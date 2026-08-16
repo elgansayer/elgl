@@ -129,7 +129,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       );
 
       const failedReminders = reminderResults.filter(
-        (result): result is PromiseRejectedResult => result.status === 'rejected',
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
       );
       if (failedReminders.length > 0) {
         throw failedReminders[0].reason;
