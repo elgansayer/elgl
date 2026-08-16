@@ -100,17 +100,29 @@ Do not create meaningless state permutations for non-interactive presentation-on
 
 ## 7. Claude Design MCP
 
-Claude Code may connect to Claude Design using Anthropic's Claude Design MCP and authenticate with `/design-login`.
+Claude Code may connect to Claude Design using Anthropic's Claude Design MCP. The canonical user-scoped bootstrap is:
+
+```bash
+claude mcp add --scope user --transport http claude-design https://api.anthropic.com/v1/design/mcp
+```
+
+Then authenticate from Claude Code with:
+
+```text
+/design-login
+```
+
+Verify the connection through Claude Code's MCP status before relying on design operations. Do not store OAuth/session credentials in this repository.
 
 Repository policy:
 
 - credentials stay outside the repository,
 - no tokens or session data are committed,
+- use the canonical Anthropic-hosted endpoint instead of an unofficial proxy,
 - lack of Claude Design connectivity must not block ordinary runtime testing,
 - `frontend/design-preview/` remains the deterministic repository-local fallback,
-- a PR may be marked design-sync-pending only when the external service is unavailable, never as a way to skip the work permanently.
-
-MCP bootstrap standardisation is tracked by #7070.
+- a PR may be marked design-sync-pending only when the external service is unavailable, never as a way to skip the work permanently,
+- when connectivity returns, reconcile the pending stable IDs before closing the associated migration work.
 
 ## 8. PR requirements
 
