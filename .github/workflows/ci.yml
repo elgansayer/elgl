@@ -45,6 +45,18 @@ jobs:
           - directory: frontend
             check: unit
             command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+          - directory: admin-portal
+            check: lint
+            command: npm run lint:check
+          - directory: admin-portal
+            check: spartan
+            command: npm run check:spartan-info
+          - directory: admin-portal
+            check: build
+            command: npm run build
+          - directory: admin-portal
+            check: unit
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -73,21 +85,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload failed backend test report
-        if: failure() && matrix.directory == 'backend' && (matrix.check == 'unit' || matrix.check == 'e2e')
+      - name: Upload failed test report
+        if: failure() && (matrix.check == 'unit' || matrix.check == 'e2e')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: backend-${{ matrix.check }}-failure-report-${{ github.sha }}
-          path: backend/test-results/${{ matrix.check }}.json
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Upload failed frontend unit report
-        if: failure() && matrix.directory == 'frontend' && matrix.check == 'unit'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: frontend-unit-failure-report-${{ github.sha }}
-          path: frontend/test-results/unit.json
+          name: ${{ matrix.directory }}-${{ matrix.check }}-failure-report-${{ github.sha }}
+          path: ${{ matrix.directory }}/test-results/${{ matrix.check }}.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -106,6 +109,10 @@ jobs:
       - run: npm run check:constitution
       - run: npm run check:agent-ui-governance
       - run: npm run check:design-sync
+      - run: npm run check:admin-ui-contract
+      - run: npm run check:admin-security-contract
+      - run: npm run check:product-contracts
+      - run: npm run check:docs-source
       - name: Enforce Spartan ownership boundaries
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -128,6 +135,64 @@ jobs:
         env:
           MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node scripts/check-migration-delta.mjs
+
+  frontend-e2e:
+    name: frontend / browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: frontend
+      - run: npx cypress install
+        working-directory: frontend
+      - run: npm run e2e:ci
+        working-directory: frontend
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-e2e-diagnostics-${{ github.sha }}
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+            frontend/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  visual-regression:
+    name: frontend / visual contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: frontend
+      - run: npx cypress install
+        working-directory: frontend
+      - run: npm run visual:capture:ci
+        working-directory: frontend
+      - name: Upload visual diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-visual-diagnostics-${{ github.sha }}
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+            frontend/test-results
+          if-no-files-found: warn
+          retention-days: 14
 
   factory:
     runs-on: ubuntu-latest
@@ -156,7 +221,7 @@ jobs:
   required-gate:
     name: CI / required
     if: always()
-    needs: [application-checks, constitution, factory]
+    needs: [application-checks, constitution, frontend-e2e, visual-regression, factory]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -164,10 +229,12 @@ jobs:
         env:
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          FRONTEND_E2E_RESULT: ${{ needs.frontend-e2e.result }}
+          VISUAL_REGRESSION_RESULT: ${{ needs.visual-regression.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
         run: |
           failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FRONTEND_E2E_RESULT" "$VISUAL_REGRESSION_RESULT" "$FACTORY_RESULT"; do
             if [ "$result" != "success" ]; then
               failed=$((failed + 1))
             fi
@@ -180,6 +247,8 @@ jobs:
             echo "| --- | --- |"
             echo "| application-checks | $APPLICATION_CHECKS_RESULT |"
             echo "| constitution | $CONSTITUTION_RESULT |"
+            echo "| frontend-e2e | $FRONTEND_E2E_RESULT |"
+            echo "| visual-regression | $VISUAL_REGRESSION_RESULT |"
             echo "| factory | $FACTORY_RESULT |"
             echo
             echo "Failing canonical groups: **$failed**"
@@ -189,21 +258,20 @@ jobs:
         env:
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          FRONTEND_E2E_RESULT: ${{ needs.frontend-e2e.result }}
+          VISUAL_REGRESSION_RESULT: ${{ needs.visual-regression.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
         run: |
-          failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FRONTEND_E2E_RESULT" "$VISUAL_REGRESSION_RESULT" "$FACTORY_RESULT"; do
             if [ "$result" != "success" ]; then
-              failed=1
+              echo "Canonical CI did not fully pass."
+              echo "application-checks=$APPLICATION_CHECKS_RESULT"
+              echo "constitution=$CONSTITUTION_RESULT"
+              echo "frontend-e2e=$FRONTEND_E2E_RESULT"
+              echo "visual-regression=$VISUAL_REGRESSION_RESULT"
+              echo "factory=$FACTORY_RESULT"
+              exit 1
             fi
           done
-
-          if [ "$failed" -ne 0 ]; then
-            echo "Canonical CI did not fully pass."
-            echo "application-checks=$APPLICATION_CHECKS_RESULT"
-            echo "constitution=$CONSTITUTION_RESULT"
-            echo "factory=$FACTORY_RESULT"
-            exit 1
-          fi
 
           echo "All canonical CI groups passed."
