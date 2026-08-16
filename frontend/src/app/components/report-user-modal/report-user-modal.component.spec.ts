@@ -96,6 +96,20 @@ describe('ReportUserModalComponent', () => {
       expect(templateContent).not.toContain('cdkTrapFocus');
     });
 
+    it('should delegate every native button to the owned Spartan Helm button directive', () => {
+      const openingButtons = templateContent.match(/<button\b[\s\S]*?>/g) ?? [];
+      expect(openingButtons.length).toBeGreaterThan(0);
+      for (const openingButton of openingButtons) {
+        expect(openingButton).toContain('hlmBtn');
+      }
+    });
+
+    it('should use touch-safe Spartan sizes for report dialog actions', () => {
+      expect(templateContent).toContain('size="icon-touch"');
+      expect(templateContent.match(/size="touch"/g)?.length).toBe(3);
+      expect(templateContent).toContain('variant="destructive-solid"');
+    });
+
     it('should use Relay design tokens instead of hardcoded slate/red Tailwind colours', () => {
       const legacyColours = [
         /\bslate-\d/,
