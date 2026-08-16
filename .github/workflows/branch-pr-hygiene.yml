@@ -1,23 +1,20 @@
 name: Branch PR Hygiene
 
 on:
-  push:
-    branches-ignore:
-      - main
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
 
 concurrency:
   group: branch-pr-hygiene
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
 
 jobs:
-  reconcile:
+  audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -30,43 +27,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reconcile branches with pull requests
+      - name: Audit branches without creating pull requests
         shell: bash
         run: |
           set -euo pipefail
 
           git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
 
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            branches=("${GITHUB_REF_NAME}")
-          else
-            mapfile -t branches < <(
-              gh api --paginate "repos/${REPOSITORY}/branches?per_page=100" \
-                --jq '.[].name'
-            )
-          fi
+          mapfile -t branches < <(
+            gh api --paginate "repos/${REPOSITORY}/branches?per_page=100" \
+              --jq '.[].name'
+          )
 
-          created=0
-          skipped=0
-          failed=0
+          orphaned=0
+          integrated=0
+          active_pr=0
+
+          echo "### Branch PR hygiene audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow is intentionally read-only. Branch existence alone must not create a pull request." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | Ahead of main | Open PR | Classification |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---|" >> "$GITHUB_STEP_SUMMARY"
 
           for branch in "${branches[@]}"; do
             [[ -z "$branch" || "$branch" == "$BASE_BRANCH" ]] && continue
 
             remote_ref="refs/remotes/origin/${branch}"
             if ! git show-ref --verify --quiet "$remote_ref"; then
-              echo "::notice::Skipping deleted branch: $branch"
-              ((skipped += 1))
               continue
             fi
 
             ahead=$(git rev-list --count "origin/${BASE_BRANCH}..${remote_ref}")
-            if [[ "$ahead" -eq 0 ]]; then
-              echo "::notice::No unmerged commits on $branch"
-              ((skipped += 1))
-              continue
-            fi
-
             existing=$(gh pr list \
               --repo "$REPOSITORY" \
               --head "$branch" \
@@ -74,38 +65,24 @@ jobs:
               --json number \
               --jq 'length')
 
-            if [[ "$existing" -gt 0 ]]; then
-              echo "PR already exists for $branch"
-              ((skipped += 1))
-              continue
-            fi
-
-            title="chore: review ${branch}"
-            printf -v body '%s\n\n%s\n\n%s' \
-              "Automated branch-hygiene PR for \`${branch}\`." \
-              "This branch is ahead of \`${BASE_BRANCH}\` and had no open pull request. The repository-wide branch hygiene workflow opened this draft PR so unmerged work remains visible to CI, review, and merge automation." \
-              "Commits ahead when detected: ${ahead}."
-
-            if gh pr create \
-              --repo "$REPOSITORY" \
-              --base "$BASE_BRANCH" \
-              --head "$branch" \
-              --draft \
-              --title "$title" \
-              --body "$body"; then
-              echo "Created draft PR for $branch"
-              ((created += 1))
+            if [[ "$ahead" -eq 0 ]]; then
+              classification="integrated/no unique commits"
+              ((integrated += 1))
+            elif [[ "$existing" -gt 0 ]]; then
+              classification="active PR"
+              ((active_pr += 1))
             else
-              echo "::error::Failed to create PR for $branch"
-              ((failed += 1))
+              classification="orphan branch: review only; do not auto-open PR"
+              ((orphaned += 1))
             fi
+
+            printf '| `%s` | %s | %s | %s |\n' \
+              "$branch" "$ahead" "$existing" "$classification" >> "$GITHUB_STEP_SUMMARY"
           done
 
-          echo "### Branch PR hygiene" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Created: $created" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Skipped: $skipped" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Failed: $failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Orphan branches requiring explicit task ownership: $orphaned" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branches with active PRs: $active_pr" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Integrated/no-unique-commit branches: $integrated" >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "$failed" -gt 0 ]]; then
-            exit 1
-          fi
+          echo "::notice::Branch hygiene is audit-only; no pull requests were created or modified."
