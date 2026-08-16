@@ -73,7 +73,6 @@ class Job:
     last_error: str | None = None
     next_attempt_at: datetime | None = None
     factory_generation: str = "unknown"
-    provider_history: list[dict[str, str | int]] = field(default_factory=list)
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

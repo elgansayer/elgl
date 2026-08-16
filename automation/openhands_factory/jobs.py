@@ -41,7 +41,6 @@ class JobStore:
                 if item.get("next_attempt_at")
                 else None,
                 factory_generation=str(item.get("factory_generation", "unknown")),
-                provider_history=item.get("provider_history", []),
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
             if job.state is JobState.QUARANTINED:
