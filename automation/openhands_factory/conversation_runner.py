@@ -12,9 +12,11 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Protocol
 
+from filelock import FileLock
+
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import FactoryError
-from openhands_factory.models import ProviderName, Task
+from openhands_factory.models import FailureKind, ProviderName, Task
 from openhands_factory.provider_health import (
     CircuitBreaker,
     ProviderHealthStore,
@@ -101,8 +103,57 @@ class ConversationRunner:
         self.timeout_seconds = timeout_seconds
         self.cancellation_grace_seconds = cancellation_grace_seconds
 
+    def _default_breakers(self) -> list[CircuitBreaker]:
+        return [
+            CircuitBreaker(
+                ProviderName.OPENAI_SUBSCRIPTION,
+                self.config.max_consecutive_failures,
+                self.config.provider_cooldown_seconds,
+            ),
+            CircuitBreaker(
+                ProviderName.OPENCODE_GO,
+                self.config.max_consecutive_failures,
+                self.config.provider_cooldown_seconds,
+            ),
+            CircuitBreaker(
+                ProviderName.GEMINI,
+                self.config.max_consecutive_failures,
+                self.config.provider_cooldown_seconds,
+            ),
+        ]
+
+    def _mutate_provider_health(
+        self,
+        provider: ProviderName,
+        *,
+        failure_kind: FailureKind | None = None,
+        retry_after_seconds: int | None = None,
+    ) -> None:
+        """Update one provider breaker without losing concurrent worker updates."""
+        store = ProviderHealthStore(self.config.state_dir / "health.json")
+        lock = FileLock(str(self.config.state_dir / "health.json.lock"))
+        with lock:
+            breakers = store.load() or self._default_breakers()
+            for breaker in breakers:
+                if breaker.provider != provider:
+                    continue
+                if failure_kind is None:
+                    breaker.record_success()
+                else:
+                    breaker.record_failure(
+                        failure_kind,
+                        retry_after_seconds=retry_after_seconds,
+                    )
+                break
+            store.save(breakers)
+
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
         started = time.monotonic()
+        # Capture the tier this attempt is expected to use before launching the child.
+        # build_llm() performs the same breaker-aware selection in that fresh process.
+        # Recording against this stable value ensures timeouts and crashes count against
+        # the provider that was selected when the attempt began.
+        primary_provider = select_primary_provider(self.config)
         context = multiprocessing.get_context("spawn")
         result_connection, child_connection = context.Pipe(duplex=False)
         process = context.Process(
@@ -137,6 +188,10 @@ class ConversationRunner:
                 process.join()
             result_connection.close()
             process.close()
+            # A timeout is a provider-attempt failure too. Without recording it, a
+            # hanging tier remains permanently "healthy" and every job retry selects
+            # the same provider again instead of allowing the circuit breaker to rotate.
+            self._mutate_provider_health(primary_provider, failure_kind=FailureKind.TRANSIENT)
             raise FactoryError("Conversation exceeded the maximum task duration")
 
         elapsed = time.monotonic() - started
@@ -144,28 +199,6 @@ class ConversationRunner:
         result_connection.close()
         exit_code = process.exitcode
         process.close()
-        store = ProviderHealthStore(self.config.state_dir / "health.json")
-        breakers = store.load()
-        if not breakers:
-            breakers = [
-                CircuitBreaker(
-                    ProviderName.OPENAI_SUBSCRIPTION,
-                    self.config.max_consecutive_failures,
-                    self.config.provider_cooldown_seconds,
-                ),
-                CircuitBreaker(
-                    ProviderName.OPENCODE_GO,
-                    self.config.max_consecutive_failures,
-                    self.config.provider_cooldown_seconds,
-                ),
-                CircuitBreaker(
-                    ProviderName.GEMINI,
-                    self.config.max_consecutive_failures,
-                    self.config.provider_cooldown_seconds,
-                ),
-            ]
-
-        primary_provider = select_primary_provider(self.config)
 
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
             status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
@@ -175,17 +208,14 @@ class ConversationRunner:
 
             kind = classify_failure(status_code, detail)
             retry_after = extract_retry_after_seconds(detail)
-            for b in breakers:
-                if b.provider == primary_provider:
-                    b.record_failure(kind, retry_after_seconds=retry_after)
-            store.save(breakers)
+            self._mutate_provider_health(
+                primary_provider,
+                failure_kind=kind,
+                retry_after_seconds=retry_after,
+            )
             raise FactoryError(detail)
 
-        for b in breakers:
-            if b.provider == primary_provider:
-                b.record_success()
-        store.save(breakers)
-
+        self._mutate_provider_health(primary_provider)
         return ConversationResult(task.identifier, elapsed, True)
 
 
