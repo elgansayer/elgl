@@ -132,8 +132,8 @@ describe('AdminV1Controller', () => {
     expect(auditQuery.list).toHaveBeenCalledWith(query);
   });
 
-  it('delegates bounded moderation reports to AdminModerationQueryService', async () => {
-    const { controller, moderationQuery } = buildController();
+  it('delegates and audits bounded moderation reports', async () => {
+    const { controller, moderationQuery, audit } = buildController();
     const query = {
       page: 2,
       pageSize: 25,
@@ -142,11 +142,24 @@ describe('AdminV1Controller', () => {
     };
     const expected = { reports: [], total: 0, page: 2, pageSize: 25 };
     moderationQuery.list.mockResolvedValue(expected);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: { 'x-request-id': 'request-moderation-1' },
+    } as never;
 
-    await expect(controller.listModerationReports(query)).resolves.toEqual(
-      expected,
-    );
+    await expect(
+      controller.listModerationReports(query, request),
+    ).resolves.toEqual(expected);
     expect(moderationQuery.list).toHaveBeenCalledWith(query);
+    expect(audit.record).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'moderation.reports.read',
+      capabilityKey: 'moderation.cases.read',
+      targetType: 'moderation-report-queue',
+      outcome: 'success',
+      correlationId: 'request-moderation-1',
+      metadata: { resultCount: 0, total: 0, source: 'admin-v1' },
+    });
   });
 
   it('delegates bounded user search to AdminService', async () => {
