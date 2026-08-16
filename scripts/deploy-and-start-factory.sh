@@ -74,6 +74,9 @@ install -o root -g root -m 0644 \
 install -o root -g root -m 0644 \
   "$WORKTREE/config/systemd/hellotalk-factory-health.timer" \
   /etc/systemd/system/hellotalk-factory-health.timer
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-meta-agent.service" \
+  /etc/systemd/system/hellotalk-meta-agent.service
 install -o root -g root -m 0755 \
   "$WORKTREE/config/systemd/hellotalk-factory-watchdog.sh" \
   /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
