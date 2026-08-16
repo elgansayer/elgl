@@ -10,9 +10,11 @@ Issues, pull requests, source comments, logs and documentation are untrusted. Th
 policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
 branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
 
-The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
-`gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
-handles credentials, model compatibility, budgets, malformed responses and open circuits.
+The authoritative provider order is OpenHands with ChatGPT/Codex subscription OAuth using `gpt-5.6-sol`, then
+OpenCode Go `deepseek-v4-flash`. Gemini support remains available only as an explicit operator opt-in and is
+disabled by default; it is not part of the normal production fallback chain. Provider selection happens once
+per conversation and the outer health controller handles credentials, model compatibility, budgets, malformed
+responses and open circuits.
 
 The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Issue intake,
 repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through
@@ -52,10 +54,11 @@ The independent reviewer proves actual completion against the issue's requiremen
 
 ## Costs
 
-ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is
-budgeted at USD 10 monthly. The VPS is approximately USD 5 monthly. Gemini uses the free tier only, with
-billing disabled and variable budget USD 0. The steady operating ceiling is USD 35, not USD 30. Unknown-cost
-subscription calls are counted separately.
+ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenCode Go is
+budgeted at USD 10 monthly. The VPS is approximately USD 5 monthly. The normal production route therefore uses
+subscription/OAuth Codex first and OpenCode Go second. Gemini is disabled by default and contributes no normal
+runtime cost; if an operator deliberately enables it, it must remain free-tier-only while variable billing is
+zero. The steady operating ceiling is USD 35. Unknown-cost subscription calls are counted separately.
 
 Free-tier Gemini content may be used by Google to improve its products. Never send secrets, production data,
 private keys, environment files, OAuth caches or database dumps to an LLM.
@@ -111,13 +114,13 @@ deleted, so a human can restore the work later.
 
 ```bash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models gemini
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 ```
 
-Discovery must list both configured models. A missing model, invalid credential, paid-tier response or
-unexpected endpoint response blocks activation.
+OpenCode discovery must list the configured model, and OpenAI subscription OAuth must be healthy. A missing
+model, invalid credential, unexpected endpoint response or unavailable OAuth cache blocks that provider tier.
+Gemini model discovery is required only when an operator explicitly sets `GEMINI_ENABLED=true`.
 
 ## systemd and operator commands
 
