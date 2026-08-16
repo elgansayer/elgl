@@ -1,6 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { vi } from 'vitest';
 import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
@@ -102,8 +104,10 @@ describe('ProfileComponent', () => {
     );
     expect(checkbox).not.toBeNull();
     expect(checkbox?.hasAttribute('data-disabled')).toBe(false);
-    const control = checkbox?.querySelector('brn-checkbox');
-    expect(control?.getAttribute('aria-checked')).toBe('true');
+
+    const checkboxDebug = fixture.debugElement.query(By.directive(HlmCheckbox));
+    expect(checkboxDebug).not.toBeNull();
+    expect((checkboxDebug.componentInstance as HlmCheckbox).checked()).toBe(true);
   });
 
   it('should not send incognito_visits=true for a non-VIP user on save', async () => {
