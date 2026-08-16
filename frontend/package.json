@@ -19,8 +19,9 @@
     "check:spacing-density": "node scripts/check-spacing-density.mjs",
     "check:motion-contract": "node scripts/check-motion-contract.mjs",
     "check:icon-contract": "node scripts/check-icon-contract.mjs",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract",
+    "check:density-modes": "node scripts/check-density-modes.mjs",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
