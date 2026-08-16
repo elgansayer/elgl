@@ -16,7 +16,9 @@ from filelock import FileLock
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import FactoryError
+from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import FailureKind, ProviderName, Task
+from openhands_factory.provider_capacity import provider_slot
 from openhands_factory.provider_health import (
     CircuitBreaker,
     ProviderHealthStore,
@@ -28,11 +30,8 @@ from openhands_factory.provider_profiles import select_primary_provider
 
 class ConversationProtocol(Protocol):
     def send_message(self, message: str) -> None: ...
-
     def run(self) -> None: ...
-
     def pause(self) -> None: ...
-
     def close(self) -> None: ...
 
 
@@ -44,6 +43,8 @@ class ConversationResult:
     task_id: str
     elapsed_seconds: float
     completed: bool
+    provider: ProviderName
+    model: str
 
 
 def _conversation_process(
@@ -53,7 +54,6 @@ def _conversation_process(
     prompt: str,
     result_connection: Connection,
 ) -> None:
-    """Run the SDK in its own process group so the parent can cancel every child."""
     os.setsid()
     conversation: ConversationProtocol | None = None
     outcome: dict[str, object] = {"completed": False, "error": "Conversation did not start"}
@@ -70,19 +70,13 @@ def _conversation_process(
         conversation.run()
         outcome = {"completed": True}
     except BaseException as error:
-        outcome = {
-            "completed": False,
-            "error": f"{type(error).__name__}: {error}"[-2000:],
-        }
+        outcome = {"completed": False, "error": f"{type(error).__name__}: {error}"[-2000:]}
     finally:
         if conversation is not None:
             try:
                 conversation.close()
             except Exception as error:
-                outcome = {
-                    "completed": False,
-                    "error": f"Conversation close failed: {error}"[-2000:],
-                }
+                outcome = {"completed": False, "error": f"Conversation close failed: {error}"[-2000:]}
         try:
             result_connection.send(outcome)
         finally:
@@ -105,22 +99,17 @@ class ConversationRunner:
 
     def _default_breakers(self) -> list[CircuitBreaker]:
         return [
-            CircuitBreaker(
-                ProviderName.OPENAI_SUBSCRIPTION,
-                self.config.max_consecutive_failures,
-                self.config.provider_cooldown_seconds,
-            ),
-            CircuitBreaker(
-                ProviderName.OPENCODE_GO,
-                self.config.max_consecutive_failures,
-                self.config.provider_cooldown_seconds,
-            ),
-            CircuitBreaker(
-                ProviderName.GEMINI,
-                self.config.max_consecutive_failures,
-                self.config.provider_cooldown_seconds,
-            ),
+            CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+            CircuitBreaker(ProviderName.OPENCODE_GO, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+            CircuitBreaker(ProviderName.GEMINI, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
         ]
+
+    def _provider_model(self, provider: ProviderName) -> str:
+        if provider is ProviderName.OPENAI_SUBSCRIPTION:
+            return self.config.openai_model
+        if provider is ProviderName.OPENCODE_GO:
+            return self.config.opencode_model
+        return self.config.gemini_model
 
     def _mutate_provider_health(
         self,
@@ -129,7 +118,6 @@ class ConversationRunner:
         failure_kind: FailureKind | None = None,
         retry_after_seconds: int | None = None,
     ) -> None:
-        """Update one provider breaker without losing concurrent worker updates."""
         store = ProviderHealthStore(self.config.state_dir / "health.json")
         lock = FileLock(str(self.config.state_dir / "health.json.lock"))
         with lock:
@@ -140,75 +128,97 @@ class ConversationRunner:
                 if failure_kind is None:
                     breaker.record_success()
                 else:
-                    breaker.record_failure(
-                        failure_kind,
-                        retry_after_seconds=retry_after_seconds,
-                    )
+                    breaker.record_failure(failure_kind, retry_after_seconds=retry_after_seconds)
                 break
             store.save(breakers)
 
+    def _record(
+        self,
+        provider: ProviderName,
+        *,
+        successful: bool,
+        failure_kind: FailureKind | None = None,
+        capacity_wait: bool = False,
+        capacity_exhausted: bool = False,
+    ) -> None:
+        MetricsStore(self.config.state_dir / "metrics.json").record(
+            provider,
+            self._provider_model(provider),
+            successful=successful,
+            fallback=provider is not ProviderName.OPENAI_SUBSCRIPTION,
+            rate_limited=failure_kind is FailureKind.RATE_LIMIT,
+            authentication_failure=failure_kind is FailureKind.AUTHENTICATION,
+            capacity_wait=capacity_wait,
+            capacity_exhausted=capacity_exhausted,
+        )
+
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
         started = time.monotonic()
-        primary_provider = select_primary_provider(self.config)
-        context = multiprocessing.get_context("spawn")
-        result_connection, child_connection = context.Pipe(duplex=False)
-        process = context.Process(
-            target=_conversation_process,
-            args=(
-                self.factory,
-                workspace,
-                self.config.max_conversation_turns,
-                prompt,
-                child_connection,
-            ),
-            name=f"factory-conversation-{task.identifier}",
-        )
-        process.start()
-        child_connection.close()
-        timeout = self.timeout_seconds or self.config.max_task_minutes * 60
-        process.join(timeout)
-        if process.is_alive():
-            process_identifier = process.pid
-            if process_identifier is not None:
-                try:
-                    os.killpg(process_identifier, signal.SIGTERM)
-                except ProcessLookupError:
-                    process.terminate()
-            process.join(self.cancellation_grace_seconds)
+        provider = select_primary_provider(self.config)
+        model = self._provider_model(provider)
+        owner = f"{task.identifier}:{os.getpid()}:{time.monotonic_ns()}"
+        try:
+            slot = provider_slot(self.config, provider, owner=owner)
+            slot.__enter__()
+        except FactoryError:
+            self._record(provider, successful=False, capacity_wait=True, capacity_exhausted=True)
+            raise
+
+        try:
+            context = multiprocessing.get_context("spawn")
+            result_connection, child_connection = context.Pipe(duplex=False)
+            process = context.Process(
+                target=_conversation_process,
+                args=(self.factory, workspace, self.config.max_conversation_turns, prompt, child_connection),
+                name=f"factory-conversation-{task.identifier}",
+            )
+            process.start()
+            child_connection.close()
+            timeout = self.timeout_seconds or self.config.max_task_minutes * 60
+            process.join(timeout)
             if process.is_alive():
+                process_identifier = process.pid
                 if process_identifier is not None:
                     try:
-                        os.killpg(process_identifier, signal.SIGKILL)
+                        os.killpg(process_identifier, signal.SIGTERM)
                     except ProcessLookupError:
-                        process.kill()
-                process.join()
+                        process.terminate()
+                process.join(self.cancellation_grace_seconds)
+                if process.is_alive():
+                    if process_identifier is not None:
+                        try:
+                            os.killpg(process_identifier, signal.SIGKILL)
+                        except ProcessLookupError:
+                            process.kill()
+                    process.join()
+                result_connection.close()
+                process.close()
+                self._mutate_provider_health(provider, failure_kind=FailureKind.TRANSIENT)
+                self._record(provider, successful=False, failure_kind=FailureKind.TRANSIENT)
+                raise FactoryError("Conversation exceeded the maximum task duration")
+
+            elapsed = time.monotonic() - started
+            outcome: object = result_connection.recv() if result_connection.poll() else None
             result_connection.close()
+            exit_code = process.exitcode
             process.close()
-            self._mutate_provider_health(primary_provider, failure_kind=FailureKind.TRANSIENT)
-            raise FactoryError("Conversation exceeded the maximum task duration")
 
-        elapsed = time.monotonic() - started
-        outcome: object = result_connection.recv() if result_connection.poll() else None
-        result_connection.close()
-        exit_code = process.exitcode
-        process.close()
+            if not isinstance(outcome, dict) or outcome.get("completed") is not True:
+                status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
+                detail = outcome.get("error") if isinstance(outcome, dict) else None
+                if not isinstance(detail, str):
+                    detail = f"conversation process exited with status {exit_code}"
+                kind = classify_failure(status_code, detail)
+                retry_after = extract_retry_after_seconds(detail)
+                self._mutate_provider_health(provider, failure_kind=kind, retry_after_seconds=retry_after)
+                self._record(provider, successful=False, failure_kind=kind)
+                raise FactoryError(detail)
 
-        if not isinstance(outcome, dict) or outcome.get("completed") is not True:
-            status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
-            detail = outcome.get("error") if isinstance(outcome, dict) else None
-            if not isinstance(detail, str):
-                detail = f"conversation process exited with status {exit_code}"
-            kind = classify_failure(status_code, detail)
-            retry_after = extract_retry_after_seconds(detail)
-            self._mutate_provider_health(
-                primary_provider,
-                failure_kind=kind,
-                retry_after_seconds=retry_after,
-            )
-            raise FactoryError(detail)
-
-        self._mutate_provider_health(primary_provider)
-        return ConversationResult(task.identifier, elapsed, True)
+            self._mutate_provider_health(provider)
+            self._record(provider, successful=True)
+            return ConversationResult(task.identifier, elapsed, True, provider, model)
+        finally:
+            slot.__exit__(None, None, None)
 
 
 @dataclass(frozen=True)
