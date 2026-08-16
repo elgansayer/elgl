@@ -89,9 +89,16 @@ for (const path of changedFiles) {
     violations.push(`${path}: newly changed feature code appears to implement roving tabindex; use the appropriate Spartan selection/navigation primitive`);
   }
 
-  const manualCombobox =
-    /role=["']combobox["']|role:\s*["']combobox["']/.test(source) &&
-    /(?:ArrowDown|ArrowUp|aria-activedescendant)/.test(source);
+  // A combobox role alone is not evidence of bespoke keyboard ownership. The
+  // changed feature must also own active-descendant state or an explicit
+  // ArrowUp/ArrowDown key handler. This avoids false positives from templates
+  // that contain unrelated icon names or translated text mentioning arrows.
+  const comboboxRole = /role=["']combobox["']|role:\s*["']combobox["']/.test(source);
+  const ownsActiveDescendant = /aria-activedescendant/.test(source);
+  const ownsComboboxArrowHandler =
+    /\(keydown(?:\.(?:arrowdown|arrowup))?\)/i.test(source) ||
+    /(?:event|e)\.key\s*===?\s*['"]Arrow(?:Down|Up)['"]/.test(source);
+  const manualCombobox = comboboxRole && (ownsActiveDescendant || ownsComboboxArrowHandler);
   if (manualCombobox) {
     violations.push(`${path}: newly changed feature code appears to implement combobox keyboard state; use the Spartan combobox/autocomplete primitive`);
   }
