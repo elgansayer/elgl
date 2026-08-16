@@ -81,14 +81,10 @@ jobs:
             fi
 
             title="chore: review ${branch}"
-            body=$(cat <<EOF
-Automated branch-hygiene PR for \`${branch}\`.
-
-This branch is ahead of \`${BASE_BRANCH}\` and had no open pull request. The repository-wide branch hygiene workflow opened this draft PR so unmerged work remains visible to CI, review, and merge automation.
-
-Commits ahead when detected: ${ahead}.
-EOF
-)
+            printf -v body '%s\n\n%s\n\n%s' \
+              "Automated branch-hygiene PR for \`${branch}\`." \
+              "This branch is ahead of \`${BASE_BRANCH}\` and had no open pull request. The repository-wide branch hygiene workflow opened this draft PR so unmerged work remains visible to CI, review, and merge automation." \
+              "Commits ahead when detected: ${ahead}."
 
             if gh pr create \
               --repo "$REPOSITORY" \
