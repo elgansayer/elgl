@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -49,6 +49,7 @@ const approvedNativeSelectPrefixes = [
   'frontend/src/app/components/primitives/select/',
   'frontend/src/app/components/primitives/language-picker/',
 ];
+const nonTextInputTypes = new Set(['hidden', 'file', 'checkbox', 'radio', 'range', 'color']);
 
 for (const path of featureFiles) {
   const file = repoPath(path);
@@ -66,7 +67,7 @@ for (const path of featureFiles) {
       findings.checkboxRadioControls.push(`${file} (${type})`);
       continue;
     }
-    if (!['hidden', 'file'].includes(type) && !/\bhlmInput\b/.test(tag)) findings.rawTextInputs.push(file);
+    if (!nonTextInputTypes.has(type) && !/\bhlmInput\b/.test(tag)) findings.rawTextInputs.push(file);
   }
 
   for (const tag of openingTags(source, 'textarea')) {
