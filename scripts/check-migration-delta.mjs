@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 const migrationPrefix = 'supabase/migrations/';
@@ -35,6 +36,23 @@ function migrationId(path) {
     );
   }
   return match[1];
+}
+
+function stripSqlComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--.*$/gm, ' ');
+}
+
+function authenticatedAdminPolicies(path) {
+  const source = stripSqlComments(readFileSync(path, 'utf8'));
+  const policies = source.match(/create\s+policy[\s\S]*?;/gi) ?? [];
+  return policies.filter(
+    (policy) =>
+      /\bto\s+authenticated\b/i.test(policy) &&
+      /\bis_admin\b/i.test(policy) &&
+      /(?:=\s*true\b|\bis\s+true\b)/i.test(policy),
+  );
 }
 
 const baseFiles = git(['ls-tree', '-r', '--name-only', base, '--', migrationPrefix])
@@ -96,6 +114,12 @@ for (const path of added) {
     if (existing?.length) {
       violations.push(
         `new migration ${path} reuses existing id ${id}: ${existing.join(', ')}`,
+      );
+    }
+
+    if (authenticatedAdminPolicies(path).length > 0) {
+      violations.push(
+        `new migration ${path} creates authenticated users.is_admin RLS authority; privileged admin access must use the capability-gated backend/service-role path`,
       );
     }
   } catch (error) {
