@@ -18,10 +18,13 @@ export class FavouriteService {
   private cache = inject(ChatCacheService);
   private baseUrl = `${environment.apiUrl}/chat`;
 
+  /**
+   * Legacy context-menu entry point. The only production caller is the chat message
+   * menu, where repeated activation is expected to toggle the message favourite.
+   */
   async addFavourite(dto: AddFavouriteDto): Promise<unknown> {
-    const result = await firstValueFrom(this.http.post(`${this.baseUrl}/favourites`, dto));
-    await this.refreshCacheBestEffort();
-    return result;
+    const favourited = await this.toggleMessageFavourite(dto.message_id, dto.note_text);
+    return { favourited };
   }
 
   async removeFavourite(favouriteId: string): Promise<unknown> {
@@ -46,7 +49,7 @@ export class FavouriteService {
     );
   }
 
-  async toggleMessageFavourite(messageId: string): Promise<boolean> {
+  async toggleMessageFavourite(messageId: string, noteText?: string): Promise<boolean> {
     const favourites = await this.getFavourites();
     const existing = favourites.find(
       (favourite) =>
@@ -58,8 +61,14 @@ export class FavouriteService {
       return false;
     }
 
-    await this.addFavourite({ message_id: messageId });
+    await this.createFavourite({ message_id: messageId, note_text: noteText });
     return true;
+  }
+
+  private async createFavourite(dto: AddFavouriteDto): Promise<unknown> {
+    const result = await firstValueFrom(this.http.post(`${this.baseUrl}/favourites`, dto));
+    await this.refreshCacheBestEffort();
+    return result;
   }
 
   private async fetchAndCacheFavourites(): Promise<FavouriteRecord[]> {
