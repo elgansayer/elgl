@@ -1,188 +1,98 @@
 # HelloTalk AI Clone
 
-This project is a premium HelloTalk-inspired social language exchange platform integrating LiveKit audio and video rooms, real-time messaging, LingQ-style interactive reading, and native-speaker corrections. Development automation is supervised by a bounded OpenHands factory.
+A HelloTalk-inspired social language-exchange platform with real-time messaging, LiveKit audio/video rooms, native-speaker corrections, interactive reading, vocabulary learning, moderation tooling, and a dedicated administration application.
 
-## Table of Contents
+The repository is a multi-application workspace:
 
-- [Overview](#overview)
-- [Wiki & Documentation](#wiki--documentation)
-- [Tech Stack](#tech-stack)
-- [Running with Docker Compose](#running-with-docker-compose)
-- [Advanced AI Factory Tooling](#advanced-ai-factory-tooling)
+- `frontend/` — Angular 22 consumer application using the repository-owned Spartan UI/design-system conventions.
+- `backend/` — NestJS API and domain services.
+- `admin-portal/` — separate Angular administration application backed only by server-authorized admin APIs.
+- `supabase/` — PostgreSQL/Supabase schema and migrations.
+- `automation/` — the bounded OpenHands Factory used for supervised autonomous engineering on the VPS.
 
-## Overview
+## Authoritative documentation
 
-HelloTalk AI Clone aims to replicate and extend the best features of modern language exchange applications. It implements a fully internationalized, highly responsive frontend coupled with a robust, scalable backend capable of handling real-time chat and multi-user WebRTC rooms.
+`README.md` is intentionally an index rather than a duplicate specification. The canonical sources are:
 
-## Wiki & Documentation
+- [`AGENTS.md`](AGENTS.md) — engineering constitution, safety rules and contribution requirements.
+- [`FEATURES_SPEC.md`](FEATURES_SPEC.md) — product capability inventory.
+- [`SPEC.md`](SPEC.md) — platform/data architecture.
+- [`DESIGN.md`](DESIGN.md) — product and design-system decisions.
+- [`ui_architecture.md`](ui_architecture.md) — Angular, Spartan UI, accessibility and UI architecture.
+- [`docs/factory/README.md`](docs/factory/README.md) — Factory deployment and operations.
+- [`docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md`](docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md) — ownership of canonical, generated, provider-specific and runtime artifacts.
 
-Comprehensive documentation has been dynamically generated from the repository's codebase and GitHub issues tracking backlog.
+The generated [`wiki/`](wiki/) is useful for navigation and reporting, but it is derived material and does not override the sources above.
 
-Please refer to the following Wiki pages for exhaustive details:
-- **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
-- **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
-- **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
-- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the swarm queue.
+## Platform architecture
 
-Additional specifications:
-- `AGENTS.md`: The Engineering Constitution and system rules.
-- `SPEC.md`: Architectural Blueprint covering the PostGIS and PostgREST structures.
+The primary stack is:
 
-## Exhaustive Feature List
+- Angular 22 standalone components and signals
+- Spartan UI conventions and repository-owned semantic design tokens
+- NestJS
+- Supabase/PostgreSQL with PostGIS
+- Redis
+- Centrifugo for real-time messaging/presence
+- LiveKit for audio/video
+- Cloudflare R2/S3-compatible object storage
+- Prometheus/Grafana observability
 
-# 📚 HELLOTALK EXHAUSTIVE FEATURE SPECIFICATION (FEATURES_SPEC.md)
+The backend applies a global `/api` prefix. The base and development Docker Compose files include the API, web frontend, Redis, Centrifugo, LiveKit, Prometheus and Grafana services.
 
-This document outlines every micro-feature required to build a 1:1 competitor to HelloTalk and Instagram with LingQ interactive reading functionality, mapped directly to our NestJS and Angular architecture.
+## Development
 
-## 1. Core Messaging & Chat Engine (Powered by Centrifugo)
+Use Node.js 22+ and npm 10+.
 
-The direct messaging ecosystem is highly structured. Messages are not just strings: they are complex JSON payloads routed via Centrifugo and cached in Redis before persistence in Supabase.
+```bash
+npm ci
+npm run verify
+```
 
-- **Text Messaging:** Real-time bi-directional chat with typing indicators and read receipts.
-- **Asynchronous Voice Notes:** Hold-to-record audio snippets uploaded to Cloudflare R2, sending the URL as the message payload.
-- **VoIP Audio Calling:** 1-on-1 internet phone calls established via LiveKit private rooms.
-- **High-Definition Video Calling:** Direct face-to-face practice sessions, also routed through LiveKit.
-- **Doodle Tool:** An integrated HTML5 canvas allowing users to draw on their screen and send the resulting image to explain concepts visually.
-- **Media Sharing:** Camera integration, gallery uploads, and live GPS location sharing (rendered as static map images).
-- **Favourites (Bookmarking):** Users can save specific messages, corrections, or audio clips into a private `favourites` table in Supabase for later revision.
-- **Message Search:** Local client-side indexing and server-side `pg_trgm` search to query chat history instantly.
-- **Virtual Gifts:** Sending digital, animated stickers or greeting cards, triggering Centrifugo global broadcast events to render full-screen animations.
-- **Group Chats:** Multi-user language exchange rooms (`group_{id}`) supporting collaborative learning, shared vocabulary banks, and group moderation.
+The root verification gate checks the consumer frontend, backend, administration application, repository governance, critical product contracts and the UI/design-system contracts. The Factory Python package has its own `uv`-managed lint, type-check and pytest gate in canonical CI.
 
-## 2. Artificial Intelligence & NLP Tools (Powered by NestJS + Azure/DeepL + NLP.js)
+For the containerized development stack:
 
-These are the built-in utilities that make the app an educational superpower rather than just a social messaging app.
+```bash
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up
+```
 
-- **In-line Translation:** Tapping any message triggers a backend request to translate the text into the user's native language (supporting 260+ languages). Tracks daily usage caps in Redis (10/day for free tier, unlimited for VIP at 8 UKP / $10 USD per month).
-- **Transliteration (Romaji/Pinyin/Cyrillic):** Instantly converts non-Latin scripts into phonetic Latin characters to aid reading.
-- **Native Speaker Corrections (Visual Diff):** A specific UI modal where User A edits User B's text. The Angular frontend renders the original text with red strikethroughs and the new text in green using structured JSON diffs (`{ type: 'correction', original: '...', fixed: '...' }`).
-- **Text-to-Voice (TTS):** Tapping text plays an AI-generated audio pronunciation of the sentence.
-- **Voice-to-Text (Transcription):** Converts an incoming voice note into a readable text transcript using backend speech-to-text APIs.
-- **AI Grammar Checker:** A pre-send tool. Users type a draft, hit the grammar button, and the AI flags errors before the message is sent.
-- **AI Pronunciation Scoring:** Users record a phrase, and the backend grades their accent, intonation, and clarity out of 100.
-
-## 3. Global Social Feed / "Moments" (Powered by Redis Fan-Out)
-
-The Instagram-style community feed where users post public updates, cultural moments, and language questions.
-
-- **Multi-modal Posts:** Users can post text, up to 9 images, or 60-second voice recordings to the public timeline.
-- **Community Corrections:** The visual diff correction tool is embedded directly in the comment section of every post.
-- **Feed Filtering:** Users can filter the feed by "All", "Classmates" (users learning the same language), or "Following".
-- **Audio Reading of Posts:** A button that commands the text-to-speech engine to read the entire text of a Moment aloud.
-- **Post Translation:** One-tap translation for entire Moments and their nested comment threads.
-- **Profile Pinning:** VIP users can pin specific Moments to the top of their profile.
-
-## 4. Audio & Video Broadcasting (Powered by LiveKit)
-
-The massive real-time community engagement and voice practice features.
-
-- **24/7 Drop-in Voice Rooms:** Public audio rooms categorised by language pair.
-- **Roles & Stage Management:** Rooms contain Hosts, Speakers (on stage), and Listeners (audience). Listeners must click "Raise Hand" (`/audio-rooms/raise-hand`) and be approved by the Host to be granted a LiveKit publishing token (`canPublish: true`).
-- **Text Chat Overlay:** A synchronised Centrifugo text chat (`room_{id}`) that runs alongside the live audio.
-- **Topic Specialisation:** Rooms are tagged (e.g., "Pronunciation Focus", "Cultural Exchange", "Beginners Only").
-- **Live Streams (Video):** Professional host broadcasting, usually run by certified language teachers or popular community members.
-- **Co-hosting (Joining the Stage):** The video host can invite a viewer to turn on their camera and join a split-screen 1-on-1 conversation.
-- **Real-Time AI Subtitles:** Live speech-to-text generating closed captions for speakers on stage.
-- **Stream Replays:** Recorded archives of previous video lessons saved to Cloudflare R2.
-
-## 5. Matchmaking & Discovery (Powered by Supabase PostGIS)
-
-The search engine used to find the perfect language exchange partners globally and locally.
-
-- **Goal-Based Pairing:** Matches users based on precise native language and target language alignment.
-- **Advanced Search Filters:** Filtering by Country, City, Age range, Gender, and Proficiency level.
-- **"Serious Learner" Toggle:** An algorithmic filter that hides casual users and prioritises accounts with high correction ratios, active study streaks, and completed profiles.
-- **Time-zone Optimisation:** Prioritises showing users who are currently awake and online (tracked via Centrifugo presence).
-- **Proximity Search:** Exact GPS radius searching (`ST_DWithin`) to find language partners in your physical city.
-
-## 6. Interactive Reading Engine (LingQ Clone in Angular)
-
-The deep immersion reading and vocabulary acquisition system integrated throughout Moments, Chat, and dedicated Reading articles.
-
-- **Universal Word Tokenisation:** Every word in any text is parsed using native `Intl.Segmenter(locale, { granularity: 'word' })` to turn plain text into clickable word tokens.
-- **Click-to-Translate & Define:** Clicking any word token opens an instant pop-up showing dictionaries, audio pronunciation, and example sentences.
-- **Spaced Repetition System (SRS) Vocabulary List:** Clicking and saving a word adds it to the user's `flashcards` table with SRS levels:
-  - Level 0: Blue (New / Unknown token encountered)
-  - Level 1-3: Yellow (Learning / In review queue)
-  - Level 4: White (Known / Mastered vocabulary)
-- **Live Vocabulary Highlighting:** Wherever text appears (Chat messages, Moments, Reading texts), word tokens are dynamically styled with CSS colours reflecting the user's personal vocabulary state.
-- **Audio-Synchronised Reading:** When reading articles or listening to voice recordings with transcripts, the `<audio>` `timeupdate` event synchronises with the `Intl.Segmenter` spans to highlight the currently spoken phrase in real time.
-
-## 7. Ecosystem & Multi-Platform Sync
-
-- **Desktop Web Platform:** A browser-based version of the chat interface, syncing seamlessly with the mobile app via QR code login. Designed for faster typing and keyboard-optimised workflows.
-- **Cloud Chat Backups:** Syncing the local message database to the cloud to persist message histories across devices.
-- **Sister App Integrations:** Single-sign-on (SSO) links to vocabulary builders and AI avatar conversational bots.
-
-## 8. VIP Premium Monetisation & Virtual Economy
-
-The logic enforced by NestJS to drive subscriptions across tiers and power the in-app economy.
-
-- **Consumer VIP Tier (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent):**
-  - Ad Removal: Strips all banner and interstitial advertising from the UI.
-  - Unlimited AI Tool Usage: Removes the daily cap on translations, transcriptions, and transliterations.
-  - Multi-Language Unlocks: Allows studying up to 3 target languages simultaneously (the free tier is locked to 1).
-  - Boosted Search Exposure: Algorithmic priority in the matchmaking database.
-  - Incognito Mode: Allows browsing other profiles without triggering their "Who Viewed Me" notification logs.
-  - Expanded Contact Limits: Increases the number of new user conversations that can be initiated per day.
-- **Developer & Creator Tier (20 UKP / $26 USD per month):** API key generation, advanced analytics, and custom educational bot creation tools.
-- **Virtual Coins Economy (`coins_balance`):** Purchasing virtual coin bundles via Stripe/App Store webhooks. Coins are spent on Virtual Gifts, Audio Room tips for hosts, and premium tutoring sessions.
-
-## 9. Trust, Safety, and Privacy Management
-
-- **Granular Privacy Toggles:** Users can hide their age, hide their exact GPS location, or remove themselves from global search entirely.
-- **Visitor Logs ("Who Viewed Me"):** A dashboard showing exactly who has clicked on a profile (blurred for free users, fully visible for VIPs).
-- **Block & Report System:** Essential moderation tools to combat inappropriate behaviour, scammers, and spam. Reports flag the user ID and message/moment context in the Supabase admin dashboard.
-
-
-## Tech Stack
-
-- **Frontend:** Angular (Standalone Components, Signals, Tailwind CSS)
-  - *Note: For advanced frontend performance, state management (via native Angular Signals), and bundle optimization strategies, please refer to Section 5 of [`ui_architecture.md`](ui_architecture.md).*
-- **Backend:** NestJS, BullMQ
-- **Database:** Supabase (PostgreSQL with PostGIS for spatial queries, pg_trgm for full-text search)
-- **Real-Time Messaging:** Centrifugo + Redis
-- **Live Video/Audio Rooms:** LiveKit SFU
-- **Storage:** Cloudflare R2 (S3-compatible)
-
-## Running with Docker Compose
-
-The repository ships Docker Compose orchestration for the full platform. The base
-`docker-compose.yml` runs a production-style stack, `docker-compose.dev.yml` runs a
-development stack with source mounts and live reload, and `docker-compose.prod.yml`
-runs the production stack behind nginx with the Datadog agent.
-
-The base and development files orchestrate the same core services:
-
-- `api`: NestJS REST API (port 3000)
-- `web`: Angular frontend (port 80 in production, 4200 in development)
-- `cache`: Redis 7 (port 6379)
-- `websocket`: Centrifugo v5 (ports 8000 and 8001)
-- `sfu`: LiveKit v2 media server (ports 7880 and 7881)
-- plus `prometheus` and `grafana` for observability
-
-Start the production-style stack:
+For the production-style local stack:
 
 ```bash
 cp .env.example .env
 docker compose up -d
 ```
 
-For development with hot reload:
+## UI and administration
 
-```bash
-docker compose -f docker-compose.dev.yml up
-```
+The consumer frontend owns the primary Spartan UI/component-system implementation and the semantic visual contracts. The standalone admin portal follows the same accessibility, logical-direction, focus, reduced-motion, forced-colour, density, typography, spacing and surface rules rather than introducing a parallel visual language.
 
-The NestJS API applies a global `/api` prefix, so the compose health checks poll
-`http://localhost:3000/api/health`.
+Administration security is server authoritative. Angular route/capability guards improve UX but are never the security boundary. NestJS admin controllers require authenticated admin context and explicit capabilities; administrative mutations are rate-limited and durably audited.
 
-## Advanced AI Factory Tooling
+## Critical product verification
 
-The repository contains a supervised OpenHands factory under `automation/`. It uses ChatGPT Plus subscription
-authentication, OpenCode Go, then Gemini Flash free tier as an ordered provider chain. Every task uses a
-bounded conversation and an isolated rootless Podman worktree. The coding process cannot push to `main` or
-merge its own pull request.
+`config/critical-product-contracts.json` defines machine-checked cross-application contracts for the admin portal and anchors for critical authentication, user/profile, audio-room, moderation and administration journeys. Canonical CI also runs backend E2E tests and browser-level frontend regression coverage.
 
-Production deployment, authentication, recovery, costs, security boundaries and operator commands are
-documented in [the factory runbook](docs/factory/README.md).
+## Advanced AI Factory tooling
+
+The repository contains the **bounded OpenHands Factory** under `automation/`. It is the active autonomous coding control plane for the VPS; the retired swarm architecture must not be reintroduced.
+
+The default production execution path is:
+
+1. OpenHands owns one bounded coding conversation inside an isolated rootless Podman worktree.
+2. OpenAI **Codex subscription OAuth** is the primary LLM provider inside OpenHands.
+3. **OpenCode Go** is an optional fallback when its key and model are both configured.
+4. Gemini configuration is retained only for migration/diagnostic compatibility and cannot be enabled as a production Factory LLM tier.
+5. An optional outer phase-specific `AgentRouter` exists for deliberately configured CLI providers; it is disabled by default and is separate from the retired swarm.
+
+The Factory records provider provenance, uses health/circuit-breaker state, performs bounded failover for provider failures, keeps task failures separate from provider failures, verifies changes before PR creation, independently reviews work where provider diversity is available, and preserves reviewed-SHA/required-check merge safety.
+
+Operational recovery commands, authentication layout, budgets, security boundaries and deployment details live in the [Factory runbook](docs/factory/README.md).
+
+## Repository governance
+
+Tool-specific directories such as `.claude/`, `.cursor/`, `.gemini/`, `.junie/`, `.windsurf/`, `.jules/`, `.Jules/`, `.agents/` and `.mcp/` are adapters for external tools. They do not form independent sources of engineering truth. Runtime output such as test results, coverage, Factory state and logs must not be committed.
+
+Changes that materially affect architecture should update executable code/tests first, then the canonical document for that domain, then any provider-specific adapters or generated documentation that depend on it.
