@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-import subprocess
 
 
 LEGACY_SYSTEMD_UNITS = (
@@ -65,7 +65,7 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
                 LegacyFinding(
                     "systemd",
                     unit,
-                    is_active,
+                    is_active or is_enabled,
                     f"active={is_active} enabled={is_enabled}",
                 )
             )
