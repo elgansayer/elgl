@@ -6,6 +6,7 @@ import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminController } from './admin.controller';
+import { AdminLoginHistoryQueryService } from './admin-login-history-query.service';
 import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminOperationalEventsV1Controller } from './admin-operational-events-v1.controller';
 import { AdminOperationalEventsService } from './admin-operational-events.service';
@@ -32,6 +33,7 @@ import { AdminGuard } from './guards/admin.guard';
     AdminAuthorizationService,
     AdminAuditService,
     AdminAuditQueryService,
+    AdminLoginHistoryQueryService,
     AdminModerationQueryService,
     AdminOperationalEventsService,
     AdminRoleAssignmentsService,
