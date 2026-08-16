@@ -139,6 +139,10 @@ class FactoryConfig(BaseModel):
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
                 "the retired swarm/older architecture must not share this control plane"
             )
+        if self.gemini_enabled:
+            raise ValueError(
+                "GEMINI_ENABLED is retired; production routing is Codex OAuth -> OpenCode Go"
+            )
         return self
 
     @classmethod
@@ -155,6 +159,7 @@ class FactoryConfig(BaseModel):
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
 
         import json
+
         agents_config = AgentsConfig()
         agents_config_path = env.get("FACTORY_AGENTS_CONFIG")
         if agents_config_path:

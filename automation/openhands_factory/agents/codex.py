@@ -41,7 +41,7 @@ class CodexProvider:
         started_at = datetime.now(UTC)
         try:
             sandbox = SandboxRunner(request.cwd)
-            cmd = [self.command, "--prompt", request.prompt]
+            cmd = ["caveman", self.command, "--prompt", request.prompt]
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
 
             stdout_text = await asyncio.to_thread(wrapper.execute)
