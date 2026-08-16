@@ -10,7 +10,7 @@ import { toastsSignal } from '../../../services/toast.service';
     >
       @for (toast of toastsSignal(); track toast.id) {
         <div
-          class="px-4 py-2 rounded-full shadow-lift font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"
+          class="px-4 py-2 rounded-card shadow-lift font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"
           [class.bg-surface-200]="toast.type === 'info'"
           [class.text-text-primary]="toast.type === 'info'"
           [class.bg-danger]="toast.type === 'error'"

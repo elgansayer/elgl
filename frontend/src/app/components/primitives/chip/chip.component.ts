@@ -44,7 +44,7 @@ export class AppChipComponent {
 
   readonly chipClasses = computed(() => {
     const base =
-      'inline-flex items-center rounded-xl font-bold text-xs ps-3 pe-3 pt-1.5 pb-1.5 transition-all cursor-pointer';
+      'inline-flex items-center rounded-pill font-bold text-xs ps-3 pe-3 pt-1.5 pb-1.5 transition-all cursor-pointer';
 
     let variantClass = '';
     switch (this.variant()) {
