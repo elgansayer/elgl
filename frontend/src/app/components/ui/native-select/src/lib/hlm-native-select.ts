@@ -45,10 +45,15 @@ export const HLM_NATIVE_SELECT_VALUE_ACCESSOR = {
       [class]="_computedSelectClass()"
       [attr.data-size]="size()"
       [attr.aria-invalid]="_ariaInvalid() ? 'true' : null"
+      [attr.aria-label]="ariaLabel()"
+      [attr.aria-labelledby]="ariaLabelledby()"
+      [attr.aria-describedby]="ariaDescribedby()"
       [attr.data-invalid]="_ariaInvalid() ? 'true' : null"
       [attr.data-dirty]="_dirty?.() ? 'true' : null"
       [attr.data-touched]="_touched?.() ? 'true' : null"
       [attr.data-matches-spartan-invalid]="_spartanInvalid() ? 'true' : null"
+      [attr.name]="name()"
+      [required]="required()"
       [value]="value()"
       [disabled]="_disabled()"
       (change)="_valueChanged($event)"
@@ -91,6 +96,11 @@ export class HlmNativeSelect implements ControlValueAccessor {
   );
 
   public readonly size = input<'sm' | 'default'>('default');
+  public readonly name = input<string | null>(null);
+  public readonly required = input<boolean, BooleanInput>(false, { transform: booleanAttribute });
+  public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
+  public readonly ariaLabelledby = input<string | null>(null, { alias: 'aria-labelledby' });
+  public readonly ariaDescribedby = input<string | null>(null, { alias: 'aria-describedby' });
 
   public readonly disabled = input<boolean, BooleanInput>(false, { transform: booleanAttribute });
 
@@ -113,6 +123,8 @@ export class HlmNativeSelect implements ControlValueAccessor {
   public readonly value = linkedSignal(this.valueInput);
 
   public readonly valueChange = output<string | undefined | null>();
+  /** Compatibility output for native-select migrations. Prefer valueChange for new code. */
+  public readonly change = output<Event>();
 
   protected _onChange?: ChangeFn<string | undefined | null>;
   protected _onTouched?: TouchFn;
@@ -134,6 +146,7 @@ export class HlmNativeSelect implements ControlValueAccessor {
     const value = (event.target as HTMLSelectElement).value;
     this.value.set(value);
     this.valueChange.emit(value);
+    this.change.emit(event);
     this._onChange?.(value);
     this._onTouched?.();
   }
