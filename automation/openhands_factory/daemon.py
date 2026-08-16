@@ -13,6 +13,7 @@ from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
+from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
@@ -52,14 +53,10 @@ def queue_snapshot(
     active_task_ids: set[str] | None = None,
     now: datetime | None = None,
 ) -> dict[str, object]:
-    """Summarize the queue into restart-safe operator-facing daemon state."""
-
     active = active_task_ids or set()
     current = now or datetime.now(UTC)
     state_counts = Counter(job.state.value for job in jobs.values())
-    non_terminal = [
-        job for job in jobs.values() if job.state.value not in {"done", "quarantined"}
-    ]
+    non_terminal = [job for job in jobs.values() if job.state.value not in {"done", "quarantined"}]
     backing_off = [
         job
         for job in non_terminal
@@ -125,6 +122,9 @@ class FactoryDaemon:
         lock = FileLock(str(self.config.state_dir / "factory.lock"))
         try:
             with lock.acquire(timeout=0):
+                # Refuse a second autonomous repository owner before publishing a
+                # fresh runtime generation into durable state.
+                assert_single_owner(self.config.repository)
                 self._activate_generation()
                 return self._loop()
         except Timeout:
