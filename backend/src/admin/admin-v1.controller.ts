@@ -23,6 +23,7 @@ import {
 } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminLoginHistoryQueryService } from './admin-login-history-query.service';
 import { AdminModerationQueryService } from './admin-moderation-query.service';
 import {
   AdminRoleInventoryEntry,
@@ -60,6 +61,7 @@ export class AdminV1Controller {
     private readonly authorization: AdminAuthorizationService,
     private readonly adminService: AdminService,
     private readonly userDetailService: AdminUserDetailService,
+    private readonly loginHistoryQuery: AdminLoginHistoryQueryService,
     private readonly audit: AdminAuditService,
     private readonly auditQuery: AdminAuditQueryService,
     private readonly moderationQuery: AdminModerationQueryService,
@@ -162,7 +164,7 @@ export class AdminV1Controller {
   @ApiOperation({
     summary: 'Inspect bounded privacy-scrubbed login history for one user',
     description:
-      'Returns at most 50 recent login-history entries using the existing privacy-scrubbed backend service. This endpoint is intentionally separated from users.read because IP and user-agent derived data are more sensitive investigation metadata.',
+      'Returns at most 50 recent login-history entries using a strict privacy-scrubbed query. This endpoint is intentionally separated from users.read because IP and user-agent derived data are more sensitive investigation metadata.',
   })
   @ApiParam({ name: 'id', description: 'Target user identifier' })
   @ApiOkResponse({ description: 'Privacy-scrubbed login history returned' })
@@ -180,7 +182,7 @@ export class AdminV1Controller {
 
     let result: LoginHistoryEntry[];
     try {
-      result = await this.adminService.getLoginHistory(id);
+      result = await this.loginHistoryQuery.list(id);
     } catch (error) {
       await this.audit.record({
         actorUserId,
