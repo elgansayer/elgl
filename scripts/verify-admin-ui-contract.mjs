@@ -6,6 +6,12 @@ const stylesPath = path.join(root, 'admin-portal/src/styles.scss');
 const appPath = path.join(root, 'admin-portal/src/app/admin-app.component.ts');
 const styles = fs.readFileSync(stylesPath, 'utf8');
 const app = fs.readFileSync(appPath, 'utf8');
+const adminPackage = JSON.parse(
+  fs.readFileSync(path.join(root, 'admin-portal/package.json'), 'utf8'),
+);
+const frontendPackage = JSON.parse(
+  fs.readFileSync(path.join(root, 'frontend/package.json'), 'utf8'),
+);
 
 const requiredStyleContracts = [
   '--admin-bg',
@@ -30,6 +36,36 @@ for (const marker of ['skip-link', 'aria-label="Admin navigation"', 'routerLinkA
   if (!app.includes(marker)) {
     errors.push(`admin shell is missing accessibility/navigation marker: ${marker}`);
   }
+}
+
+for (const [section, dependency] of [
+  ['dependencies', '@spartan-ng/brain'],
+  ['dependencies', '@angular/cdk'],
+  ['devDependencies', '@spartan-ng/cli'],
+  ['devDependencies', 'tailwindcss'],
+  ['devDependencies', 'tw-animate-css'],
+]) {
+  if (!adminPackage[section]?.[dependency]) {
+    errors.push(`admin portal must declare ${dependency} in ${section}`);
+  }
+}
+
+if (
+  adminPackage.dependencies?.['@spartan-ng/brain'] !==
+  frontendPackage.dependencies?.['@spartan-ng/brain']
+) {
+  errors.push('admin and consumer frontend must use the same Spartan brain version range');
+}
+if (
+  adminPackage.devDependencies?.['@spartan-ng/cli'] !==
+  frontendPackage.devDependencies?.['@spartan-ng/cli']
+) {
+  errors.push('admin and consumer frontend must use the same Spartan CLI version range');
+}
+
+const ownershipDoc = path.join(root, 'admin-portal/src/app/ui/README.md');
+if (!fs.existsSync(ownershipDoc)) {
+  errors.push('admin portal is missing its repository-owned Spartan Helm ownership document');
 }
 
 const forbiddenStyles = [
@@ -67,4 +103,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log('Admin UI semantic, accessibility, RTL and density contract passed.');
+console.log('Admin Spartan, semantic, accessibility, RTL and density contract passed.');
