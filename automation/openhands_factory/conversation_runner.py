@@ -51,11 +51,13 @@ class ConversationResult:
     task_id: str
     elapsed_seconds: float
     completed: bool
-    provider: ProviderName
-    model: str
-    role: str
-    fallback: bool
-    fallback_reason: str | None
+    # Defaults preserve the original three-field public/test interface. Production
+    # ConversationRunner always supplies the real attribution values explicitly.
+    provider: ProviderName = ProviderName.OPENAI_SUBSCRIPTION
+    model: str = ""
+    role: str = "factory-phase"
+    fallback: bool = False
+    fallback_reason: str | None = None
 
 
 def _conversation_process(
