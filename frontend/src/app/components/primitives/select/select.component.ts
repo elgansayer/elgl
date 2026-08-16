@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     @if (label()) {
-      <label [for]="selectId()" class="block font-bold text-xs text-text-primary mb-1">
+      <label [for]="selectId()" class="mb-1 block text-xs font-bold text-text-primary">
         {{ label() | t }}
       </label>
     }
@@ -49,10 +49,10 @@ export class AppSelectComponent {
 
   readonly selectClasses = computed(() => {
     const base =
-      'block w-full rounded-app border ps-3 pe-3 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
+      'block w-full rounded-app border ps-3 pe-3 pt-2.5 pb-2.5 text-sm font-medium transition-colors';
     const state = this.disabled()
-      ? 'bg-surface-100 text-text-muted border-surface-100 cursor-not-allowed'
-      : 'bg-surface-300 border-surface-100 text-text-primary cursor-pointer';
+      ? 'cursor-not-allowed border-surface-100 bg-surface-100 text-text-muted'
+      : 'cursor-pointer border-surface-100 bg-surface-300 text-text-primary';
     const extra = this.customClass();
     return `${base} ${state}${extra ? ' ' + extra : ''}`.trim();
   });
