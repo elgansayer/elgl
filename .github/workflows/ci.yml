@@ -32,10 +32,10 @@ jobs:
             command: npm run build
           - directory: backend
             check: unit
-            command: npm run test:cov
+            command: mkdir -p test-results && npm run test:cov -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/unit.json
           - directory: backend
             check: e2e
-            command: npm run test:e2e
+            command: mkdir -p test-results && npm run test:e2e -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/e2e.json
           - directory: frontend
             check: static-analysis
             command: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check
@@ -71,6 +71,15 @@ jobs:
           name: backend-coverage-${{ github.sha }}
           path: backend/coverage
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failed backend test report
+        if: failure() && matrix.directory == 'backend' && (matrix.check == 'unit' || matrix.check == 'e2e')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-${{ matrix.check }}-failure-report-${{ github.sha }}
+          path: backend/test-results/${{ matrix.check }}.json
+          if-no-files-found: warn
           retention-days: 14
 
   constitution:
@@ -115,6 +124,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Summarize canonical CI groups
+        env:
+          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          FACTORY_RESULT: ${{ needs.factory.result }}
+        run: |
+          failed=0
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+            if [ "$result" != "success" ]; then
+              failed=$((failed + 1))
+            fi
+          done
+
+          {
+            echo "### Canonical CI summary"
+            echo
+            echo "| Group | Result |"
+            echo "| --- | --- |"
+            echo "| application-checks | $APPLICATION_CHECKS_RESULT |"
+            echo "| constitution | $CONSTITUTION_RESULT |"
+            echo "| factory | $FACTORY_RESULT |"
+            echo
+            echo "Failing canonical groups: **$failed**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Require every canonical CI group to pass
         env:
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
