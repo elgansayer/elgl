@@ -11,6 +11,7 @@
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
+    "check:spartan-boundaries": "node scripts/verify-spartan-boundaries.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
     "lint": "npm run lint:frontend && npm run lint:backend",
@@ -31,7 +32,7 @@
     "test:frontend": "cd frontend && npm run test",
     "test:backend": "cd backend && npm run test",
     "test:admin": "cd admin-portal && npm run test",
-    "verify": "npm run check:constitution && npm run check:design-sync && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
+    "verify": "npm run check:constitution && npm run check:design-sync && npm run check:spartan-boundaries && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
