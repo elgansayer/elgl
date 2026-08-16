@@ -32,6 +32,9 @@ def test_execution_architecture_locks_openhands_control_plane() -> None:
     assert "OpenAI subscription OAuth / Codex" in architecture
     assert "OpenCode Go" in architecture
     assert "only production fallback" in architecture
-    assert "Direct Claude Code, Codex CLI, Gemini/Google Agent, and OpenCode CLI adapters" in architecture
+    direct_adapters = (
+        "Direct Claude Code, Codex CLI, Gemini/Google Agent, and OpenCode CLI adapters"
+    )
+    assert direct_adapters in architecture
     assert "not production routing peers" in architecture
     assert "fails closed" in architecture
