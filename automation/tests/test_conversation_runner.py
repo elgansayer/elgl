@@ -52,7 +52,7 @@ def config(tmp_path: Path) -> FactoryConfig:
     )
 
 
-def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
+def test_selected_provider_is_passed_to_spawned_conversation(tmp_path: Path) -> None:
     runner = ConversationRunner(config(tmp_path), Factory())
     result = runner.run(Task("one", "Task", "body", "test", 1), tmp_path, "prompt")
     assert result.completed
