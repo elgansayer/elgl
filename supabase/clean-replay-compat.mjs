@@ -197,4 +197,13 @@ ALTER TABLE public.escrows
   ADD COLUMN IF NOT EXISTS interests VARCHAR(50)[];
 `,
   },
+  {
+    beforeSourceFile: '20260808000003_optimise_video_classroom_indices.sql',
+    name: 'reconcile_duplicate_call_log_indices_before_second_optimiser',
+    reason:
+      '20260808000002_optimise_video_classroom_indices.sql already creates idx_call_logs_caller_type_started and idx_call_logs_receiver_type_started, while the immediately following optimiser drops different legacy names and recreates these two names without IF NOT EXISTS.',
+    sql: `DROP INDEX IF EXISTS public.idx_call_logs_caller_type_started;
+DROP INDEX IF EXISTS public.idx_call_logs_receiver_type_started;
+`,
+  },
 ];
