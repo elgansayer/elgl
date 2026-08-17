@@ -43,6 +43,9 @@ describe('CulturalTipComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Bowing is the customary greeting in Japan.');
     const region = fixture.nativeElement.querySelector('[role="region"]');
     expect(region).toBeTruthy();
+    expect(region.getAttribute('aria-label')).toBeTruthy();
+    expect(region.hasAttribute('aria-labelledby')).toBe(false);
+    expect(fixture.nativeElement.querySelector('#cultural-tip-heading')).toBeNull();
   });
 
   it('should render nothing when no guide is found for the language', async () => {

@@ -11,9 +11,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         class="ps-4 pe-4 py-3 rounded-xl bg-surface-2 border-s-4 border-e-0 border-accent
                text-sm leading-relaxed"
         role="region"
-        aria-labelledby="cultural-tip-heading"
+        [attr.aria-label]="'culturalGuide.title' | t"
       >
-        <h3 id="cultural-tip-heading" class="font-semibold mb-1">
+        <h3 class="font-semibold mb-1">
           {{ 'culturalGuide.title' | t }}
         </h3>
         <p>{{ text }}</p>
