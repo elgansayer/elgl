@@ -93,12 +93,13 @@ and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeabil
 review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
 enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
 
-GitHub applies a no-bypass baseline ruleset requiring pull requests and strict `CI / required`, plus a second
-review-only ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass the
-review-only rule, and only through an existing pull request. This permits a deliberate human merge without giving
-the Factory, roles, apps, teams, or deploy keys a route around CI. Expected-source binding through a dedicated
-GitHub App is still required to attest the publisher; online doctor validates the layered rules, context names,
-and narrow owner bypass. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
+GitHub applies a baseline ruleset requiring pull requests and strict `CI / required`, plus a second review-only
+ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass either ruleset,
+and only through an existing pull request. This permits a deliberate human waiver of CI, review, or both while
+Factory automation continues to require literal success from both statuses. Roles, apps, teams, deploy keys,
+direct pushes, and always-mode bypasses remain prohibited. Expected-source binding through a dedicated GitHub App
+is still required to attest the publisher; online doctor validates the layered rules, context names, and narrow
+owner bypass. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 ## Recovery authority
 

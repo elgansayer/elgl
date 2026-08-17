@@ -72,9 +72,10 @@ the current head to review.
 - The merge call is atomically bound to the inspected head SHA with `--match-head-commit`.
 - `CI / required` and `factory/independent-review` must both report literal `SUCCESS` for autonomous merge.
   Missing, skipped, neutral, pending, or failed required contexts fail closed.
-- A no-bypass baseline ruleset on `main` requires pull requests and strict `CI / required`. A review-only ruleset
-  requires `factory/independent-review`. Its sole optional bypass actor is the exact repository-owner user in
-  pull-request mode. The daemon, apps, roles, teams, and deploy keys cannot use that manual path. Pin each status
+- A baseline ruleset on `main` requires pull requests and strict `CI / required`. A review-only ruleset requires
+  `factory/independent-review`. The sole optional bypass actor on either ruleset is the exact repository-owner
+  user in pull-request mode. Roles, teams, apps, deploy keys, direct pushes, and always-mode bypasses remain
+  prohibited. Factory automation still requires both statuses and never invokes the manual path. Pin each status
   to its expected GitHub App integration; a context name alone does not attest its publisher.
 - A human `CHANGES_REQUESTED` review blocks merge.
 - GitHub comments describe user-visible lifecycle changes and never expose credentials or routine provider
@@ -84,7 +85,7 @@ the current head to review.
   bypass merge safety.
 - The pre-push quality gate rejects provider credential directories, high-confidence tokens, and private keys.
 
-The owner-only review override is documented in
+The owner-only pull-request override is documented in
 [`docs/factory/MANUAL-MERGE.md`](../../docs/factory/MANUAL-MERGE.md). Factory automation never invokes it.
 
 ## Parallelism and recovery

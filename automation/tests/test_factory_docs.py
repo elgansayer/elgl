@@ -100,7 +100,7 @@ def test_runbook_documents_agent_and_verification_credential_boundaries() -> Non
         "disposable empty directories",
         "run `gh auth login`",
         "persistent service-home GitHub credentials",
-        "one no-bypass baseline GitHub ruleset requires pull requests",
+        "one baseline GitHub ruleset requires pull requests",
     ):
         assert marker in runbook
     assert "Do not authenticate GitHub CLI as `hellotalk-factory`" in subscriptions
@@ -145,7 +145,7 @@ def test_control_panel_documents_remote_visibility_and_fixed_command_boundary() 
         assert marker in panel
 
 
-def test_manual_merge_is_owner_only_and_cannot_bypass_ci() -> None:
+def test_manual_merge_is_owner_only_and_can_bypass_all_checks() -> None:
     runbook = RUNBOOK.read_text(encoding="utf-8")
     workflow = AI_WORKFLOW.read_text(encoding="utf-8")
     manual_merge = MANUAL_MERGE.read_text(encoding="utf-8")
@@ -153,10 +153,11 @@ def test_manual_merge_is_owner_only_and_cannot_bypass_ci() -> None:
     assert "MANUAL-MERGE.md" in runbook
     assert "MANUAL-MERGE.md" in workflow
     for marker in (
-        "sole bypass actor is the exact repository-owner `User`",
+        "Both rulesets have one bypass actor: the exact repository-owner `User`",
         "bypass_mode=pull_request",
-        "cannot use this path to push directly to `main`",
-        "Wait for `CI / required` to report success",
+        "push directly to `main`",
+        "pull-request boundary",
+        "Prefer waiting for `CI / required`",
         "Factory automation never invokes it",
     ):
         assert marker in manual_merge
