@@ -178,7 +178,8 @@ class FactoryDaemon:
                         for task_id in recovered:
                             self.pipeline.tasks.release(task_id)
                             LOGGER.warning(
-                                "Recovered abandoned Factory attempt for task %s; retry is backed off",
+                                "Recovered abandoned Factory attempt for task %s; "
+                                "retry is backed off",
                                 task_id,
                             )
                         if recovered:
