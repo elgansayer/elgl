@@ -15,6 +15,10 @@ from openhands_factory.failure_attribution import failed_check_names
 from openhands_factory.models import Task
 from openhands_factory.repository_guard import ProcessResult, run_process
 
+REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
+_PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
+_ALLOWED_TERMINAL_CONCLUSIONS = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
+
 
 class GitHubRunner(Protocol):
     def __call__(
@@ -467,16 +471,39 @@ class GitHubClient:
         item = json.loads(output)
         check_rollup = item.get("statusCheckRollup", [])
         conclusions: list[str] = []
+        observed_checks: set[str] = set()
+        successful_checks: set[str] = set()
         pending = False
         for check in check_rollup:
-            conclusion = check.get("conclusion")
-            status = check.get("status")
-            if isinstance(conclusion, str) and conclusion:
+            name = str(check.get("name") or check.get("context") or "")
+            if name:
+                observed_checks.add(name)
+            conclusion = str(check.get("conclusion") or "")
+            status = str(check.get("status") or "")
+            state = str(check.get("state") or "")
+            if conclusion:
                 conclusions.append(conclusion)
-            if status in {"QUEUED", "IN_PROGRESS", "PENDING", "WAITING"}:
+            if name and (conclusion == "SUCCESS" or state == "SUCCESS"):
+                successful_checks.add(name)
+            if status in _PENDING_CHECK_STATES or state in _PENDING_CHECK_STATES:
                 pending = True
-        passed = bool(conclusions) and all(
-            conclusion in {"SUCCESS", "NEUTRAL", "SKIPPED"} for conclusion in conclusions
+
+        failed_checks = failed_check_names(check_rollup)
+        missing_required = REQUIRED_FACTORY_MERGE_CHECKS - observed_checks
+        if missing_required:
+            # GitHub creates workflow check-runs asynchronously. Treat an absent
+            # canonical gate as pending rather than allowing a temporary partial
+            # rollup to arm auto-merge.
+            pending = True
+        required_passed = REQUIRED_FACTORY_MERGE_CHECKS.issubset(successful_checks)
+        terminal_checks_passed = all(
+            conclusion in _ALLOWED_TERMINAL_CONCLUSIONS for conclusion in conclusions
+        )
+        passed = (
+            required_passed
+            and terminal_checks_passed
+            and not pending
+            and not failed_checks
         )
         return PullRequestStatus(
             number=int(item["number"]),
@@ -487,5 +514,5 @@ class GitHubClient:
             head_sha=str(item["headRefOid"]),
             checks_passed=passed,
             checks_pending=pending,
-            failed_checks=failed_check_names(check_rollup),
+            failed_checks=failed_checks,
         )
