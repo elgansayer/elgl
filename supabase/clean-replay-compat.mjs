@@ -236,4 +236,34 @@ DROP INDEX IF EXISTS public.idx_call_logs_receiver_type_started;
 );
 `,
   },
+  {
+    beforeSourceFile: '20260808000004_finalise_rls_discovery_map.sql',
+    name: 'remove_discovery_rpc_before_broken_historical_drop_loop',
+    reason:
+      'The historical finalise migration reconstructs DROP FUNCTION text from regprocedure by appending a second closing parenthesis, so its dynamic SQL is syntactically invalid whenever any search_nearby_users overload exists. Removing the temporary legacy overload makes that loop empty; the migration then creates its intended definitive 12-argument function.',
+    sql: `DROP FUNCTION IF EXISTS public.search_nearby_users(
+  double precision,
+  double precision,
+  double precision,
+  uuid,
+  character varying,
+  character varying,
+  boolean
+);
+DROP FUNCTION IF EXISTS public.search_nearby_users(
+  double precision,
+  double precision,
+  double precision,
+  uuid,
+  character varying[],
+  character varying,
+  boolean,
+  character varying,
+  character varying,
+  integer,
+  integer,
+  boolean
+);
+`,
+  },
 ];
