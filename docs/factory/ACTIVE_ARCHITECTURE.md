@@ -1,43 +1,107 @@
-# Active Architecture: The Subscription-First CLI Orchestrator
+# Active Architecture: OpenHands Agent Canvas Factory
 
-## Overview
+## Authority
 
-The OpenHands Factory has been fully rewritten into a **Subscription-First CLI Orchestrator**. 
-This system deprecates all legacy architecture guarding, raw LLM API keys, and custom LLM inference pipelines in favor of invoking first-party CLI agents (`claude`, `codex`, `gemini`, `opencode`) using the enterprise LLM subscriptions that the organization already pays for.
+The production autonomous-development control plane is the OpenHands SDK Factory in
+`automation/openhands_factory`. OpenHands owns implementation, security review,
+quality repair, independent review, and CI-repair conversations. The repository
+must not add a second outer agent router, direct-provider executor swarm, or
+GitHub-Actions issue resolver beside this control plane.
 
-By orchestrating the native CLI agents, we offload context management, memory, indexing, tool routing, and network proxying directly to the AI providers. 
+`FACTORY_ARCHITECTURE=openhands-agent-canvas-v1` is the static architecture
+identity. The daemon separately creates a per-process generation token after it
+acquires the Factory lock so stale processes cannot keep writing durable state.
 
-## 1. Provider Ecosystem & Routing
+## 1. Conversation and provider boundary
 
-The factory dynamically routes tasks to the best provider based on their CLI profile using `agents/policy.py` and `config.py`.
+`FactoryPipeline` delegates model work to `ConversationRunner`, which starts one
+bounded OpenHands SDK conversation for the requested phase. Provider selection is
+conversation-scoped and remains stable for the life of that conversation.
 
-- **Claude Code (`claude`)**: Deployed for complex problem solving, architecture design, and refactoring (`Architect`, `Implementation`).
-- **OpenAI Codex (`codex`)**: Used for code generation, test creation, and targeted patching.
-- **Gemini (`gemini`)**: Employed for PR reviews, validation, and analytics (`Review`).
-- **OpenCode (`opencode`)**: Utilized for repository exploration and bug localization.
+The authoritative production model-provider order is exactly:
 
-## 2. Secure Execution via Podman & PTY
+1. **OpenAI subscription / Codex OAuth**
+2. **OpenCode Go**
 
-Each CLI provider is executed in strict isolation:
-- **SandboxRunner**: Ephemeral `localhost/hellotalk-factory-worker:current` podman containers.
-- **Network Isolation**: `--network none` ensures agents cannot exfiltrate data, force them to use the factory's tools.
-- **PTYWrapper**: A robust pseudo-terminal emulator strips ANSI colour codes, handles interactive TTY prompts (like "Are you sure?"), and prevents agents from hanging indefinitely on unhandled `stdin`.
+If both production providers are unavailable, the job enters the Factory's bounded
+recovery path. It does not silently dispatch Claude Code, Gemini, a raw OpenAI API
+key, or another direct execution provider.
 
-## 3. Caveman Integration
+Historical Claude/Codex/Google/OpenCode direct-executor configuration and Gemini
+helpers may remain temporarily for migration/diagnostic compatibility, but they
+must be disabled and must never be selected by production routing. Doctor and CI
+should treat an enabled direct executor or a non-OpenHands phase route as
+architecture drift.
 
-We employ the **Caveman Local Proxy/CLI Wrap** (`@caveman-ai/cli`) to aggressively shrink tokens across all models.
-- **Implementation**: We prepend the `caveman` command in the `SandboxRunner` execution vector (e.g. `caveman claude`).
-- **No Gateway Required**: By leveraging the local CLI tools, we bypass the need for a hosted `GATEWAY_URL` or `CAVE_API_KEY`. The local agent directly interfaces with the Caveman CLI engine, preserving 65% of tokens in the shell outputs.
+## 2. Execution isolation
 
-## 4. Self-Healing & the Meta-Agent
+Each issue is processed from durable Factory state and an isolated worktree.
+Repository/tool execution is constrained by the Factory security boundary and its
+Podman-backed worker tooling. Controller credentials are not a license to bypass
+that boundary or push directly to protected `main`.
 
-The new system employs `meta_agent.py` to ensure high availability:
-- **Continuous Monitoring**: Tailing `/var/log/hellotalk-factory.log` to detect tracebacks or catastrophic failures.
-- **Autonomous Recovery**: Upon detecting a failure, `meta_agent.py` spawns a high-priority `claude` subprocess to diagnose and patch the underlying bug without human intervention.
-- **Resilience**: A fully closed-loop validation pipeline, ensuring "A failing build MUST NOT reach `main`."
+The old direct CLI-agent architecture (`claude`, `codex`, `gemini`, `opencode` as
+outer task executors), the historical AI swarm, Aider-style workers, autonomous
+GitHub Actions resolvers/reviewers, Caveman orchestration, and a separate
+self-patching meta-agent are not part of the active production architecture.
+Historical documentation or migration code may mention them, but executable
+production paths must not resurrect them.
 
-## 5. Clean Slate Policy
+## 3. Durable bounded recovery
 
-To reinforce the subscription-first mandate:
-- Legacy autonomous executors, swarm endpoints, and unused agent branches have been retired.
-- Lingering pull requests related to the legacy pipeline are closed in favor of this single, deterministic CLI wrapper stack.
+The daemon owns scheduling and restart recovery. Durable job state records attempts,
+failure class, stable failure fingerprint, provider history, and next-attempt time.
+Repeated failures use deterministic jittered backoff capped by policy and provider
+circuit breakers rather than an unbounded hot loop.
+
+Durable execution states abandoned by a crashed or restarted daemon are detected by
+the watchdog, classified through the normal timeout failure path, have their stale
+lease released, and are retried through the same bounded policy. Live worker
+futures and polling-only `CI_PENDING` / `MERGE_QUEUED` jobs are never treated as
+abandoned workers.
+
+Terminal issue quarantine is not the production recovery strategy. Legacy
+quarantine state is migration compatibility only and must not be reintroduced as
+the normal outcome of repeated failures.
+
+## 4. Review and merge authority
+
+A Factory pull request is reviewed on the same head SHA it proposes to merge.
+Independent review should prefer the other healthy production provider when
+available, while remaining provider-stable within that review conversation.
+
+Factory merge readiness is fail-closed. Both named authorities must be present and
+successful before Factory can arm auto-merge:
+
+- `CI / required`
+- `factory/independent-review`
+
+Missing canonical checks are treated as pending, not as success. The reviewed head
+SHA must still match before merge is enabled. `.github/workflows/factory-merge.yml`
+enforces the same named contexts for its scheduled merge gate.
+
+Repository settings must independently require the canonical aggregate for manual
+and integration merges as well. Issue #7250 tracks the active `main` ruleset gap
+because repository-settings mutation is outside the connected automation surface.
+
+## 5. Sources of truth
+
+| Concern | Authority |
+| --- | --- |
+| outer execution control plane | `automation/openhands_factory/pipeline.py`, `conversation_runner.py` |
+| production provider order | `automation/openhands_factory/provider_profiles.py` |
+| provider health / circuit breakers | `automation/openhands_factory/provider_health.py` and related health stores |
+| durable retries / abandoned attempts | `automation/openhands_factory/jobs.py`, `retry_policy.py`, `daemon.py` |
+| runtime diagnostics | `automation/openhands_factory/doctor.py` |
+| static architecture guard | `automation/openhands_factory/architecture_guard.py` |
+| canonical application/Factory CI | `.github/workflows/ci.yml` |
+| Factory-reviewed merge gate | `.github/workflows/factory-merge.yml` |
+| system service configuration | `config/systemd/hellotalk-factory.service`, `factory.env.example` |
+
+## 6. Change policy
+
+Changes to provider order, authentication, execution isolation, outer routing, retry
+authority, or merge authority must update this document in the same logical change
+and add or update executable regression coverage. Dependency upgrades that change
+OpenHands/provider/runtime behavior require migration-specific acceptance criteria;
+they must not silently redefine the control plane through a package update alone.
