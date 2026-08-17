@@ -116,6 +116,7 @@ def test_current_audit_separates_source_quality_from_live_readiness() -> None:
         "GitHub can merge around the Factory",
         "service-account provider capacity is unknown",
         "August 2026 model policy",
+        "Codex option incompatibility",
         "No paid model task was launched",
         "Required activation sequence",
     ):

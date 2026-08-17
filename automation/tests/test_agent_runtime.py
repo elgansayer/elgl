@@ -339,6 +339,24 @@ def test_process_failure_classification(text: str, kind: AgentFailureKind) -> No
         assert failure.retry_after_seconds == 30
 
 
+@pytest.mark.parametrize(
+    ("text", "retry_after_seconds"),
+    [
+        ("Individual quota reached. Resets in 2h12m46s.", 7966),
+        ("Insufficient balance. Manage your billing.", None),
+        ("You've hit your monthly spend limit.", None),
+    ],
+)
+def test_provider_quota_messages_are_classified_without_transport_retries(
+    text: str,
+    retry_after_seconds: int | None,
+) -> None:
+    failure = classify_process_failure(ProcessResult(("agent",), 1, "", text, False, False, 0.1))
+
+    assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
+    assert failure.retry_after_seconds == retry_after_seconds
+
+
 def test_health_store_allows_only_one_half_open_probe(tmp_path: Path) -> None:
     store = AgentHealthStore(tmp_path / "health.json")
     breaker = AgentCircuitBreaker("first", 1, 1)
