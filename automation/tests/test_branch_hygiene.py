@@ -4,9 +4,13 @@ import json
 from pathlib import Path
 
 from openhands_factory.branch_hygiene import (
+    BranchAudit,
     BranchClassification,
+    BranchRecord,
     audit_branches,
     classify_branch,
+    delete_safe_branches,
+    safe_deletion_candidates,
 )
 from openhands_factory.repository_guard import ProcessResult
 
@@ -79,6 +83,53 @@ def test_unowned_unmerged_branch_is_reported_as_orphan() -> None:
     assert record.classification is BranchClassification.ORPHAN
 
 
+def test_safe_deletion_requires_zero_ahead_and_integrated_or_merged() -> None:
+    records = (
+        BranchRecord("merged-safe", "a" * 40, BranchClassification.MERGED, 0),
+        BranchRecord("integrated-safe", "b" * 40, BranchClassification.INTEGRATED, 0),
+        BranchRecord("merged-moved", "c" * 40, BranchClassification.MERGED, 1),
+        BranchRecord("closed", "d" * 40, BranchClassification.CLOSED, 0),
+        BranchRecord("orphan", "e" * 40, BranchClassification.ORPHAN, 2),
+        BranchRecord("live", "f" * 40, BranchClassification.ACTIVE_CANONICAL, 0),
+    )
+    audit = BranchAudit("owner/repo", "main", "2026-08-17T00:00:00Z", records)
+
+    assert [record.name for record in safe_deletion_candidates(audit)] == [
+        "merged-safe",
+        "integrated-safe",
+    ]
+    assert audit.safe_deletion_candidates == ("merged-safe", "integrated-safe")
+
+
+def test_safe_cleanup_deletes_only_provably_integrated_remote_tips(tmp_path: Path) -> None:
+    audit = BranchAudit(
+        "owner/repo",
+        "main",
+        "2026-08-17T00:00:00Z",
+        (
+            BranchRecord("merged-safe", "a" * 40, BranchClassification.MERGED, 0),
+            BranchRecord("orphan-work", "b" * 40, BranchClassification.ORPHAN, 3),
+            BranchRecord("closed-work", "c" * 40, BranchClassification.CLOSED, 0),
+            BranchRecord("active-work", "d" * 40, BranchClassification.ACTIVE_CANONICAL, 0),
+        ),
+    )
+    calls: list[tuple[str, ...]] = []
+
+    def runner(
+        arguments: tuple[str, ...] | list[str],
+        cwd: Path,
+        timeout: int = 300,
+    ) -> ProcessResult:
+        del cwd, timeout
+        calls.append(tuple(arguments))
+        return ProcessResult(0, "", "")
+
+    deleted = delete_safe_branches(audit, tmp_path, runner=runner)
+
+    assert deleted == ("merged-safe",)
+    assert calls == [("git", "push", "origin", "--delete", "--", "merged-safe")]
+
+
 def test_audit_is_read_only_and_emits_machine_readable_counts(tmp_path: Path) -> None:
     calls: list[tuple[str, ...]] = []
     prs = [
@@ -131,5 +182,6 @@ def test_audit_is_read_only_and_emits_machine_readable_counts(tmp_path: Path) ->
 
     assert payload["counts"]["active-canonical-pr"] == 1
     assert payload["counts"]["orphan"] == 1
+    assert payload["safe_deletion_candidates"] == []
     assert all("delete" not in call and "push" not in call for call in calls)
     assert not any(call[:4] == ("gh", "pr", "create", "--repo") for call in calls)
