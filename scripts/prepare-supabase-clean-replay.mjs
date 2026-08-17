@@ -8,6 +8,12 @@ import {
 } from 'node:fs';
 import { basename, join } from 'node:path';
 import { compatibilityShims } from '../supabase/clean-replay-compat.mjs';
+import { schemaCompatibilityShims } from '../supabase/clean-replay-compat-schema.mjs';
+
+const replayCompatibilityShims = [
+  ...compatibilityShims,
+  ...schemaCompatibilityShims,
+];
 
 const [sourceDirectory, outputDirectory, manifestPath] = process.argv.slice(2);
 
@@ -30,11 +36,11 @@ if (files.length === 0) {
 // Deployed migration files are append-only, but the historical corpus contains
 // a small number of ordering/schema assumptions that make a clean replay
 // impossible. CI keeps every source migration byte-for-byte and inserts only
-// explicit, narrowly-scoped compatibility shims from the canonical manifest.
-// Every shim is hashed and listed in the replay manifest so normalized history
-// remains reviewable rather than silently rewritten.
+// explicit, narrowly-scoped compatibility shims from the canonical compatibility
+// modules. Every shim is hashed and listed in the replay manifest so normalized
+// history remains reviewable rather than silently rewritten.
 const shimNames = new Set();
-for (const shim of compatibilityShims) {
+for (const shim of replayCompatibilityShims) {
   if (!shim.beforeSourceFile || !shim.name || !shim.reason || !shim.sql) {
     throw new Error('Every clean-replay compatibility shim must define target, name, reason, and SQL');
   }
@@ -69,7 +75,7 @@ const sourceEntries = files.map((file) => {
   };
 });
 
-const missingShimTargets = compatibilityShims.filter(
+const missingShimTargets = replayCompatibilityShims.filter(
   ({ beforeSourceFile }) =>
     !sourceEntries.some(({ sourceFile }) => sourceFile === beforeSourceFile),
 );
@@ -96,7 +102,7 @@ const nextReplayIdentity = (suffix) => {
 };
 
 for (const sourceEntry of sourceEntries) {
-  for (const shim of compatibilityShims.filter(
+  for (const shim of replayCompatibilityShims.filter(
     ({ beforeSourceFile }) => beforeSourceFile === sourceEntry.sourceFile,
   )) {
     const identity = nextReplayIdentity(`compat_${shim.name}`);
