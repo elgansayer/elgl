@@ -21,6 +21,11 @@ Environment=HOME=/var/lib/hellotalk-factory/home
 # `id -u hellotalk-factory`); update this and the unit name above if a
 # fresh install assigns a different uid.
 Environment=XDG_RUNTIME_DIR=/run/user/988
+# Refuse daemon generation takeover unless both production provider paths pass
+# their bounded online capability checks. This prevents a restart from silently
+# entering service with broken ChatGPT subscription OAuth or an unusable
+# OpenCode Go fallback.
+ExecStartPre=/opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon
 Restart=on-failure
 RestartSec=30
