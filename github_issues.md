@@ -1,92 +1,53 @@
 # GitHub Issues for Communities UI Improvements
 
-## Issue 1: Refactor `CommunitiesComponent` to a Three-Pane Responsive Layout
+## Issue 1: Fix Angular 19 `resource` untracked context bug in `groupsResource`
 
 **Description**
-The current `CommunitiesComponent` uses a basic single-column list flow that does not scale well for deep hierarchies. To align with modern real-time platforms (e.g., Discord), we need to transition the desktop interface into a multi-pane layout. This refactor should establish a 3-pane responsive structure: a primary narrow sidebar for top-level communities, a secondary sidebar for groups within the selected community, and a main central area (initially housing the chat or content/form).
+In `CommunitiesComponent` (`frontend/src/app/pages/communities/communities.component.ts`), the `groupsResource` relies on reading the `selectedCommunityId()` signal directly inside its `loader` function. In Angular v19, the `loader` of the `resource` API executes in an untracked context. This means the resource will not automatically re-evaluate and fetch new groups when the selected community changes.
 
 **Acceptance Criteria**
-- Refactor `communities.component.html` using Tailwind CSS Grid or Flexbox to create a three-pane layout on desktop.
-- Pane 1: A narrow sidebar containing the list of Communities.
-- Pane 2: A secondary sidebar containing the list of Groups for the active Community.
-- Pane 3: The main central area for active content (e.g., chat interface or the existing community creation form).
-- Ensure the layout degrades gracefully on smaller screens (mobile responsiveness logic to be handled in a separate issue).
-- Ensure existing functionality (fetching and displaying communities and groups) remains intact.
-
-**Suggested Labels**
-- enhancement
-- ui
-- layout
-
----
-
-## Issue 2: Implement Dynamic Active States and Micro-interactions
-
-**Description**
-The current navigation lacks clear visual feedback regarding spatial position and interaction state. We need to implement distinct active states for selected items and micro-interactions (like hover effects) to improve the user experience and make navigation intuitive.
-
-**Acceptance Criteria**
-- Apply distinct active styles to the selected community using Tailwind classes like `bg-surface-300` and `border-l-4 border-indigo-500` (or the theme's equivalent primary border, e.g. `border-primary`).
-- Implement the same active state logic for selected groups.
-- Introduce hover effects on list items (e.g., `hover:bg-surface-200`, `transition-colors duration-150`).
-- Ensure all styling changes rely on the existing Angular signals (e.g., `selectedCommunityId()`).
-
-**Suggested Labels**
-- enhancement
-- ui
-- good first issue
-
----
-
-## Issue 3: Implement Mobile Off-Canvas Drawer / Sliding Pane Navigation
-
-**Description**
-The proposed complex multi-pane navigation layout will overwhelm mobile devices if displayed simultaneously. We need to implement an off-canvas drawer or a sliding pane view for smaller screens to ensure a responsive, uncluttered experience.
-
-**Acceptance Criteria**
-- Design and implement a mobile-specific layout that triggers on small screens (using Tailwind responsive prefixes, e.g., `md:`).
-- On mobile, display only one pane at a time (e.g., start with the Communities list).
-- Implement a sliding pane or off-canvas drawer mechanism to transition between the Community list, Group list, and Main Chat area.
-- Utilize Angular animations for smooth transitions between views.
-- Ensure easy navigation back up the hierarchy (e.g., a 'Back' button or swipe gestures).
-
-**Suggested Labels**
-- enhancement
-- mobile
-- responsive
-
----
-
-## Issue 4: Add Unread Notification Badges to Communities and Groups
-
-**Description**
-To keep users engaged and informed about new activities within their communities, we need to introduce visual indicators for unread content. Small notification badges should be added to the list items for communities and groups that have new, unread activity.
-
-**Acceptance Criteria**
-- Update the `Community` and `CommunityGroup` interfaces/models (if necessary) to include an unread count or a boolean flag indicating new activity.
-- Implement a UI component or inline HTML for an unread badge (e.g., a pill-shaped red div: `bg-red-500 text-white rounded-full px-1.5 text-[10px]`).
-- Display the badge conditionally on community and group list items if there are unread notifications.
-- Ensure the badge disappears or its count resets when the user navigates into that community or group.
-
-**Suggested Labels**
-- enhancement
-- feature
-- engagement
-
----
-
-## Issue 5: Add Error Handling and Loading States to Communities UI
-
-**Description**
-The current `CommunitiesComponent` handles data fetching via Angular signals/resources but lacks explicit user feedback for loading states and error conditions (e.g., network failure when fetching communities or creating one).
-
-**Acceptance Criteria**
-- Add loading spinners or skeleton loaders to the `communities.component.html` to indicate when `communitiesResource` and `groupsResource` are loading (`communitiesResource.isLoading()` / `groupsResource.isLoading()`).
-- Implement a try/catch block around `createCommunity()` to handle and display creation errors gracefully.
-- Show user-friendly error messages if fetching communities or groups fails.
-- Disable the "Create" button while the creation request is in flight to prevent double-submissions.
+- Refactor `groupsResource` to pass the `selectedCommunityId` signal to the `request` property of the resource options.
+- Update the `loader` function to accept the request value and use it to fetch groups.
+- Ensure that selecting a new community correctly triggers a new network request to load its respective groups.
 
 **Suggested Labels**
 - bug
+- angular
+- state-management
+
+---
+
+## Issue 2: Resolve accessibility interaction debt on community list items
+
+**Description**
+The current `CommunitiesComponent` template (`frontend/src/app/pages/communities/communities.component.html`) uses a non-interactive `<div>` element with a `(click)` event handler to allow users to select a community. This is inaccessible to keyboard and screen-reader users, violating our accessibility guidelines and technical standards.
+
+**Acceptance Criteria**
+- Replace the `<div>` used for community items with a native `<button>` element, OR apply the `appA11yClickable` directive from `A11yClickableDirective`.
+- Ensure the interactive element receives visible focus when navigating via keyboard.
+- Ensure the element can be activated using both the Space and Enter keys.
+- Add an appropriate `aria-label` or ensure the text content clearly describes the action.
+
+**Suggested Labels**
 - tech-debt
+- accessibility
+- a11y
 - ui
+
+---
+
+## Issue 3: Add error handling and loading states to Communities UI
+
+**Description**
+The current `CommunitiesComponent` handles data fetching via Angular signals/resources but lacks explicit user feedback for loading states and error conditions. For example, there is no indication when communities or groups are being fetched, and network failures during community creation are not handled or displayed to the user.
+
+**Acceptance Criteria**
+- Add loading indicators (e.g., spinners or skeleton loaders) to the UI to indicate when `communitiesResource` and `groupsResource` are loading (using `communitiesResource.isLoading()` and `groupsResource.isLoading()`).
+- Implement a `try/catch` block around the `communitiesService.create()` call in `createCommunity()`.
+- Display user-friendly error messages (e.g., via a toast service) if fetching communities/groups fails or if community creation fails.
+- Disable the "Create" button and show a loading state while the creation request is in flight to prevent duplicate submissions.
+
+**Suggested Labels**
+- enhancement
+- ux
+- error-handling
