@@ -19,8 +19,9 @@ host proves all of the following:
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
 - root and Factory-state volumes both retain the configured free-space reserve;
-- one active GitHub ruleset without bypass actors requires pull requests, `CI / required`, and
-  `factory/independent-review` on `main`;
+- one no-bypass baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
+- `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
+  bypass is the exact repository-owner user in pull-request mode;
 - the required statuses are pinned to their expected GitHub App sources before any additional write actor is
   trusted;
 - `hellotalk-factory legacy scan` reports no active competing executor;
@@ -35,10 +36,10 @@ Temporary exhaustion of every provider does not stop an already configured daemo
 An initial production activation still needs one usable provider because the required end-to-end canary cannot
 otherwise run.
 
-The 2026-08-17 audit found the inspected host still failed, the installed service definition was stale, and the
-GitHub ruleset did not enforce either Factory status. Treat production as inactive until every activation blocker
-in [AUDIT-2026-08-17.md](AUDIT-2026-08-17.md) is cleared. A green repository revision is not an operational
-canary.
+The 2026-08-17 audit began with a failed host, stale service, and unenforced Factory statuses. The repaired daemon
+is now running a partial production canary, but no complete implementation-to-merge cycle has passed yet. Treat
+[AUDIT-2026-08-17.md](AUDIT-2026-08-17.md) as the current evidence ledger. A green repository revision is not an
+operational canary.
 
 ## Architecture
 
@@ -94,8 +95,8 @@ sessions, durable Factory state, logs, rootless Podman sockets, shared host temp
 environments. The deployed Factory tree is read-only there too.
 
 See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
-[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [CONTROL-PANEL.md](CONTROL-PANEL.md), and
-[HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
+[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [MANUAL-MERGE.md](MANUAL-MERGE.md),
+[CONTROL-PANEL.md](CONTROL-PANEL.md), and [HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
 
 ## Durable lifecycle
 
@@ -110,6 +111,13 @@ DISCOVERED -> IMPLEMENTING -> SECURITY_REVIEW -> VERIFYING
 External pull requests enter through discovery and local verification before `REVIEWING`. A changed PR head
 immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
 the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
+
+If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
+before issue work, including when only one worker is available. It also withholds one provider slot from new issue
+jobs until that review worker finishes. Pull requests default to priority 5, while trusted `guardian-alert`,
+`priority:critical`, and `priority:high` labels promote urgent reviews. Ties use the oldest numeric identifier.
+Other slots remain ordered by issue priority and identifier. This bounded lane prevents required independent
+reviews from starving behind a large critical-issue backlog.
 
 Provider exhaustion does not consume a task attempt. The job remains in its current state with `next_attempt_at`
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
@@ -139,16 +147,23 @@ Before a task branch can merge, the Factory preserves these controls:
 - stale report deletion before every structured-output attempt;
 - file-based report validation before provider success;
 - independent review by a different provider where possible;
+- one merge-queue lane submitted before issue work, with one provider slot withheld from new issue jobs while the
+  selected pull-request worker is active;
 - SHA-scoped `factory/independent-review` status, reset to `PENDING` before every PR-backed AI phase, refresh, or
   base update;
 - head-SHA comparison before the scheduled merge queue;
 - atomic base updates and renewed verification/review when a head is behind `main`;
 - atomic `--match-head-commit` enforcement at the merge call;
-- literal success for `CI / required` and `factory/independent-review`;
-- one active, no-bypass GitHub ruleset requiring pull requests and those two statuses before any account can merge
-  to `main`;
+- literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
+- a no-bypass baseline ruleset requiring pull requests and strict `CI / required`;
+- a review-only ruleset requiring `factory/independent-review`, with an optional exact-owner, pull-request-only
+  manual bypass that cannot bypass baseline CI;
 - human `CHANGES_REQUESTED` review blocking;
-- no administrator merge bypass.
+- no administrator bypass by the Factory or repository workflows.
+
+The repository owner can deliberately waive only the independent-review rule through the GitHub web interface.
+See [MANUAL-MERGE.md](MANUAL-MERGE.md). This does not give the daemon, integrations, roles, or deploy keys bypass
+authority.
 
 The structured report files are control artefacts. They are validated, deleted, and never committed as task
 code. Every code-mutating review or repair returns to verification and a fresh independent review.
@@ -218,16 +233,21 @@ Use the service-user environment for every check:
 ```bash
 FACTORY_HOME=/var/lib/hellotalk-factory/home
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 Authenticate each CLI manually once as `hellotalk-factory`. Do not copy another user's home or fixed credential
 directories. Do not place provider tokens in `factory.env` when the adapter is configured for subscription auth.
 Common API-key variables are stripped from direct subscription-provider environments so they cannot silently
 switch to PAYG authentication.
+
+In particular, do not put `OPENCODE_GO_API_KEY` in the repository `.env`. Use `opencode auth login --provider
+opencode-go` as the service user. `auth list` and `models opencode-go` do not prove remaining balance, so classify
+an `insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
+provider when no separate SDK credential exists.
 
 Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
 pass. Gemini CLI remains configurable only for account types where Google still supports that path. Provider
@@ -249,13 +269,21 @@ sudo scripts/maintain-factory-host-storage.sh
 
 - `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
   authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
-  usability, competing executors, authenticated repository access, and the no-bypass GitHub merge policy. An
+  usability, competing executors, authenticated repository access, and the layered GitHub merge policy. An
   optional OpenAI OAuth failure is a warning when another configured provider is usable.
 - `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
   rootless worker isolation,
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
-  scoped Git credential helper, authenticated GitHub repository reads, and a no-bypass server-side merge policy.
+  scoped Git credential helper, authenticated GitHub repository reads, and the layered server-side merge policy.
 - `status` prints the durable daemon generation, queue counts, active jobs, and heartbeat.
+- After a watchdog restart, the default 30-second grace window lets systemd preflight complete and the daemon
+  publish its initial heartbeat before recovery is judged. Set `FACTORY_WATCHDOG_RESTART_GRACE_SECONDS` only when
+  host startup measurements justify a different value.
+- GitHub and worktree reconciliation runs on a single control worker. The owner loop publishes heartbeat updates
+  every ten seconds while that pass is busy, and closed jobs are merged in one durable batch without overwriting
+  concurrent worker transitions.
+- Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
+  keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
 - `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact

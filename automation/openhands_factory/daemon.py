@@ -6,15 +6,18 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
 from openhands_factory.agents.base import ProviderHealth
+from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
@@ -52,12 +55,24 @@ def provider_status_snapshot(
     ]
 
 
+def release_review_capacity_after(
+    router: AgentRouter,
+    task_id: str,
+    _future: Future[Job | None],
+) -> None:
+    """Release a review reservation regardless of worker completion outcome."""
+
+    router.release_review_capacity(task_id)
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
     excluded_task_ids: set[str] | None = None,
     now: datetime | None = None,
 ) -> list[Job]:
+    if limit <= 0:
+        return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
     candidates = [
@@ -68,7 +83,24 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    return candidates[:limit]
+    review_is_active = any(
+        item.task.identifier in excluded and item.task.source == "github-pull-request"
+        for item in jobs.values()
+    )
+    if review_is_active:
+        return [item for item in candidates if item.task.source != "github-pull-request"][:limit]
+
+    review = next(
+        (item for item in candidates if item.task.source == "github-pull-request"),
+        None,
+    )
+    if review is None:
+        return candidates[:limit]
+
+    # Submit the merge-queue lane first. The router reserves provider capacity
+    # for this job before issue workers can consume every healthy subscription.
+    remaining = [item for item in candidates if item.task.source != "github-pull-request"]
+    return [review, *remaining[: max(limit - 1, 0)]]
 
 
 def refresh_jobs(
@@ -84,6 +116,24 @@ def refresh_jobs(
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
+
+
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
+    publish_heartbeat: Callable[[], None],
+    heartbeat_seconds: float = 10.0,
+) -> tuple[dict[str, Job], float]:
+    """Keep daemon liveness current while control-plane reconciliation blocks."""
+
+    while True:
+        try:
+            return future.result(timeout=heartbeat_seconds)
+        except FutureTimeoutError:
+            if future.done():
+                # A completed refresh may itself have raised TimeoutError. Do not
+                # misreport that failure as an ordinary heartbeat interval.
+                return future.result()
+            publish_heartbeat()
 
 
 def queue_snapshot(
@@ -260,12 +310,17 @@ class FactoryDaemon:
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
         architect_future: Future[None] | None = None
+        # Publish liveness before the first provider probe and GitHub refresh.
+        # A large queue can make that first scheduling cycle slower than the
+        # watchdog interval, but the daemon already owns its generation here.
+        self._write_daemon_state("running", active, active_started_at)
         with (
             ThreadPoolExecutor(
                 max_workers=self.config.max_parallel_jobs,
                 thread_name_prefix="factory-worker",
             ) as workers,
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-control") as control,
         ):
             while not self.stopping:
                 self._assert_owner()
@@ -304,11 +359,16 @@ class FactoryDaemon:
                                 "retry evidence was preserved",
                                 task_id,
                             )
-                        jobs, next_refresh_at = refresh_jobs(
+                        refresh_future = control.submit(
+                            refresh_jobs,
                             self.pipeline,
                             active_task_ids,
                             now,
                             self.config.cooldown_seconds,
+                        )
+                        jobs, next_refresh_at = await_refresh(
+                            refresh_future,
+                            lambda: self._write_daemon_state("running", active, active_started_at),
                         )
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
@@ -332,7 +392,23 @@ class FactoryDaemon:
                             verification_slots=self.verification_slots,
                             agent_router=self.pipeline.router,
                         )
-                        future = workers.submit(worker.run_job, job.task.identifier)
+                        review_priority = job.task.source == "github-pull-request"
+                        if review_priority:
+                            self.pipeline.router.reserve_review_capacity(job.task.identifier)
+                        try:
+                            future = workers.submit(worker.run_job, job.task.identifier)
+                        except Exception:
+                            if review_priority:
+                                self.pipeline.router.release_review_capacity(job.task.identifier)
+                            raise
+                        if review_priority:
+                            future.add_done_callback(
+                                partial(
+                                    release_review_capacity_after,
+                                    self.pipeline.router,
+                                    job.task.identifier,
+                                )
+                            )
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)

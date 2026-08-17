@@ -175,13 +175,17 @@ following:
 - mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The scheduled merge workflow is the only merge authority. It re-reads the live conditions, binds the squash
-merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or
-administrator bypass. One active GitHub ruleset with no bypass actors must also require pull requests,
-`CI / required`, and `factory/independent-review`. This prevents direct merge around the contexts. A dedicated
-GitHub App and ruleset expected-source binding are still required to prevent another write actor from publishing
-the same legacy status-context name. Online doctor currently validates the rules and context names, not status
-publisher identity.
+The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
+squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
+administrator bypass. A no-bypass baseline ruleset requires pull requests and strict `CI / required`. A second,
+review-only ruleset requires `factory/independent-review`; its sole optional bypass actor is the exact
+repository-owner user in pull-request mode. The owner can therefore waive unavailable Factory review without
+bypassing CI or pushing directly to `main`. The daemon and integrations cannot use that path. See
+[MANUAL-MERGE.md](MANUAL-MERGE.md).
+
+A dedicated GitHub App and ruleset expected-source binding are still required to prevent another write actor from
+publishing the same legacy status-context name. Online doctor currently validates the layered rules, context
+names, and narrow manual actor, not status publisher identity.
 
 ## Deployment identity and change policy
 

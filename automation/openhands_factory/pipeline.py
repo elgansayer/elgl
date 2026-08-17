@@ -15,6 +15,7 @@ from openhands_factory.architect_report import ArchitectProposal, load_architect
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
 from openhands_factory.exceptions import (
+    AgentTaskFailure,
     FactoryError,
     ProviderCapacityUnavailable,
     RepositorySafetyError,
@@ -277,6 +278,7 @@ class FactoryPipeline:
                 self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
+        retired_jobs: list[Job] = []
         for task_id, job in jobs.items():
             if task_id in active_task_ids or task_id in protected or job.state in TERMINAL_STATES:
                 continue
@@ -311,7 +313,8 @@ class FactoryPipeline:
                 if job.task.source == "github-issue"
                 else "Pull request closed before the factory finished with it"
             )
-            self.jobs.save_job(job)
+            retired_jobs.append(job)
+        self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
 
     def run_once(self) -> Job | None:
@@ -463,7 +466,7 @@ class FactoryPipeline:
             except RepositorySafetyError as error:
                 raise RuntimeError("Repository-change validation failed internally") from error
             if current_fingerprint == baseline_fingerprint:
-                raise FactoryError(f"{phase.replace('_', ' ').title()} produced no changes")
+                raise AgentTaskFailure(f"{phase.replace('_', ' ').title()} produced no changes")
 
         request = AgentRequest(
             phase=agent_phase,
@@ -575,6 +578,8 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.VERIFYING:
+            if self._refresh_pull_request_if_changed(job, worktree):
+                return
             if not self._verify_or_schedule_quality_repair(job, workflow):
                 return
             findings = check_quality_gate(workflow, self.config.base_branch)
@@ -603,6 +608,8 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.QUALITY_REPAIRING:
+            if self._refresh_pull_request_if_changed(job, worktree):
+                return
             findings = check_quality_gate(workflow, self.config.base_branch)
             if not findings and not job.review_findings:
                 job.state = JobState.VERIFYING
@@ -654,6 +661,9 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            if self._refresh_pull_request_if_changed(job, worktree):
+                return
+
             # The worktree persists across retries of this state, so a review report
             # left behind by an earlier failed attempt (crashed conversation, hit its
             # turn budget, etc.) must not be re-validated as if it were fresh: remove
@@ -935,6 +945,21 @@ class FactoryPipeline:
         ):
             return
         job.state = JobState.REVIEWING
+
+    def _refresh_pull_request_if_changed(self, job: Job, worktree: Path) -> bool:
+        """Refresh PR evidence before using or pushing it against a changed head."""
+        if job.pull_request is None:
+            return False
+
+        status = self._status(job)
+        if status.state == "MERGED":
+            job.state = JobState.MERGED
+            return True
+        if job.head_sha == status.head_sha:
+            return False
+
+        self._refresh_pull_request_for_review(job, worktree)
+        return True
 
     def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:
         """Refresh a behind head without weakening reviewed-SHA protection."""

@@ -24,7 +24,11 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.cli import redact_agent_output
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
-from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
+from openhands_factory.exceptions import (
+    AgentTaskFailure,
+    FactoryError,
+    ProviderCapacityUnavailable,
+)
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -107,11 +111,34 @@ class AgentRouter:
         self.same_provider_retries = same_provider_retries
         self._stopping = threading.Event()
         self._memory_breakers_lock = threading.Lock()
+        self._review_capacity_lock = threading.Lock()
+        self._review_capacity_tasks: set[str] = set()
         self._memory_breakers = self._default_breakers()
 
     def shutdown(self) -> None:
         """Stop admitting provider attempts while active children are drained."""
         self._stopping.set()
+
+    def reserve_review_capacity(self, task_id: str) -> None:
+        """Hold one provider slot for a scheduled pull request review job."""
+
+        with self._review_capacity_lock:
+            self._review_capacity_tasks.add(task_id)
+
+    def release_review_capacity(self, task_id: str) -> None:
+        """Release a pull request review reservation after its worker finishes."""
+
+        with self._review_capacity_lock:
+            self._review_capacity_tasks.discard(task_id)
+
+    def _capacity_limit(self, provider: str, job: Job) -> int:
+        limit = self.provider_limits.get(provider, 1)
+        with self._review_capacity_lock:
+            review_waiting = bool(self._review_capacity_tasks)
+            review_job = job.task.identifier in self._review_capacity_tasks
+        if review_waiting and not review_job:
+            return max(limit - 1, 0)
+        return limit
 
     def _default_breakers(self) -> dict[str, AgentCircuitBreaker]:
         return {
@@ -333,10 +360,21 @@ class AgentRouter:
         ]
         return min(waits) if waits else None
 
-    def _reserve_capacity(self, provider: str, request: AgentRequest, owner: str) -> float:
+    def _reserve_capacity(
+        self,
+        provider: str,
+        request: AgentRequest,
+        owner: str,
+        job: Job,
+    ) -> float:
         if self.capacity_store is None:
             return 0
-        limit = self.provider_limits.get(provider, 1)
+        limit = self._capacity_limit(provider, job)
+        if limit == 0:
+            raise ProviderCapacityUnavailable(
+                f"Provider capacity reserved for pull request review on {provider}",
+                retry_after_seconds=max(self.capacity_wait_seconds, 1),
+            )
         timeout = request.timeout_seconds or 3600
         return self.capacity_store.acquire(
             provider,
@@ -405,6 +443,12 @@ class AgentRouter:
             return result
         try:
             request.validate_output()
+        except AgentTaskFailure as error:
+            return replace(
+                result,
+                success=False,
+                failure=AgentFailure(AgentFailureKind.TASK_FAILURE, str(error)),
+            )
         except FactoryError as error:
             return replace(
                 result,
@@ -451,6 +495,7 @@ class AgentRouter:
                     name,
                     provider_request,
                     owner,
+                    job,
                 )
             except ProviderCapacityUnavailable:
                 any_busy = True
