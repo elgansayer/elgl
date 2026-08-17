@@ -15,6 +15,7 @@ from filelock import FileLock, Timeout
 
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
+from openhands_factory.controlled_recovery import recover_due_quarantines
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
@@ -207,6 +208,14 @@ class FactoryDaemon:
                                 for name, item in sorted(health.items())
                             ),
                         )
+                        recovered_circuits = recover_due_quarantines(self.pipeline.jobs)
+                        for task_id in recovered_circuits:
+                            self.pipeline.tasks.release(task_id)
+                            LOGGER.warning(
+                                "Released bounded Factory recovery circuit for task %s; "
+                                "retry evidence was preserved",
+                                task_id,
+                            )
                         jobs = self.pipeline.refresh(active_task_ids)
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
