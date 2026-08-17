@@ -65,6 +65,26 @@ def test_deployment_is_pinned_to_clean_main() -> None:
     assert "status --porcelain" in deploy
 
 
+def test_failed_deployment_restores_previously_active_factory_units() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    trap = deploy.index("trap cleanup EXIT")
+    stop = deploy.index("systemctl stop hellotalk-factory-health.timer hellotalk-factory.service")
+    start = deploy.index('"$WORKTREE/scripts/start-factory.sh"')
+    completed = deploy.index("DEPLOYMENT_SUCCEEDED=true", start)
+
+    assert trap < stop < start < completed
+    assert "FACTORY_MAINTENANCE_STARTED=true" in deploy
+    assert "Factory supervision units did not stop cleanly" in deploy
+    assert 'if [ "$FACTORY_SERVICE_WAS_ACTIVE" = true ]; then' in deploy
+    assert "systemctl start hellotalk-factory.service" in deploy
+    assert 'if [ "$FACTORY_HEALTH_TIMER_WAS_ACTIVE" = true ]; then' in deploy
+    assert "systemctl start hellotalk-factory-health.timer" in deploy
+    assert "Factory deployment failed; restoring the previously active supervision units." in deploy
+
+
 def test_deployment_preserves_operator_agent_routing_configuration() -> None:
     deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
         encoding="utf-8"
