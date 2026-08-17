@@ -110,7 +110,7 @@ def classify_failure(status_code: int | None, message: str) -> FailureKind:
 
 
 def _positive_int(value: object, default: int, *, maximum: int | None = None) -> int:
-    if isinstance(value, bool) or not isinstance(value, (int, str)):
+    if isinstance(value, bool) or not isinstance(value, int | str):
         return default
     try:
         parsed = int(value)
@@ -124,7 +124,7 @@ def _positive_int(value: object, default: int, *, maximum: int | None = None) ->
 
 
 def _non_negative_int(value: object, default: int = 0, *, maximum: int | None = None) -> int:
-    if isinstance(value, bool) or not isinstance(value, (int, str)):
+    if isinstance(value, bool) or not isinstance(value, int | str):
         return default
     try:
         parsed = int(value)
