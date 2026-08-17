@@ -105,3 +105,27 @@ describe('CoinEconomyDashboard RTL Logical CSS Audit (ps-, pe-)', () => {
     expect(sectionPeMatches!.length).toBeGreaterThan(0);
   });
 });
+
+describe('CoinEconomyDashboard Spartan interaction ownership', () => {
+  it('should compose every button and action link with the Spartan button primitive', () => {
+    const interactiveElements = TEMPLATE.match(/<(?:button|a)\b[\s\S]*?>/g) ?? [];
+
+    expect(interactiveElements).toHaveLength(8);
+    for (const element of interactiveElements) {
+      expect(element).toMatch(/\bhlmBtn\b/);
+    }
+  });
+
+  it('should preserve native anchor navigation for all quick actions', () => {
+    const quickActionLinks = TEMPLATE.match(/<a\b[\s\S]*?>/g) ?? [];
+    const routes = ['/vip', '/chat', '/sticker-store', '/shop', '/vip', '/escrow'];
+
+    expect(quickActionLinks).toHaveLength(routes.length);
+    for (const [index, link] of quickActionLinks.entries()) {
+      expect(link).toContain('hlmBtn');
+      expect(link).toContain(`routerLink="${routes[index]}"`);
+      expect(link).not.toContain('role="button"');
+      expect(link).not.toContain('tabindex=');
+    }
+  });
+});
