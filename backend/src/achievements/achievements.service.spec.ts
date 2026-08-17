@@ -346,8 +346,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      vi.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -367,8 +370,15 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [
+          {
+            achievements: { code: 'first_message' },
+          },
+        ],
+        error: null,
+      });
 
-      vi.spyOn(service, 'hasAchievement').mockResolvedValue(true);
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -384,8 +394,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 30 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      vi.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -408,8 +421,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      vi.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -428,8 +444,11 @@ describe('AchievementsService', () => {
         data: null,
         error: { message: 'db error' },
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      vi.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
