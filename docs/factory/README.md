@@ -178,10 +178,10 @@ run `gh auth login`: setup resets inherited Git credential helpers and every clo
 operation receives the root-managed token only for that Factory-owned child process. Doctor fails if it finds a
 GitHub CLI OAuth token or persistent Git credential in the agent-readable service home.
 
-The production starting policy is
+The production policy is
 [`config/factory/agents.production.json`](../../config/factory/agents.production.json). It enables Claude Code,
-Codex CLI, and OpenCode, leaves Google disabled until service-user authentication is proven, and keeps OpenHands
-emergency-only. Providers are optional independently. Do not enable a provider merely because its binary exists.
+Codex CLI, Antigravity, and OpenCode, while keeping OpenHands emergency-only. Providers remain independently
+health-gated, so an unavailable provider is skipped without stopping the daemon.
 
 Deploy only from `main`:
 
@@ -229,8 +229,8 @@ directories. Do not place provider tokens in `factory.env` when the adapter is c
 Common API-key variables are stripped from direct subscription-provider environments so they cannot silently
 switch to PAYG authentication.
 
-Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
-pass. Gemini CLI remains configurable only for account types where Google still supports that path. Provider
+Google Antigravity is enabled after `agy models`, doctor, and service-user authentication passed on the production
+host. Gemini CLI remains configurable only for account types where Google still supports that path. Provider
 installation and authentication details are in [SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md).
 
 ## Diagnostics
