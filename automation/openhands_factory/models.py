@@ -2,9 +2,46 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+
+_TASK_KEY_MARKER = re.compile(
+    r"(?im)^\s*(?:factory[-_ ]task[-_ ]key|logical[-_ ]task[-_ ]key)\s*:\s*"
+    r"([a-z0-9][a-z0-9._:/-]{2,127})\s*$"
+)
+_ISSUE_PREFIX = re.compile(r"^(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)\s+#\d+\s*:\s*", re.I)
+_TITLE_DECORATION = re.compile(r"\s*(?:\(#\d+\)|#\d+)\s*$")
+_TITLE_SPACE = re.compile(r"\s+")
+
+
+def _normalise_task_title(title: str) -> str:
+    """Return the identity-bearing title scope, excluding issue/PR decoration."""
+
+    value = _TITLE_SPACE.sub(" ", title.strip().casefold())
+    value = _ISSUE_PREFIX.sub("", value)
+    value = _TITLE_DECORATION.sub("", value).strip()
+    return value
+
+
+def logical_task_key(title: str, body: str = "") -> str:
+    """Build a stable task identity that is independent of GitHub object numbers.
+
+    An explicit marker is authoritative and lets a task retain its identity across a
+    substantial retitle or a successor issue/PR. Without a marker, use a digest of the
+    normalized semantic title. The Factory already treats identical normalized titles
+    as duplicate issue scope; using the same scope for durable leases extends that
+    invariant across issue numbers, retries, providers, branches, and PR review tasks.
+    """
+
+    marker = _TASK_KEY_MARKER.search(body)
+    if marker:
+        return f"explicit:{marker.group(1).casefold()}"
+    normalized = _normalise_task_title(title)
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
+    return f"title:{digest}"
 
 
 class ProviderName(StrEnum):
@@ -61,6 +98,10 @@ class Task:
     pr_branch: str | None = None
     triage_tags: frozenset[str] = frozenset()
 
+    @property
+    def logical_key(self) -> str:
+        return logical_task_key(self.title, self.body)
+
 
 @dataclass
 class Job:
@@ -106,3 +147,4 @@ class Lease:
     acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
     factory_generation: str = "unknown"
+    task_key: str | None = None
