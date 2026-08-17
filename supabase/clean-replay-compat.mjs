@@ -215,4 +215,25 @@ DROP INDEX IF EXISTS public.idx_call_logs_receiver_type_started;
   ADD COLUMN IF NOT EXISTS invited_user_ids UUID[];
 `,
   },
+  {
+    beforeSourceFile: '20260808000003_restrict_search_nearby_users_columns.sql',
+    name: 'retire_richer_discovery_rpc_before_legacy_security_rewrite',
+    reason:
+      'The immediately preceding discovery optimiser introduces the active 12-argument search_nearby_users overload, then the historical column-restriction migration creates a 7-argument overload and uses an unqualified COMMENT ON FUNCTION, which PostgreSQL rejects while both overloads exist. The forward convergence migration later restores only the active 12-argument RPC used by DiscoveryService.',
+    sql: `DROP FUNCTION IF EXISTS public.search_nearby_users(
+  double precision,
+  double precision,
+  double precision,
+  uuid,
+  character varying[],
+  character varying,
+  boolean,
+  character varying,
+  character varying,
+  integer,
+  integer,
+  boolean
+);
+`,
+  },
 ];
