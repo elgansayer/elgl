@@ -145,6 +145,8 @@ Before a task branch can merge, the Factory preserves these controls:
 - stale report deletion before every structured-output attempt;
 - file-based report validation before provider success;
 - independent review by a different provider where possible;
+- one merge-queue lane submitted before issue work, with one provider slot withheld from new issue jobs while the
+  selected pull-request worker is active;
 - SHA-scoped `factory/independent-review` status, reset to `PENDING` before every PR-backed AI phase, refresh, or
   base update;
 - head-SHA comparison before the scheduled merge queue;
@@ -224,16 +226,21 @@ Use the service-user environment for every check:
 ```bash
 FACTORY_HOME=/var/lib/hellotalk-factory/home
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 Authenticate each CLI manually once as `hellotalk-factory`. Do not copy another user's home or fixed credential
 directories. Do not place provider tokens in `factory.env` when the adapter is configured for subscription auth.
 Common API-key variables are stripped from direct subscription-provider environments so they cannot silently
 switch to PAYG authentication.
+
+In particular, do not put `OPENCODE_GO_API_KEY` in the repository `.env`. Use `opencode auth login --provider
+opencode-go` as the service user. `auth list` and `models opencode-go` do not prove remaining balance, so classify
+an `insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
+provider when no separate SDK credential exists.
 
 Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
 pass. Gemini CLI remains configurable only for account types where Google still supports that path. Provider

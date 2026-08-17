@@ -63,7 +63,36 @@ def test_select_batch_reserves_one_parallel_slot_for_pull_request_review() -> No
 
     selected = select_batch(jobs, 3)
 
-    assert [item.task.identifier for item in selected] == ["10", "11", "7348"]
+    assert [item.task.identifier for item in selected] == ["7348", "10", "11"]
+
+
+def test_select_batch_prioritises_review_with_one_worker() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
+def test_select_batch_admits_only_one_pull_request_lane() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
+def test_select_batch_respects_zero_capacity() -> None:
+    selected = select_batch({"7348": pull_request_job("7348")}, 0)
+
+    assert selected == []
 
 
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
@@ -77,6 +106,18 @@ def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
     selected = select_batch(jobs, 2, {"7347"})
 
     assert [item.task.identifier for item in selected] == ["10", "11"]
+
+
+def test_select_batch_skips_other_pull_requests_while_review_is_active() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7346": pull_request_job("7346", priority=0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+    }
+
+    selected = select_batch(jobs, 2, {"7347"})
+
+    assert [item.task.identifier for item in selected] == ["10"]
 
 
 def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -> None:

@@ -17,12 +17,13 @@ Every AI-backed phase becomes one typed `AgentRequest` and can run through an el
 Providers cannot discover work, own job state, merge, or weaken Factory policy. The transport may be CLI,
 OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 
-The scheduler uses a bounded pull-request review lane when at least two worker slots are free. If no review is
-already active, one slot is reserved for the highest-priority runnable external PR and the remaining slots retain
-normal priority order. Reviews default to priority 5. Trusted `guardian-alert`, `priority:critical`, and
-`priority:high` labels promote urgent PRs within that lane, with numeric identifier as the tie-breaker. This
-prevents a large critical-issue backlog from starving every required review without turning review into a second
-scheduler or displacing all urgent issue work.
+The scheduler uses one bounded pull-request review lane. If no review is already active, the highest-priority
+runnable external PR is submitted before issue work, including when only one worker is available. A second PR
+cannot enter while that lane is active. The router reserves one slot on each provider from non-review jobs while
+the selected PR worker is active, so issue workers cannot consume every healthy subscription before the required
+review starts. Existing provider calls are never pre-empted. Remaining worker and provider slots retain normal
+issue priority order. Reviews default to priority 5. Trusted `guardian-alert`, `priority:critical`, and
+`priority:high` labels promote urgent PRs within that lane, with numeric identifier as the tie-breaker.
 
 GitHub discovery and stale-worktree reconciliation run on one control-plane worker. The owning daemon waits for
 that bounded pass while continuing to publish heartbeat state every ten seconds. Retired inactive jobs are merged
@@ -46,7 +47,8 @@ overwrites a sibling worker transition.
 - Provider-side failures may fall through according to typed policy. Repository, test, task, policy, and internal
   Factory failures do not blindly rotate.
 - No-provider capacity defers work without consuming a task attempt or entering task quarantine.
-- A bounded pull-request review lane prevents required merge reviews from starving behind the issue backlog.
+- A bounded pull-request review lane receives the first worker position and one reserved provider slot, preventing
+  required merge reviews from starving behind the issue backlog.
 - Repeated identical task-side failures open a recoverable circuit at the configured limit, while different
   failure fingerprints retain independent bounded backoff histories.
 - Provider health, circuits, retry evidence, history, and job state are durable across restart.

@@ -10,12 +10,14 @@ from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
 from openhands_factory.agents.base import ProviderHealth
+from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
@@ -53,12 +55,24 @@ def provider_status_snapshot(
     ]
 
 
+def release_review_capacity_after(
+    router: AgentRouter,
+    task_id: str,
+    _future: Future[Job | None],
+) -> None:
+    """Release a review reservation regardless of worker completion outcome."""
+
+    router.release_review_capacity(task_id)
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
     excluded_task_ids: set[str] | None = None,
     now: datetime | None = None,
 ) -> list[Job]:
+    if limit <= 0:
+        return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
     candidates = [
@@ -69,26 +83,24 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    selected = candidates[:limit]
-    if limit <= 1 or any(item.task.source == "github-pull-request" for item in selected):
-        return selected
-
     review_is_active = any(
         item.task.identifier in excluded and item.task.source == "github-pull-request"
         for item in jobs.values()
     )
     if review_is_active:
-        return selected
+        return [item for item in candidates if item.task.source != "github-pull-request"][:limit]
 
     review = next(
         (item for item in candidates if item.task.source == "github-pull-request"),
         None,
     )
-    if review is not None:
-        # Keep one of multiple worker slots moving the merge queue even when a
-        # large critical-issue backlog would otherwise starve every PR review.
-        selected[-1] = review
-    return selected
+    if review is None:
+        return candidates[:limit]
+
+    # Submit the merge-queue lane first. The router reserves provider capacity
+    # for this job before issue workers can consume every healthy subscription.
+    remaining = [item for item in candidates if item.task.source != "github-pull-request"]
+    return [review, *remaining[: max(limit - 1, 0)]]
 
 
 def refresh_jobs(
@@ -380,7 +392,23 @@ class FactoryDaemon:
                             verification_slots=self.verification_slots,
                             agent_router=self.pipeline.router,
                         )
-                        future = workers.submit(worker.run_job, job.task.identifier)
+                        review_priority = job.task.source == "github-pull-request"
+                        if review_priority:
+                            self.pipeline.router.reserve_review_capacity(job.task.identifier)
+                        try:
+                            future = workers.submit(worker.run_job, job.task.identifier)
+                        except Exception:
+                            if review_priority:
+                                self.pipeline.router.release_review_capacity(job.task.identifier)
+                            raise
+                        if review_priority:
+                            future.add_done_callback(
+                                partial(
+                                    release_review_capacity_after,
+                                    self.pipeline.router,
+                                    job.task.identifier,
+                                )
+                            )
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)

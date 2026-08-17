@@ -533,6 +533,40 @@ def test_router_skips_cross_process_busy_provider(tmp_path: Path) -> None:
     assert job.last_provider_failure == "first:busy"
 
 
+def test_router_reserves_provider_slot_for_pull_request_review(tmp_path: Path) -> None:
+    provider = Provider("first")
+    capacity = ProviderCapacityStore(tmp_path)
+    capacity.acquire("first", limit=2, owner="active-issue", wait_seconds=0, lease_seconds=60)
+    router = AgentRouter(
+        [provider],
+        capacity_store=capacity,
+        provider_limits={"first": 2},
+        skip_busy_providers=True,
+    )
+    router.reserve_review_capacity("7348")
+    issue_request, issue_job = request(tmp_path)
+
+    with pytest.raises(ProviderCapacityUnavailable, match="busy"):
+        router.run(issue_request, issue_job)
+
+    review_task = Task("7348", "Review", "Body", "github-pull-request", 5)
+    review_request = AgentRequest(
+        AgentPhase.CODE_REVIEW,
+        review_task,
+        "review it",
+        tmp_path,
+    )
+    review_job = Job(review_task)
+
+    result = router.run(review_request, review_job)
+
+    assert result.provider == "first"
+    assert provider.calls == 1
+    assert capacity.snapshot()["first"] == 1
+    router.release_review_capacity("7348")
+    capacity.release("first", owner="active-issue")
+
+
 def test_router_capacity_lease_covers_every_same_provider_attempt(tmp_path: Path) -> None:
     class RecordingCapacityStore(ProviderCapacityStore):
         def __init__(self, state_dir: Path) -> None:

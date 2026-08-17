@@ -113,12 +113,13 @@ def test_current_audit_separates_source_quality_from_live_readiness() -> None:
     assert "AUDIT-2026-08-17.md" in runbook
     for marker in (
         "not working flawlessly",
-        "hellotalk-factory.service` was `failed`",
-        "GitHub can merge around the Factory",
-        "service-account provider capacity is unknown",
+        "remained active since",
+        "GitHub enforces Factory review",
+        "service-account provider capacity is constrained",
         "August 2026 model policy",
         "Codex option incompatibility",
-        "No paid model task was launched",
+        "live router selected Claude",
+        "PR #7348 advanced remotely",
         "Required activation sequence",
     ):
         assert marker in audit
