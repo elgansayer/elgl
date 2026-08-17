@@ -38,3 +38,8 @@
 **Learning:** Services should employ a fail-secure approach during startup. Defaulting to development secrets is risky unless explicitly constrained to non-production environments.
 **Prevention:** In constructors or initialization blocks, verify that `NODE_ENV === "production"` has the required sensitive environment variables set, and throw a fast-failing error if not.
 
+
+## 2025-02-12 - [Strict Secrets Validation for Centrifugo]
+**Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (`CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY`) to pass unnoticed in production.
+**Learning:** Defaulting to development secrets or using the non-null assertion operator (`!`) on optional config values can compromise critical API endpoints if not explicitly validated during app startup.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret or API key is absent, preventing the backend from initializing insecurely.
