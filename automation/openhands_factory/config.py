@@ -5,63 +5,302 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.exceptions import ConfigurationError
 
 
 class ProviderConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     enabled: bool = False
     command: str | None = None
+    wrapper_command: str | None = None
+    cli_variant: Literal["gemini", "antigravity"] | None = None
     auth_mode: str | None = None
+    transport: str = "cli"
     emergency_only: bool = False
     max_concurrency: int = 2
+    model: str | None = None
+    phase_models: dict[str, str] = Field(default_factory=dict)
+    timeout_seconds: int | None = None
+    max_output_bytes: int = 1_000_000
+    max_turns: int = 100
+    extra_args: list[str] = Field(default_factory=list)
+    credential_paths: list[str] = Field(default_factory=list)
+    runtime_paths: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_provider(self) -> ProviderConfig:
+        if self.max_concurrency <= 0:
+            raise ValueError("provider max_concurrency must be positive")
+        if self.timeout_seconds is not None and self.timeout_seconds <= 0:
+            raise ValueError("provider timeout_seconds must be positive")
+        if self.max_output_bytes <= 0 or self.max_turns <= 0:
+            raise ValueError("provider output and turn limits must be positive")
+        if self.transport not in {"cli", "openhands-sdk"}:
+            raise ValueError(f"Unsupported provider transport: {self.transport}")
+        if self.auth_mode not in {None, "subscription", "api"}:
+            raise ValueError(f"Unsupported provider auth_mode: {self.auth_mode}")
+        valid_phases = {
+            "planning",
+            "architecture",
+            "implementation",
+            "security-review",
+            "security_review",
+            "quality-repair",
+            "quality_repair",
+            "code-review",
+            "code_review",
+            "ci-repair",
+            "ci_repair",
+            "general-action",
+            "general_action",
+        }
+        unknown = sorted(set(self.phase_models) - valid_phases)
+        if unknown:
+            raise ValueError(f"Unknown model phase(s): {', '.join(unknown)}")
+        home_paths = [*self.credential_paths, *self.runtime_paths]
+        if len(home_paths) > 16:
+            raise ValueError("provider home mounts are limited to 16 paths")
+        for value in home_paths:
+            path = Path(value)
+            if (
+                not value
+                or path.is_absolute()
+                or path == Path(".")
+                or ".." in path.parts
+                or any(marker in value for marker in ("\x00", "\n", "|"))
+            ):
+                raise ValueError(f"Unsafe provider home mount: {value!r}")
+        if len(set(home_paths)) != len(home_paths):
+            raise ValueError("provider home mounts must be unique")
+        for index, path in enumerate(map(Path, home_paths)):
+            for other in map(Path, home_paths[index + 1 :]):
+                if path.is_relative_to(other) or other.is_relative_to(path):
+                    raise ValueError("provider home mounts must not overlap")
+        return self
+
+
+class AgentTimeoutsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    planning: int = 1200
+    architecture: int = 1800
+    implementation: int = 3600
+    security_review: int = 1800
+    quality_repair: int = 3600
+    code_review: int = 1800
+    ci_repair: int = 3600
+    general_action: int = 1800
+
+    @model_validator(mode="after")
+    def positive_timeouts(self) -> AgentTimeoutsConfig:
+        if any(value <= 0 for value in self.model_dump().values()):
+            raise ValueError("agent phase timeouts must be positive")
+        return self
+
+    def for_phase(self, phase: str) -> int:
+        return int(getattr(self, phase.replace("-", "_")))
+
+
+class AgentCircuitBreakerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    failure_threshold: int = 2
+    default_cooldown_seconds: int = 300
+    rate_limit_cooldown_seconds: int = 300
+    quota_cooldown_seconds: int = 3600
+    auth_cooldown_seconds: int = 900
+    unavailable_cooldown_seconds: int = 300
+    transport_cooldown_seconds: int = 300
+    timeout_cooldown_seconds: int = 300
+    crash_cooldown_seconds: int = 300
+    invalid_output_cooldown_seconds: int = 60
+
+    @model_validator(mode="after")
+    def positive_values(self) -> AgentCircuitBreakerConfig:
+        if any(value <= 0 for value in self.model_dump().values()):
+            raise ValueError("agent circuit-breaker values must be positive")
+        return self
 
 
 class AgentsRoutingConfig(BaseModel):
-    """Outer execution routing.
+    model_config = ConfigDict(extra="forbid")
 
-    OpenHands Agent Canvas is the sole execution control plane. Model/provider
-    fallback is owned inside ConversationRunner: Codex subscription OAuth first,
-    then OpenCode Go. Direct CLI agent providers remain importable only for
-    diagnostics/migration tests and must not enter autonomous production routing.
-    """
-
-    planning: list[str] = Field(default_factory=lambda: ["openhands"])
-    architecture: list[str] = Field(default_factory=lambda: ["openhands"])
-    implementation: list[str] = Field(default_factory=lambda: ["openhands"])
-    security_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    quality_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    code_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    ci_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    general_action: list[str] = Field(default_factory=lambda: ["openhands"])
+    planning: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    architecture: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    implementation: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    security_review: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    quality_repair: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    code_review: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    ci_repair: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    general_action: list[str] = Field(
+        default_factory=lambda: ["opencode", "google", "codex", "claude", "openhands"]
+    )
     skip_busy_providers: bool = True
+    same_provider_retries: int = 1
+
+    @field_validator("same_provider_retries")
+    @classmethod
+    def bounded_same_provider_retries(cls, value: int) -> int:
+        if value < 0 or value > 2:
+            raise ValueError("same_provider_retries must be between 0 and 2")
+        return value
 
 
 class AgentsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     routing_enabled: bool = True
     providers: dict[str, ProviderConfig] = Field(
         default_factory=lambda: {
-            "claude": ProviderConfig(enabled=False, auth_mode="subscription"),
-            "codex": ProviderConfig(enabled=False, auth_mode="subscription"),
-            "google": ProviderConfig(enabled=False, auth_mode="subscription"),
-            "opencode": ProviderConfig(enabled=False, auth_mode="subscription"),
+            "claude": ProviderConfig(
+                enabled=True,
+                command="claude",
+                auth_mode="subscription",
+                model="fable",
+                credential_paths=[".claude", ".claude.json"],
+                runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
+            ),
+            "codex": ProviderConfig(
+                enabled=True,
+                command="codex",
+                auth_mode="subscription",
+                model="gpt-5.6-sol",
+                credential_paths=[".codex"],
+                runtime_paths=[".local/bin", ".npm-global"],
+            ),
+            "google": ProviderConfig(
+                enabled=False,
+                command="agy",
+                cli_variant="antigravity",
+                auth_mode="subscription",
+                model="gemini-3.1-pro-high",
+                credential_paths=[".gemini"],
+                runtime_paths=[".local/bin", ".npm-global"],
+            ),
+            "opencode": ProviderConfig(
+                enabled=False,
+                command="opencode",
+                auth_mode="subscription",
+                model="opencode-go/kimi-k3",
+                credential_paths=[".config/opencode", ".local/share/opencode"],
+                runtime_paths=[".local/bin", ".npm-global", ".opencode"],
+                phase_models={
+                    "planning": "opencode-go/qwen3.8-max",
+                    "architecture": "opencode-go/qwen3.8-max",
+                    "security_review": "opencode-go/qwen3.8-max",
+                    "code_review": "opencode-go/qwen3.8-max",
+                    "general_action": "opencode-go/kimi-k2.7-code",
+                },
+            ),
             "openhands": ProviderConfig(
                 enabled=True,
-                emergency_only=False,
-                auth_mode="control-plane",
+                emergency_only=True,
+                auth_mode="api",
+                transport="openhands-sdk",
+                model="gpt-5.6-sol",
             ),
         }
     )
     routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
+    timeouts: AgentTimeoutsConfig = Field(default_factory=AgentTimeoutsConfig)
+    circuit_breaker: AgentCircuitBreakerConfig = Field(default_factory=AgentCircuitBreakerConfig)
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_provider_transport_defaults(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        providers = value.get("providers")
+        if not isinstance(providers, dict):
+            return value
+        normalised_providers: dict[object, object] = {}
+        for name, provider in providers.items():
+            if not isinstance(provider, dict):
+                normalised_providers[name] = provider
+                continue
+            normalised_provider = dict(provider)
+            normalised_provider.setdefault(
+                "transport", "openhands-sdk" if name == "openhands" else "cli"
+            )
+            normalised_provider.setdefault(
+                "auth_mode", "api" if name == "openhands" else "subscription"
+            )
+            defaults = {
+                "claude": {
+                    "credential_paths": [".claude", ".claude.json"],
+                    "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"],
+                },
+                "codex": {
+                    "credential_paths": [".codex"],
+                    "runtime_paths": [".local/bin", ".npm-global"],
+                },
+                "google": {
+                    "credential_paths": [".gemini"],
+                    "runtime_paths": [".local/bin", ".npm-global"],
+                },
+                "opencode": {
+                    "credential_paths": [".config/opencode", ".local/share/opencode"],
+                    "runtime_paths": [".local/bin", ".npm-global", ".opencode"],
+                },
+            }.get(str(name), {})
+            for key, default in defaults.items():
+                normalised_provider.setdefault(key, default)
+            normalised_providers[name] = normalised_provider
+        normalised = dict(value)
+        normalised["providers"] = normalised_providers
+        return normalised
+
+    @classmethod
+    def legacy_openhands_only(cls) -> AgentsConfig:
+        config = cls(routing_enabled=False)
+        for name, provider in config.providers.items():
+            provider.enabled = name == "openhands"
+        config.providers["openhands"].emergency_only = False
+        return config
 
     @model_validator(mode="after")
     def validate_provider_names(self) -> AgentsConfig:
         supported = {"claude", "codex", "google", "opencode", "openhands"}
+        declared_unknown = sorted(set(self.providers) - supported)
+        if declared_unknown:
+            raise ValueError(f"Unknown agent provider(s): {', '.join(declared_unknown)}")
         for name in supported - set(self.providers):
             self.providers[name] = ProviderConfig(enabled=False)
+        for name, provider in self.providers.items():
+            if provider.cli_variant is not None and name != "google":
+                raise ValueError("cli_variant is supported only by the google provider")
+            expected_transport = "openhands-sdk" if name == "openhands" else "cli"
+            if provider.enabled and provider.transport != expected_transport:
+                raise ValueError(
+                    f"Provider {name!r} requires transport {expected_transport!r}, "
+                    f"not {provider.transport!r}"
+                )
+            expected_auth_mode = "api" if name == "openhands" else "subscription"
+            if provider.enabled and provider.auth_mode != expected_auth_mode:
+                raise ValueError(
+                    f"Provider {name!r} requires auth_mode {expected_auth_mode!r}, "
+                    f"not {provider.auth_mode!r}"
+                )
         known = set(self.providers)
         referenced = {
             provider
@@ -72,23 +311,15 @@ class AgentsConfig(BaseModel):
         unknown = sorted(referenced - known)
         if unknown:
             raise ValueError(f"Unknown agent provider(s): {', '.join(unknown)}")
-
-        direct_enabled = sorted(
-            name
-            for name, provider in self.providers.items()
-            if name != "openhands" and provider.enabled
-        )
-        direct_referenced = sorted(referenced - {"openhands"})
-        if direct_enabled or direct_referenced:
-            offenders = sorted(set(direct_enabled + direct_referenced))
-            raise ValueError(
-                "Direct agent providers are disabled in openhands-agent-canvas-v1; "
-                "route every phase through OpenHands and configure model fallback "
-                "inside OpenHands (Codex OAuth then OpenCode Go). Offenders: "
-                + ", ".join(offenders)
-            )
-        if not self.providers["openhands"].enabled:
-            raise ValueError("OpenHands control-plane provider must remain enabled")
+        if not self.routing_enabled:
+            if not self.providers["openhands"].enabled:
+                raise ValueError("OpenHands must be enabled when agent routing is disabled")
+            return self
+        for phase, names in self.routing.model_dump().items():
+            if not isinstance(names, list):
+                continue
+            if not any(self.providers[name].enabled for name in names):
+                raise ValueError(f"Agent route {phase!r} has no enabled provider")
         return self
 
 
@@ -106,19 +337,19 @@ class FactoryConfig(BaseModel):
     # ownership UUID after the host-level lock is acquired.
     factory_architecture: str = EXPECTED_FACTORY_ARCHITECTURE
     factory_generation: str = "unknown"
-    openai_model: str = "gpt-5.2-codex"
+    openai_model: str = "gpt-5.6-sol"
     openai_max_concurrent_conversations: int = 2
-    opencode_api_key: SecretStr
+    opencode_api_key: SecretStr | None = None
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
-    opencode_model: str
+    opencode_model: str | None = None
     opencode_profile_name: str = "opencode-go"
     opencode_max_concurrent_conversations: int = 3
     planning_model: str | None = None
     terminal_execution_model: str | None = None
     bulk_ci_repair_model: str | None = None
-    # Legacy fields remain loadable so old environment files fail with a precise
-    # migration error instead of becoming unparsable. Gemini is not a production
-    # execution tier in the Agent Canvas factory.
+    # Legacy API-backed Gemini fields remain loadable so old environment files
+    # fail with a precise migration error instead of becoming unparsable. The
+    # direct Google subscription adapter is configured under agents.providers.
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
@@ -143,6 +374,8 @@ class FactoryConfig(BaseModel):
     architect_max_new_issues: int = 8
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
+    require_trusted_intake: bool = False
+    trusted_github_actors: frozenset[str] = frozenset({"elgansayer"})
     require_ready_label: bool = False
     ready_label: str = "factory-ready"
     telegram_bot_token: SecretStr | None = None
@@ -196,6 +429,10 @@ class FactoryConfig(BaseModel):
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
                 "the retired swarm/older architecture must not share this control plane"
             )
+        if (self.opencode_api_key is None) != (self.opencode_model is None):
+            raise ValueError(
+                "OPENCODE_GO_API_KEY and OPENCODE_GO_MODEL must either both be set or both be empty"
+            )
         return self
 
     @classmethod
@@ -213,7 +450,7 @@ class FactoryConfig(BaseModel):
 
         import json
 
-        agents_config = AgentsConfig()
+        agents_config = AgentsConfig.legacy_openhands_only()
         if boolean("GEMINI_ENABLED", False):
             raise ConfigurationError(
                 "GEMINI_ENABLED is retired; configure a subscription agent provider instead"
@@ -226,6 +463,14 @@ class FactoryConfig(BaseModel):
                 agents_config = AgentsConfig(**agents_data)
             except (OSError, ValueError) as error:
                 raise ConfigurationError(f"Invalid FACTORY_AGENTS_CONFIG: {error}") from error
+
+        github_repository = env.get("GITHUB_REPOSITORY", "elgansayer/elgl")
+        repository_owner = github_repository.partition("/")[0]
+        trusted_github_actors = frozenset(
+            actor.strip().casefold()
+            for actor in env.get("FACTORY_TRUSTED_GITHUB_ACTORS", repository_owner).split(",")
+            if actor.strip()
+        )
 
         try:
             return cls(
@@ -245,19 +490,19 @@ class FactoryConfig(BaseModel):
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
                 ),
-                factory_architecture=env.get(
-                    "FACTORY_ARCHITECTURE", EXPECTED_FACTORY_ARCHITECTURE
-                ),
+                factory_architecture=env.get("FACTORY_ARCHITECTURE", EXPECTED_FACTORY_ARCHITECTURE),
                 factory_generation=env.get("FACTORY_GENERATION", "unknown"),
-                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.2-codex"),
+                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.6-sol"),
                 openai_max_concurrent_conversations=int(
                     env.get("FACTORY_OPENAI_MAX_CONCURRENT_CONVERSATIONS", "2")
                 ),
-                opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
+                opencode_api_key=SecretStr(env["OPENCODE_GO_API_KEY"])
+                if env.get("OPENCODE_GO_API_KEY", "").strip()
+                else None,
                 opencode_base_url=env.get(
                     "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1"
                 ).rstrip("/"),
-                opencode_model=required("OPENCODE_GO_MODEL"),
+                opencode_model=env.get("OPENCODE_GO_MODEL") or None,
                 opencode_profile_name=env.get("OPENCODE_GO_PROFILE_NAME", "opencode-go"),
                 opencode_max_concurrent_conversations=int(
                     env.get("FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS", "3")
@@ -296,7 +541,9 @@ class FactoryConfig(BaseModel):
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
-                github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
+                github_repository=github_repository,
+                require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
+                trusted_github_actors=trusted_github_actors,
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),
                 ready_label=env.get("FACTORY_READY_LABEL", "factory-ready"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import ast
+import logging
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 
-from openhands_factory.models import Job, JobState, Task
+from filelock import FileLock
+
+from openhands_factory.exceptions import FactoryError
+from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, JobState, Task
 from openhands_factory.retry_policy import (
     deterministic_backoff,
     record_failure_diagnostics,
@@ -26,17 +31,29 @@ RECOVERABLE_ACTIVE_STATES = {
     JobState.REPAIRING,
     JobState.QUALITY_REPAIRING,
 }
+logger = logging.getLogger(__name__)
+
+
+def _is_job_payload(value: object) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("jobs"), list)
 
 
 class JobStore:
-    _process_lock = Lock()
+    _process_lock = RLock()
 
-    def __init__(self, path: Path, factory_generation: str = "unknown") -> None:
+    def __init__(
+        self,
+        path: Path,
+        factory_generation: str = "unknown",
+        max_repeated_failures: int | None = None,
+    ) -> None:
         self.path = path
         if factory_generation == "unknown":
             generation = read_json(path.parent / "generation.json", {})
             factory_generation = str(generation.get("identifier", "unknown"))
         self.factory_generation = factory_generation
+        self.max_repeated_failures = max_repeated_failures
+        self.file_lock = FileLock(str(path) + ".lock")
 
     @staticmethod
     def _load_next_attempt_at(value: object, now: datetime) -> datetime | None:
@@ -64,37 +81,130 @@ class JobStore:
             return maximum
         return parsed
 
-    def load(self) -> dict[str, Job]:
-        payload = read_json(self.path, {"jobs": []})
+    def _load(self) -> dict[str, Job]:
+        payload = read_json(self.path, {"jobs": []}, validator=_is_job_payload)
         jobs: dict[str, Job] = {}
         now = datetime.now(UTC)
-        for item in payload.get("jobs", []):
-            task = Task(**item["task"])
-            job = Job(
-                task=task,
-                state=JobState(item["state"]),
-                branch=item.get("branch"),
-                pull_request=item.get("pull_request"),
-                head_sha=item.get("head_sha"),
-                attempts=int(item.get("attempts", 0)),
-                repair_attempts=int(item.get("repair_attempts", 0)),
-                quality_repairs=int(item.get("quality_repairs", 0)),
-                last_error=item.get("last_error"),
-                next_attempt_at=self._load_next_attempt_at(item.get("next_attempt_at"), now),
-                failure_counts={
-                    str(key): int(value) for key, value in item.get("failure_counts", {}).items()
-                },
-                last_failure_kind=item.get("last_failure_kind"),
-                last_failure_fingerprint=item.get("last_failure_fingerprint"),
-                repeated_failure_count=int(item.get("repeated_failure_count", 0)),
-                factory_generation=str(item.get("factory_generation", "unknown")),
-                provider_history=item.get("provider_history", []),
-                updated_at=datetime.fromisoformat(item["updated_at"]),
-            )
-            if job.state is JobState.QUARANTINED:
+        for index, item in enumerate(payload.get("jobs", [])):
+            try:
+                job = self._restore_job(item, now)
+            except (KeyError, OverflowError, TypeError, ValueError) as error:
+                logger.error(
+                    "factory.state.job_skipped index=%s error=%s",
+                    index,
+                    type(error).__name__,
+                )
+                continue
+            if job.state is JobState.QUARANTINED and job.quarantine_reason is None:
                 self._reset_legacy_quarantine(job, now)
-            jobs[task.identifier] = job
+            jobs[job.task.identifier] = job
         return jobs
+
+    def load(self) -> dict[str, Job]:
+        with self._process_lock, self.file_lock:
+            return self._load()
+
+    def _assert_generation_current(self) -> None:
+        if self.factory_generation == "unknown":
+            return
+        generation = read_json(self.path.parent / "generation.json", {})
+        if generation.get("identifier") != self.factory_generation:
+            raise FactoryError("Stale Factory generation cannot mutate durable job state")
+
+    def _restore_job(self, item: object, now: datetime) -> Job:
+        if not isinstance(item, dict):
+            raise TypeError("job entry is not a mapping")
+        task_payload = dict(item["task"])
+        task_payload["triage_tags"] = self._restore_triage_tags(task_payload.get("triage_tags", []))
+        task = Task(**task_payload)
+        failure_counts = item.get("failure_counts", {})
+        if not isinstance(failure_counts, dict):
+            failure_counts = {}
+        restored_failure_counts: dict[str, int] = {}
+        for key, value in failure_counts.items():
+            try:
+                restored_failure_counts[str(key)] = int(value)
+            except (TypeError, ValueError):
+                continue
+        review_findings = item.get("review_findings", [])
+        if not isinstance(review_findings, list):
+            review_findings = []
+        updated_at = self._restore_datetime(item.get("updated_at")) or now
+        return Job(
+            task=task,
+            state=JobState(item["state"]),
+            branch=item.get("branch"),
+            pull_request=item.get("pull_request"),
+            head_sha=item.get("head_sha"),
+            attempts=int(item.get("attempts", 0)),
+            repair_attempts=int(item.get("repair_attempts", 0)),
+            quality_repairs=int(item.get("quality_repairs", 0)),
+            last_error=item.get("last_error"),
+            next_attempt_at=self._load_next_attempt_at(item.get("next_attempt_at"), now),
+            failure_counts=restored_failure_counts,
+            last_failure_kind=item.get("last_failure_kind"),
+            last_failure_fingerprint=item.get("last_failure_fingerprint"),
+            repeated_failure_count=int(item.get("repeated_failure_count", 0)),
+            quarantine_reason=item.get("quarantine_reason"),
+            quarantined_at=self._restore_datetime(item.get("quarantined_at")),
+            quarantine_notification_pending=bool(
+                item.get("quarantine_notification_pending", False)
+            ),
+            factory_generation=str(item.get("factory_generation", "unknown")),
+            implementation_provider=item.get("implementation_provider"),
+            review_provider=item.get("review_provider"),
+            security_provider=item.get("security_provider"),
+            last_provider_failure=item.get("last_provider_failure"),
+            provider_failover_count=int(item.get("provider_failover_count", 0)),
+            review_findings=[str(value) for value in review_findings],
+            provider_history=self._restore_provider_history(item.get("provider_history", [])),
+            updated_at=updated_at,
+        )
+
+    @staticmethod
+    def _restore_triage_tags(value: object) -> frozenset[str]:
+        if isinstance(value, list | tuple | set | frozenset):
+            return frozenset(str(tag) for tag in value)
+        if isinstance(value, str) and value.startswith("frozenset(") and value.endswith(")"):
+            inner = value[len("frozenset(") : -1]
+            if not inner:
+                return frozenset()
+            try:
+                parsed = ast.literal_eval(inner)
+            except (SyntaxError, ValueError):
+                return frozenset()
+            if isinstance(parsed, list | tuple | set | frozenset):
+                return frozenset(str(tag) for tag in parsed)
+        return frozenset()
+
+    @staticmethod
+    def _restore_datetime(value: object) -> datetime | None:
+        if not isinstance(value, str):
+            return None
+        try:
+            restored = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        return restored if restored.tzinfo is not None else restored.replace(tzinfo=UTC)
+
+    @staticmethod
+    def _restore_provider_history(
+        value: object,
+    ) -> list[dict[str, str | int | float | bool | None]]:
+        if not isinstance(value, list):
+            return []
+        history: list[dict[str, str | int | float | bool | None]] = []
+        for entry in value[-MAX_PROVIDER_HISTORY:]:
+            if not isinstance(entry, dict):
+                continue
+            restored: dict[str, str | int | float | bool | None] = {}
+            for key, item in entry.items():
+                if isinstance(key, str) and (
+                    item is None or isinstance(item, str | int | float | bool)
+                ):
+                    restored[key] = item
+            history.append(restored)
+        return history
 
     def _stamp(self, job: Job) -> None:
         if self.factory_generation != "unknown":
@@ -107,13 +217,18 @@ class JobStore:
         for job in jobs.values():
             self._stamp(job)
             item = asdict(job)
+            item["task"]["triage_tags"] = sorted(job.task.triage_tags)
             item["state"] = job.state.value
             item["updated_at"] = job.updated_at.isoformat()
             item["next_attempt_at"] = (
                 job.next_attempt_at.isoformat() if job.next_attempt_at else None
             )
             serialised.append(item)
-        atomic_write_json(self.path, {"jobs": serialised})
+        atomic_write_json(
+            self.path,
+            {"jobs": serialised},
+            validator=_is_job_payload,
+        )
 
     @staticmethod
     def _retry_transition_changed(previous: Job | None, current: Job) -> bool:
@@ -144,16 +259,18 @@ class JobStore:
         normalizes a newly failed attempt through the same policy before persistence.
         """
 
-        previous_jobs = self.load()
-        for task_id, job in jobs.items():
-            previous = previous_jobs.get(task_id)
-            if job.last_error and job.attempts > 0:
-                if self._retry_transition_changed(previous, job):
-                    self._apply_retry_policy(previous, job)
-                continue
-            if previous is not None and self._made_meaningful_progress(previous, job):
-                reset_retry_diagnostics(job)
-        self._save_raw(jobs)
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            previous_jobs = self._load()
+            for task_id, job in jobs.items():
+                previous = previous_jobs.get(task_id)
+                if job.last_error and job.attempts > 0:
+                    if self._retry_transition_changed(previous, job):
+                        self._apply_retry_policy(previous, job)
+                    continue
+                if previous is not None and self._made_meaningful_progress(previous, job):
+                    reset_retry_diagnostics(job)
+            self._save_raw(jobs)
 
     @staticmethod
     def _made_meaningful_progress(previous: Job, current: Job) -> bool:
@@ -181,8 +298,31 @@ class JobStore:
 
         if job.state in {JobState.DONE, JobState.QUARANTINED}:
             return
+        if (
+            previous is not None
+            and job.attempts == previous.attempts
+            and job.next_attempt_at is not None
+        ):
+            # Provider exhaustion and capacity pressure deliberately schedule a
+            # retry without consuming a task attempt. Preserve that provider-aware
+            # deadline instead of reclassifying an older task failure and extending
+            # its backoff again.
+            return
         if job.last_error and job.attempts > 0:
             class_retry_count = record_failure_diagnostics(job, job.last_error)
+            if (
+                self.max_repeated_failures is not None
+                and job.repeated_failure_count >= self.max_repeated_failures
+            ):
+                job.state = JobState.QUARANTINED
+                job.next_attempt_at = None
+                job.quarantine_reason = (
+                    f"Repeated {job.last_failure_kind or 'task'} failure reached the "
+                    f"configured limit of {self.max_repeated_failures}"
+                )
+                job.quarantined_at = now or datetime.now(UTC)
+                job.quarantine_notification_pending = True
+                return
             fingerprint = job.last_failure_fingerprint or "unknown"
             delay = deterministic_backoff(
                 class_retry_count,
@@ -195,8 +335,9 @@ class JobStore:
 
     def save_job(self, job: Job) -> None:
         """Merge one completed worker transition without losing sibling jobs."""
-        with self._process_lock:
-            jobs = self.load()
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            jobs = self._load()
             previous = jobs.get(job.task.identifier)
             if job.last_error and job.attempts > 0:
                 if self._retry_transition_changed(previous, job):
@@ -227,8 +368,9 @@ class JobStore:
         current = now or datetime.now(UTC)
         threshold = current - max_age
         recovered: list[str] = []
-        with self._process_lock:
-            jobs = self.load()
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            jobs = self._load()
             for task_id, job in jobs.items():
                 if task_id in protected_task_ids:
                     continue
@@ -250,7 +392,7 @@ class JobStore:
 
     @staticmethod
     def _reset_legacy_quarantine(job: Job, now: datetime) -> None:
-        """Migrate the removed terminal quarantine state back into the retry pipeline."""
+        """Reset either a legacy quarantine or an operator-approved task circuit."""
         job.state = JobState.DISCOVERED
         job.attempts = 0
         job.repair_attempts = 0
@@ -261,16 +403,25 @@ class JobStore:
         job.last_failure_kind = None
         job.last_failure_fingerprint = None
         job.repeated_failure_count = 0
+        job.quarantine_reason = None
+        job.quarantined_at = None
+        job.quarantine_notification_pending = False
+        job.last_provider_failure = None
+        job.review_findings.clear()
         job.updated_at = now
 
     def reconcile(self, tasks: list[Task]) -> dict[str, Job]:
-        with self._process_lock:
-            jobs = self.load()
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            jobs = self._load()
             now = datetime.now(UTC)
 
             for persisted_job in jobs.values():
                 self._stamp(persisted_job)
-                if persisted_job.state is JobState.QUARANTINED:
+                if (
+                    persisted_job.state is JobState.QUARANTINED
+                    and persisted_job.quarantine_reason is None
+                ):
                     self._reset_legacy_quarantine(persisted_job, now)
 
             for task in tasks:
@@ -282,11 +433,18 @@ class JobStore:
                     continue
                 existing.task = task
                 self._stamp(existing)
-                if (
+                closed_issue_reopened = (
                     existing.state is JobState.DONE
                     and existing.pull_request is None
                     and existing.last_error == "Issue closed before pull request creation"
-                ):
+                )
+                closed_pull_request_reopened = (
+                    existing.state is JobState.DONE
+                    and task.source == "github-pull-request"
+                    and existing.last_error
+                    == "Pull request closed before the factory finished with it"
+                )
+                if closed_issue_reopened or closed_pull_request_reopened:
                     existing.state = JobState.DISCOVERED
                     existing.attempts = 0
                     existing.repair_attempts = 0
@@ -298,5 +456,23 @@ class JobStore:
                     existing.last_failure_fingerprint = None
                     existing.repeated_failure_count = 0
                     existing.updated_at = now
-            self.save(jobs)
+            self._save_raw(jobs)
             return jobs
+
+    def requeue_quarantined(self, task_ids: set[str]) -> list[str]:
+        """Reset durable quarantine state for an explicit operator-selected set."""
+
+        requeued: list[str] = []
+        now = datetime.now(UTC)
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            jobs = self._load()
+            for task_id in sorted(task_ids, key=lambda value: (not value.isdigit(), value)):
+                job = jobs.get(task_id)
+                if job is None or job.state is not JobState.QUARANTINED:
+                    continue
+                self._reset_legacy_quarantine(job, now)
+                requeued.append(task_id)
+            if requeued:
+                self._save_raw(jobs)
+        return requeued

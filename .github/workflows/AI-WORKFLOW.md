@@ -1,84 +1,98 @@
-# OpenHands factory workflow
+# OpenHands Factory workflow
 
-The canonical autonomous development system is the OpenHands SDK factory under
-`automation/openhands_factory`. GitHub Actions provide repository CI and the
-final merge gate. There must not be a second issue resolver, direct-provider
-agent router, or PR reviewer implementation in GitHub Actions or the Factory
-pipeline.
+The canonical autonomous engineering system is `automation/openhands_factory`. OpenHands Factory owns issue
+discovery, scheduling, durable jobs, worktrees, provider routing, verification, review, repair, pull requests,
+CI polling, and merge safety. Claude Code, Codex CLI, Google coding agents, OpenCode, and the OpenHands SDK are
+interchangeable execution engines beneath that control plane.
+
+GitHub Actions owns repository CI and the final scheduled merge gate. It must not contain a competing issue
+resolver, reviewer, provider router, or direct provider merge implementation.
 
 ## End-to-end flow
 
 ```text
-open GitHub issues
-  -> factory daemon refreshes and persists the backlog
-  -> worker pool selects the highest-priority available issues
-  -> isolated worktree and issue comment
-  -> OpenHands SDK conversation
-       OpenAI subscription/Codex OAuth -> OpenCode Go
-  -> local constitution, lint, build, unit and E2E verification
-  -> factory branch push and draft pull request
-  -> fresh OpenHands SDK review on the same branch
-  -> SHA-anchored independent-review status, labels and pull request comments
+eligible GitHub issues and external pull requests
+  -> Factory daemon reconciles durable jobs
+  -> worker pool selects the highest-priority runnable job
+  -> isolated task worktree
+  -> phase-specific AgentRouter selection
+       Claude Code, Codex CLI, Google agent, OpenCode, OpenHands emergency
+  -> security review and repository-native verification
+  -> task branch push and draft pull request
+  -> independent provider writes a fresh .factory-review.json
+  -> validated SHA-scoped factory/independent-review status
   -> GitHub checks and mergeability polling
-  -> repair loop for failed checks
-  -> auto-merge only after `CI / required` and `factory/independent-review` succeed
-  -> issue closure after GitHub reports MERGED
+  -> provider-rotated repair with current failed-check evidence when needed
+  -> verification and independent review repeat after every code change
+  -> scheduled merge gate validates labels, SHA status, and every required check
+  -> squash merge without administrator bypass
+  -> issue closure only after GitHub reports MERGED
 ```
 
-The worker pool is intentionally parallel. `FACTORY_MAX_PARALLEL_JOBS=3` is
-the safe default for the current memory limit. Increase it only with more
-RAM, or reduce it to `1` when diagnosing a provider or repository problem.
+External pull requests skip implementation but use the same verification, review, repair, and merge path. A new
+head commit invalidates the previous review, removes review labels, rebuilds the isolated worktree, and returns
+the current head to review.
 
 ## Components
 
 | Component | Responsibility |
 | --- | --- |
-| `automation/openhands_factory/daemon.py` | Refreshes the backlog, recovers abandoned attempts, and schedules independent jobs |
-| `automation/openhands_factory/pipeline.py` | Durable issue-to-merge state machine |
-| `automation/openhands_factory/conversation_runner.py` | Bounded OpenHands SDK process execution and conversation-scoped provider selection |
-| `automation/openhands_factory/provider_profiles.py` | OpenAI subscription/Codex OAuth first, then OpenCode Go; historical providers are not eligible for production routing |
-| `automation/openhands_factory/github.py` | Credential-safe GitHub issue, PR, comment, label, status, and fail-closed merge-readiness operations |
-| `.github/workflows/ci.yml` | Application and Factory verification plus the canonical `CI / required` aggregate |
-| `.github/workflows/factory-merge.yml` | Final merge gate for Factory-reviewed pull requests |
-| `config/systemd/hellotalk-factory.service` | Always-on daemon |
-| `config/systemd/hellotalk-factory-health.timer` | Periodic read-only health checks |
+| `automation/openhands_factory/daemon.py` | Single-owner scheduling, abandoned-attempt recovery, pause, generation, and shutdown |
+| `automation/openhands_factory/pipeline.py` | Durable issue-to-merge state machine and repository safety gates |
+| `automation/openhands_factory/agents/` | Provider protocol, adapters, policy, process runner, health, and router |
+| `automation/openhands_factory/jobs.py` | Backwards-compatible durable state and retry authority |
+| `automation/openhands_factory/provider_capacity.py` | Cross-process, generation-aware provider concurrency leases |
+| `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport |
+| `automation/openhands_factory/github.py` | Typed issue, PR, label, check, status, and merge boundary |
+| `.github/workflows/ci.yml` | Application and Factory verification plus `CI / required` |
+| `.github/workflows/factory-merge.yml` | Final fail-closed merge gate for reviewed pull requests |
+| `config/systemd/hellotalk-factory.service` | Always-on daemon from the dedicated `main` checkout |
+| `config/systemd/hellotalk-factory-health.timer` | Periodic read-only health and restart supervision |
 
 ## Guarantees
 
-- Existing environment variables are preserved. The complete list is in
-  `config/systemd/factory.env.example`.
-- OpenHands is the sole outer execution control plane. Direct Claude, Codex,
-  Google/Gemini, and OpenCode agent executors are disabled outside that boundary.
-- Production model routing is conversation-stable: Codex subscription OAuth is
-  preferred and OpenCode Go is the only production fallback.
-- No worker can push directly to `main`.
-- A pull request is reviewed on the same branch that implemented it.
-- The reviewed head SHA must still match before merge is enabled.
-- Factory merge readiness requires the named `CI / required` aggregate and the
-  SHA-anchored `factory/independent-review` status to be present and successful.
-- Failed checks return the job to the repair phase.
-- Repeated failures use persisted failure-class/fingerprint accounting,
-  deterministic jittered backoff, and provider circuit breakers. The Factory
-  does not use a terminal issue quarantine as its recovery strategy.
-- Durable execution states abandoned by a crashed daemon are recovered into the
-  same bounded retry path without discarding their worktree or job history.
-- Every lifecycle transition is visible through GitHub comments and labels.
-- Worktree, lease and job state are durable across daemon restarts.
-- GitHub Actions do not create competing resolver or reviewer jobs.
+- Production Factory code is deployed from `origin/main` only.
+- Agents cannot push application changes directly to `main` or merge pull requests.
+- Routing is typed, phase-specific, configurable, health-aware, and capacity-aware.
+- Provider-side failures can fall through; task, test, repository, policy, and internal Factory failures cannot
+  blindly rotate.
+- A no-provider condition defers the job without consuming a task attempt or permanently quarantining it.
+- Retry classes, deterministic jittered backoff, provider circuits, provider history, and worktree state survive
+  daemon restart.
+- Corrupt future or overlong provider and task leases cannot suppress scheduling indefinitely.
+- A watchdog can recover abandoned execution states but cannot start an LLM or modify the base checkout.
+- Review avoids every provider that may have mutated the code when another healthy provider is available.
+- `.factory-review.json` and `.factory-architect.json` are fresh, validated, authoritative control artefacts and
+  are removed before repository commits.
+- Every repair returns to local verification and independent review.
+- The reviewed head SHA must still be current before merge eligibility.
+- A reviewed head that becomes behind `main` loses eligibility, receives an expected-SHA base update, and is
+  verified and reviewed again.
+- The merge call is atomically bound to the inspected head SHA with `--match-head-commit`.
+- `CI / required` and `factory/independent-review` must both report literal `SUCCESS`. Missing, skipped, neutral,
+  pending, or failed required contexts fail closed.
+- One active GitHub ruleset on `main` must have no bypass actors and require pull requests plus both canonical
+  statuses. The scheduled workflow is not a substitute for a server-side rule because another authenticated
+  account could otherwise merge around Factory review. Pin each status to its expected GitHub App integration;
+  a context name alone does not attest its publisher.
+- A human `CHANGES_REQUESTED` review blocks merge.
+- GitHub comments describe user-visible lifecycle changes and never expose credentials or routine provider
+  fallback noise.
+- The pre-push quality gate rejects provider credential directories, high-confidence tokens, and private keys.
 
-## Recovery
+## Parallelism and recovery
 
-Use the runbook in `docs/factory/README.md`. To inspect the retired pre-SDK
-GitHub Actions implementation for historical reference, inspect the parent of
-the deployment commit:
+`FACTORY_MAX_PARALLEL_JOBS=3` is the production starting point. Each provider also has an independent
+`max_concurrency`. Busy providers can be skipped so another healthy subscription can make progress. Fixed-port
+verification commands use a separate semaphore.
 
-```bash
-git show 7569bf64^:.github/workflows/architect.yml
-git show 7569bf64^:.github/workflows/auto-dispatcher.yml
-git show 7569bf64^:.github/workflows/openhands.yml
-git show 7569bf64^:.github/workflows/pr-reviewer.yml
-```
+Use `docs/factory/README.md` for deployment and recovery. Historical resolver and reviewer workflows must not be
+restored beside the daemon because they would create duplicate workers, branches, comments, pull requests, and
+merge decisions.
 
-Those files are historical reference only. Restoring them alongside the SDK
-daemon would create duplicate issue workers, duplicate reviews, and duplicate
-pull requests.
+A green scheduled merge-workflow run does not prove that a pull request was merged. The workflow intentionally
+does nothing when no eligible PR exists. Check daemon state, durable jobs, PR labels, required checks, and the
+SHA-scoped review status for throughput evidence.
+
+`hellotalk-factory doctor --online` fails when GitHub does not enforce the two canonical statuses. Production
+activation also requires `hellotalk-factory legacy scan` to report no competing executor.

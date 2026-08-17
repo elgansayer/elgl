@@ -44,6 +44,8 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert "Untrusted-content rule" in prompt
     assert "reveal secrets" in prompt
     assert prompt.index("Untrusted-content rule") < prompt.index("Task ID: 42")
+    assert "## Begin untrusted task and evidence data" in prompt
+    assert "## End untrusted task and evidence data" in prompt
 
 
 def test_build_phase_prompt_rejects_unknown_phase(tmp_path: Path) -> None:

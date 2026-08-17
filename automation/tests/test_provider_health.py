@@ -73,6 +73,14 @@ def test_breaker_caps_an_absurd_provider_reported_wait() -> None:
     assert breaker.permits_call(now + timedelta(seconds=MAX_RETRY_AFTER_SECONDS + 1))
 
 
+def test_breaker_clamps_a_negative_provider_reported_wait() -> None:
+    breaker = CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, 1, 300)
+
+    breaker.record_failure(FailureKind.RATE_LIMIT, retry_after_seconds=-1)
+
+    assert breaker.retry_after_seconds == 0
+
+
 def test_success_clears_a_previous_retry_after_override() -> None:
     now = datetime.now(UTC)
     breaker = CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, 1, 300)

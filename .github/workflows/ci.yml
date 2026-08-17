@@ -351,6 +351,8 @@ jobs:
       - name: Install frozen Factory dependencies
         run: uv sync --frozen --extra development
         working-directory: automation
+      - run: uv run --frozen ruff format --check .
+        working-directory: automation
       - run: uv run --frozen ruff check openhands_factory tests
         working-directory: automation
       - run: uv run --frozen mypy openhands_factory

@@ -4,7 +4,9 @@ from openhands_factory import cli
 from openhands_factory.oauth_health import OAuthHealth, OAuthHealthKind
 
 
-def test_online_provider_check_fails_closed_when_subscription_smoke_fails(monkeypatch) -> None:
+def test_online_doctor_warns_when_optional_openai_subscription_smoke_fails(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(cli, "run_doctor", lambda config, online: [])
     monkeypatch.setattr(cli, "_legacy_checks", lambda: [])
     monkeypatch.setattr(
@@ -20,7 +22,7 @@ def test_online_provider_check_fails_closed_when_subscription_smoke_fails(monkey
     checks = cli._doctor_checks(object(), online=True)
     subscription = next(check for check in checks if check.name == "openai-subscription-online")
 
-    assert not subscription.passed
+    assert subscription.passed
     assert subscription.warning
     assert "subscription unavailable" in subscription.detail
 
@@ -28,12 +30,12 @@ def test_online_provider_check_fails_closed_when_subscription_smoke_fails(monkey
 def test_systemd_requires_provider_preflight_before_daemon_start() -> None:
     repository = Path(__file__).parents[2]
     unit_lines = (
-        repository / "config" / "systemd" / "hellotalk-factory.service"
-    ).read_text(encoding="utf-8").splitlines()
-
-    preflight = (
-        "ExecStartPre=/opt/hellotalk-factory/venv/bin/hellotalk-factory providers check"
+        (repository / "config" / "systemd" / "hellotalk-factory.service")
+        .read_text(encoding="utf-8")
+        .splitlines()
     )
+
+    preflight = "ExecStartPre=/opt/hellotalk-factory/venv/bin/hellotalk-factory providers check"
     daemon = "ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon"
 
     assert preflight in unit_lines

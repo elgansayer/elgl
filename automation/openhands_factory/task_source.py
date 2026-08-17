@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fcntl
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -12,6 +13,16 @@ from threading import Lock
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import Lease, Task
 from openhands_factory.state import atomic_write_json, read_json
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _is_backlog_payload(value: object) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("tasks"), list)
+
+
+def _is_lease_payload(value: object) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("leases"), list)
 
 
 class LeaseIndex(dict[str, Lease]):
@@ -88,16 +99,30 @@ class TaskStore:
                     for task in tasks
                 ]
             },
+            validator=_is_backlog_payload,
         )
 
     def cached(self) -> list[Task]:
-        payload = read_json(self.backlog_path, {"tasks": []})
+        payload = read_json(
+            self.backlog_path,
+            {"tasks": []},
+            validator=_is_backlog_payload,
+        )
         tasks: list[Task] = []
-        for item in payload.get("tasks", []):
-            tags = item.get("triage_tags", [])
-            if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
-                tags = []
-            tasks.append(Task(**{**item, "triage_tags": frozenset(tags)}))
+        for index, item in enumerate(payload.get("tasks", [])):
+            try:
+                if not isinstance(item, dict):
+                    raise TypeError("task entry is not a mapping")
+                tags = item.get("triage_tags", [])
+                if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+                    tags = []
+                tasks.append(Task(**{**item, "triage_tags": frozenset(tags)}))
+            except (TypeError, ValueError) as error:
+                LOGGER.error(
+                    "factory.state.task_skipped index=%s error=%s",
+                    index,
+                    type(error).__name__,
+                )
         return tasks
 
     def _task_key(self, task_or_id: Task | str) -> str:
@@ -117,28 +142,29 @@ class TaskStore:
 
     def leases(self, now: datetime | None = None) -> dict[str, Lease]:
         current = now or datetime.now(UTC)
-        payload = read_json(self.lease_path, {"leases": []})
+        payload = read_json(
+            self.lease_path,
+            {"leases": []},
+            validator=_is_lease_payload,
+        )
         leases: LeaseIndex = LeaseIndex()
-        for item in payload.get("leases", []):
-            expires = datetime.fromisoformat(item["expires_at"])
-            generation = str(item.get("factory_generation", "unknown"))
-            if (
-                expires > current
-                and (
-                    self.factory_generation == "unknown"
-                    or generation in {"unknown", self.factory_generation}
+        for index, item in enumerate(payload.get("leases", [])):
+            try:
+                lease = self._restore_lease(item)
+            except (KeyError, TypeError, ValueError) as error:
+                LOGGER.error(
+                    "factory.state.lease_skipped index=%s error=%s",
+                    index,
+                    type(error).__name__,
                 )
+                continue
+            if self._lease_is_active(lease, current) and (
+                self.factory_generation == "unknown"
+                or lease.factory_generation in {"unknown", self.factory_generation}
             ):
-                task_id = str(item["task_id"])
-                task_key = str(item.get("task_key") or self._task_key(task_id))
-                leases[task_key] = Lease(
-                    task_id=task_id,
-                    owner=item["owner"],
-                    acquired_at=datetime.fromisoformat(item["acquired_at"]),
-                    expires_at=expires,
-                    factory_generation=generation,
-                    task_key=task_key,
-                )
+                task_key = lease.task_key or self._task_key(lease.task_id)
+                lease.task_key = task_key
+                leases[task_key] = lease
         return leases
 
     def select(self, tasks: list[Task] | None = None) -> Task | None:
@@ -212,31 +238,69 @@ class TaskStore:
         current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
             self._assert_generation_current()
-            payload = read_json(self.lease_path, {"leases": []})
+            payload = read_json(
+                self.lease_path,
+                {"leases": []},
+                validator=_is_lease_payload,
+            )
             active: dict[str, Lease] = {}
             expired: list[str] = []
-            for item in payload.get("leases", []):
-                expires = datetime.fromisoformat(item["expires_at"])
-                generation = str(item.get("factory_generation", "unknown"))
+            for index, item in enumerate(payload.get("leases", [])):
+                try:
+                    lease = self._restore_lease(item)
+                except (KeyError, TypeError, ValueError) as error:
+                    LOGGER.error(
+                        "factory.state.lease_skipped index=%s error=%s",
+                        index,
+                        type(error).__name__,
+                    )
+                    continue
                 same_generation = (
                     self.factory_generation == "unknown"
-                    or generation in {"unknown", self.factory_generation}
+                    or lease.factory_generation in {"unknown", self.factory_generation}
                 )
-                task_id = str(item["task_id"])
-                task_key = str(item.get("task_key") or self._task_key(task_id))
-                if expires > current and same_generation:
-                    active[task_key] = Lease(
-                        task_id=task_id,
-                        owner=item["owner"],
-                        acquired_at=datetime.fromisoformat(item["acquired_at"]),
-                        expires_at=expires,
-                        factory_generation=generation,
-                        task_key=task_key,
-                    )
+                if self._lease_is_active(lease, current) and same_generation:
+                    task_key = lease.task_key or self._task_key(lease.task_id)
+                    lease.task_key = task_key
+                    active[task_key] = lease
                 else:
-                    expired.append(task_id)
+                    expired.append(lease.task_id)
             self._write_leases(active)
             return sorted(expired, key=lambda identifier: (not identifier.isdigit(), identifier))
+
+    def _restore_lease(self, item: object) -> Lease:
+        if not isinstance(item, dict):
+            raise TypeError("lease entry is not a mapping")
+
+        def timestamp(name: str) -> datetime:
+            value = item[name]
+            if not isinstance(value, str):
+                raise TypeError(f"lease {name} is not a timestamp")
+            restored = datetime.fromisoformat(value)
+            return restored if restored.tzinfo is not None else restored.replace(tzinfo=UTC)
+
+        task_id = item["task_id"]
+        owner = item["owner"]
+        if not isinstance(task_id, str) or not isinstance(owner, str):
+            raise TypeError("lease identity must contain strings")
+        task_key = str(item.get("task_key") or self._task_key(task_id))
+        return Lease(
+            task_id=task_id,
+            owner=owner,
+            acquired_at=timestamp("acquired_at"),
+            expires_at=timestamp("expires_at"),
+            factory_generation=str(item.get("factory_generation", "unknown")),
+            task_key=task_key,
+        )
+
+    def _lease_is_active(self, lease: Lease, current: datetime) -> bool:
+        if lease.expires_at is None:
+            return False
+        maximum_expiry = current + timedelta(minutes=self.lease_minutes)
+        maximum_clock_skew = current + timedelta(minutes=1)
+        return (
+            lease.acquired_at <= maximum_clock_skew and current < lease.expires_at <= maximum_expiry
+        )
 
     def _write_leases(self, leases: dict[str, Lease]) -> None:
         atomic_write_json(
@@ -254,4 +318,5 @@ class TaskStore:
                     for item in leases.values()
                 ]
             },
+            validator=_is_lease_payload,
         )

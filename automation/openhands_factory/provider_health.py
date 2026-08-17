@@ -18,6 +18,10 @@ DEFAULT_FAILURE_THRESHOLD = 3
 DEFAULT_COOLDOWN_SECONDS = 300
 
 
+def _is_health_payload(value: object) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("breakers"), list)
+
+
 @dataclass
 class CircuitBreaker:
     provider: ProviderName
@@ -59,7 +63,10 @@ class CircuitBreaker:
         retry_after_seconds: int | None = None,
     ) -> None:
         if retry_after_seconds is not None:
-            self.retry_after_seconds = min(retry_after_seconds, MAX_RETRY_AFTER_SECONDS)
+            self.retry_after_seconds = min(
+                max(retry_after_seconds, 0),
+                MAX_RETRY_AFTER_SECONDS,
+            )
         if kind in {FailureKind.AUTHENTICATION, FailureKind.CONFIGURATION, FailureKind.BUDGET}:
             self.state = CircuitState.OPEN
             self.consecutive_failures = self.failure_threshold
@@ -167,7 +174,11 @@ class ProviderHealthStore:
             item["state"] = breaker.state.value
             item["opened_at"] = breaker.opened_at.isoformat() if breaker.opened_at else None
             payload.append(item)
-        atomic_write_json(self.path, {"breakers": payload})
+        atomic_write_json(
+            self.path,
+            {"breakers": payload},
+            validator=_is_health_payload,
+        )
 
     def load(self, *, now: datetime | None = None) -> list[CircuitBreaker]:
         """Load breaker state defensively while failing closed for known providers.

@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -153,8 +154,7 @@ def test_stale_lease_is_recovered(tmp_path: Path) -> None:
 def test_parallel_acquisitions_preserve_every_distinct_logical_lease(tmp_path: Path) -> None:
     store = TaskStore(tmp_path)
     tasks = [
-        Task(str(identifier), f"Task {identifier}", "body", "github", 0)
-        for identifier in range(6)
+        Task(str(identifier), f"Task {identifier}", "body", "github", 0) for identifier in range(6)
     ]
 
     with ThreadPoolExecutor(max_workers=6) as workers:
@@ -199,6 +199,7 @@ def test_legacy_identifier_lease_migrates_to_logical_key_when_backlog_is_known(
     task = Task("42", "Fix build", "body", "github-issue", 3)
     store.cache([task])
     now = datetime.now(UTC)
+
     atomic_write_json(
         store.lease_path,
         {
@@ -218,3 +219,72 @@ def test_legacy_identifier_lease_migrates_to_logical_key_when_backlog_is_known(
     assert set(leases) == {task.logical_key}
     assert leases[task.logical_key].task_id == "42"
     assert leases[task.logical_key].task_key == task.logical_key
+
+
+def test_malformed_task_and_lease_entries_do_not_hide_valid_siblings(
+    tmp_path: Path,
+    caplog,
+) -> None:
+    now = datetime.now(UTC)
+    store = TaskStore(tmp_path)
+    store.backlog_path.write_text(
+        json.dumps(
+            {
+                "tasks": [
+                    {
+                        "identifier": "3",
+                        "title": "Valid",
+                        "body": "",
+                        "source": "github-issue",
+                        "priority": 0,
+                    },
+                    {"identifier": "broken"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    store.lease_path.write_text(
+        json.dumps(
+            {
+                "leases": [
+                    {
+                        "task_id": "3",
+                        "owner": "factory",
+                        "acquired_at": now.isoformat(),
+                        "expires_at": (now + timedelta(minutes=5)).isoformat(),
+                    },
+                    {"task_id": "broken", "expires_at": "not-a-date"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert [task.identifier for task in store.cached()] == ["3"]
+    valid = store.cached()[0]
+    assert set(store.leases(now)) == {valid.logical_key}
+    assert "factory.state.task_skipped" in caplog.text
+    assert "factory.state.lease_skipped" in caplog.text
+
+
+def test_corrupt_far_future_task_lease_does_not_suppress_work(tmp_path: Path) -> None:
+    now = datetime.now(UTC)
+    task = Task("4", "Recoverable", "body", "github", 0)
+    store = TaskStore(tmp_path, lease_minutes=5)
+    atomic_write_json(
+        store.lease_path,
+        {
+            "leases": [
+                {
+                    "task_id": task.identifier,
+                    "owner": "corrupt",
+                    "acquired_at": now.isoformat(),
+                    "expires_at": (now + timedelta(days=365)).isoformat(),
+                }
+            ]
+        },
+    )
+
+    assert store.select([task]) == task
+    assert store.prune_expired_leases(now) == [task.identifier]

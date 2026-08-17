@@ -6,6 +6,7 @@ EXECUTION_ARCHITECTURE = REPOSITORY / "docs" / "factory" / "execution-architectu
 ACTIVE_ARCHITECTURE = REPOSITORY / "docs" / "factory" / "ACTIVE_ARCHITECTURE.md"
 AI_WORKFLOW = REPOSITORY / ".github" / "workflows" / "AI-WORKFLOW.md"
 ENV_EXAMPLE = REPOSITORY / "config" / "systemd" / "factory.env.example"
+SUBSCRIPTION_AGENTS = REPOSITORY / "docs" / "factory" / "SUBSCRIPTION-AGENTS.md"
 
 OPERATOR_RECOVERY_COMMANDS = (
     "doctor --online",
@@ -15,6 +16,7 @@ OPERATOR_RECOVERY_COMMANDS = (
     "reconcile",
     "pause",
     "resume",
+    "backlog requeue-quarantined",
 )
 
 
@@ -26,55 +28,73 @@ def test_runbook_documents_operator_recovery_commands() -> None:
         assert f"hellotalk-factory {command}" in recovery
 
 
-def test_execution_architecture_locks_openhands_control_plane() -> None:
+def test_execution_architecture_locks_single_factory_owner_and_multiple_providers() -> None:
     architecture = EXECUTION_ARCHITECTURE.read_text(encoding="utf-8")
 
-    assert "exactly one autonomous execution control plane" in architecture
-    assert "OpenHands Agent Canvas" in architecture
-    assert "OpenAI subscription OAuth / Codex" in architecture
+    assert "exactly one autonomous orchestration control plane" in architecture
+    assert "AgentRouter" in architecture
+    assert "Claude Code CLI" in architecture
+    assert "Codex CLI" in architecture
+    assert "Google agent CLI" in architecture
     assert "OpenCode Go" in architecture
-    assert "only production fallback" in architecture
-    direct_adapters = (
-        "Direct Claude Code, Codex CLI, Gemini/Google Agent, and OpenCode CLI adapters"
-    )
-    assert direct_adapters in architecture
-    assert "not production routing peers" in architecture
-    assert "fails closed" in architecture
+    assert "OpenHands SDK" in architecture
+    assert "No-provider capacity defers work" in architecture
 
 
-def test_active_architecture_cannot_drift_back_to_direct_cli_routing() -> None:
+def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:
     architecture = ACTIVE_ARCHITECTURE.read_text(encoding="utf-8")
 
     required_contract = (
-        "OpenHands Agent Canvas Factory",
+        "OpenHands Factory with interchangeable agents",
         "FACTORY_ARCHITECTURE=openhands-agent-canvas-v1",
-        "OpenAI subscription / Codex OAuth",
-        "OpenCode Go",
+        "AgentRouter",
+        "Claude CLI",
+        "Codex CLI",
+        "OpenCode CLI",
+        "OpenHands SDK adapter",
         "CI / required",
         "factory/independent-review",
-        "Terminal issue quarantine is not the production recovery strategy",
-        "Dependency upgrades that change",
-        "migration-specific acceptance criteria",
+        "A repeated identical task-side failure opens a durable, recoverable quarantine",
+        "Any change to provider order",
     )
     for marker in required_contract:
         assert marker in architecture
 
     retired_runtime_claims = (
-        "Subscription-First CLI Orchestrator",
         "caveman claude",
-        "meta_agent.py",
+        "separate self-patching meta-agent",
     )
     for marker in retired_runtime_claims:
         assert marker not in architecture
 
 
-def test_workflow_and_environment_match_the_authoritative_provider_chain() -> None:
+def test_workflow_and_environment_match_subscription_first_routing() -> None:
     workflow = AI_WORKFLOW.read_text(encoding="utf-8")
     environment = ENV_EXAMPLE.read_text(encoding="utf-8")
 
-    assert "OpenAI subscription/Codex OAuth -> OpenCode Go" in workflow
-    assert "Gemini free tier" not in workflow
+    assert "phase-specific AgentRouter selection" in workflow
+    assert "Claude Code, Codex CLI, Google agent, OpenCode, OpenHands emergency" in workflow
+    assert "provider-rotated repair" in workflow
     assert "Three consecutive failures quarantine" not in workflow
     assert "FACTORY_ARCHITECTURE=openhands-agent-canvas-v1" in environment
+    assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in environment
     assert "GEMINI_ENABLED=false" in environment
-    assert "Codex via OpenHands subscription OAuth -> OpenCode Go only" in environment
+    assert "direct" in environment.lower()
+
+
+def test_runbook_documents_agent_and_verification_credential_boundaries() -> None:
+    runbook = RUNBOOK.read_text(encoding="utf-8")
+    subscriptions = SUBSCRIPTION_AGENTS.read_text(encoding="utf-8")
+
+    for marker in (
+        "inside private user, mount",
+        "PID, and proc namespaces",
+        "no-network namespace",
+        "disposable empty directories",
+        "run `gh auth login`",
+        "persistent service-home GitHub credentials",
+        "one active GitHub ruleset without bypass actors requires pull requests",
+    ):
+        assert marker in runbook
+    assert "Do not authenticate GitHub CLI as `hellotalk-factory`" in subscriptions
+    assert "~/.config/gh/hosts.yml" in subscriptions

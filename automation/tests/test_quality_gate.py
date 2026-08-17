@@ -82,6 +82,33 @@ def test_check_quality_gate_blocks_e2e_skip() -> None:
     assert [finding.code for finding in findings] == ["skipped-test"]
 
 
+def test_check_quality_gate_blocks_provider_credential_artifacts() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/.codex/auth.json
+@@ -0,0 +1 @@
++{"token":"opaque-value"}
+"""
+    )
+
+    findings = check_quality_gate(workflow, "main")
+
+    assert [finding.code for finding in findings] == ["credential-artifact"]
+
+
+def test_check_quality_gate_blocks_high_confidence_secret_patterns() -> None:
+    workflow = Mock()
+    fake_token = "ghp_" + "A" * 24
+    workflow.runner.return_value = Mock(
+        stdout=(f'+++ b/backend/src/config.ts\n@@ -0,0 +1 @@\n+const token = "{fake_token}";\n')
+    )
+
+    findings = check_quality_gate(workflow, "main")
+
+    assert [finding.code for finding in findings] == ["credential-leak"]
+    assert fake_token not in findings[0].evidence
+
+
 def test_check_quality_gate_reports_diff_failure() -> None:
     workflow = Mock()
     workflow.runner.return_value = Mock(returncode=1, stderr="fatal: bad revision", stdout="")

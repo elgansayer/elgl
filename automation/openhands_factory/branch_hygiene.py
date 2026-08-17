@@ -217,8 +217,10 @@ def classify_branch(
             numbers.append(number)
     pull_request_numbers = tuple(sorted(numbers))
 
-    if name == base_branch or name in {"main", "master", "develop"} or any(
-        name.startswith(prefix) for prefix in protected_prefixes
+    if (
+        name == base_branch
+        or name in {"main", "master", "develop"}
+        or any(name.startswith(prefix) for prefix in protected_prefixes)
     ):
         return BranchRecord(
             name,
@@ -238,11 +240,7 @@ def classify_branch(
             "provider-managed dependency branch",
         )
 
-    open_prs = [
-        item
-        for item in pull_requests
-        if str(item.get("state") or "").upper() == "OPEN"
-    ]
+    open_prs = [item for item in pull_requests if str(item.get("state") or "").upper() == "OPEN"]
     if open_prs:
         explicitly_noncanonical = any(
             _labels(item).intersection({"superseded", "factory-skip", "duplicate"})

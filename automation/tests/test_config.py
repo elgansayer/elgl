@@ -1,8 +1,11 @@
+import os
 from pathlib import Path
 
 import pytest
 
+from openhands_factory import cli
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
+from openhands_factory.cli import _config
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
@@ -13,6 +16,7 @@ RETIRED_SYSTEMD_UNITS = {
     "hellotalk-guardian.service",
     "hellotalk-resolver.service",
     "hellotalk-reviewer.service",
+    "hellotalk-meta-agent.service",
 }
 
 RETIRED_EXECUTOR_FILENAMES = {
@@ -42,6 +46,44 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "merge --ff-only origin/main" in setup
     assert "hellotalk-factory@users.noreply.github.com" in setup
     assert "hellotalk-factory-watchdog.sh" in setup
+    assert '"$FACTORY_STATE/recovery"' in setup
+    assert "uv==0.12.5" in setup
+
+
+def test_deployment_is_pinned_to_clean_main() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "DEPLOY_REF=main" in deploy
+    assert "FACTORY_DEPLOY_REF must be main" in deploy
+    assert 'git -C "$FACTORY_CHECKOUT" switch main' in deploy
+    assert 'git -C "$FACTORY_CHECKOUT" merge --ff-only origin/main' in deploy
+    assert "status --porcelain" in deploy
+
+
+def test_deployment_preserves_operator_agent_routing_configuration() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "if [ ! -f /etc/hellotalk-factory/agents.json ]; then" in deploy
+    assert "/etc/hellotalk-factory/agents.previous.json" not in deploy
+    assert "/etc/hellotalk-factory/agents.example.json" in deploy
+
+
+def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "uv sync" in deploy
+    assert "--active --frozen --no-editable --extra development" in deploy
+    assert '"$FACTORY_CHECKOUT/admin-portal"' in deploy
+    assert 'npm ci --prefix "$directory"' in deploy
+    assert "npm exec -- cypress install" in deploy
+    assert "podman build --cgroup-manager=cgroupfs" in deploy
+    assert "localhost/hellotalk-factory-worker:current" in deploy
 
 
 def test_legacy_github_agent_workflows_stay_retired() -> None:
@@ -49,6 +91,22 @@ def test_legacy_github_agent_workflows_stay_retired() -> None:
 
     for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
         assert not (workflows / name).exists()
+
+
+def test_final_merge_gate_respects_human_requested_changes() -> None:
+    workflow = (
+        Path(__file__).parents[2] / ".github" / "workflows" / "factory-merge.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "reviewDecision" in workflow
+    assert '.reviewDecision != "CHANGES_REQUESTED"' in workflow
+    assert "headRefOid" in workflow
+    assert '--match-head-commit "$head_sha"' in workflow
+    assert '== "factory/independent-review")] | length) >= 1' in workflow
+    assert '== "CI / required")] | length) >= 1' in workflow
+    assert workflow.count("| not))] | length) == 0") == 2
+    assert "--auto" not in workflow
+    assert "--admin" not in workflow
 
 
 def test_retired_autonomous_entrypoints_cannot_reappear() -> None:
@@ -80,6 +138,48 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
 
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
+    assert "ProtectProc=ptraceable" in unit
+    assert "/opt/hellotalk-factory/venv/bin" in unit
+
+
+def test_factory_secret_environment_is_installed_root_only() -> None:
+    repository_root = Path(__file__).parents[2]
+    scripts = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            repository_root / "scripts/install-factory-env.sh",
+            repository_root / "scripts/repair-factory-host.sh",
+            repository_root / "setup-debian.sh",
+        )
+    )
+
+    assert "chown root:root" in scripts
+    assert "chmod 0600" in scripts
+    assert "install -o root -g root -m 0600" in scripts
+
+
+def test_factory_git_auth_is_scoped_and_does_not_require_service_user_login() -> None:
+    repository_root = Path(__file__).parents[2]
+    setup = (repository_root / "setup-debian.sh").read_text(encoding="utf-8")
+    deploy = (repository_root / "scripts/deploy-and-start-factory.sh").read_text(encoding="utf-8")
+
+    assert setup.index("factory.env") < setup.index("git -c credential.helper")
+    for script in (setup, deploy):
+        assert 'GH_TOKEN="$factory_github_token"' in script
+        assert "config --add credential.helper ''" in script
+        assert "config --add credential.helper" in script
+        assert "gh auth login" not in script
+
+
+def test_factory_environment_installer_does_not_copy_legacy_gemini_secrets() -> None:
+    installer = (Path(__file__).parents[2] / "scripts" / "install-factory-env.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "GEMINI_ENABLED$" not in installer
+    assert "|GEMINI_|" not in installer
+    assert 'key == "GEMINI_ENABLED"' in installer
+    assert 'print "GEMINI_ENABLED=false"' in installer
 
 
 def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> None:
@@ -92,6 +192,19 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
     assert "MemoryHigh=6G" in unit
     assert "MemoryMax=7G" in unit
     assert "TasksMax=1024" in unit
+
+
+def test_service_runs_bounded_startup_preflight_before_daemon() -> None:
+    unit_lines = (
+        (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
+    preflight = "ExecStartPre=/opt/hellotalk-factory/venv/bin/hellotalk-factory providers check"
+    daemon = "ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon"
+
+    assert preflight in unit_lines
+    assert unit_lines.index(preflight) < unit_lines.index(daemon)
 
 
 def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
@@ -110,13 +223,16 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "Delegate=yes" not in unit
     assert "OnUnitActiveSec=2min" in timer
     assert 'systemctl restart "$SERVICE"' in watchdog
-    assert 'for attempt in 1 2 3' in watchdog
-    assert 'alert-daemon-failed' in watchdog
-    assert 'jobs-quarantined' not in watchdog
-    assert 'jobs-stalled' not in watchdog
+    assert "for attempt in 1 2 3" in watchdog
+    assert "alert-daemon-failed" in watchdog
+    assert "active_started_at" in watchdog
+    assert "FACTORY_MAX_TASK_MINUTES" in watchdog
+    assert "jobs-quarantined" not in watchdog
+    assert "jobs-stalled" not in watchdog
     for directive in (
         "PrivateTmp=true",
-        "ProtectHome=true",
+        "ProtectHome=tmpfs",
+        "BindPaths=/run/user",
         "ProtectKernelModules=true",
         "ProtectKernelLogs=true",
         "ProtectClock=true",
@@ -139,7 +255,7 @@ def environment(**overrides: str) -> dict[str, str]:
 
 
 def test_missing_required_environment_is_rejected() -> None:
-    with pytest.raises(ConfigurationError, match="OPENCODE_GO_API_KEY"):
+    with pytest.raises(ConfigurationError, match="GITHUB_TOKEN"):
         FactoryConfig.from_environment({})
 
 
@@ -162,17 +278,12 @@ def test_default_repository_is_production_clone() -> None:
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
-    assert config.agents.routing_enabled is True
+    assert config.require_trusted_intake is False
+    assert config.trusted_github_actors == frozenset({"elgansayer"})
+    assert config.agents.routing_enabled is False
     assert config.agents.providers["openhands"].enabled is True
-    assert config.agents.providers["openhands"].emergency_only is False
-    assert config.agents.providers["openhands"].auth_mode == "control-plane"
-    assert config.agents.routing.implementation == ["openhands"]
-    assert config.agents.routing.code_review == ["openhands"]
-    assert all(
-        not provider.enabled
-        for name, provider in config.agents.providers.items()
-        if name != "openhands"
-    )
+    assert config.agents.providers["claude"].enabled is False
+    assert config.agents.routing.implementation[0] == "claude"
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
@@ -190,20 +301,138 @@ def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
         )
 
 
-def test_direct_agent_provider_routing_cannot_bypass_openhands(tmp_path: Path) -> None:
+def test_agent_routing_rejects_misspelled_configuration_fields(tmp_path: Path) -> None:
     config_path = tmp_path / "agents.json"
     config_path.write_text(
         '{"routing_enabled": true, "providers": {'
-        '"openhands": {"enabled": true}, "codex": {"enabled": true}}, '
+        '"codex": {"enabled": true, "max_concurency": 9}}, '
         '"routing": {"implementation": ["codex"]}}',
         encoding="utf-8",
     )
-    with pytest.raises(ConfigurationError, match="Direct agent providers are disabled"):
-        FactoryConfig.from_environment(
-            environment(
-                FACTORY_AGENTS_CONFIG=str(config_path),
-            )
-        )
+
+    with pytest.raises(ConfigurationError, match="max_concurency"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_agent_routing_rejects_a_phase_without_an_enabled_provider(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        '"codex": {"enabled": false}, "openhands": {"enabled": true}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="implementation.*no enabled provider"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_production_agent_configuration_loads() -> None:
+    config_path = Path(__file__).parents[2] / "config/factory/agents.production.json"
+
+    factory_config = FactoryConfig.from_environment(
+        environment(FACTORY_AGENTS_CONFIG=str(config_path))
+    )
+
+    assert factory_config.agents.routing_enabled
+    assert factory_config.agents.providers["claude"].model == "fable"
+    assert factory_config.agents.providers["claude"].credential_paths == [
+        ".claude",
+        ".claude.json",
+    ]
+    assert factory_config.agents.providers["codex"].model == "gpt-5.6-sol"
+    assert factory_config.agents.providers["codex"].credential_paths == [".codex"]
+    assert factory_config.agents.providers["google"].enabled is False
+    assert factory_config.agents.providers["google"].command == "agy"
+    assert factory_config.agents.providers["google"].cli_variant == "antigravity"
+    assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
+    assert factory_config.agents.providers["opencode"].model == "opencode-go/kimi-k3"
+    assert factory_config.agents.providers["opencode"].credential_paths == [
+        ".config/opencode",
+        ".local/share/opencode",
+    ]
+    assert (
+        factory_config.agents.providers["opencode"].phase_models["code_review"]
+        == "opencode-go/qwen3.8-max"
+    )
+    assert (
+        factory_config.agents.providers["opencode"].phase_models["general_action"]
+        == "opencode-go/kimi-k2.7-code"
+    )
+    assert factory_config.agents.providers["openhands"].emergency_only
+
+
+@pytest.mark.parametrize(
+    "credential_path",
+    ("/tmp/provider", "../other-provider", ".", "safe|unsafe"),
+)
+def test_agent_routing_rejects_unsafe_provider_home_mounts(
+    tmp_path: Path,
+    credential_path: str,
+) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        f'"codex": {{"enabled": true, "credential_paths": ["{credential_path}"]}}}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="Unsafe provider home mount"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_agent_routing_rejects_google_variant_on_another_provider(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        '"codex": {"enabled": true, "cli_variant": "gemini"}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="cli_variant.*google"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_agent_routing_rejects_a_transport_the_adapter_would_ignore(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        '"codex": {"enabled": true, "transport": "openhands-sdk"}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="codex.*requires transport.*cli"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_openhands_transport_defaults_to_the_sdk_and_rejects_an_explicit_cli(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": false, "providers": {'
+        '"openhands": {"enabled": true, "transport": "cli"}}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="openhands.*requires transport.*openhands-sdk"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
+
+
+def test_subscription_provider_rejects_api_auth_mode(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        '"codex": {"enabled": true, "auth_mode": "api"}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError, match="codex.*requires auth_mode.*subscription"):
+        FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:
@@ -214,9 +443,64 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
+    assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
+    assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
+    assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
     assert f"FACTORY_ARCHITECTURE={EXPECTED_FACTORY_ARCHITECTURE}" in template
     assert "GEMINI_ENABLED=false" in template
+
+
+def test_host_repair_preserves_the_production_parallelism_limit() -> None:
+    repair = (Path(__file__).parents[2] / "scripts/repair-factory-host.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "FACTORY_MAX_PARALLEL_JOBS=3" in repair
+    assert "FACTORY_MAX_PARALLEL_JOBS=5" not in repair
+    assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in repair
+    assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in repair
+
+
+def test_cli_keeps_parsed_secrets_out_of_provider_child_environments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = FactoryConfig.from_environment(environment())
+    monkeypatch.setattr(FactoryConfig, "from_environment", lambda: expected)
+    monkeypatch.setenv("GITHUB_TOKEN", "github-secret")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-secret")
+    monkeypatch.setenv("FACTORY_VISIBLE_SETTING", "retained")
+
+    loaded = _config()
+
+    assert loaded is expected
+    assert "GITHUB_TOKEN" not in os.environ
+    assert "OPENAI_API_KEY" not in os.environ
+    assert "TELEGRAM_BOT_TOKEN" not in os.environ
+    assert os.environ["FACTORY_VISIBLE_SETTING"] == "retained"
+
+
+def test_cli_protects_process_before_loading_secret_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+    expected = FactoryConfig.from_environment(environment())
+    monkeypatch.setattr(
+        cli,
+        "protect_process_credentials",
+        lambda: events.append("process-protected"),
+    )
+
+    def load_config() -> FactoryConfig:
+        events.append("configuration-loaded")
+        return expected
+
+    monkeypatch.setattr(cli, "_config", load_config)
+
+    assert cli.main(["task", "run", "--dry-run"]) == 0
+    assert events == ["process-protected", "configuration-loaded"]
 
 
 def test_parallel_job_limit_must_be_positive() -> None:

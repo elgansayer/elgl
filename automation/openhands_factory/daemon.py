@@ -58,9 +58,7 @@ def queue_snapshot(
     active = active_task_ids or set()
     current = now or datetime.now(UTC)
     state_counts = Counter(job.state.value for job in jobs.values())
-    non_terminal = [
-        job for job in jobs.values() if job.state.value not in {"done", "quarantined"}
-    ]
+    non_terminal = [job for job in jobs.values() if job.state.value not in {"done", "quarantined"}]
     backing_off = [
         job
         for job in non_terminal
@@ -98,11 +96,26 @@ class FactoryDaemon:
 
     def request_stop(self, signum: int, frame: object) -> None:
         self.stopping = True
+        from openhands_factory.agents.process import AgentProcessRunner
+        from openhands_factory.conversation_runner import ConversationRunner
+        from openhands_factory.repository_guard import request_process_shutdown
+
+        self.pipeline.router.shutdown()
+        AgentProcessRunner.request_shutdown()
+        ConversationRunner.request_shutdown()
+        request_process_shutdown()
 
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
 
     def _activate_generation(self) -> None:
+        from openhands_factory.agents.process import AgentProcessRunner
+        from openhands_factory.conversation_runner import ConversationRunner
+        from openhands_factory.repository_guard import reset_process_shutdown
+
+        AgentProcessRunner.reset_shutdown()
+        ConversationRunner.reset_shutdown()
+        reset_process_shutdown()
         generation = FactoryGeneration.create()
         activate_generation(self.config.state_dir, generation)
         self.generation = generation
@@ -132,7 +145,21 @@ class FactoryDaemon:
                 # Fail before durable generation takeover if the active checkout has
                 # resurrected a known autonomous swarm workflow.
                 assert_single_owner(self.config.repository)
+                from openhands_factory.doctor import startup_security_checks
+
+                failed_security = [
+                    check for check in startup_security_checks(self.config) if not check.passed
+                ]
+                if failed_security:
+                    for check in failed_security:
+                        LOGGER.error("Factory startup security check failed: %s", check.name)
+                    return 1
                 self._activate_generation()
+                if not self.pipeline.router.has_usable_provider():
+                    LOGGER.warning(
+                        "No configured agent provider is currently usable; "
+                        "the daemon will keep jobs recoverable and retry health checks"
+                    )
                 return self._loop()
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
@@ -143,6 +170,7 @@ class FactoryDaemon:
 
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}
+        active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
         architect_future: Future[None] | None = None
         with (
@@ -158,6 +186,7 @@ class FactoryDaemon:
                     if not future.done():
                         continue
                     del active[future]
+                    active_started_at.pop(task_id, None)
                     try:
                         job = future.result()
                     except Exception:
@@ -170,6 +199,14 @@ class FactoryDaemon:
                 if not self.paused() and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
+                        health = self.pipeline.router.health_snapshot()
+                        LOGGER.info(
+                            "Factory provider health: %s",
+                            ", ".join(
+                                f"{name}={item.status.value}"
+                                for name, item in sorted(health.items())
+                            ),
+                        )
                         jobs = self.pipeline.refresh(active_task_ids)
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
@@ -192,9 +229,11 @@ class FactoryDaemon:
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
+                            agent_router=self.pipeline.router,
                         )
                         future = workers.submit(worker.run_job, job.task.identifier)
                         active[future] = job.task.identifier
+                        active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)
                 if not self.paused() and (architect_future is None or architect_future.done()):
                     if architect_future is not None:
@@ -205,14 +244,24 @@ class FactoryDaemon:
                     if self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
-                        architect_worker = FactoryPipeline(self.config)
+                        architect_worker = FactoryPipeline(
+                            self.config,
+                            agent_router=self.pipeline.router,
+                        )
                         architect_future = architect.submit(architect_worker.run_architect_cycle)
-                self._write_daemon_state("running", active)
+                self._write_daemon_state("running", active, active_started_at)
                 time.sleep(min(self.config.cooldown_seconds, 10))
-        self._write_daemon_state("stopped", active)
+        # ThreadPoolExecutor has drained every future before leaving the context.
+        # Do not persist stale task identifiers as active in the stopped snapshot.
+        self._write_daemon_state("stopped", {}, {})
         return 0
 
-    def _write_daemon_state(self, status: str, active: dict[Future[Job | None], str]) -> None:
+    def _write_daemon_state(
+        self,
+        status: str,
+        active: dict[Future[Job | None], str],
+        active_started_at: dict[str, str] | None = None,
+    ) -> None:
         self._assert_owner()
         active_task_ids = set(active.values())
         jobs = self.pipeline.jobs.load()
@@ -230,6 +279,7 @@ class FactoryDaemon:
                 "pid": generation.pid,
                 "hostname": generation.hostname,
                 "active_jobs": sorted(active_task_ids, key=int),
+                "active_started_at": active_started_at or {},
                 "queue": queue_snapshot(jobs, active_task_ids),
             },
         )

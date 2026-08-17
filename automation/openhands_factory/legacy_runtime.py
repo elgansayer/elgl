@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ LEGACY_SYSTEMD_UNITS = (
     "hellotalk-guardian.service",
     "hellotalk-resolver.service",
     "hellotalk-reviewer.service",
+    "hellotalk-meta-agent.service",
 )
 
 LEGACY_TMUX_SESSIONS = (
@@ -30,6 +32,12 @@ LEGACY_STATE_PATHS = (
     Path("/opt/hellotalk-swarm"),
     Path("/var/lib/ai-swarm"),
     Path("/opt/ai-swarm"),
+)
+
+LEGACY_PROCESS_MARKERS = (
+    "meta_agent.py",
+    "pty_wrapper.py",
+    "claude --dangerously-skip-permissions",
 )
 
 
@@ -109,11 +117,41 @@ def detect_legacy_state_paths(
     return findings
 
 
+def detect_legacy_processes() -> list[LegacyFinding]:
+    """Find known unrestricted executors without exposing their full command lines."""
+
+    try:
+        result = _run(("ps", "-eo", "pid=,args="))
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
+        return []
+    findings: list[LegacyFinding] = []
+    for line in result.stdout.splitlines():
+        pid_text, separator, command = line.strip().partition(" ")
+        if not separator or not pid_text.isdigit() or int(pid_text) == os.getpid():
+            continue
+        for marker in LEGACY_PROCESS_MARKERS:
+            if marker not in command:
+                continue
+            findings.append(
+                LegacyFinding(
+                    "process",
+                    marker,
+                    True,
+                    "retired or unrestricted provider process is running",
+                )
+            )
+            break
+    return findings
+
+
 def detect_legacy_runtime() -> list[LegacyFinding]:
     """Return retired runtime/state findings without mutating the host."""
 
     return [
         *detect_legacy_systemd_units(),
         *detect_legacy_tmux_sessions(),
+        *detect_legacy_processes(),
         *detect_legacy_state_paths(),
     ]

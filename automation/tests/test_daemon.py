@@ -1,7 +1,11 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
 
-from openhands_factory.daemon import queue_snapshot, select_batch
+import pytest
+
+from openhands_factory.daemon import FactoryDaemon, queue_snapshot, select_batch
 from openhands_factory.models import Job, JobState, Task
 
 
@@ -78,3 +82,87 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
             "quarantined": 1,
         },
     }
+
+
+def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        state_dir=tmp_path,
+        repository=tmp_path,
+    )
+    daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
+        router=SimpleNamespace(has_usable_provider=lambda: False)
+    )
+    daemon.stopping = False
+    loop_calls: list[bool] = []
+    monkeypatch.setattr("openhands_factory.daemon.signal.signal", lambda signum, handler: None)
+    monkeypatch.setattr("openhands_factory.daemon.assert_single_owner", lambda repository: None)
+    monkeypatch.setattr("openhands_factory.doctor.startup_security_checks", lambda config: [])
+    monkeypatch.setattr(daemon, "_activate_generation", lambda: None)
+    monkeypatch.setattr(daemon, "_loop", lambda: loop_calls.append(True) or 0)
+
+    result = daemon.run()
+
+    assert result == 0
+    assert loop_calls == [True]
+
+
+def test_daemon_refuses_to_schedule_when_a_security_boundary_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(state_dir=tmp_path, repository=tmp_path)  # type: ignore[assignment]
+    daemon.pipeline = SimpleNamespace(router=SimpleNamespace(has_usable_provider=lambda: True))  # type: ignore[assignment]
+    daemon.stopping = False
+    activated: list[bool] = []
+    monkeypatch.setattr("openhands_factory.daemon.signal.signal", lambda signum, handler: None)
+    monkeypatch.setattr("openhands_factory.daemon.assert_single_owner", lambda repository: None)
+    monkeypatch.setattr(
+        "openhands_factory.doctor.startup_security_checks",
+        lambda config: [SimpleNamespace(name="verification-isolation", passed=False)],
+    )
+    monkeypatch.setattr(daemon, "_activate_generation", lambda: activated.append(True))
+
+    result = daemon.run()
+
+    assert result == 1
+    assert activated == []
+
+
+def test_stop_blocks_new_agent_starts_before_terminating_children(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from openhands_factory import repository_guard
+    from openhands_factory.agents.process import AgentProcessRunner
+    from openhands_factory.conversation_runner import ConversationRunner
+
+    calls: list[str] = []
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.stopping = False
+    daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
+        router=SimpleNamespace(shutdown=lambda: calls.append("router"))
+    )
+    monkeypatch.setattr(
+        AgentProcessRunner,
+        "request_shutdown",
+        lambda: calls.append("cli-processes"),
+    )
+    monkeypatch.setattr(
+        ConversationRunner,
+        "request_shutdown",
+        lambda: calls.append("sdk-processes"),
+    )
+    monkeypatch.setattr(
+        repository_guard,
+        "request_process_shutdown",
+        lambda: calls.append("repository-processes"),
+    )
+
+    daemon.request_stop(15, None)
+
+    assert daemon.stopping
+    assert calls == ["router", "cli-processes", "sdk-processes", "repository-processes"]

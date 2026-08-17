@@ -63,9 +63,7 @@ def test_repeated_alerts_in_the_same_category_are_suppressed_after_the_first(
     assert len(sent_texts) == 1
 
 
-def test_alert_after_cooldown_reports_the_suppressed_count(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_alert_after_cooldown_reports_the_suppressed_count(tmp_path: Path, monkeypatch) -> None:
     from datetime import UTC, datetime, timedelta
 
     from openhands_factory.state import atomic_write_json, read_json
@@ -148,9 +146,7 @@ def test_large_issue_lists_are_compacted_before_delivery(tmp_path: Path, monkeyp
     assert len(sent_texts[0]) < 4000
 
 
-def test_different_categories_are_not_suppressed_by_each_other(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_different_categories_are_not_suppressed_by_each_other(tmp_path: Path, monkeypatch) -> None:
     config = factory_config(tmp_path, TELEGRAM_BOT_TOKEN="token", TELEGRAM_CHAT_ID="chat")
     sent_texts: list[str] = []
 

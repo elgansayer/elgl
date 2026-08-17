@@ -44,11 +44,16 @@ def logical_task_key(title: str, body: str = "") -> str:
     return f"title:{digest}"
 
 
+MAX_PROVIDER_HISTORY = 500
+
+
 class ProviderName(StrEnum):
+    """Providers available inside the OpenHands compatibility adapter."""
+
     OPENAI_SUBSCRIPTION = "openai-subscription"
     OPENCODE_GO = "opencode-go"
     # Retained only so historical provider-health/attribution state can still be
-    # deserialized during migration. Production routing is Codex OAuth -> OpenCode Go.
+    # deserialised during migration. The outer AgentRouter never selects this enum.
     GEMINI = "gemini-flash"
 
 
@@ -119,21 +124,34 @@ class Job:
     last_failure_kind: str | None = None
     last_failure_fingerprint: str | None = None
     repeated_failure_count: int = 0
+    quarantine_reason: str | None = None
+    quarantined_at: datetime | None = None
+    quarantine_notification_pending: bool = False
     factory_generation: str = "unknown"
-    provider_history: list[dict[str, str | int]] = field(default_factory=list)
+    implementation_provider: str | None = None
+    review_provider: str | None = None
+    security_provider: str | None = None
+    last_provider_failure: str | None = None
+    provider_failover_count: int = 0
+    review_findings: list[str] = field(default_factory=list)
+    provider_history: list[dict[str, str | int | float | bool | None]] = field(default_factory=list)
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
 class ProviderUsage:
-    provider: ProviderName
+    provider: str
     model: str
+    phase: str = "unknown"
     calls: int = 0
     successes: int = 0
     failures: int = 0
     fallbacks: int = 0
     rate_limits: int = 0
     authentication_failures: int = 0
+    quota_failures: int = 0
+    timeouts: int = 0
+    total_duration_seconds: float = 0.0
     capacity_wait_seconds: float = 0.0
     capacity_waited_calls: int = 0
     estimated_cost_usd: float = 0.0

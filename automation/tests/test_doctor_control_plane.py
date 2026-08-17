@@ -23,25 +23,26 @@ def _config(tmp_path: Path) -> FactoryConfig:
     )
 
 
-def test_doctor_reports_openhands_as_the_sole_outer_execution_control_plane(
+def test_doctor_reports_legacy_openhands_compatibility_mode(
     tmp_path: Path,
 ) -> None:
     checks = {check.name: check for check in agent_provider_checks(_config(tmp_path))}
 
-    assert checks["agent-routing"].passed
-    assert checks["agent-routing"].detail == "OpenHands single control plane"
+    assert not checks["agent-routing"].passed
+    assert checks["agent-routing"].warning
+    assert checks["agent-routing"].detail == "OpenHands compatibility mode"
     assert checks["agent:openhands"].passed
-    assert checks["agent:openhands"].detail == "sole outer execution control plane"
+    assert "transport=openhands-sdk" in checks["agent:openhands"].detail
 
     for name in ("claude", "codex", "google", "opencode"):
         assert checks[f"agent:{name}"].passed
-        assert checks[f"agent:{name}"].detail == "disabled direct executor"
+        assert checks[f"agent:{name}"].detail == "disabled"
 
 
-def test_doctor_source_does_not_resurrect_direct_provider_health_probes() -> None:
-    source = (
-        Path(__file__).parents[1] / "openhands_factory" / "doctor.py"
-    ).read_text(encoding="utf-8")
+def test_doctor_source_includes_each_direct_provider_health_probe() -> None:
+    source = (Path(__file__).parents[1] / "openhands_factory" / "doctor.py").read_text(
+        encoding="utf-8"
+    )
 
     for retired_executor in (
         "ClaudeCodeProvider",
@@ -49,4 +50,4 @@ def test_doctor_source_does_not_resurrect_direct_provider_health_probes() -> Non
         "GoogleAgentProvider",
         "OpenCodeProvider",
     ):
-        assert retired_executor not in source
+        assert retired_executor in source

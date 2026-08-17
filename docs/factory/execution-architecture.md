@@ -1,36 +1,92 @@
 # Factory execution architecture
 
-## Authoritative control plane
+## One orchestration owner, multiple execution providers
 
-The production Factory has exactly one autonomous execution control plane: **OpenHands Agent Canvas**.
+The production system has exactly one autonomous orchestration control plane: OpenHands Factory. The daemon and
+`FactoryPipeline` own scheduling, durable state, retries, worktrees, verification, review, PRs, CI repair, and
+merge safety. `AgentRouter` is an internal Factory service, not a competing swarm.
 
-Every Factory phase, including planning, architecture, implementation, security review, quality repair, code review, CI repair, and general actions, enters the owned `OpenHandsProvider` boundary and is executed by the bounded `ConversationRunner`. Direct Claude Code, Codex CLI, Gemini/Google Agent, and OpenCode CLI adapters are not production routing peers and must not be enabled through `AgentsConfig`.
+Every AI-backed phase becomes one typed `AgentRequest` and can run through an eligible adapter:
 
-This keeps process lifecycle, worktree confinement, provider attribution, capacity limits, circuit breakers, cost accounting, cancellation, and recovery under one control plane rather than creating a second autonomous agent system beside OpenHands.
+- Claude Code CLI using a Claude subscription;
+- Codex CLI using ChatGPT subscription authentication;
+- configurable Google agent CLI, with Antigravity preferred for supported consumer subscriptions;
+- OpenCode CLI using OpenCode Go authentication;
+- OpenHands SDK as an optional emergency compatibility provider.
 
-## Model/provider chain inside OpenHands
-
-For each OpenHands conversation, `ConversationRunner` selects one conversation-stable model provider through `provider_profiles.select_provider_decision`:
-
-1. **OpenAI subscription OAuth / Codex** is the primary provider.
-2. **OpenCode Go** is the only production fallback when the primary provider is unavailable or cooling down.
-
-The independent review phase may prefer the other healthy provider for provider diversity, but it still runs as an OpenHands conversation and remains provider-stable for that conversation.
-
-Gemini helpers are historical configuration/diagnostic compatibility only. They are not eligible for production execution. If both production model providers are unavailable, the Factory fails closed and returns the job to bounded retry/recovery rather than silently dispatching a third provider.
+Providers cannot discover work, own job state, merge, or weaken Factory policy. The transport may be CLI,
+OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 
 ## Architecture invariants
 
-- `FACTORY_ARCHITECTURE` remains `openhands-agent-canvas-v1`.
-- Outer phase routing resolves only to `openhands`.
-- Direct CLI agent providers remain disabled and cannot be referenced by production phase routing.
-- OpenHands cannot be disabled in production Factory configuration.
-- Underlying provider health is durable and applies only to the two production model providers.
-- Routine provider exhaustion is recoverable work, not a reason to resurrect permanent job quarantine or the retired swarm.
-- Retired Aider, swarm, guardian, resolver, reviewer, and parallel autonomous executor entrypoints must not return.
+- `FACTORY_ARCHITECTURE` remains `openhands-agent-canvas-v1` for deployment and state compatibility.
+- `FactoryPipeline` calls `AgentRouter` for every AI-backed phase.
+- Provider adapters contain vendor invocation details; routing policy contains only provider names and phase order.
+- Direct provider children receive no GitHub token, vendor API-key override, proxy credential, Telegram secret,
+  or application secret.
+- Direct provider children run with private process and mount views that hide durable Factory state, logs, host
+  temporary files, runtime sockets, and other provider sessions while retaining only the assigned worktree,
+  read-only base, provider-owned credential paths, and read-only runtime paths.
+- Repository-controlled verification receives neither provider sessions nor external network access.
+- OpenHands remains available through `OpenHandsProvider`; there is no parallel legacy conversation path.
+- Disabled, unsupported, unhealthy, cooling-down, quota-exhausted, auth-broken, and optionally busy providers are
+  skipped.
+- Provider-side failures may fall through according to typed policy. Repository, test, task, policy, and internal
+  Factory failures do not blindly rotate.
+- No-provider capacity defers work without consuming a task attempt or entering task quarantine.
+- Repeated identical task-side failures open a recoverable circuit at the configured limit, while different
+  failure fingerprints retain independent bounded backoff histories.
+- Provider health, circuits, retry evidence, history, and job state are durable across restart.
+- Provider health probes run in disposable empty workspaces instead of the writable canonical checkout.
+- Persisted provider and task leases are generation-aware, duration-bounded, and reject malformed timestamps.
+- Task leases and every `jobs.json` read-modify-write path are locked across processes.
+- Per-job provider provenance retains the latest 500 attempts, bounding durable state growth.
+- Provider credential artefacts, high-confidence tokens, and private keys fail the pre-push quality gate.
+- Persistent GitHub CLI and Git credential stores are forbidden in the service home; GitHub access is injected
+  only into trusted Factory-owned children from root-only configuration.
+- Retired swarm, Aider, guardian, resolver, reviewer, meta-agent, and autonomous GitHub executor entrypoints remain
+  absent.
 
-## Why two routing layers are prohibited
+## Default production route
 
-The Factory contains provider-adapter code that can be useful for diagnostics and migration, but making those adapters autonomous routing peers duplicates responsibilities already owned by OpenHands and `ConversationRunner`. It can bypass OpenHands OAuth/provider selection, produce two incompatible circuit-breaker stores, and make provider provenance ambiguous.
+| Phase | Ordered candidates |
+| --- | --- |
+| Planning | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Architecture | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Implementation | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Security review | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Quality repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| Code review | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| CI repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| General action | OpenCode, Google, Codex, Claude, OpenHands emergency |
 
-Configuration validation therefore rejects enabled or routed direct agent providers. Removing the unused direct adapters from the codebase is a safe follow-up once compatibility consumers are confirmed absent.
+The route is configuration, not hard-coded business logic. The initial production file keeps Google disabled
+until its service-user authentication and non-interactive output contract pass a canary. OpenHands is
+emergency-only and must not silently create unrestricted PAYG spend.
+
+## Independent review and merge authority
+
+Review excludes every provider that may have mutated the current worktree. Same-provider review is allowed only
+when no alternative can run and is recorded as a diversity fallback. `.factory-review.json` is removed before
+each attempt and validated before success. Every PR-backed AI phase, refresh, and base update removes review
+labels and marks the current SHA-scoped status `PENDING` before work starts. A changed review head is marked
+pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
+an expected-head guard, then returns to local verification and independent review.
+
+Merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present and report
+literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human review may
+report `CHANGES_REQUESTED`. The scheduled merge workflow is the only merge authority and enforces the same
+boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`. One active GitHub
+ruleset without bypass actors must require pull requests and both canonical statuses so another authenticated
+actor cannot merge while either context is absent. Expected-source binding through a dedicated GitHub App is
+still required to attest the publisher; online doctor currently validates the active ruleset and context names.
+
+## Recovery authority
+
+`JobStore` and `retry_policy.py` are the single durable retry authority. Repeated failure classes use independent
+counters, stable semantic fingerprints, deterministic jitter, and capped exponential delay. Provider circuits
+prevent a known-broken subscription from being hammered for every issue. The watchdog only recovers stale active
+states through that same path and never starts an agent itself.
+
+See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md) for module and trust boundaries and
+[AGENT-ROUTING.md](AGENT-ROUTING.md) for detailed routing, failure, health, and model policy.

@@ -16,9 +16,13 @@ if [ ! -r "$FACTORY_CONFIG" ]; then
   echo "Missing $FACTORY_CONFIG. Run setup-debian.sh first." >&2
   exit 1
 fi
+if [ ! -r /etc/hellotalk-factory/runtime.env ]; then
+  echo 'Missing /etc/hellotalk-factory/runtime.env. Run setup-debian.sh first.' >&2
+  exit 1
+fi
 
 required_names=(
-  FACTORY_ARCHITECTURE OPENCODE_GO_API_KEY OPENCODE_GO_MODEL GITHUB_TOKEN
+  FACTORY_ARCHITECTURE FACTORY_AGENTS_CONFIG GITHUB_TOKEN
 )
 
 for name in "${required_names[@]}"; do
@@ -50,15 +54,24 @@ fi
 set -a
 # shellcheck disable=SC1090
 . "$FACTORY_CONFIG"
+# shellcheck disable=SC1091
+. /etc/hellotalk-factory/runtime.env
 set +a
 export HOME=/var/lib/hellotalk-factory/home
 cd /tmp
 
+if [ ! -r "${FACTORY_AGENTS_CONFIG}" ]; then
+  echo "Missing agent routing configuration: ${FACTORY_AGENTS_CONFIG}" >&2
+  exit 1
+fi
+
+systemctl disable --now hellotalk-meta-agent.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/hellotalk-meta-agent.service
+
 systemd-analyze verify \
   /etc/systemd/system/hellotalk-factory.service \
   /etc/systemd/system/hellotalk-factory-health.service \
-  /etc/systemd/system/hellotalk-factory-health.timer \
-  /etc/systemd/system/hellotalk-meta-agent.service
+  /etc/systemd/system/hellotalk-factory-health.timer
 systemctl daemon-reload
 
 if [ ! -x "$FACTORY_CLI" ]; then
@@ -69,7 +82,7 @@ fi
 # Start recovery supervision before running diagnostics. Doctor includes the
 # daemon heartbeat, so running it first would make a stopped daemon block the
 # very start/recovery path intended to bring it back.
-systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER" hellotalk-meta-agent.service
+systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER"
 sleep 2
 runuser -u hellotalk-factory --preserve-environment -- "$FACTORY_CLI" doctor --online
 systemctl --no-pager --full status "$FACTORY_SERVICE"

@@ -4,18 +4,28 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from openhands_factory.alerts import AlertService
 from openhands_factory.authentication import authenticate_openai
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import FactoryDaemon, set_paused
-from openhands_factory.doctor import Check, run_doctor
+from openhands_factory.doctor import (
+    Check,
+    agent_provider_checks,
+    github_merge_policy_check,
+    github_repository_access_check,
+    run_doctor,
+)
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
+from openhands_factory.jobs import JobStore
 from openhands_factory.legacy_runtime import detect_legacy_runtime
 from openhands_factory.metrics import MetricsStore
+from openhands_factory.models import JobState
 from openhands_factory.oauth_health import smoke_openai_subscription
+from openhands_factory.process_security import protect_process_credentials
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
 from openhands_factory.state import read_json
 from openhands_factory.task_source import TaskStore
@@ -52,7 +62,15 @@ def parser() -> argparse.ArgumentParser:
 
 
 def _config() -> FactoryConfig:
-    return FactoryConfig.from_environment()
+    config = FactoryConfig.from_environment()
+    # Keep parsed secrets only in typed configuration. Provider children receive
+    # an explicit allowlisted environment, and unrelated verification commands do
+    # not need daemon, vendor API, or application credentials.
+    sensitive_suffixes = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD")
+    for name in tuple(os.environ):
+        if name.upper().endswith(sensitive_suffixes):
+            os.environ.pop(name, None)
+    return config
 
 
 def _legacy_checks() -> list[Check]:
@@ -81,7 +99,7 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
         checks.append(
             Check(
                 "openai-subscription-online",
-                oauth.passed,
+                True,
                 f"{oauth.kind}: {oauth.detail}",
                 warning=not oauth.passed,
             )
@@ -89,9 +107,29 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
     return checks
 
 
+def _provider_startup_checks(config: FactoryConfig) -> list[Check]:
+    """Return the bounded read-only gates required before daemon activation."""
+
+    checks = agent_provider_checks(config)
+    checks.extend(_legacy_checks())
+    checks.append(github_repository_access_check(config))
+    checks.append(github_merge_policy_check(config))
+    oauth = smoke_openai_subscription(config)
+    checks.append(
+        Check(
+            "openai-subscription-online",
+            True,
+            f"{oauth.kind}: {oauth.detail}",
+            warning=not oauth.passed,
+        )
+    )
+    return checks
+
+
 def main(arguments: list[str] | None = None) -> int:
     args = parser().parse_args(arguments)
     try:
+        protect_process_credentials()
         config = _config()
         if args.command == "doctor":
             checks = _doctor_checks(config, online=args.online)
@@ -111,15 +149,11 @@ def main(arguments: list[str] | None = None) -> int:
             print("\n".join(sorted(models)))
             return 0
         if args.command == "providers":
-            checks = _doctor_checks(config, online=True)
-            provider_checks = [
-                check
-                for check in checks
-                if check.name in {"openai-subscription-online", "opencode-go", "gemini"}
-            ]
-            for check in provider_checks:
-                print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
-            return 0 if all(check.passed for check in provider_checks) else 1
+            checks = _provider_startup_checks(config)
+            for check in checks:
+                status = "FAIL" if not check.passed else "WARN" if check.warning else "PASS"
+                print(f"{status} {check.name}: {check.detail}")
+            return 0 if all(check.passed for check in checks) else 1
         if args.command == "legacy":
             findings = detect_legacy_runtime()
             print(
@@ -183,8 +217,28 @@ def main(arguments: list[str] | None = None) -> int:
                 config.github_token.get_secret_value(),
                 base_branch=config.base_branch,
             )
-            requeued = github.requeue_quarantined_issues()
-            print(json.dumps({"requeued": requeued}, indent=2))
+            jobs = JobStore(
+                config.state_dir / "jobs.json",
+                max_repeated_failures=config.max_consecutive_failures,
+            )
+            labelled = {str(issue) for issue in github.list_quarantined_issues()}
+            durable = {
+                task_id for task_id, job in jobs.load().items() if job.state is JobState.QUARANTINED
+            }
+            targets = labelled | durable
+            numeric_targets = sorted(int(task_id) for task_id in targets if task_id.isdigit())
+            github_requeued = github.requeue_quarantined_issues(numeric_targets)
+            durable_requeued = jobs.requeue_quarantined(targets)
+            print(
+                json.dumps(
+                    {
+                        "requeued": numeric_targets,
+                        "github_labels_reset": github_requeued,
+                        "durable_jobs_reset": durable_requeued,
+                    },
+                    indent=2,
+                )
+            )
             return 0
     except FactoryError as error:
         print(f"Factory error: {error}", file=sys.stderr)

@@ -1,5 +1,6 @@
 import json
-from collections.abc import Sequence
+import os
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,7 @@ class Runner:
         return self.results.pop(0)
 
 
-def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> None:
+def test_collect_prioritises_labels_and_skips_quarantined(tmp_path: Path) -> None:
     payload = [
         {
             "number": 10,
@@ -33,6 +34,18 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
             "labels": [{"name": "guardian-alert"}, {"name": "factory-ready"}],
         },
         {
+            "number": 13,
+            "title": "Urgent workflow failure",
+            "body": "Broken",
+            "labels": [{"name": "priority:high"}, {"name": "factory-ready"}],
+        },
+        {
+            "number": 14,
+            "title": "Low-priority cleanup",
+            "body": "Cleanup",
+            "labels": [{"name": "priority:low"}, {"name": "factory-ready"}],
+        },
+        {
             "number": 12,
             "title": "Human decision",
             "body": "Blocked",
@@ -44,14 +57,115 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
 
     tasks = client.collect_open_issues()
 
-    assert [task.identifier for task in tasks] == ["10", "11"]
+    assert [task.identifier for task in tasks] == ["10", "11", "13", "14"]
     assert tasks[0].priority == 10
     assert tasks[1].priority == 0
+    assert tasks[2].priority == 2
+    assert tasks[3].priority == 20
     assert "10000" in runner.calls[0]
     assert "secret" not in repr(runner.calls)
 
 
-def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
+def test_trusted_intake_accepts_configured_actors_and_admitted_public_issues(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 8,
+            "title": "Trusted work",
+            "body": "Untrusted title pre-emption",
+            "labels": [],
+            "author": {"login": "outsider"},
+        },
+        {
+            "number": 9,
+            "title": "Trusted work",
+            "body": "Owner request",
+            "labels": [],
+            "author": {"login": "RepoOwner"},
+        },
+        {
+            "number": 10,
+            "title": "Admitted contribution",
+            "body": "Maintainer reviewed intake",
+            "labels": [{"name": "factory-ready"}],
+            "author": {"login": "outsider"},
+        },
+        {
+            "number": 11,
+            "title": "Untrusted request",
+            "body": "Not admitted",
+            "labels": [],
+            "author": {"login": "outsider"},
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors={"repoowner"},
+    )
+
+    tasks = client.collect_open_issues()
+
+    assert [task.identifier for task in tasks] == ["9", "10"]
+    assert "number,title,body,labels,author" in runner.calls[0]
+
+
+def test_injected_runner_never_receives_token_through_global_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    observed: list[str | None] = []
+
+    class EnvironmentRunner(Runner):
+        def __call__(
+            self, arguments: Sequence[str], cwd: Path, timeout: int = 300
+        ) -> ProcessResult:
+            observed.append(os.environ.get("GH_TOKEN"))
+            return super().__call__(arguments, cwd, timeout)
+
+    monkeypatch.setenv("GH_TOKEN", "parent-value")
+    runner = EnvironmentRunner([ProcessResult(0, "[]", "")])
+    client = GitHubClient("owner/repo", tmp_path, "factory-secret", runner)
+
+    client.collect_open_issues()
+
+    assert observed == ["parent-value"]
+
+
+def test_github_cli_receives_only_scoped_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, str] = {}
+
+    def fake_run_process(
+        arguments: Sequence[str],
+        cwd: Path,
+        timeout: int = 300,
+        *,
+        environment: Mapping[str, str] | None = None,
+    ) -> ProcessResult:
+        del arguments, cwd, timeout
+        captured.update(environment or {})
+        return ProcessResult(0, "[]", "")
+
+    monkeypatch.setenv("DATABASE_URL", "must-not-leak")
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-leak")
+    monkeypatch.setenv("GH_TOKEN", "parent-token")
+    monkeypatch.setattr("openhands_factory.github.run_process", fake_run_process)
+
+    client = GitHubClient("owner/repo", tmp_path, "factory-secret")
+    client.collect_open_issues()
+
+    assert captured["GH_TOKEN"] == "factory-secret"
+    assert "DATABASE_URL" not in captured
+    assert "OPENAI_API_KEY" not in captured
+
+
+def test_collect_defers_duplicate_titles_without_mutating_tickets(tmp_path: Path) -> None:
     payload = [
         {
             "number": 20,
@@ -72,21 +186,13 @@ def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
             "labels": [{"name": "swarm-active"}],
         },
     ]
-    runner = Runner(
-        [
-            ProcessResult(0, json.dumps(payload), ""),
-            ProcessResult(0, "", ""),  # comment on the duplicate issue #21
-            ProcessResult(0, "", ""),  # close the duplicate issue #21
-            ProcessResult(0, "", ""),  # label the duplicate issue #21
-        ]
-    )
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     tasks = client.collect_open_issues()
 
     assert [task.identifier for task in tasks] == ["20"]
-    assert any("21" in call and "close" in call for call in runner.calls[1:])
-    assert any("21" in call and "duplicate" in call for call in runner.calls[1:])
+    assert len(runner.calls) == 1
 
 
 def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
@@ -115,7 +221,32 @@ def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
     )
 
 
-def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
+def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"number": 32}]), ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_ready_label=True,
+        ready_label="factory-ready",
+    )
+
+    client.requeue_quarantined_issues()
+
+    assert any(
+        "32" in call and "--add-label" in call and "factory-ready" in call for call in runner.calls
+    )
+
+
+def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     tmp_path: Path,
 ) -> None:
     payload = [
@@ -145,11 +276,36 @@ def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
         },
         {
             "number": 43,
-            "title": "Already reviewed",
+            "title": "Reviewed but still open",
             "body": "Body",
             "headRefName": "sentinel/fix-thing",
             "isDraft": False,
             "labels": [{"name": "factory-reviewed"}],
+        },
+        {
+            "number": 44,
+            "title": "Operator skipped",
+            "body": "Body",
+            "headRefName": "operator/skip-thing",
+            "isDraft": False,
+            "labels": [{"name": "factory-skip"}],
+        },
+        {
+            "number": 45,
+            "title": "Weekly architecture gap analysis",
+            "body": "Body",
+            "headRefName": "factory/architect-2026-w34-cycle",
+            "isDraft": True,
+            "labels": [],
+        },
+        {
+            "number": 46,
+            "title": "Fork contribution",
+            "body": "Body",
+            "headRefName": "contributor/fix",
+            "isCrossRepository": True,
+            "isDraft": False,
+            "labels": [],
         },
     ]
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -157,13 +313,73 @@ def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
 
     tasks = client.collect_open_pull_requests()
 
-    assert [task.identifier for task in tasks] == ["40"]
+    assert [task.identifier for task in tasks] == ["40", "43", "45"]
     assert tasks[0].source == "github-pull-request"
     assert tasks[0].pr_branch == "bolt/optimize-quests"
     # Above ordinary issue work (10) so a review-only task doesn't sit behind
     # a long backlog of fresh issue implementations at equal priority, but
     # below guardian-alert issues (0), which stay most urgent.
     assert tasks[0].priority == 5
+    assert tasks[2].pr_branch == "factory/architect-2026-w34-cycle"
+
+
+def test_trusted_intake_gates_external_pull_requests_but_not_architecture_work(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 50,
+            "title": "Trusted PR",
+            "body": "Body",
+            "headRefName": "owner/fix",
+            "isDraft": False,
+            "labels": [],
+            "author": {"login": "repoowner"},
+        },
+        {
+            "number": 51,
+            "title": "Admitted PR",
+            "body": "Body",
+            "headRefName": "contributor/fix",
+            "isDraft": False,
+            "labels": [{"name": "factory-ready"}],
+            "author": {"login": "outsider"},
+        },
+        {
+            "number": 52,
+            "title": "Untrusted PR",
+            "body": "Body",
+            "headRefName": "contributor/untrusted",
+            "isDraft": False,
+            "labels": [],
+            "author": {"login": "outsider"},
+        },
+        {
+            "number": 53,
+            "title": "Architecture PR",
+            "body": "Body",
+            "headRefName": "factory/architect-2026-w34-cycle",
+            "isDraft": True,
+            "labels": [],
+            "author": {"login": "factory-bot"},
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors={"repoowner"},
+    )
+
+    tasks = client.collect_open_pull_requests()
+
+    assert [task.identifier for task in tasks] == ["50", "51", "53"]
+    assert (
+        "number,title,body,headRefName,isCrossRepository,isDraft,labels,author" in runner.calls[0]
+    )
 
 
 def test_list_all_open_issue_titles_ignores_labels(tmp_path: Path) -> None:
@@ -174,6 +390,40 @@ def test_list_all_open_issue_titles_ignores_labels(tmp_path: Path) -> None:
     titles = client.list_all_open_issue_titles()
 
     assert titles == {"Blocked one", "Normal one"}
+
+
+def test_architect_deduplication_ignores_unadmitted_public_titles(tmp_path: Path) -> None:
+    payload = [
+        {
+            "title": "Public pre-emption",
+            "labels": [],
+            "author": {"login": "outsider"},
+        },
+        {
+            "title": "Trusted blocked work",
+            "labels": [{"name": "needs-human"}],
+            "author": {"login": "repoowner"},
+        },
+        {
+            "title": "Admitted public work",
+            "labels": [{"name": "factory-ready"}],
+            "author": {"login": "outsider"},
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_trusted_intake=True,
+        trusted_github_actors={"repoowner"},
+    )
+
+    titles = client.list_all_open_issue_titles()
+
+    assert titles == {"Trusted blocked work", "Admitted public work"}
+    assert "title,labels,author" in runner.calls[0]
 
 
 def test_create_issue_parses_number_and_applies_labels(tmp_path: Path) -> None:
@@ -215,15 +465,23 @@ def test_comment_is_published_with_a_bounded_body(tmp_path: Path) -> None:
     assert "Factory update" in runner.calls[0]
 
 
-def test_auto_merge_never_uses_admin(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+def test_pull_request_branch_update_is_bound_to_the_inspected_head(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "{}", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
-    client.enable_auto_merge(42)
+    client.update_pull_request_branch(42, "abc123")
 
-    call = runner.calls[0]
-    assert "--auto" in call
-    assert "--admin" not in call
+    assert runner.calls == [
+        (
+            "gh",
+            "api",
+            "--method",
+            "PUT",
+            "repos/owner/repo/pulls/42/update-branch",
+            "-f",
+            "expected_head_sha=abc123",
+        )
+    ]
 
 
 def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None:
@@ -232,9 +490,12 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
         "state": "OPEN",
         "isDraft": False,
         "mergeable": "MERGEABLE",
+        "mergeStateStatus": "BEHIND",
         "reviewDecision": "APPROVED",
         "headRefOid": "abc123",
         "statusCheckRollup": [
+            {"context": "factory/independent-review", "state": "SUCCESS"},
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": "SUCCESS"},
             {"name": "backend / unit", "status": "COMPLETED", "conclusion": "SUCCESS"},
             {"name": "frontend / build", "status": "COMPLETED", "conclusion": "SKIPPED"},
             {"name": "CI / required", "status": "COMPLETED", "conclusion": "SUCCESS"},
@@ -250,6 +511,7 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
     assert not status.checks_pending
     assert status.failed_checks == frozenset()
     assert status.head_sha == "abc123"
+    assert status.merge_state_status == "BEHIND"
 
 
 def test_pull_request_status_treats_missing_canonical_gate_as_pending(tmp_path: Path) -> None:
@@ -295,6 +557,34 @@ def test_pull_request_status_requires_independent_review_success(tmp_path: Path)
 
     assert not status.checks_passed
     assert status.checks_pending
+    assert status.failed_checks == frozenset({"factory/independent-review"})
+
+
+@pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
+def test_pull_request_status_requires_success_for_canonical_contexts(
+    tmp_path: Path,
+    conclusion: str,
+) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"context": "factory/independent-review", "state": "SUCCESS"},
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": conclusion},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert not status.checks_pending
+    assert status.failed_checks == frozenset({"CI / required"})
 
 
 def test_pull_request_status_exposes_terminal_failed_check_names(tmp_path: Path) -> None:
@@ -318,9 +608,57 @@ def test_pull_request_status_exposes_terminal_failed_check_names(tmp_path: Path)
 
     assert not status.checks_passed
     assert status.checks_pending
-    assert status.failed_checks == frozenset(
-        {"backend / unit", "factory/independent-review"}
-    )
+    assert status.failed_checks == frozenset({"backend / unit", "factory/independent-review"})
+
+
+def test_pull_request_status_does_not_mark_terminal_required_failure_as_pending(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"context": "factory/independent-review", "state": "SUCCESS"},
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": "FAILURE"},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert not status.checks_pending
+    assert status.failed_checks == frozenset({"CI / required"})
+
+
+def test_pull_request_status_never_merges_over_requested_human_changes(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "CHANGES_REQUESTED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"context": "factory/independent-review", "state": "SUCCESS"},
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": "SUCCESS"},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert status.checks_pending
+    assert status.review_decision == "CHANGES_REQUESTED"
 
 
 def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
@@ -333,6 +671,18 @@ def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
     assert "repos/owner/repo/statuses/abc123" in call
     assert "context=factory/independent-review" in call
     assert "state=success" in call
+
+
+def test_pending_review_status_invalidates_same_head_approval(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.publish_review_pending("abc123", detail="Review in progress")
+
+    call = runner.calls[0]
+    assert "repos/owner/repo/statuses/abc123" in call
+    assert "context=factory/independent-review" in call
+    assert "state=pending" in call
 
 
 def test_transient_github_failure_is_retried(
