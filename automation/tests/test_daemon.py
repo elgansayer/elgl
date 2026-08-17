@@ -1,3 +1,4 @@
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    await_refresh,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
@@ -219,6 +221,47 @@ def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> N
 
     assert refreshed == durable
     assert retry_at == 40.0
+
+
+def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
+    attempts = 0
+    heartbeats: list[str] = []
+
+    class RefreshFuture:
+        def result(self, timeout: float | None = None) -> tuple[dict[str, Job], float]:
+            nonlocal attempts
+            assert timeout == 10.0
+            attempts += 1
+            if attempts == 1:
+                raise FutureTimeoutError
+            return {"42": job("42", 0)}, 30.0
+
+        def done(self) -> bool:
+            return attempts > 1
+
+    jobs, retry_at = await_refresh(  # type: ignore[arg-type]
+        RefreshFuture(),
+        lambda: heartbeats.append("published"),
+    )
+
+    assert set(jobs) == {"42"}
+    assert retry_at == 30.0
+    assert heartbeats == ["published"]
+
+
+def test_await_refresh_propagates_timeout_raised_by_completed_refresh() -> None:
+    class FailedRefreshFuture:
+        def result(self, timeout: float | None = None) -> tuple[dict[str, Job], float]:
+            raise FutureTimeoutError("GitHub request timed out")
+
+        def done(self) -> bool:
+            return True
+
+    with pytest.raises(FutureTimeoutError, match="GitHub request timed out"):
+        await_refresh(  # type: ignore[arg-type]
+            FailedRefreshFuture(),
+            lambda: pytest.fail("completed failure must not publish a heartbeat"),
+        )
 
 
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(

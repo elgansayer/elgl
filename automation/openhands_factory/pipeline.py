@@ -278,6 +278,7 @@ class FactoryPipeline:
                 self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
+        retired_jobs: list[Job] = []
         for task_id, job in jobs.items():
             if task_id in active_task_ids or task_id in protected or job.state in TERMINAL_STATES:
                 continue
@@ -312,7 +313,8 @@ class FactoryPipeline:
                 if job.task.source == "github-issue"
                 else "Pull request closed before the factory finished with it"
             )
-            self.jobs.save_job(job)
+            retired_jobs.append(job)
+        self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
 
     def run_once(self) -> Job | None:

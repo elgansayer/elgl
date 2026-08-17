@@ -265,6 +265,11 @@ sudo scripts/maintain-factory-host-storage.sh
 - After a watchdog restart, the default 30-second grace window lets systemd preflight complete and the daemon
   publish its initial heartbeat before recovery is judged. Set `FACTORY_WATCHDOG_RESTART_GRACE_SECONDS` only when
   host startup measurements justify a different value.
+- GitHub and worktree reconciliation runs on a single control worker. The owner loop publishes heartbeat updates
+  every ten seconds while that pass is busy, and closed jobs are merged in one durable batch without overwriting
+  concurrent worker transitions.
+- Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
+  keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
 - `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact

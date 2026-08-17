@@ -24,6 +24,11 @@ normal priority order. Reviews default to priority 5. Trusted `guardian-alert`, 
 prevents a large critical-issue backlog from starving every required review without turning review into a second
 scheduler or displacing all urgent issue work.
 
+GitHub discovery and stale-worktree reconciliation run on one control-plane worker. The owning daemon waits for
+that bounded pass while continuing to publish heartbeat state every ten seconds. Retired inactive jobs are merged
+into the latest durable snapshot in one write, so a large cleanup neither rewrites the full queue per job nor
+overwrites a sibling worker transition.
+
 ## Architecture invariants
 
 - `FACTORY_ARCHITECTURE` remains `openhands-agent-canvas-v1` for deployment and state compatibility.

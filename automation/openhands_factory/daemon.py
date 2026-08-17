@@ -6,8 +6,9 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
@@ -103,6 +104,24 @@ def refresh_jobs(
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
+
+
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
+    publish_heartbeat: Callable[[], None],
+    heartbeat_seconds: float = 10.0,
+) -> tuple[dict[str, Job], float]:
+    """Keep daemon liveness current while control-plane reconciliation blocks."""
+
+    while True:
+        try:
+            return future.result(timeout=heartbeat_seconds)
+        except FutureTimeoutError:
+            if future.done():
+                # A completed refresh may itself have raised TimeoutError. Do not
+                # misreport that failure as an ordinary heartbeat interval.
+                return future.result()
+            publish_heartbeat()
 
 
 def queue_snapshot(
@@ -289,6 +308,7 @@ class FactoryDaemon:
                 thread_name_prefix="factory-worker",
             ) as workers,
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-control") as control,
         ):
             while not self.stopping:
                 self._assert_owner()
@@ -327,11 +347,16 @@ class FactoryDaemon:
                                 "retry evidence was preserved",
                                 task_id,
                             )
-                        jobs, next_refresh_at = refresh_jobs(
+                        refresh_future = control.submit(
+                            refresh_jobs,
                             self.pipeline,
                             active_task_ids,
                             now,
                             self.config.cooldown_seconds,
+                        )
+                        jobs, next_refresh_at = await_refresh(
+                            refresh_future,
+                            lambda: self._write_daemon_state("running", active, active_started_at),
                         )
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
