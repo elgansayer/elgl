@@ -237,6 +237,8 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
         "statusCheckRollup": [
             {"name": "backend / unit", "status": "COMPLETED", "conclusion": "SUCCESS"},
             {"name": "frontend / build", "status": "COMPLETED", "conclusion": "SKIPPED"},
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"context": "factory/independent-review", "state": "SUCCESS"},
         ],
     }
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -248,6 +250,51 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
     assert not status.checks_pending
     assert status.failed_checks == frozenset()
     assert status.head_sha == "abc123"
+
+
+def test_pull_request_status_treats_missing_canonical_gate_as_pending(tmp_path: Path) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"name": "backend / unit", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"context": "factory/independent-review", "state": "SUCCESS"},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert status.checks_pending
+    assert status.failed_checks == frozenset()
+
+
+def test_pull_request_status_requires_independent_review_success(tmp_path: Path) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"name": "CI / required", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"context": "factory/independent-review", "state": "PENDING"},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert status.checks_pending
 
 
 def test_pull_request_status_exposes_terminal_failed_check_names(tmp_path: Path) -> None:
