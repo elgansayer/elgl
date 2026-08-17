@@ -20,11 +20,16 @@ health timer is running. The issue reports:
 - pause state and up to ten active issue links;
 - bounded queue totals and state counts;
 - enabled providers, transport, selected model, last observed health and retry time;
-- aggregate calls, successes, failures, fallbacks, rate limits and timeouts.
+- aggregate calls, successes, failures, fallbacks, rate limits and timeouts;
+- root and Factory-state storage use, free-space reserve, health, and bounded trend projection.
 
 The top indicator is healthy only when the daemon heartbeat and recovery timer are current and at least one
 enabled provider is healthy or degraded-but-routable. A running daemon with every provider disabled,
 unauthenticated, cooling down or unavailable is shown as degraded rather than green.
+
+A warning, critical, or unreadable root or Factory-state volume also prevents a green top indicator. Storage
+projection compares adjacent watchdog samples only after a meaningful decline, so it is an early warning rather
+than a capacity guarantee. See [HOST-STORAGE.md](HOST-STORAGE.md) for thresholds, retention and recovery.
 
 The panel never includes prompts, transcripts, issue bodies, environment variables, provider diagnostics,
 credential paths, tokens or raw exception text. A stale panel timestamp is a dead-man signal: it means the
@@ -99,6 +104,10 @@ git switch main
 git pull --ff-only origin main
 sudo scripts/deploy-and-start-factory.sh --use-existing-credentials
 ```
+
+Deployment also installs the bounded persistent-journal policy and vacuums archived entries. It does not prune
+Docker automatically. Inspect or perform the separately bounded host maintenance command as documented in
+[HOST-STORAGE.md](HOST-STORAGE.md).
 
 After deployment, confirm that the panel issue exists and that its service, timer and heartbeat rows are green.
 If publication fails, run `dashboard sync --force` as the service user and inspect the health service journal:

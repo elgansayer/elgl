@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from subprocess import CompletedProcess
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,7 @@ from openhands_factory.doctor import (
     Check,
     agent_provider_checks,
     daemon_health_check,
+    disk_space_checks,
     git_credential_helper_check,
     github_merge_policy_check,
     github_repository_access_check,
@@ -171,6 +173,28 @@ def test_doctor_reports_openai_subscription_credentials(
     checks = {check.name: check for check in run_doctor(factory_config)}
     assert checks["openai-subscription"].passed
     assert checks["openai-subscription"].detail == "gpt-5.6-sol"
+
+
+def test_doctor_checks_root_and_factory_state_volumes_separately(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    factory_config.state_dir.mkdir()
+    gibibyte = 1024**3
+
+    def disk_usage(path: Path) -> SimpleNamespace:
+        free = 2 * gibibyte if path == Path("/") else 20 * gibibyte
+        return SimpleNamespace(free=free)
+
+    monkeypatch.setattr("openhands_factory.doctor.shutil.disk_usage", disk_usage)
+
+    checks = {check.name: check for check in disk_space_checks(factory_config)}
+
+    assert not checks["disk-free:root"].passed
+    assert "root: 2.0 GiB available" in checks["disk-free:root"].detail
+    assert checks["disk-free"].passed
+    assert "factory state: 20.0 GiB available" in checks["disk-free"].detail
 
 
 def test_doctor_reports_missing_systemd_analyse_without_crashing(

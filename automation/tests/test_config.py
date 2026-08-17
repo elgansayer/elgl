@@ -86,6 +86,30 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert "localhost/hellotalk-factory-worker:current" in deploy
 
 
+def test_deployment_installs_bounded_host_storage_policy() -> None:
+    repository_root = Path(__file__).parents[2]
+    deploy = (repository_root / "scripts/deploy-and-start-factory.sh").read_text(encoding="utf-8")
+    maintenance = (repository_root / "scripts/maintain-factory-host-storage.sh").read_text(
+        encoding="utf-8"
+    )
+    journal_policy = (
+        repository_root / "config/systemd/99-hellotalk-factory-storage.conf"
+    ).read_text(encoding="utf-8")
+
+    maintenance_call = '"$SCRIPT_DIRECTORY/maintain-factory-host-storage.sh" --apply'
+    assert maintenance_call in deploy
+    assert deploy.index(maintenance_call) < deploy.index('fetch origin "$DEPLOY_REF"')
+    assert "SystemMaxUse=512M" in journal_policy
+    assert "SystemKeepFree=5G" in journal_policy
+    assert "MaxRetentionSec=14day" in journal_policy
+    assert "docker image prune" in maintenance
+    assert "docker builder prune" in maintenance
+    assert "docker system prune" not in maintenance
+    assert "docker volume prune" not in maintenance
+    assert "docker container prune" not in maintenance
+    assert "--prune-docker requires --apply" in maintenance
+
+
 def test_legacy_github_agent_workflows_stay_retired() -> None:
     workflows = Path(__file__).parents[2] / ".github" / "workflows"
 

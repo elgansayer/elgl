@@ -18,6 +18,7 @@ from openhands_factory.agents.base import ProviderHealth
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
+from openhands_factory.doctor import disk_space_checks
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
@@ -145,6 +146,7 @@ class FactoryDaemon:
         self.pipeline = FactoryPipeline(config)
         self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
+        self.storage_blocked = False
 
     @property
     def control_path(self) -> Path:
@@ -163,6 +165,19 @@ class FactoryDaemon:
 
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
+
+    def _storage_ready(self) -> bool:
+        failed = [check for check in disk_space_checks(self.config) if not check.passed]
+        blocked = bool(failed)
+        if blocked and not self.storage_blocked:
+            LOGGER.warning(
+                "Factory scheduling paused by storage reserve: %s",
+                "; ".join(check.detail for check in failed),
+            )
+        elif not blocked and self.storage_blocked:
+            LOGGER.info("Factory storage reserve recovered; scheduling can resume")
+        self.storage_blocked = blocked
+        return not blocked
 
     def _activate_generation(self) -> None:
         from openhands_factory.agents.process import AgentProcessRunner
@@ -252,7 +267,8 @@ class FactoryDaemon:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
                 capacity = self.config.max_parallel_jobs - len(active)
-                if not self.paused() and capacity > 0:
+                storage_ready = self._storage_ready()
+                if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
                         health = self.pipeline.router.health_snapshot()
@@ -300,7 +316,11 @@ class FactoryDaemon:
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)
-                if not self.paused() and (architect_future is None or architect_future.done()):
+                if (
+                    not self.paused()
+                    and storage_ready
+                    and (architect_future is None or architect_future.done())
+                ):
                     if architect_future is not None:
                         try:
                             architect_future.result()
@@ -344,6 +364,7 @@ class FactoryDaemon:
                 "pid": generation.pid,
                 "hostname": generation.hostname,
                 "paused": self.paused(),
+                "storage_blocked": self.storage_blocked,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
                 "queue": queue_snapshot(jobs, active_task_ids),

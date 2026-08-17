@@ -25,6 +25,7 @@ def config(tmp_path: Path) -> FactoryConfig:
             "GITHUB_REPOSITORY": "owner/repo",
             "FACTORY_REPOSITORY": str(tmp_path / "repository"),
             "FACTORY_STATE_DIR": str(tmp_path / "state"),
+            "FACTORY_MINIMUM_FREE_DISK_GIB": "1",
             "FACTORY_TRUSTED_GITHUB_ACTORS": "repoowner",
             "FACTORY_CONTROL_GITHUB_ACTORS": "repoowner",
         }
@@ -253,6 +254,49 @@ def test_running_factory_is_degraded_when_no_provider_is_usable(tmp_path: Path) 
     assert snapshot["status"] == "degraded"
 
 
+def test_storage_reserve_and_exhaustion_projection_are_visible(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    now = datetime(2026, 8, 17, 12, tzinfo=UTC)
+    write_running_state(factory_config, now)
+    gibibyte = 1024**3
+
+    def disk_usage(path: Path) -> tuple[int, int, int]:
+        if path == Path("/"):
+            return (40 * gibibyte, 39 * gibibyte + gibibyte // 2, gibibyte // 2)
+        return (50 * gibibyte, 10 * gibibyte, 40 * gibibyte)
+
+    snapshot = build_status_snapshot(
+        factory_config,
+        now=now,
+        unit_states={
+            "hellotalk-factory.service": "active",
+            "hellotalk-factory-health.timer": "active",
+        },
+        previous_storage_samples=[
+            {
+                "name": "root",
+                "sampled_at": (now - timedelta(minutes=10)).isoformat(),
+                "free_bytes": 2 * gibibyte + gibibyte // 2,
+            }
+        ],
+        disk_usage_reader=disk_usage,
+    )
+    markdown = render_status_markdown(snapshot, factory_config.github_repository)
+
+    assert snapshot["status"] == "degraded"
+    storage = snapshot["storage"]
+    assert isinstance(storage, list)
+    root = next(item for item in storage if item["name"] == "root")
+    factory_state = next(item for item in storage if item["name"] == "factory_state")
+    assert root["status"] == "critical"
+    assert root["growth_bytes_per_hour"] == 12 * gibibyte
+    assert root["projected_exhaustion_at"] == (now + timedelta(minutes=2, seconds=30)).isoformat()
+    assert factory_state["status"] == "healthy"
+    assert "### Storage" in markdown
+    assert "factory state" in markdown
+    assert "0.5" in markdown
+
+
 def test_sync_creates_one_factory_skipped_status_issue(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime(2026, 8, 17, 12, tzinfo=UTC)
@@ -272,6 +316,11 @@ def test_sync_creates_one_factory_skipped_status_issue(tmp_path: Path) -> None:
     assert github.labels_ensured
     assert github.created[0][2] == ("factory-status", "factory-skip")
     assert CONTROL_PANEL_MARKER in github.created[0][1]
+    state = read_json(factory_config.state_dir / "control_panel.json", {})
+    assert [sample["name"] for sample in state["storage_samples"]] == [
+        "root",
+        "factory_state",
+    ]
 
 
 def test_only_trusted_exact_comments_can_change_pause_state(tmp_path: Path) -> None:

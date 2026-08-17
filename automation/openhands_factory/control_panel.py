@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -23,6 +24,9 @@ CONTROL_PANEL_LABEL = "factory-status"
 CONTROL_PANEL_MARKER = "<!-- hellotalk-factory-control-panel -->"
 PUBLISH_INTERVAL_SECONDS = 15 * 60
 HEARTBEAT_FRESH_SECONDS = 120
+GIBIBYTE = 1024**3
+MINIMUM_TREND_INTERVAL_SECONDS = 60
+MINIMUM_TREND_CHANGE_BYTES = 64 * 1024**2
 
 
 class ControlPanelGitHub(Protocol):
@@ -214,11 +218,87 @@ def _metrics_snapshot(config: FactoryConfig) -> list[dict[str, object]]:
     return [{"provider": provider, **values} for provider, values in sorted(totals.items())]
 
 
+def _storage_snapshot(
+    config: FactoryConfig,
+    current: datetime,
+    previous_samples: object,
+    disk_usage_reader: Callable[[Path], tuple[int, int, int]],
+) -> list[dict[str, object]]:
+    previous_by_name: dict[str, dict[str, object]] = {}
+    if isinstance(previous_samples, list):
+        for item in previous_samples:
+            sample = _mapping(item)
+            name = sample.get("name")
+            if isinstance(name, str):
+                previous_by_name[name] = sample
+
+    reserve_bytes = int(config.minimum_free_disk_gib * GIBIBYTE)
+    samples: list[dict[str, object]] = []
+    for name, path in (("root", Path("/")), ("factory_state", config.state_dir)):
+        try:
+            total_bytes, used_bytes, free_bytes = disk_usage_reader(path)
+        except OSError:
+            samples.append(
+                {
+                    "name": name,
+                    "status": "unavailable",
+                    "sampled_at": current.isoformat(),
+                    "reserve_bytes": reserve_bytes,
+                }
+            )
+            continue
+
+        if free_bytes < reserve_bytes:
+            status = "critical"
+        elif free_bytes < reserve_bytes * 2:
+            status = "warning"
+        else:
+            status = "healthy"
+
+        projected_exhaustion_at: str | None = None
+        growth_bytes_per_hour: int | None = None
+        previous = previous_by_name.get(name, {})
+        previous_free = _integer(previous.get("free_bytes"), -1)
+        previous_at = _timestamp(previous.get("sampled_at"))
+        if previous_free >= 0 and previous_at is not None:
+            elapsed_seconds = (current - previous_at).total_seconds()
+            consumed_bytes = previous_free - free_bytes
+            if (
+                elapsed_seconds >= MINIMUM_TREND_INTERVAL_SECONDS
+                and consumed_bytes >= MINIMUM_TREND_CHANGE_BYTES
+            ):
+                bytes_per_second = consumed_bytes / elapsed_seconds
+                growth_bytes_per_hour = round(bytes_per_second * 3600)
+                projected_exhaustion_at = (
+                    current + timedelta(seconds=free_bytes / bytes_per_second)
+                ).isoformat()
+
+        samples.append(
+            {
+                "name": name,
+                "status": status,
+                "sampled_at": current.isoformat(),
+                "total_bytes": total_bytes,
+                "used_bytes": used_bytes,
+                "free_bytes": free_bytes,
+                "used_percent": round((used_bytes / total_bytes) * 100, 1)
+                if total_bytes > 0
+                else 0.0,
+                "reserve_bytes": reserve_bytes,
+                "growth_bytes_per_hour": growth_bytes_per_hour,
+                "projected_exhaustion_at": projected_exhaustion_at,
+            }
+        )
+    return samples
+
+
 def build_status_snapshot(
     config: FactoryConfig,
     *,
     now: datetime | None = None,
     unit_states: Mapping[str, str] | None = None,
+    previous_storage_samples: object = None,
+    disk_usage_reader: Callable[[Path], tuple[int, int, int]] = shutil.disk_usage,
 ) -> dict[str, object]:
     current = (now or datetime.now(UTC)).astimezone(UTC)
     daemon = _read_mapping(config.state_dir / "daemon.json")
@@ -245,6 +325,12 @@ def build_status_snapshot(
     provider_usable = any(
         provider.get("status") in {"healthy", "degraded"} for provider in provider_snapshot
     )
+    storage = _storage_snapshot(
+        config,
+        current,
+        previous_storage_samples,
+        disk_usage_reader,
+    )
     if service in {"failed", "inactive", "deactivating"}:
         overall = "offline"
     elif service == "active" and daemon_status == "running" and heartbeat_fresh:
@@ -255,6 +341,10 @@ def build_status_snapshot(
         else:
             overall = "healthy" if provider_usable else "degraded"
     else:
+        overall = "degraded"
+    if overall in {"healthy", "paused"} and any(
+        sample.get("status") in {"critical", "warning", "unavailable"} for sample in storage
+    ):
         overall = "degraded"
 
     active_jobs = daemon.get("active_jobs")
@@ -281,6 +371,7 @@ def build_status_snapshot(
         "queue": _queue_snapshot(daemon),
         "providers": provider_snapshot,
         "metrics": _metrics_snapshot(config),
+        "storage": storage,
     }
 
 
@@ -307,6 +398,7 @@ def render_status_markdown(
     by_state = _mapping(queue.get("by_state"))
     providers = snapshot.get("providers")
     metrics = snapshot.get("metrics")
+    storage = snapshot.get("storage")
     active_tasks = snapshot.get("active_tasks")
     active_links = []
     if isinstance(active_tasks, list):
@@ -337,6 +429,26 @@ def render_status_markdown(
         *_markdown_table(
             ("Component", "State"),
             [(name, _text(value)) for name, value in sorted(components.items())],
+        ),
+        "",
+        "### Storage",
+        "",
+        *_markdown_table(
+            ("Volume", "State", "Used", "Free GiB", "Reserve GiB", "Projected exhaustion"),
+            [
+                (
+                    _text(sample.get("name")).replace("_", " "),
+                    _text(sample.get("status")),
+                    f"{sample.get('used_percent', 'unknown')}%",
+                    f"{_integer(sample.get('free_bytes')) / GIBIBYTE:.1f}",
+                    f"{_integer(sample.get('reserve_bytes')) / GIBIBYTE:.1f}",
+                    _text(sample.get("projected_exhaustion_at"), "not projected"),
+                )
+                for item in storage
+                if (sample := _mapping(item))
+            ]
+            if isinstance(storage, list)
+            else [("none", "unavailable", "unknown", "0.0", "0.0", "not projected")],
         ),
         "",
         "### Queue",
@@ -465,6 +577,16 @@ def _status_fingerprint(snapshot: Mapping[str, object], last_command: Mapping[st
             {key: value for key, value in _mapping(item).items() if key != "checked_at"}
             for item in providers
         ]
+    storage = stable.get("storage")
+    if isinstance(storage, list):
+        stable["storage"] = [
+            {
+                "name": sample.get("name"),
+                "status": sample.get("status"),
+            }
+            for item in storage
+            if (sample := _mapping(item))
+        ]
     stable["last_command"] = dict(last_command)
     encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
@@ -478,6 +600,7 @@ class FactoryControlPanel:
         *,
         clock: Callable[[], datetime] | None = None,
         unit_state_reader: Callable[[str], str] = systemd_unit_state,
+        disk_usage_reader: Callable[[Path], tuple[int, int, int]] = shutil.disk_usage,
     ) -> None:
         self.config = config
         self.github = github or GitHubClient(
@@ -488,10 +611,15 @@ class FactoryControlPanel:
         )
         self.clock = clock or (lambda: datetime.now(UTC))
         self.unit_state_reader = unit_state_reader
+        self.disk_usage_reader = disk_usage_reader
         self.state_path = config.state_dir / "control_panel.json"
         self.lock = FileLock(str(self.state_path) + ".lock")
 
-    def _snapshot(self, now: datetime) -> dict[str, object]:
+    def _snapshot(
+        self,
+        now: datetime,
+        previous_storage_samples: object = None,
+    ) -> dict[str, object]:
         return build_status_snapshot(
             self.config,
             now=now,
@@ -501,6 +629,8 @@ class FactoryControlPanel:
                     "hellotalk-factory-health.timer"
                 ),
             },
+            previous_storage_samples=previous_storage_samples,
+            disk_usage_reader=self.disk_usage_reader,
         )
 
     def _apply_command(self, comment: IssueComment, action: str, now: datetime) -> None:
@@ -551,7 +681,8 @@ class FactoryControlPanel:
             state = _read_mapping(self.state_path)
             last_comment_id = _integer(state.get("last_comment_id"))
             last_command = _mapping(state.get("last_command"))
-            snapshot = self._snapshot(now)
+            previous_storage_samples = state.get("storage_samples")
+            snapshot = self._snapshot(now, previous_storage_samples)
             body = render_status_markdown(
                 snapshot,
                 self.config.github_repository,
@@ -606,10 +737,11 @@ class FactoryControlPanel:
             state["issue"] = issue
             state["last_comment_id"] = last_comment_id
             state["last_command"] = last_command
+            state["storage_samples"] = snapshot.get("storage", [])
             atomic_write_json(self.state_path, state)
 
             if accepted_command is not None:
-                snapshot = self._snapshot(now)
+                snapshot = self._snapshot(now, previous_storage_samples)
                 body = render_status_markdown(
                     snapshot,
                     self.config.github_repository,

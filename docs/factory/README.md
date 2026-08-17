@@ -18,6 +18,7 @@ host proves all of the following:
 - trusted intake is enabled for this public repository, with every automatic actor explicitly listed;
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
+- root and Factory-state volumes both retain the configured free-space reserve;
 - one active GitHub ruleset without bypass actors requires pull requests, `CI / required`, and
   `factory/independent-review` on `main`;
 - the required statuses are pinned to their expected GitHub App sources before any additional write actor is
@@ -93,8 +94,8 @@ sessions, durable Factory state, logs, rootless Podman sockets, shared host temp
 environments. The deployed Factory tree is read-only there too.
 
 See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
-[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), and [CONTROL-PANEL.md](CONTROL-PANEL.md) for the detailed
-contract.
+[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [CONTROL-PANEL.md](CONTROL-PANEL.md), and
+[HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
 
 ## Durable lifecycle
 
@@ -243,13 +244,15 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
 sudo systemctl status hellotalk-factory.service hellotalk-factory-health.timer
 sudo journalctl -u hellotalk-factory.service -n 200 --no-pager
+sudo scripts/maintain-factory-host-storage.sh
 ```
 
 - `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
   authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
   usability, competing executors, authenticated repository access, and the no-bypass GitHub merge policy. An
   optional OpenAI OAuth failure is a warning when another configured provider is usable.
-- `doctor --online` checks architecture ownership, state, disk, daemon heartbeat, rootless worker isolation,
+- `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
+  rootless worker isolation,
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
   scoped Git credential helper, authenticated GitHub repository reads, and a no-bypass server-side merge policy.
 - `status` prints the durable daemon generation, queue counts, active jobs, and heartbeat.
@@ -257,6 +260,8 @@ sudo journalctl -u hellotalk-factory.service -n 200 --no-pager
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
   pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.
+- the dashboard storage rows distinguish root capacity from the secondary-backed Factory state volume and expose
+  a short-term exhaustion estimate only after a meaningful decline.
 - `reconcile` releases expired task leases and never deletes worktrees or branches.
 - `pause` stops new scheduling while preserving jobs, branches, active workers, and pull requests.
 - `resume` re-enables scheduling after the underlying cause is resolved.

@@ -52,6 +52,12 @@ if [ -n "${FACTORY_DEPLOY_REF:-}" ] && [ "$FACTORY_DEPLOY_REF" != main ]; then
   echo 'FACTORY_DEPLOY_REF must be main.' >&2
   exit 1
 fi
+
+# Recover bounded root headroom before fetch, worktree creation, dependency
+# refresh, or image builds need it. This script comes from the operator's
+# checked-out main revision, which the runbook requires updating first.
+"$SCRIPT_DIRECTORY/maintain-factory-host-storage.sh" --apply
+
 if [ -d "$FACTORY_CHECKOUT/.git" ] && [ -n "$(git -C "$FACTORY_CHECKOUT" status --porcelain)" ]; then
   echo "Dedicated Factory checkout is dirty: $FACTORY_CHECKOUT" >&2
   echo 'Preserve or resolve those changes before deployment.' >&2

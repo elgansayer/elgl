@@ -822,15 +822,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
                 "ready" if exists_and_writable else "missing or not writable",
             )
         )
-    usage = shutil.disk_usage(config.state_dir if config.state_dir.exists() else Path("/"))
-    free_gib = usage.free / 1024**3
-    checks.append(
-        Check(
-            "disk-free",
-            free_gib >= config.minimum_free_disk_gib,
-            f"{free_gib:.1f} GiB available, {config.minimum_free_disk_gib:.1f} GiB required",
-        )
-    )
+    checks.extend(disk_space_checks(config))
     for script in (
         config.repository / "scripts/verify-constitution.mjs",
         config.repository / "scripts/check-conflict-markers.mjs",
@@ -874,5 +866,29 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     else:
         checks.append(
             Check("systemd-unit", systemd.returncode == 0, systemd.stderr.strip() or "valid")
+        )
+    return checks
+
+
+def disk_space_checks(config: FactoryConfig) -> list[Check]:
+    """Check root separately from the potentially secondary-backed Factory state."""
+
+    checks: list[Check] = []
+    for name, label, path in (
+        ("disk-free:root", "root", Path("/")),
+        ("disk-free", "factory state", config.state_dir),
+    ):
+        try:
+            free_gib = shutil.disk_usage(path).free / 1024**3
+        except OSError as error:
+            checks.append(Check(name, False, f"{label}: unavailable ({type(error).__name__})"))
+            continue
+        checks.append(
+            Check(
+                name,
+                free_gib >= config.minimum_free_disk_gib,
+                f"{label}: {free_gib:.1f} GiB available, "
+                f"{config.minimum_free_disk_gib:.1f} GiB required",
+            )
         )
     return checks

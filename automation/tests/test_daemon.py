@@ -190,6 +190,24 @@ def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
     assert loop_calls == [True]
 
 
+def test_storage_reserve_blocks_and_recovers_scheduling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace()  # type: ignore[assignment]
+    daemon.storage_blocked = False
+    checks = [SimpleNamespace(passed=False, detail="root: 2.0 GiB available")]
+    monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: checks)
+
+    assert not daemon._storage_ready()
+    assert daemon.storage_blocked
+
+    checks[:] = [SimpleNamespace(passed=True, detail="root: 8.0 GiB available")]
+
+    assert daemon._storage_ready()
+    assert not daemon.storage_blocked
+
+
 def test_daemon_refuses_to_schedule_when_a_security_boundary_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
