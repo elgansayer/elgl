@@ -211,9 +211,10 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory prov
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 ```
 
-Online doctor also verifies that one active GitHub ruleset without bypass actors requires pull requests,
-`CI / required`, and `factory/independent-review` on the configured base branch. A healthy provider cannot
-compensate for a merge policy that permits another actor to bypass independent review.
+Online doctor also verifies a layered GitHub policy on the configured base branch. A no-bypass baseline ruleset
+must require pull requests and `CI / required`. Independent review must be required by either that ruleset or a
+review-only ruleset whose sole bypass actor is the exact repository-owner user in pull-request mode. This manual
+path cannot bypass CI and is never available to the daemon. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 Required context names alone do not prove who published a legacy commit status. Before granting repository write
 access beyond the Factory operator, provision a dedicated GitHub App for Factory review attestations and pin each

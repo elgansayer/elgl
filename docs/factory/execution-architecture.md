@@ -88,13 +88,17 @@ labels and marks the current SHA-scoped status `PENDING` before work starts. A c
 pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
 an expected-head guard, then returns to local verification and independent review.
 
-Merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present and report
-literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human review may
-report `CHANGES_REQUESTED`. The scheduled merge workflow is the only merge authority and enforces the same
-boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`. One active GitHub
-ruleset without bypass actors must require pull requests and both canonical statuses so another authenticated
-actor cannot merge while either context is absent. Expected-source binding through a dedicated GitHub App is
-still required to attest the publisher; online doctor currently validates the active ruleset and context names.
+Autonomous merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present
+and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human
+review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
+enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
+
+GitHub applies a no-bypass baseline ruleset requiring pull requests and strict `CI / required`, plus a second
+review-only ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass the
+review-only rule, and only through an existing pull request. This permits a deliberate human merge without giving
+the Factory, roles, apps, teams, or deploy keys a route around CI. Expected-source binding through a dedicated
+GitHub App is still required to attest the publisher; online doctor validates the layered rules, context names,
+and narrow owner bypass. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 ## Recovery authority
 
