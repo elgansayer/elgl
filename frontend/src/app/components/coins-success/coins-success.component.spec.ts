@@ -68,6 +68,43 @@ describe('CoinsSuccessComponent', () => {
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
+  it('exposes a labelled main landmark and live status region', () => {
+    const main = fixture.nativeElement.querySelector('main');
+    const title = fixture.nativeElement.querySelector('#coins-success-title');
+    const status = fixture.nativeElement.querySelector('#coins-success-status');
+
+    expect(main).toBeTruthy();
+    expect(title).toBeTruthy();
+    expect(status).toBeTruthy();
+    expect(main.getAttribute('aria-labelledby')).toBe('coins-success-title');
+    expect(main.getAttribute('aria-describedby')).toBe('coins-success-status');
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('keeps deterministic native keyboard and touch semantics for the dashboard action', () => {
+    const interactiveElements = fixture.nativeElement.querySelectorAll(
+      'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const dashboardButton = fixture.nativeElement.querySelector('button');
+
+    expect(interactiveElements).toHaveLength(1);
+    expect(dashboardButton).toBeTruthy();
+    expect(dashboardButton.getAttribute('type')).toBe('button');
+    expect(dashboardButton.textContent).toContain('coinsSuccess.dashboardBtn');
+  });
+
+  it('keeps the page reflow-safe instead of clipping content at high zoom', () => {
+    const main = fixture.nativeElement.querySelector('main');
+    const content = fixture.nativeElement.querySelector('main > div');
+
+    expect(main.classList.contains('min-h-screen')).toBe(true);
+    expect(main.classList.contains('h-screen')).toBe(false);
+    expect(main.classList.contains('overflow-hidden')).toBe(false);
+    expect(content.classList.contains('w-full')).toBe(true);
+    expect(content.classList.contains('max-w-md')).toBe(true);
+  });
+
   it('should transition to confirmed view when confirmed', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
