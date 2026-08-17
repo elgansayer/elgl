@@ -236,6 +236,7 @@ jobs:
             run_database=true
           elif git diff --name-only "$BASE_SHA" "$GITHUB_SHA" -- \
             .github/workflows/ci.yml \
+            scripts/prepare-supabase-clean-replay.mjs \
             supabase/ \
             backend/src/supabase/ \
             | grep -q .; then
@@ -266,7 +267,7 @@ jobs:
             supabase/migrations \
             test-results/migration-replay-map.json
 
-      - name: Start local Supabase stack
+      - name: Start local Supabase database
         id: supabase-start
         if: steps.changes.outputs.run_database == 'true'
         run: |
@@ -274,12 +275,24 @@ jobs:
           mkdir -p test-results
           max_attempts=3
           for attempt in $(seq 1 "$max_attempts"); do
-            echo "Supabase start attempt ${attempt}/${max_attempts}"
-            if npx --yes supabase@2.114.0 start 2>&1 | tee -a test-results/supabase-start.log; then
+            attempt_log="test-results/supabase-start-attempt-${attempt}.log"
+            echo "Supabase database start attempt ${attempt}/${max_attempts}"
+            if npx --yes supabase@2.114.0 db start 2>&1 | tee "$attempt_log" | tee -a test-results/supabase-start.log; then
               exit 0
             fi
+
+            if grep -Eq 'SQLSTATE|At statement:' "$attempt_log"; then
+              echo "Deterministic migration failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+              echo "Non-transient Supabase startup failure detected; refusing to retry."
+              exit 1
+            fi
+
             if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Supabase failed to start after ${max_attempts} attempts."
+              echo "Supabase database failed to start after ${max_attempts} transient attempts."
               exit 1
             fi
             npx --yes supabase@2.114.0 stop --no-backup || true
@@ -330,7 +343,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: '0.12.5'
           enable-cache: true

@@ -71,7 +71,7 @@ $$;
     beforeSourceFile: '20260807143544_review_rls_srs_flashcards.sql',
     name: 'materialize_typeorm_flashcard_decks_before_rls_review',
     reason:
-      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL migration corpus. The forward SQL migration later in the corpus consolidates that schema contract for deployed databases.',
+      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL migration corpus. The shim mirrors that migration before the RLS review.',
     sql: `CREATE TABLE IF NOT EXISTS public.decks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -98,6 +98,114 @@ CREATE INDEX IF NOT EXISTS idx_deck_flashcards_deck_id
   ON public.deck_flashcards(deck_id);
 CREATE INDEX IF NOT EXISTS idx_deck_flashcards_flashcard_id
   ON public.deck_flashcards(flashcard_id);
+`,
+  },
+  {
+    beforeSourceFile: '20260807152902_review_rls_matchmaking.sql',
+    name: 'materialize_legacy_matchmaking_interest_tables_before_rls_review',
+    reason:
+      'The historical RLS review expects user_interests and interest_vocabulary tables that are absent from the surviving Supabase SQL corpus. PR #2841 documents user_interests as insert/delete rows protected by UNIQUE(user_id, tag) and interest_vocabulary as a read-only catalogue; the following historical index migration requires user_id/tag and canonical_tag.',
+    sql: `CREATE TABLE IF NOT EXISTS public.user_interests (
+  user_id UUID NOT NULL,
+  tag TEXT NOT NULL,
+  UNIQUE(user_id, tag)
+);
+
+CREATE TABLE IF NOT EXISTS public.interest_vocabulary (
+  canonical_tag TEXT NOT NULL
+);
+`,
+  },
+  {
+    beforeSourceFile: '20260807160000_review_rls_lingq_reading_engine.sql',
+    name: 'materialize_typeorm_curated_content_before_rls_review',
+    reason:
+      'The LingQ RLS review expects curated_articles and curated_dialogues created by backend/src/database/migrations/20260731000003-create-curated-content.ts, which is outside the Supabase SQL corpus. This shim mirrors that TypeORM migration exactly before its RLS policies are applied.',
+    sql: `CREATE TABLE IF NOT EXISTS public.curated_articles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  cefr_level TEXT NOT NULL,
+  language TEXT NOT NULL,
+  content_text TEXT NOT NULL,
+  word_count INTEGER NOT NULL DEFAULT 0,
+  difficulty_rating INTEGER NOT NULL DEFAULT 1,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.curated_dialogues (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  cefr_level TEXT NOT NULL,
+  language TEXT NOT NULL,
+  lines JSONB NOT NULL DEFAULT '[]'::jsonb,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_curated_articles_cefr_language
+  ON public.curated_articles(cefr_level, language);
+CREATE INDEX IF NOT EXISTS idx_curated_dialogues_cefr_language
+  ON public.curated_dialogues(cefr_level, language);
+`,
+  },
+  {
+    beforeSourceFile: '20260807190000_review_rls_video_classrooms.sql',
+    name: 'materialize_typeorm_quick_polls_before_rls_review',
+    reason:
+      'The video-classroom RLS review explicitly states that quick_polls and poll_votes were created by backend/src/database/migrations/20260730000001-create-quick-polls.ts, outside the Supabase SQL corpus. This shim mirrors that TypeORM migration exactly before its RLS policies are applied.',
+    sql: `CREATE TABLE IF NOT EXISTS public.quick_polls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES public.audio_rooms(id) ON DELETE CASCADE,
+  host_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  options TEXT[] NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.poll_votes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  poll_id UUID NOT NULL REFERENCES public.quick_polls(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  option_index INTEGER NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(poll_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_quick_polls_room_id ON public.quick_polls(room_id);
+CREATE INDEX IF NOT EXISTS idx_quick_polls_host_id ON public.quick_polls(host_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_id ON public.poll_votes(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON public.poll_votes(user_id);
+`,
+  },
+  {
+    beforeSourceFile: '20260808000001_optimise_escrow_indices.sql',
+    name: 'materialize_backend_escrow_transactions_before_index_optimisation',
+    reason:
+      'The escrow index migration operates on escrow_transactions created by backend/src/database/migrations/20260807000001-create-escrow-transactions.sql, which is outside the Supabase SQL corpus. This shim mirrors that migration before the Supabase optimisation and RLS policy are applied.',
+    sql: `CREATE TABLE IF NOT EXISTS public.escrow_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  payee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  amount_coins INTEGER NOT NULL CHECK (amount_coins > 0),
+  status TEXT NOT NULL DEFAULT 'held' CHECK (status IN ('held', 'released', 'refunded', 'disputed')),
+  description TEXT,
+  reference_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  released_at TIMESTAMPTZ,
+  refunded_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payer
+  ON public.escrow_transactions(payer_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payee
+  ON public.escrow_transactions(payee_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_status
+  ON public.escrow_transactions(status, created_at DESC);
 `,
   },
 ];
