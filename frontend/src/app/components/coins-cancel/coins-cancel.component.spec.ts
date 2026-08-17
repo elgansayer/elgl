@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { CoinsCancelComponent } from './coins-cancel.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -19,13 +20,15 @@ class MockI18nService {
 describe('CoinsCancelComponent', () => {
   let component: CoinsCancelComponent;
   let fixture: ComponentFixture<CoinsCancelComponent>;
+  let router: Router;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CoinsCancelComponent, TranslatePipe],
-      providers: [{ provide: I18nService, useClass: MockI18nService }],
+      providers: [provideRouter([]), { provide: I18nService, useClass: MockI18nService }],
     }).compileComponents();
 
+    router = TestBed.inject(Router);
     fixture = TestBed.createComponent(CoinsCancelComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -61,6 +64,16 @@ describe('CoinsCancelComponent', () => {
     expect(button.getAttribute('size')).toBe('touch');
     button.focus();
     expect(document.activeElement).toBe(button);
+  });
+
+  it('should navigate back to the dashboard when the back action is activated', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+
+    button.click();
+
+    expect(navigate).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
   it('should use fluid layout primitives that preserve reflow at high zoom', () => {

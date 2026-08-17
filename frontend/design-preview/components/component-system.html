@@ -16,6 +16,14 @@
       button:focus-visible, .action-link:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
       input, textarea, select { background: Field; color: FieldText; inline-size: min(100%, 22rem); }
       textarea { min-block-size: 6rem; padding-block: 0.75rem; }
+      .feedback-preview-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+      .feedback-preview { inline-size: 100%; box-sizing: border-box; border: 1px solid ButtonBorder; border-radius: 1rem; padding: 1rem; background: Canvas; color: CanvasText; }
+      .feedback-preview[data-theme="light"] { color-scheme: light; }
+      .feedback-preview[data-theme="dark"] { color-scheme: dark; }
+      .feedback-preview[data-width="mobile"] { max-inline-size: 390px; }
+      .feedback-content { min-block-size: 18rem; display: grid; place-items: center; align-content: center; gap: 1rem; padding-inline: 1rem; text-align: center; background: Canvas; color: CanvasText; }
+      .feedback-content .status-icon { font-size: 3rem; }
+      .feedback-content h3, .feedback-content p { margin: 0; }
       .informational-region { border-inline-start: 4px solid Highlight; border-inline-end: 0; background: color-mix(in srgb, CanvasText 6%, Canvas); }
       .dialog-stage { background: color-mix(in srgb, CanvasText 60%, transparent); padding: 1rem; border-radius: 0.75rem; }
       .dialog-panel { margin-inline: auto; max-inline-size: 28rem; border: 1px solid ButtonBorder; border-radius: 0.75rem; background: Canvas; color: CanvasText; box-shadow: 0 1rem 3rem color-mix(in srgb, CanvasText 24%, transparent); }
@@ -29,8 +37,9 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      @media (max-width: 30rem) { body { padding: 1rem; } .feedback-preview-grid { grid-template-columns: 1fr; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .feedback-preview, .dialog-panel, .celebration-card { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -44,11 +53,27 @@
         <p>Navigation actions remain native anchors while composing the same Helm button primitive and focus treatment as command buttons.</p>
         <div class="row"><button>Primary</button><button>Secondary</button><button disabled>Disabled</button><a class="action-link" href="#fields">Navigation action</a></div>
       </section>
-      <section aria-labelledby="static-feedback-title" aria-describedby="static-feedback-message">
-        <div aria-hidden="true">😕</div>
-        <h2 id="static-feedback-title">Static feedback state</h2>
-        <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region.</p>
-        <div class="row"><button type="button">Back</button></div>
+      <section aria-labelledby="coins-cancel-preview-title">
+        <h2 id="coins-cancel-preview-title">Coins cancel feedback</h2>
+        <p>Reference the same static cancellation state in explicit light/mobile and dark/desktop compositions. The Back action remains a native button with the shared Helm interaction treatment.</p>
+        <div class="feedback-preview-grid">
+          <article class="feedback-preview" data-theme="light" data-width="mobile" aria-label="Coins cancel light mobile preview">
+            <div class="feedback-content" aria-labelledby="coins-cancel-light-title" aria-describedby="coins-cancel-light-message">
+              <div class="status-icon" aria-hidden="true">😕</div>
+              <h3 id="coins-cancel-light-title">Payment cancelled</h3>
+              <p id="coins-cancel-light-message">No coins were purchased. You can return to the dashboard and try again later.</p>
+              <button type="button">Back</button>
+            </div>
+          </article>
+          <article class="feedback-preview" data-theme="dark" data-width="desktop" aria-label="Coins cancel dark desktop preview">
+            <div class="feedback-content" aria-labelledby="coins-cancel-dark-title" aria-describedby="coins-cancel-dark-message">
+              <div class="status-icon" aria-hidden="true">😕</div>
+              <h3 id="coins-cancel-dark-title">Payment cancelled</h3>
+              <p id="coins-cancel-dark-message">No coins were purchased. You can return to the dashboard and try again later.</p>
+              <button type="button">Back</button>
+            </div>
+          </article>
+        </div>
       </section>
       <section class="informational-region" role="region" aria-label="Cultural guide">
         <h2>Cultural guide</h2>

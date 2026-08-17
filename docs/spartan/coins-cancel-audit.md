@@ -12,7 +12,7 @@ Tracks issue #6046 for `frontend/src/app/components/coins-cancel`.
 | --- | --- | --- | --- | --- |
 | Back button | Native `<button>` with `hlmBtn`, `type="button"`, `size="touch"` | Navigates to `/dashboard` on activation | Spartan Helm button (`HlmButtonImports`) | Keep. The interaction is already owned by the approved Spartan button primitive. |
 | Status illustration | Decorative `😕` text with `aria-hidden="true"` | Non-interactive | None | Keep as decorative content. Do not introduce a primitive solely for the glyph. |
-| Status content | Heading and translated explanatory text inside `role="region"` / `aria-live="polite"` | Static cancellation state | Relay typography and surface tokens | Keep. No interactive Brain primitive is needed. |
+| Status content | Heading and translated explanatory text inside a named `main` landmark | Static cancellation state | Relay typography and surface tokens | Keep. No interactive Brain primitive is needed. |
 | Page layout | Tailwind layout using `bg-surface-500`, `text-text-primary`, `text-text-secondary` | Responsive centered card-width content | Relay design tokens | Keep. No bespoke interaction exists here. |
 
 ## Interaction inventory
@@ -35,7 +35,7 @@ No analytics hook, telemetry event, API request, mutation, storage write or paym
 
 - All user-visible strings are translated through `TranslatePipe`.
 - The emoji is hidden from assistive technology because it is decorative.
-- The status copy is exposed as a polite live region.
+- The status copy is exposed through the named `main` landmark without an unnecessary static live region.
 - The only interactive element is a semantic native button enhanced by Spartan.
 - Current utility classes contain no left/right directional spacing or borders, so the surface is RTL-safe.
 - Text and background use Relay semantic tokens rather than hardcoded product colours.
@@ -48,7 +48,7 @@ No analytics hook, telemetry event, API request, mutation, storage write or paym
 3. **Preserve `type="button"` and the touch-size contract.** Dropping either can create submission or target-size regressions.
 4. **Preserve the `/dashboard` route contract.** Converting to a different navigation mechanism is acceptable only if behaviour remains equivalent.
 5. **Do not hardcode colours while restyling.** Continue using Relay surface/text tokens so light/dark themes and future token changes remain first-class.
-6. **Do not remove the live-region semantics without an accessibility review.** The page may be reached immediately after an external checkout redirect.
+6. **Keep static feedback semantics static.** Do not add a live region unless the content begins changing after initial render.
 
 ## Prerequisites and follow-on work
 
@@ -72,3 +72,14 @@ If the Angular test runner in the current workspace does not support `--include`
 ## Audit result
 
 **Mapped and ready for the remaining migration stages.** Every control, state, overlay and bespoke utility in `coins-cancel` has been inventoried. The single interactive control is already on the approved Spartan button primitive; no duplicate feature-level interaction behaviour remains to replace.
+
+## Regression and design-preview lock
+
+Issue #6050 locks the documented behaviour and visual intent without changing product behaviour:
+
+- The component spec provides an explicit router test harness and verifies that activating the Back action navigates exactly to `/dashboard`.
+- Existing tests continue to cover the named landmark, decorative illustration, keyboard focusability, touch sizing, fluid high-zoom layout and logical-direction safety.
+- `frontend/design-preview/components/component-system.html` contains explicit light/mobile and dark/desktop references for the cancellation state, including the Helm-owned Back action.
+- The preview uses system/semantic colour roles and logical sizing so it remains valid in forced-colour and RTL review contexts.
+
+The interaction-conversion stage (#6047) requires no additional runtime primitive because the Back action already uses `hlmBtn`. The separate Relay token/theme parity stage (#6048) remains independently tracked, so this audit does not mark that visual-polish work complete prematurely.
