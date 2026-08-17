@@ -1,92 +1,62 @@
-# GitHub Issues for Communities UI Improvements
+# Audit and Issues: Language Correction Enhancements
 
-## Issue 1: Refactor `CommunitiesComponent` to a Three-Pane Responsive Layout
-
-**Description**
-The current `CommunitiesComponent` uses a basic single-column list flow that does not scale well for deep hierarchies. To align with modern real-time platforms (e.g., Discord), we need to transition the desktop interface into a multi-pane layout. This refactor should establish a 3-pane responsive structure: a primary narrow sidebar for top-level communities, a secondary sidebar for groups within the selected community, and a main central area (initially housing the chat or content/form).
-
-**Acceptance Criteria**
-- Refactor `communities.component.html` using Tailwind CSS Grid or Flexbox to create a three-pane layout on desktop.
-- Pane 1: A narrow sidebar containing the list of Communities.
-- Pane 2: A secondary sidebar containing the list of Groups for the active Community.
-- Pane 3: The main central area for active content (e.g., chat interface or the existing community creation form).
-- Ensure the layout degrades gracefully on smaller screens (mobile responsiveness logic to be handled in a separate issue).
-- Ensure existing functionality (fetching and displaying communities and groups) remains intact.
-
-**Suggested Labels**
-- enhancement
-- ui
-- layout
+This document contains a series of GitHub issues generated from an audit of the language correction functionality across the HelloTalk-clone platform. The goal is to make corrections faster to create, easier to understand, non-judgemental, translatable, and reusable as learning material via Spaced Repetition System (SRS) integration.
 
 ---
 
-## Issue 2: Implement Dynamic Active States and Micro-interactions
+## Issue 1: Make Corrections Non-Judgemental (Terminology Update)
+**Title:** Refactor terminology from "Correction" to "Suggestion" and "Corrected" to "Improved"
+**Labels:** `enhancement`, `frontend`, `ux`
 
-**Description**
-The current navigation lacks clear visual feedback regarding spatial position and interaction state. We need to implement distinct active states for selected items and micro-interactions (like hover effects) to improve the user experience and make navigation intuitive.
+**Description:**
+To foster a non-judgemental and supportive learning environment, the terminology used in the correction UI should be softened. "Correction" implies the user made a strict mistake, which can be discouraging.
 
-**Acceptance Criteria**
-- Apply distinct active styles to the selected community using Tailwind classes like `bg-surface-300` and `border-l-4 border-indigo-500` (or the theme's equivalent primary border, e.g. `border-primary`).
-- Implement the same active state logic for selected groups.
-- Introduce hover effects on list items (e.g., `hover:bg-surface-200`, `transition-colors duration-150`).
-- Ensure all styling changes rely on the existing Angular signals (e.g., `selectedCommunityId()`).
-
-**Suggested Labels**
-- enhancement
-- ui
-- good first issue
+**Tasks:**
+- In `frontend/src/assets/i18n/*.json`:
+  - Rename translation keys matching "correction" (e.g., `moments.sendCorrection`, `moments.correctSentenceTitle`) to use "Suggestion" or "Improvement".
+  - Rename `moments.correctedSentence` to `moments.improvedSentence`.
+  - Update `visual_diff.title` from "✏️ Visual Diff" / "Correction" to "✏️ Language Suggestion".
+- Update the UI text in `CorrectionModalComponent` and `VisualDiffComponent` to reflect the new terminology.
 
 ---
 
-## Issue 3: Implement Mobile Off-Canvas Drawer / Sliding Pane Navigation
+## Issue 2: Streamline and Accelerate Correction Creation
+**Title:** Improve creation speed of Language Suggestions (Auto-focus & Quick Tags)
+**Labels:** `enhancement`, `frontend`
 
-**Description**
-The proposed complex multi-pane navigation layout will overwhelm mobile devices if displayed simultaneously. We need to implement an off-canvas drawer or a sliding pane view for smaller screens to ensure a responsive, uncluttered experience.
+**Description:**
+Creating a correction must be extremely fast to encourage more users to participate in community feedback. Currently, the `CorrectionModalComponent` requires manual focus and typing out explanations from scratch.
 
-**Acceptance Criteria**
-- Design and implement a mobile-specific layout that triggers on small screens (using Tailwind responsive prefixes, e.g., `md:`).
-- On mobile, display only one pane at a time (e.g., start with the Communities list).
-- Implement a sliding pane or off-canvas drawer mechanism to transition between the Community list, Group list, and Main Chat area.
-- Utilize Angular animations for smooth transitions between views.
-- Ensure easy navigation back up the hierarchy (e.g., a 'Back' button or swipe gestures).
-
-**Suggested Labels**
-- enhancement
-- mobile
-- responsive
+**Tasks:**
+- Add `cdkFocusInitial` or manually auto-focus the `HlmTextarea` in `CorrectionModalComponent` so users can start typing their improvements immediately when the modal opens.
+- Add quick-select explanation tags (e.g., "Natural phrasing", "Grammar", "Typo", "Vocabulary") below the explanation input so tutors can provide context with a single tap.
+- Consider pre-filling the explanation input when a quick tag is tapped.
 
 ---
 
-## Issue 4: Add Unread Notification Badges to Communities and Groups
+## Issue 3: Make Explanations Translatable & Easy to Understand
+**Title:** Add one-tap translation for tutor explanations in Visual Diff
+**Labels:** `feature`, `frontend`
 
-**Description**
-To keep users engaged and informed about new activities within their communities, we need to introduce visual indicators for unread content. Small notification badges should be added to the list items for communities and groups that have new, unread activity.
+**Description:**
+When a user receives a correction, the tutor's explanation is often written in the tutor's native language or the target language, which the learner might not fully understand.
 
-**Acceptance Criteria**
-- Update the `Community` and `CommunityGroup` interfaces/models (if necessary) to include an unread count or a boolean flag indicating new activity.
-- Implement a UI component or inline HTML for an unread badge (e.g., a pill-shaped red div: `bg-red-500 text-white rounded-full px-1.5 text-[10px]`).
-- Display the badge conditionally on community and group list items if there are unread notifications.
-- Ensure the badge disappears or its count resets when the user navigates into that community or group.
-
-**Suggested Labels**
-- enhancement
-- feature
-- engagement
+**Tasks:**
+- In `VisualDiffComponent`, add a translation button (e.g., a small globe icon) next to the explanation text.
+- Connect this button to the `I18nService` / `TranslatePipe` or the NLP translation backend endpoint to instantly translate the explanation into the learner's native language.
+- Ensure the translation state is togglable (show original / show translation).
 
 ---
 
-## Issue 5: Add Error Handling and Loading States to Communities UI
+## Issue 4: One-Click Conversion to SRS Flashcards
+**Title:** Implement one-tap saving of corrections to SRS Vocabulary Store
+**Labels:** `feature`, `frontend`
 
-**Description**
-The current `CommunitiesComponent` handles data fetching via Angular signals/resources but lacks explicit user feedback for loading states and error conditions (e.g., network failure when fetching communities or creating one).
+**Description:**
+To make corrections highly reusable as learning material, learners should be able to convert a received correction (and its explanation) into an SRS flashcard or example sentence with a single action.
 
-**Acceptance Criteria**
-- Add loading spinners or skeleton loaders to the `communities.component.html` to indicate when `communitiesResource` and `groupsResource` are loading (`communitiesResource.isLoading()` / `groupsResource.isLoading()`).
-- Implement a try/catch block around `createCommunity()` to handle and display creation errors gracefully.
-- Show user-friendly error messages if fetching communities or groups fails.
-- Disable the "Create" button while the creation request is in flight to prevent double-submissions.
-
-**Suggested Labels**
-- bug
-- tech-debt
-- ui
+**Tasks:**
+- In `VisualDiffComponent` (or via an event emitted to its parent, such as `ChatRoomComponent` or `MomentsFeedComponent`), add a "Save as Flashcard" button.
+- Upon clicking, invoke `VocabularyStore.saveWord({ word_token: <corrected_segment>, translation: <explanation_or_original>, original_context: <full_corrected_sentence> })`.
+- Since `VisualDiffComponent` receives `original`, `corrected`, and `explanation` as inputs, it has all the context needed to construct a meaningful flashcard payload.
+- Show a success toast/haptic feedback when the correction is successfully added to the user's SRS review queue.
