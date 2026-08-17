@@ -77,3 +77,7 @@
 ## 2026-08-17 - [Optimize Sequential Account Deletions via Bounded Concurrency]
 **Learning:** In the backend `data-retention.service.ts`, finalizing user account deletions (`finaliseAccountDeletions`) looped sequentially through `usersToDelete` executing `wipeUserData` and a table update. Simply changing this to an unbounded `Promise.allSettled` is dangerous and can exhaust database connections when processing dozens of concurrent users.
 **Action:** When optimizing long-running cron jobs or batch loops across multiple records, replace sequential iterations with a bounded concurrent approach. Use a `for` loop with `slice(i, i + chunkSize)` (e.g. chunk size 10) and wrap the execution in `Promise.allSettled`. This safely provides concurrent execution benefits without breaking connection pool limits. Ensure the mapped functions catch errors and explicitly narrow return unions (e.g., `success: true as const`) to satisfy TypeScript.
+
+## 2026-08-17 - Recommendation Service Bottleneck (O(n^2) nested maps)
+**Learning:** Nested loops where the inner loop does array operations like `filter` and `map` followed by `JSON.stringify` can cause severe performance issues with large datasets.
+**Action:** Pre-process inner-loop data structure outside loop. If generating JSON subsets where an item needs to be excluded, map and stringify elements just once, and string-manipulate the full string using `.replace` instead of re-evaluating arrays.
