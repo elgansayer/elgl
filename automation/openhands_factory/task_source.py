@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import fcntl
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Lock
@@ -23,11 +26,31 @@ class TaskStore:
         self.state_dir = state_dir
         self.backlog_path = state_dir / "backlog.json"
         self.lease_path = state_dir / "leases.json"
+        self.lease_lock_path = state_dir / "leases.lock"
         self.lease_minutes = lease_minutes
         if factory_generation == "unknown":
             generation = read_json(state_dir / "generation.json", {})
             factory_generation = str(generation.get("identifier", "unknown"))
         self.factory_generation = factory_generation
+
+    @contextmanager
+    def _exclusive_lease_file_lock(self) -> Iterator[None]:
+        """Serialize lease compare-and-swap across daemon processes.
+
+        The in-process lock prevents sibling worker threads from racing, while the
+        advisory file lock prevents two Factory processes that share the durable
+        state directory from both observing an unclaimed task and writing competing
+        owners. The generation fence is rechecked while this lock is held by every
+        lease mutation so a superseded daemon cannot win a check/write race.
+        """
+
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        with self.lease_lock_path.open("a+", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     def _assert_generation_current(self) -> None:
         if self.factory_generation == "unknown":
@@ -91,11 +114,16 @@ class TaskStore:
         return min(available, key=lambda task: (task.priority, task.identifier), default=None)
 
     def acquire(self, task: Task, owner: str, now: datetime | None = None) -> Lease:
-        self._assert_generation_current()
+        """Atomically claim a task, idempotently for the existing owner."""
+
         current = now or datetime.now(UTC)
-        with self._lease_lock:
+        with self._lease_lock, self._exclusive_lease_file_lock():
+            self._assert_generation_current()
             leases = self.leases(current)
-            if task.identifier in leases:
+            existing = leases.get(task.identifier)
+            if existing is not None:
+                if existing.owner == owner:
+                    return existing
                 raise ValueError(f"Task {task.identifier} already has an active lease")
             lease = Lease(
                 task_id=task.identifier,
@@ -108,17 +136,42 @@ class TaskStore:
             self._write_leases(leases)
             return lease
 
+    def renew(self, task_id: str, owner: str, now: datetime | None = None) -> Lease:
+        """Renew an active lease only when the durable owner still matches."""
+
+        current = now or datetime.now(UTC)
+        with self._lease_lock, self._exclusive_lease_file_lock():
+            self._assert_generation_current()
+            leases = self.leases(current)
+            existing = leases.get(task_id)
+            if existing is None:
+                raise ValueError(f"Task {task_id} does not have an active lease")
+            if existing.owner != owner:
+                raise ValueError(
+                    f"Task {task_id} lease belongs to {existing.owner}, not {owner}",
+                )
+            renewed = Lease(
+                task_id=existing.task_id,
+                owner=existing.owner,
+                acquired_at=existing.acquired_at,
+                expires_at=current + timedelta(minutes=self.lease_minutes),
+                factory_generation=self.factory_generation,
+            )
+            leases[task_id] = renewed
+            self._write_leases(leases)
+            return renewed
+
     def release(self, task_id: str) -> None:
-        self._assert_generation_current()
-        with self._lease_lock:
+        with self._lease_lock, self._exclusive_lease_file_lock():
+            self._assert_generation_current()
             leases = self.leases()
             leases.pop(task_id, None)
             self._write_leases(leases)
 
     def prune_expired_leases(self, now: datetime | None = None) -> list[str]:
-        self._assert_generation_current()
         current = now or datetime.now(UTC)
-        with self._lease_lock:
+        with self._lease_lock, self._exclusive_lease_file_lock():
+            self._assert_generation_current()
             payload = read_json(self.lease_path, {"leases": []})
             active: dict[str, Lease] = {}
             expired: list[str] = []
