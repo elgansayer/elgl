@@ -7,7 +7,7 @@ import signal
 import time
 from collections import Counter
 from concurrent.futures import Future, ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
 
@@ -171,6 +171,19 @@ class FactoryDaemon:
                     now = time.monotonic()
                     if now >= next_refresh_at:
                         jobs = self.pipeline.refresh(active_task_ids)
+                        recovered = self.pipeline.jobs.recover_abandoned_attempts(
+                            active_task_ids,
+                            timedelta(minutes=self.config.max_task_minutes + 15),
+                        )
+                        for task_id in recovered:
+                            self.pipeline.tasks.release(task_id)
+                            LOGGER.warning(
+                                "Recovered abandoned Factory attempt for task %s; "
+                                "retry is backed off",
+                                task_id,
+                            )
+                        if recovered:
+                            jobs = self.pipeline.jobs.load()
                         next_refresh_at = now + self.config.cooldown_seconds
                     else:
                         jobs = self.pipeline.jobs.load()

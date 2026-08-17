@@ -16,6 +16,16 @@ from openhands_factory.retry_policy import (
 from openhands_factory.state import atomic_write_json, read_json
 
 MAX_PERSISTED_RETRY_DELAY = timedelta(hours=24)
+RECOVERABLE_ACTIVE_STATES = {
+    JobState.LEASED,
+    JobState.IMPLEMENTING,
+    JobState.SECURITY_REVIEW,
+    JobState.VERIFYING,
+    JobState.PR_DRAFT,
+    JobState.REVIEWING,
+    JobState.REPAIRING,
+    JobState.QUALITY_REPAIRING,
+}
 
 
 class JobStore:
@@ -118,7 +128,13 @@ class JobStore:
             or previous.head_sha != current.head_sha
         )
 
-    def _apply_retry_policy(self, previous: Job | None, job: Job) -> None:
+    def _apply_retry_policy(
+        self,
+        previous: Job | None,
+        job: Job,
+        *,
+        now: datetime | None = None,
+    ) -> None:
         """Attach restart-safe retry accounting immediately before durable save."""
 
         if job.state in {JobState.DONE, JobState.QUARANTINED}:
@@ -130,7 +146,7 @@ class JobStore:
                 class_retry_count,
                 jitter_key=f"{job.task.identifier}:{fingerprint}",
             )
-            job.next_attempt_at = datetime.now(UTC) + delay
+            job.next_attempt_at = (now or datetime.now(UTC)) + delay
             return
         if previous is not None and self._made_meaningful_progress(previous, job):
             reset_retry_diagnostics(job)
@@ -144,6 +160,47 @@ class JobStore:
             self._stamp(job)
             jobs[job.task.identifier] = job
             self.save(jobs)
+
+    def recover_abandoned_attempts(
+        self,
+        protected_task_ids: set[str],
+        max_age: timedelta,
+        *,
+        now: datetime | None = None,
+    ) -> list[str]:
+        """Back off durable worker states abandoned by a previous daemon generation.
+
+        Live futures are passed as ``protected_task_ids`` and can never be touched by
+        the watchdog. Only execution states that require an active worker are
+        recoverable; CI-pending and merge-queued jobs are polling states and are left
+        alone even when old. Recovery preserves the job state/worktree, records a
+        task-timeout diagnostic, and schedules the next attempt through the same
+        restart-stable per-failure-class policy as an ordinary worker failure.
+        """
+
+        current = now or datetime.now(UTC)
+        threshold = current - max_age
+        recovered: list[str] = []
+        with self._process_lock:
+            jobs = self.load()
+            for task_id, job in jobs.items():
+                if task_id in protected_task_ids:
+                    continue
+                if job.state not in RECOVERABLE_ACTIVE_STATES:
+                    continue
+                if job.updated_at > threshold:
+                    continue
+                job.attempts += 1
+                job.last_error = (
+                    f"Watchdog recovered abandoned {job.state.value} attempt after "
+                    "maximum task duration"
+                )
+                job.updated_at = current
+                self._apply_retry_policy(None, job, now=current)
+                recovered.append(task_id)
+            if recovered:
+                self.save(jobs)
+        return sorted(recovered, key=lambda identifier: (not identifier.isdigit(), identifier))
 
     @staticmethod
     def _reset_legacy_quarantine(job: Job, now: datetime) -> None:
