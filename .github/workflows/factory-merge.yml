@@ -37,6 +37,8 @@ jobs:
               and ([.statusCheckRollup[]? | select(((.status == "COMPLETED") and ((.conclusion // "") | IN("SUCCESS", "NEUTRAL", "SKIPPED"))) or .state == "SUCCESS")] | length) == (.statusCheckRollup | length)
             ) | "\(.number)\t\(.headRefOid)"' \
             | while IFS=$'\t' read -r number head_sha; do
-                [ -n "$number" ] && [ -n "$head_sha" ] || continue
+                if [ -z "$number" ] || [ -z "$head_sha" ]; then
+                  continue
+                fi
                 gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --delete-branch --match-head-commit "$head_sha"
               done
