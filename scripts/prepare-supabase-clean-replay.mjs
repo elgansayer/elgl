@@ -71,7 +71,7 @@ $$;
     beforeSourceFile: '20260807143544_review_rls_srs_flashcards.sql',
     name: 'materialize_typeorm_flashcard_decks_before_rls_review',
     reason:
-      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL migration corpus. The shim mirrors that migration before the RLS review.',
+      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL corpus. The shim mirrors that migration before the RLS review.',
     sql: `CREATE TABLE IF NOT EXISTS public.decks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -188,6 +188,17 @@ CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON public.poll_votes(user_id);
       '20260807000000_create_escrow_transactions.sql creates escrow_transactions in the Supabase corpus without reference_id, while 20260808000001_optimise_escrow_indices.sql immediately indexes that column. Add only the missing idempotency-reference column before replaying the optimiser; the optimiser itself adds expires_at.',
     sql: `ALTER TABLE public.escrow_transactions
   ADD COLUMN IF NOT EXISTS reference_id TEXT;
+`,
+  },
+  {
+    beforeSourceFile: '20260808000002_optimise_video_classroom_indices.sql',
+    name: 'reconcile_duplicate_video_classroom_policies_before_optimisation',
+    reason:
+      '20260807190000_review_rls_video_classrooms.sql already creates call_logs_select_own, call_logs_insert_own, audio_room_tips_select_own, and audio_room_tips_insert_own. The later optimiser recreates those exact policy names without DROP POLICY, so a clean chronological replay must remove the earlier named policies immediately before replaying the optimiser.',
+    sql: `DROP POLICY IF EXISTS call_logs_select_own ON public.call_logs;
+DROP POLICY IF EXISTS call_logs_insert_own ON public.call_logs;
+DROP POLICY IF EXISTS audio_room_tips_select_own ON public.audio_room_tips;
+DROP POLICY IF EXISTS audio_room_tips_insert_own ON public.audio_room_tips;
 `,
   },
 ];
