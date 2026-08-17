@@ -294,3 +294,6 @@
 - Ensure full keyboard tab-navigation support for desktop viewports.
 - Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
 
+
+- Epic: Mobile UX Audit: Fix PWA Safe Areas, Touch Targets, Viewport & Mobile Media Capabilities
+  - **Issue:** The application acts like a responsive website instead of a true mobile social app. Needs comprehensive PWA/Mobile optimizations (safe-area-inset, touch targets, overscroll, media capture, modal back navigation, transitions, input modes).
