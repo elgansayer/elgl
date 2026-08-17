@@ -68,7 +68,28 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    return candidates[:limit]
+    selected = candidates[:limit]
+    if limit <= 1 or any(
+        item.task.source == "github-pull-request" for item in selected
+    ):
+        return selected
+
+    review_is_active = any(
+        item.task.identifier in excluded and item.task.source == "github-pull-request"
+        for item in jobs.values()
+    )
+    if review_is_active:
+        return selected
+
+    review = next(
+        (item for item in candidates if item.task.source == "github-pull-request"),
+        None,
+    )
+    if review is not None:
+        # Keep one of multiple worker slots moving the merge queue even when a
+        # large critical-issue backlog would otherwise starve every PR review.
+        selected[-1] = review
+    return selected
 
 
 def refresh_jobs(

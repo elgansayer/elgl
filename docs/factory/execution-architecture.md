@@ -17,6 +17,11 @@ Every AI-backed phase becomes one typed `AgentRequest` and can run through an el
 Providers cannot discover work, own job state, merge, or weaken Factory policy. The transport may be CLI,
 OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 
+The scheduler uses a bounded pull-request review lane when at least two worker slots are free. If no review is
+already active, one slot is reserved for the oldest runnable external PR and the remaining slots retain normal
+priority order. This prevents a large critical-issue backlog from starving every required review without turning
+review into a second scheduler or displacing all urgent issue work.
+
 ## Architecture invariants
 
 - `FACTORY_ARCHITECTURE` remains `openhands-agent-canvas-v1` for deployment and state compatibility.
@@ -34,6 +39,7 @@ OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 - Provider-side failures may fall through according to typed policy. Repository, test, task, policy, and internal
   Factory failures do not blindly rotate.
 - No-provider capacity defers work without consuming a task attempt or entering task quarantine.
+- A bounded pull-request review lane prevents required merge reviews from starving behind the issue backlog.
 - Repeated identical task-side failures open a recoverable circuit at the configured limit, while different
   failure fingerprints retain independent bounded backoff histories.
 - Provider health, circuits, retry evidence, history, and job state are durable across restart.

@@ -111,6 +111,10 @@ External pull requests enter through discovery and local verification before `RE
 immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
 the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
 
+When at least two worker slots are free, the scheduler reserves one slot for the oldest runnable external pull
+request if no PR review is already active. Other slots remain ordered by issue priority and identifier. This
+bounded lane prevents required independent reviews from starving behind a large critical-issue backlog.
+
 Provider exhaustion does not consume a task attempt. The job remains in its current state with `next_attempt_at`
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
 rotation. Persisted failure classes and deterministic jittered backoff remain authoritative across restart.

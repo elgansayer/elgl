@@ -43,6 +43,7 @@ def test_execution_architecture_locks_single_factory_owner_and_multiple_provider
         "OpenCode CLI",
         "OpenHands SDK",
         "No-provider capacity defers work",
+        "bounded pull-request review lane",
     ):
         assert marker in architecture
 

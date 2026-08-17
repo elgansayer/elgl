@@ -21,6 +21,22 @@ def job(identifier: str, priority: int, state: JobState = JobState.DISCOVERED) -
     return Job(Task(identifier, f"Task {identifier}", "Body", "github-issue", priority), state)
 
 
+def pull_request_job(
+    identifier: str,
+    priority: int = 5,
+    state: JobState = JobState.DISCOVERED,
+) -> Job:
+    task = Task(
+        identifier,
+        f"Pull request {identifier}",
+        "Body",
+        "github-pull-request",
+        priority,
+        pr_branch=f"agent/change-{identifier}",
+    )
+    return Job(task, state)
+
+
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
     jobs = {
         "12": job("12", 10),
@@ -33,6 +49,32 @@ def test_select_batch_fills_parallel_capacity_by_priority() -> None:
     selected = select_batch(jobs, 3)
 
     assert [item.task.identifier for item in selected] == ["10", "11", "12"]
+
+
+def test_select_batch_reserves_one_parallel_slot_for_pull_request_review() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "11": job("11", 0),
+        "12": job("12", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 3)
+
+    assert [item.task.identifier for item in selected] == ["10", "11", "7348"]
+
+
+def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "11": job("11", 0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 2, {"7347"})
+
+    assert [item.task.identifier for item in selected] == ["10", "11"]
 
 
 def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -> None:
