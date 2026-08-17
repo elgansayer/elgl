@@ -221,10 +221,13 @@ class ProviderHealthStore:
                 )
             )
             opened_at = _load_opened_at(item.get("opened_at"), now=current)
+            state_value = item.get("state")
 
             try:
-                state = CircuitState(item.get("state"))
-            except (TypeError, ValueError):
+                if not isinstance(state_value, str):
+                    raise ValueError("persisted circuit state must be a string")
+                state = CircuitState(state_value)
+            except ValueError:
                 state = CircuitState.OPEN
                 opened_at = current
                 consecutive_failures = max(consecutive_failures, failure_threshold)
