@@ -2,7 +2,7 @@
   "routing_enabled": true,
   "providers": {
     "claude": {
-      "enabled": true,
+      "enabled": false,
       "command": "claude",
       "auth_mode": "subscription",
       "transport": "cli",
@@ -13,7 +13,7 @@
       "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"]
     },
     "codex": {
-      "enabled": true,
+      "enabled": false,
       "command": "codex",
       "auth_mode": "subscription",
       "transport": "cli",
@@ -35,7 +35,7 @@
       "runtime_paths": [".local/bin", ".npm-global"]
     },
     "opencode": {
-      "enabled": true,
+      "enabled": false,
       "command": "opencode",
       "auth_mode": "subscription",
       "transport": "cli",
@@ -61,14 +61,14 @@
     }
   },
   "routing": {
-    "planning": ["claude", "codex", "google", "opencode", "openhands"],
-    "architecture": ["claude", "codex", "google", "opencode", "openhands"],
-    "implementation": ["claude", "codex", "google", "opencode", "openhands"],
-    "security_review": ["claude", "codex", "google", "opencode", "openhands"],
-    "quality_repair": ["codex", "claude", "google", "opencode", "openhands"],
-    "code_review": ["codex", "claude", "google", "opencode", "openhands"],
-    "ci_repair": ["codex", "claude", "google", "opencode", "openhands"],
-    "general_action": ["opencode", "google", "codex", "claude", "openhands"],
+    "planning": ["openhands"],
+    "architecture": ["openhands"],
+    "implementation": ["openhands"],
+    "security_review": ["openhands"],
+    "quality_repair": ["openhands"],
+    "code_review": ["openhands"],
+    "ci_repair": ["openhands"],
+    "general_action": ["openhands"],
     "skip_busy_providers": true,
     "same_provider_retries": 1
   },
