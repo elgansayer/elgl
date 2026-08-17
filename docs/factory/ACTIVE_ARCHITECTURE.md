@@ -81,7 +81,9 @@ an architecture change, not a routine configuration tweak.
 
 - `openhands` is the only enabled provider eligible in every production phase route;
 - direct `claude`, `codex`, `google`, and `opencode` outer adapters are disabled;
-- `openhands` is not marked emergency-only because it is the normal production execution boundary;
+- the legacy `emergency_only` bit may remain `true` as compatibility metadata until the outer router is removed;
+  because every production route contains only `openhands`, that bit cannot place another outer provider ahead of
+  the OpenHands boundary;
 - planning, architecture, implementation, security review, quality repair, code review, CI repair, and general
   actions each route exactly through `openhands`;
 - OpenAI subscription/Codex OAuth and OpenCode Go fallback remain inside `conversation_runner.py`;
