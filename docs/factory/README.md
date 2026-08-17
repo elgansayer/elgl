@@ -19,9 +19,11 @@ host proves all of the following:
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
 - root and Factory-state volumes both retain the configured free-space reserve;
-- one no-bypass baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
+- one baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
 - `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
   bypass is the exact repository-owner user in pull-request mode;
+- the baseline ruleset may use the same exact-owner, pull-request-only bypass, while role, team, app, deploy-key,
+  direct-push, and always-mode bypasses remain prohibited;
 - the required statuses are pinned to their expected GitHub App sources before any additional write actor is
   trusted;
 - `hellotalk-factory legacy scan` reports no active competing executor;
@@ -155,15 +157,15 @@ Before a task branch can merge, the Factory preserves these controls:
 - atomic base updates and renewed verification/review when a head is behind `main`;
 - atomic `--match-head-commit` enforcement at the merge call;
 - literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
-- a no-bypass baseline ruleset requiring pull requests and strict `CI / required`;
-- a review-only ruleset requiring `factory/independent-review`, with an optional exact-owner, pull-request-only
-  manual bypass that cannot bypass baseline CI;
+- a baseline ruleset requiring pull requests and strict `CI / required`;
+- an optional exact-owner, pull-request-only bypass on the baseline and review-only rulesets;
+- a review-only ruleset requiring `factory/independent-review`;
 - human `CHANGES_REQUESTED` review blocking;
 - no administrator bypass by the Factory or repository workflows.
 
-The repository owner can deliberately waive only the independent-review rule through the GitHub web interface.
-See [MANUAL-MERGE.md](MANUAL-MERGE.md). This does not give the daemon, integrations, roles, or deploy keys bypass
-authority.
+The repository owner can deliberately waive CI, independent review, or both through an existing pull request.
+See [MANUAL-MERGE.md](MANUAL-MERGE.md). Factory automation still requires both statuses and never invokes that
+manual authority. Roles, teams, apps, deploy keys, direct pushes, and always-mode bypasses remain prohibited.
 
 The structured report files are control artefacts. They are validated, deleted, and never committed as task
 code. Every code-mutating review or repair returns to verification and a fresh independent review.

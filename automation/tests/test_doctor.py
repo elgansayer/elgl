@@ -400,6 +400,51 @@ def test_online_merge_policy_allows_exact_owner_to_bypass_review_only(
     assert check.passed
     assert "baseline-ruleset=42" in check.detail
     assert "review-ruleset=43" in check.detail
+    assert "manual-ci-bypass=disabled" in check.detail
+    assert "manual-review-bypass=elgansayer; ruleset=43" in check.detail
+
+
+def test_online_merge_policy_allows_exact_owner_to_bypass_all_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rules = [
+        {"type": "pull_request", "parameters": {}, "ruleset_id": 42},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 42,
+            "parameters": {"required_status_checks": [{"context": "CI / required"}]},
+        },
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 43,
+            "parameters": {"required_status_checks": [{"context": "factory/independent-review"}]},
+        },
+    ]
+    owner_bypass = [
+        {
+            "actor_id": 6_216_372,
+            "actor_type": "User",
+            "bypass_mode": "pull_request",
+        }
+    ]
+
+    def run(arguments: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
+        del kwargs
+        payload: object = rules
+        if arguments[-1].endswith(("/rulesets/42", "/rulesets/43")):
+            payload = {"enforcement": "active", "bypass_actors": owner_bypass}
+        elif arguments[-1] == "users/elgansayer":
+            payload = {"id": 6_216_372, "login": "elgansayer", "type": "User"}
+        return CompletedProcess(arguments, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = github_merge_policy_check(config(tmp_path))
+
+    assert check.passed
+    assert "baseline-ruleset=42" in check.detail
+    assert "review-ruleset=43" in check.detail
+    assert "manual-ci-bypass=elgansayer; ruleset=42" in check.detail
     assert "manual-review-bypass=elgansayer; ruleset=43" in check.detail
 
 
@@ -474,7 +519,7 @@ def test_online_merge_policy_rejects_complete_ruleset_with_bypass_actors(
     check = github_merge_policy_check(config(tmp_path))
 
     assert not check.passed
-    assert "no active no-bypass ruleset requiring pull requests and CI" in check.detail
+    assert "no active ruleset requiring pull requests and CI" in check.detail
 
 
 @pytest.mark.parametrize(

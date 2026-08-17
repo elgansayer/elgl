@@ -177,10 +177,11 @@ following:
 
 The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
 squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. A no-bypass baseline ruleset requires pull requests and strict `CI / required`. A second,
-review-only ruleset requires `factory/independent-review`; its sole optional bypass actor is the exact
-repository-owner user in pull-request mode. The owner can therefore waive unavailable Factory review without
-bypassing CI or pushing directly to `main`. The daemon and integrations cannot use that path. See
+administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
+review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
+pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
+permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes
+that path. See
 [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 A dedicated GitHub App and ruleset expected-source binding are still required to prevent another write actor from
