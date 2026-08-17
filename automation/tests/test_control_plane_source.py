@@ -37,7 +37,7 @@ def test_production_routes_every_agent_phase_through_openhands() -> None:
     assert config["routing_enabled"] is True
     assert providers["openhands"]["enabled"] is True
     assert providers["openhands"]["transport"] == "openhands-sdk"
-    assert providers["openhands"]["emergency_only"] is False
+    assert providers["openhands"]["emergency_only"] is True
     assert providers["claude"]["enabled"] is False
     assert providers["codex"]["enabled"] is False
     assert providers["google"]["enabled"] is False
@@ -63,4 +63,4 @@ def test_active_architecture_matches_production_provider_boundary() -> None:
     assert "OpenAI subscription-backed Codex OAuth" in architecture
     assert "OpenCode Go subscription fallback" in architecture
     assert "Google/Gemini is disabled" in architecture
-    assert "Emergency-only OpenHands remains behind" not in architecture
+    assert "Direct CLI outer adapters" in architecture
