@@ -266,4 +266,13 @@ DROP FUNCTION IF EXISTS public.search_nearby_users(
 );
 `,
   },
+  {
+    beforeSourceFile: '20260808000004_optimise_matchmaking_indices.sql',
+    name: 'add_is_deleted_before_matchmaking_partial_index',
+    reason:
+      'The matchmaking optimiser filters its partial users index on is_deleted two historical steps before 20260808000006_add_is_deleted_to_users.sql materializes that GDPR finalisation flag.',
+    sql: `ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT false;
+`,
+  },
 ];
