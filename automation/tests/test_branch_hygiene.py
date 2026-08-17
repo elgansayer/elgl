@@ -121,13 +121,48 @@ def test_safe_cleanup_deletes_only_provably_integrated_remote_tips(tmp_path: Pat
         timeout: int = 300,
     ) -> ProcessResult:
         del cwd, timeout
-        calls.append(tuple(arguments))
-        return ProcessResult(0, "", "")
+        args = tuple(arguments)
+        calls.append(args)
+        if args[:3] == ("gh", "pr", "list"):
+            return ProcessResult(0, "[]", "")
+        if args[:2] == ("git", "ls-remote"):
+            return ProcessResult(
+                0,
+                f"{'a' * 40}\trefs/heads/merged-safe\n",
+                "",
+            )
+        if args[:2] == ("git", "push"):
+            return ProcessResult(0, "", "")
+        raise AssertionError(args)
 
     deleted = delete_safe_branches(audit, tmp_path, runner=runner)
 
     assert deleted == ("merged-safe",)
-    assert calls == [("git", "push", "origin", "--delete", "--", "merged-safe")]
+    assert calls == [
+        (
+            "gh",
+            "pr",
+            "list",
+            "--repo",
+            "owner/repo",
+            "--state",
+            "open",
+            "--head",
+            "merged-safe",
+            "--limit",
+            "20",
+            "--json",
+            "number",
+        ),
+        ("git", "ls-remote", "--heads", "origin", "refs/heads/merged-safe"),
+        (
+            "git",
+            "push",
+            f"--force-with-lease=refs/heads/merged-safe:{'a' * 40}",
+            "origin",
+            ":refs/heads/merged-safe",
+        ),
+    ]
 
 
 def test_audit_is_read_only_and_emits_machine_readable_counts(tmp_path: Path) -> None:
