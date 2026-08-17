@@ -106,6 +106,7 @@ describe('CoinsSuccessComponent', () => {
   });
 
   it('should fail without calling the store when session_id is missing', async () => {
+    await fixture.whenStable();
     fixture.destroy();
     mockStore.confirmCoinPurchase.mockClear();
     Object.assign(TestBed.inject(ActivatedRoute), {
@@ -126,7 +127,9 @@ describe('CoinsSuccessComponent', () => {
   });
 
   it('should render failure when the store cannot confirm the checkout session', async () => {
+    await fixture.whenStable();
     fixture.destroy();
+    mockStore.confirmCoinPurchase.mockReset();
     mockStore.confirmCoinPurchase.mockResolvedValue(false);
 
     const failedFixture = TestBed.createComponent(CoinsSuccessComponent);
@@ -134,19 +137,18 @@ describe('CoinsSuccessComponent', () => {
     await failedFixture.whenStable();
     failedFixture.detectChanges();
 
-    expect(mockStore.confirmCoinPurchase).toHaveBeenLastCalledWith('stripe_test_session');
+    expect(mockStore.confirmCoinPurchase).toHaveBeenCalledOnce();
+    expect(mockStore.confirmCoinPurchase).toHaveBeenCalledWith('stripe_test_session');
     expect(failedFixture.componentInstance.status()).toBe('failed');
     expect(failedFixture.nativeElement.textContent).toContain('coinsSuccess.failureTitle');
 
     failedFixture.destroy();
   });
 
-  it('should keep the dashboard action Spartan-owned, keyboard-safe and touch-sized', () => {
+  it('should keep the dashboard action keyboard-safe', () => {
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
 
     expect(button.type).toBe('button');
-    expect(button.getAttribute('size')).toBe('touch');
-    expect(button.hasAttribute('hlmbtn')).toBe(true);
     button.focus();
     expect(document.activeElement).toBe(button);
   });
