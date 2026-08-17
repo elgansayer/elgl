@@ -206,4 +206,13 @@ ALTER TABLE public.escrows
 DROP INDEX IF EXISTS public.idx_call_logs_receiver_type_started;
 `,
   },
+  {
+    beforeSourceFile: '20260808000003_optimise_video_classroom_indices.sql',
+    name: 'restore_audio_room_invited_users_before_gin_index',
+    reason:
+      'The historical video-classroom optimiser creates its invited_user_ids GIN index before the same source migration reaches the idempotent ALTER TABLE that adds invited_user_ids.',
+    sql: `ALTER TABLE public.audio_rooms
+  ADD COLUMN IF NOT EXISTS invited_user_ids UUID[];
+`,
+  },
 ];
