@@ -16,6 +16,7 @@
       button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
       input, textarea, select { background: Field; color: FieldText; inline-size: min(100%, 22rem); }
       textarea { min-block-size: 6rem; padding-block: 0.75rem; }
+      .informational-region { border-inline-start: 4px solid Highlight; border-inline-end: 0; background: color-mix(in srgb, CanvasText 6%, Canvas); }
       .dialog-stage { background: color-mix(in srgb, CanvasText 60%, transparent); padding: 1rem; border-radius: 0.75rem; }
       .dialog-panel { margin-inline: auto; max-inline-size: 28rem; border: 1px solid ButtonBorder; border-radius: 0.75rem; background: Canvas; color: CanvasText; box-shadow: 0 1rem 3rem color-mix(in srgb, CanvasText 24%, transparent); }
       .dialog-header, .dialog-body, .dialog-footer { padding: 1rem; }
@@ -43,6 +44,10 @@
         <h2 id="static-feedback-title">Static feedback state</h2>
         <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region.</p>
         <div class="row"><button type="button">Back</button></div>
+      </section>
+      <section class="informational-region" role="region" aria-label="Cultural guide">
+        <h2>Cultural guide</h2>
+        <p>A read-only cultural tip remains a native named region under Relay presentation authority; it does not acquire a Spartan interaction primitive solely for visual composition.</p>
       </section>
       <section>
         <h2>Fields</h2>
