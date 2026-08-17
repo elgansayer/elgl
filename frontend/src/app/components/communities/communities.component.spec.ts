@@ -56,8 +56,10 @@ describe('CommunitiesComponent', () => {
     fixture = TestBed.createComponent(CommunitiesComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(component.communities()).toHaveLength(1);
+    });
   });
 
   it('should create', () => {
@@ -132,7 +134,7 @@ describe('CommunitiesComponent', () => {
   it('should prevent overlapping delete mutations and restore controls afterwards', async () => {
     let finishDelete: (() => void) | undefined;
     const pendingDelete = new Promise<void>((resolve) => {
-      finishDelete = resolve;
+      finishDelete = () => resolve();
     });
     removeCommunity.mockReturnValueOnce(pendingDelete);
 
