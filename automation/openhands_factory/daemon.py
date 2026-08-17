@@ -69,9 +69,7 @@ def select_batch(
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     selected = candidates[:limit]
-    if limit <= 1 or any(
-        item.task.source == "github-pull-request" for item in selected
-    ):
+    if limit <= 1 or any(item.task.source == "github-pull-request" for item in selected):
         return selected
 
     review_is_active = any(
