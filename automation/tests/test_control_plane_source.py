@@ -1,5 +1,7 @@
 import json
 
+from openhands_factory.agents.base import AgentPhase
+
 
 def read_source(path: str) -> str:
     with open(path, encoding="utf-8") as source_file:
@@ -29,38 +31,42 @@ def test_openhands_adapter_keeps_its_inner_provider_stable() -> None:
     assert "ProviderName.OPENCODE_GO" in source
 
 
-def test_production_routes_every_agent_phase_through_openhands() -> None:
+def test_production_uses_subscription_first_phase_routing() -> None:
     config = json.loads(read_source("../config/factory/agents.production.json"))
     providers = config["providers"]
     routing = config["routing"]
 
     assert config["routing_enabled"] is True
+    assert providers["claude"]["enabled"] is True
+    assert providers["codex"]["enabled"] is True
+    assert providers["opencode"]["enabled"] is True
+    assert providers["google"]["enabled"] is False
     assert providers["openhands"]["enabled"] is True
     assert providers["openhands"]["transport"] == "openhands-sdk"
     assert providers["openhands"]["emergency_only"] is True
-    assert providers["claude"]["enabled"] is False
-    assert providers["codex"]["enabled"] is False
-    assert providers["google"]["enabled"] is False
-    assert providers["opencode"]["enabled"] is False
 
-    for phase in (
-        "planning",
-        "architecture",
-        "implementation",
-        "security_review",
-        "quality_repair",
-        "code_review",
-        "ci_repair",
-        "general_action",
-    ):
-        assert routing[phase] == ["openhands"]
+    expected = {
+        AgentPhase.PLANNING: ["claude", "codex", "google", "opencode", "openhands"],
+        AgentPhase.ARCHITECTURE: ["claude", "codex", "google", "opencode", "openhands"],
+        AgentPhase.IMPLEMENTATION: ["claude", "codex", "google", "opencode", "openhands"],
+        AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "openhands"],
+        AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "openhands"],
+        AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "openhands"],
+        AgentPhase.CI_REPAIR: ["codex", "claude", "google", "opencode", "openhands"],
+        AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "openhands"],
+    }
+    for phase, candidates in expected.items():
+        assert routing[phase.value.replace("-", "_")] == candidates
+        assert candidates[-1] == "openhands"
 
 
-def test_active_architecture_matches_production_provider_boundary() -> None:
+def test_active_architecture_matches_provider_neutral_boundary() -> None:
     architecture = read_source("../docs/factory/ACTIVE_ARCHITECTURE.md")
 
-    assert "one OpenHands SDK conversation boundary" in architecture
-    assert "OpenAI subscription-backed Codex OAuth" in architecture
-    assert "OpenCode Go subscription fallback" in architecture
-    assert "Google/Gemini is disabled" in architecture
-    assert "Direct CLI outer adapters" in architecture
+    assert "OpenHands Factory with interchangeable agents" in architecture
+    assert "AgentRouter" in architecture
+    assert "Claude CLI" in architecture
+    assert "Codex CLI" in architecture
+    assert "Google CLI" in architecture
+    assert "OpenCode CLI" in architecture
+    assert "OpenHands SDK adapter" in architecture

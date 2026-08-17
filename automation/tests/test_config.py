@@ -335,18 +335,21 @@ def test_production_agent_configuration_loads() -> None:
     )
 
     assert factory_config.agents.routing_enabled
+    assert factory_config.agents.providers["claude"].enabled
     assert factory_config.agents.providers["claude"].model == "fable"
     assert factory_config.agents.providers["claude"].credential_paths == [
         ".claude",
         ".claude.json",
     ]
     assert factory_config.agents.providers["codex"].model == "gpt-5.6-sol"
+    assert factory_config.agents.providers["codex"].enabled
     assert factory_config.agents.providers["codex"].credential_paths == [".codex"]
     assert factory_config.agents.providers["google"].enabled is False
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
     assert factory_config.agents.providers["opencode"].model == "opencode-go/kimi-k3"
+    assert factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
         ".config/opencode",
         ".local/share/opencode",
@@ -360,6 +363,27 @@ def test_production_agent_configuration_loads() -> None:
         == "opencode-go/kimi-k2.7-code"
     )
     assert factory_config.agents.providers["openhands"].emergency_only
+    assert factory_config.agents.routing.implementation == [
+        "claude",
+        "codex",
+        "google",
+        "opencode",
+        "openhands",
+    ]
+    assert factory_config.agents.routing.code_review == [
+        "codex",
+        "claude",
+        "google",
+        "opencode",
+        "openhands",
+    ]
+    assert factory_config.agents.routing.general_action == [
+        "opencode",
+        "google",
+        "codex",
+        "claude",
+        "openhands",
+    ]
 
 
 @pytest.mark.parametrize(

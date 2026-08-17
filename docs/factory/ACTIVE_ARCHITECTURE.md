@@ -1,31 +1,20 @@
-# Active architecture: OpenHands Factory with one production conversation boundary
+# Active architecture: OpenHands Factory with interchangeable agents
 
 ## Authority
 
 `automation/openhands_factory` is the only autonomous engineering control plane. It owns GitHub discovery,
-scheduling, durable state, retries, worktrees, provider health, prompts, verification, reviews, repairs, pull
-requests, CI polling, and merge safety. Model providers supply intelligence beneath that control plane and cannot
-independently schedule work, write merge policy, push to `main`, or merge.
+scheduling, durable state, retries, worktrees, provider health, phase routing, prompts, verification, reviews,
+repairs, pull requests, CI polling, and merge safety. Providers supply intelligence beneath the Factory and
+cannot independently schedule, push to `main`, create merge policy, or merge.
 
-The static deployment identity remains `FACTORY_ARCHITECTURE=openhands-agent-canvas-v1` for durable-state and
-operator compatibility.
+The static identity remains `FACTORY_ARCHITECTURE=openhands-agent-canvas-v1` for deployment and durable-state
+compatibility. In this architecture, "OpenHands" names the Factory control plane. It does not mean every phase
+must run through one OpenHands SDK conversation. OpenHands SDK is one optional provider adapter in the same
+router as subscription-backed CLIs.
 
-Production engineering phases cross one OpenHands SDK conversation boundary. The Factory does not route normal
-production work directly to Claude CLI, Codex CLI, Google/Gemini CLI, or OpenCode CLI. Those outer adapters may
-remain in the codebase temporarily while convergence removes them, but production configuration keeps them
-disabled.
-
-Inside the OpenHands conversation boundary, provider selection is:
-
-1. OpenAI subscription-backed Codex OAuth.
-2. OpenCode Go subscription fallback.
-
-Google/Gemini is disabled and is not selected by the production conversation runner. Historical provider state may
-still be readable for migration or diagnostics, but it must not make Gemini eligible for new work.
-
-The retired swarm, Aider workers, GitHub Actions issue resolvers, separate autonomous reviewers, meta-agent, and
-PTY wrapper must not return. A watchdog may restart the daemon and perform read-only diagnostics, but it cannot
-invoke an agent or patch a checkout.
+The retired swarm, Aider workers, GitHub Actions issue resolvers, separate reviewers, meta-agent, and PTY wrapper
+must not return. A watchdog may restart the daemon and perform read-only diagnostics, but it cannot invoke an
+agent or patch the checkout.
 
 ## Control flow
 
@@ -43,25 +32,16 @@ issues and PRs        | one host lock and UUID |
                                   |
                                   v
                       +------------------------+
-                      | outer phase routing    |
-                      | production: OpenHands  |
-                      +-----------+------------+
+                      | AgentRouter            |
+                      | policy, health, leases |
+                      +--+-------+------+---+--+
+                         |       |      |   |
+                Claude CLI  Codex CLI  Google CLI  OpenCode CLI
+                         \       |      |   /
+                          \      |      |  /
+                           OpenHands SDK adapter
                                   |
                                   v
-                      +------------------------+
-                      | OpenHands SDK          |
-                      | conversation boundary  |
-                      +-----------+------------+
-                                  |
-                     +------------+-------------+
-                     |                          |
-                     v                          v
-           OpenAI subscription            OpenCode Go
-           Codex OAuth, primary            subscription fallback
-                     \                          /
-                      +------------+-------------+
-                                   |
-                                   v
                       +------------------------+
                       | isolated task worktree |
                       +-----------+------------+
@@ -71,46 +51,25 @@ issues and PRs        | one host lock and UUID |
                          SHA-bound merge gate
 ```
 
-`AgentRouter` can remain as a compatibility layer while direct outer adapters are removed, but the canonical
-production configuration routes every phase only to the OpenHands adapter. Re-enabling a direct outer provider is
-an architecture change, not a routine configuration tweak.
-
-## Production provider boundary
-
-`config/factory/agents.production.json` is the canonical production reference. It must satisfy these invariants:
-
-- `openhands` is the only enabled provider eligible in every production phase route;
-- direct `claude`, `codex`, `google`, and `opencode` outer adapters are disabled;
-- the legacy `emergency_only` bit may remain `true` as compatibility metadata until the outer router is removed;
-  because every production route contains only `openhands`, that bit cannot place another outer provider ahead of
-  the OpenHands boundary;
-- planning, architecture, implementation, security review, quality repair, code review, CI repair, and general
-  actions each route exactly through `openhands`;
-- OpenAI subscription/Codex OAuth and OpenCode Go fallback remain inside `conversation_runner.py`;
-- Google/Gemini is not an inner production fallback.
-
-Deployment preserves an existing operator-owned `/etc/hellotalk-factory/agents.json` rather than silently
-rewriting it. Operators must reconcile that file with the canonical production reference when this contract
-changes. Startup and doctor checks must fail closed when the configured production execution boundary cannot run.
-
 ## Runtime boundaries
 
 | Boundary | Behaviour |
 | --- | --- |
 | Factory controller | Dedicated `hellotalk-factory` user, one host lock, durable generation UUID |
-| Production execution | One OpenHands SDK conversation per leased task/phase under Factory wall-clock bounds |
-| Inner provider choice | OpenAI subscription/Codex OAuth first, OpenCode Go fallback, with durable attribution and provider health |
-| Direct CLI outer adapters | Transitional code only; disabled in production and not eligible for normal phase routing |
+| Direct CLI adapter | Argument-vector subprocess, private user/mount/PID/proc namespaces, non-interactive stdin, bounded output and timeout |
+| Direct CLI environment | Current worktree, read-only base repository, provider-specific credential paths, read-only runtime paths, and minimal environment; other sessions, Factory state, logs, runtime sockets, host temp, proxy credentials, API keys, and daemon secrets hidden |
+| Direct CLI health | Disposable empty working directory, provider-specific session paths, bounded no-generation probe, removed after use |
 | Verification | Private user/mount/PID/proc/network namespaces, fresh home and private temporary filesystems, read-only deployed Factory tree, no provider sessions or Factory state |
+| OpenHands adapter | Existing SDK runner behind the same `AgentProvider` protocol; no GitHub, Telegram, or legacy Gemini credentials in child configuration |
 | OpenHands terminal | Rootless Podman, no network, no capabilities, bounded resources, worktree mount only |
 | OpenHands file editor | Resolved paths must remain inside the task worktree |
 | Git operations | Factory-owned host code, protected-base push rejection, reset credential-helper chain, root-managed GitHub token scoped only to Git children |
 | GitHub operations | Typed client with bounded retries and no provider transcript publication |
 
-The OpenHands conversation process is placed in its own process group so Factory shutdown and task timeout logic
-can terminate the complete conversation tree. Inner-provider health, cooldown, capacity, and attribution are
-persisted by Factory-owned code. Provider-side authentication material must never expand the GitHub or merge
-authority of the model process.
+Direct subscription CLIs require provider network access and access to the shared service-user authentication
+cache. Their own tool sandbox is therefore part of the current trust boundary even though host process, state,
+runtime, and worktree boundaries are enforced outside the CLI. A future stable ACP transport or provider-specific
+credential broker can separate provider sessions without changing `FactoryPipeline` or routing policy.
 
 ## Core modules
 
@@ -118,101 +77,102 @@ authority of the model process.
 | --- | --- |
 | `daemon.py` | Single-owner daemon, scheduling, abandoned-attempt recovery, pause, and graceful shutdown |
 | `pipeline.py` | One bounded state transition and all repository safety gates |
-| `conversation_runner.py` | Canonical production OpenHands transport, inner OpenAI/OpenCode selection, cancellation, health, and attribution |
 | `agents/base.py` | Typed phases, requests, results, health, failure classes, and provider protocol |
-| `agents/router.py` | Outer compatibility routing and eligibility; production policy must resolve only to OpenHands |
-| `agents/policy.py` | Configured outer phase policy and compatibility validation |
-| `agents/process.py` | Bounded subprocess process groups for remaining non-production/diagnostic adapters |
-| `agents/health.py` | Durable outer-provider circuit state used while compatibility adapters remain |
-| `provider_health.py` | Durable inner-provider health for OpenAI subscription and OpenCode Go |
+| `agents/router.py` | Eligibility, bounded retry, fallback, diversity, capacity, provenance, and metrics |
+| `agents/policy.py` | Configured phase order, emergency tier, and repair rotation |
+| `agents/process.py` | Child process groups, output bounds, timeout, TERM, and forced KILL |
+| `agents/health.py` | Durable circuit breakers and atomic half-open admission |
 | `provider_capacity.py` | Generation-aware cross-process provider leases |
-| `provider_runtime.py` | Inner-provider attribution and model/role metadata |
-| `jobs.py`, `retry_policy.py` | Durable job state and restart-stable bounded retry authority |
+| `conversation_runner.py` | OpenHands SDK compatibility transport and inner-provider attribution |
+| `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority |
 | `git_workflow.py` | Worktree, branch, commit, push, and recovery archive safety |
 | `review_report.py` | Authoritative `.factory-review.json` schema and acceptance validation |
 | `architect_report.py` | Authoritative `.factory-architect.json` schema |
 | `doctor.py` | Read-only runtime, isolation, GitHub, provider, state, and capacity diagnostics |
 
-## Durable state and bounded recovery
+## Durable state and recovery
 
 State beneath `FACTORY_STATE_DIR` is written atomically, schema checked where applicable, and protected by a
-last-known-good backup. Durable state includes job progress and retry evidence, inner-provider health and
-attribution, capacity leases, metrics, daemon generation and heartbeat, pause state, and architect state.
+last-known-good backup:
 
-A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered
-conversation, Git, verification, and repository child process groups, waits for workers to unwind, and records
-itself stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-acquired, and overlong
-provider or task leases are bounded or discarded rather than suppressing work indefinitely.
+- `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, and the latest 500 provider
+  provenance entries per job;
+- `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
+- `provider-capacity.json`: current-generation provider leases;
+- `metrics.json`: provider, model, phase, result, duration, fallback, quota, and timeout counters;
+- `generation.json`: active daemon ownership UUID and schema version;
+- `daemon.json`: heartbeat, PID, generation, queue counts, and active tasks;
+- `control.json`: pause state;
+- `architect_state.json`: architect completion and retry data;
+- `provider-attribution.json`: detailed OpenHands inner-provider attribution.
 
-Abandoned execution states recover through the normal typed timeout/retry path. Live futures and polling-only
-`CI_PENDING` or `MERGE_QUEUED` states are not reclassified as abandoned work. Provider auth, quota, rate-limit,
-availability, timeout, transport, crash, malformed-output, and busy-capacity exhaustion do not consume task
-attempts or open the task failure circuit.
+A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
+OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
+stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-acquired, and overlong provider or
+task leases are bounded or discarded rather than suppressing work indefinitely. Task-lease and `jobs.json`
+read-modify-write operations use cross-process locks. The watchdog recovers old execution states through the
+normal timeout class and deterministic retry policy while leaving live futures and polling-only states untouched.
 
-Repeated identical task-side failures may open the durable recoverable task circuit after the configured
-consecutive-failure threshold. That circuit prevents deterministic task defects from retrying forever. Recovery
-must remain explicit and bounded rather than restoring the retired permanent-quarantine/swarm behavior.
+A repeated identical task-side failure opens a durable, recoverable quarantine after
+`FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
+`factory-quarantined` plus `needs-human` once. Provider auth, quota, rate-limit, availability, timeout, transport,
+crash, malformed-output, and busy-capacity exhaustion never consume a task attempt or open this task circuit.
+`backlog requeue-quarantined` resets both durable state and GitHub labels after the cause is resolved. Historical
+quarantine entries without the new reason marker are migrated back into normal retry flow.
 
-## Inner provider routing and independent review
+## Routing and independent review
 
-`conversation_runner.py` owns production inner-provider selection. OpenAI subscription/Codex OAuth is the primary
-inner provider and OpenCode Go is the fallback. Inner provider attribution is recorded on every attempt so retry,
-health, review diversity, and diagnostics can distinguish the model that actually executed the work.
+Phase order is validated from `/etc/hellotalk-factory/agents.json`. The router skips disabled, unsupported,
+unhealthy, cooling-down, and optionally busy providers. Emergency-only OpenHands remains behind all healthy
+subscription providers. Provider-side auth, quota, rate, timeout, transport, crash, availability, and malformed
+output failures may fall through. Task, test, repository, policy, and internal Factory failures return to Factory
+repair or retry logic instead of blind provider rotation.
 
-Google/Gemini is excluded from new production selection. Direct Claude, Codex, Google, and OpenCode outer
-adapters are likewise disabled by production policy.
+Every code review and security review excludes providers that may have mutated the current worktree, including
+failed or timed-out attempts. If no alternative can run, the same provider is allowed only as a recorded
+`diversity-last-resort` fallback.
 
-Review approval is based on the authoritative structured review artifact, not natural-language stdout. Review and
-security-review diversity must use recorded provider attribution and must not silently treat the OpenHands outer
-adapter as proof that two reviews used different inner providers. If no independent eligible provider can run,
-last-resort behavior must be explicit and recorded rather than hidden by fallback.
-
-`.factory-review.json` and `.factory-architect.json` are removed before their attempts, validated before success is
-accepted, and deleted before repository change detection. Natural-language model output never substitutes for
-those files.
+`.factory-review.json` and `.factory-architect.json` are removed before each attempt, validated before the router
+accepts success, then deleted before repository change detection. Natural-language stdout never substitutes for
+these authoritative files.
 
 ## Repository and merge safety
 
 Issue work starts from fresh `origin/main` in an isolated branch and worktree. External PRs use their recorded
 remote branch in a separate worktree. Only trusted Factory code performs Git add, commit, push, status, and merge
-operations. Model/provider execution does not receive merge authority.
+operations. Provider subprocesses do not receive GitHub or application secrets.
 
 Review approval publishes `factory/independent-review` on the exact reviewed head and adds `factory-reviewed`.
-Before every PR-backed AI phase, refresh, or base update, Factory invalidates stale review authority and republishes
-the status as pending on the current SHA. If the PR head changes, the new head is rebuilt, verified, and reviewed
-again. If a reviewed PR is behind `main`, Factory performs a SHA-bound base update and repeats verification/review.
+Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
+status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
+reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
+If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
+SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+following:
 
-Merge readiness requires all of the following:
-
-- the live PR head equals the reviewed SHA;
+- the PR head equals the reviewed SHA;
 - `CI / required` is present and reports literal `SUCCESS`;
 - `factory/independent-review` is present and reports literal `SUCCESS`;
-- duplicate rollup entries for required contexts do not contradict those successes;
+- any duplicate rollup entry for either required context also reports literal `SUCCESS`;
 - every visible terminal check is allowed;
 - mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The scheduled merge workflow is the only merge authority. It re-reads live conditions, binds the squash merge to
-the inspected head SHA, and does not use native auto-merge or administrator bypass. Repository rules must require
-pull requests, `CI / required`, and `factory/independent-review` with no bypass actors.
-
-## Branch and stale-PR convergence
-
-One canonical active PR is maintained per logical task. Stale work is replayed or updated onto current `main`
-rather than duplicated. Superseded PRs are closed and classified explicitly. Branch existence alone never creates
-new implementation work.
-
-The canonical branch-hygiene classifier is read-only by default. It distinguishes protected branches, Dependabot,
-active canonical and non-canonical PR branches, merged/closed PR branches, fully integrated branches, and orphaned
-ahead branches. Deletion is a separate explicit operation and is permitted only for verified safe candidates.
+The scheduled merge workflow is the only merge authority. It re-reads the live conditions, binds the squash
+merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or
+administrator bypass. One active GitHub ruleset with no bypass actors must also require pull requests,
+`CI / required`, and `factory/independent-review`. This prevents direct merge around the contexts. A dedicated
+GitHub App and ruleset expected-source binding are still required to prevent another write actor from publishing
+the same legacy status-context name. Online doctor currently validates the rules and context names, not status
+publisher identity.
 
 ## Deployment identity and change policy
 
-Factory code is deployed only from a clean, fast-forwarded `origin/main`. Task changes use branches and pull
-requests. Deployment refreshes the frozen Python environment, application dependency trees, worker image, and
-systemd files while preserving operator-owned configuration that requires deliberate reconciliation.
+Factory code is deployed only from a clean, fast-forwarded `origin/main`. Task changes still use branches and pull
+requests. Deployment refreshes the frozen Python environment, Node dependency trees, Cypress, worker image, and
+systemd files while preserving the operator-owned `agents.json`.
 
-Any change to the production conversation boundary, inner provider order, authentication, transport, retry
-authority, worktree confinement, review independence, or merge authority must update this document, the canonical
-production configuration, and executable regression tests in the same logical PR. Model aliases are configuration
-and must be reviewed after provider deprecation or catalogue changes rather than silently substituted during a job.
+Any change to provider order, authentication, transport, retry authority, worktree confinement, review
+independence, or merge authority must update these architecture documents and executable regression tests in the
+same logical change. Model aliases are configuration and must be reviewed after provider deprecation or catalogue
+changes rather than silently substituted during a job.

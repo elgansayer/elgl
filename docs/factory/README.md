@@ -34,9 +34,10 @@ Temporary exhaustion of every provider does not stop an already configured daemo
 An initial production activation still needs one usable provider because the required end-to-end canary cannot
 otherwise run.
 
-The 2026-08-17 audit found the inspected host still failed and found a pull request merged without Factory review
-or status provenance. Treat production as inactive until every activation blocker in
-[AUDIT-2026-08-16.md](AUDIT-2026-08-16.md) is cleared. A green repository revision is not an operational canary.
+The 2026-08-17 audit found the inspected host still failed, the installed service definition was stale, and the
+GitHub ruleset did not enforce either Factory status. Treat production as inactive until every activation blocker
+in [AUDIT-2026-08-17.md](AUDIT-2026-08-17.md) is cleared. A green repository revision is not an operational
+canary.
 
 ## Architecture
 
@@ -330,11 +331,11 @@ preserved backup.
 
 ## Audit status and limitations
 
-The current engineering review is [AUDIT-2026-08-16.md](AUDIT-2026-08-16.md), updated on 2026-08-17. It separates
-implemented and tested controls from production-host and paid-provider evidence. The Factory targets unattended
-operation, but it safely stops agent progress when credentials need account-owner renewal, branch policy blocks
-merge, a product decision is required, or no provider is usable. Cross-repository PRs are excluded from mutation
-because the repository token cannot safely push fork branches.
+The current engineering review is [AUDIT-2026-08-17.md](AUDIT-2026-08-17.md). It separates implemented and tested
+controls from production-host and paid-provider evidence. The Factory targets unattended operation, but it safely
+stops agent progress when credentials need account-owner renewal, branch policy blocks merge, a product decision
+is required, or no provider is usable. Cross-repository PRs are excluded from mutation because the repository
+token cannot safely push fork branches.
 
 Current limitations are explicit:
 
