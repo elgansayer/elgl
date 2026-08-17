@@ -26,7 +26,8 @@ from openhands_factory.generation import (
     activate_generation,
     assert_generation_current,
 )
-from openhands_factory.models import Job
+from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
@@ -52,11 +53,16 @@ def provider_status_snapshot(
     ]
 
 
+def is_new_github_issue(job: Job) -> bool:
+    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
     excluded_task_ids: set[str] | None = None,
     now: datetime | None = None,
+    new_issue_slots: int | None = None,
 ) -> list[Job]:
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
@@ -68,7 +74,18 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    return candidates[:limit]
+    if new_issue_slots is None:
+        return candidates[:limit]
+
+    # Pipeline states already in progress, plus incoming pull-request review tasks,
+    # are never delayed by the new-issue cadence. Fill remaining worker capacity with
+    # only the configured number of newly discovered issues.
+    progressing = [job for job in candidates if not is_new_github_issue(job)]
+    discovered_issues = [job for job in candidates if is_new_github_issue(job)]
+    selected = progressing[:limit]
+    remaining = max(0, limit - len(selected))
+    selected.extend(discovered_issues[: min(remaining, max(0, new_issue_slots))])
+    return selected
 
 
 def refresh_jobs(
@@ -160,9 +177,18 @@ class FactoryDaemon:
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
         self.pipeline = FactoryPipeline(config)
+        self.issue_admission = self._issue_admission_gate(config)
         self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+
+    @staticmethod
+    def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
+        return IssueAdmissionGate(
+            config.state_dir / "issue-admissions.json",
+            interval_seconds=config.new_issue_interval_seconds,
+            max_admissions=config.new_issues_per_interval,
+        )
 
     @property
     def control_path(self) -> Path:
@@ -212,6 +238,7 @@ class FactoryDaemon:
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
         self.pipeline = FactoryPipeline(self.config)
+        self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
             generation.identifier,
@@ -325,8 +352,24 @@ class FactoryDaemon:
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
-                    for job in select_batch(jobs, capacity, active_task_ids):
+                    scheduler_time = datetime.now(UTC)
+                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    for job in select_batch(
+                        jobs,
+                        capacity,
+                        active_task_ids,
+                        now=scheduler_time,
+                        new_issue_slots=new_issue_slots,
+                    ):
                         self._assert_owner()
+                        if is_new_github_issue(job) and not self.issue_admission.admit(
+                            job.task.identifier, scheduler_time
+                        ):
+                            LOGGER.info(
+                                "New-issue admission interval is full; deferred task %s",
+                                job.task.identifier,
+                            )
+                            continue
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
@@ -387,6 +430,7 @@ class FactoryDaemon:
                 "storage_blocked": self.storage_blocked,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
+                "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
                 "providers": provider_status_snapshot(self.provider_health),
             },
