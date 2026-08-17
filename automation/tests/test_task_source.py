@@ -21,6 +21,51 @@ def test_priority_and_duplicate_lease_rejection(tmp_path: Path) -> None:
         store.acquire(urgent, "other")
 
 
+def test_reacquiring_same_task_by_same_owner_is_idempotent(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path, lease_minutes=30)
+    task = Task("issue-2", "Feature", "body", "github", 3)
+    now = datetime.now(UTC)
+
+    original = store.acquire(task, "daemon-a", now)
+    repeated = store.acquire(task, "daemon-a", now + timedelta(minutes=5))
+
+    assert repeated == original
+    assert store.leases(now + timedelta(minutes=5))[task.identifier] == original
+
+
+def test_parallel_claims_choose_one_canonical_owner(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path)
+    task = Task("issue-2", "Feature", "body", "github", 3)
+
+    def claim(owner: str) -> str:
+        try:
+            return store.acquire(task, owner).owner
+        except ValueError:
+            return "lost"
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        results = list(workers.map(claim, ["daemon-a", "daemon-b"]))
+
+    winners = [owner for owner in results if owner != "lost"]
+    assert len(winners) == 1
+    assert store.leases()[task.identifier].owner == winners[0]
+
+
+def test_lease_renewal_preserves_owner_and_acquisition_time(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path, lease_minutes=30)
+    task = Task("issue-2", "Feature", "body", "github", 3)
+    now = datetime.now(UTC)
+    original = store.acquire(task, "daemon-a", now)
+
+    renewed = store.renew(task.identifier, "daemon-a", now + timedelta(minutes=20))
+
+    assert renewed.owner == original.owner
+    assert renewed.acquired_at == original.acquired_at
+    assert renewed.expires_at == now + timedelta(minutes=50)
+    with pytest.raises(ValueError, match="belongs to daemon-a"):
+        store.renew(task.identifier, "daemon-b", now + timedelta(minutes=21))
+
+
 def test_triage_tags_round_trip_through_backlog_state(tmp_path: Path) -> None:
     store = TaskStore(tmp_path)
     task = Task(
