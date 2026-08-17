@@ -25,10 +25,23 @@
       .dialog-body { display: grid; gap: 0.75rem; }
       .dialog-body label { display: grid; gap: 0.375rem; }
       .dialog-footer { justify-content: end; border-block-start: 1px solid ButtonBorder; }
+      .theme-pair { display: grid; gap: 1rem; }
+      .theme-sample { min-inline-size: 0; border: 1px solid ButtonBorder; border-radius: 0.75rem; padding: 0.75rem; background: Canvas; color: CanvasText; color-scheme: light; }
+      .theme-sample.dark { color-scheme: dark; }
+      .theme-label { display: block; margin-block-end: 0.5rem; }
+      .confirm-dialog-panel { box-sizing: border-box; inline-size: 100%; max-inline-size: 24rem; border-radius: 1.25rem; padding: 1.5rem; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
+      .confirm-dialog-panel p { margin-block: 0 1.25rem; }
+      .confirm-dialog-actions { display: flex; flex-direction: column; gap: 0.75rem; }
+      .confirm-dialog-actions button { inline-size: 100%; }
       .celebration-stage { display: grid; place-items: center; gap: 0.75rem; min-block-size: 14rem; padding: 1rem; border-radius: 1rem; background: color-mix(in srgb, CanvasText 40%, transparent); }
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      @media (min-width: 640px) {
+        .theme-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .confirm-dialog-actions { flex-direction: row; justify-content: end; }
+        .confirm-dialog-actions button { inline-size: auto; }
+      }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
       @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
     </style>
@@ -73,6 +86,30 @@
               <label>Language pair <select><option>English ↔ Japanese</option></select></label>
             </div>
             <div class="dialog-footer"><button>Cancel</button><button>Launch stage</button></div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>Confirmation dialog theme parity</h2>
+        <p>The shared confirmation surface uses Relay sheet radius and lift elevation tokens. Actions stack to full width at the 390px mobile baseline, then return to an end-aligned row on tablet and desktop. Spartan continues to own focus and dismissal behaviour.</p>
+        <div class="theme-pair">
+          <div class="theme-sample">
+            <strong class="theme-label">Light / mobile</strong>
+            <div class="dialog-stage">
+              <div class="dialog-panel confirm-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="confirm-light-message">
+                <p id="confirm-light-message">Remove this item?</p>
+                <div class="confirm-dialog-actions"><button type="button">Cancel</button><button type="button">Confirm</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="theme-sample dark">
+            <strong class="theme-label">Dark / tablet and desktop</strong>
+            <div class="dialog-stage">
+              <div class="dialog-panel confirm-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="confirm-dark-message">
+                <p id="confirm-dark-message">Remove this item?</p>
+                <div class="confirm-dialog-actions"><button type="button">Cancel</button><button type="button">Confirm</button></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
