@@ -1,10 +1,12 @@
 import json
+from pathlib import Path
 
 from openhands_factory.agents.base import AgentPhase
 
 
 def read_source(path: str) -> str:
-    with open(path, encoding="utf-8") as source_file:
+    source_path = (Path(__file__).parents[1] / path).resolve()
+    with source_path.open(encoding="utf-8") as source_file:
         return source_file.read()
 
 

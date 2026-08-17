@@ -83,6 +83,8 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'npm ci --prefix "$directory"' in deploy
     assert "npm exec -- cypress install" in deploy
     assert "podman build --cgroup-manager=cgroupfs" in deploy
+    assert 'bash -c \'cd "$1" && exec podman build' in deploy
+    assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
 
 

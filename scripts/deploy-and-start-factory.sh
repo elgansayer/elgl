@@ -188,10 +188,15 @@ rsync -a --delete \
   "$WORKTREE/automation/" /opt/hellotalk-factory/build-context/
 chown -R hellotalk-factory:hellotalk-factory \
   /opt/hellotalk-factory/build-context
+# Rootless Podman and its helpers may inspect the inherited working directory.
+# The operator's checkout is intentionally not accessible to the service user,
+# so enter the owned build context before starting the child process.
+# `$1` is intentionally expanded by the child shell.
+# shellcheck disable=SC2016
 runuser -u hellotalk-factory -- env HOME=/var/lib/hellotalk-factory/home \
-  podman build --cgroup-manager=cgroupfs \
-  --tag localhost/hellotalk-factory-worker:current \
-  --file /opt/hellotalk-factory/build-context/Containerfile \
+  bash -c 'cd "$1" && exec podman build --cgroup-manager=cgroupfs \
+    --tag localhost/hellotalk-factory-worker:current \
+    --file "$1/Containerfile" "$1"' _ \
   /opt/hellotalk-factory/build-context
 
 if ! grep -q '^[[:space:]]*FACTORY_AGENTS_CONFIG=' /etc/hellotalk-factory/factory.env; then
