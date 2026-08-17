@@ -7,10 +7,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppCardComponent } from '../primitives/card/card.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 @Component({
   standalone: true,
-  imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent, A11yClickableDirective],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary p-4">
       <div class="max-w-2xl mx-auto">
@@ -50,7 +51,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           @for (day of days(); track $index) {
             <div
               class="flex flex-col items-center min-h-[72px] p-1.5 bg-surface-300 transition-colors cursor-pointer"
-              role="button"
+              appA11yClickable
               [attr.tabindex]="day ? 0 : null"
               [attr.aria-label]="day ? ('events.calendar.selectDate' | t: { date: day }) : null"
               [attr.aria-disabled]="!day"
@@ -60,8 +61,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
               [class.ring-1]="!!day && isToday(day)"
               [class.ring-primary/50]="!!day && isToday(day)"
               (click)="day && selectDate(day)"
-              (keydown.enter)="day && selectDate(day)"
-              (keydown.space)="day && selectDate(day)"
             >
               @if (day) {
                 <span class="text-sm font-medium mb-1" [class.text-primary]="isToday(day)">{{
