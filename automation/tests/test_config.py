@@ -168,6 +168,7 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
     assert "ProtectProc=ptraceable" in unit
+    assert "ProtectKernelLogs=true" not in unit
     assert "/opt/hellotalk-factory/venv/bin" in unit
 
 
