@@ -192,6 +192,19 @@ CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON public.poll_votes(user_id);
   },
   {
     beforeSourceFile: '20260808000002_optimise_video_classroom_indices.sql',
+    name: 'restore_audio_room_discovery_contract_before_optimisation',
+    reason:
+      'The surviving 006_audio_rooms.sql predates language-party discovery. Current CreateAudioRoomDto and AudioRoomsService require language_pair/topic_tag, model level as optional text and is_video_stream as boolean, while createLanguageParty writes party_type=language_party. The video-classroom optimiser indexes party_type, topic_tag, level and is_video_stream, so materialize those source-grounded runtime columns before replaying it.',
+    sql: `ALTER TABLE public.audio_rooms
+  ADD COLUMN IF NOT EXISTS party_type TEXT,
+  ADD COLUMN IF NOT EXISTS language_pair TEXT,
+  ADD COLUMN IF NOT EXISTS topic_tag TEXT,
+  ADD COLUMN IF NOT EXISTS level TEXT,
+  ADD COLUMN IF NOT EXISTS is_video_stream BOOLEAN NOT NULL DEFAULT false;
+`,
+  },
+  {
+    beforeSourceFile: '20260808000002_optimise_video_classroom_indices.sql',
     name: 'reconcile_duplicate_video_classroom_policies_before_optimisation',
     reason:
       '20260807190000_review_rls_video_classrooms.sql already creates call_logs_select_own, call_logs_insert_own, audio_room_tips_select_own, and audio_room_tips_insert_own. The later optimiser recreates those exact policy names without DROP POLICY, so a clean chronological replay must remove the earlier named policies immediately before replaying the optimiser.',
