@@ -94,7 +94,7 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(container.getAttribute('aria-label')).toBeTruthy();
 
     const dismissBtn = fixture.nativeElement.querySelector('button');
-    expect(dismissBtn.getAttribute('aria-label')).toBe('[common.close]');
+    expect(dismissBtn.getAttribute('aria-label')).toBe('Close');
   });
 
   it('should use Relay semantic colour roles instead of physical black/white utilities', () => {
