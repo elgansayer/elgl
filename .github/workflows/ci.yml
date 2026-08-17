@@ -319,6 +319,21 @@ jobs:
           test -s test-results/database.types.ts
           grep -q 'export type Database' test-results/database.types.ts
 
+      - name: Enforce generated Supabase type drift baseline
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          expected=$(node -p "require('./supabase/database-types.snapshot.json').sha256")
+          actual=$(sha256sum test-results/database.types.ts | awk '{print $1}')
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Generated Supabase database types drifted from the committed snapshot."
+            echo "expected=$expected"
+            echo "actual=$actual"
+            echo "Regenerate against a clean replay, review the schema change, then update supabase/database-types.snapshot.json in the same PR."
+            exit 1
+          fi
+          echo "Generated Supabase types match snapshot: $actual"
+
       - name: Upload clean-database evidence
         if: steps.changes.outputs.run_database == 'true' && success()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
