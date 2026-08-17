@@ -227,6 +227,9 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "alert-daemon-failed" in watchdog
     assert "active_started_at" in watchdog
     assert "FACTORY_MAX_TASK_MINUTES" in watchdog
+    assert "dashboard sync" in watchdog
+    assert "restart_request_is_safe" in watchdog
+    assert "control_request.json" in watchdog
     assert "jobs-quarantined" not in watchdog
     assert "jobs-stalled" not in watchdog
     for directive in (
@@ -280,6 +283,7 @@ def test_default_repository_is_production_clone() -> None:
     assert config.factory_generation == "unknown"
     assert config.require_trusted_intake is False
     assert config.trusted_github_actors == frozenset({"elgansayer"})
+    assert config.control_github_actors == frozenset({"elgansayer"})
     assert config.agents.routing_enabled is False
     assert config.agents.providers["openhands"].enabled is True
     assert config.agents.providers["claude"].enabled is False
@@ -472,6 +476,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
+    assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in template
     assert f"FACTORY_ARCHITECTURE={EXPECTED_FACTORY_ARCHITECTURE}" in template
     assert "GEMINI_ENABLED=false" in template
 
@@ -485,6 +490,7 @@ def test_host_repair_preserves_the_production_parallelism_limit() -> None:
     assert "FACTORY_MAX_PARALLEL_JOBS=5" not in repair
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in repair
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in repair
+    assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in repair
 
 
 def test_cli_keeps_parsed_secrets_out_of_provider_child_environments(

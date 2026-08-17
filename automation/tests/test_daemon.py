@@ -5,7 +5,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from openhands_factory.daemon import FactoryDaemon, queue_snapshot, select_batch
+from openhands_factory.agents.base import ProviderHealth, ProviderStatus
+from openhands_factory.daemon import (
+    FactoryDaemon,
+    provider_status_snapshot,
+    queue_snapshot,
+    select_batch,
+)
 from openhands_factory.models import Job, JobState, Task
 
 
@@ -131,6 +137,31 @@ def test_queue_snapshot_bounds_blocked_tasks_and_aggregates_failure_fingerprints
     oldest = snapshot["oldest_blocked_tasks"]
     assert isinstance(oldest, list)
     assert [item["task_id"] for item in oldest] == ["101", "102", "103", "104", "105"]
+
+
+def test_provider_status_snapshot_exposes_no_provider_detail_or_credentials() -> None:
+    now = datetime(2026, 8, 17, 12, tzinfo=UTC)
+    snapshot = provider_status_snapshot(
+        {
+            "claude": ProviderHealth(
+                provider="claude",
+                status=ProviderStatus.RATE_LIMITED,
+                checked_at=now,
+                retry_after=now + timedelta(minutes=5),
+                detail="secret-looking diagnostic that must stay private",
+            )
+        }
+    )
+
+    assert snapshot == [
+        {
+            "name": "claude",
+            "status": "rate_limited",
+            "checked_at": now.isoformat(),
+            "retry_after": (now + timedelta(minutes=5)).isoformat(),
+        }
+    ]
+    assert "detail" not in snapshot[0]
 
 
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(

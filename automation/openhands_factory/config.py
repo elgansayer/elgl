@@ -376,6 +376,7 @@ class FactoryConfig(BaseModel):
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
     trusted_github_actors: frozenset[str] = frozenset({"elgansayer"})
+    control_github_actors: frozenset[str] = frozenset({"elgansayer"})
     require_ready_label: bool = False
     ready_label: str = "factory-ready"
     telegram_bot_token: SecretStr | None = None
@@ -471,6 +472,11 @@ class FactoryConfig(BaseModel):
             for actor in env.get("FACTORY_TRUSTED_GITHUB_ACTORS", repository_owner).split(",")
             if actor.strip()
         )
+        control_github_actors = frozenset(
+            actor.strip().casefold()
+            for actor in env.get("FACTORY_CONTROL_GITHUB_ACTORS", repository_owner).split(",")
+            if actor.strip()
+        )
 
         try:
             return cls(
@@ -544,6 +550,7 @@ class FactoryConfig(BaseModel):
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
                 trusted_github_actors=trusted_github_actors,
+                control_github_actors=control_github_actors,
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),
                 ready_label=env.get("FACTORY_READY_LABEL", "factory-ready"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])

@@ -44,6 +44,7 @@ the current head to review.
 | `automation/openhands_factory/provider_capacity.py` | Cross-process, generation-aware provider concurrency leases |
 | `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport |
 | `automation/openhands_factory/github.py` | Typed issue, PR, label, check, status, and merge boundary |
+| `automation/openhands_factory/control_panel.py` | Sanitised GitHub status issue and bounded operator commands |
 | `.github/workflows/ci.yml` | Application and Factory verification plus `CI / required` |
 | `.github/workflows/factory-merge.yml` | Final fail-closed merge gate for reviewed pull requests |
 | `config/systemd/hellotalk-factory.service` | Always-on daemon from the dedicated `main` checkout |
@@ -78,6 +79,9 @@ the current head to review.
 - A human `CHANGES_REQUESTED` review blocks merge.
 - GitHub comments describe user-visible lifecycle changes and never expose credentials or routine provider
   fallback noise.
+- The `factory-status` issue is a projection of authoritative daemon state. Only exact pause, resume, status, and
+  restart comments from `FACTORY_CONTROL_GITHUB_ACTORS` are accepted; no comment can execute arbitrary code or
+  bypass merge safety.
 - The pre-push quality gate rejects provider credential directories, high-confidence tokens, and private keys.
 
 ## Parallelism and recovery

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import time
@@ -51,6 +53,14 @@ class PullRequestStatus:
     checks_pending: bool
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
+
+
+@dataclass(frozen=True)
+class IssueComment:
+    identifier: int
+    author: str
+    body: str
+    created_at: str
 
 
 def issue_priority(labels: set[str]) -> int:
@@ -183,6 +193,7 @@ class GitHubClient:
             if labels.intersection(
                 {
                     "factory-skip",
+                    "factory-status",
                     "duplicate",
                     "needs-human",
                     "factory-epic",
@@ -343,6 +354,98 @@ class GitHubClient:
         except ValueError as error:
             raise FactoryError(f"Could not parse issue URL: {url}") from error
 
+    def find_open_issue_by_title(self, title: str, *, required_label: str) -> int | None:
+        output = self._run(
+            (
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--limit",
+                "100",
+                "--search",
+                f'"{title}" in:title label:{required_label}',
+                "--json",
+                "number,title,labels",
+            )
+        )
+        matches: list[int] = []
+        for item in json.loads(output):
+            if not isinstance(item, dict) or item.get("title") != title:
+                continue
+            labels = item.get("labels")
+            label_items = labels if isinstance(labels, list) else []
+            label_names = {
+                name
+                for label in label_items
+                if isinstance(label, dict)
+                if isinstance((name := label.get("name")), str)
+            }
+            number = item.get("number")
+            if required_label in label_names and isinstance(number, int):
+                matches.append(number)
+        return min(matches) if matches else None
+
+    def update_issue(self, issue: int, *, title: str, body: str) -> None:
+        self._run(
+            (
+                "gh",
+                "issue",
+                "edit",
+                str(issue),
+                "--repo",
+                self.repository,
+                "--title",
+                title,
+                "--body",
+                body,
+            )
+        )
+
+    def list_issue_comments(self, issue: int, *, after: int = 0) -> list[IssueComment]:
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--method",
+                "GET",
+                f"repos/{self.repository}/issues/{issue}/comments",
+                "-f",
+                "per_page=100",
+                "--paginate",
+                "--jq",
+                ".[] | @base64",
+            )
+        )
+        comments: list[IssueComment] = []
+        items: list[object] = []
+        for encoded in output.splitlines():
+            try:
+                decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
+                items.append(json.loads(decoded))
+            except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise FactoryError("Could not parse GitHub issue comments") from error
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            identifier = item.get("id")
+            author = item.get("user")
+            login = author.get("login") if isinstance(author, dict) else None
+            body = item.get("body")
+            created_at = item.get("created_at")
+            if (
+                isinstance(identifier, int)
+                and identifier > after
+                and isinstance(login, str)
+                and isinstance(body, str)
+                and isinstance(created_at, str)
+            ):
+                comments.append(IssueComment(identifier, login, body, created_at))
+        return sorted(comments, key=lambda item: item.identifier)
+
     def ensure_factory_labels(self) -> None:
         labels = {
             "factory-ready": "1d76db",
@@ -353,6 +456,7 @@ class GitHubClient:
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
+            "factory-status": "0969da",
         }
         for name, colour in labels.items():
             self._run(

@@ -92,8 +92,9 @@ directory. It can write the task worktree and read the canonical dependency tree
 sessions, durable Factory state, logs, rootless Podman sockets, shared host temporary files, or sibling process
 environments. The deployed Factory tree is read-only there too.
 
-See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md), and
-[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md) for the detailed contract.
+See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
+[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), and [CONTROL-PANEL.md](CONTROL-PANEL.md) for the detailed
+contract.
 
 ## Durable lifecycle
 
@@ -238,6 +239,8 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory prov
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard show
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
 sudo systemctl status hellotalk-factory.service hellotalk-factory-health.timer
 sudo journalctl -u hellotalk-factory.service -n 200 --no-pager
 ```
@@ -251,6 +254,9 @@ sudo journalctl -u hellotalk-factory.service -n 200 --no-pager
   scoped Git credential helper, authenticated GitHub repository reads, and a no-bypass server-side merge policy.
 - `status` prints the durable daemon generation, queue counts, active jobs, and heartbeat.
 - `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
+- `dashboard show` renders the sanitised GitHub control-panel body without network access.
+- `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
+  pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.
 - `reconcile` releases expired task leases and never deletes worktrees or branches.
 - `pause` stops new scheduling while preserving jobs, branches, active workers, and pull requests.
 - `resume` re-enables scheduling after the underlying cause is resolved.
@@ -287,6 +293,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doct
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume

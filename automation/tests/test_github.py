@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 from collections.abc import Mapping, Sequence
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
 from openhands_factory.repository_guard import ProcessResult
 
@@ -17,6 +19,12 @@ class Runner:
     def __call__(self, arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         self.calls.append(tuple(arguments))
         return self.results.pop(0)
+
+
+def encoded_api_items(items: list[object]) -> str:
+    return "\n".join(
+        base64.b64encode(json.dumps(item).encode("utf-8")).decode("ascii") for item in items
+    )
 
 
 def test_collect_prioritises_labels_and_skips_quarantined(tmp_path: Path) -> None:
@@ -50,6 +58,12 @@ def test_collect_prioritises_labels_and_skips_quarantined(tmp_path: Path) -> Non
             "title": "Human decision",
             "body": "Blocked",
             "labels": [{"name": "needs-human"}],
+        },
+        {
+            "number": 15,
+            "title": "Factory control panel",
+            "body": "Operational status",
+            "labels": [{"name": "factory-status"}],
         },
     ]
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -434,6 +448,107 @@ def test_create_issue_parses_number_and_applies_labels(tmp_path: Path) -> None:
 
     assert number == 55
     assert "--label" in runner.calls[0] and "architect-proposed" in runner.calls[0]
+
+
+def test_find_control_panel_issue_requires_exact_title_and_status_label(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 61,
+            "title": "Factory control panel preview",
+            "labels": [{"name": "factory-status"}],
+        },
+        {
+            "number": 62,
+            "title": "Factory control panel",
+            "labels": [{"name": "factory-status"}, {"name": "factory-skip"}],
+        },
+        {
+            "number": 63,
+            "title": "Factory control panel",
+            "labels": [],
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    issue = client.find_open_issue_by_title(
+        "Factory control panel",
+        required_label="factory-status",
+    )
+
+    assert issue == 62
+    assert '"Factory control panel" in:title label:factory-status' in runner.calls[0]
+
+
+def test_issue_update_uses_fixed_argv_without_a_shell(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.update_issue(62, title="Factory control panel", body="Status: healthy")
+
+    assert runner.calls[0][:4] == ("gh", "issue", "edit", "62")
+    assert "Status: healthy" in runner.calls[0]
+
+
+def test_issue_comments_are_typed_sorted_and_filtered_after_cursor(tmp_path: Path) -> None:
+    payload = [
+        {
+            "id": 12,
+            "body": "/factory pause",
+            "created_at": "2026-08-17T12:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {
+            "id": 10,
+            "body": "older",
+            "created_at": "2026-08-17T11:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {"id": "invalid", "body": "ignored", "user": {"login": "owner"}},
+    ]
+    runner = Runner([ProcessResult(0, encoded_api_items(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    comments = client.list_issue_comments(62, after=10)
+
+    assert [(comment.identifier, comment.author, comment.body) for comment in comments] == [
+        (12, "owner", "/factory pause")
+    ]
+    assert "repos/owner/repo/issues/62/comments" in runner.calls[0]
+    assert "--paginate" in runner.calls[0]
+    assert "--jq" in runner.calls[0]
+    assert "--slurp" not in runner.calls[0]
+
+
+def test_paginated_issue_comment_records_are_decoded(tmp_path: Path) -> None:
+    payload = [
+        {
+            "id": 20,
+            "body": "/factory status",
+            "created_at": "2026-08-17T12:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {
+            "id": 21,
+            "body": "/factory resume",
+            "created_at": "2026-08-17T12:01:00Z",
+            "user": {"login": "owner"},
+        },
+    ]
+    runner = Runner([ProcessResult(0, encoded_api_items(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    comments = client.list_issue_comments(62)
+
+    assert [comment.identifier for comment in comments] == [20, 21]
+
+
+def test_malformed_issue_comment_output_fails_closed(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "not-base64", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    with pytest.raises(FactoryError, match="Could not parse GitHub issue comments"):
+        client.list_issue_comments(62)
 
 
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:

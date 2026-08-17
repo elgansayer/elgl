@@ -6,6 +6,7 @@ import logging
 import signal
 import time
 from collections import Counter
+from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,6 +14,7 @@ from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
+from openhands_factory.agents.base import ProviderHealth
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
@@ -30,6 +32,22 @@ from openhands_factory.task_source import TaskStore
 LOGGER = logging.getLogger(__name__)
 MAX_ACTIONABLE_BLOCKED_TASKS = 5
 MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
+
+
+def provider_status_snapshot(
+    health: Mapping[str, ProviderHealth],
+) -> list[dict[str, object]]:
+    """Return the non-secret provider fields suitable for operator status."""
+
+    return [
+        {
+            "name": name,
+            "status": item.status.value,
+            "checked_at": item.checked_at.isoformat(),
+            "retry_after": item.retry_after.isoformat() if item.retry_after is not None else None,
+        }
+        for name, item in sorted(health.items())
+    ]
 
 
 def select_batch(
@@ -126,6 +144,7 @@ class FactoryDaemon:
         self.tasks = TaskStore(config.state_dir)
         self.pipeline = FactoryPipeline(config)
         self.verification_slots = Semaphore(1)
+        self.provider_health: dict[str, ProviderHealth] = {}
 
     @property
     def control_path(self) -> Path:
@@ -237,6 +256,7 @@ class FactoryDaemon:
                     now = time.monotonic()
                     if now >= next_refresh_at:
                         health = self.pipeline.router.health_snapshot()
+                        self.provider_health = dict(health)
                         LOGGER.info(
                             "Factory provider health: %s",
                             ", ".join(
@@ -323,9 +343,11 @@ class FactoryDaemon:
                 "schema_version": generation.schema_version,
                 "pid": generation.pid,
                 "hostname": generation.hostname,
+                "paused": self.paused(),
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
                 "queue": queue_snapshot(jobs, active_task_ids),
+                "providers": provider_status_snapshot(self.provider_health),
             },
         )
 

@@ -179,10 +179,13 @@ The NestJS API applies a global `/api` prefix, so the compose health checks poll
 
 ## Advanced AI Factory Tooling
 
-The repository contains a supervised OpenHands factory under `automation/`. It uses ChatGPT Plus subscription
-authentication, OpenCode Go, then Gemini Flash free tier as an ordered provider chain. Every task uses a
-bounded conversation and an isolated rootless Podman worktree. The coding process cannot push to `main` or
-merge its own pull request.
+The repository contains a supervised OpenHands Factory under `automation/`. A typed, phase-specific router uses
+subscription-authenticated Claude Code, Codex CLI, configurable Google and OpenCode agents, with OpenHands API as
+an optional emergency fallback. Every task uses bounded execution and an isolated rootless Podman worktree. Agent
+providers cannot push to `main` or merge their own pull requests.
 
 Production deployment, authentication, recovery, costs, security boundaries and operator commands are
-documented in [the factory runbook](docs/factory/README.md).
+documented in [the factory runbook](docs/factory/README.md). The watchdog maintains a sanitised
+[GitHub status and control issue](https://github.com/elgansayer/elgl/issues?q=is%3Aissue+is%3Aopen+label%3Afactory-status)
+with fixed, allowlisted pause, resume, status and restart comments. See the
+[control-panel security model](docs/factory/CONTROL-PANEL.md).

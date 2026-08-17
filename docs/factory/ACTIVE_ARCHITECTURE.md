@@ -89,6 +89,7 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 | `review_report.py` | Authoritative `.factory-review.json` schema and acceptance validation |
 | `architect_report.py` | Authoritative `.factory-architect.json` schema |
 | `doctor.py` | Read-only runtime, isolation, GitHub, provider, state, and capacity diagnostics |
+| `control_panel.py` | Sanitised GitHub status projection and fixed trusted-actor controls |
 
 ## Durable state and recovery
 
@@ -101,8 +102,10 @@ last-known-good backup:
 - `provider-capacity.json`: current-generation provider leases;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, and timeout counters;
 - `generation.json`: active daemon ownership UUID and schema version;
-- `daemon.json`: heartbeat, PID, generation, queue counts, and active tasks;
+- `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
 - `control.json`: pause state;
+- `control_panel.json`: issue cursor, publication fingerprint, and last accepted bounded command;
+- `control_request.json`: optional mode-0600, single-use watchdog restart request;
 - `architect_state.json`: architect completion and retry data;
 - `provider-attribution.json`: detailed OpenHands inner-provider attribution.
 
@@ -119,6 +122,20 @@ A repeated identical task-side failure opens a durable, recoverable quarantine a
 crash, malformed-output, and busy-capacity exhaustion never consume a task attempt or open this task circuit.
 `backlog requeue-quarantined` resets both durable state and GitHub labels after the cause is resolved. Historical
 quarantine entries without the new reason marker are migrated back into normal retry flow.
+
+## GitHub operator panel
+
+The health watchdog maintains one open `factory-status` and `factory-skip` issue as a sanitised projection of
+daemon, queue, provider, metric, service, and timer state. It publishes on material change and at least every 15
+minutes, so a stale update is a dead-man indicator. The issue never contains prompts, transcripts, issue bodies,
+environment values, credentials, raw provider diagnostics, or exception text.
+
+Only actors in the narrower `FACTORY_CONTROL_GITHUB_ACTORS` allowlist can submit the exact fixed commands
+`status`, `pause`, `resume`, and `restart`. Comment text never enters a shell. Restart crosses the privilege
+boundary through a schema, owner, mode and age checked single-use request consumed by the existing root watchdog.
+No panel action can
+select work, change routes, execute a task, push, review, approve, or merge. See
+[CONTROL-PANEL.md](CONTROL-PANEL.md).
 
 ## Routing and independent review
 

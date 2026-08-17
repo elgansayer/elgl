@@ -3,9 +3,37 @@ set -euo pipefail
 
 SERVICE=hellotalk-factory.service
 FACTORY=/opt/hellotalk-factory/venv/bin/hellotalk-factory
+FACTORY_PYTHON=/opt/hellotalk-factory/venv/bin/python
 FACTORY_USER=hellotalk-factory
 HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
+CONTROL_REQUEST=/var/lib/hellotalk-factory/control_request.json
 MAX_TASK_MINUTES=${FACTORY_MAX_TASK_MINUTES:-120}
+
+sync_dashboard() {
+  timeout --signal=TERM --kill-after=5s 45s \
+    runuser -u "$FACTORY_USER" --preserve-environment -- \
+      "$FACTORY" dashboard sync >/dev/null || \
+    echo 'factory watchdog: GitHub dashboard sync failed' >&2
+}
+
+consume_restart_request() {
+  local factory_uid
+  factory_uid=$(id -u "$FACTORY_USER")
+  "$FACTORY_PYTHON" - "$CONTROL_REQUEST" "$factory_uid" <<'PY'
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+from openhands_factory.control_panel import restart_request_is_safe
+
+valid = restart_request_is_safe(
+    Path(sys.argv[1]),
+    expected_uid=int(sys.argv[2]),
+    now=datetime.now(UTC),
+)
+raise SystemExit(0 if valid else 1)
+PY
+}
 
 healthy() {
   systemctl is-active --quiet "$SERVICE" || return 1
@@ -42,11 +70,40 @@ raise SystemExit(0 if healthy else 1)
 PY
 }
 
+# The unprivileged control panel can request only this fixed operation. The
+# validator checks ownership, permissions, schema and age, consumes the file,
+# and never interprets comment text as a command.
+restart_requested=false
+if consume_restart_request; then
+  restart_requested=true
+  echo 'factory watchdog: accepted bounded restart request'
+  systemctl reset-failed "$SERVICE" || true
+  systemctl restart "$SERVICE" || true
+  sleep 20
+fi
+
 # systemd already restarts ordinary process crashes. The watchdog is a second
 # recovery layer for a daemon that remains down or has stopped updating its
-# heartbeat after systemd's own policy had a chance to recover it.
+# heartbeat after systemd's own policy had a chance to recover it. Never let a
+# remote dashboard outage delay this recovery path. A healthy daemon polls the
+# panel first; an unhealthy daemon recovers before attempting publication.
 if healthy; then
-  exit 0
+  if [ "$restart_requested" = false ]; then
+    sync_dashboard
+    if consume_restart_request; then
+      restart_requested=true
+      echo 'factory watchdog: accepted bounded restart request'
+      systemctl reset-failed "$SERVICE" || true
+      systemctl restart "$SERVICE" || true
+      sleep 20
+    fi
+  fi
+  if healthy; then
+    if [ "$restart_requested" = true ]; then
+      sync_dashboard
+    fi
+    exit 0
+  fi
 fi
 
 for attempt in 1 2 3; do
@@ -56,6 +113,7 @@ for attempt in 1 2 3; do
   sleep 20
   if healthy; then
     echo "factory watchdog: daemon recovered on attempt ${attempt}"
+    sync_dashboard
     exit 0
   fi
 done
@@ -67,4 +125,5 @@ done
 # heartbeat failure or a live worker that exceeded its wall-clock limit and
 # stayed unhealthy after restart attempts.
 runuser -u "$FACTORY_USER" --preserve-environment -- "$FACTORY" alert-daemon-failed || true
+sync_dashboard
 exit 1

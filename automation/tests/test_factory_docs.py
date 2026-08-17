@@ -8,12 +8,14 @@ AI_WORKFLOW = REPOSITORY / ".github" / "workflows" / "AI-WORKFLOW.md"
 ENV_EXAMPLE = REPOSITORY / "config" / "systemd" / "factory.env.example"
 SUBSCRIPTION_AGENTS = REPOSITORY / "docs" / "factory" / "SUBSCRIPTION-AGENTS.md"
 CURRENT_AUDIT = REPOSITORY / "docs" / "factory" / "AUDIT-2026-08-17.md"
+CONTROL_PANEL = REPOSITORY / "docs" / "factory" / "CONTROL-PANEL.md"
 
 OPERATOR_RECOVERY_COMMANDS = (
     "doctor --online",
     "providers check",
     "status",
     "metrics",
+    "dashboard sync --force",
     "reconcile",
     "pause",
     "resume",
@@ -118,3 +120,22 @@ def test_current_audit_separates_source_quality_from_live_readiness() -> None:
         "Required activation sequence",
     ):
         assert marker in audit
+
+
+def test_control_panel_documents_remote_visibility_and_fixed_command_boundary() -> None:
+    runbook = RUNBOOK.read_text(encoding="utf-8")
+    panel = CONTROL_PANEL.read_text(encoding="utf-8")
+
+    assert "CONTROL-PANEL.md" in runbook
+    for marker in (
+        "factory-status",
+        "factory-skip",
+        "/factory pause",
+        "/factory resume",
+        "/factory restart",
+        "never executed",
+        "single-use",
+        "stale panel timestamp",
+        "no new inbound network exposure",
+    ):
+        assert marker in panel
