@@ -55,7 +55,7 @@
       "enabled": true,
       "auth_mode": "api",
       "transport": "openhands-sdk",
-      "emergency_only": false,
+      "emergency_only": true,
       "max_concurrency": 1,
       "model": "gpt-5.6-sol"
     }
