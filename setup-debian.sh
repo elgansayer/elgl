@@ -130,10 +130,16 @@ rsync -a --delete \
   --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \
   "$REPOSITORY_SOURCE/automation/" "$FACTORY_ROOT/build-context/"
 chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
-sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" podman build \
-  --cgroup-manager=cgroupfs \
-  --tag localhost/hellotalk-factory-worker:current \
-  --file "$FACTORY_ROOT/build-context/Containerfile" "$FACTORY_ROOT/build-context"
+# Rootless Podman may inspect the inherited working directory. Enter the
+# service-owned build context before starting it because the source checkout
+# can be inaccessible to the service user.
+# $1 is intentionally expanded by the child shell.
+# shellcheck disable=SC2016
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+  'cd "$1" && exec podman build \
+    --cgroup-manager=cgroupfs \
+    --tag localhost/hellotalk-factory-worker:current \
+    --file "$1/Containerfile" "$1"' _ "$FACTORY_ROOT/build-context"
 
 printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > "$FACTORY_CONFIG/runtime.env"
 chown root:"$FACTORY_USER" "$FACTORY_CONFIG/runtime.env"

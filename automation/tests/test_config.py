@@ -48,6 +48,9 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
     assert '"$FACTORY_STATE/recovery"' in setup
     assert "uv==0.12.5" in setup
+    assert "bash -c \\" in setup
+    assert 'cd "$1" && exec podman build' in setup
+    assert '"$1/Containerfile" "$1"' in setup
 
 
 def test_deployment_is_pinned_to_clean_main() -> None:
