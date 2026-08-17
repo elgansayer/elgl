@@ -94,7 +94,11 @@ def test_audit_is_read_only_and_emits_machine_readable_counts(tmp_path: Path) ->
         }
     ]
 
-    def runner(arguments: tuple[str, ...] | list[str], cwd: Path, timeout: int = 300) -> ProcessResult:
+    def runner(
+        arguments: tuple[str, ...] | list[str],
+        cwd: Path,
+        timeout: int = 300,
+    ) -> ProcessResult:
         del cwd, timeout
         args = tuple(arguments)
         calls.append(args)
