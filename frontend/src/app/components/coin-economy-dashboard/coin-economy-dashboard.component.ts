@@ -71,6 +71,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.buyCoins' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.buyCoinsDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -86,6 +87,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.sendGift' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.sendGiftDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/chat"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -101,6 +103,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.stickerStore' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.stickerStoreDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/sticker-store"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -116,6 +119,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.shop' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.shopDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/shop"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -131,6 +135,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.vip' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.vipDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -146,6 +151,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.escrowPayments' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.escrowPaymentsDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/escrow"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
