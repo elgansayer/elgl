@@ -75,6 +75,27 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
         "active_count": 1,
         "runnable_count": 1,
         "backing_off_count": 1,
+        "quarantined_count": 1,
+        "blocked_count": 2,
+        "top_failure_fingerprints": [],
+        "oldest_blocked_tasks": [
+            {
+                "task_id": "12",
+                "state": "implementing",
+                "updated_at": jobs["12"].updated_at.isoformat(),
+                "next_attempt_at": (now + timedelta(minutes=5)).isoformat(),
+                "quarantined_at": None,
+                "failure_fingerprint": None,
+            },
+            {
+                "task_id": "14",
+                "state": "quarantined",
+                "updated_at": jobs["14"].updated_at.isoformat(),
+                "next_attempt_at": None,
+                "quarantined_at": None,
+                "failure_fingerprint": None,
+            },
+        ],
         "by_state": {
             "discovered": 1,
             "done": 1,
@@ -82,6 +103,34 @@ def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() ->
             "quarantined": 1,
         },
     }
+
+
+def test_queue_snapshot_bounds_blocked_tasks_and_aggregates_failure_fingerprints() -> None:
+    now = datetime(2026, 1, 10, tzinfo=UTC)
+    jobs: dict[str, Job] = {}
+    for index in range(1, 8):
+        task_id = str(100 + index)
+        fingerprint = "validation:same" if index <= 4 else f"failure:{index}"
+        jobs[task_id] = replace(
+            job(task_id, index, JobState.QUARANTINED),
+            last_failure_fingerprint=fingerprint,
+            quarantined_at=now - timedelta(days=8 - index),
+            updated_at=now - timedelta(days=8 - index),
+        )
+
+    snapshot = queue_snapshot(jobs, now=now)
+
+    assert snapshot["quarantined_count"] == 7
+    assert snapshot["blocked_count"] == 7
+    assert snapshot["top_failure_fingerprints"] == [
+        {"fingerprint": "validation:same", "count": 4},
+        {"fingerprint": "failure:5", "count": 1},
+        {"fingerprint": "failure:6", "count": 1},
+        {"fingerprint": "failure:7", "count": 1},
+    ]
+    oldest = snapshot["oldest_blocked_tasks"]
+    assert isinstance(oldest, list)
+    assert [item["task_id"] for item in oldest] == ["101", "102", "103", "104", "105"]
 
 
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
