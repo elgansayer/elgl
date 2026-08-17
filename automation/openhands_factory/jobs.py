@@ -100,7 +100,9 @@ class JobStore:
         if self.factory_generation != "unknown":
             job.factory_generation = self.factory_generation
 
-    def save(self, jobs: dict[str, Job]) -> None:
+    def _save_raw(self, jobs: dict[str, Job]) -> None:
+        """Persist already-normalized jobs without applying retry policy again."""
+
         serialised = []
         for job in jobs.values():
             self._stamp(job)
@@ -112,6 +114,46 @@ class JobStore:
             )
             serialised.append(item)
         atomic_write_json(self.path, {"jobs": serialised})
+
+    @staticmethod
+    def _retry_transition_changed(previous: Job | None, current: Job) -> bool:
+        """Return whether a failure represents a newly completed attempt.
+
+        `save()` is also used by reconciliation and tests to persist whole snapshots.
+        Reloading and saving an unchanged failed job must not increment durable failure
+        counters or push its cooldown farther into the future. Attempts, error text, or
+        the transition timestamp changing are enough evidence that a new attempt was
+        completed and should be accounted for exactly once.
+        """
+
+        if previous is None:
+            return True
+        return (
+            previous.attempts != current.attempts
+            or previous.last_error != current.last_error
+            or previous.updated_at != current.updated_at
+        )
+
+    def save(self, jobs: dict[str, Job]) -> None:
+        """Persist a full snapshot through the canonical retry-policy boundary.
+
+        Historically `run_once()` wrote snapshots through this method while worker
+        transitions used `save_job()`. That allowed the former path to persist the
+        pipeline's legacy fixed exponential delay without failure classification,
+        fingerprinting, or deterministic jitter. Every public JobStore save now
+        normalizes a newly failed attempt through the same policy before persistence.
+        """
+
+        previous_jobs = self.load()
+        for task_id, job in jobs.items():
+            previous = previous_jobs.get(task_id)
+            if job.last_error and job.attempts > 0:
+                if self._retry_transition_changed(previous, job):
+                    self._apply_retry_policy(previous, job)
+                continue
+            if previous is not None and self._made_meaningful_progress(previous, job):
+                reset_retry_diagnostics(job)
+        self._save_raw(jobs)
 
     @staticmethod
     def _made_meaningful_progress(previous: Job, current: Job) -> bool:
@@ -156,10 +198,14 @@ class JobStore:
         with self._process_lock:
             jobs = self.load()
             previous = jobs.get(job.task.identifier)
-            self._apply_retry_policy(previous, job)
+            if job.last_error and job.attempts > 0:
+                if self._retry_transition_changed(previous, job):
+                    self._apply_retry_policy(previous, job)
+            elif previous is not None and self._made_meaningful_progress(previous, job):
+                reset_retry_diagnostics(job)
             self._stamp(job)
             jobs[job.task.identifier] = job
-            self.save(jobs)
+            self._save_raw(jobs)
 
     def recover_abandoned_attempts(
         self,
@@ -199,7 +245,7 @@ class JobStore:
                 self._apply_retry_policy(None, job, now=current)
                 recovered.append(task_id)
             if recovered:
-                self.save(jobs)
+                self._save_raw(jobs)
         return sorted(recovered, key=lambda identifier: (not identifier.isdigit(), identifier))
 
     @staticmethod
