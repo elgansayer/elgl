@@ -227,7 +227,11 @@ def classify_branch(
             "provider-managed dependency branch",
         )
 
-    open_prs = [item for item in pull_requests if str(item.get("state") or "").upper() == "OPEN"]
+    open_prs = [
+        item
+        for item in pull_requests
+        if str(item.get("state") or "").upper() == "OPEN"
+    ]
     if open_prs:
         explicitly_noncanonical = any(
             _labels(item).intersection({"superseded", "factory-skip", "duplicate"})
