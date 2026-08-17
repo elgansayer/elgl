@@ -120,7 +120,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
       if (event.type === 'text') {
         this.addMessage({
-          id: event.id || Math.random().toString(36).substring(2),
+          id: event.id || crypto.randomUUID(),
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),

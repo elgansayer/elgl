@@ -8,7 +8,7 @@ import { UserProfile } from './user.service';
 
 function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
-    id: `user-${Math.random().toString(36).slice(2, 8)}`,
+    id: `user-${crypto.randomUUID()}`,
     display_name: 'Test User',
     native_languages: ['en'],
     target_languages: ['ja'],
