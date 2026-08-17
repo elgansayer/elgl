@@ -237,57 +237,48 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
 
 
 def agent_provider_checks(config: FactoryConfig) -> list[Check]:
-    """Report configured agent availability without attempting a paid run."""
-    from openhands_factory.agents import (
-        AgentProvider,
-        ClaudeCodeProvider,
-        CodexProvider,
-        GoogleAgentProvider,
-        OpenCodeProvider,
-    )
+    """Report the active execution boundary without probing retired direct executors."""
     configured = config.agents.providers
+    routes = config.agents.routing.model_dump()
+    direct_names = ("claude", "codex", "google", "opencode")
 
-    def command_for(name: str, default: str) -> str:
-        provider_config = configured.get(name)
-        return provider_config.command if provider_config and provider_config.command else default
-
-    providers: dict[str, AgentProvider] = {
-        "claude": ClaudeCodeProvider(command=command_for("claude", "claude")),
-        "codex": CodexProvider(command=command_for("codex", "codex")),
-        "google": GoogleAgentProvider(command=command_for("google", "gemini")),
-        "opencode": OpenCodeProvider(command=command_for("opencode", "opencode")),
-    }
     checks: list[Check] = [
         Check(
             "agent-routing",
             config.agents.routing_enabled,
-            "enabled" if config.agents.routing_enabled else "OpenHands compatibility mode",
+            "OpenHands single control plane"
+            if config.agents.routing_enabled
+            else "outer execution routing disabled",
             warning=not config.agents.routing_enabled,
         )
     ]
-    for name, provider in providers.items():
-        provider_config = configured.get(name)
-        if provider_config is None or not provider_config.enabled:
-            checks.append(Check(f"agent:{name}", True, "disabled"))
-            continue
-        health = provider.health()
+
+    for name in direct_names:
+        provider = configured.get(name)
+        disabled = provider is None or not provider.enabled
         checks.append(
             Check(
                 f"agent:{name}",
-                health.status.value in {"healthy", "degraded"},
-                health.detail or health.status.value,
-                warning=health.status.value != "healthy",
+                disabled,
+                "disabled direct executor"
+                if disabled
+                else "direct executor enabled outside OpenHands boundary",
             )
         )
-    openhands = configured.get("openhands")
-    checks.append(
-        Check(
-            "agent:openhands",
-            bool(openhands and openhands.enabled),
-            "enabled as emergency fallback" if openhands and openhands.enabled else "disabled",
-            warning=not bool(openhands and openhands.enabled),
-        )
+
+    invalid_routes = sorted(
+        phase
+        for phase, providers in routes.items()
+        if isinstance(providers, list) and providers != ["openhands"]
     )
+    openhands = configured.get("openhands")
+    openhands_ready = bool(openhands and openhands.enabled) and not invalid_routes
+    detail = "sole outer execution control plane"
+    if not openhands or not openhands.enabled:
+        detail = "OpenHands control plane disabled"
+    elif invalid_routes:
+        detail = f"non-OpenHands phase routes: {', '.join(invalid_routes)}"
+    checks.append(Check("agent:openhands", openhands_ready, detail))
     return checks
 
 
