@@ -48,6 +48,9 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
     assert '"$FACTORY_STATE/recovery"' in setup
     assert "uv==0.12.5" in setup
+    assert "bash -c \\" in setup
+    assert 'cd "$1" && exec podman build' in setup
+    assert '"$1/Containerfile" "$1"' in setup
 
 
 def test_deployment_is_pinned_to_clean_main() -> None:
@@ -83,6 +86,8 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'npm ci --prefix "$directory"' in deploy
     assert "npm exec -- cypress install" in deploy
     assert "podman build --cgroup-manager=cgroupfs" in deploy
+    assert 'bash -c \'cd "$1" && exec podman build' in deploy
+    assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
 
 
@@ -163,6 +168,7 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
     assert "ProtectProc=ptraceable" in unit
+    assert "ProtectKernelLogs=true" not in unit
     assert "/opt/hellotalk-factory/venv/bin" in unit
 
 
