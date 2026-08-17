@@ -71,7 +71,7 @@ $$;
     beforeSourceFile: '20260807143544_review_rls_srs_flashcards.sql',
     name: 'materialize_typeorm_flashcard_decks_before_rls_review',
     reason:
-      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL corpus. The shim mirrors that migration before the RLS review.',
+      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL migration corpus. The shim mirrors that migration before the RLS review.',
     sql: `CREATE TABLE IF NOT EXISTS public.decks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -212,6 +212,20 @@ CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON public.poll_votes(user_id);
 DROP POLICY IF EXISTS call_logs_insert_own ON public.call_logs;
 DROP POLICY IF EXISTS audio_room_tips_select_own ON public.audio_room_tips;
 DROP POLICY IF EXISTS audio_room_tips_insert_own ON public.audio_room_tips;
+`,
+  },
+  {
+    beforeSourceFile: '20260808000002_review_rls_escrow_payments.sql',
+    name: 'reconcile_escrow_recipient_column_before_rls_review',
+    reason:
+      'The root Supabase corpus creates public.escrows with receiver_id, while the surviving backend/supabase/20260807000000-create-escrows.sql contract and the later RLS review use recipient_id. Preserve both historical paths and materialize the participant alias before the review rather than rewriting either deployed migration.',
+    sql: `ALTER TABLE public.escrows
+  ADD COLUMN IF NOT EXISTS recipient_id UUID REFERENCES public.users(id) ON DELETE CASCADE;
+UPDATE public.escrows
+  SET recipient_id = receiver_id
+  WHERE recipient_id IS NULL;
+ALTER TABLE public.escrows
+  ALTER COLUMN recipient_id SET NOT NULL;
 `,
   },
 ];
