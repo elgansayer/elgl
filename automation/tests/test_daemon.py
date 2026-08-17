@@ -10,8 +10,10 @@ from openhands_factory.daemon import (
     FactoryDaemon,
     provider_status_snapshot,
     queue_snapshot,
+    refresh_jobs,
     select_batch,
 )
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import Job, JobState, Task
 
 
@@ -162,6 +164,19 @@ def test_provider_status_snapshot_exposes_no_provider_detail_or_credentials() ->
         }
     ]
     assert "detail" not in snapshot[0]
+
+
+def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> None:
+    durable = {"42": job("42", 0)}
+    pipeline = SimpleNamespace(
+        refresh=lambda protected: (_ for _ in ()).throw(FactoryError("HTTP 503")),
+        jobs=SimpleNamespace(load=lambda: durable),
+    )
+
+    refreshed, retry_at = refresh_jobs(pipeline, set(), 10.0, 5)  # type: ignore[arg-type]
+
+    assert refreshed == durable
+    assert retry_at == 40.0
 
 
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(

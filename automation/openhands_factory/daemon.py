@@ -19,6 +19,7 @@ from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
 from openhands_factory.doctor import disk_space_checks
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
@@ -68,6 +69,21 @@ def select_batch(
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     return candidates[:limit]
+
+
+def refresh_jobs(
+    pipeline: FactoryPipeline,
+    protected_task_ids: set[str],
+    now: float,
+    cooldown_seconds: int,
+) -> tuple[dict[str, Job], float]:
+    """Refresh GitHub work without turning a control-plane outage into a crash."""
+
+    try:
+        return pipeline.refresh(protected_task_ids), now + cooldown_seconds
+    except FactoryError as error:
+        LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
+        return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
 
 
 def queue_snapshot(
@@ -288,7 +304,12 @@ class FactoryDaemon:
                                 "retry evidence was preserved",
                                 task_id,
                             )
-                        jobs = self.pipeline.refresh(active_task_ids)
+                        jobs, next_refresh_at = refresh_jobs(
+                            self.pipeline,
+                            active_task_ids,
+                            now,
+                            self.config.cooldown_seconds,
+                        )
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
                             timedelta(minutes=self.config.max_task_minutes + 15),
@@ -302,7 +323,6 @@ class FactoryDaemon:
                             )
                         if recovered:
                             jobs = self.pipeline.jobs.load()
-                        next_refresh_at = now + self.config.cooldown_seconds
                     else:
                         jobs = self.pipeline.jobs.load()
                     for job in select_batch(jobs, capacity, active_task_ids):
