@@ -15,6 +15,7 @@ from openhands_factory.architect_report import ArchitectProposal, load_architect
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
 from openhands_factory.exceptions import (
+    AgentTaskFailure,
     FactoryError,
     ProviderCapacityUnavailable,
     RepositorySafetyError,
@@ -463,7 +464,7 @@ class FactoryPipeline:
             except RepositorySafetyError as error:
                 raise RuntimeError("Repository-change validation failed internally") from error
             if current_fingerprint == baseline_fingerprint:
-                raise FactoryError(f"{phase.replace('_', ' ').title()} produced no changes")
+                raise AgentTaskFailure(f"{phase.replace('_', ' ').title()} produced no changes")
 
         request = AgentRequest(
             phase=agent_phase,

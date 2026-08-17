@@ -111,9 +111,11 @@ External pull requests enter through discovery and local verification before `RE
 immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
 the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
 
-When at least two worker slots are free, the scheduler reserves one slot for the oldest runnable external pull
-request if no PR review is already active. Other slots remain ordered by issue priority and identifier. This
-bounded lane prevents required independent reviews from starving behind a large critical-issue backlog.
+When at least two worker slots are free, the scheduler reserves one slot for the highest-priority runnable
+external pull request if no PR review is already active. Pull requests default to priority 5, while trusted
+`guardian-alert`, `priority:critical`, and `priority:high` labels promote urgent reviews. Ties use the oldest
+numeric identifier. Other slots remain ordered by issue priority and identifier. This bounded lane prevents
+required independent reviews from starving behind a large critical-issue backlog.
 
 Provider exhaustion does not consume a task attempt. The job remains in its current state with `next_attempt_at`
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
@@ -260,6 +262,9 @@ sudo scripts/maintain-factory-host-storage.sh
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
   scoped Git credential helper, authenticated GitHub repository reads, and a no-bypass server-side merge policy.
 - `status` prints the durable daemon generation, queue counts, active jobs, and heartbeat.
+- After a watchdog restart, the default 30-second grace window lets systemd preflight complete and the daemon
+  publish its initial heartbeat before recovery is judged. Set `FACTORY_WATCHDOG_RESTART_GRACE_SECONDS` only when
+  host startup measurements justify a different value.
 - `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact

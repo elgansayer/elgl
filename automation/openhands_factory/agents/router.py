@@ -24,7 +24,11 @@ from openhands_factory.agents.base import (
 )
 from openhands_factory.agents.cli import redact_agent_output
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
-from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
+from openhands_factory.exceptions import (
+    AgentTaskFailure,
+    FactoryError,
+    ProviderCapacityUnavailable,
+)
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -405,6 +409,12 @@ class AgentRouter:
             return result
         try:
             request.validate_output()
+        except AgentTaskFailure as error:
+            return replace(
+                result,
+                success=False,
+                failure=AgentFailure(AgentFailureKind.TASK_FAILURE, str(error)),
+            )
         except FactoryError as error:
             return replace(
                 result,

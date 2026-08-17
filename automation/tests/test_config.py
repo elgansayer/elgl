@@ -253,6 +253,9 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "Delegate=yes" not in unit
     assert "OnUnitActiveSec=2min" in timer
     assert 'systemctl restart "$SERVICE"' in watchdog
+    assert "FACTORY_WATCHDOG_RESTART_GRACE_SECONDS:-30" in watchdog
+    assert 'sleep "$RESTART_GRACE_SECONDS"' in watchdog
+    assert "sleep 20" not in watchdog
     assert "for attempt in 1 2 3" in watchdog
     assert "alert-daemon-failed" in watchdog
     assert "active_started_at" in watchdog

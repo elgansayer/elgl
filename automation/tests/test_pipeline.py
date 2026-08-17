@@ -994,7 +994,7 @@ def test_repeated_identical_task_failure_opens_recoverable_quarantine(
     assert len(github.comments) == 1
 
 
-def test_provider_output_failure_does_not_consume_task_attempts_or_quarantine(
+def test_no_change_task_failure_is_bounded_without_disabling_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github = GitHub()
@@ -1010,15 +1010,22 @@ def test_provider_output_failure_does_not_consume_task_attempts_or_quarantine(
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
-    result = None
-    for _ in range(3):
-        result = pipeline.run_job("42")
+    first = pipeline.run_job("42")
+    second = pipeline.run_job("42")
+    third = pipeline.run_job("42")
 
-    assert result is not None and result.state is JobState.IMPLEMENTING
-    assert result.attempts == 0
-    assert result.next_attempt_at is not None
+    assert first is not None and first.attempts == 1
+    assert second is not None and second.attempts == 2
+    assert third is not None and third.attempts == 3
+    assert third.state is JobState.QUARANTINED
+    assert third.next_attempt_at is None
+    assert [entry.get("failure_classification") for entry in third.provider_history[-3:]] == [
+        "task_failure",
+        "task_failure",
+        "task_failure",
+    ]
     assert github.closed == []
-    assert not any(labels == ("factory-quarantined", "needs-human") for _, labels in github.labels)
+    assert (42, ("factory-quarantined", "needs-human")) in github.labels
     assert not any("already satisfied" in body for _, body in github.comments)
 
 

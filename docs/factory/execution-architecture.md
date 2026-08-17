@@ -18,9 +18,11 @@ Providers cannot discover work, own job state, merge, or weaken Factory policy. 
 OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 
 The scheduler uses a bounded pull-request review lane when at least two worker slots are free. If no review is
-already active, one slot is reserved for the oldest runnable external PR and the remaining slots retain normal
-priority order. This prevents a large critical-issue backlog from starving every required review without turning
-review into a second scheduler or displacing all urgent issue work.
+already active, one slot is reserved for the highest-priority runnable external PR and the remaining slots retain
+normal priority order. Reviews default to priority 5. Trusted `guardian-alert`, `priority:critical`, and
+`priority:high` labels promote urgent PRs within that lane, with numeric identifier as the tie-breaker. This
+prevents a large critical-issue backlog from starving every required review without turning review into a second
+scheduler or displacing all urgent issue work.
 
 ## Architecture invariants
 

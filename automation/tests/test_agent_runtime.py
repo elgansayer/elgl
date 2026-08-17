@@ -30,7 +30,11 @@ from openhands_factory.agents.process import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.config import AgentsConfig
-from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
+from openhands_factory.exceptions import (
+    AgentTaskFailure,
+    FactoryError,
+    ProviderCapacityUnavailable,
+)
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, ProviderName, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -840,6 +844,36 @@ def test_invalid_structured_output_retries_then_falls_back(tmp_path: Path) -> No
         AgentFailureKind.INVALID_AGENT_OUTPUT.value,
         AgentFailureKind.INVALID_AGENT_OUTPUT.value,
     ]
+
+
+def test_task_validation_failure_does_not_retry_or_open_provider_circuit(
+    tmp_path: Path,
+) -> None:
+    first = Provider("first")
+    second = Provider("second")
+    agent_request, job = request(tmp_path)
+
+    def validate() -> None:
+        raise AgentTaskFailure("Implementation produced no changes")
+
+    agent_request.validate_output = validate
+    router = AgentRouter(
+        [first, second],
+        policy=OrderedPolicy(),
+        same_provider_retries=1,
+        failure_threshold=1,
+    )
+
+    result = router.run(agent_request, job)
+
+    assert not result.success
+    assert result.provider == "first"
+    assert result.failure is not None
+    assert result.failure.kind is AgentFailureKind.TASK_FAILURE
+    assert first.calls == 1
+    assert second.calls == 0
+    assert router._memory_breakers["first"].state == "closed"
+    assert job.provider_history[-1]["failure_classification"] == "task_failure"
 
 
 def test_no_provider_does_not_mutate_task_attempt_count(tmp_path: Path) -> None:
