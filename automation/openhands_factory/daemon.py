@@ -28,6 +28,8 @@ from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
 LOGGER = logging.getLogger(__name__)
+MAX_ACTIONABLE_BLOCKED_TASKS = 5
+MAX_ACTIONABLE_FAILURE_FINGERPRINTS = 5
 
 
 def select_batch(
@@ -73,11 +75,45 @@ def queue_snapshot(
         if job.task.identifier not in active
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
+    quarantined = [job for job in jobs.values() if job.state.value == "quarantined"]
+    blocked = sorted(
+        [*backing_off, *quarantined],
+        key=lambda job: (job.updated_at, job.task.identifier),
+    )
+    failure_fingerprints = Counter(
+        job.last_failure_fingerprint for job in blocked if job.last_failure_fingerprint is not None
+    )
+    top_failure_fingerprints = [
+        {"fingerprint": fingerprint, "count": count}
+        for fingerprint, count in sorted(
+            failure_fingerprints.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[:MAX_ACTIONABLE_FAILURE_FINGERPRINTS]
+    ]
+    oldest_blocked_tasks = [
+        {
+            "task_id": job.task.identifier,
+            "state": job.state.value,
+            "updated_at": job.updated_at.isoformat(),
+            "next_attempt_at": (
+                job.next_attempt_at.isoformat() if job.next_attempt_at is not None else None
+            ),
+            "quarantined_at": (
+                job.quarantined_at.isoformat() if job.quarantined_at is not None else None
+            ),
+            "failure_fingerprint": job.last_failure_fingerprint,
+        }
+        for job in blocked[:MAX_ACTIONABLE_BLOCKED_TASKS]
+    ]
     return {
         "total_jobs": len(jobs),
         "active_count": len(active),
         "runnable_count": len(runnable),
         "backing_off_count": len(backing_off),
+        "quarantined_count": len(quarantined),
+        "blocked_count": len(blocked),
+        "top_failure_fingerprints": top_failure_fingerprints,
+        "oldest_blocked_tasks": oldest_blocked_tasks,
         "by_state": dict(sorted(state_counts.items())),
     }
 
