@@ -16,7 +16,7 @@ Tracks issue #6051 for `frontend/src/app/components/coins-success`.
 | Failed state | `status()` signal value `failed` | Used when `session_id` is absent or purchase confirmation returns false | Relay typography/status presentation | Keep. Preserve the failure path during later visual work. |
 | Status message | Semantic `<p role="status" aria-live="polite">` | Announces pending/confirmed/failed copy | Native status semantics + Relay typography tokens | Keep. No custom live-region primitive is necessary. |
 | Status illustration | Decorative emoji selected from component state with `aria-hidden="true"` | `🎉` for pending/confirmed, `😕` for failed | None | Keep decorative. Do not introduce a primitive solely for the glyph. |
-| Page layout | Tailwind layout using `bg-surface-500`, `text-text-primary`, `text-text-secondary` | Full-height centered checkout-return page | Relay semantic surface/text tokens | Keep as presentation; later token/parity work can refine it without changing behaviour. |
+| Page layout | Tailwind layout using `bg-surface-500`, `text-text-primary`, `text-text-secondary` | Full-height centred checkout-return page | Relay semantic surface/text tokens | Keep as presentation; later token/parity work can refine it without changing behaviour. |
 
 ## Interaction inventory
 
@@ -48,7 +48,7 @@ Both contracts must remain unchanged unless a separate product/payment-routing c
 
 ## Analytics and side effects
 
-The component itself does not emit an analytics/telemetry event. Its meaningful side effect is delegated to `EconomyStore.confirmCoinPurchase(sessionId)` during initialization. Later Spartan/Relay conversion work must preserve the single store-owned confirmation path and must not trigger confirmation from the Dashboard button or from repeated presentation events.
+The component itself does not emit an analytics/telemetry event. Its meaningful side effect is delegated to `EconomyStore.confirmCoinPurchase(sessionId)` during initialisation. Later Spartan/Relay conversion work must preserve the single store-owned confirmation path and must not trigger confirmation from the Dashboard button or from repeated presentation events.
 
 The Dashboard button performs navigation only.
 
@@ -76,13 +76,13 @@ The Dashboard button performs navigation only.
 
 ## Prerequisites and follow-on work
 
-Program dependency #5462 is complete. The single user control is already on Spartan Helm, so issue #6052 should not replace it with another interaction implementation merely to satisfy the conversion program.
+Program dependency #5462 is complete. The single user control is already on Spartan Helm, so issue #6052 should not replace it with another interaction implementation merely to satisfy the conversion programme.
 
 No new Relay or Spartan Brain primitive is required for the current interaction model. Follow-on work can focus on token/theme parity, accessibility verification and regression/design-preview coverage while preserving the checkout state machine documented here.
 
 ## Verification
 
-The existing focused component spec covers component creation, logical-direction utility safety and the confirmed-state transition. For changes to this surface, run the focused component test and frontend verification gate:
+The focused component spec covers component creation, logical-direction utility safety and the confirmed-state transition. For changes to this surface, run the focused component test and frontend verification gate:
 
 ```bash
 cd frontend
@@ -93,6 +93,14 @@ npm run build
 
 If the Angular test runner in the current workspace does not support `--include`, run `npm test` instead.
 
+## Regression and design-preview status
+
+Issue #6055 locks the current checkout-return contract with regression coverage for all three presentation states and both failure paths. The suite now verifies successful confirmation, a missing `session_id`, a rejected confirmation, polite status semantics, decorative illustration semantics, Spartan button ownership, touch sizing, keyboard focusability, RTL-safe utilities and exact `/dashboard` navigation.
+
+The Relay + Spartan component-system preview now includes the coins-success pending, confirmed and failed states. It records an explicit light 390px mobile composition plus dark tablet/desktop coverage, while keeping the same single Spartan-owned Dashboard action and status semantics.
+
+This regression stage intentionally adds no new feature behaviour. It protects the existing payment confirmation boundary and gives future token, accessibility and layout work a stable executable contract.
+
 ## Audit result
 
-**Mapped and ready for the remaining migration stages.** Every current control, presentation state and bespoke utility in `coins-success` has been inventoried. The only interactive control already uses the approved Spartan Helm button primitive; the checkout confirmation remains correctly separated in `EconomyStore`, and no additional Brain primitive is required by this surface.
+**Mapped and regression-locked for the remaining migration stages.** Every current control, presentation state and bespoke utility in `coins-success` has been inventoried. The only interactive control already uses the approved Spartan Helm button primitive; the checkout confirmation remains correctly separated in `EconomyStore`, and the key state, failure, navigation and visual-preview contracts are now covered for issue #6055.

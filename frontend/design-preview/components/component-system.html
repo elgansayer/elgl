@@ -29,8 +29,17 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      .checkout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; align-items: start; }
+      .checkout-frame { box-sizing: border-box; inline-size: 100%; min-block-size: 18rem; border: 1px solid ButtonBorder; border-radius: 1rem; padding: 1rem; display: grid; place-items: center; background: Canvas; color: CanvasText; }
+      .checkout-frame[data-viewport="mobile"] { max-inline-size: 24.375rem; }
+      .checkout-frame[data-theme="light"] { color-scheme: light; }
+      .checkout-frame[data-theme="dark"] { color-scheme: dark; }
+      .checkout-state { inline-size: min(100%, 24rem); text-align: center; display: grid; justify-items: center; gap: 0.75rem; }
+      .checkout-state .status-icon { font-size: 3rem; }
+      .checkout-state p { margin: 0; max-inline-size: 32ch; }
+      .preview-label { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .checkout-frame { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -49,6 +58,39 @@
         <h2 id="static-feedback-title">Static feedback state</h2>
         <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region.</p>
         <div class="row"><button type="button">Back</button></div>
+      </section>
+      <section aria-labelledby="checkout-return-title">
+        <h2 id="checkout-return-title">Checkout return states</h2>
+        <p>The coins-success surface keeps its asynchronous payment state in feature code, announces status changes politely, and delegates the dashboard action to the Spartan button primitive. The preview records light mobile and dark wider states without changing the checkout contract.</p>
+        <div class="checkout-grid">
+          <article class="checkout-frame" data-theme="light" data-viewport="mobile" aria-label="Light mobile pending checkout state">
+            <div class="checkout-state">
+              <span class="preview-label">Light / 390px mobile</span>
+              <span class="status-icon" aria-hidden="true">🎉</span>
+              <strong>Confirming your coins</strong>
+              <p role="status" aria-live="polite">We are confirming your purchase.</p>
+              <button type="button">Dashboard</button>
+            </div>
+          </article>
+          <article class="checkout-frame" data-theme="dark" data-viewport="desktop" aria-label="Dark desktop confirmed checkout state">
+            <div class="checkout-state">
+              <span class="preview-label">Dark / tablet and desktop</span>
+              <span class="status-icon" aria-hidden="true">🎉</span>
+              <strong>Coins added</strong>
+              <p role="status" aria-live="polite">Your coin purchase was confirmed.</p>
+              <button type="button">Dashboard</button>
+            </div>
+          </article>
+          <article class="checkout-frame" data-theme="light" data-viewport="desktop" aria-label="Light desktop failed checkout state">
+            <div class="checkout-state">
+              <span class="preview-label">Failure state</span>
+              <span class="status-icon" aria-hidden="true">😕</span>
+              <strong>Purchase not confirmed</strong>
+              <p role="status" aria-live="polite">We could not confirm this purchase.</p>
+              <button type="button">Dashboard</button>
+            </div>
+          </article>
+        </div>
       </section>
       <section class="informational-region" role="region" aria-label="Cultural guide">
         <h2>Cultural guide</h2>
