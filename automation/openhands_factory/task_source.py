@@ -14,6 +14,22 @@ from openhands_factory.models import Lease, Task
 from openhands_factory.state import atomic_write_json, read_json
 
 
+class LeaseIndex(dict[str, Lease]):
+    """Logical-key lease mapping with legacy task-id lookup compatibility.
+
+    Iteration and membership remain canonical logical-key operations, so scheduling
+    cannot accidentally treat two equivalent GitHub objects as separate work. Direct
+    indexed lookup by the original task identifier remains supported for diagnostics
+    and older callers during the rolling state-format migration.
+    """
+
+    def __missing__(self, key: str) -> Lease:
+        for lease in self.values():
+            if lease.task_id == key:
+                return lease
+        raise KeyError(key)
+
+
 class TaskStore:
     _lease_lock = Lock()
 
@@ -102,7 +118,7 @@ class TaskStore:
     def leases(self, now: datetime | None = None) -> dict[str, Lease]:
         current = now or datetime.now(UTC)
         payload = read_json(self.lease_path, {"leases": []})
-        leases: dict[str, Lease] = {}
+        leases: LeaseIndex = LeaseIndex()
         for item in payload.get("leases", []):
             expires = datetime.fromisoformat(item["expires_at"])
             generation = str(item.get("factory_generation", "unknown"))
