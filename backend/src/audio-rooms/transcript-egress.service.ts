@@ -175,10 +175,13 @@ export class TranscriptEgressService {
       let status = 'Running';
       let statusResponse: Response;
       let statusData: { status: string; links?: { files?: string } };
+      let pollCount = 0;
 
       while (status === 'Running' || status === 'NotStarted') {
-        // Wait 5 seconds before checking status again
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        // Wait using exponential backoff: 1s, 1.5s, 2.25s, 3.37s, 5s... capped at 5s to reduce wait time for fast jobs
+        const waitTime = Math.min(1000 * Math.pow(1.5, pollCount), 5000);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        pollCount++;
 
         statusResponse = await fetch(jobUrl, {
           headers: {
