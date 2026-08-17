@@ -107,7 +107,8 @@ sudo scripts/deploy-and-start-factory.sh --use-existing-credentials
 
 Deployment also installs the bounded persistent-journal policy and vacuums archived entries. It does not prune
 Docker automatically. Inspect or perform the separately bounded host maintenance command as documented in
-[HOST-STORAGE.md](HOST-STORAGE.md).
+[HOST-STORAGE.md](HOST-STORAGE.md). The deploy exit trap restores the daemon and watchdog when an upgrade fails
+after entering its maintenance window, provided each unit was active before deployment began.
 
 After deployment, confirm that the panel issue exists and that its service, timer and heartbeat rows are green.
 If publication fails, run `dashboard sync --force` as the service user and inspect the health service journal:

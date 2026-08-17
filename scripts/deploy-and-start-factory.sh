@@ -8,6 +8,10 @@ FACTORY_CHECKOUT=/var/lib/hellotalk-factory/repository
 WORKTREE=''
 USE_EXISTING_CREDENTIALS=false
 SOURCE_REF=origin/main
+DEPLOYMENT_SUCCEEDED=false
+FACTORY_MAINTENANCE_STARTED=false
+FACTORY_SERVICE_WAS_ACTIVE=false
+FACTORY_HEALTH_TIMER_WAS_ACTIVE=false
 
 usage() {
   cat <<'EOF'
@@ -64,8 +68,6 @@ if [ -d "$FACTORY_CHECKOUT/.git" ] && [ -n "$(git -C "$FACTORY_CHECKOUT" status 
   exit 1
 fi
 
-systemctl stop hellotalk-factory-health.timer hellotalk-factory.service >/dev/null 2>&1 || true
-
 if [ ! -r /etc/hellotalk-factory/factory.env ]; then
   echo 'Missing /etc/hellotalk-factory/factory.env.' >&2
   exit 1
@@ -90,9 +92,28 @@ factory_git() {
 }
 
 cleanup() {
+  exit_status=$?
+  trap - EXIT
+  set +e
   if [ -n "$WORKTREE" ] && [ -d "$WORKTREE" ]; then
     git -C "$REPOSITORY" worktree remove --force "$WORKTREE" >/dev/null 2>&1 || true
   fi
+  if [ "$DEPLOYMENT_SUCCEEDED" != true ] && [ "$FACTORY_MAINTENANCE_STARTED" = true ]; then
+    echo 'Factory deployment failed; restoring the previously active supervision units.' >&2
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ "$FACTORY_SERVICE_WAS_ACTIVE" = true ]; then
+      systemctl reset-failed hellotalk-factory.service >/dev/null 2>&1 || true
+      if ! systemctl start hellotalk-factory.service; then
+        echo 'Failed to restore hellotalk-factory.service after deployment failure.' >&2
+      fi
+    fi
+    if [ "$FACTORY_HEALTH_TIMER_WAS_ACTIVE" = true ]; then
+      if ! systemctl start hellotalk-factory-health.timer; then
+        echo 'Failed to restore hellotalk-factory-health.timer after deployment failure.' >&2
+      fi
+    fi
+  fi
+  exit "$exit_status"
 }
 trap cleanup EXIT
 
@@ -101,6 +122,20 @@ env GH_TOKEN="$factory_github_token" \
   -C "$REPOSITORY" fetch origin "$DEPLOY_REF"
 WORKTREE=$(mktemp -d /tmp/hellotalk-factory-deploy.XXXXXX)
 git -C "$REPOSITORY" worktree add --detach "$WORKTREE" "$SOURCE_REF" >/dev/null
+
+if systemctl is-active --quiet hellotalk-factory.service; then
+  FACTORY_SERVICE_WAS_ACTIVE=true
+fi
+if systemctl is-active --quiet hellotalk-factory-health.timer; then
+  FACTORY_HEALTH_TIMER_WAS_ACTIVE=true
+fi
+FACTORY_MAINTENANCE_STARTED=true
+systemctl stop hellotalk-factory-health.timer hellotalk-factory.service
+if systemctl is-active --quiet hellotalk-factory-health.timer || \
+  systemctl is-active --quiet hellotalk-factory.service; then
+  echo 'Factory supervision units did not stop cleanly; refusing an in-place upgrade.' >&2
+  exit 1
+fi
 
 "$WORKTREE/scripts/repair-factory-host.sh"
 
@@ -214,7 +249,8 @@ fi
 # the diagnostics and would otherwise block recovery before it can start.
 "$WORKTREE/scripts/start-factory.sh"
 
-echo 'Factory deployment and startup completed.'
 systemctl is-active hellotalk-factory.service
 systemctl is-active hellotalk-factory-health.timer
 systemctl --no-pager --full status hellotalk-factory.service
+DEPLOYMENT_SUCCEEDED=true
+echo 'Factory deployment and startup completed.'

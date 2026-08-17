@@ -212,7 +212,9 @@ The deploy script rejects a non-main ref, fast-forwards the dedicated checkout, 
 refreshes the frozen Python environment and Node dependency trees, installs Cypress, rebuilds the secretless
 worker image, verifies systemd, starts the daemon, and runs online diagnostics. It updates
 `agents.example.json` but creates `agents.json` only when the operator file is absent. Existing routing and
-credentials are not replaced or printed.
+credentials are not replaced or printed. It records whether the daemon and watchdog were active before the
+maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
+trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
 
 Because deployment deliberately preserves the operator policy, compare it with the newly deployed model and
 adapter example after every upgrade, then merge reviewed changes explicitly:
