@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import cast
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.repository_guard import ProcessRunner, run_process
@@ -136,13 +137,15 @@ def _pull_requests(
         ),
         workspace,
     )
+    decoded = cast(list[object], json.loads(output))
     grouped: dict[str, list[Mapping[str, object]]] = defaultdict(list)
-    for item in json.loads(output):
+    for item in decoded:
         if not isinstance(item, dict):
             continue
-        head = item.get("headRefName")
+        record = cast(dict[str, object], item)
+        head = record.get("headRefName")
         if isinstance(head, str) and head:
-            grouped[head].append(item)
+            grouped[head].append(record)
     return grouped
 
 
@@ -182,11 +185,14 @@ def _labels(item: Mapping[str, object]) -> set[str]:
     labels = item.get("labels")
     if not isinstance(labels, list):
         return set()
-    return {
-        str(label.get("name"))
-        for label in labels
-        if isinstance(label, dict) and label.get("name")
-    }
+    names: set[str] = set()
+    for label in cast(list[object], labels):
+        if not isinstance(label, dict):
+            continue
+        name = cast(dict[str, object], label).get("name")
+        if isinstance(name, str) and name:
+            names.add(name)
+    return names
 
 
 def classify_branch(
@@ -199,13 +205,13 @@ def classify_branch(
     pull_requests: Sequence[Mapping[str, object]],
     protected_prefixes: Sequence[str] = ("release/", "hotfix/"),
 ) -> BranchRecord:
-    numbers = tuple(
-        sorted(
-            int(item["number"])
-            for item in pull_requests
-            if isinstance(item.get("number"), int)
-        )
-    )
+    numbers: list[int] = []
+    for item in pull_requests:
+        number = item.get("number")
+        if isinstance(number, int):
+            numbers.append(number)
+    pull_request_numbers = tuple(sorted(numbers))
+
     if name == base_branch or name in {"main", "master", "develop"} or any(
         name.startswith(prefix) for prefix in protected_prefixes
     ):
@@ -214,7 +220,7 @@ def classify_branch(
             sha,
             BranchClassification.PROTECTED,
             ahead_by,
-            numbers,
+            pull_request_numbers,
             "protected branch or prefix",
         )
     if name.startswith("dependabot/"):
@@ -223,7 +229,7 @@ def classify_branch(
             sha,
             BranchClassification.DEPENDABOT,
             ahead_by,
-            numbers,
+            pull_request_numbers,
             "provider-managed dependency branch",
         )
 
@@ -247,7 +253,14 @@ def classify_branch(
             if explicitly_noncanonical
             else "open PR owns this branch"
         )
-        return BranchRecord(name, sha, classification, ahead_by, numbers, reason)
+        return BranchRecord(
+            name,
+            sha,
+            classification,
+            ahead_by,
+            pull_request_numbers,
+            reason,
+        )
 
     if any(item.get("mergedAt") for item in pull_requests):
         return BranchRecord(
@@ -255,7 +268,7 @@ def classify_branch(
             sha,
             BranchClassification.MERGED,
             ahead_by,
-            numbers,
+            pull_request_numbers,
             "branch belongs to a merged PR",
         )
     if pull_requests:
@@ -264,7 +277,7 @@ def classify_branch(
             sha,
             BranchClassification.CLOSED,
             ahead_by,
-            numbers,
+            pull_request_numbers,
             "branch belongs only to closed, unmerged PRs",
         )
     if integrated or ahead_by == 0:
@@ -273,7 +286,7 @@ def classify_branch(
             sha,
             BranchClassification.INTEGRATED,
             ahead_by,
-            numbers,
+            pull_request_numbers,
             "branch tip is already reachable from the base branch",
         )
     return BranchRecord(
@@ -281,7 +294,7 @@ def classify_branch(
         sha,
         BranchClassification.ORPHAN,
         ahead_by,
-        numbers,
+        pull_request_numbers,
         "no PR intent was found and commits are not integrated",
     )
 
