@@ -205,6 +205,29 @@ def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
     assert loop_calls == [True]
 
 
+def test_daemon_publishes_heartbeat_before_first_scheduling_cycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(max_parallel_jobs=1)  # type: ignore[assignment]
+    daemon.stopping = False
+    writes: list[str] = []
+
+    def record_state(
+        status: str,
+        active: object,
+        active_started_at: object | None = None,
+    ) -> None:
+        writes.append(status)
+        if status == "running":
+            daemon.stopping = True
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", record_state)
+
+    assert daemon._loop() == 0
+    assert writes == ["running", "stopped"]
+
+
 def test_storage_reserve_blocks_and_recovers_scheduling(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

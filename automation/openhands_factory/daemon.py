@@ -260,6 +260,10 @@ class FactoryDaemon:
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
         architect_future: Future[None] | None = None
+        # Publish liveness before the first provider probe and GitHub refresh.
+        # A large queue can make that first scheduling cycle slower than the
+        # watchdog interval, but the daemon already owns its generation here.
+        self._write_daemon_state("running", active, active_started_at)
         with (
             ThreadPoolExecutor(
                 max_workers=self.config.max_parallel_jobs,
