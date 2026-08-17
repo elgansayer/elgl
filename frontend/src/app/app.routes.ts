@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'onboarding', pathMatch: 'full' },
+  { path: '', redirectTo: 'ai-conversation', pathMatch: 'full' },
   {
     path: 'lock',
     loadComponent: () =>
