@@ -133,8 +133,8 @@ describe('CommunitiesComponent', () => {
 
   it('should prevent overlapping delete mutations and restore controls afterwards', async () => {
     let finishDelete: (() => void) | undefined;
-    const pendingDelete = new Promise<void>((resolve) => {
-      finishDelete = () => resolve();
+    const pendingDelete = new Promise<undefined>((resolve) => {
+      finishDelete = () => resolve(undefined);
     });
     removeCommunity.mockReturnValueOnce(pendingDelete);
 
@@ -154,8 +154,8 @@ describe('CommunitiesComponent', () => {
   });
 
   it('should render valid list children for loaded communities', () => {
-    const list = fixture.nativeElement.querySelector('ul');
-    const children = Array.from(list?.children ?? []);
+    const list: HTMLUListElement | null = fixture.nativeElement.querySelector('ul');
+    const children = list ? Array.from(list.children) : [];
 
     expect(children.length).toBeGreaterThan(0);
     expect(children.every((child) => child.tagName === 'LI')).toBe(true);
