@@ -29,7 +29,7 @@ def test_runbook_documents_operator_recovery_commands() -> None:
 
 
 def test_execution_architecture_locks_single_factory_owner_and_openhands_boundary() -> None:
-    architecture = EXECUTION_ARCHITECTURE.read_text(encoding="utf-8")
+    architecture = " ".join(EXECUTION_ARCHITECTURE.read_text(encoding="utf-8").split())
 
     for marker in (
         "exactly one autonomous orchestration control plane",
@@ -45,7 +45,7 @@ def test_execution_architecture_locks_single_factory_owner_and_openhands_boundar
 
 
 def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:
-    architecture = ACTIVE_ARCHITECTURE.read_text(encoding="utf-8")
+    architecture = " ".join(ACTIVE_ARCHITECTURE.read_text(encoding="utf-8").split())
 
     required_contract = (
         "OpenHands Factory with one production conversation boundary",
@@ -74,7 +74,7 @@ def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:
 
 
 def test_workflow_and_environment_match_openhands_subscription_boundary() -> None:
-    workflow = AI_WORKFLOW.read_text(encoding="utf-8")
+    workflow = " ".join(AI_WORKFLOW.read_text(encoding="utf-8").split())
     environment = ENV_EXAMPLE.read_text(encoding="utf-8")
 
     for marker in (
