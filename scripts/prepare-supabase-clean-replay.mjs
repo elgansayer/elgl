@@ -7,6 +7,13 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, join } from 'node:path';
+import { compatibilityShims } from '../supabase/clean-replay-compat.mjs';
+import { schemaCompatibilityShims } from '../supabase/clean-replay-compat-schema.mjs';
+
+const replayCompatibilityShims = [
+  ...compatibilityShims,
+  ...schemaCompatibilityShims,
+];
 
 const [sourceDirectory, outputDirectory, manifestPath] = process.argv.slice(2);
 
@@ -29,78 +36,19 @@ if (files.length === 0) {
 // Deployed migration files are append-only, but the historical corpus contains
 // a small number of ordering/schema assumptions that make a clean replay
 // impossible. CI keeps every source migration byte-for-byte and inserts only
-// explicit, narrowly-scoped compatibility shims. Each shim is hashed and listed
-// in the replay manifest so the normalized history is reviewable rather than
-// silently rewritten.
-const compatibilityShims = [
-  {
-    beforeSourceFile: '014_chat_rooms_table.sql',
-    name: 'remove_legacy_local_chat_rooms_placeholder',
-    reason:
-      '008_local_dev_seed_tables.sql defines chat_rooms.id as TEXT; 014_chat_rooms_table.sql establishes the production UUID contract.',
-    sql: `DO $$
-DECLARE
-  existing_id_type text;
-BEGIN
-  IF to_regclass('public.chat_rooms') IS NOT NULL THEN
-    SELECT format_type(attribute.atttypid, attribute.atttypmod)
-      INTO existing_id_type
-      FROM pg_attribute AS attribute
-      WHERE attribute.attrelid = 'public.chat_rooms'::regclass
-        AND attribute.attname = 'id'
-        AND NOT attribute.attisdropped;
-
-    IF existing_id_type = 'text' THEN
-      DROP TABLE public.chat_rooms;
-    END IF;
-  END IF;
-END
-$$;
-`,
-  },
-  {
-    beforeSourceFile: '20260807000001_create_audio_room_notes.sql',
-    name: 'add_audio_rooms_is_archived_before_notes_policy',
-    reason:
-      '20260807000001_create_audio_room_notes.sql references audio_rooms.is_archived before the historical migration corpus defines that column; the forward migration later in the corpus makes the contract explicit for deployed databases.',
-    sql: `ALTER TABLE public.audio_rooms
-  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
-`,
-  },
-  {
-    beforeSourceFile: '20260807143544_review_rls_srs_flashcards.sql',
-    name: 'materialize_typeorm_flashcard_decks_before_rls_review',
-    reason:
-      'The RLS review expects decks and deck_flashcards created by backend/src/database/migrations/20260801000000-create-flashcard-decks.ts, which is outside the Supabase SQL migration corpus. The forward SQL migration later in the corpus consolidates that schema contract for deployed databases.',
-    sql: `CREATE TABLE IF NOT EXISTS public.decks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  colour TEXT DEFAULT '#6366f1',
-  icon TEXT DEFAULT '📚',
-  card_count INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_decks_user_id ON public.decks(user_id);
-
-CREATE TABLE IF NOT EXISTS public.deck_flashcards (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  deck_id UUID NOT NULL REFERENCES public.decks(id) ON DELETE CASCADE,
-  flashcard_id UUID NOT NULL REFERENCES public.flashcards(id) ON DELETE CASCADE,
-  added_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(deck_id, flashcard_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_deck_flashcards_deck_id
-  ON public.deck_flashcards(deck_id);
-CREATE INDEX IF NOT EXISTS idx_deck_flashcards_flashcard_id
-  ON public.deck_flashcards(flashcard_id);
-`,
-  },
-];
+// explicit, narrowly-scoped compatibility shims from the canonical compatibility
+// modules. Every shim is hashed and listed in the replay manifest so normalized
+// history remains reviewable rather than silently rewritten.
+const shimNames = new Set();
+for (const shim of replayCompatibilityShims) {
+  if (!shim.beforeSourceFile || !shim.name || !shim.reason || !shim.sql) {
+    throw new Error('Every clean-replay compatibility shim must define target, name, reason, and SQL');
+  }
+  if (shimNames.has(shim.name)) {
+    throw new Error(`Duplicate clean-replay compatibility shim name: ${shim.name}`);
+  }
+  shimNames.add(shim.name);
+}
 
 const sourceIds = new Map();
 const sourceEntries = files.map((file) => {
@@ -127,6 +75,18 @@ const sourceEntries = files.map((file) => {
   };
 });
 
+const missingShimTargets = replayCompatibilityShims.filter(
+  ({ beforeSourceFile }) =>
+    !sourceEntries.some(({ sourceFile }) => sourceFile === beforeSourceFile),
+);
+if (missingShimTargets.length > 0) {
+  throw new Error(
+    `Compatibility shim target(s) missing: ${missingShimTargets
+      .map(({ beforeSourceFile }) => beforeSourceFile)
+      .join(', ')}`,
+  );
+}
+
 const replayEntries = [];
 const shimEntries = [];
 let replayOrder = 0;
@@ -142,7 +102,7 @@ const nextReplayIdentity = (suffix) => {
 };
 
 for (const sourceEntry of sourceEntries) {
-  for (const shim of compatibilityShims.filter(
+  for (const shim of replayCompatibilityShims.filter(
     ({ beforeSourceFile }) => beforeSourceFile === sourceEntry.sourceFile,
   )) {
     const identity = nextReplayIdentity(`compat_${shim.name}`);
@@ -161,17 +121,6 @@ for (const sourceEntry of sourceEntries) {
     ...nextReplayIdentity(basename(sourceEntry.sourceFile, '.sql')),
     ...sourceEntry,
   });
-}
-
-const missingShimTargets = compatibilityShims.filter(
-  ({ beforeSourceFile }) => !sourceEntries.some(({ sourceFile }) => sourceFile === beforeSourceFile),
-);
-if (missingShimTargets.length > 0) {
-  throw new Error(
-    `Compatibility shim target(s) missing: ${missingShimTargets
-      .map(({ beforeSourceFile }) => beforeSourceFile)
-      .join(', ')}`,
-  );
 }
 
 rmSync(outputDirectory, { recursive: true, force: true });
