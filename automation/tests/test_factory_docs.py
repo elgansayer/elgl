@@ -1,9 +1,11 @@
 from pathlib import Path
 
-RUNBOOK = Path(__file__).parents[2] / "docs" / "factory" / "README.md"
-EXECUTION_ARCHITECTURE = (
-    Path(__file__).parents[2] / "docs" / "factory" / "execution-architecture.md"
-)
+REPOSITORY = Path(__file__).parents[2]
+RUNBOOK = REPOSITORY / "docs" / "factory" / "README.md"
+EXECUTION_ARCHITECTURE = REPOSITORY / "docs" / "factory" / "execution-architecture.md"
+ACTIVE_ARCHITECTURE = REPOSITORY / "docs" / "factory" / "ACTIVE_ARCHITECTURE.md"
+AI_WORKFLOW = REPOSITORY / ".github" / "workflows" / "AI-WORKFLOW.md"
+ENV_EXAMPLE = REPOSITORY / "config" / "systemd" / "factory.env.example"
 
 OPERATOR_RECOVERY_COMMANDS = (
     "doctor --online",
@@ -38,3 +40,41 @@ def test_execution_architecture_locks_openhands_control_plane() -> None:
     assert direct_adapters in architecture
     assert "not production routing peers" in architecture
     assert "fails closed" in architecture
+
+
+def test_active_architecture_cannot_drift_back_to_direct_cli_routing() -> None:
+    architecture = ACTIVE_ARCHITECTURE.read_text(encoding="utf-8")
+
+    required_contract = (
+        "OpenHands Agent Canvas Factory",
+        "FACTORY_ARCHITECTURE=openhands-agent-canvas-v1",
+        "OpenAI subscription / Codex OAuth",
+        "OpenCode Go",
+        "CI / required",
+        "factory/independent-review",
+        "Terminal issue quarantine is not the production recovery strategy",
+        "Dependency upgrades that change",
+        "migration-specific acceptance criteria",
+    )
+    for marker in required_contract:
+        assert marker in architecture
+
+    retired_runtime_claims = (
+        "Subscription-First CLI Orchestrator",
+        "caveman claude",
+        "meta_agent.py",
+    )
+    for marker in retired_runtime_claims:
+        assert marker not in architecture
+
+
+def test_workflow_and_environment_match_the_authoritative_provider_chain() -> None:
+    workflow = AI_WORKFLOW.read_text(encoding="utf-8")
+    environment = ENV_EXAMPLE.read_text(encoding="utf-8")
+
+    assert "OpenAI subscription/Codex OAuth -> OpenCode Go" in workflow
+    assert "Gemini free tier" not in workflow
+    assert "Three consecutive failures quarantine" not in workflow
+    assert "FACTORY_ARCHITECTURE=openhands-agent-canvas-v1" in environment
+    assert "GEMINI_ENABLED=false" in environment
+    assert "Codex via OpenHands subscription OAuth -> OpenCode Go only" in environment
