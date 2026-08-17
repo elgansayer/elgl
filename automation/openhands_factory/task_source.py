@@ -84,6 +84,21 @@ class TaskStore:
             tasks.append(Task(**{**item, "triage_tags": frozenset(tags)}))
         return tasks
 
+    def _task_key(self, task_or_id: Task | str) -> str:
+        """Resolve an object identifier to its stable logical lease identity.
+
+        Existing callers release/renew by GitHub identifier, so resolve through the
+        cached backlog. If no cached task exists, retain the legacy identifier. That
+        fallback lets old lease state be pruned or released during rolling upgrades.
+        """
+
+        if isinstance(task_or_id, Task):
+            return task_or_id.logical_key
+        for task in self.cached():
+            if task.identifier == task_or_id:
+                return task.logical_key
+        return task_or_id
+
     def leases(self, now: datetime | None = None) -> dict[str, Lease]:
         current = now or datetime.now(UTC)
         payload = read_json(self.lease_path, {"leases": []})
@@ -98,52 +113,60 @@ class TaskStore:
                     or generation in {"unknown", self.factory_generation}
                 )
             ):
-                leases[item["task_id"]] = Lease(
-                    task_id=item["task_id"],
+                task_id = str(item["task_id"])
+                task_key = str(item.get("task_key") or self._task_key(task_id))
+                leases[task_key] = Lease(
+                    task_id=task_id,
                     owner=item["owner"],
                     acquired_at=datetime.fromisoformat(item["acquired_at"]),
                     expires_at=expires,
                     factory_generation=generation,
+                    task_key=task_key,
                 )
         return leases
 
     def select(self, tasks: list[Task] | None = None) -> Task | None:
         candidates = tasks if tasks is not None else self.cached()
         leased = self.leases()
-        available = [task for task in candidates if task.identifier not in leased]
+        available = [task for task in candidates if task.logical_key not in leased]
         return min(available, key=lambda task: (task.priority, task.identifier), default=None)
 
     def acquire(self, task: Task, owner: str, now: datetime | None = None) -> Lease:
-        """Atomically claim a task, idempotently for the existing owner."""
+        """Atomically claim a logical task, idempotently for the existing owner."""
 
         current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
             self._assert_generation_current()
             leases = self.leases(current)
-            existing = leases.get(task.identifier)
+            task_key = task.logical_key
+            existing = leases.get(task_key)
             if existing is not None:
                 if existing.owner == owner:
                     return existing
-                raise ValueError(f"Task {task.identifier} already has an active lease")
+                raise ValueError(
+                    f"Logical task {task_key} already has an active lease for {existing.task_id}"
+                )
             lease = Lease(
                 task_id=task.identifier,
                 owner=owner,
                 acquired_at=current,
                 expires_at=current + timedelta(minutes=self.lease_minutes),
                 factory_generation=self.factory_generation,
+                task_key=task_key,
             )
-            leases[task.identifier] = lease
+            leases[task_key] = lease
             self._write_leases(leases)
             return lease
 
     def renew(self, task_id: str, owner: str, now: datetime | None = None) -> Lease:
-        """Renew an active lease only when the durable owner still matches."""
+        """Renew an active lease only when the durable logical owner still matches."""
 
         current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
             self._assert_generation_current()
             leases = self.leases(current)
-            existing = leases.get(task_id)
+            task_key = self._task_key(task_id)
+            existing = leases.get(task_key)
             if existing is None:
                 raise ValueError(f"Task {task_id} does not have an active lease")
             if existing.owner != owner:
@@ -156,8 +179,9 @@ class TaskStore:
                 acquired_at=existing.acquired_at,
                 expires_at=current + timedelta(minutes=self.lease_minutes),
                 factory_generation=self.factory_generation,
+                task_key=task_key,
             )
-            leases[task_id] = renewed
+            leases[task_key] = renewed
             self._write_leases(leases)
             return renewed
 
@@ -165,7 +189,7 @@ class TaskStore:
         with self._lease_lock, self._exclusive_lease_file_lock():
             self._assert_generation_current()
             leases = self.leases()
-            leases.pop(task_id, None)
+            leases.pop(self._task_key(task_id), None)
             self._write_leases(leases)
 
     def prune_expired_leases(self, now: datetime | None = None) -> list[str]:
@@ -182,16 +206,19 @@ class TaskStore:
                     self.factory_generation == "unknown"
                     or generation in {"unknown", self.factory_generation}
                 )
+                task_id = str(item["task_id"])
+                task_key = str(item.get("task_key") or self._task_key(task_id))
                 if expires > current and same_generation:
-                    active[item["task_id"]] = Lease(
-                        task_id=item["task_id"],
+                    active[task_key] = Lease(
+                        task_id=task_id,
                         owner=item["owner"],
                         acquired_at=datetime.fromisoformat(item["acquired_at"]),
                         expires_at=expires,
                         factory_generation=generation,
+                        task_key=task_key,
                     )
                 else:
-                    expired.append(item["task_id"])
+                    expired.append(task_id)
             self._write_leases(active)
             return sorted(expired, key=lambda identifier: (not identifier.isdigit(), identifier))
 
@@ -202,6 +229,7 @@ class TaskStore:
                 "leases": [
                     {
                         "task_id": item.task_id,
+                        "task_key": item.task_key or self._task_key(item.task_id),
                         "owner": item.owner,
                         "acquired_at": item.acquired_at.isoformat(),
                         "expires_at": item.expires_at.isoformat() if item.expires_at else None,
