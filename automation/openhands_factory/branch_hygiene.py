@@ -426,9 +426,7 @@ def delete_safe_branches(
             detail = (result.stderr or result.stdout).strip()[-2000:]
             if _cleanup_race(detail):
                 continue
-            raise FactoryError(
-                f"Branch hygiene command failed: {' '.join(arguments)}: {detail}"
-            )
+            raise FactoryError(f"Branch hygiene command failed: {' '.join(arguments)}: {detail}")
         deleted.append(record.name)
     return tuple(deleted)
 
