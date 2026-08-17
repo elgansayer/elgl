@@ -1,8 +1,8 @@
-"""Read-only classification for remote branch hygiene.
+"""Deterministic audit and conservative cleanup for remote branch hygiene.
 
-This module intentionally never mutates remote branches or opens pull requests. It gives
-operators and later garbage-collection code a deterministic inventory first, so cleanup
-can be enabled only after branch intent has been classified and tested.
+Auditing is read-only by default. Explicit cleanup deletes only branch tips that are
+provably already reachable from the base branch and are not protected, provider-managed,
+or attached to an open pull request. Orphans and closed-unmerged work are never deleted.
 """
 
 from __future__ import annotations
@@ -54,6 +54,10 @@ class BranchAudit:
         counts = Counter(record.classification.value for record in self.branches)
         return dict(sorted(counts.items()))
 
+    @property
+    def safe_deletion_candidates(self) -> tuple[str, ...]:
+        return tuple(record.name for record in safe_deletion_candidates(self))
+
     def to_json(self) -> str:
         return json.dumps(
             {
@@ -61,6 +65,7 @@ class BranchAudit:
                 "base_branch": self.base_branch,
                 "generated_at": self.generated_at,
                 "counts": self.counts,
+                "safe_deletion_candidates": self.safe_deletion_candidates,
                 "branches": [asdict(record) for record in self.branches],
             },
             indent=2,
@@ -299,6 +304,42 @@ def classify_branch(
     )
 
 
+def safe_deletion_candidates(audit: BranchAudit) -> tuple[BranchRecord, ...]:
+    """Return only branches whose exact tip is already contained in the base.
+
+    A merged PR is not enough on its own because squash/rebase merges can leave commits
+    that are not ancestors of the base, and a branch may have received new commits after
+    its PR merged. Requiring ``ahead_by == 0`` makes deletion deliberately conservative.
+    Closed-unmerged and orphan branches are never cleanup candidates.
+    """
+
+    safe_classes = {BranchClassification.MERGED, BranchClassification.INTEGRATED}
+    return tuple(
+        record
+        for record in audit.branches
+        if record.classification in safe_classes and record.ahead_by == 0
+    )
+
+
+def delete_safe_branches(
+    audit: BranchAudit,
+    workspace: Path,
+    *,
+    runner: ProcessRunner = run_process,
+) -> tuple[str, ...]:
+    """Delete only provably integrated remote branches from an existing audit."""
+
+    deleted: list[str] = []
+    for record in safe_deletion_candidates(audit):
+        _run_checked(
+            runner,
+            ("git", "push", "origin", "--delete", "--", record.name),
+            workspace,
+        )
+        deleted.append(record.name)
+    return tuple(deleted)
+
+
 def audit_branches(
     repository: str,
     workspace: Path,
@@ -332,7 +373,9 @@ def audit_branches(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Audit remote branches without mutating GitHub")
+    parser = argparse.ArgumentParser(
+        description="Audit remote branches and optionally delete only provably integrated tips"
+    )
     parser.add_argument("--repository", required=True, help="owner/name repository")
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     parser.add_argument("--base", default="main", dest="base_branch")
@@ -341,6 +384,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="exit non-zero when genuine orphan branches are found",
     )
+    parser.add_argument(
+        "--delete-safe",
+        action="store_true",
+        help=(
+            "delete only merged/integrated branches whose exact tip has zero commits "
+            "ahead of the base; never deletes open-PR, orphan, or closed-unmerged work"
+        ),
+    )
     arguments = parser.parse_args(argv)
     audit = audit_branches(
         arguments.repository,
@@ -348,6 +399,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         base_branch=arguments.base_branch,
     )
     print(audit.to_json())
+    if arguments.delete_safe:
+        deleted = delete_safe_branches(audit, arguments.workspace)
+        for branch in deleted:
+            print(f"deleted-safe-branch: {branch}")
     if arguments.fail_on_orphans and any(
         record.classification is BranchClassification.ORPHAN for record in audit.branches
     ):
