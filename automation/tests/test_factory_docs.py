@@ -45,17 +45,18 @@ def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:
     architecture = ACTIVE_ARCHITECTURE.read_text(encoding="utf-8")
 
     required_contract = (
-        "OpenHands Factory with interchangeable agents",
+        "OpenHands Factory with one production conversation boundary",
         "FACTORY_ARCHITECTURE=openhands-agent-canvas-v1",
         "AgentRouter",
-        "Claude CLI",
-        "Codex CLI",
-        "OpenCode CLI",
-        "OpenHands SDK adapter",
+        "OpenHands SDK",
+        "OpenAI subscription-backed Codex OAuth",
+        "OpenCode Go subscription fallback",
+        "Google/Gemini is disabled",
+        "Direct CLI outer adapters",
         "CI / required",
         "factory/independent-review",
-        "A repeated identical task-side failure opens a durable, recoverable quarantine",
-        "Any change to provider order",
+        "Repeated identical task-side failures may open the durable recoverable task circuit",
+        "Any change to the production conversation boundary",
     )
     for marker in required_contract:
         assert marker in architecture
@@ -63,6 +64,7 @@ def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:
     retired_runtime_claims = (
         "caveman claude",
         "separate self-patching meta-agent",
+        "Emergency-only OpenHands remains behind",
     )
     for marker in retired_runtime_claims:
         assert marker not in architecture
