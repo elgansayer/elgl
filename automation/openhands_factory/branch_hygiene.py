@@ -319,21 +319,116 @@ def safe_deletion_candidates(audit: BranchAudit) -> tuple[BranchRecord, ...]:
     )
 
 
+def _open_pull_request_numbers(
+    runner: ProcessRunner,
+    workspace: Path,
+    repository: str,
+    branch: str,
+) -> tuple[int, ...]:
+    """Re-check live PR ownership immediately before deleting a branch."""
+
+    output = _run_checked(
+        runner,
+        (
+            "gh",
+            "pr",
+            "list",
+            "--repo",
+            repository,
+            "--state",
+            "open",
+            "--head",
+            branch,
+            "--limit",
+            "20",
+            "--json",
+            "number",
+        ),
+        workspace,
+    )
+    decoded = cast(list[object], json.loads(output))
+    numbers: list[int] = []
+    for item in decoded:
+        if not isinstance(item, dict):
+            continue
+        number = cast(dict[str, object], item).get("number")
+        if isinstance(number, int):
+            numbers.append(number)
+    return tuple(sorted(numbers))
+
+
+def _remote_branch_tip(
+    runner: ProcessRunner,
+    workspace: Path,
+    branch: str,
+) -> str | None:
+    """Return the current exact remote tip, or None when another actor deleted it."""
+
+    ref = f"refs/heads/{branch}"
+    output = _run_checked(
+        runner,
+        ("git", "ls-remote", "--heads", "origin", ref),
+        workspace,
+    ).strip()
+    if not output:
+        return None
+    lines = output.splitlines()
+    if len(lines) != 1:
+        raise FactoryError(f"Unexpected remote branch lookup for {branch}: {output!r}")
+    fields = lines[0].split()
+    if len(fields) != 2 or fields[1] != ref:
+        raise FactoryError(f"Unexpected remote branch lookup for {branch}: {output!r}")
+    return fields[0]
+
+
+def _cleanup_race(detail: str) -> bool:
+    normalized = detail.lower()
+    return "stale info" in normalized or "remote ref does not exist" in normalized
+
+
 def delete_safe_branches(
     audit: BranchAudit,
     workspace: Path,
     *,
     runner: ProcessRunner = run_process,
 ) -> tuple[str, ...]:
-    """Delete only provably integrated remote branches from an existing audit."""
+    """Delete only still-unowned, unchanged, provably integrated remote branches.
+
+    The audit is a snapshot. A branch can acquire a new PR owner, move to a new commit,
+    or disappear between that snapshot and cleanup. Re-check ownership and the remote tip,
+    then bind deletion to the audited SHA with ``--force-with-lease`` so stale cleanup can
+    never delete commits that arrived after the audit.
+    """
 
     deleted: list[str] = []
     for record in safe_deletion_candidates(audit):
-        _run_checked(
+        if _open_pull_request_numbers(
             runner,
-            ("git", "push", "origin", "--delete", "--", record.name),
             workspace,
+            audit.repository,
+            record.name,
+        ):
+            continue
+        remote_tip = _remote_branch_tip(runner, workspace, record.name)
+        if remote_tip is None or remote_tip != record.sha:
+            continue
+
+        ref = f"refs/heads/{record.name}"
+        arguments = (
+            "git",
+            "push",
+            f"--force-with-lease={ref}:{record.sha}",
+            "origin",
+            f":{ref}",
         )
+        result = runner(arguments, workspace)
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()[-2000:]
+            if _cleanup_race(detail):
+                continue
+            raise FactoryError(
+                f"Branch hygiene command failed: {' '.join(arguments)}: {detail}"
+            )
         deleted.append(record.name)
     return tuple(deleted)
 
