@@ -4,8 +4,8 @@ from pathlib import Path
 
 from openhands_factory.models import CircuitState, FailureKind, ProviderName
 from openhands_factory.provider_health import (
-    CircuitBreaker,
     MAX_RETRY_AFTER_SECONDS,
+    CircuitBreaker,
     ProviderHealthStore,
     classify_failure,
     extract_retry_after_seconds,
