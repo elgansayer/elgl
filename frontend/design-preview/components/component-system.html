@@ -25,8 +25,12 @@
       .dialog-body { display: grid; gap: 0.75rem; }
       .dialog-body label { display: grid; gap: 0.375rem; }
       .dialog-footer { justify-content: end; border-block-start: 1px solid ButtonBorder; }
+      .celebration-stage { display: grid; place-items: center; gap: 0.75rem; min-block-size: 14rem; padding: 1rem; border-radius: 1rem; background: color-mix(in srgb, CanvasText 40%, transparent); }
+      .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
+      .celebration-card .gift { display: block; font-size: 3rem; }
+      .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -69,6 +73,18 @@
             </div>
             <div class="dialog-footer"><button>Cancel</button><button>Launch stage</button></div>
           </div>
+        </div>
+      </section>
+      <section>
+        <h2>Gift notification overlay</h2>
+        <p>Gift celebrations remain non-modal live notifications. Relay owns the celebratory surface and scrim, while the single dismiss action stays a 44px Spartan button with a translated accessible name. Reduced-motion mode keeps the message and action while suppressing decorative animation.</p>
+        <div class="celebration-stage" role="alert" aria-live="polite" aria-label="Mina sent a rose to Alex">
+          <div class="celebration-card">
+            <span class="gift" aria-hidden="true">🌹</span>
+            <strong>Rose sent!</strong>
+            <p>Mina sent a rose to Alex.</p>
+          </div>
+          <button class="icon-control" aria-label="Close">×</button>
         </div>
       </section>
       <section dir="rtl">
