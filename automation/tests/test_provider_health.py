@@ -113,7 +113,9 @@ def test_invalid_persisted_state_fails_closed_for_one_bounded_cooldown(tmp_path:
     assert breaker.permits_call(now + timedelta(seconds=301))
 
 
-def test_corrupt_open_timestamp_restarts_cooldown_instead_of_wedging_provider(tmp_path: Path) -> None:
+def test_corrupt_open_timestamp_restarts_cooldown_instead_of_wedging_provider(
+    tmp_path: Path,
+) -> None:
     now = datetime(2026, 8, 17, 1, 0, tzinfo=UTC)
     path = tmp_path / "health.json"
     path.write_text(
