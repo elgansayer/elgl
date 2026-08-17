@@ -183,29 +183,11 @@ CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON public.poll_votes(user_id);
   },
   {
     beforeSourceFile: '20260808000001_optimise_escrow_indices.sql',
-    name: 'materialize_backend_escrow_transactions_before_index_optimisation',
+    name: 'add_escrow_reference_id_before_index_optimisation',
     reason:
-      'The escrow index migration operates on escrow_transactions created by backend/src/database/migrations/20260807000001-create-escrow-transactions.sql, which is outside the Supabase SQL corpus. This shim mirrors that migration before the Supabase optimisation and RLS policy are applied.',
-    sql: `CREATE TABLE IF NOT EXISTS public.escrow_transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  payer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  payee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  amount_coins INTEGER NOT NULL CHECK (amount_coins > 0),
-  status TEXT NOT NULL DEFAULT 'held' CHECK (status IN ('held', 'released', 'refunded', 'disputed')),
-  description TEXT,
-  reference_id TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  released_at TIMESTAMPTZ,
-  refunded_at TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payer
-  ON public.escrow_transactions(payer_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payee
-  ON public.escrow_transactions(payee_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_escrow_transactions_status
-  ON public.escrow_transactions(status, created_at DESC);
+      '20260807000000_create_escrow_transactions.sql creates escrow_transactions in the Supabase corpus without reference_id, while 20260808000001_optimise_escrow_indices.sql immediately indexes that column. Add only the missing idempotency-reference column before replaying the optimiser; the optimiser itself adds expires_at.',
+    sql: `ALTER TABLE public.escrow_transactions
+  ADD COLUMN IF NOT EXISTS reference_id TEXT;
 `,
   },
 ];
