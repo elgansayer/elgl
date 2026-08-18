@@ -46,10 +46,14 @@ export class DataStorageService {
         const cacheNames = await caches.keys();
         for (const cacheName of cacheNames) {
           const cache = await caches.open(cacheName);
-          const requests = await cache.keys();
-          for (const request of requests) {
-            const response = await cache.match(request);
-            if (response) {
+          // ⚡ Bolt Optimization: Use cache.matchAll() to fetch all responses concurrently
+          // and check Content-Length header before falling back to blob() to avoid memory allocation overhead
+          const responses = await cache.matchAll();
+          for (const response of responses) {
+            const contentLength = response.headers.get('Content-Length');
+            if (contentLength) {
+              total += parseInt(contentLength, 10);
+            } else {
               const blob = await response.clone().blob();
               total += blob.size;
             }
