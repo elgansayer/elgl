@@ -9,8 +9,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-coins-success',
   imports: [TranslatePipe, RouterLink, ...HlmButtonImports],
   template: `
-    <div class="flex min-h-screen items-center justify-center bg-surface-500 px-4">
-      <div class="w-full max-w-md text-center">
+    <div
+      class="flex min-h-screen items-center justify-center bg-surface-500 px-4 py-6 sm:px-6 sm:py-10 lg:px-8"
+    >
+      <div
+        class="w-full max-w-md rounded-card border border-surface-100 bg-surface-200 px-5 py-8 text-center shadow-card sm:px-8 sm:py-10 lg:px-10 lg:py-12"
+      >
         <div class="mb-6 text-5xl sm:text-6xl" aria-hidden="true">
           {{ status() === 'failed' ? '😕' : '🎉' }}
         </div>
@@ -27,7 +31,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             ) | t
           }}
         </p>
-        <a hlmBtn size="touch" routerLink="/dashboard">
+        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/dashboard">
           {{ 'coinsSuccess.dashboardBtn' | t }}
         </a>
       </div>
