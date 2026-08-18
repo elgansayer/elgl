@@ -47,7 +47,10 @@ interface MentionSuggestion {
 
 @Component({
   selector: 'app-moments-feed',
-  imports: [HlmTextarea, HlmInput, HlmButton,
+  imports: [
+    HlmTextarea,
+    HlmInput,
+    HlmButton,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -551,7 +554,7 @@ export class MomentsFeedComponent {
 
   quoteTextToComment(moment: MomentRecord, text: string): void {
     const existing = this.commentInputMap[moment.id] || '';
-    this.commentInputMap[moment.id] = `\"> ${text}\"\n` + existing;
+    this.commentInputMap[moment.id] = `"> ${text}"\n` + existing;
     const map = new Set(this.openCommentsMap());
     map.add(moment.id);
     this.openCommentsMap.set(map);
