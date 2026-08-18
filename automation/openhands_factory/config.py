@@ -364,6 +364,11 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    # Zero preserves the historical unlimited admission behaviour. Production can
+    # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
+    # allowing in-flight implementation, review, CI repair, and PR work to continue.
+    new_issue_interval_seconds: int = 0
+    new_issues_per_interval: int = 1
     label_reconciliation_batch_size: int = 25
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
@@ -400,6 +405,7 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
         "gemini_max_concurrent_conversations",
@@ -410,6 +416,13 @@ class FactoryConfig(BaseModel):
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("new_issue_interval_seconds")
+    @classmethod
+    def non_negative_issue_interval(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("new issue interval cannot be negative")
         return value
 
     @field_validator("label_reconciliation_batch_size")
@@ -546,6 +559,8 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
+                new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
                 label_reconciliation_batch_size=int(
                     env.get("FACTORY_LABEL_RECONCILIATION_BATCH_SIZE", "25")
                 ),

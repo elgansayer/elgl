@@ -125,6 +125,22 @@ Provider exhaustion does not consume a task attempt. The job remains in its curr
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
 rotation. Persisted failure classes and deterministic jittered backoff remain authoritative across restart.
 
+### New-issue admission cadence
+
+Production admits one newly discovered GitHub issue per hour through:
+
+```text
+FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
+```
+
+This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
+and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; implementation, security review,
+verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
+review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
+admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
+
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
 job, preventing one difficult task from growing durable state without bound.
