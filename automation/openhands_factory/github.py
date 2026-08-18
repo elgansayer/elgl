@@ -517,14 +517,18 @@ class GitHubClient:
         )
         return sorted(int(item["number"]) for item in json.loads(output))
 
-    def requeue_quarantined_issues(self, issues: list[int] | None = None) -> list[int]:
+    def requeue_quarantined_issues(
+        self,
+        issues: list[int] | None = None,
+        *,
+        announce: bool = True,
+    ) -> list[int]:
         """Clear a resolved-cause quarantine so an issue is eligible for a clean retry.
 
         Quarantine is a circuit breaker: it exists so a genuinely broken task cannot
-        loop forever, not to permanently withhold work. Once the operator has fixed the
-        systemic cause (a bug, a stale collision with another pipeline), the affected
-        issues need to be moved back into the pool by hand, since only a human can judge
-        that the cause is actually resolved.
+        loop forever, not to permanently withhold work. Automatic bounded recovery uses
+        this operation without comments after its cooldown. Operators can also use it
+        for an earlier targeted reset after fixing a known systemic cause.
         """
         requeued: list[int] = []
         for issue in sorted(set(issues if issues is not None else self.list_quarantined_issues())):
@@ -534,12 +538,13 @@ class GitHubClient:
             )
             if self.require_ready_label:
                 self.add_issue_labels(issue, (self.ready_label,))
-            self.add_comment(
-                issue,
-                "Clearing the quarantine labels on this issue after an operator "
-                "confirmed the underlying cause is resolved. It is eligible for a "
-                "clean retry.",
-            )
+            if announce:
+                self.add_comment(
+                    issue,
+                    "Clearing the quarantine labels on this issue after an operator "
+                    "confirmed the underlying cause is resolved. It is eligible for a "
+                    "clean retry.",
+                )
             requeued.append(issue)
         return requeued
 

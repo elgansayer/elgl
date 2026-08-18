@@ -38,6 +38,26 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_quarantine_recovery_cli_is_targetable_and_quiet_by_default() -> None:
+    defaults = cli.parser().parse_args(["backlog", "requeue-quarantined"])
+    selected = cli.parser().parse_args(
+        [
+            "backlog",
+            "requeue-quarantined",
+            "--issue",
+            "42",
+            "--issue",
+            "43",
+            "--announce",
+        ]
+    )
+
+    assert defaults.issue is None
+    assert defaults.announce is False
+    assert selected.issue == [42, 43]
+    assert selected.announce is True
+
+
 def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
 
