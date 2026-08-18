@@ -49,6 +49,14 @@
         <p>Navigation actions remain native anchors while composing the same Helm button primitive and focus treatment as command buttons.</p>
         <div class="row"><button>Primary</button><button>Secondary</button><button disabled>Disabled</button><a class="action-link" href="#fields">Navigation action</a></div>
       </section>
+      <section aria-labelledby="device-lock-interaction-title">
+        <h2 id="device-lock-interaction-title">Device lock interaction</h2>
+        <p>The unlock action remains a native Spartan button. While platform authentication is active, the same action is disabled and exposes a busy state so repeated activation cannot start overlapping credential requests.</p>
+        <div class="row">
+          <button type="button">Unlock</button>
+          <button type="button" disabled aria-busy="true">Unlock</button>
+        </div>
+      </section>
       <section aria-labelledby="static-feedback-title" aria-describedby="static-feedback-message">
         <div aria-hidden="true">😕</div>
         <h2 id="static-feedback-title">Static feedback state</h2>
