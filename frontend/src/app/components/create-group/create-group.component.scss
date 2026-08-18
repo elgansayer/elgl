@@ -173,7 +173,7 @@
 }
 
 .create-btn {
-  @apply flex min-h-11 w-full items-center justify-center gap-2 rounded-pill bg-primary text-base font-bold text-on-fill transition-opacity duration-base ease-app sm:w-auto sm:min-w-56;
+  @apply flex min-h-11 w-full items-center justify-center gap-2 rounded-app bg-primary text-base font-bold text-on-fill transition-opacity duration-base ease-app sm:w-auto sm:min-w-56;
 
   &:hover:not(:disabled) {
     @apply opacity-90;
