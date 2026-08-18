@@ -1,0 +1,103 @@
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthService } from './auth.service';
+import { NlpRequestError, NlpService } from './nlp.service';
+
+const response = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...headers },
+  });
+
+describe('NlpService', () => {
+  let service: NlpService;
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  const authService = {
+    getAccessToken: vi.fn(() => 'access-token'),
+  };
+
+  beforeEach(() => {
+    authService.getAccessToken.mockReturnValue('access-token');
+    TestBed.configureTestingModule({
+      providers: [NlpService, { provide: AuthService, useValue: authService }],
+    });
+    service = TestBed.inject(NlpService);
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('posts the original and corrected text to the authenticated endpoint', async () => {
+    fetchSpy.mockResolvedValue(
+      response({
+        original: 'I has a cat',
+        corrected: 'I have a cat',
+        explanation: 'Use have with I.',
+      }),
+    );
+
+    const result = await service.explainGrammar({
+      original: '  I has a cat  ',
+      corrected: '  I have a cat  ',
+    });
+
+    expect(result.explanation).toBe('Use have with I.');
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/nlp\/explain-grammar$/);
+    expect(init.method).toBe('POST');
+    expect(init.cache).toBe('no-store');
+    expect(init.headers).toEqual({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer access-token',
+    });
+    expect(JSON.parse(String(init.body))).toEqual({
+      original: 'I has a cat',
+      corrected: 'I have a cat',
+    });
+  });
+
+  it('classifies rate-limit responses and preserves Retry-After', async () => {
+    fetchSpy.mockResolvedValue(response({ message: 'Too many requests' }, 429, { 'Retry-After': '17' }));
+
+    await expect(
+      service.explainGrammar({ original: 'wrong', corrected: 'right' }),
+    ).rejects.toMatchObject<NlpRequestError>({
+      kind: 'rate_limit',
+      status: 429,
+      retryAfterSeconds: 17,
+    });
+  });
+
+  it('rejects missing authentication before making a request', async () => {
+    authService.getAccessToken.mockReturnValue(null);
+
+    await expect(
+      service.explainGrammar({ original: 'wrong', corrected: 'right' }),
+    ).rejects.toMatchObject<NlpRequestError>({ kind: 'auth' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('treats blank or malformed explanation responses as empty', async () => {
+    fetchSpy.mockResolvedValue(
+      response({ original: 'wrong', corrected: 'right', explanation: '   ' }),
+    );
+
+    await expect(
+      service.explainGrammar({ original: 'wrong', corrected: 'right' }),
+    ).rejects.toMatchObject<NlpRequestError>({ kind: 'empty' });
+  });
+
+  it('passes cancellation to fetch', async () => {
+    const controller = new AbortController();
+    fetchSpy.mockResolvedValue(
+      response({ original: 'wrong', corrected: 'right', explanation: 'Reason' }),
+    );
+
+    await service.explainGrammar({ original: 'wrong', corrected: 'right' }, controller.signal);
+
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
+  });
+});
