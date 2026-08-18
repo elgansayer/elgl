@@ -104,11 +104,15 @@ describe('PasswordResetService', () => {
 
       await service.requestPasswordReset({ email: 'target@example.com' });
 
-      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(1, {
+      expect(
+        mockSupabaseClient.auth.admin.listUsers,
+      ).toHaveBeenNthCalledWith(1, {
         page: 1,
         perPage: 1000,
       });
-      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(2, {
+      expect(
+        mockSupabaseClient.auth.admin.listUsers,
+      ).toHaveBeenNthCalledWith(2, {
         page: 2,
         perPage: 1000,
       });
@@ -218,7 +222,9 @@ describe('PasswordResetService', () => {
       ).rejects.toThrow(BadRequestException);
 
       const storedToken = insertChain.insert.mock.calls[0][0].token;
-      expect(deliveryInvalidationChain.update).toHaveBeenCalledWith({ used: true });
+      expect(deliveryInvalidationChain.update).toHaveBeenCalledWith({
+        used: true,
+      });
       expect(deliveryInvalidationChain.eq).toHaveBeenCalledWith(
         'token',
         storedToken,
@@ -227,9 +233,10 @@ describe('PasswordResetService', () => {
   });
 
   describe('resetPassword', () => {
-    const createClaimChain = (
-      result: { data: { user_id: string } | null; error: unknown },
-    ) => ({
+    const createClaimChain = (result: {
+      data: { user_id: string } | null;
+      error: unknown;
+    }) => ({
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       gt: vi.fn().mockReturnThis(),
@@ -254,7 +261,9 @@ describe('PasswordResetService', () => {
         'expires_at',
         expect.any(String),
       );
-      expect(mockSupabaseClient.auth.admin.updateUserById).not.toHaveBeenCalled();
+      expect(
+        mockSupabaseClient.auth.admin.updateUserById,
+      ).not.toHaveBeenCalled();
     });
 
     it('claims the SHA-256 digest before changing the password', async () => {
@@ -312,7 +321,9 @@ describe('PasswordResetService', () => {
         }),
       ).rejects.toThrow(UnauthorizedException);
 
-      expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledTimes(1);
+      expect(
+        mockSupabaseClient.auth.admin.updateUserById,
+      ).toHaveBeenCalledTimes(1);
       expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
         'user-abc',
         { password: 'firstPass123!' },
@@ -332,7 +343,9 @@ describe('PasswordResetService', () => {
           newPassword: 'newPass123!',
         }),
       ).rejects.toThrow(UnauthorizedException);
-      expect(mockSupabaseClient.auth.admin.updateUserById).not.toHaveBeenCalled();
+      expect(
+        mockSupabaseClient.auth.admin.updateUserById,
+      ).not.toHaveBeenCalled();
     });
 
     it('throws when password update fails after the token is claimed', async () => {

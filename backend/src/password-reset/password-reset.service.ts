@@ -42,7 +42,9 @@ export class PasswordResetService {
 
       if (listError) {
         this.logger.error('Failed to query accounts for password reset');
-        throw new BadRequestException('Failed to process password reset request');
+        throw new BadRequestException(
+          'Failed to process password reset request',
+        );
       }
 
       const users = pageData?.users ?? [];
@@ -106,7 +108,9 @@ export class PasswordResetService {
         .eq('token', tokenHash);
 
       if (invalidateError) {
-        this.logger.error('Failed to invalidate undelivered password reset token');
+        this.logger.error(
+          'Failed to invalidate undelivered password reset token',
+        );
       }
       this.logger.error('Failed to dispatch password reset email');
       throw new BadRequestException('Failed to dispatch password reset email');

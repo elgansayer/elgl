@@ -1,6 +1,5 @@
 import type { Mock } from 'vitest';
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 
 vi.mock('nodemailer', () => ({
