@@ -244,6 +244,7 @@ class FactoryPipeline:
             metrics_store=MetricsStore(config.state_dir / "metrics.json"),
         )
         self.labels_ready = False
+        self.active_label_reconciliation_pending = True
         self.verification_slots = verification_slots
 
     def _workflow(
@@ -266,6 +267,8 @@ class FactoryPipeline:
             self.github.ensure_factory_labels()
             self._reconcile_quarantine_labels()
             self.labels_ready = True
+        if self.active_label_reconciliation_pending:
+            self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
@@ -347,6 +350,34 @@ class FactoryPipeline:
         """Request one control-label reconciliation before the next discovery read."""
 
         self.labels_ready = False
+        self.active_label_reconciliation_pending = True
+
+    def _reconcile_active_labels(self, protected_task_ids: set[str]) -> None:
+        """Repair one bounded batch of stale Factory ownership markers."""
+
+        jobs = self.jobs.load()
+        protected_numeric = {int(task_id) for task_id in protected_task_ids if task_id.isdigit()}
+        durable_active = protected_numeric | {
+            int(task_id)
+            for task_id, job in jobs.items()
+            if task_id.isdigit()
+            and job.task.source == "github-issue"
+            and (job.state not in {JobState.DISCOVERED, JobState.DONE, JobState.QUARANTINED})
+        }
+        labelled_active = set(self.github.list_active_issues())
+        stale_labels = sorted(labelled_active - durable_active)
+        batch = stale_labels[: self.config.label_reconciliation_batch_size]
+        if not batch:
+            self.active_label_reconciliation_pending = False
+            return
+
+        released = self.github.release_active_issues(batch)
+        self.active_label_reconciliation_pending = len(stale_labels) > len(released)
+        LOGGER.warning(
+            "Reconciled %d stale Factory ownership labels; %d remain in the current snapshot",
+            len(released),
+            max(len(stale_labels) - len(released), 0),
+        )
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()

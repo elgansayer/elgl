@@ -34,6 +34,9 @@ class GitHub:
         self.quarantined_issues: list[int] = []
         self.requeued_quarantines: list[tuple[list[int], bool]] = []
         self.quarantine_list_calls = 0
+        self.active_issues: list[int] = []
+        self.released_active_issues: list[list[int]] = []
+        self.active_list_calls = 0
         self._next_issue_number = 200
 
     def ensure_factory_labels(self) -> None:
@@ -75,6 +78,17 @@ class GitHub:
         self.quarantined_issues = [
             issue for issue in self.quarantined_issues if issue not in selected
         ]
+        return selected
+
+    def list_active_issues(self, limit: int = 10_000) -> list[int]:
+        del limit
+        self.active_list_calls += 1
+        return list(self.active_issues)
+
+    def release_active_issues(self, issues: list[int]) -> list[int]:
+        selected = sorted(set(issues))
+        self.released_active_issues.append(selected)
+        self.active_issues = [issue for issue in self.active_issues if issue not in selected]
         return selected
 
     def add_comment(self, number: int, body: str) -> None:
@@ -350,6 +364,38 @@ def test_refresh_reconciles_labels_only_on_startup_or_explicit_request(tmp_path:
 
     assert github.quarantine_list_calls == 2
     assert github.requeued_quarantines == [([43], False)]
+
+
+def test_refresh_reconciles_stale_active_labels_in_bounded_batches(tmp_path: Path) -> None:
+    github = GitHub()
+    github.active_issues = [40, 41, 42]
+    factory_config = config(tmp_path).model_copy(update={"label_reconciliation_batch_size": 2})
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+
+    pipeline.refresh()
+    assert github.released_active_issues == [[40, 41]]
+    assert pipeline.active_label_reconciliation_pending
+
+    pipeline.refresh()
+    assert github.released_active_issues == [[40, 41], [42]]
+    assert not pipeline.active_label_reconciliation_pending
+
+    pipeline.refresh()
+    assert github.active_list_calls == 2
+
+
+def test_refresh_preserves_durable_and_protected_active_owners(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    durable = pipeline.jobs.reconcile(github.tasks)["42"]
+    durable.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(durable)
+    github.active_issues = [42, 43]
+
+    pipeline.refresh({"43"})
+
+    assert github.released_active_issues == []
+    assert github.active_issues == [42, 43]
 
 
 def test_refresh_releases_closed_issue_before_pull_request(

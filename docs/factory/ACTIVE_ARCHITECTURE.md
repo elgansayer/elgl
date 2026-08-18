@@ -130,7 +130,10 @@ durable state. `backlog requeue-quarantined`
 provides an earlier operator-selected reset, with repeatable `--issue` targeting and optional `--announce`
 comments. Historical quarantine entries without the new reason marker are migrated back into normal retry flow.
 Successful issue completion removes the Factory ownership label before closing the issue, preventing new stale
-`factory-active` markers from accumulating after merge.
+`factory-active` markers from accumulating after merge. Startup also compares open ownership labels with durable
+active jobs and protected workers, including retired `swarm-active` markers. It releases only a configured bounded
+batch per refresh, restoring the ready label to preserve admission and posting no comments, until historical drift
+reaches zero.
 
 ## GitHub operator panel
 
