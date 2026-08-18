@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   DestroyRef,
+  Injector,
   afterNextRender,
   inject,
   input,
@@ -93,6 +94,7 @@ export class LiveChatOverlayComponent implements OnInit {
   centrifugo = inject(CentrifugoService);
   i18n = inject(I18nService);
   destroyRef = inject(DestroyRef);
+  private injector = inject(Injector);
 
   messages = signal<LiveMessage[]>([]);
   channelName = '';
@@ -120,7 +122,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
       if (event.type === 'text') {
         this.addMessage({
-          id: event.id || Math.random().toString(36).substring(2),
+          id: event.id || crypto.randomUUID(),
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
@@ -150,14 +152,17 @@ export class LiveChatOverlayComponent implements OnInit {
   }
 
   scrollToBottom() {
-    afterNextRender(() => {
-      const el = this.scrollContainer()?.nativeElement;
-      if (el) {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    });
+    afterNextRender(
+      () => {
+        const el = this.scrollContainer()?.nativeElement;
+        if (el) {
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

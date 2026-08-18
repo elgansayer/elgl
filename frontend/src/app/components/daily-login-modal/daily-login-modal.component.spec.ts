@@ -22,6 +22,12 @@ describe('DailyLoginModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should generate a secure unique dialog title ID', () => {
+    expect(component.dialogTitleId).toMatch(
+      /^daily-login-title-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
   it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
     const componentHtml = fixture.nativeElement.innerHTML;
     expect(componentHtml).not.toMatch(/\bpl-\d/);

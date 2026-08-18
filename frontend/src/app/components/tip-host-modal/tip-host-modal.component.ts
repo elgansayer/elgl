@@ -164,9 +164,9 @@ export class TipHostModalComponent {
 
   readonly presetAmounts = signal<number[]>([10, 50, 100, 500]);
 
-  readonly titleId = 'tip-host-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'tip-host-subtitle-' + Math.random().toString(36).substring(2, 9);
-  readonly customAmountId = 'tip-host-custom-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'tip-host-title-' + crypto.randomUUID();
+  readonly subtitleId = 'tip-host-subtitle-' + crypto.randomUUID();
+  readonly customAmountId = 'tip-host-custom-' + crypto.randomUUID();
 
   selectAmount(amount: number): void {
     if (amount >= 1) {

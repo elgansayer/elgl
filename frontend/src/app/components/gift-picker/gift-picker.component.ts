@@ -191,8 +191,8 @@ export class GiftPickerComponent {
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly titleId = 'gift-picker-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'gift-picker-subtitle-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'gift-picker-title-' + crypto.randomUUID();
+  readonly subtitleId = 'gift-picker-subtitle-' + crypto.randomUUID();
 
   readonly effectiveBalance = computed(() => this.economyStore.coinsBalance() - this.deductedAmount());
 
