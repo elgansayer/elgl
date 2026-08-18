@@ -1,7 +1,7 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, resource } from '@angular/core';
+import { Component, inject, signal, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import {
@@ -128,6 +128,23 @@ export class NotificationPreferencesComponent {
   readonly quietStart = signal('');
   readonly quietEnd = signal('');
 
+  readonly activePrefsMasks = computed(() => {
+    const p = this.prefs();
+    const maskMap = new Map<NotificationCategory, number>();
+    if (!p) return maskMap;
+
+    for (const cat of this.categories()) {
+      const catPref = p[cat as keyof NotificationPreferences] as CategoryPreference;
+      if (catPref) {
+        let mask = 0;
+        if (catPref.push) mask |= 1;
+        if (catPref.badge) mask |= 2;
+        maskMap.set(cat, mask);
+      }
+    }
+    return maskMap;
+  });
+
   private readonly prefsResource = resource({
     loader: async () => {
       this.loading.set(true);
@@ -151,42 +168,10 @@ export class NotificationPreferencesComponent {
     this.prefsResource.reload();
   }
 
-  private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
-    const p = this.prefs();
-    if (!p) return undefined;
-    // explicit switch to avoid any / type assertion
-    switch (cat) {
-      case 'new_message':
-        return p.new_message;
-      case 'call_invite':
-        return p.call_invite;
-      case 'moment_like':
-        return p.moment_like;
-      case 'moment_comment':
-        return p.moment_comment;
-      case 'correction':
-        return p.correction;
-      case 'gift':
-        return p.gift;
-      case 'profile_view':
-        return p.profile_view;
-      case 'study_reminder':
-        return p.study_reminder;
-      case 'friend_request':
-        return p.friend_request;
-      case 'audio_room_invite':
-        return p.audio_room_invite;
-      case 'new_follower':
-        return p.new_follower;
-      default:
-        return undefined;
-    }
-  }
-
   channelEnabled(cat: NotificationCategory, ch: 'push' | 'badge'): boolean {
-    const cp = this.categoryPref(cat);
-    if (!cp) return false;
-    return cp[ch];
+    const mask = this.activePrefsMasks().get(cat) || 0;
+    const bit = ch === 'push' ? 1 : 2;
+    return (mask & bit) !== 0;
   }
 
   categoryLabel(cat: NotificationCategory): string {
@@ -198,7 +183,9 @@ export class NotificationPreferencesComponent {
   }
 
   toggle(cat: NotificationCategory, ch: 'push' | 'badge'): void {
-    const cp = this.categoryPref(cat);
+    const p = this.prefs();
+    if (!p) return;
+    const cp = p[cat as keyof NotificationPreferences] as CategoryPreference;
     if (!cp) return;
     const newVal = !cp[ch];
     this.service
