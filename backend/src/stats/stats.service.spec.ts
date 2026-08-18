@@ -86,14 +86,16 @@ describe('StatsService', () => {
         { duration_seconds: 3600, started_at: new Date().toISOString() },
         { duration_seconds: 1800, started_at: new Date().toISOString() },
       ];
+      let chatMessagesQueryCount = 0;
 
-      const callIdx = 0;
       supabaseMock.from.mockImplementation((table: string) => {
         const chain = createQueryChain();
         if (table === 'call_logs') {
           chain._setResolveData({ data: callLogs, error: null });
         } else if (table === 'chat_messages') {
-          chain._setResolveData({ data: null, count: 42, error: null });
+          const count = chatMessagesQueryCount === 0 ? 42 : 7;
+          chatMessagesQueryCount += 1;
+          chain._setResolveData({ data: null, count, error: null });
         } else if (table === 'moment_comments') {
           chain._setResolveData({ data: null, count: 15, error: null });
         } else if (table === 'moments') {
@@ -110,12 +112,58 @@ describe('StatsService', () => {
       expect(result).toHaveProperty('moments_count');
       expect(result.study_hours).toHaveLength(7);
       expect(result.messages_sent).toBe(42);
-      expect(result.corrections_count).toBe(15);
+      expect(result.corrections_count).toBe(22);
       expect(result.moments_count).toBe(5);
     });
 
-    it('should return zeroes when no data exists', async () => {
+    it('should count corrections made in both chat messages and moment comments', async () => {
+      const chatChains: any[] = [];
+      const momentCommentChains: any[] = [];
+      let chatMessagesQueryCount = 0;
+
       supabaseMock.from.mockImplementation((table: string) => {
+        const chain = createQueryChain();
+        if (table === 'call_logs') {
+          chain._setResolveData({ data: [], error: null });
+        } else if (table === 'chat_messages') {
+          const count = chatMessagesQueryCount === 0 ? 10 : 3;
+          chatMessagesQueryCount += 1;
+          chatChains.push(chain);
+          chain._setResolveData({ data: null, count, error: null });
+        } else if (table === 'moment_comments') {
+          momentCommentChains.push(chain);
+          chain._setResolveData({ data: null, count: 4, error: null });
+        } else if (table === 'moments') {
+          chain._setResolveData({ data: null, count: 0, error: null });
+        }
+        return chain;
+      });
+
+      const result = await service.getStats('user-1');
+
+      expect(result.messages_sent).toBe(10);
+      expect(result.corrections_count).toBe(7);
+      expect(chatChains).toHaveLength(2);
+      expect(chatChains[1].eq).toHaveBeenCalledWith('sender_id', 'user-1');
+      expect(chatChains[1].not).toHaveBeenCalledWith(
+        'correction_payload',
+        'is',
+        null,
+      );
+      expect(momentCommentChains).toHaveLength(1);
+      expect(momentCommentChains[0].eq).toHaveBeenCalledWith(
+        'user_id',
+        'user-1',
+      );
+      expect(momentCommentChains[0].not).toHaveBeenCalledWith(
+        'correction_payload',
+        'is',
+        null,
+      );
+    });
+
+    it('should return zeroes when no data exists', async () => {
+      supabaseMock.from.mockImplementation(() => {
         const chain = createQueryChain();
         chain._setResolveData({ data: [], count: 0, error: null });
         return chain;
@@ -159,6 +207,30 @@ describe('StatsService', () => {
       });
 
       await expect(service.getStats('user-1')).rejects.toThrow('DB error');
+    });
+
+    it('should fail closed when the chat correction count cannot be loaded', async () => {
+      let chatMessagesQueryCount = 0;
+      supabaseMock.from.mockImplementation((table: string) => {
+        const chain = createQueryChain();
+        if (table === 'call_logs') {
+          chain._setResolveData({ data: [], error: null });
+        } else if (table === 'chat_messages') {
+          if (chatMessagesQueryCount === 0) {
+            chain._setResolveData({ data: null, count: 12, error: null });
+          } else {
+            chain._setRejectError(new Error('Correction count unavailable'));
+          }
+          chatMessagesQueryCount += 1;
+        } else {
+          chain._setResolveData({ data: [], count: 0, error: null });
+        }
+        return chain;
+      });
+
+      await expect(service.getStats('user-1')).rejects.toThrow(
+        'Correction count unavailable',
+      );
     });
 
     it('should aggregate study hours across multiple days correctly', async () => {

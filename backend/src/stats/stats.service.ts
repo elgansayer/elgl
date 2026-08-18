@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-interface StudyHoursRow {
-  day: string;
-  total_seconds: number;
-}
-
 export interface MyStatsResponse {
   study_hours: { day: string; hours: number }[];
   messages_sent: number;
@@ -63,14 +58,24 @@ export class StatsService {
       throw new Error(msgErr.message);
     }
 
-    // corrections count (moment_comments with non-null correction_payload)
-    const { count: correctionsCount, error: corrErr } = await client
+    // Corrections can be made in both chat and Moments. Count both sources so
+    // the dashboard reports the user's complete correction activity.
+    const { count: chatCorrectionsCount, error: chatCorrErr } = await client
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', userId)
+      .not('correction_payload', 'is', null);
+    if (chatCorrErr) {
+      throw new Error(chatCorrErr.message);
+    }
+
+    const { count: momentCorrectionsCount, error: momentCorrErr } = await client
       .from('moment_comments')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .not('correction_payload', 'is', null);
-    if (corrErr) {
-      throw new Error(corrErr.message);
+    if (momentCorrErr) {
+      throw new Error(momentCorrErr.message);
     }
 
     // moments count
@@ -85,7 +90,8 @@ export class StatsService {
     return {
       study_hours,
       messages_sent: messagesCount ?? 0,
-      corrections_count: correctionsCount ?? 0,
+      corrections_count:
+        (chatCorrectionsCount ?? 0) + (momentCorrectionsCount ?? 0),
       moments_count: momentsCount ?? 0,
     };
   }
