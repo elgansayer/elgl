@@ -129,8 +129,10 @@ When every candidate fails for a provider-side reason, the router raises `Provid
 keeps the current phase, schedules the earliest bounded retry, and does not increment the task-attempt counter.
 Task, test, repository, policy, and internal failures return to the durable Factory retry or repair path. If the
 same task-side failure fingerprint reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory opens a recoverable
-quarantine rather than looping forever. Run `hellotalk-factory backlog requeue-quarantined` after fixing the
-underlying cause.
+quarantine rather than looping forever. The bounded recovery window releases the circuit automatically and
+reconciles stale GitHub quarantine labels before discovery. Run
+`hellotalk-factory backlog requeue-quarantined --issue NUMBER` after fixing the underlying cause when an earlier
+retry is appropriate. Add `--announce` only when an issue comment is warranted.
 
 ## Circuit breakers and health
 

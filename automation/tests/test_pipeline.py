@@ -31,6 +31,9 @@ class GitHub:
         self.pull_requests: list[Task] = []
         self.open_issue_titles: set[str] = set()
         self.created_issues: list[tuple[str, str, tuple[str, ...]]] = []
+        self.quarantined_issues: list[int] = []
+        self.requeued_quarantines: list[tuple[list[int], bool]] = []
+        self.quarantine_list_calls = 0
         self._next_issue_number = 200
 
     def ensure_factory_labels(self) -> None:
@@ -55,6 +58,24 @@ class GitHub:
 
     def remove_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.removed_labels.append((issue, labels))
+
+    def list_quarantined_issues(self, limit: int = 10_000) -> list[int]:
+        del limit
+        self.quarantine_list_calls += 1
+        return list(self.quarantined_issues)
+
+    def requeue_quarantined_issues(
+        self,
+        issues: list[int] | None = None,
+        *,
+        announce: bool = True,
+    ) -> list[int]:
+        selected = sorted(set(issues or self.quarantined_issues))
+        self.requeued_quarantines.append((selected, announce))
+        self.quarantined_issues = [
+            issue for issue in self.quarantined_issues if issue not in selected
+        ]
+        return selected
 
     def add_comment(self, number: int, body: str) -> None:
         self.comments.append((number, body))
@@ -283,6 +304,52 @@ def test_refresh_creates_durable_discovered_job(tmp_path: Path) -> None:
 
     assert jobs["42"].state is JobState.DISCOVERED
     assert restored["42"].task.title == "Fix build"
+
+
+def test_refresh_silently_reconciles_stale_github_quarantine_labels(
+    tmp_path: Path,
+) -> None:
+    github = GitHub()
+    github.quarantined_issues = [42]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.DISCOVERED
+    assert github.requeued_quarantines == [([42], False)]
+    assert github.comments == []
+
+
+def test_refresh_preserves_labels_backed_by_durable_quarantine(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.jobs.reconcile(github.tasks)["42"]
+    job.state = JobState.QUARANTINED
+    job.quarantine_reason = "Repeated deterministic task failure"
+    pipeline.jobs.save_job(job)
+    github.quarantined_issues = [42]
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.QUARANTINED
+    assert github.requeued_quarantines == []
+    assert github.quarantined_issues == [42]
+
+
+def test_refresh_reconciles_labels_only_on_startup_or_explicit_request(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+
+    pipeline.refresh()
+    pipeline.refresh()
+    assert github.quarantine_list_calls == 1
+
+    github.quarantined_issues = [43]
+    pipeline.request_label_reconciliation()
+    pipeline.refresh()
+
+    assert github.quarantine_list_calls == 2
+    assert github.requeued_quarantines == [([43], False)]
 
 
 def test_refresh_releases_closed_issue_before_pull_request(
@@ -525,6 +592,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         JobState.DONE,
     ]
     assert github.closed == [42]
+    assert (42, ("factory-active", "swarm-active")) in github.removed_labels
     assert github.reviewed == ["abcdef1234567"]
     assert [number for number, _ in github.comments].count(42) == 1
     assert [number for number, _ in github.comments].count(99) == 3

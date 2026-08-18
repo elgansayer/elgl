@@ -260,6 +260,18 @@ def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
     )
 
 
+def test_requeue_can_silently_clear_automatic_recovery_labels(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    requeued = client.requeue_quarantined_issues([33], announce=False)
+
+    assert requeued == [33]
+    assert len(runner.calls) == 1
+    assert "--remove-label" in runner.calls[0]
+    assert all("comment" not in call for call in runner.calls)
+
+
 def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     tmp_path: Path,
 ) -> None:

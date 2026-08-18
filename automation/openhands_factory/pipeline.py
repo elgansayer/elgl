@@ -264,6 +264,7 @@ class FactoryPipeline:
     def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
         if not self.labels_ready:
             self.github.ensure_factory_labels()
+            self._reconcile_quarantine_labels()
             self.labels_ready = True
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
         self.tasks.cache(tasks)
@@ -316,6 +317,36 @@ class FactoryPipeline:
             retired_jobs.append(job)
         self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
+
+    def _reconcile_quarantine_labels(self) -> None:
+        """Clear GitHub quarantine labels no longer backed by durable state.
+
+        Bounded recovery changes a due job back to ``DISCOVERED`` before the next
+        GitHub refresh. Discovery deliberately excludes ``factory-quarantined`` and
+        ``needs-human``, so an interrupted or older recovery can otherwise hide the
+        job forever. Durable state is authoritative. Label cleanup is idempotent and
+        intentionally silent because routine circuit recovery is control-plane noise.
+        """
+
+        durable_quarantined = {
+            int(task_id)
+            for task_id, job in self.jobs.load().items()
+            if task_id.isdigit() and job.state is JobState.QUARANTINED
+        }
+        labelled_quarantined = set(self.github.list_quarantined_issues())
+        stale_labels = sorted(labelled_quarantined - durable_quarantined)
+        if not stale_labels:
+            return
+        cleared = self.github.requeue_quarantined_issues(stale_labels, announce=False)
+        LOGGER.warning(
+            "Reconciled stale Factory quarantine labels for tasks: %s",
+            ",".join(str(issue) for issue in cleared),
+        )
+
+    def request_label_reconciliation(self) -> None:
+        """Request one control-label reconciliation before the next discovery read."""
+
+        self.labels_ready = False
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
@@ -855,7 +886,9 @@ class FactoryPipeline:
                     "OpenHands factory confirmed that GitHub merged this pull request.",
                 )
             if job.task.source == "github-issue":
-                self.github.close_issue(int(job.task.identifier))
+                issue = int(job.task.identifier)
+                self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
+                self.github.close_issue(issue)
             self._workflow(self.config.repository).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
