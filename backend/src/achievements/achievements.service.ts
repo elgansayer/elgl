@@ -38,6 +38,17 @@ export class AchievementsService implements OnModuleInit {
     },
   ];
 
+  private readonly messageMilestoneCodes: readonly string[] = [
+    'first_message',
+    '100_messages',
+    '500_messages',
+  ];
+
+  private readonly streakMilestoneCodes: readonly string[] = [
+    '7_day_streak',
+    '30_day_streak',
+  ];
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async onModuleInit(): Promise<void> {
@@ -191,19 +202,31 @@ export class AchievementsService implements OnModuleInit {
   }
 
   async evaluateAchievements(userId: string): Promise<void> {
-    // ⚡ Bolt Optimization: Fetch message count, streak, and existing achievements concurrently
-    // Replaces sequential fetching and N+1 lookups for achievements in evaluate loop.
-    const [msgCount, streakDays, earnedRows] = await Promise.all([
-      this.getUserMessageCount(userId),
-      this.getStudyStreakDays(userId),
-      this.getUserAchievements(userId),
-    ]);
-
+    // The earned-state lookup is bounded by the small achievement catalogue. Once a
+    // milestone family is complete, skip its potentially growing source query on
+    // every subsequent event. This keeps message.sent cheap for long-lived users.
+    const earnedRows = await this.getUserAchievements(userId);
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
       const code = row.achievements?.code;
       if (code) earnedCodes.add(code);
     }
+
+    const messageMilestonesComplete = this.messageMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
+    );
+    const streakMilestonesComplete = this.streakMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
+    );
+
+    const [msgCount, streakDays] = await Promise.all([
+      messageMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getUserMessageCount(userId),
+      streakMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getStudyStreakDays(userId),
+    ]);
 
     const newAwards: Promise<void>[] = [];
 

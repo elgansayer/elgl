@@ -847,9 +847,17 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
         openhands_usable = False
     usable += int(openhands_usable)
     openhands_health = openhands_breaker.get_health()
+    openhands_source = (
+        "openai-oauth"
+        if openai_credentials_available(config)
+        else "opencode-go-api"
+        if config.opencode_api_key is not None and config.opencode_model is not None
+        else "none"
+    )
     openhands_detail = (
         "healthy; transport=openhands-sdk; emergency-only="
-        f"{str(bool(openhands and openhands.emergency_only)).lower()}; circuit=closed"
+        f"{str(bool(openhands and openhands.emergency_only)).lower()}; "
+        f"credential-source={openhands_source}; circuit=closed"
         if openhands_usable
         else "disabled or authentication unavailable"
     )
@@ -929,7 +937,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         Check(
             "openai-subscription",
             True,
-            config.openai_model if openai_ready else "OAuth credentials missing or unavailable",
+            (
+                f"optional OpenHands SDK OAuth model={config.openai_model}"
+                if openai_ready
+                else (
+                    "optional OpenHands SDK OAuth missing or unavailable; "
+                    "Codex CLI auth is separate"
+                )
+            ),
             warning=not openai_ready,
         )
     )

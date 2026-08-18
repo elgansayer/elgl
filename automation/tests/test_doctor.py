@@ -172,7 +172,9 @@ def test_doctor_reports_openai_subscription_credentials(
     )
     checks = {check.name: check for check in run_doctor(factory_config)}
     assert checks["openai-subscription"].passed
-    assert checks["openai-subscription"].detail == "gpt-5.6-sol"
+    assert checks["openai-subscription"].detail == (
+        "optional OpenHands SDK OAuth model=gpt-5.6-sol"
+    )
 
 
 def test_doctor_checks_root_and_factory_state_volumes_separately(

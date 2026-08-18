@@ -5,6 +5,8 @@ FACTORY_CONFIG=/etc/hellotalk-factory/factory.env
 FACTORY_SERVICE=hellotalk-factory.service
 FACTORY_HEALTH_TIMER=hellotalk-factory-health.timer
 FACTORY_CLI=/opt/hellotalk-factory/venv/bin/hellotalk-factory
+FACTORY_HOME=/var/lib/hellotalk-factory/home
+FACTORY_SERVICE_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
 EXPECTED_ARCHITECTURE=openhands-agent-canvas-v1
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -57,7 +59,8 @@ set -a
 # shellcheck disable=SC1091
 . /etc/hellotalk-factory/runtime.env
 set +a
-export HOME=/var/lib/hellotalk-factory/home
+export HOME="$FACTORY_HOME"
+export PATH="$FACTORY_SERVICE_PATH"
 cd /tmp
 
 if [ ! -r "${FACTORY_AGENTS_CONFIG}" ]; then
