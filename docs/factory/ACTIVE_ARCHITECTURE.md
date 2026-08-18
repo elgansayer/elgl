@@ -100,7 +100,7 @@ last-known-good backup:
   provenance entries per job;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
-- `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
+- `metrics.json`: provider, model, phase, result, duration, fallback, quota, and timeout counters;
 - `generation.json`: active daemon ownership UUID and schema version;
 - `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
 - `control.json`: pause state;
@@ -108,10 +108,6 @@ last-known-good backup:
 - `control_request.json`: optional mode-0600, single-use watchdog restart request;
 - `architect_state.json`: architect completion and retry data;
 - `provider-attribution.json`: detailed OpenHands inner-provider attribution.
-
-Typed metric failure counters are an additive state expansion. New readers treat an absent or malformed counter
-map as empty, while older readers ignore the added field, so mixed-version startup and rollback preserve the
-existing call, success, failure, quota, fallback, duration, and timeout counters.
 
 A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
@@ -179,30 +175,19 @@ following:
 - mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
-squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
-review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
-pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
-permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes
-that path. See
-[MANUAL-MERGE.md](MANUAL-MERGE.md).
-
-A dedicated GitHub App and ruleset expected-source binding are still required to prevent another write actor from
-publishing the same legacy status-context name. Online doctor currently validates the layered rules, context
-names, and narrow manual actor, not status publisher identity.
+The scheduled merge workflow is the only merge authority. It re-reads the live conditions, binds the squash
+merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or
+administrator bypass. One active GitHub ruleset with no bypass actors must also require pull requests,
+`CI / required`, and `factory/independent-review`. This prevents direct merge around the contexts. A dedicated
+GitHub App and ruleset expected-source binding are still required to prevent another write actor from publishing
+the same legacy status-context name. Online doctor currently validates the rules and context names, not status
+publisher identity.
 
 ## Deployment identity and change policy
 
 Factory code is deployed only from a clean, fast-forwarded `origin/main`. Task changes still use branches and pull
 requests. Deployment refreshes the frozen Python environment, Node dependency trees, Cypress, worker image, and
-systemd files while preserving the operator-owned `agents.json`. The optional `--fast` mode may reuse Node trees
-and the worker image only through deployment-owned fingerprints that bind lockfiles, toolchains, installed npm
-state, tracked worker inputs, and the rootless image ID. It never skips Git synchronisation, host repair, Python
-synchronisation, systemd installation, startup preflight, online doctor, or service verification.
-
-The startup preflight deliberately mirrors the service unit's `HOME` and `PATH`, so a deploy cannot reject valid
-service-user CLI installations merely because root or sudo has a narrower interactive path.
+systemd files while preserving the operator-owned `agents.json`.
 
 Any change to provider order, authentication, transport, retry authority, worktree confinement, review
 independence, or merge authority must update these architecture documents and executable regression tests in the

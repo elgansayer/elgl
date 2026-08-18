@@ -455,8 +455,6 @@ class TestAgentProviders(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "codex success")
         self.assertIn("--approve-for-me", runner.commands[0])
-        self.assertNotIn("--sandbox", runner.commands[0])
-        self.assertNotIn("-s", runner.commands[0])
         self.assertIn('model_reasoning_effort="max"', runner.commands[0])
         self.assertIn("gpt-5.6-sol", runner.commands[0])
         self.assertIn("--ignore-user-config", runner.commands[0])

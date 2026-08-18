@@ -19,10 +19,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p class="text-text-secondary" aria-live="polite">{{ 'dailyLoginModal.body' | t: { coins: coins() } }}</p>
         <button
           hlmBtn
-          hlmDialogClose
           type="button"
           size="touch"
           class="mt-4 w-full"
+          (click)="closed.emit()"
           [attr.aria-label]="('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })"
         >
           {{ 'dailyLoginModal.cta' | t }}

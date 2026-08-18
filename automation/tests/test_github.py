@@ -294,10 +294,7 @@ def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
             "body": "Body",
             "headRefName": "sentinel/fix-thing",
             "isDraft": False,
-            "labels": [
-                {"name": "factory-reviewed"},
-                {"name": "priority:critical"},
-            ],
+            "labels": [{"name": "factory-reviewed"}],
         },
         {
             "number": 44,
@@ -337,7 +334,6 @@ def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     # a long backlog of fresh issue implementations at equal priority, but
     # below guardian-alert issues (0), which stay most urgent.
     assert tasks[0].priority == 5
-    assert tasks[1].priority == 1
     assert tasks[2].pr_branch == "factory/architect-2026-w34-cycle"
 
 

@@ -31,8 +31,6 @@ import { environment } from '../../../environments/environment';
         [messageId]="message().id"
         [messageContent]="message().text_content ?? ''"
         [messageType]="message().message_type"
-        [correctionOriginal]="message().correction_payload?.original ?? null"
-        [correctionCorrected]="message().correction_payload?.corrected ?? null"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
         [isBlocked]="isBlocked()"

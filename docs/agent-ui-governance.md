@@ -1,22 +1,19 @@
 # Cross-agent UI governance
 
-This file provides common frontend design-system guidance for every coding agent and editor integration used in
-this repository. It is a living document and can be updated as the product and toolchain evolve.
+This file is the common frontend design-system contract for every coding agent and editor integration used in this repository.
 
-## Guidance order
+## Authority order
 
-For frontend UI work, agents should begin with:
+For frontend UI work, agents must read and follow:
 
-1. `AGENTS.md` - living repository-wide engineering guidelines.
-2. `frontend/AGENTS.md` - frontend-specific Angular and Spartan guidance.
+1. `AGENTS.md` - engineering constitution and repository-wide rules.
+2. `frontend/AGENTS.md` - frontend-specific Angular and Spartan rules.
 3. `DESIGN.md` - Relay visual language, semantic tokens and product design direction.
 4. `docs/spartan-relay-architecture.md` - Relay/Helm/Brain ownership boundaries.
 5. `docs/claude-design-two-way-sync.md` - code-first, design-first and reconciliation workflow.
 6. `design-sync.manifest.json` - stable design artefact identity and provenance.
 
-Tool-specific instruction files may add operational hints. When guidance conflicts, use the current task,
-mechanically enforced checks, safety requirements, and evidence-based engineering judgement, then update the
-living documents when a persistent clarification is useful.
+Tool-specific instruction files may add operational hints, but they must not override these authorities.
 
 ## UI ownership contract
 
@@ -68,9 +65,6 @@ npm run check:design-sync
 
 Run the Spartan health workflow/commands after Spartan package, configuration or owned Helm changes. Material visual changes must update the mapped repository preview/design-sync metadata and be reconciled with Claude Design.
 
-## Agent fallback guidance
+## Agent fallback rule
 
-Fallback agents such as Gemini, Junie, Windsurf, Cursor, Copilot, or other coding assistants start from the same
-Relay, Spartan, and Claude Design guidance. If a tool-specific file conflicts with these defaults, resolve the
-conflict using current task needs, safety, repository checks, and available evidence rather than treating either
-document as immutable.
+Fallback agents such as Gemini, Junie, Windsurf, Cursor, Copilot or other coding assistants do not get a weaker UI contract. They inherit the same Relay + Spartan + Claude Design rules. If a tool-specific file conflicts with this document or the authority order above, the central repository rules win and the conflicting tool file should be corrected.

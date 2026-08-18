@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,12 +42,6 @@ class CrashingConversation(Conversation):
         os._exit(9)
 
 
-class NoisyConversation(Conversation):
-    def run(self) -> None:
-        print("raw provider transcript must not reach the daemon log")
-        print("raw provider error must not reach the daemon log", file=sys.stderr)
-
-
 @dataclass(frozen=True)
 class Factory:
     stuck: bool = False
@@ -64,13 +57,6 @@ class CrashingFactory:
     def __call__(self, workspace: Path, turns: int, provider: ProviderName) -> Conversation:
         del turns, provider
         return CrashingConversation(workspace, False)
-
-
-@dataclass(frozen=True)
-class NoisyFactory:
-    def __call__(self, workspace: Path, turns: int, provider: ProviderName) -> Conversation:
-        del turns, provider
-        return NoisyConversation(workspace, False)
 
 
 def config(tmp_path: Path) -> FactoryConfig:
@@ -96,20 +82,6 @@ def test_selected_provider_is_passed_to_spawned_conversation(tmp_path: Path) -> 
     assert result.completed
     assert (tmp_path / "closed").is_file()
     assert (tmp_path / "provider").read_text(encoding="utf-8") == ProviderName.OPENCODE_GO.value
-
-
-def test_sdk_child_output_does_not_reach_daemon_stdio(
-    tmp_path: Path,
-    capfd: pytest.CaptureFixture[str],
-) -> None:
-    runner = ConversationRunner(config(tmp_path), NoisyFactory())
-
-    result = runner.run(Task("noisy", "Task", "body", "test", 1), tmp_path, "prompt")
-    captured = capfd.readouterr()
-
-    assert result.completed
-    assert "raw provider transcript" not in captured.out
-    assert "raw provider error" not in captured.err
 
 
 def test_stuck_conversation_is_cancelled_without_poisoning_provider_health(tmp_path: Path) -> None:

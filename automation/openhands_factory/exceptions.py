@@ -25,10 +25,6 @@ class VerificationFailed(FactoryError):
     """A required verification command failed."""
 
 
-class AgentTaskFailure(FactoryError):
-    """A responsive agent could not satisfy the task contract."""
-
-
 class ProviderCapacityUnavailable(FactoryError):
     """No eligible provider can start now, without consuming a task attempt."""
 

@@ -161,12 +161,6 @@ generation's capacity. Persisted leases with missing or timezone-naive timestamp
 or expiry beyond the longest configured attempt window are discarded. Task leases apply the same bounded-duration
 rule, and their mutations use a cross-process file lock so operator reconciliation cannot race the daemon.
 
-The daemon admits at most one pull-request review lane and submits it before issue work. While that PR worker is
-active, `AgentRouter` subtracts one slot from the limit offered to non-review jobs on every provider. The PR job
-retains the full configured limit. This reservation does not cancel an existing provider process, but it prevents
-new issue phases from repeatedly taking a newly freed slot before the required review can acquire it. The
-reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
-
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.
 

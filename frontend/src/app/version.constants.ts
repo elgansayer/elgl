@@ -1,13 +1,8 @@
-import {
-  GENERATED_APP_VERSION,
-  GENERATED_BUILD_NUMBER,
-} from './generated/build-info.generated';
+/** The current application version as deployed to the stores */
+export const APP_VERSION = '2.0.0';
 
-/** The current application version as deployed to the stores. */
-export const APP_VERSION = GENERATED_APP_VERSION;
+/** Incremented on every CI build; displayed on the Help & About page */
+export const BUILD_NUMBER = '2026.0807.42';
 
-/** Build metadata generated from CI run and commit information. */
-export const BUILD_NUMBER = GENERATED_BUILD_NUMBER;
-
-/** Versions lower than this are considered deprecated and will be blocked. */
+/** Versions lower than this are considered deprecated and will be blocked */
 export const MIN_SUPPORTED_VERSION = '2.0.0';

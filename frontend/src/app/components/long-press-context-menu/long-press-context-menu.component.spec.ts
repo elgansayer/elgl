@@ -3,36 +3,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { LongPressContextMenuComponent } from './long-press-context-menu.component';
 import { I18nService } from '../../services/i18n.service';
-import { NlpRequestError, NlpService } from '../../services/nlp.service';
-
-const deferred = <T>() => {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-};
 
 describe('LongPressContextMenuComponent', () => {
   let component: LongPressContextMenuComponent;
   let fixture: ComponentFixture<LongPressContextMenuComponent>;
-  const nlpService = {
-    explainGrammar: vi.fn(),
-  };
 
   beforeEach(async () => {
-    nlpService.explainGrammar.mockReset();
-    nlpService.explainGrammar.mockResolvedValue({
-      original: 'I has a cat',
-      corrected: 'I have a cat',
-      explanation: 'Use have with I.',
-    });
-
     await TestBed.configureTestingModule({
       imports: [LongPressContextMenuComponent],
-      providers: [I18nService, { provide: NlpService, useValue: nlpService }],
+      providers: [I18nService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LongPressContextMenuComponent);
@@ -177,148 +156,6 @@ describe('LongPressContextMenuComponent', () => {
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
     expect(buttons.length).toBe(6);
-  });
-
-  it('should expose grammar explanation only for a correction with both text variants', async () => {
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
-    fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
-    component.menuVisible.set(true);
-    await fixture.whenStable();
-
-    expect(component.canExplainCorrection()).toBe(true);
-    const menu = document.body.querySelector('[role="dialog"]');
-    expect(menu?.textContent).toContain('Explanation');
-    expect(menu?.querySelectorAll('button')).toHaveLength(7);
-
-    fixture.componentRef.setInput('correctionOriginal', '');
-    await fixture.whenStable();
-    expect(component.canExplainCorrection()).toBe(false);
-    expect(document.body.querySelector('[role="dialog"]')?.querySelectorAll('button')).toHaveLength(
-      6,
-    );
-  });
-
-  it('should request an explanation with the exact correction pair and close the context menu', async () => {
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
-    fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
-    component.menuVisible.set(true);
-    fixture.detectChanges();
-
-    component.openExplanation();
-    await fixture.whenStable();
-
-    expect(component.menuVisible()).toBe(false);
-    expect(component.explanationOpen()).toBe(true);
-    expect(nlpService.explainGrammar).toHaveBeenCalledWith(
-      { original: 'I has a cat', corrected: 'I have a cat' },
-      expect.any(AbortSignal),
-    );
-    expect(component.explanationText()).toBe('Use have with I.');
-  });
-
-  it('should classify rate-limit failures without closing the explanation dialog', async () => {
-    nlpService.explainGrammar.mockRejectedValue(
-      new NlpRequestError('rate_limit', 'Too many requests', 429, 10),
-    );
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-
-    component.openExplanation();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(component.explanationOpen()).toBe(true);
-    expect(component.explanationError()).toBe('rate_limit');
-    const alert = fixture.debugElement.query(By.css('[role="alert"]'));
-    expect(alert.attributes['data-error-kind']).toBe('rate_limit');
-  });
-
-  it('should prevent duplicate explanation requests while one is in flight', () => {
-    const pending = deferred<{
-      original: string;
-      corrected: string;
-      explanation: string;
-    }>();
-    nlpService.explainGrammar.mockReturnValue(pending.promise);
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-
-    component.openExplanation();
-    component.retryExplanation();
-
-    expect(nlpService.explainGrammar).toHaveBeenCalledOnce();
-  });
-
-  it('should ignore a stale response after the explanation dialog closes', async () => {
-    const pending = deferred<{
-      original: string;
-      corrected: string;
-      explanation: string;
-    }>();
-    nlpService.explainGrammar.mockReturnValue(pending.promise);
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-
-    component.openExplanation();
-    component.closeExplanation();
-    pending.resolve({ original: 'wrong', corrected: 'right', explanation: 'stale' });
-    await fixture.whenStable();
-
-    expect(component.explanationOpen()).toBe(false);
-    expect(component.explanationText()).toBeNull();
-  });
-
-  it('should ignore a stale response if the message changes', async () => {
-    const pending = deferred<{
-      original: string;
-      corrected: string;
-      explanation: string;
-    }>();
-    nlpService.explainGrammar.mockReturnValue(pending.promise);
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-
-    component.openExplanation();
-    fixture.componentRef.setInput('messageId', 'different-message');
-    pending.resolve({ original: 'wrong', corrected: 'right', explanation: 'stale' });
-    await fixture.whenStable();
-
-    expect(component.explanationText()).toBeNull();
-  });
-
-  it('should render model output as text rather than executable HTML', async () => {
-    nlpService.explainGrammar.mockResolvedValue({
-      original: 'wrong',
-      corrected: 'right',
-      explanation: '<img src=x onerror=alert(1)>',
-    });
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-
-    component.openExplanation();
-    await fixture.whenStable();
-
-    const dialog = document.body.querySelector('[role="dialog"]');
-    expect(dialog?.textContent).toContain('<img src=x onerror=alert(1)>');
-    expect(dialog?.querySelector('img')).toBeNull();
-  });
-
-  it('should close the explanation when the Spartan dialog reports dismissal', () => {
-    fixture.componentRef.setInput('messageType', 'correction');
-    fixture.componentRef.setInput('correctionOriginal', 'wrong');
-    fixture.componentRef.setInput('correctionCorrected', 'right');
-    component.openExplanation();
-
-    component.onExplanationDialogStateChanged('closed');
-
-    expect(component.explanationOpen()).toBe(false);
   });
 
   it('should emit block toggled to true when the sender is not yet blocked', () => {

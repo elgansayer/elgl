@@ -16,10 +16,7 @@ Spartan UI is the canonical component architecture for frontend UI work.
 - Use the existing `@ng-icons/core` + Lucide stack for generic vector UI icons and register icons with `provideIcons`.
 - After broad Spartan migrations or package upgrades, run the Spartan healthcheck in addition to project verification.
 
-Project-specific guidance is generally stricter than generic Spartan examples. `../DESIGN.md`, Relay semantic
-tokens, light/dark parity, per-user primary accent behaviour, RTL, i18n, reduced motion, forced colours, high
-zoom, screen-reader support, and WCAG AA are the preferred project defaults unless current task evidence or an
-explicit decision justifies updating them.
+Project-specific rules remain stricter than generic Spartan examples. `../DESIGN.md`, Relay semantic tokens, light/dark parity, per-user primary accent behaviour, RTL, i18n, reduced motion, forced colours, high zoom, screen-reader support, and WCAG AA are authoritative.
 
 ## TypeScript Best Practices
 
@@ -82,11 +79,9 @@ explicit decision justifies updating them.
 - Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
 - Use the `inject()` function instead of constructor injection
 
-## Repository Engineering Guidelines
+## Engineering Constitution & Project Mandates
 
-In addition to the Angular, TypeScript, and Spartan practices above, use the living repository guidelines in the
-parent `../AGENTS.md` as strong defaults. They may be updated or adapted when current task requirements, safety,
-mechanically enforced checks, and engineering evidence justify doing so:
+In addition to the Angular, TypeScript, and Spartan best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
 
 - **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
 - **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.

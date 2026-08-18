@@ -8,7 +8,6 @@ FACTORY_USER=hellotalk-factory
 HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
 CONTROL_REQUEST=/var/lib/hellotalk-factory/control_request.json
 MAX_TASK_MINUTES=${FACTORY_MAX_TASK_MINUTES:-120}
-RESTART_GRACE_SECONDS=${FACTORY_WATCHDOG_RESTART_GRACE_SECONDS:-30}
 
 sync_dashboard() {
   timeout --signal=TERM --kill-after=5s 45s \
@@ -80,7 +79,7 @@ if consume_restart_request; then
   echo 'factory watchdog: accepted bounded restart request'
   systemctl reset-failed "$SERVICE" || true
   systemctl restart "$SERVICE" || true
-  sleep "$RESTART_GRACE_SECONDS"
+  sleep 20
 fi
 
 # systemd already restarts ordinary process crashes. The watchdog is a second
@@ -96,7 +95,7 @@ if healthy; then
       echo 'factory watchdog: accepted bounded restart request'
       systemctl reset-failed "$SERVICE" || true
       systemctl restart "$SERVICE" || true
-      sleep "$RESTART_GRACE_SECONDS"
+      sleep 20
     fi
   fi
   if healthy; then
@@ -111,7 +110,7 @@ for attempt in 1 2 3; do
   echo "factory watchdog: restart attempt ${attempt}/3"
   systemctl reset-failed "$SERVICE" || true
   systemctl restart "$SERVICE" || true
-  sleep "$RESTART_GRACE_SECONDS"
+  sleep 20
   if healthy; then
     echo "factory watchdog: daemon recovered on attempt ${attempt}"
     sync_dashboard

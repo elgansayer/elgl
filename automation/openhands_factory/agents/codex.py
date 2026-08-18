@@ -68,8 +68,8 @@ class CodexProvider(CLIProvider):
             model,
             "-c",
             'model_reasoning_effort="max"',
-            # Codex applies workspace-write when --approve-for-me is selected.
-            # Passing an explicit sandbox as well is rejected by current CLIs.
+            "-s",
+            "workspace-write",
             "--approve-for-me",
             "-C",
             str(request.cwd),
