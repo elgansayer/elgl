@@ -274,7 +274,9 @@ sudo scripts/maintain-factory-host-storage.sh
 - `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
   authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
   usability, competing executors, authenticated repository access, and the layered GitHub merge policy. An
-  optional OpenAI OAuth failure is a warning when another configured provider is usable.
+  optional OpenAI OAuth failure is a warning when another configured provider is usable. Detached unrestricted
+  provider processes remain fail-closed competing executors. A provider attached to an operator TTY is treated as
+  an interactive session rather than a second autonomous control plane.
 - `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
   rootless worker isolation,
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the

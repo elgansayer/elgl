@@ -229,7 +229,9 @@ new structured review approves the exact current SHA.
 `providers check` is also the service's bounded preflight. It requires no competing legacy executor,
 authenticated repository access, and the same merge policy. Zero usable providers is a warning rather than a
 startup failure: the daemon remains online, retains durable work, and retries when health or cooldown state
-recovers. OpenAI SDK OAuth is also an optional warning when another configured provider can execute the work.
+recovers. Detached unrestricted provider processes still fail closed, while a provider attached to an operator
+TTY is not classified as an autonomous runtime owner. OpenAI SDK OAuth is also an optional warning when another
+configured provider can execute the work.
 An activation canary still requires at least one usable provider.
 
 Normal CI uses fake providers and never requires real subscriptions. Optional live smoke tests must be explicitly
