@@ -132,6 +132,7 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
             Check(
                 "openai-subscription-online",
                 True,
+                "optional OpenHands SDK OAuth, separate from Codex CLI: "
                 f"{oauth.kind}: {oauth.detail}",
                 warning=not oauth.passed,
             )
@@ -153,7 +154,7 @@ def _provider_startup_checks(config: FactoryConfig) -> list[Check]:
         Check(
             "openai-subscription-online",
             True,
-            f"{oauth.kind}: {oauth.detail}",
+            f"optional OpenHands SDK OAuth, separate from Codex CLI: {oauth.kind}: {oauth.detail}",
             warning=not oauth.passed,
         )
     )

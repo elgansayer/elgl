@@ -28,8 +28,10 @@ def test_runbook_documents_operator_recovery_commands() -> None:
     runbook = RUNBOOK.read_text(encoding="utf-8")
     assert "## Operator recovery" in runbook
     recovery = runbook.split("## Operator recovery", 1)[1].split("\n## ", 1)[0]
+    assert '/opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"' in recovery
+    assert 'PATH="$FACTORY_PATH"' in recovery
     for command in OPERATOR_RECOVERY_COMMANDS:
-        assert f"hellotalk-factory {command}" in recovery
+        assert f"factory_cli {command}" in recovery
 
 
 def test_execution_architecture_locks_single_factory_owner_and_multiple_providers() -> None:

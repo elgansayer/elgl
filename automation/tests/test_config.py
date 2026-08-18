@@ -71,11 +71,13 @@ def test_failed_deployment_restores_previously_active_factory_units() -> None:
     )
 
     trap = deploy.index("trap cleanup EXIT")
-    stop = deploy.index("systemctl stop hellotalk-factory-health.timer hellotalk-factory.service")
+    stop_timer = deploy.index("systemctl stop hellotalk-factory-health.timer")
+    stop_watchdog = deploy.index("systemctl stop hellotalk-factory-health.service")
+    stop_daemon = deploy.index("systemctl stop hellotalk-factory.service")
     start = deploy.index('"$WORKTREE/scripts/start-factory.sh"')
     completed = deploy.index("DEPLOYMENT_SUCCEEDED=true", start)
 
-    assert trap < stop < start < completed
+    assert trap < stop_timer < stop_watchdog < stop_daemon < start < completed
     assert "FACTORY_MAINTENANCE_STARTED=true" in deploy
     assert "Factory supervision units did not stop cleanly" in deploy
     assert 'if [ "$FACTORY_SERVICE_WAS_ACTIVE" = true ]; then' in deploy
@@ -109,6 +111,43 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'bash -c \'cd "$1" && exec podman build' in deploy
     assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
+
+
+def test_fast_deployment_reuses_only_verified_dependencies_and_worker_image() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--fast) FAST_DEPLOY=true" in deploy
+    assert "npm_input_fingerprint" in deploy
+    assert 'sha256sum "$directory/package.json" "$directory/package-lock.json"' in deploy
+    assert "sha256sum node_modules/.package-lock.json" in deploy
+    assert "find node_modules -type f -name package.json" in deploy
+    assert "find node_modules/.bin" in deploy
+    assert 'git -C "$WORKTREE" ls-files -s -- automation' in deploy
+    assert "podman image inspect --format '{{.Id}}'" in deploy
+    assert "npm_cache_is_current" in deploy
+    assert "worker_cache_is_current" in deploy
+    assert deploy.index('npm ci --prefix "$directory"') < deploy.index(
+        'record_npm_cache "$directory" "$cache_file"'
+    )
+    assert deploy.index("podman build --cgroup-manager=cgroupfs") < deploy.index(
+        'record_worker_cache "$worker_cache_file"'
+    )
+
+
+def test_deployment_serialises_runs_and_drains_the_active_watchdog() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "hellotalk-factory-deploy.lock" in deploy
+    assert 'flock -n "$deploy_lock_fd"' in deploy
+    stop_timer = deploy.index("systemctl stop hellotalk-factory-health.timer")
+    stop_watchdog = deploy.index("systemctl stop hellotalk-factory-health.service")
+    stop_daemon = deploy.index("systemctl stop hellotalk-factory.service")
+    dependency_refresh = deploy.index('npm ci --prefix "$directory"')
+    assert stop_timer < stop_watchdog < stop_daemon < dependency_refresh
 
 
 def test_deployment_installs_bounded_host_storage_policy() -> None:
@@ -532,6 +571,27 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in template
     assert f"FACTORY_ARCHITECTURE={EXPECTED_FACTORY_ARCHITECTURE}" in template
     assert "GEMINI_ENABLED=false" in template
+
+
+def test_start_script_uses_the_systemd_service_path_for_online_doctor() -> None:
+    root = Path(__file__).parents[2]
+    start_script = (root / "scripts/start-factory.sh").read_text(encoding="utf-8")
+    service = (root / "config/systemd/hellotalk-factory.service").read_text(encoding="utf-8")
+    service_path = next(
+        line.removeprefix("Environment=PATH=")
+        for line in service.splitlines()
+        if line.startswith("Environment=PATH=")
+    )
+
+    assert "FACTORY_HOME=/var/lib/hellotalk-factory/home" in start_script
+    service_path_expression = service_path.replace(
+        "/var/lib/hellotalk-factory/home", "$FACTORY_HOME"
+    )
+    assert f'FACTORY_SERVICE_PATH="{service_path_expression}"' in start_script
+    assert 'export HOME="$FACTORY_HOME"' in start_script
+    path_export = 'export PATH="$FACTORY_SERVICE_PATH"'
+    assert path_export in start_script
+    assert start_script.index(path_export) < start_script.index("doctor --online")
 
 
 def test_host_repair_preserves_the_production_parallelism_limit() -> None:

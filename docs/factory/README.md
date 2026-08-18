@@ -216,6 +216,30 @@ credentials are not replaced or printed. It records whether the daemon and watch
 maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
 trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
 
+For repeated deployments whose package manifests and worker inputs have not changed, use the verified fast path:
+
+```bash
+sudo scripts/deploy-and-start-factory.sh --use-existing-credentials --fast
+```
+
+Both modes run the startup doctor with the same `HOME` and `PATH` as the systemd service. This is required for
+subscription CLIs installed beneath the service account and for the deployed `uv` executable. A bare
+`sudo -u hellotalk-factory ... doctor` can inherit sudo's restricted path and falsely report that authenticated
+providers are not installed.
+
+Fast deployment still fetches and fast-forwards `main`, repairs canonical host configuration, refreshes the frozen
+Python environment, installs current systemd files, runs startup preflight, and verifies the live daemon. It skips
+a Node dependency tree only when the package manifests, lockfile, Node/npm toolchain, and npm hidden lock all match
+a deployment-owned fingerprint. Installed package manifests and executable links are also included, so a
+partially removed dependency tree is a cache miss. It skips the worker build only when all tracked `automation/`
+inputs and the rootless Podman image ID match. Cache misses automatically run the normal phase. The first fast
+deployment after installing this feature has no trusted fingerprints, so it performs a full refresh and warms
+the cache.
+
+Deployments are serialised with `/run/lock/hellotalk-factory-deploy.lock`. Maintenance stops and drains both the
+watchdog timer and any active watchdog invocation before stopping the daemon, preventing a watchdog restart from
+overlapping dependency or image replacement.
+
 Because deployment deliberately preserves the operator policy, compare it with the newly deployed model and
 adapter example after every upgrade, then merge reviewed changes explicitly:
 
@@ -236,7 +260,7 @@ Use the service-user environment for every check:
 
 ```bash
 FACTORY_HOME=/var/lib/hellotalk-factory/home
-FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
 sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
 sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
 sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
@@ -274,9 +298,10 @@ sudo scripts/maintain-factory-host-storage.sh
 - `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
   authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
   usability, competing executors, authenticated repository access, and the layered GitHub merge policy. An
-  optional OpenAI OAuth failure is a warning when another configured provider is usable. Detached unrestricted
-  provider processes remain fail-closed competing executors. A provider attached to an operator TTY is treated as
-  an interactive session rather than a second autonomous control plane.
+  optional OpenHands SDK OpenAI OAuth failure is a warning when another configured provider is usable. That OAuth
+  profile is separate from Codex CLI's ChatGPT subscription login. Detached unrestricted provider processes
+  remain fail-closed competing executors. A provider attached to an operator TTY is treated as an interactive
+  session rather than a second autonomous control plane.
 - `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
   rootless worker isolation,
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
@@ -290,7 +315,7 @@ sudo scripts/maintain-factory-host-storage.sh
   concurrent worker transitions.
 - Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
   keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
-- `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
+- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
   pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.
@@ -325,18 +350,25 @@ blocked.
 
 ## Operator recovery
 
-Run recovery commands as the service user from the installed virtual environment:
+Run recovery commands as the service user with the same environment used by systemd. Defining this helper in the
+current root shell prevents sudo's secure path from hiding authenticated provider executables:
 
 ```bash
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory backlog requeue-quarantined
+FACTORY_HOME=/var/lib/hellotalk-factory/home
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+factory_cli() {
+  sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+    /opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"
+}
+factory_cli doctor --online
+factory_cli providers check
+factory_cli status
+factory_cli metrics
+factory_cli dashboard sync --force
+factory_cli reconcile
+factory_cli pause
+factory_cli resume
+factory_cli backlog requeue-quarantined
 ```
 
 If every provider is unavailable, do not delete the job, circuit, lease, or `jobs.json`. Fix service-user auth or
