@@ -21,6 +21,11 @@
       .informational-region h3 { margin-block: 0 0.25rem; }
       .informational-region p { margin-block: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
       .informational-region.theme-dark { color-scheme: dark; }
+      .translation-grid { display: grid; gap: 0.75rem; }
+      .translation-card { border: 1px solid ButtonBorder; border-radius: 0.75rem; padding: 0.875rem; background: color-mix(in srgb, CanvasText 5%, Canvas); }
+      .translation-card p { margin-block: 0 0.5rem; }
+      .translation-status { margin-block: 0.5rem 0; color: LinkText; }
+      .translation-status.error { color: MarkText; background: Mark; border-radius: 0.5rem; padding: 0.5rem; }
       .dialog-stage { background: color-mix(in srgb, CanvasText 60%, transparent); padding: 1rem; border-radius: 0.75rem; }
       .dialog-panel { margin-inline: auto; max-inline-size: 28rem; border: 1px solid ButtonBorder; border-radius: 0.75rem; background: Canvas; color: CanvasText; box-shadow: 0 1rem 3rem color-mix(in srgb, CanvasText 24%, transparent); }
       .dialog-header, .dialog-body, .dialog-footer { padding: 1rem; }
@@ -33,9 +38,9 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
-      @media (min-width: 48rem) { .cultural-tip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
+      @media (min-width: 48rem) { .cultural-tip-grid, .translation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -63,6 +68,12 @@
         <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region. Navigation back to the dashboard remains a native link composed with the Spartan button treatment.</p>
         <div class="row"><a class="action-link" href="/dashboard">Back</a></div>
       </section>
+      <section aria-labelledby="checkout-confirmation-title" aria-describedby="checkout-confirmation-status">
+        <div aria-hidden="true">🎉</div>
+        <h2 id="checkout-confirmation-title">Checkout confirmation</h2>
+        <p id="checkout-confirmation-status" role="status" aria-live="polite">Purchase confirmed. The dashboard action remains native navigation composed with the Spartan button treatment.</p>
+        <div class="row"><a class="action-link" href="/dashboard">Go to dashboard</a></div>
+      </section>
       <section>
         <h2>Cultural guide callout</h2>
         <p>A read-only cultural tip stays a native named region under Relay presentation authority. The surface uses theme-aware semantic background, text, radius and elevation roles without acquiring a Spartan interaction primitive.</p>
@@ -74,6 +85,33 @@
           <article class="informational-region theme-dark" role="region" aria-label="Cultural guide dark wider state">
             <h3>Cultural guide</h3>
             <p>Relay semantic surface and text roles preserve the same hierarchy in dark mode and at wider breakpoints.</p>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="profile-translation-title">
+        <h2 id="profile-translation-title">Profile bio translation states</h2>
+        <p>Discovery cards and full profiles keep the original bio visible until a current translation succeeds. Spartan actions expose native disabled and busy semantics during requests, and failures remain retryable with an announced status instead of replacing profile text.</p>
+        <div class="translation-grid">
+          <article class="translation-card">
+            <strong>Loading</strong>
+            <p lang="ja">日本語を勉強しています。</p>
+            <button type="button" disabled aria-busy="true">Translating...</button>
+          </article>
+          <article class="translation-card">
+            <strong>Failure and retry</strong>
+            <p lang="ja">日本語を勉強しています。</p>
+            <button type="button" aria-describedby="translation-error">Translate bio</button>
+            <p id="translation-error" class="translation-status error" role="status" aria-live="polite">Something went wrong. Please try again.</p>
+          </article>
+          <article class="translation-card">
+            <strong>Translated</strong>
+            <p>I am studying Japanese.</p>
+            <button type="button">Show original</button>
+          </article>
+          <article class="translation-card" dir="rtl">
+            <strong>RTL retry</strong>
+            <p lang="ar">أتعلم اليابانية.</p>
+            <button type="button">ترجمة النبذة</button>
           </article>
         </div>
       </section>

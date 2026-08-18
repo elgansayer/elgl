@@ -122,13 +122,27 @@
           {{ displayBio || ('discovery.partnerBioFallback' | t) }}
         </p>
         @if (profile()?.bio_text) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="mt-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+            [disabled]="isTranslating()"
+            [attr.aria-busy]="isTranslating() ? 'true' : null"
+            [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
             (click)="toggleTranslation()"
           >
             {{ translationLabelKey | t }}
           </button>
+          @if (translationErrorKey()) {
+            <p
+              [id]="translationStatusId()"
+              class="mt-2 text-xs text-danger"
+              role="status"
+              aria-live="polite"
+            >
+              {{ translationErrorKey() | t }}
+            </p>
+          }
         }
 
         @if (profile()?.audio_intro_url) {

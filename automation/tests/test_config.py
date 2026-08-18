@@ -38,6 +38,38 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_quarantine_recovery_cli_is_targetable_and_quiet_by_default() -> None:
+    defaults = cli.parser().parse_args(["backlog", "requeue-quarantined"])
+    selected = cli.parser().parse_args(
+        [
+            "backlog",
+            "requeue-quarantined",
+            "--issue",
+            "42",
+            "--issue",
+            "43",
+            "--announce",
+        ]
+    )
+
+    assert defaults.issue is None
+    assert defaults.announce is False
+    assert selected.issue == [42, 43]
+    assert selected.announce is True
+
+
+def test_active_label_reconciliation_batch_is_typed_and_bounded() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="17")
+    )
+
+    assert configured.label_reconciliation_batch_size == 17
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="0"))
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="101"))
+
+
 def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
 
@@ -48,6 +80,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
     assert '"$FACTORY_STATE/recovery"' in setup
     assert "uv==0.12.5" in setup
+    assert "--inexact" in setup
     assert "bash -c \\" in setup
     assert 'cd "$1" && exec podman build' in setup
     assert '"$1/Containerfile" "$1"' in setup
@@ -102,8 +135,12 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
         encoding="utf-8"
     )
 
-    assert "uv sync" in deploy
-    assert "--active --frozen --no-editable --extra development" in deploy
+    assert '"$FACTORY_UV" sync' in deploy
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert "FACTORY_UV_VERSION=0.12.5" in deploy
+    assert '"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install' in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
+    assert "Factory dependency refresh removed the pinned uv executable" in deploy
     assert '"$FACTORY_CHECKOUT/admin-portal"' in deploy
     assert 'npm ci --prefix "$directory"' in deploy
     assert "npm exec -- cypress install" in deploy
@@ -111,6 +148,20 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'bash -c \'cd "$1" && exec podman build' in deploy
     assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
+
+
+def test_deployment_repairs_and_preserves_the_pinned_uv_bootstrap() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    repair = deploy.index('"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install')
+    refresh = deploy.index('"$FACTORY_UV" sync')
+    survival_check = deploy.index("Factory dependency refresh removed the pinned uv executable")
+
+    assert repair < refresh < survival_check
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
 
 
 def test_fast_deployment_reuses_only_verified_dependencies_and_worker_image() -> None:
@@ -566,6 +617,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_LABEL_RECONCILIATION_BATCH_SIZE=25" in template
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
     assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in template

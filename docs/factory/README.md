@@ -125,6 +125,22 @@ Provider exhaustion does not consume a task attempt. The job remains in its curr
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
 rotation. Persisted failure classes and deterministic jittered backoff remain authoritative across restart.
 
+### New-issue admission cadence
+
+Production admits one newly discovered GitHub issue per hour through:
+
+```text
+FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
+```
+
+This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
+and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; implementation, security review,
+verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
+review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
+admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
+
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
 job, preventing one difficult task from growing durable state without bound.
@@ -215,6 +231,9 @@ worker image, verifies systemd, starts the daemon, and runs online diagnostics. 
 credentials are not replaced or printed. It records whether the daemon and watchdog were active before the
 maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
 trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
+The Python refresh preserves the pinned `uv` bootstrap tool as an intentional extraneous package. If an older
+exact sync removed it, deployment restores the pinned version before continuing and proves it remains executable
+after the refresh. This keeps both startup doctor and isolated repository verification recoverable.
 
 For repeated deployments whose package manifests and worker inputs have not changed, use the verified fast path:
 
@@ -369,6 +388,8 @@ factory_cli reconcile
 factory_cli pause
 factory_cli resume
 factory_cli backlog requeue-quarantined
+factory_cli backlog requeue-quarantined --issue 1234
+factory_cli backlog requeue-quarantined --issue 1234 --announce
 ```
 
 If every provider is unavailable, do not delete the job, circuit, lease, or `jobs.json`. Fix service-user auth or
@@ -382,10 +403,20 @@ operator hold.
 
 Provider-side exhaustion remains automatic: it does not increment task attempts or trigger quarantine. When the
 same task-side failure reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory stores a recoverable quarantine and
-adds `factory-quarantined` plus `needs-human` once. Pause the daemon, resolve the deterministic cause, run
-`backlog requeue-quarantined`, then resume. The command reconciles the union of durable quarantine state and
-GitHub labels, so rerunning it safely completes a partially interrupted reset. Historical quarantine entries
-without the current reason marker are migrated into normal retry flow.
+adds `factory-quarantined` plus `needs-human` once. A due circuit re-enters discovery automatically after the
+bounded recovery window. Before discovery, Factory silently clears GitHub quarantine labels that are no longer
+backed by durable quarantine state at startup and whenever a bounded circuit is released, so a partial recovery
+cannot hide the job without adding a high-volume query to every scheduler refresh. To retry sooner, pause the daemon,
+resolve the deterministic cause, run `backlog requeue-quarantined`, then resume. Use repeatable `--issue` options
+for a targeted reset. Recovery is quiet by default; add `--announce` only when a lifecycle comment is useful. The
+command reconciles the union of durable quarantine state and GitHub labels, so rerunning it safely completes a
+partially interrupted reset. Historical quarantine entries without the current reason marker are migrated into
+normal retry flow. Successful merge completion removes `factory-active` before closing the source issue. Existing
+historical `factory-active` and retired `swarm-active` drift is cleaned in batches of
+`FACTORY_LABEL_RECONCILIATION_BATCH_SIZE` per scheduler refresh. Durable active jobs and currently protected
+workers retain ownership. Released issues always regain `factory-ready` because `factory-active` also carried
+trusted-intake authority. The configured batch is validated between 1 and 100. This avoids an unbounded startup
+mutation or GitHub comment burst while converging automatically.
 
 Never restore the old swarm or create a parallel one-off resolver to bypass a red diagnostic.
 

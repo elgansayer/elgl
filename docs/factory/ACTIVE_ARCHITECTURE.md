@@ -124,8 +124,16 @@ A repeated identical task-side failure opens a durable, recoverable quarantine a
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
 `factory-quarantined` plus `needs-human` once. Provider auth, quota, rate-limit, availability, timeout, transport,
 crash, malformed-output, and busy-capacity exhaustion never consume a task attempt or open this task circuit.
-`backlog requeue-quarantined` resets both durable state and GitHub labels after the cause is resolved. Historical
-quarantine entries without the new reason marker are migrated back into normal retry flow.
+After the bounded window, automatic recovery preserves failure evidence, returns the job to discovery, and
+requests a startup-equivalent reconciliation that silently removes GitHub quarantine labels no longer backed by
+durable state. `backlog requeue-quarantined`
+provides an earlier operator-selected reset, with repeatable `--issue` targeting and optional `--announce`
+comments. Historical quarantine entries without the new reason marker are migrated back into normal retry flow.
+Successful issue completion removes the Factory ownership label before closing the issue, preventing new stale
+`factory-active` markers from accumulating after merge. Startup also compares open ownership labels with durable
+active jobs and protected workers, including retired `swarm-active` markers. It releases only a configured bounded
+batch per refresh, restoring the ready label to preserve admission and posting no comments, until historical drift
+reaches zero.
 
 ## GitHub operator panel
 

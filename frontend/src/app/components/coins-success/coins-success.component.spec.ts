@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { CoinsSuccessComponent } from './coins-success.component';
 import { EconomyStore } from '../../services/economy.store';
@@ -36,6 +36,7 @@ describe('CoinsSuccessComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CoinsSuccessComponent, TranslatePipe],
       providers: [
+        provideRouter([]),
         { provide: I18nService, useClass: MockI18nService },
         { provide: EconomyStore, useValue: mockStore },
         {
@@ -45,7 +46,6 @@ describe('CoinsSuccessComponent', () => {
             snapshot: { queryParams: { session_id: 'stripe_test_session' } },
           },
         },
-        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -72,9 +72,19 @@ describe('CoinsSuccessComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
-    // With session_id present and confirmCoinPurchase resolving to true,
-    // status should transition to 'confirmed'
     expect(text).toContain('coinsSuccess.title');
     expect(text).not.toContain('coinsSuccess.pending');
+  });
+
+  it('should use a native Spartan navigation link for the dashboard action', () => {
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+
+    expect(dashboardLink).toBeTruthy();
+    expect(dashboardLink.getAttribute('href')).toBe('/dashboard');
+    expect(dashboardLink.getAttribute('size')).toBe('touch');
+    expect(dashboardLink.hasAttribute('role')).toBe(false);
+    expect(dashboardLink.hasAttribute('tabindex')).toBe(false);
+    dashboardLink.focus();
+    expect(document.activeElement).toBe(dashboardLink);
   });
 });
