@@ -29,7 +29,7 @@ from openhands_factory.generation import (
     activate_generation,
     assert_generation_current,
 )
-from openhands_factory.models import Job
+from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
@@ -65,6 +65,16 @@ def release_review_capacity_after(
     router.release_review_capacity(task_id)
 
 
+def is_review_lane_job(job: Job) -> bool:
+    """Return whether a job is advancing an existing or immediately ready PR."""
+
+    return (
+        job.task.source == "github-pull-request"
+        or job.pull_request is not None
+        or job.state is JobState.PR_DRAFT
+    )
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
@@ -84,22 +94,18 @@ def select_batch(
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     review_is_active = any(
-        item.task.identifier in excluded and item.task.source == "github-pull-request"
-        for item in jobs.values()
+        item.task.identifier in excluded and is_review_lane_job(item) for item in jobs.values()
     )
     if review_is_active:
-        return [item for item in candidates if item.task.source != "github-pull-request"][:limit]
+        return [item for item in candidates if not is_review_lane_job(item)][:limit]
 
-    review = next(
-        (item for item in candidates if item.task.source == "github-pull-request"),
-        None,
-    )
+    review = next((item for item in candidates if is_review_lane_job(item)), None)
     if review is None:
         return candidates[:limit]
 
     # Submit the merge-queue lane first. The router reserves provider capacity
     # for this job before issue workers can consume every healthy subscription.
-    remaining = [item for item in candidates if item.task.source != "github-pull-request"]
+    remaining = [item for item in candidates if not is_review_lane_job(item)]
     return [review, *remaining[: max(limit - 1, 0)]]
 
 
@@ -392,7 +398,7 @@ class FactoryDaemon:
                             verification_slots=self.verification_slots,
                             agent_router=self.pipeline.router,
                         )
-                        review_priority = job.task.source == "github-pull-request"
+                        review_priority = is_review_lane_job(job)
                         if review_priority:
                             self.pipeline.router.reserve_review_capacity(job.task.identifier)
                         try:
