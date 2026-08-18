@@ -1,18 +1,24 @@
-import type { Mock } from 'vitest';
 import { Test } from '@nestjs/testing';
-import { PasswordResetService } from './password-reset.service';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PasswordResetService } from './password-reset.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let mockSupabaseClient: {
-    from: vi.Mock;
-    auth: { admin: { listUsers: vi.Mock; updateUserById: vi.Mock } };
+    from: ReturnType<typeof vi.fn>;
+    auth: {
+      admin: {
+        listUsers: ReturnType<typeof vi.fn>;
+        updateUserById: ReturnType<typeof vi.fn>;
+      };
+    };
   };
-  let mockEmailService: { sendPasswordResetEmail: vi.Mock };
+  let mockEmailService: {
+    sendPasswordResetEmail: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockEmailService = {
@@ -51,7 +57,7 @@ describe('PasswordResetService', () => {
   });
 
   describe('requestPasswordReset', () => {
-    it('should silently return when no user is found', async () => {
+    it('silently returns when no user is found', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: { users: [] },
         error: null,
@@ -59,14 +65,13 @@ describe('PasswordResetService', () => {
 
       await service.requestPasswordReset({ email: 'nobody@example.com' });
 
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
       expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('should create a reset token and send email for a valid user', async () => {
+    it('creates a reset token and sends email for a valid user', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
-        data: {
-          users: [{ id: 'user-abc', email: 'user@example.com' }],
-        },
+        data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
         error: null,
       });
 
@@ -75,7 +80,7 @@ describe('PasswordResetService', () => {
       };
       mockSupabaseClient.from.mockReturnValue(insertChain);
 
-      await service.requestPasswordReset({ email: 'user@example.com' });
+      await service.requestPasswordReset({ email: 'USER@example.com' });
 
       expect(insertChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -84,124 +89,113 @@ describe('PasswordResetService', () => {
         }),
       );
       expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
-        'user@example.com',
+        'USER@example.com',
         expect.any(String),
       );
       const token = mockEmailService.sendPasswordResetEmail.mock.calls[0][1];
       expect(token).toHaveLength(64);
     });
 
-    it('should fall back to listUsers and find user by email case-insensitively', async () => {
+    it('fails internally when account lookup fails', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
-        data: {
-          users: [
-            { id: 'user-fallback', email: 'user@example.com' },
-            { id: 'other', email: 'other@example.com' },
-          ],
-        },
-        error: null,
+        data: null,
+        error: { message: 'auth unavailable' },
       });
 
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      mockSupabaseClient.from.mockReturnValue(insertChain);
-
-      await service.requestPasswordReset({ email: 'user@example.com' });
-
-      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenCalled();
-      expect(insertChain.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ user_id: 'user-fallback' }),
-      );
-      expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
-        'user@example.com',
-        expect.any(String),
-      );
+      await expect(
+        service.requestPasswordReset({ email: 'user@example.com' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+      expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when token insert fails', async () => {
+    it('throws when token persistence fails', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
-        data: {
-          users: [{ id: 'user-abc', email: 'user@example.com' }],
-        },
+        data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
         error: null,
       });
-
       const insertChain = {
-        insert: vi
-          .fn()
-          .mockResolvedValue({ error: new Error('insert failed') }),
+        insert: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'insert failed' },
+        }),
       };
       mockSupabaseClient.from.mockReturnValue(insertChain);
 
       await expect(
         service.requestPasswordReset({ email: 'user@example.com' }),
       ).rejects.toThrow(BadRequestException);
+      expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('invalidates an undelivered token when email dispatch fails', async () => {
+      mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
+        data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
+        error: null,
+      });
+      const insertChain = {
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      const invalidateChain = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      mockSupabaseClient.from
+        .mockReturnValueOnce(insertChain)
+        .mockReturnValueOnce(invalidateChain);
+      mockEmailService.sendPasswordResetEmail.mockRejectedValue(
+        new Error('mail unavailable'),
+      );
+
+      await expect(
+        service.requestPasswordReset({ email: 'user@example.com' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(invalidateChain.update).toHaveBeenCalledWith({ used: true });
+      expect(invalidateChain.eq).toHaveBeenCalledWith(
+        'token',
+        expect.any(String),
+      );
     });
   });
 
   describe('resetPassword', () => {
-    it('should throw for invalid token', async () => {
-      const selectChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'not found' },
-        }),
-      };
-      mockSupabaseClient.from.mockReturnValue(selectChain);
+    const createClaimChain = (
+      result: { data: { user_id: string } | null; error: unknown },
+    ) => ({
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue(result),
+    });
+
+    it('rejects an invalid or expired token before changing a password', async () => {
+      const claimChain = createClaimChain({ data: null, error: null });
+      mockSupabaseClient.from.mockReturnValue(claimChain);
 
       await expect(
         service.resetPassword({
-          token: 'bad-token',
-          newPassword: 'newpass123',
+          token: 'invalid-token',
+          newPassword: 'newPass123!',
         }),
       ).rejects.toThrow(UnauthorizedException);
+
+      expect(claimChain.update).toHaveBeenCalledWith({ used: true });
+      expect(claimChain.eq).toHaveBeenCalledWith('used', false);
+      expect(claimChain.gt).toHaveBeenCalledWith(
+        'expires_at',
+        expect.any(String),
+      );
+      expect(mockSupabaseClient.auth.admin.updateUserById).not.toHaveBeenCalled();
     });
 
-    it('should throw for expired token', async () => {
-      const pastDate = new Date(Date.now() - 10000);
-
-      const selectChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { user_id: 'user-1', expires_at: pastDate.toISOString() },
-          error: null,
-        }),
-      };
-      mockSupabaseClient.from.mockReturnValue(selectChain);
-
-      await expect(
-        service.resetPassword({
-          token: 'expired-token',
-          newPassword: 'newpass123',
-        }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should update password and mark token used for valid request', async () => {
-      const futureDate = new Date(Date.now() + 3600000);
-
-      const selectChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { user_id: 'user-abc', expires_at: futureDate.toISOString() },
-          error: null,
-        }),
-      };
-
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-
-      mockSupabaseClient.from
-        .mockReturnValueOnce(selectChain)
-        .mockReturnValueOnce(updateChain);
-
+    it('atomically claims a valid token before changing the password', async () => {
+      const claimChain = createClaimChain({
+        data: { user_id: 'user-abc' },
+        error: null,
+      });
+      mockSupabaseClient.from.mockReturnValue(claimChain);
       mockSupabaseClient.auth.admin.updateUserById.mockResolvedValue({
         data: null,
         error: null,
@@ -212,36 +206,80 @@ describe('PasswordResetService', () => {
         newPassword: 'newPass123!',
       });
 
+      expect(claimChain.update).toHaveBeenCalledWith({ used: true });
+      expect(claimChain.eq).toHaveBeenCalledWith('token', 'valid-token');
+      expect(claimChain.eq).toHaveBeenCalledWith('used', false);
+      expect(claimChain.select).toHaveBeenCalledWith('user_id');
       expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
         'user-abc',
         { password: 'newPass123!' },
       );
-      expect(updateChain.eq).toHaveBeenCalledWith('token', 'valid-token');
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw BadRequestException when password update fails', async () => {
-      const future = new Date(Date.now() + 30 * 60 * 1000);
-
-      const selectChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { user_id: 'user-abc', expires_at: future.toISOString() },
-          error: null,
-        }),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(selectChain);
-
+    it('allows only one password change when the same token is retried', async () => {
+      const claimChain = createClaimChain({
+        data: { user_id: 'user-abc' },
+        error: null,
+      });
+      claimChain.maybeSingle
+        .mockResolvedValueOnce({ data: { user_id: 'user-abc' }, error: null })
+        .mockResolvedValueOnce({ data: null, error: null });
+      mockSupabaseClient.from.mockReturnValue(claimChain);
       mockSupabaseClient.auth.admin.updateUserById.mockResolvedValue({
         data: null,
-        error: new Error('auth update failed'),
+        error: null,
+      });
+
+      await service.resetPassword({
+        token: 'single-use-token',
+        newPassword: 'firstPass123!',
+      });
+      await expect(
+        service.resetPassword({
+          token: 'single-use-token',
+          newPassword: 'secondPass123!',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledTimes(1);
+      expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
+        'user-abc',
+        { password: 'firstPass123!' },
+      );
+    });
+
+    it('rejects the request when the token claim fails', async () => {
+      const claimChain = createClaimChain({
+        data: null,
+        error: { message: 'database unavailable' },
+      });
+      mockSupabaseClient.from.mockReturnValue(claimChain);
+
+      await expect(
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'newPass123!',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockSupabaseClient.auth.admin.updateUserById).not.toHaveBeenCalled();
+    });
+
+    it('throws when password update fails after the token is claimed', async () => {
+      const claimChain = createClaimChain({
+        data: { user_id: 'user-abc' },
+        error: null,
+      });
+      mockSupabaseClient.from.mockReturnValue(claimChain);
+      mockSupabaseClient.auth.admin.updateUserById.mockResolvedValue({
+        data: null,
+        error: { message: 'auth update failed' },
       });
 
       await expect(
         service.resetPassword({
           token: 'valid-token',
-          newPassword: 'newpass123',
+          newPassword: 'newPass123!',
         }),
       ).rejects.toThrow(BadRequestException);
     });

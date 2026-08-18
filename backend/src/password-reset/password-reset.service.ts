@@ -26,24 +26,30 @@ export class PasswordResetService {
 
     // Look up user by email via Supabase auth admin API - emails live in
     // auth.users, not in the public.users table (which has no email column).
-    let userId: string | null = null;
-    const { data: allUsers } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
+    const { data: allUsers, error: listError } =
+      await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+
+    if (listError) {
+      this.logger.error('Failed to query accounts for password reset');
+      throw new BadRequestException('Failed to process password reset request');
+    }
+
     const match = allUsers?.users?.find(
-      (u: { email?: string; id?: string }) =>
-        u.email?.toLowerCase() === dto.email.toLowerCase(),
+      (user: { email?: string; id?: string }) =>
+        user.email?.toLowerCase() === dto.email.toLowerCase(),
     );
-    userId = match?.id ?? null;
+    const userId = match?.id ?? null;
 
     if (!userId) {
-      // Do not reveal whether the email exists
+      // Do not reveal whether the email exists.
       return;
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     const { error: insertError } = await supabase
       .from('password_reset_tokens')
@@ -55,51 +61,54 @@ export class PasswordResetService {
       });
 
     if (insertError) {
-      this.logger.error(`Failed to insert reset token: ${insertError.message}`);
+      this.logger.error('Failed to persist password reset token');
       throw new BadRequestException('Failed to create reset token');
     }
 
-    await this.emailService.sendPasswordResetEmail(dto.email, token);
+    try {
+      await this.emailService.sendPasswordResetEmail(dto.email, token);
+    } catch {
+      // A token whose email was never delivered should not remain usable.
+      const { error: invalidateError } = await supabase
+        .from('password_reset_tokens')
+        .update({ used: true })
+        .eq('token', token);
+
+      if (invalidateError) {
+        this.logger.error('Failed to invalidate undelivered password reset token');
+      }
+      this.logger.error('Failed to dispatch password reset email');
+      throw new BadRequestException('Failed to dispatch password reset email');
+    }
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
+    // Claim the token with a single conditional UPDATE. PostgreSQL rechecks the
+    // predicates after row-lock waits, so concurrent requests cannot both claim
+    // the same single-use token.
     const { data: tokenRecord, error: tokenError } = await supabase
       .from('password_reset_tokens')
-      .select('user_id, expires_at')
+      .update({ used: true })
       .eq('token', dto.token)
       .eq('used', false)
-      .single();
+      .gt('expires_at', new Date().toISOString())
+      .select('user_id')
+      .maybeSingle();
 
     if (tokenError || !tokenRecord) {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
-    const now = new Date();
-    const expiresAt = new Date(tokenRecord.expires_at);
-    if (now > expiresAt) {
-      throw new UnauthorizedException('Reset token has expired');
-    }
-
-    // Update password via Supabase admin API
     const { error: authError } = await supabase.auth.admin.updateUserById(
       tokenRecord.user_id,
       { password: dto.newPassword },
     );
 
     if (authError) {
-      this.logger.error(
-        `Failed to update password: ${authError.message}`,
-        authError,
-      );
+      this.logger.error('Failed to update password after reset token claim');
       throw new BadRequestException('Failed to update password');
     }
-
-    // Mark token as used
-    await supabase
-      .from('password_reset_tokens')
-      .update({ used: true })
-      .eq('token', dto.token);
   }
 }
