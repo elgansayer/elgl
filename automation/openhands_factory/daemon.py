@@ -358,6 +358,8 @@ class FactoryDaemon:
                             ),
                         )
                         recovered_circuits = recover_due_quarantines(self.pipeline.jobs)
+                        if recovered_circuits:
+                            self.pipeline.request_label_reconciliation()
                         for task_id in recovered_circuits:
                             self.pipeline.tasks.release(task_id)
                             LOGGER.warning(

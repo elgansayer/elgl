@@ -38,6 +38,38 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_quarantine_recovery_cli_is_targetable_and_quiet_by_default() -> None:
+    defaults = cli.parser().parse_args(["backlog", "requeue-quarantined"])
+    selected = cli.parser().parse_args(
+        [
+            "backlog",
+            "requeue-quarantined",
+            "--issue",
+            "42",
+            "--issue",
+            "43",
+            "--announce",
+        ]
+    )
+
+    assert defaults.issue is None
+    assert defaults.announce is False
+    assert selected.issue == [42, 43]
+    assert selected.announce is True
+
+
+def test_active_label_reconciliation_batch_is_typed_and_bounded() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="17")
+    )
+
+    assert configured.label_reconciliation_batch_size == 17
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="0"))
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="101"))
+
+
 def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
 
@@ -585,6 +617,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_LABEL_RECONCILIATION_BATCH_SIZE=25" in template
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
     assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in template

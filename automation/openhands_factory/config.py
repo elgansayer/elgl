@@ -364,6 +364,7 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    label_reconciliation_batch_size: int = 25
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     provider_slot_wait_seconds: int = 30
@@ -409,6 +410,13 @@ class FactoryConfig(BaseModel):
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("label_reconciliation_batch_size")
+    @classmethod
+    def bounded_label_reconciliation_batch(cls, value: int) -> int:
+        if not 1 <= value <= 100:
+            raise ValueError("label reconciliation batch size must be between 1 and 100")
         return value
 
     @model_validator(mode="after")
@@ -538,6 +546,9 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                label_reconciliation_batch_size=int(
+                    env.get("FACTORY_LABEL_RECONCILIATION_BATCH_SIZE", "25")
+                ),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
