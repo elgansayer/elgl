@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
-import { NlpRequestError, NlpService } from './nlp.service';
+import { NlpService } from './nlp.service';
 
 const response = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
@@ -13,7 +13,7 @@ describe('NlpService', () => {
   let service: NlpService;
   let fetchSpy: ReturnType<typeof vi.spyOn>;
   const authService = {
-    getAccessToken: vi.fn(() => 'access-token'),
+    getAccessToken: vi.fn((): string | null => 'access-token'),
   };
 
   beforeEach(() => {
@@ -60,11 +60,13 @@ describe('NlpService', () => {
   });
 
   it('classifies rate-limit responses and preserves Retry-After', async () => {
-    fetchSpy.mockResolvedValue(response({ message: 'Too many requests' }, 429, { 'Retry-After': '17' }));
+    fetchSpy.mockResolvedValue(
+      response({ message: 'Too many requests' }, 429, { 'Retry-After': '17' }),
+    );
 
     await expect(
       service.explainGrammar({ original: 'wrong', corrected: 'right' }),
-    ).rejects.toMatchObject<NlpRequestError>({
+    ).rejects.toMatchObject({
       kind: 'rate_limit',
       status: 429,
       retryAfterSeconds: 17,
@@ -76,7 +78,7 @@ describe('NlpService', () => {
 
     await expect(
       service.explainGrammar({ original: 'wrong', corrected: 'right' }),
-    ).rejects.toMatchObject<NlpRequestError>({ kind: 'auth' });
+    ).rejects.toMatchObject({ kind: 'auth' });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -87,7 +89,7 @@ describe('NlpService', () => {
 
     await expect(
       service.explainGrammar({ original: 'wrong', corrected: 'right' }),
-    ).rejects.toMatchObject<NlpRequestError>({ kind: 'empty' });
+    ).rejects.toMatchObject({ kind: 'empty' });
   });
 
   it('passes cancellation to fetch', async () => {
