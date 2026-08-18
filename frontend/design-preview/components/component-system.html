@@ -38,6 +38,20 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      .moments-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; max-inline-size: 30rem; }
+      .moments-media-trigger { min-block-size: 7rem; padding: 0; overflow: hidden; background: linear-gradient(135deg, Highlight, Mark); }
+      .moments-media-trigger:nth-child(2) { background: linear-gradient(135deg, Mark, ButtonFace); }
+      .moments-media-trigger:nth-child(3) { background: linear-gradient(135deg, ButtonFace, Highlight); }
+      .lightbox-stage { position: relative; min-block-size: 22rem; display: grid; place-items: center; overflow: hidden; border-radius: 0.75rem; background: #050505; color: white; }
+      .lightbox-stage .media { inline-size: min(70%, 24rem); aspect-ratio: 4 / 3; border: 1px solid #777; border-radius: 0.75rem; background: linear-gradient(135deg, #1d4ed8, #c026d3); }
+      .lightbox-close, .lightbox-prev, .lightbox-next { position: absolute; background: #111c; color: white; border-color: #777; }
+      .lightbox-close { inset-block-start: 1rem; inset-inline-end: 1rem; }
+      .lightbox-prev { inset-inline-start: 1rem; inset-block-start: 50%; transform: translateY(-50%); }
+      .lightbox-next { inset-inline-end: 1rem; inset-block-start: 50%; transform: translateY(-50%); }
+      .lightbox-dots { position: absolute; inset-block-end: 1rem; inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 0.5rem; }
+      .lightbox-dot { min-block-size: 24px; min-inline-size: 24px; padding: 0; border-radius: 999px; background: #ffffff55; border-color: transparent; }
+      .lightbox-dot[aria-current="true"] { background: white; }
+      @media (max-width: 34rem) { .moments-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lightbox-prev, .lightbox-next { display: none; } }
       .create-group-states { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
       .create-group-preview { border: 1px solid ButtonBorder; border-radius: 0.75rem; padding: 1rem; background: Canvas; color: CanvasText; display: grid; gap: 1rem; }
       .create-group-preview.light { color-scheme: light; }
@@ -58,7 +72,7 @@
       .sidebar-preview a:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
       @media (min-width: 48rem) { .cultural-tip-grid, .translation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview, .lightbox-stage { border-color: CanvasText; } .lightbox-stage .media { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -161,6 +175,26 @@
               <label>Language pair <select><option>English ↔ Japanese</option></select></label>
             </div>
             <div class="dialog-footer"><button>Cancel</button><button>Launch stage</button></div>
+          </div>
+        </div>
+      </section>
+      <section aria-labelledby="moments-lightbox-title">
+        <h2 id="moments-lightbox-title">Moments multi-image lightbox</h2>
+        <p>Moment thumbnails remain native Spartan buttons. Activating any thumbnail opens the shared full-screen Spartan dialog at the clicked image, with swipe and arrow navigation while focus and background interaction stay inside the modal lifecycle.</p>
+        <div class="moments-media-grid" aria-label="Moment images">
+          <button class="moments-media-trigger" aria-label="Image 1 of 3"></button>
+          <button class="moments-media-trigger" aria-label="Image 2 of 3"></button>
+          <button class="moments-media-trigger" aria-label="Image 3 of 3"></button>
+        </div>
+        <div class="lightbox-stage" role="dialog" aria-modal="true" aria-label="Image 2 of 3">
+          <button class="icon-control lightbox-close" aria-label="Close lightbox">×</button>
+          <button class="icon-control lightbox-prev" aria-label="Previous image">‹</button>
+          <div class="media" role="img" aria-label="Image 2 of 3"></div>
+          <button class="icon-control lightbox-next" aria-label="Next image">›</button>
+          <div class="lightbox-dots" aria-label="Image position">
+            <button class="lightbox-dot" aria-label="Go to image 1"></button>
+            <button class="lightbox-dot" aria-label="Go to image 2" aria-current="true"></button>
+            <button class="lightbox-dot" aria-label="Go to image 3"></button>
           </div>
         </div>
       </section>
