@@ -14,6 +14,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type DeckView = 'list' | 'detail';
 
@@ -55,6 +56,7 @@ const DECK_ICONS = [
     AppButtonPrimaryComponent,
     AppInputComponent,
     AppChipComponent,
+    A11yClickableDirective,
   ],
   template: `
     <app-srs-error-boundary
@@ -192,9 +194,7 @@ const DECK_ICONS = [
                     class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"
                     [style.border-color]="deck.colour + '40'"
                     (click)="openDeckDetail(deck)"
-                    (keyup.enter)="openDeckDetail(deck)"
-                    role="button"
-                    tabindex="0"
+                    appA11yClickable
                     [attr.aria-label]="'deck.openAriaLabel' | t: { name: deck.name }"
                   >
                     <div
