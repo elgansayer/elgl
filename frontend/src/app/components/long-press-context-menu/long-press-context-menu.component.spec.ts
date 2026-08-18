@@ -179,21 +179,24 @@ describe('LongPressContextMenuComponent', () => {
     expect(buttons.length).toBe(6);
   });
 
-  it('should expose grammar explanation only for a correction with both text variants', () => {
+  it('should expose grammar explanation only for a correction with both text variants', async () => {
     fixture.componentRef.setInput('messageType', 'correction');
     fixture.componentRef.setInput('correctionOriginal', 'I has a cat');
     fixture.componentRef.setInput('correctionCorrected', 'I have a cat');
     component.menuVisible.set(true);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.canExplainCorrection()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Explanation');
-    expect(fixture.debugElement.queryAll(By.css('button')).length).toBe(7);
+    const menu = document.body.querySelector('[role="dialog"]');
+    expect(menu?.textContent).toContain('Explanation');
+    expect(menu?.querySelectorAll('button')).toHaveLength(7);
 
     fixture.componentRef.setInput('correctionOriginal', '');
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(component.canExplainCorrection()).toBe(false);
-    expect(fixture.debugElement.queryAll(By.css('button')).length).toBe(6);
+    expect(document.body.querySelector('[role="dialog"]')?.querySelectorAll('button')).toHaveLength(
+      6,
+    );
   });
 
   it('should request an explanation with the exact correction pair and close the context menu', async () => {
@@ -301,10 +304,10 @@ describe('LongPressContextMenuComponent', () => {
 
     component.openExplanation();
     await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('<img src=x onerror=alert(1)>');
-    expect(fixture.nativeElement.querySelector('img')).toBeNull();
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('<img src=x onerror=alert(1)>');
+    expect(dialog?.querySelector('img')).toBeNull();
   });
 
   it('should close the explanation when the Spartan dialog reports dismissal', () => {

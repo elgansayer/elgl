@@ -86,11 +86,13 @@ export class NlpService {
 
   private isExplainGrammarResult(value: unknown): value is ExplainGrammarResult {
     if (!value || typeof value !== 'object') return false;
-    const candidate = value as Partial<ExplainGrammarResult>;
     return (
-      typeof candidate.original === 'string' &&
-      typeof candidate.corrected === 'string' &&
-      typeof candidate.explanation === 'string'
+      'original' in value &&
+      typeof value.original === 'string' &&
+      'corrected' in value &&
+      typeof value.corrected === 'string' &&
+      'explanation' in value &&
+      typeof value.explanation === 'string'
     );
   }
 

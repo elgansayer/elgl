@@ -12,6 +12,10 @@ interface ExplainGrammarContext {
 
 type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
 @Component({
   selector: 'app-long-press-context-menu',
   imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
@@ -34,7 +38,13 @@ type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
         [showCloseButton]="false"
         class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 px-4 py-3 gap-1 sm:max-w-sm"
       >
-        <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doReply()">
+        <button
+          hlmBtn
+          variant="ghost"
+          size="touch"
+          class="w-full justify-start"
+          (click)="doReply()"
+        >
           {{ 'context_menu.reply' | t }}
         </button>
 
@@ -63,7 +73,13 @@ type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
             {{ 'context_menu.transliterate' | t }}
           </button>
 
-          <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doSpeak()">
+          <button
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
+            (click)="doSpeak()"
+          >
             {{ 'context_menu.speak' | t }}
           </button>
 
@@ -182,7 +198,10 @@ type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
             {{ 'common.error_generic' | t }}
           </div>
         } @else if (explanationText(); as explanation) {
-          <p class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary" aria-live="polite">
+          <p
+            class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary"
+            aria-live="polite"
+          >
             {{ explanation }}
           </p>
         }
@@ -371,7 +390,7 @@ export class LongPressContextMenuComponent {
       if (!this.isCurrentExplanationRequest(requestId, source)) return;
       this.explanationText.set(result.explanation);
     } catch (error: unknown) {
-      if ((error as { name?: string } | null)?.name === 'AbortError') return;
+      if (isAbortError(error)) return;
       if (!this.isCurrentExplanationRequest(requestId, source)) return;
       if (error instanceof NlpRequestError) {
         this.explanationError.set(error.kind);
