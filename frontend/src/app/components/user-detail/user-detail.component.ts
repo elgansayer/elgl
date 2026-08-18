@@ -184,6 +184,6 @@ export class UserDetailComponent {
   private getTranslationContext(): string {
     const targetLang = this.i18n.currentLang() || 'en-GB';
     const profile = this.profile();
-    return `${profile?.id ?? this.userId()}\u0000${targetLang}\u0000${profile?.bio_text ?? ''}`;
+    return `${this.userId()}\u0000${profile?.id ?? ''}\u0000${targetLang}\u0000${profile?.bio_text ?? ''}`;
   }
 }
