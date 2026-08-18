@@ -36,6 +36,7 @@ describe('CoinsSuccessComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CoinsSuccessComponent, TranslatePipe],
       providers: [
+        provideRouter([]),
         { provide: I18nService, useClass: MockI18nService },
         { provide: EconomyStore, useValue: mockStore },
         {
@@ -45,7 +46,6 @@ describe('CoinsSuccessComponent', () => {
             snapshot: { queryParams: { session_id: 'stripe_test_session' } },
           },
         },
-        provideRouter([]),
       ],
     }).compileComponents();
 
