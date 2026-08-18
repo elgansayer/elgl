@@ -1,5 +1,12 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, ElementRef, output, viewChild, afterNextRender } from '@angular/core';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
+import {
+  Component,
+  ElementRef,
+  output,
+  viewChild,
+  afterNextRender,
+} from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -8,7 +15,9 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
+    ...HlmRadioGroupImports,
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
@@ -27,7 +36,15 @@ export class DoodlePadComponent {
 
   currentColor = '#000000';
   brushWidth = 4;
-  readonly colors = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+  readonly colors = [
+    '#000000',
+    '#ef4444',
+    '#3b82f6',
+    '#10b981',
+    '#f59e0b',
+    '#8b5cf6',
+  ];
+  readonly brushWidths = [2, 4, 8, 14];
 
   constructor() {
     afterNextRender(() => {
@@ -84,6 +101,13 @@ export class DoodlePadComponent {
 
   setBrushWidth(width: number): void {
     this.brushWidth = width;
+  }
+
+  setBrushWidthFromValue(value: string): void {
+    const width = Number(value);
+    if (this.brushWidths.includes(width)) {
+      this.setBrushWidth(width);
+    }
   }
 
   save(): void {
