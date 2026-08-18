@@ -9,6 +9,7 @@ ENV_EXAMPLE = REPOSITORY / "config" / "systemd" / "factory.env.example"
 SUBSCRIPTION_AGENTS = REPOSITORY / "docs" / "factory" / "SUBSCRIPTION-AGENTS.md"
 CURRENT_AUDIT = REPOSITORY / "docs" / "factory" / "AUDIT-2026-08-17.md"
 CONTROL_PANEL = REPOSITORY / "docs" / "factory" / "CONTROL-PANEL.md"
+MANUAL_MERGE = REPOSITORY / "docs" / "factory" / "MANUAL-MERGE.md"
 
 OPERATOR_RECOVERY_COMMANDS = (
     "doctor --online",
@@ -27,8 +28,10 @@ def test_runbook_documents_operator_recovery_commands() -> None:
     runbook = RUNBOOK.read_text(encoding="utf-8")
     assert "## Operator recovery" in runbook
     recovery = runbook.split("## Operator recovery", 1)[1].split("\n## ", 1)[0]
+    assert '/opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"' in recovery
+    assert 'PATH="$FACTORY_PATH"' in recovery
     for command in OPERATOR_RECOVERY_COMMANDS:
-        assert f"hellotalk-factory {command}" in recovery
+        assert f"factory_cli {command}" in recovery
 
 
 def test_execution_architecture_locks_single_factory_owner_and_multiple_providers() -> None:
@@ -43,6 +46,7 @@ def test_execution_architecture_locks_single_factory_owner_and_multiple_provider
         "OpenCode CLI",
         "OpenHands SDK",
         "No-provider capacity defers work",
+        "bounded pull-request review lane",
     ):
         assert marker in architecture
 
@@ -98,7 +102,7 @@ def test_runbook_documents_agent_and_verification_credential_boundaries() -> Non
         "disposable empty directories",
         "run `gh auth login`",
         "persistent service-home GitHub credentials",
-        "one active GitHub ruleset without bypass actors requires pull requests",
+        "one baseline GitHub ruleset requires pull requests",
     ):
         assert marker in runbook
     assert "Do not authenticate GitHub CLI as `hellotalk-factory`" in subscriptions
@@ -112,11 +116,13 @@ def test_current_audit_separates_source_quality_from_live_readiness() -> None:
     assert "AUDIT-2026-08-17.md" in runbook
     for marker in (
         "not working flawlessly",
-        "hellotalk-factory.service` was `failed`",
-        "GitHub can merge around the Factory",
-        "service-account provider capacity is unknown",
+        "remained active since",
+        "GitHub enforces Factory review",
+        "service-account provider capacity is constrained",
         "August 2026 model policy",
-        "No paid model task was launched",
+        "Codex option incompatibility",
+        "live router selected Claude",
+        "PR #7348 advanced remotely",
         "Required activation sequence",
     ):
         assert marker in audit
@@ -139,3 +145,21 @@ def test_control_panel_documents_remote_visibility_and_fixed_command_boundary() 
         "no new inbound network exposure",
     ):
         assert marker in panel
+
+
+def test_manual_merge_is_owner_only_and_can_bypass_all_checks() -> None:
+    runbook = RUNBOOK.read_text(encoding="utf-8")
+    workflow = AI_WORKFLOW.read_text(encoding="utf-8")
+    manual_merge = MANUAL_MERGE.read_text(encoding="utf-8")
+
+    assert "MANUAL-MERGE.md" in runbook
+    assert "MANUAL-MERGE.md" in workflow
+    for marker in (
+        "Both rulesets have one bypass actor: the exact repository-owner `User`",
+        "bypass_mode=pull_request",
+        "push directly to `main`",
+        "pull-request boundary",
+        "Prefer waiting for `CI / required`",
+        "Factory automation never invokes it",
+    ):
+        assert marker in manual_merge

@@ -17,6 +17,19 @@ Every AI-backed phase becomes one typed `AgentRequest` and can run through an el
 Providers cannot discover work, own job state, merge, or weaken Factory policy. The transport may be CLI,
 OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 
+The scheduler uses one bounded pull-request review lane. If no review is already active, the highest-priority
+runnable external PR is submitted before issue work, including when only one worker is available. A second PR
+cannot enter while that lane is active. The router reserves one slot on each provider from non-review jobs while
+the selected PR worker is active, so issue workers cannot consume every healthy subscription before the required
+review starts. Existing provider calls are never pre-empted. Remaining worker and provider slots retain normal
+issue priority order. Reviews default to priority 5. Trusted `guardian-alert`, `priority:critical`, and
+`priority:high` labels promote urgent PRs within that lane, with numeric identifier as the tie-breaker.
+
+GitHub discovery and stale-worktree reconciliation run on one control-plane worker. The owning daemon waits for
+that bounded pass while continuing to publish heartbeat state every ten seconds. Retired inactive jobs are merged
+into the latest durable snapshot in one write, so a large cleanup neither rewrites the full queue per job nor
+overwrites a sibling worker transition.
+
 ## Architecture invariants
 
 - `FACTORY_ARCHITECTURE` remains `openhands-agent-canvas-v1` for deployment and state compatibility.
@@ -34,6 +47,8 @@ OpenHands SDK, or a future ACP adapter without changing pipeline ownership.
 - Provider-side failures may fall through according to typed policy. Repository, test, task, policy, and internal
   Factory failures do not blindly rotate.
 - No-provider capacity defers work without consuming a task attempt or entering task quarantine.
+- A bounded pull-request review lane receives the first worker position and one reserved provider slot, preventing
+  required merge reviews from starving behind the issue backlog.
 - Repeated identical task-side failures open a recoverable circuit at the configured limit, while different
   failure fingerprints retain independent bounded backoff histories.
 - Provider health, circuits, retry evidence, history, and job state are durable across restart.
@@ -73,13 +88,18 @@ labels and marks the current SHA-scoped status `PENDING` before work starts. A c
 pending before verification. An otherwise reviewed head that falls behind `main` is updated through GitHub with
 an expected-head guard, then returns to local verification and independent review.
 
-Merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present and report
-literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human review may
-report `CHANGES_REQUESTED`. The scheduled merge workflow is the only merge authority and enforces the same
-boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`. One active GitHub
-ruleset without bypass actors must require pull requests and both canonical statuses so another authenticated
-actor cannot merge while either context is absent. Expected-source binding through a dedicated GitHub App is
-still required to attest the publisher; online doctor currently validates the active ruleset and context names.
+Autonomous merge readiness is fail-closed. Both `CI / required` and `factory/independent-review` must be present
+and report literal `SUCCESS`, the reviewed SHA must equal the PR head, mergeability must be clean, and no human
+review may report `CHANGES_REQUESTED`. The scheduled merge workflow is the only autonomous merge authority and
+enforces the same boundary with an atomic `--match-head-commit` guard, without native `--auto` or `--admin`.
+
+GitHub applies a baseline ruleset requiring pull requests and strict `CI / required`, plus a second review-only
+ruleset requiring `factory/independent-review`. Only the exact repository-owner user may bypass either ruleset,
+and only through an existing pull request. This permits a deliberate human waiver of CI, review, or both while
+Factory automation continues to require literal success from both statuses. Roles, apps, teams, deploy keys,
+direct pushes, and always-mode bypasses remain prohibited. Expected-source binding through a dedicated GitHub App
+is still required to attest the publisher; online doctor validates the layered rules, context names, and narrow
+owner bypass. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 ## Recovery authority
 
