@@ -74,7 +74,7 @@
           <label class="block text-xs font-bold text-warning uppercase tracking-wider mb-1">
             {{ 'moments.liveDiffPreview' | t }}
           </label>
-          <app-visual-diff [original]="originalText()" [corrected]="correctedText()">
+          <app-visual-diff [original]="originalText()" [corrected]="correctedText()" [showActions]="true">
           </app-visual-diff>
         </div>
       }
