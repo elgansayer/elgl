@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
 import { I18nService } from '../../services/i18n.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
@@ -27,7 +28,7 @@ describe('DesktopSidebarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DesktopSidebarComponent],
+      imports: [DesktopSidebarComponent, JoyrideModule.forRoot()],
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: UnreadCounterService, useClass: MockUnreadCounterService },
