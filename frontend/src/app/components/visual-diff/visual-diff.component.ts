@@ -1,4 +1,9 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, inject } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { FlashcardService } from '../../services/flashcard.service';
+import { showToast } from '../../services/toast.service';
+import { I18nService } from '../../services/i18n.service';
 
 interface DiffSegment {
   type: 'unchanged' | 'removed' | 'added';
@@ -8,6 +13,7 @@ interface DiffSegment {
 
 @Component({
   selector: 'app-visual-diff',
+  imports: [...HlmButtonImports, TranslatePipe],
   template: `
     <div class="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
       @for (segment of segments(); track segment.index) {
@@ -31,12 +37,42 @@ interface DiffSegment {
         }
       }
     </div>
+    @if (explanation()) {
+      <div class="mt-1 text-xs text-text-secondary italic">
+        {{ explanation() }}
+      </div>
+    }
+    @if (showActions()) {
+      <div class="mt-2 flex">
+        <button hlmBtn variant="outline" size="sm" class="text-xs" (click)="createFlashcard()">
+          ➕ {{ 'correction.createFlashcard' | t }}
+        </button>
+      </div>
+    }
   `,
 })
 export class VisualDiffComponent {
   readonly original = input.required<string>();
   readonly corrected = input.required<string>();
   readonly explanation = input<string>();
+  readonly showActions = input<boolean>(false);
+
+  private flashcardService = inject(FlashcardService);
+  private i18n = inject(I18nService);
+
+  async createFlashcard() {
+    try {
+      await this.flashcardService.createFlashcard({
+        word_token: this.corrected(),
+        translation: this.original(),
+        original_context: this.explanation() || undefined,
+      });
+      showToast(this.i18n.translate('correction.flashcardCreatedAlert') || 'Flashcard created');
+    } catch (err) {
+      console.error('Error creating flashcard', err);
+      showToast(this.i18n.translate('error.general') || 'Error');
+    }
+  }
 
   readonly segments = computed<DiffSegment[]>(() => {
     const orig = this.original();

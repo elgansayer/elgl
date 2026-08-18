@@ -129,8 +129,10 @@ When every candidate fails for a provider-side reason, the router raises `Provid
 keeps the current phase, schedules the earliest bounded retry, and does not increment the task-attempt counter.
 Task, test, repository, policy, and internal failures return to the durable Factory retry or repair path. If the
 same task-side failure fingerprint reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory opens a recoverable
-quarantine rather than looping forever. Run `hellotalk-factory backlog requeue-quarantined` after fixing the
-underlying cause.
+quarantine rather than looping forever. The bounded recovery window releases the circuit automatically and
+reconciles stale GitHub quarantine labels before discovery. Run
+`hellotalk-factory backlog requeue-quarantined --issue NUMBER` after fixing the underlying cause when an earlier
+retry is appropriate. Add `--announce` only when an issue comment is warranted.
 
 ## Circuit breakers and health
 
@@ -160,6 +162,12 @@ return, and is scoped to the active daemon generation. Stale leases from a crash
 generation's capacity. Persisted leases with missing or timezone-naive timestamps, impossible acquisition times,
 or expiry beyond the longest configured attempt window are discarded. Task leases apply the same bounded-duration
 rule, and their mutations use a cross-process file lock so operator reconciliation cannot race the daemon.
+
+The daemon admits at most one pull-request review lane and submits it before issue work. While that PR worker is
+active, `AgentRouter` subtracts one slot from the limit offered to non-review jobs on every provider. The PR job
+retains the full configured limit. This reservation does not cancel an existing provider process, but it prevents
+new issue phases from repeatedly taking a newly freed slot before the required review can acquire it. The
+reservation is released by the worker future on success, failure, cancellation, or shutdown drain.
 
 `jobs.json` read-modify-write operations also use a cross-process lock. Provider history is bounded to the latest
 500 entries per job on append and deserialisation, preserving useful provenance without unbounded state growth.

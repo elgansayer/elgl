@@ -43,6 +43,7 @@ import { HelpModule } from './help/help.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { GroupsModule } from './groups/groups.module';
+import { CommunitiesModule } from './communities/communities.module';
 import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
@@ -150,6 +151,7 @@ import { LivekitModule } from './livekit/livekit.module';
     LanguageChallengesModule,
     PronunciationModule,
     GroupsModule,
+    CommunitiesModule,
     ShoppingModule,
     MilestonesModule,
     StudyBuddiesModule,

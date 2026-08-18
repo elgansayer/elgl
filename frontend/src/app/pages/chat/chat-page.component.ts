@@ -36,6 +36,7 @@ interface AiChatMessage {
             <div
               (click)="selectRoom(room)"
               (keydown.enter)="selectRoom(room)"
+              (keydown.space)="selectRoom(room); $event.preventDefault()"
               tabindex="0"
               role="button"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"

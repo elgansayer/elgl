@@ -48,6 +48,31 @@ describe('CulturalTipComponent', () => {
     expect(fixture.nativeElement.querySelector('#cultural-tip-heading')).toBeNull();
   });
 
+  it('should use Relay theme tokens and mobile-first responsive spacing', async () => {
+    fixture.detectChanges();
+    httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja').flush({
+      language: 'ja',
+      guide: 'Bowing is the customary greeting in Japan.',
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const region: HTMLElement = fixture.nativeElement.querySelector('[role="region"]');
+    const heading: HTMLElement = fixture.nativeElement.querySelector('h3');
+
+    expect(region.classList).toContain('rounded-card');
+    expect(region.classList).toContain('bg-surface-100');
+    expect(region.classList).toContain('border-primary');
+    expect(region.classList).toContain('text-text-secondary');
+    expect(region.classList).toContain('shadow-card');
+    expect(region.classList).toContain('px-4');
+    expect(region.classList).toContain('sm:px-5');
+    expect(region.classList).not.toContain('bg-surface-2');
+    expect(region.classList).not.toContain('rounded-xl');
+    expect(region.classList).not.toContain('border-accent');
+    expect(heading.classList).toContain('text-text-primary');
+  });
+
   it('should render nothing when no guide is found for the language', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('http://localhost:3000/api/cultural-guides/ja');

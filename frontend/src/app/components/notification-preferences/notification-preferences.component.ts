@@ -153,34 +153,7 @@ export class NotificationPreferencesComponent {
 
   private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
     const p = this.prefs();
-    if (!p) return undefined;
-    // explicit switch to avoid any / type assertion
-    switch (cat) {
-      case 'new_message':
-        return p.new_message;
-      case 'call_invite':
-        return p.call_invite;
-      case 'moment_like':
-        return p.moment_like;
-      case 'moment_comment':
-        return p.moment_comment;
-      case 'correction':
-        return p.correction;
-      case 'gift':
-        return p.gift;
-      case 'profile_view':
-        return p.profile_view;
-      case 'study_reminder':
-        return p.study_reminder;
-      case 'friend_request':
-        return p.friend_request;
-      case 'audio_room_invite':
-        return p.audio_room_invite;
-      case 'new_follower':
-        return p.new_follower;
-      default:
-        return undefined;
-    }
+    return p?.[cat];
   }
 
   channelEnabled(cat: NotificationCategory, ch: 'push' | 'badge'): boolean {
@@ -198,11 +171,13 @@ export class NotificationPreferencesComponent {
   }
 
   toggle(cat: NotificationCategory, ch: 'push' | 'badge'): void {
+    const p = this.prefs();
+    if (!p) return;
     const cp = this.categoryPref(cat);
     if (!cp) return;
     const newVal = !cp[ch];
     this.service
-      .toggleCategoryChannel(cat, ch, newVal, this.prefs()!)
+      .toggleCategoryChannel(cat, ch, newVal, p)
       .then((updated) => {
         this.prefs.set(updated);
         this.doNotDisturb.set(updated.do_not_disturb);

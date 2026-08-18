@@ -12,6 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       (click)="cancelCrop.emit()"
       (keydown.enter)="cancelCrop.emit()"
+      (keydown.space)="cancelCrop.emit(); $event.preventDefault()"
       tabindex="0"
       role="button"
     >
@@ -19,6 +20,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         class="bg-surface-200 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
         (click)="$event.stopPropagation()"
         (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation(); $event.preventDefault()"
         tabindex="0"
         role="button"
       >

@@ -43,3 +43,8 @@
 **Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (`CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY`) to pass unnoticed in production.
 **Learning:** Defaulting to development secrets or using the non-null assertion operator (`!`) on optional config values can compromise critical API endpoints if not explicitly validated during app startup.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret or API key is absent, preventing the backend from initializing insecurely.
+
+## 2026-08-18 - [Strict Secrets Validation in Production for Monetisation]
+**Vulnerability:** Monetisation services (`AppleReceiptValidatorService` and `MonetisationService`) relied on weak development fallback values for critical secrets (`APPLE_SHARED_SECRET` and `STRIPE_SECRET_KEY`) when environment variables were missing.
+**Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, preventing real payments while avoiding startup crashes.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
