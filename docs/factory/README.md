@@ -215,6 +215,9 @@ worker image, verifies systemd, starts the daemon, and runs online diagnostics. 
 credentials are not replaced or printed. It records whether the daemon and watchdog were active before the
 maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
 trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
+The Python refresh preserves the pinned `uv` bootstrap tool as an intentional extraneous package. If an older
+exact sync removed it, deployment restores the pinned version before continuing and proves it remains executable
+after the refresh. This keeps both startup doctor and isolated repository verification recoverable.
 
 For repeated deployments whose package manifests and worker inputs have not changed, use the verified fast path:
 

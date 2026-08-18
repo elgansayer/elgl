@@ -61,7 +61,9 @@ export class MonetisationService {
 
     if (env === 'production') {
       if (!secret || secret === 'sk_test_123' || secret === 'sk_test') {
-        throw new Error('STRIPE_SECRET_KEY must be configured securely in production');
+        throw new Error(
+          'STRIPE_SECRET_KEY must be configured securely in production',
+        );
       }
     } else {
       if (!secret) {
@@ -69,12 +71,9 @@ export class MonetisationService {
       }
     }
 
-    this.stripe = new Stripe(
-      secret,
-      {
-        apiVersion: '2023-10-16',
-      },
-    );
+    this.stripe = new Stripe(secret, {
+      apiVersion: '2023-10-16',
+    });
   }
 
   /**

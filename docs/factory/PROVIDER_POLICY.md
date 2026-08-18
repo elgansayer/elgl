@@ -5,25 +5,26 @@ It supplements `ACTIVE_ARCHITECTURE.md` with the concrete default routing contra
 
 ## Canonical production route
 
-For every normal engineering phase, the production route is:
+Normal engineering phases use phase-specific subscription routes:
 
-1. `codex` using the OpenAI/ChatGPT subscription-backed Codex CLI.
-2. `opencode` using the authenticated OpenCode Go subscription.
+- Planning, architecture, implementation, and security review: `claude`, `codex`, `google`, `opencode`.
+- Quality repair, code review, and CI repair: `codex`, `claude`, `google`, `opencode`.
+- General actions: `opencode`, `google`, `codex`, `claude`.
 
-`openhands` remains available only as an explicitly `emergency_only` SDK adapter after the normal subscription providers are unavailable or ineligible. It must not preempt either normal provider.
+`openhands` remains available only as an explicitly `emergency_only` SDK adapter after the normal subscription providers are unavailable or ineligible. It must not preempt a subscription provider.
 
-The optional `claude` and `google` adapters remain implemented so they can be deliberately enabled in a future architecture change, but they are disabled in the production configuration and must not appear in the normal routing chain. Gemini/Google therefore remains disabled by default.
+Claude is enabled in the production reference configuration. Google remains disabled in the production reference configuration until its host authentication and executable are verified, but it remains in every configured route so an operator can enable it without redesigning policy. Disabled, unhealthy, cooling-down, or busy providers are skipped by the router.
 
 ## Phase policy
 
-The same normal ordering applies to planning, architecture, implementation, security review, quality repair, code review, CI repair, and general actions. Review independence is enforced by the router's provider-history and diversity rules rather than by changing the canonical provider order.
+Review and repair phases prefer Codex, while implementation and planning prefer Claude. General actions prefer OpenCode. Review independence is also enforced by provider history and diversity rules, so the implementation provider is avoided when another reviewer is usable.
 
 The production route is represented by `config/factory/agents.production.json`. Factory CI asserts the following invariants:
 
 - routing is enabled;
-- Codex and OpenCode use subscription authentication over their CLI transports;
-- every routed phase is `codex`, then `opencode`, then emergency-only `openhands`;
-- Claude and Google are disabled in production;
+- Claude, Codex, and OpenCode use subscription authentication over their CLI transports;
+- every routed phase follows its documented phase-specific order;
+- Google is represented in the routes but disabled in the safe reference configuration;
 - the OpenHands SDK adapter is enabled only as an emergency tier.
 
 A change to this order, authentication mode, transport, or emergency tier is an architecture change. It must update this document, `ACTIVE_ARCHITECTURE.md` when its control-plane description changes, the production configuration, and executable regression tests in the same logical PR.

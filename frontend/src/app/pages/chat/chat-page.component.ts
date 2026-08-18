@@ -9,7 +9,6 @@ import { CentrifugoService } from '../../services/centrifugo.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from './ai-conversation.service';
-import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 
 interface AiChatMessage {
   id: string;
@@ -20,7 +19,7 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective],
+  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -36,7 +35,10 @@ interface AiChatMessage {
           @for (room of rooms(); track room) {
             <div
               (click)="selectRoom(room)"
-              appA11yClickable
+              (keydown.enter)="selectRoom(room)"
+              (keydown.space)="selectRoom(room); $event.preventDefault()"
+              tabindex="0"
+              role="button"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
               [class.bg-primary/10]="selectedRoom()?.id === room.id"
             >

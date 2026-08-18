@@ -16,6 +16,9 @@ FACTORY_HEALTH_TIMER_WAS_ACTIVE=false
 DEPLOY_CACHE_DIRECTORY=/opt/hellotalk-factory/deploy-cache
 DEPLOY_CACHE_SCHEMA=1
 WORKER_IMAGE=localhost/hellotalk-factory-worker:current
+FACTORY_VIRTUAL_ENV=/opt/hellotalk-factory/venv
+FACTORY_UV_VERSION=0.12.5
+FACTORY_UV="$FACTORY_VIRTUAL_ENV/bin/uv"
 
 usage() {
   cat <<'EOF'
@@ -314,14 +317,23 @@ systemctl disable --now hellotalk-meta-agent.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/hellotalk-meta-agent.service
 systemctl daemon-reload
 
-if [ ! -x /opt/hellotalk-factory/venv/bin/uv ]; then
+if [ ! -x "$FACTORY_VIRTUAL_ENV/bin/python" ]; then
   echo 'Missing factory virtual environment.' >&2
   exit 1
 fi
-VIRTUAL_ENV=/opt/hellotalk-factory/venv \
-  /opt/hellotalk-factory/venv/bin/uv sync \
-  --active --frozen --no-editable --extra development \
+if [ ! -x "$FACTORY_UV" ]; then
+  echo "Repairing pinned Factory uv $FACTORY_UV_VERSION"
+  "$FACTORY_VIRTUAL_ENV/bin/python" -m pip install \
+    --disable-pip-version-check --no-input "uv==$FACTORY_UV_VERSION"
+fi
+VIRTUAL_ENV="$FACTORY_VIRTUAL_ENV" \
+  "$FACTORY_UV" sync \
+  --active --frozen --inexact --no-editable --extra development \
   --project "$WORKTREE/automation"
+if [ ! -x "$FACTORY_UV" ]; then
+  echo 'Factory dependency refresh removed the pinned uv executable.' >&2
+  exit 1
+fi
 
 install -d -o root -g root -m 0755 "$DEPLOY_CACHE_DIRECTORY"
 

@@ -3,21 +3,26 @@ import { Component, input, output, signal } from '@angular/core';
 import { ImageCropperComponent } from 'ngx-image-cropper';
 
 import { TranslatePipe } from '../../services/translate.pipe';
-import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 @Component({
   selector: 'app-cover-photo-cropper',
-  imports: [HlmButton, ImageCropperComponent, TranslatePipe, A11yClickableDirective],
+  imports: [HlmButton, ImageCropperComponent, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       (click)="cancelCrop.emit()"
-      appA11yClickable
+      (keydown.enter)="cancelCrop.emit()"
+      (keydown.space)="cancelCrop.emit(); $event.preventDefault()"
+      tabindex="0"
+      role="button"
     >
       <div
         class="bg-surface-200 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
         (click)="$event.stopPropagation()"
-        appA11yClickable
+        (keydown.enter)="$event.stopPropagation()"
+        (keydown.space)="$event.stopPropagation(); $event.preventDefault()"
+        tabindex="0"
+        role="button"
       >
         <h3 class="text-lg font-semibold text-text-primary mb-4">{{ 'coverPhoto.crop' | t }}</h3>
 

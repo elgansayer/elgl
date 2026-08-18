@@ -7,7 +7,16 @@ def test_production_provider_policy_is_locked() -> None:
     config = json.loads(path.read_text(encoding="utf-8"))
     providers = config["providers"]
     routing = config["routing"]
-    expected_route = ["codex", "opencode", "openhands"]
+    expected_routes = {
+        "planning": ["claude", "codex", "google", "opencode", "openhands"],
+        "architecture": ["claude", "codex", "google", "opencode", "openhands"],
+        "implementation": ["claude", "codex", "google", "opencode", "openhands"],
+        "security_review": ["claude", "codex", "google", "opencode", "openhands"],
+        "quality_repair": ["codex", "claude", "google", "opencode", "openhands"],
+        "code_review": ["codex", "claude", "google", "opencode", "openhands"],
+        "ci_repair": ["codex", "claude", "google", "opencode", "openhands"],
+        "general_action": ["opencode", "google", "codex", "claude", "openhands"],
+    }
 
     assert config["routing_enabled"] is True
     assert providers["codex"] == {
@@ -22,21 +31,13 @@ def test_production_provider_policy_is_locked() -> None:
         "auth_mode": "subscription",
         "transport": "cli",
     }
-    assert providers["claude"]["enabled"] is False
+    assert providers["claude"]["enabled"] is True
+    assert providers["claude"]["auth_mode"] == "subscription"
+    assert providers["claude"]["transport"] == "cli"
     assert providers["google"]["enabled"] is False
     assert providers["openhands"]["enabled"] is True
     assert providers["openhands"]["emergency_only"] is True
     assert providers["openhands"]["transport"] == "openhands-sdk"
 
-    routed_phases = {
-        "planning",
-        "architecture",
-        "implementation",
-        "security_review",
-        "quality_repair",
-        "code_review",
-        "ci_repair",
-        "general_action",
-    }
-    assert routed_phases <= routing.keys()
-    assert all(routing[phase] == expected_route for phase in routed_phases)
+    assert expected_routes.keys() <= routing.keys()
+    assert all(routing[phase] == route for phase, route in expected_routes.items())

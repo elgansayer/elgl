@@ -5,7 +5,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 interface CropBox {
   x: number;
@@ -16,7 +15,7 @@ interface CropBox {
 
 @Component({
   selector: 'app-cover-photo-uploader',
-  imports: [HlmButton, TranslatePipe, A11yClickableDirective],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="relative w-full max-w-2xl mx-auto">
       <!-- Hidden file input -->
@@ -43,7 +42,10 @@ interface CropBox {
           <div
             class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
             (click)="fileInput.click()"
-            appA11yClickable
+            (keydown.enter)="fileInput.click()"
+            (keydown.space)="fileInput.click(); $event.preventDefault()"
+            tabindex="0"
+            role="button"
           >
             <div class="text-center text-white">
               <svg

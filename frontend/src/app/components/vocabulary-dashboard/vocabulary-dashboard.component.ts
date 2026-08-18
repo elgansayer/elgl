@@ -7,13 +7,12 @@ import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from '../srs-error-boundary/srs-error-boundary.component';
-import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent, A11yClickableDirective],
+  imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -47,7 +46,10 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 class="flashcard"
                 [class.is-flipped]="isFlipped()"
                 (click)="flipCard()"
-                appA11yClickable
+                (keydown.enter)="flipCard()"
+                (keydown.space)="flipCard(); $event.preventDefault()"
+                role="button"
+                tabindex="0"
                 [attr.aria-pressed]="isFlipped()"
               >
                 <div class="flashcard-inner">
