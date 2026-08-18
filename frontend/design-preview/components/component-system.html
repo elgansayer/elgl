@@ -70,9 +70,20 @@
       .sidebar-preview a { min-block-size: 44px; padding-inline: 0.875rem; border-radius: 0.75rem; color: color-mix(in srgb, CanvasText 72%, Canvas); display: flex; gap: 0.75rem; align-items: center; text-decoration: none; }
       .sidebar-preview a[aria-current="page"] { background: color-mix(in srgb, CanvasText 10%, Canvas); color: Highlight; font-weight: 600; }
       .sidebar-preview a:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+      .checkout-states { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+      .checkout-preview { min-block-size: 20rem; padding: 1rem; border-radius: 1rem; background: color-mix(in srgb, CanvasText 4%, Canvas); display: grid; place-items: center; }
+      .checkout-preview.light { color-scheme: light; }
+      .checkout-preview.dark { color-scheme: dark; }
+      .checkout-card { inline-size: min(100%, 28rem); box-sizing: border-box; border: 1px solid ButtonBorder; border-radius: 1rem; padding: 2rem 1.25rem; text-align: center; background: color-mix(in srgb, CanvasText 7%, Canvas); box-shadow: 0 1px 2px color-mix(in srgb, CanvasText 4%, transparent), 0 4px 14px color-mix(in srgb, CanvasText 8%, transparent); }
+      .checkout-card .status-icon { display: block; font-size: 3rem; margin-block-end: 1rem; }
+      .checkout-card h3 { margin-block: 0 0.75rem; }
+      .checkout-card p { margin-block: 0 1.5rem; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .checkout-card .checkout-action { inline-size: 100%; box-sizing: border-box; }
+      .checkout-preview.wide .checkout-card { padding: 2.5rem; }
+      .checkout-preview.wide .checkout-action { inline-size: auto; }
       @media (min-width: 48rem) { .cultural-tip-grid, .translation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview, .lightbox-stage { border-color: CanvasText; } .lightbox-stage .media { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview, .checkout-card, .lightbox-stage { border-color: CanvasText; } .lightbox-stage .media { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -109,11 +120,27 @@
         <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region. Navigation back to the dashboard remains a native link composed with the Spartan button treatment.</p>
         <div class="row"><a class="action-link" href="/dashboard">Back</a></div>
       </section>
-      <section aria-labelledby="checkout-confirmation-title" aria-describedby="checkout-confirmation-status">
-        <div aria-hidden="true">🎉</div>
-        <h2 id="checkout-confirmation-title">Checkout confirmation</h2>
-        <p id="checkout-confirmation-status" role="status" aria-live="polite">Purchase confirmed. The dashboard action remains native navigation composed with the Spartan button treatment.</p>
-        <div class="row"><a class="action-link" href="/dashboard">Go to dashboard</a></div>
+      <section aria-labelledby="checkout-confirmation-title">
+        <h2 id="checkout-confirmation-title">Checkout confirmation Relay states</h2>
+        <p>The checkout return keeps the page on the Relay canvas, elevates the result into a semantic card surface, and lets the Spartan dashboard action use the current user primary accent. Mobile keeps the action full-width while wider layouts return it to intrinsic sizing.</p>
+        <div class="checkout-states">
+          <div class="checkout-preview light" aria-label="Checkout success light mobile preview">
+            <article class="checkout-card">
+              <span class="status-icon" aria-hidden="true">🎉</span>
+              <h3>Purchase confirmed</h3>
+              <p role="status" aria-live="polite">Your coins are ready to use.</p>
+              <a class="action-link checkout-action" href="/dashboard">Go to dashboard</a>
+            </article>
+          </div>
+          <div class="checkout-preview dark wide" aria-label="Checkout success dark desktop preview">
+            <article class="checkout-card">
+              <span class="status-icon" aria-hidden="true">🎉</span>
+              <h3>Purchase confirmed</h3>
+              <p role="status" aria-live="polite">Your coins are ready to use.</p>
+              <a class="action-link checkout-action" href="/dashboard">Go to dashboard</a>
+            </article>
+          </div>
+        </div>
       </section>
       <section>
         <h2>Cultural guide callout</h2>
