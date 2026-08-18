@@ -16,7 +16,11 @@
       button:focus-visible, .action-link:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
       input, textarea, select { background: Field; color: FieldText; inline-size: min(100%, 22rem); }
       textarea { min-block-size: 6rem; padding-block: 0.75rem; }
-      .informational-region { border-inline-start: 4px solid Highlight; border-inline-end: 0; background: color-mix(in srgb, CanvasText 6%, Canvas); }
+      .cultural-tip-grid { display: grid; gap: 0.75rem; }
+      .informational-region { border-inline-start: 4px solid Highlight; border-radius: 1rem; background: color-mix(in srgb, CanvasText 6%, Canvas); padding: 0.75rem 1rem; box-shadow: 0 1px 2px color-mix(in srgb, CanvasText 4%, transparent), 0 4px 14px color-mix(in srgb, CanvasText 8%, transparent); }
+      .informational-region h3 { margin-block: 0 0.25rem; }
+      .informational-region p { margin-block: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .informational-region.theme-dark { color-scheme: dark; }
       .dialog-stage { background: color-mix(in srgb, CanvasText 60%, transparent); padding: 1rem; border-radius: 0.75rem; }
       .dialog-panel { margin-inline: auto; max-inline-size: 28rem; border: 1px solid ButtonBorder; border-radius: 0.75rem; background: Canvas; color: CanvasText; box-shadow: 0 1rem 3rem color-mix(in srgb, CanvasText 24%, transparent); }
       .dialog-header, .dialog-body, .dialog-footer { padding: 1rem; }
@@ -29,8 +33,9 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      @media (min-width: 48rem) { .cultural-tip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -50,9 +55,19 @@
         <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region.</p>
         <div class="row"><button type="button">Back</button></div>
       </section>
-      <section class="informational-region" role="region" aria-label="Cultural guide">
-        <h2>Cultural guide</h2>
-        <p>A read-only cultural tip remains a native named region under Relay presentation authority; it does not acquire a Spartan interaction primitive solely for visual composition.</p>
+      <section>
+        <h2>Cultural guide callout</h2>
+        <p>A read-only cultural tip stays a native named region under Relay presentation authority. The surface uses theme-aware semantic background, text, radius and elevation roles without acquiring a Spartan interaction primitive.</p>
+        <div class="cultural-tip-grid">
+          <article class="informational-region" role="region" aria-label="Cultural guide light mobile state">
+            <h3>Cultural guide</h3>
+            <p>In Japan, a small bow is a common greeting. Keep the guide readable as normal document text at narrow widths.</p>
+          </article>
+          <article class="informational-region theme-dark" role="region" aria-label="Cultural guide dark wider state">
+            <h3>Cultural guide</h3>
+            <p>Relay semantic surface and text roles preserve the same hierarchy in dark mode and at wider breakpoints.</p>
+          </article>
+        </div>
       </section>
       <section id="fields">
         <h2>Fields</h2>
