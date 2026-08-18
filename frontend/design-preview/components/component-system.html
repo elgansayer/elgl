@@ -77,6 +77,20 @@
         </div>
       </section>
       <section>
+        <h2>Controlled daily-login dialog</h2>
+        <p>The reward CTA delegates dismissal to the Spartan dialog-close primitive. Feature code observes the resulting dialog state change and emits its parent-facing close event instead of owning a separate click-to-close path.</p>
+        <div class="dialog-stage">
+          <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="daily-login-title" aria-describedby="daily-login-description">
+            <div class="dialog-body" style="text-align: center">
+              <div aria-hidden="true" style="font-size: 3rem">🎁</div>
+              <strong id="daily-login-title">Daily reward</strong>
+              <p id="daily-login-description">You earned 10 coins for checking in today.</p>
+              <button type="button">Collect reward</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section>
         <h2>Gift notification overlay</h2>
         <p>Gift celebrations remain non-modal live notifications. Relay owns the celebratory surface and scrim, while the single dismiss action stays a 44px Spartan button with a translated accessible name. Reduced-motion mode keeps the message and action while suppressing decorative animation.</p>
         <div class="celebration-stage" role="alert" aria-live="polite" aria-label="Mina sent a rose to Alex">

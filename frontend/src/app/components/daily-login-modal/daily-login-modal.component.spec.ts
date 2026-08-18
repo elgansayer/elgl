@@ -50,15 +50,44 @@ describe('DailyLoginModalComponent', () => {
     expect(button.nativeElement.textContent).toBeTruthy();
   });
 
-  it('should emit closed event when the button is clicked', () => {
-    let emitted = false;
-    const subscription = component.closed.subscribe(() => {
-      emitted = true;
-    });
+  it('should delegate CTA dismissal to the Spartan dialog close primitive', () => {
     const button = fixture.debugElement.query(By.css('button'));
     expect(button).not.toBeNull();
-    button.triggerEventHandler('click', null);
-    expect(emitted).toBe(true);
+    expect(button.nativeElement.getAttribute('data-slot')).toBe('dialog-close');
+  });
+
+  it('should emit closed when the Spartan close action dismisses the dialog', async () => {
+    const closedSpy = vi.fn();
+    const subscription = component.closed.subscribe(closedSpy);
+    const button = fixture.debugElement.query(By.css('button'));
+    expect(button).not.toBeNull();
+
+    button.nativeElement.click();
+    await fixture.whenStable();
+
+    expect(closedSpy).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+  });
+
+  it('should emit closed for dialog-originated dismissal while controlled open', () => {
+    const closedSpy = vi.fn();
+    const subscription = component.closed.subscribe(closedSpy);
+
+    component.onDialogStateChanged('closed');
+
+    expect(closedSpy).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+  });
+
+  it('should not emit a duplicate close after the parent has closed the modal', () => {
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    const closedSpy = vi.fn();
+    const subscription = component.closed.subscribe(closedSpy);
+
+    component.onDialogStateChanged('closed');
+
+    expect(closedSpy).not.toHaveBeenCalled();
     subscription.unsubscribe();
   });
 });
