@@ -70,9 +70,17 @@
       .sidebar-preview a { min-block-size: 44px; padding-inline: 0.875rem; border-radius: 0.75rem; color: color-mix(in srgb, CanvasText 72%, Canvas); display: flex; gap: 0.75rem; align-items: center; text-decoration: none; }
       .sidebar-preview a[aria-current="page"] { background: color-mix(in srgb, CanvasText 10%, Canvas); color: Highlight; font-weight: 600; }
       .sidebar-preview a:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+      .document-viewer-states { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+      .document-viewer-preview { box-sizing: border-box; inline-size: 100%; padding: 1rem; background: color-mix(in srgb, CanvasText 4%, Canvas); color: CanvasText; }
+      .document-viewer-preview.dark { color-scheme: dark; }
+      .document-viewer-card { border: 1px solid ButtonBorder; border-radius: 0.75rem; padding: 1rem; background: color-mix(in srgb, CanvasText 7%, Canvas); box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 10%, transparent); }
+      .document-viewer-card h3 { margin-block: 0 0.75rem; }
+      .document-viewer-card p { margin-block: 0 0.75rem; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .document-viewer-preview.wide { padding: 2rem; }
+      .document-viewer-preview.wide .document-viewer-card { padding: 2rem; }
       @media (min-width: 48rem) { .cultural-tip-grid, .translation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview, .lightbox-stage { border-color: CanvasText; } .lightbox-stage .media { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card, .create-group-preview, .sidebar-preview, .document-viewer-card, .lightbox-stage { border-color: CanvasText; } .lightbox-stage .media { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -246,6 +254,26 @@
               <div class="member-row"><span class="avatar" aria-hidden="true">R</span><span>Riku</span><button aria-label="Remove Riku">×</button></div>
             </div>
             <button class="create-action">Create group</button>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="document-viewer-preview-title">
+        <h2 id="document-viewer-preview-title">Document viewer Relay theme states</h2>
+        <p>The document viewer uses neutral Relay surface and text roles in both themes. Mobile starts with compact padding at the 390px baseline, while wider tablet and desktop layouts increase the page and card spacing without changing the projected document contract.</p>
+        <div class="document-viewer-states">
+          <article class="document-viewer-preview" aria-label="Document viewer light mobile preview">
+            <div class="document-viewer-card">
+              <h3>Privacy policy</h3>
+              <p>Your privacy controls and account choices remain readable without a dark-only typography override.</p>
+              <p>Long document text wraps naturally within the semantic Relay card surface.</p>
+            </div>
+          </article>
+          <article class="document-viewer-preview dark wide" aria-label="Document viewer dark desktop preview">
+            <div class="document-viewer-card">
+              <h3>Terms of service</h3>
+              <p>The same semantic surface hierarchy adapts to dark mode while retaining text contrast and wider spacing.</p>
+              <p>Projected content inherits the active theme rather than forcing an inverted prose palette.</p>
+            </div>
           </article>
         </div>
       </section>
