@@ -20,6 +20,7 @@ describe('LongPressContextMenuComponent', () => {
   let fixture: ComponentFixture<LongPressContextMenuComponent>;
   const nlpService = {
     explainGrammar: vi.fn(),
+    simplifyText: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -28,6 +29,11 @@ describe('LongPressContextMenuComponent', () => {
       original: 'I has a cat',
       corrected: 'I have a cat',
       explanation: 'Use have with I.',
+    });
+    nlpService.simplifyText.mockReset();
+    nlpService.simplifyText.mockResolvedValue({
+      original: 'Hello world',
+      simplified: 'Hello.',
     });
 
     await TestBed.configureTestingModule({
@@ -170,13 +176,102 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.menuVisible()).toBe(false);
   });
 
-  it('should not render translate, transliterate, speak, or correct actions for non-text messages', () => {
+  it('should not render text-only actions for non-text messages', () => {
     fixture.componentRef.setInput('messageType', 'voice');
     component.menuVisible.set(true);
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
     expect(buttons.length).toBe(6);
+  });
+
+  it('should simplify the exact message text from the context menu', async () => {
+    component.menuVisible.set(true);
+
+    component.openSimplification();
+    await fixture.whenStable();
+
+    expect(component.menuVisible()).toBe(false);
+    expect(component.simplificationOpen()).toBe(true);
+    expect(nlpService.simplifyText).toHaveBeenCalledWith(
+      { text: 'Hello world' },
+      expect.any(AbortSignal),
+    );
+    expect(component.simplificationText()).toBe('Hello.');
+  });
+
+  it('should classify simplification rate-limit failures and keep the dialog open', async () => {
+    nlpService.simplifyText.mockRejectedValue(
+      new NlpRequestError('rate_limit', 'Too many requests', 429, 10),
+    );
+
+    component.openSimplification();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.simplificationOpen()).toBe(true);
+    expect(component.simplificationError()).toBe('rate_limit');
+    const alert = document.body.querySelector('[role="alert"][data-error-kind="rate_limit"]');
+    expect(alert).toBeTruthy();
+  });
+
+  it('should prevent duplicate simplification requests while one is in flight', () => {
+    const pending = deferred<{ original: string; simplified: string }>();
+    nlpService.simplifyText.mockReturnValue(pending.promise);
+
+    component.openSimplification();
+    component.retrySimplification();
+
+    expect(nlpService.simplifyText).toHaveBeenCalledOnce();
+  });
+
+  it('should ignore a stale simplification response after the dialog closes', async () => {
+    const pending = deferred<{ original: string; simplified: string }>();
+    nlpService.simplifyText.mockReturnValue(pending.promise);
+
+    component.openSimplification();
+    component.closeSimplification();
+    pending.resolve({ original: 'Hello world', simplified: 'stale' });
+    await fixture.whenStable();
+
+    expect(component.simplificationOpen()).toBe(false);
+    expect(component.simplificationText()).toBeNull();
+  });
+
+  it('should ignore a stale simplification response when message content changes', async () => {
+    const pending = deferred<{ original: string; simplified: string }>();
+    nlpService.simplifyText.mockReturnValue(pending.promise);
+
+    component.openSimplification();
+    fixture.componentRef.setInput('messageContent', 'Different message');
+    pending.resolve({ original: 'Hello world', simplified: 'stale' });
+    await fixture.whenStable();
+
+    expect(component.simplificationText()).toBeNull();
+  });
+
+  it('should render simplified model output as text rather than executable HTML', async () => {
+    nlpService.simplifyText.mockResolvedValue({
+      original: 'Hello world',
+      simplified: '<img src=x onerror=alert(1)>',
+    });
+
+    component.openSimplification();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const dialogs = Array.from(document.body.querySelectorAll('[role="dialog"]'));
+    const dialog = dialogs.find((element) => element.textContent?.includes('<img src=x onerror=alert(1)>'));
+    expect(dialog?.textContent).toContain('<img src=x onerror=alert(1)>');
+    expect(dialog?.querySelector('img')).toBeNull();
+  });
+
+  it('should close simplification when the Spartan dialog reports dismissal', () => {
+    component.openSimplification();
+
+    component.onSimplificationDialogStateChanged('closed');
+
+    expect(component.simplificationOpen()).toBe(false);
   });
 
   it('should expose grammar explanation only for a correction with both text variants', async () => {
@@ -378,7 +473,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(11);
+    expect(buttons.length).toBe(12);
   });
 
   it('should render every action through the Spartan Helm button directive', () => {
@@ -386,7 +481,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const helmButtons = fixture.debugElement.queryAll(By.css('button[data-slot="button"]'));
-    expect(helmButtons.length).toBe(11);
+    expect(helmButtons.length).toBe(12);
   });
 
   it('should emit block toggled to false when the sender is already blocked', () => {
