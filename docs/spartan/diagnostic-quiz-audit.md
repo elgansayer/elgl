@@ -33,6 +33,10 @@ The route contract is:
   -> title: Language Level Diagnostic - HelloTalk
 ```
 
+The path and lazy-loading boundary are contracts to preserve. The route title is currently hard-coded English in
+`app.routes.ts`, so it is a known internationalisation defect rather than a string that migration work should
+copy. Correct it through the repository's translated route-title pattern when that shared pattern is available.
+
 The component itself never calls `Router.navigate()` and must remain embeddable. Completion is reported to a consumer through `quizCompleted`; route changes, onboarding continuation or profile updates remain consumer responsibilities.
 
 ## Public component contract
@@ -56,10 +60,10 @@ The component emits this output after a completion attempt even when `/api/quiz/
 
 `QuizService` currently exposes two operations:
 
-| Operation | Request | Purpose | UI states affected |
-| --- | --- | --- | --- |
-| `getQuestions(language)` | `GET /api/quiz/questions?language=<language>` | Load the diagnostic question set | loading, error, empty, quiz content |
-| `submitResults(results)` | `POST /api/quiz/results` | Persist score, maximum score, suggested CEFR level and answer map | submitting, submit failure toast, completion output |
+| Operation                | Request                                       | Purpose                                                           | UI states affected                                  |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
+| `getQuestions(language)` | `GET /api/quiz/questions?language=<language>` | Load the diagnostic question set                                  | loading, error, empty, quiz content                 |
+| `submitResults(results)` | `POST /api/quiz/results`                      | Persist score, maximum score, suggested CEFR level and answer map | submitting, submit failure toast, completion output |
 
 Question loading is owned by Angular `resource()`. Result submission is explicitly awaited by `finishQuiz()`.
 
@@ -120,40 +124,40 @@ On the last question, `next()` calls `finishQuiz()`.
 The score thresholds are:
 
 | Percentage | Suggested level |
-| --- | --- |
-| `>= 0.90` | C2 |
-| `>= 0.80` | C1 |
-| `>= 0.60` | B2 |
-| `>= 0.40` | B1 |
-| `>= 0.20` | A2 |
-| otherwise | A1 |
+| ---------- | --------------- |
+| `>= 0.90`  | C2              |
+| `>= 0.80`  | C1              |
+| `>= 0.60`  | B2              |
+| `>= 0.40`  | B1              |
+| `>= 0.20`  | A2              |
+| otherwise  | A1              |
 
 The hard-coded `4` maximum points per question is a feature/data contract, not UI state. If backend question scoring becomes variable, that calculation needs a separate domain change rather than being folded into the Spartan conversion.
 
 ## Complete control and surface inventory
 
-| Element / state | Current implementation | State owner | Target owner | Migration action |
-| --- | --- | --- | --- | --- |
-| Loading container | Native `<div role="status">` | Angular resource | Relay async-state composition | Preserve semantics; use approved Spinner presentation if available |
-| Loading spinner | CSS border spinner | Template | Relay Spinner / approved loading primitive | Replace bespoke spinner when the repository primitive is available |
-| Load error surface | Native `<div role="alert">` plus warning emoji | Angular resource | Relay error-state composition | Preserve alert semantics; standardise presentation |
-| Retry action | `<button hlmBtn>` | Feature action | Spartan Helm Button | Preserve primitive; use standard button variant/sizing |
-| Quiz outer surface | Semantic utility classes | Feature composition | Relay surface/card composition | Replace bespoke radius/border recipe with approved Relay surface tokens |
-| Quiz heading | Native `h2` | Translation | Native semantics + Relay typography | Preserve |
-| Question counter | Native `span`, semantic tokens | Derived state | Relay badge/chip-like presentation if approved | Keep informational, not interactive |
-| Progress track | Native `div role="progressbar"` | Derived progress | Spartan/Relay progress capability if available, otherwise native ARIA + Relay tokens | Preserve value contract; add an accessible name/value text if needed |
-| Progress fill | Dynamic inline width | Derived progress | Progress primitive presentation | Preserve derived percentage |
-| Question heading | Native `h3` | API data | Native semantics + Relay typography | Preserve |
-| Answer option set | Repeated `<button hlmBtn aria-pressed>` | `answers` signal | Single-choice primitive if supported; otherwise Helm Button cards + feature state | Do not invent custom radio keyboard behaviour |
-| Selected option styling | Conditional border/shadow/background/token classes | `answers` signal | Relay selected-state recipe | Consolidate into approved semantic tokens |
-| Option number marker | Native `span` circle | Loop index + selected state | Relay presentation | Preserve visual ordering; keep number out of scoring semantics |
-| Previous action | `<button hlmBtn>` | `currentIndex` | Spartan Helm Button | Preserve; standard secondary/outline presentation |
-| Next action | `<button hlmBtn>` | `canProceed` / `currentIndex` | Spartan Helm Button | Preserve; standard primary presentation |
-| Submit action | `<button hlmBtn>` | `canProceed` / `isSubmitting` | Spartan Helm Button | Preserve; expose busy state consistently |
-| Submit spinner | CSS border spinner inside button | `isSubmitting` | Relay/approved Spinner | Replace bespoke spinner when possible; mark decoration correctly |
-| Footer action bar | Native flex container | Derived state | Relay layout composition | Preserve feature ownership; make mobile/translation-safe |
-| Empty state | Native `<div role="status">` plus clipboard emoji | Empty resource result | Relay Empty State if approved | Prefer shared empty-state presentation; no Brain behaviour needed |
-| Submission failure toast | `showToast(..., 'error')` | Feature orchestration | Existing toast service / approved toast primitive | Preserve service boundary and translated copy |
+| Element / state          | Current implementation                             | State owner                   | Target owner                                                                         | Migration action                                                        |
+| ------------------------ | -------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Loading container        | Native `<div role="status">`                       | Angular resource              | Relay async-state composition                                                        | Preserve semantics; use approved Spinner presentation if available      |
+| Loading spinner          | CSS border spinner                                 | Template                      | Relay Spinner / approved loading primitive                                           | Replace bespoke spinner when the repository primitive is available      |
+| Load error surface       | Native `<div role="alert">` plus warning emoji     | Angular resource              | Relay error-state composition                                                        | Preserve alert semantics; standardise presentation                      |
+| Retry action             | `<button hlmBtn>`                                  | Feature action                | Spartan Helm Button                                                                  | Preserve primitive; use standard button variant/sizing                  |
+| Quiz outer surface       | Semantic utility classes                           | Feature composition           | Relay surface/card composition                                                       | Replace bespoke radius/border recipe with approved Relay surface tokens |
+| Quiz heading             | Native `h2`                                        | Translation                   | Native semantics + Relay typography                                                  | Preserve                                                                |
+| Question counter         | Native `span`, semantic tokens                     | Derived state                 | Relay badge/chip-like presentation if approved                                       | Keep informational, not interactive                                     |
+| Progress track           | Native `div role="progressbar"`                    | Derived progress              | Spartan/Relay progress capability if available, otherwise native ARIA + Relay tokens | Preserve value contract; add an accessible name/value text if needed    |
+| Progress fill            | Dynamic inline width                               | Derived progress              | Progress primitive presentation                                                      | Preserve derived percentage                                             |
+| Question heading         | Native `h3`                                        | API data                      | Native semantics + Relay typography                                                  | Preserve                                                                |
+| Answer option set        | Repeated `<button hlmBtn aria-pressed>`            | `answers` signal              | Single-choice primitive if supported; otherwise Helm Button cards + feature state    | Do not invent custom radio keyboard behaviour                           |
+| Selected option styling  | Conditional border/shadow/background/token classes | `answers` signal              | Relay selected-state recipe                                                          | Consolidate into approved semantic tokens                               |
+| Option number marker     | Native `span` circle                               | Loop index + selected state   | Relay presentation                                                                   | Preserve visual ordering; keep number out of scoring semantics          |
+| Previous action          | `<button hlmBtn>`                                  | `currentIndex`                | Spartan Helm Button                                                                  | Preserve; standard secondary/outline presentation                       |
+| Next action              | `<button hlmBtn>`                                  | `canProceed` / `currentIndex` | Spartan Helm Button                                                                  | Preserve; standard primary presentation                                 |
+| Submit action            | `<button hlmBtn>`                                  | `canProceed` / `isSubmitting` | Spartan Helm Button                                                                  | Preserve; expose busy state consistently                                |
+| Submit spinner           | CSS border spinner inside button                   | `isSubmitting`                | Relay/approved Spinner                                                               | Replace bespoke spinner when possible; mark decoration correctly        |
+| Footer action bar        | Native flex container                              | Derived state                 | Relay layout composition                                                             | Preserve feature ownership; make mobile/translation-safe                |
+| Empty state              | Native `<div role="status">` plus clipboard emoji  | Empty resource result         | Relay Empty State if approved                                                        | Prefer shared empty-state presentation; no Brain behaviour needed       |
+| Submission failure toast | `showToast(..., 'error')`                          | Feature orchestration         | Existing toast service / approved toast primitive                                    | Preserve service boundary and translated copy                           |
 
 ## Spartan ownership decisions
 
@@ -291,7 +295,9 @@ The existing template already uses logical horizontal spacing (`ps-*`, `pe-*`, `
 
 No `left-*` / `right-*` positional contract is needed for the surface. Future decorative icons should use logical placement or be direction-neutral.
 
-All product-owned visible UI strings in the current template use translation keys. Question and option text come from the quiz API and are selected by `targetLanguage` / active language.
+All product-owned visible UI strings in the current template use translation keys. The route title is a known
+hard-coded English exception outside the template. Question and option text come from the quiz API and are
+selected by `targetLanguage` / active language.
 
 Migration requirements:
 
@@ -420,6 +426,7 @@ The conversion/regression stages should add focused coverage for:
 18. no raw palette/hex product colour is introduced;
 19. result submission payload remains unchanged;
 20. submission failure still emits the existing completion output after the translated toast.
+21. the route path remains stable and its title is translated once the shared route-title pattern exists.
 
 ## Migration risks
 
@@ -458,6 +465,13 @@ Only the question body changes when advancing. A conversion may need deliberate 
 ### Long translations
 
 Fixed horizontal header/footer layouts can fail before desktop English does. Responsive changes should be validated with intentionally long translated strings and RTL, not just viewport width.
+
+### Hard-coded route title
+
+The route currently assigns `Language Level Diagnostic - HelloTalk` directly in `app.routes.ts`. Preserve the
+route path and lazy-loading boundary, but do not treat that English title as an approved internationalisation
+contract. Migrate it through a shared translated route-title mechanism rather than adding a quiz-specific title
+workaround.
 
 ## Primitive prerequisites
 
@@ -506,13 +520,16 @@ For the implementation stages, run the actual frontend commands defined by the r
 
 ```bash
 cd frontend
-npm run test -- --run
-npm run lint
-npm run static-analysis
+npm run check:control-flow
+npm run check:template-bindings
+npm run check:rtl-logical
+npm run lint:check
 npm run build
+npm run test -- --watch=false
 ```
 
-and the repository's Spartan ownership/convergence, design-token, constitution/design-sync and mapped-preview checks where applicable.
+If the mapped visual contract changes, also run the root design-sync check and the repository's visual-capture
+workflow.
 
 This audit itself is documentation-only and does not alter Angular runtime behavior, API calls, routes, tests or the design-preview visual contract.
 
