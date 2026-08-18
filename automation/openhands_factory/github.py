@@ -220,10 +220,11 @@ class GitHubClient:
                 {self.ready_label, "factory-active", "guardian-alert"}
             ):
                 continue
-            # Pull-request review uses priority 5 (see
+            # Pull-request review defaults to priority 5 (see
             # collect_open_pull_requests). Labelled critical and high issues
-            # run before reviews, while ordinary and low-priority backlog work
-            # runs afterwards. Lower values run first in select_batch.
+            # run before ordinary reviews, while ordinary and low-priority
+            # backlog work runs afterwards. Lower values run first in
+            # select_batch.
             priority = issue_priority(labels)
             tasks.append(
                 Task(
@@ -288,15 +289,12 @@ class GitHubClient:
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-pull-request",
-                    # Below guardian-alert issues (0) but above ordinary issue
-                    # work (10, see collect_open_issues): reviewing an
-                    # already-written external PR is typically fast (no
-                    # implementation needed) and often carries its own urgency
-                    # - security or performance fixes from other automated
-                    # systems - so it should not sit behind a long backlog of
-                    # fresh issue implementations at equal priority, the way
-                    # it did before this ordering existed.
-                    priority=5,
+                    # Normal reviews sit below guardian-alert issues (0) but
+                    # above ordinary issue work (10). Trusted urgency labels
+                    # can promote a PR within the bounded review lane, which
+                    # lets a bootstrap or security repair reach its required
+                    # independent review without bypassing merge protection.
+                    priority=min(5, issue_priority(labels)),
                     pr_branch=head_ref,
                 )
             )
