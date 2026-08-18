@@ -22,6 +22,17 @@ function persistCellularPreference(enabled: boolean): void {
   }
 }
 
+async function responseSize(response: Response): Promise<number> {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength !== null && contentLength.trim() !== '') {
+    const parsedLength = Number(contentLength);
+    if (Number.isSafeInteger(parsedLength) && parsedLength >= 0) {
+      return parsedLength;
+    }
+  }
+  return (await response.clone().blob()).size;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DataStorageService {
   readonly cellularAutoDownload = signal<boolean>(loadCellularPreference());
@@ -46,26 +57,11 @@ export class DataStorageService {
         const cacheNames = await caches.keys();
         const cacheSizes = await Promise.all(
           cacheNames.map(async (cacheName) => {
-            let cacheTotal = 0;
             const cache = await caches.open(cacheName);
             const responses = await cache.matchAll();
-
-            await Promise.all(
-              responses.map(async (response) => {
-                const contentLength = response.headers.get('content-length');
-                if (contentLength) {
-                  const size = parseInt(contentLength, 10);
-                  if (!isNaN(size)) {
-                    cacheTotal += size;
-                    return;
-                  }
-                }
-                const blob = await response.clone().blob();
-                cacheTotal += blob.size;
-              })
-            );
-            return cacheTotal;
-          })
+            const responseSizes = await Promise.all(responses.map(responseSize));
+            return responseSizes.reduce((sum, size) => sum + size, 0);
+          }),
         );
         total += cacheSizes.reduce((a, b) => a + b, 0);
       } catch {
