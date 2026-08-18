@@ -22,7 +22,7 @@ Please refer to the following Wiki pages for exhaustive details:
 - **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
 - **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
 - **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
-- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the swarm queue.
+- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the OpenHands Factory queue.
 
 Additional specifications:
 - `AGENTS.md`: The Engineering Constitution and system rules.

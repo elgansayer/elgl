@@ -90,3 +90,24 @@ The current `CommunitiesComponent` handles data fetching via Angular signals/res
 - bug
 - tech-debt
 - ui
+
+## Issue: Architectural Enhancements for Language Learning Synergy
+
+**Description**
+Following an audit of the application's language-learning features, several silos were identified where core principles (comprehensible input, retrieval practice, spaced repetition, active production, and meaningful feedback) are not fully integrated across modules.
+
+Currently:
+- AI Conversations provide active production but do not auto-extract unknown words into the Spaced Repetition System (SRS).
+- Voice Transcriptions and Pronunciation Scoring happen in isolation without feeding into the flashcard ecosystem.
+- Reading Engine difficulty is static rather than dynamically adjusting based on Assessment scores.
+
+**Acceptance Criteria**
+- Build a background worker in `nlp.service.ts` that automatically extracts and suggests new vocabulary (flashcards) from completed AI Conversations and Voice Transcriptions.
+- Integrate the Pronunciation Scoring service with the SRS engine so that reviewing a flashcard can include an active-production voice test, grading the user's spoken retrieval.
+- Map the user's dynamic Assessment proficiency score to the LingQ Reading Engine to highlight i+1 (Comprehensible Input) texts and appropriately scale tokenized difficulty.
+- Modify the Visual Diff tool in Corrections to automatically queue corrected words into the user's flashcard deck for spaced repetition.
+
+**Suggested Labels**
+- enhancement
+- architecture
+- learning-engine

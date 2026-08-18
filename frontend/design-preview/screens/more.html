@@ -245,6 +245,44 @@
         font-size: 13px;
       }
 
+      /* ---- Help & About build metadata and licence manifest ---- */
+      .about-preview {
+        padding: 13px 14px;
+      }
+      .about-meta-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 12px;
+      }
+      .about-meta-row + .about-meta-row {
+        margin-top: 7px;
+      }
+      .about-meta-row .value {
+        color: rgb(var(--text-secondary));
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 10px;
+        text-align: end;
+      }
+      .licence-summary {
+        margin-top: 11px;
+        border-radius: 12px;
+        background: rgb(var(--surface-300));
+        padding: 10px;
+      }
+      .licence-summary strong {
+        display: block;
+        font-size: 12px;
+      }
+      .licence-summary span {
+        display: block;
+        margin-top: 3px;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
       /* ---- Stats summary card (my-stats.component.ts) ---- */
       .stats-card {
         border-radius: 16px;
@@ -625,6 +663,22 @@
                   >
                   <span class="chev">→</span>
                 </a>
+                <div class="about-preview">
+                  <div class="about-meta-row">
+                    <span>App version</span>
+                    <span class="value">generated from package version</span>
+                  </div>
+                  <div class="about-meta-row">
+                    <span>Build number</span>
+                    <span class="value">CI run + commit</span>
+                  </div>
+                  <div class="licence-summary">
+                    <strong>Open-source licences</strong>
+                    <span>
+                      Production dependencies list their package, version, licence and source link.
+                    </span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -697,8 +751,10 @@
       <code>lessons.component.ts</code>'s accent-bordered row with proficiency badge and completed
       checkmark. The practice row stands in for <code>ai-conversation.component.ts</code>. The FAQ
       item mirrors <code>help-centre.component.ts</code>'s question/answer card, alongside nav
-      shortcuts to the help centre and help-about routes. The legal block is a representative
-      excerpt in the same typographic style as <code>pages/legal/terms.component.ts</code> and
+      shortcuts to the help centre and help-about routes. The Help &amp; About preview records the
+      build-generated app version, CI run plus commit build number, and production dependency
+      licence manifest contract. The legal block is a representative excerpt in the same typographic
+      style as <code>pages/legal/terms.component.ts</code> and
       <code>privacy.component.ts</code> (both already clean of hardcoded colour, so no sample needed
       beyond typography), followed by nav rows to privacy/GDPR (<code>components/gdpr</code>),
       change password, device transfer, and account deletion
