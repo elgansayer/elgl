@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { PasswordResetService } from './password-reset.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
@@ -18,6 +18,24 @@ describe('PasswordResetService', () => {
   };
   let mockEmailService: {
     sendPasswordResetEmail: ReturnType<typeof vi.fn>;
+  };
+
+  const createExistingTokenInvalidationChain = () => ({
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+  });
+
+  const createInsertChain = (error: unknown = null) => ({
+    insert: vi.fn().mockResolvedValue({ data: null, error }),
+  });
+
+  const prepareSuccessfulIssue = () => {
+    const invalidationChain = createExistingTokenInvalidationChain();
+    const insertChain = createInsertChain();
+    mockSupabaseClient.from
+      .mockReturnValueOnce(invalidationChain)
+      .mockReturnValueOnce(insertChain);
+    return { invalidationChain, insertChain };
   };
 
   beforeEach(async () => {
@@ -38,7 +56,6 @@ describe('PasswordResetService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         PasswordResetService,
-        { provide: ConfigService, useValue: { get: vi.fn() } },
         {
           provide: SupabaseService,
           useValue: {
@@ -69,31 +86,62 @@ describe('PasswordResetService', () => {
       expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('creates a reset token and sends email for a valid user', async () => {
+    it('paginates beyond the first 1,000 auth users', async () => {
+      const firstPageUsers = Array.from({ length: 1000 }, (_, index) => ({
+        id: `user-${index}`,
+        email: `user-${index}@example.com`,
+      }));
+      mockSupabaseClient.auth.admin.listUsers
+        .mockResolvedValueOnce({
+          data: { users: firstPageUsers },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { users: [{ id: 'target-user', email: 'target@example.com' }] },
+          error: null,
+        });
+      prepareSuccessfulIssue();
+
+      await service.requestPasswordReset({ email: 'target@example.com' });
+
+      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(1, {
+        page: 1,
+        perPage: 1000,
+      });
+      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(2, {
+        page: 2,
+        perPage: 1000,
+      });
+      expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('stores only a SHA-256 digest while emailing the raw reset token', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
         error: null,
       });
-
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      mockSupabaseClient.from.mockReturnValue(insertChain);
+      const { invalidationChain, insertChain } = prepareSuccessfulIssue();
 
       await service.requestPasswordReset({ email: 'USER@example.com' });
 
-      expect(insertChain.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: 'user-abc',
-          used: false,
-        }),
-      );
+      expect(invalidationChain.update).toHaveBeenCalledWith({ used: true });
+      expect(invalidationChain.eq).toHaveBeenCalledWith('user_id', 'user-abc');
+      expect(invalidationChain.eq).toHaveBeenCalledWith('used', false);
+
+      const rawToken = mockEmailService.sendPasswordResetEmail.mock.calls[0][1];
+      const storedToken = insertChain.insert.mock.calls[0][0].token;
+      const expectedHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+
+      expect(rawToken).toHaveLength(64);
+      expect(storedToken).toBe(expectedHash);
+      expect(storedToken).not.toBe(rawToken);
       expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledWith(
         'USER@example.com',
-        expect.any(String),
+        rawToken,
       );
-      const token = mockEmailService.sendPasswordResetEmail.mock.calls[0][1];
-      expect(token).toHaveLength(64);
     });
 
     it('fails internally when account lookup fails', async () => {
@@ -109,18 +157,40 @@ describe('PasswordResetService', () => {
       expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
+    it('does not issue a new token when prior-token invalidation fails', async () => {
+      mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
+        data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
+        error: null,
+      });
+      const invalidationChain = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn(),
+      };
+      invalidationChain.eq
+        .mockReturnValueOnce(invalidationChain)
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'update failed' },
+        });
+      mockSupabaseClient.from.mockReturnValue(invalidationChain);
+
+      await expect(
+        service.requestPasswordReset({ email: 'user@example.com' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockSupabaseClient.from).toHaveBeenCalledTimes(1);
+      expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
     it('throws when token persistence fails', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
         error: null,
       });
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'insert failed' },
-        }),
-      };
-      mockSupabaseClient.from.mockReturnValue(insertChain);
+      const invalidationChain = createExistingTokenInvalidationChain();
+      const insertChain = createInsertChain({ message: 'insert failed' });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(invalidationChain)
+        .mockReturnValueOnce(insertChain);
 
       await expect(
         service.requestPasswordReset({ email: 'user@example.com' }),
@@ -128,21 +198,17 @@ describe('PasswordResetService', () => {
       expect(mockEmailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it('invalidates an undelivered token when email dispatch fails', async () => {
+    it('invalidates an undelivered token by its stored digest', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: { users: [{ id: 'user-abc', email: 'user@example.com' }] },
         error: null,
       });
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      const invalidateChain = {
+      const { insertChain } = prepareSuccessfulIssue();
+      const deliveryInvalidationChain = {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
-      mockSupabaseClient.from
-        .mockReturnValueOnce(insertChain)
-        .mockReturnValueOnce(invalidateChain);
+      mockSupabaseClient.from.mockReturnValueOnce(deliveryInvalidationChain);
       mockEmailService.sendPasswordResetEmail.mockRejectedValue(
         new Error('mail unavailable'),
       );
@@ -151,10 +217,11 @@ describe('PasswordResetService', () => {
         service.requestPasswordReset({ email: 'user@example.com' }),
       ).rejects.toThrow(BadRequestException);
 
-      expect(invalidateChain.update).toHaveBeenCalledWith({ used: true });
-      expect(invalidateChain.eq).toHaveBeenCalledWith(
+      const storedToken = insertChain.insert.mock.calls[0][0].token;
+      expect(deliveryInvalidationChain.update).toHaveBeenCalledWith({ used: true });
+      expect(deliveryInvalidationChain.eq).toHaveBeenCalledWith(
         'token',
-        expect.any(String),
+        storedToken,
       );
     });
   });
@@ -190,7 +257,7 @@ describe('PasswordResetService', () => {
       expect(mockSupabaseClient.auth.admin.updateUserById).not.toHaveBeenCalled();
     });
 
-    it('atomically claims a valid token before changing the password', async () => {
+    it('claims the SHA-256 digest before changing the password', async () => {
       const claimChain = createClaimChain({
         data: { user_id: 'user-abc' },
         error: null,
@@ -206,9 +273,12 @@ describe('PasswordResetService', () => {
         newPassword: 'newPass123!',
       });
 
-      expect(claimChain.update).toHaveBeenCalledWith({ used: true });
-      expect(claimChain.eq).toHaveBeenCalledWith('token', 'valid-token');
-      expect(claimChain.eq).toHaveBeenCalledWith('used', false);
+      const expectedHash = crypto
+        .createHash('sha256')
+        .update('valid-token')
+        .digest('hex');
+      expect(claimChain.eq).toHaveBeenCalledWith('token', expectedHash);
+      expect(claimChain.eq).not.toHaveBeenCalledWith('token', 'valid-token');
       expect(claimChain.select).toHaveBeenCalledWith('user_id');
       expect(mockSupabaseClient.auth.admin.updateUserById).toHaveBeenCalledWith(
         'user-abc',

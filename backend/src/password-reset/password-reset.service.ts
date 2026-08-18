@@ -4,7 +4,6 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
 import * as crypto from 'crypto';
@@ -13,49 +12,80 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class PasswordResetService {
+  private static readonly USER_LOOKUP_PAGE_SIZE = 1000;
+  private static readonly MAX_USER_LOOKUP_PAGES = 100;
   private readonly logger = new Logger(PasswordResetService.name);
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
     private readonly emailService: EmailService,
   ) {}
 
   async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
+    const normalisedEmail = dto.email.toLowerCase();
+    let userId: string | null = null;
 
-    // Look up user by email via Supabase auth admin API - emails live in
-    // auth.users, not in the public.users table (which has no email column).
-    const { data: allUsers, error: listError } =
-      await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
+    // Supabase Auth does not expose a get-by-email admin method. Paginate the
+    // bounded admin listing rather than silently limiting password recovery to
+    // the first 1,000 accounts.
+    for (
+      let page = 1;
+      page <= PasswordResetService.MAX_USER_LOOKUP_PAGES;
+      page += 1
+    ) {
+      const { data: pageData, error: listError } =
+        await supabase.auth.admin.listUsers({
+          page,
+          perPage: PasswordResetService.USER_LOOKUP_PAGE_SIZE,
+        });
 
-    if (listError) {
-      this.logger.error('Failed to query accounts for password reset');
-      throw new BadRequestException('Failed to process password reset request');
+      if (listError) {
+        this.logger.error('Failed to query accounts for password reset');
+        throw new BadRequestException('Failed to process password reset request');
+      }
+
+      const users = pageData?.users ?? [];
+      const match = users.find(
+        (user: { email?: string; id?: string }) =>
+          user.email?.toLowerCase() === normalisedEmail,
+      );
+      if (match?.id) {
+        userId = match.id;
+        break;
+      }
+      if (users.length < PasswordResetService.USER_LOOKUP_PAGE_SIZE) {
+        break;
+      }
     }
 
-    const match = allUsers?.users?.find(
-      (user: { email?: string; id?: string }) =>
-        user.email?.toLowerCase() === dto.email.toLowerCase(),
-    );
-    const userId = match?.id ?? null;
-
     if (!userId) {
-      // Do not reveal whether the email exists.
+      // Do not reveal whether the email exists or whether a bounded lookup
+      // reached its safety limit.
       return;
     }
 
     const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(token);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Only the newest reset request should remain usable for an account.
+    const { error: invalidationError } = await supabase
+      .from('password_reset_tokens')
+      .update({ used: true })
+      .eq('user_id', userId)
+      .eq('used', false);
+
+    if (invalidationError) {
+      this.logger.error('Failed to invalidate previous password reset tokens');
+      throw new BadRequestException('Failed to create reset token');
+    }
 
     const { error: insertError } = await supabase
       .from('password_reset_tokens')
       .insert({
         user_id: userId,
-        token,
+        token: tokenHash,
         expires_at: expiresAt.toISOString(),
         used: false,
       });
@@ -66,13 +96,14 @@ export class PasswordResetService {
     }
 
     try {
+      // Only the raw one-time token leaves the service. The database stores its
+      // SHA-256 digest so a token-table leak does not expose reset credentials.
       await this.emailService.sendPasswordResetEmail(dto.email, token);
     } catch {
-      // A token whose email was never delivered should not remain usable.
       const { error: invalidateError } = await supabase
         .from('password_reset_tokens')
         .update({ used: true })
-        .eq('token', token);
+        .eq('token', tokenHash);
 
       if (invalidateError) {
         this.logger.error('Failed to invalidate undelivered password reset token');
@@ -84,14 +115,15 @@ export class PasswordResetService {
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
+    const tokenHash = this.hashToken(dto.token);
 
-    // Claim the token with a single conditional UPDATE. PostgreSQL rechecks the
+    // Claim the digest with one conditional UPDATE. PostgreSQL rechecks the
     // predicates after row-lock waits, so concurrent requests cannot both claim
     // the same single-use token.
     const { data: tokenRecord, error: tokenError } = await supabase
       .from('password_reset_tokens')
       .update({ used: true })
-      .eq('token', dto.token)
+      .eq('token', tokenHash)
       .eq('used', false)
       .gt('expires_at', new Date().toISOString())
       .select('user_id')
@@ -110,5 +142,9 @@ export class PasswordResetService {
       this.logger.error('Failed to update password after reset token claim');
       throw new BadRequestException('Failed to update password');
     }
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 }
