@@ -68,6 +68,39 @@ describe('CoinsSuccessComponent', () => {
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
+  it('should use Relay semantic surface, radius, and elevation tokens', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
+
+    expect([...page.classList]).toEqual(expect.arrayContaining(['bg-surface-500']));
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining([
+        'bg-surface-200',
+        'border-surface-100',
+        'rounded-card',
+        'shadow-card',
+        'text-center',
+      ]),
+    );
+    expect(panel.className).not.toMatch(
+      /\b(?:bg|text|border)-(?:black|white|slate|gray|red|blue|green|amber|purple|pink)(?:-|\b)/,
+    );
+  });
+
+  it('should use mobile-first spacing with wider breakpoint refinements', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+
+    expect([...page.classList]).toEqual(
+      expect.arrayContaining(['px-4', 'py-6', 'sm:px-6', 'sm:py-10', 'lg:px-8']),
+    );
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining(['px-5', 'py-8', 'sm:px-8', 'sm:py-10', 'lg:px-10', 'lg:py-12']),
+    );
+    expect([...dashboardLink.classList]).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
+  });
+
   it('should transition to confirmed view when confirmed', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
