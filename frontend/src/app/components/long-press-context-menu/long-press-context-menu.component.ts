@@ -10,7 +10,12 @@ interface ExplainGrammarContext {
   corrected: string;
 }
 
-type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
+interface SimplificationContext {
+  messageId: string;
+  text: string;
+}
+
+type NlpDialogError = 'rate_limit' | 'empty' | 'auth' | 'request';
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
@@ -61,6 +66,16 @@ function isAbortError(error: unknown): boolean {
             (click)="doTranslate()"
           >
             {{ 'context_menu.translate' | t }}
+          </button>
+
+          <button
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
+            (click)="openSimplification()"
+          >
+            {{ 'chatRoom.simplifyBtn' | t }}
           </button>
 
           <button
@@ -155,6 +170,69 @@ function isAbortError(error: unknown): boolean {
         >
           {{ 'context_menu.cancel' | t }}
         </button>
+      </hlm-dialog-content>
+    </hlm-dialog>
+
+    <hlm-dialog
+      [state]="simplificationDialogState()"
+      (stateChanged)="onSimplificationDialogStateChanged($event)"
+    >
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full max-w-lg bg-surface-200 rounded-sheet shadow-lift border border-surface-100 p-5"
+      >
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>{{ 'chatRoom.simplifiedTitle' | t }}</h2>
+        </hlm-dialog-header>
+
+        @if (simplificationSource(); as source) {
+          <div class="space-y-3 text-sm">
+            <div>
+              <p class="font-semibold text-text-secondary">{{ 'moments.originalSentence' | t }}</p>
+              <p class="mt-1 whitespace-pre-wrap text-text-primary">{{ source.text }}</p>
+            </div>
+          </div>
+        }
+
+        @if (simplificationLoading()) {
+          <p role="status" aria-live="polite" class="py-4 text-sm text-text-secondary">
+            {{ 'chatRoom.simplifying' | t }}
+          </p>
+        } @else if (simplificationError()) {
+          <div
+            role="alert"
+            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+            [attr.data-error-kind]="simplificationError()"
+          >
+            {{ 'common.error_generic' | t }}
+          </div>
+        } @else if (simplificationText(); as simplified) {
+          <p
+            class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary"
+            aria-live="polite"
+          >
+            {{ simplified }}
+          </p>
+        }
+
+        <hlm-dialog-footer class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          @if (simplificationError()) {
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              [disabled]="simplificationLoading()"
+              (click)="retrySimplification()"
+            >
+              {{ 'common.retry' | t }}
+            </button>
+          }
+          <button hlmBtn type="button" size="touch" (click)="closeSimplification()">
+            {{ 'common.close' | t }}
+          </button>
+        </hlm-dialog-footer>
       </hlm-dialog-content>
     </hlm-dialog>
 
@@ -269,10 +347,19 @@ export class LongPressContextMenuComponent {
     );
   });
 
+  readonly simplificationOpen = signal(false);
+  readonly simplificationLoading = signal(false);
+  readonly simplificationText = signal<string | null>(null);
+  readonly simplificationError = signal<NlpDialogError | null>(null);
+  readonly simplificationSource = signal<SimplificationContext | null>(null);
+  readonly simplificationDialogState = computed<HlmDialogState>(() =>
+    this.simplificationOpen() ? 'open' : 'closed',
+  );
+
   readonly explanationOpen = signal(false);
   readonly explanationLoading = signal(false);
   readonly explanationText = signal<string | null>(null);
-  readonly explanationError = signal<ExplanationError | null>(null);
+  readonly explanationError = signal<NlpDialogError | null>(null);
   readonly explanationSource = signal<ExplainGrammarContext | null>(null);
   readonly explanationDialogState = computed<HlmDialogState>(() =>
     this.explanationOpen() ? 'open' : 'closed',
@@ -281,6 +368,8 @@ export class LongPressContextMenuComponent {
   private readonly nlpService = inject(NlpService);
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
+  private simplificationController?: AbortController;
+  private simplificationRequestId = 0;
   private explanationController?: AbortController;
   private explanationRequestId = 0;
 
@@ -336,6 +425,80 @@ export class LongPressContextMenuComponent {
     if (state === 'closed' && this.menuVisible()) {
       this.menuVisible.set(false);
     }
+  }
+
+  openSimplification(): void {
+    const text = this.messageContent().trim();
+    if (this.messageType() !== 'text' || !text || this.simplificationLoading()) return;
+
+    this.closeMenu();
+    this.simplificationSource.set({ messageId: this.messageId(), text });
+    this.simplificationText.set(null);
+    this.simplificationError.set(null);
+    this.simplificationOpen.set(true);
+    void this.loadSimplification();
+  }
+
+  retrySimplification(): void {
+    if (this.simplificationLoading() || !this.simplificationSource()) return;
+    void this.loadSimplification();
+  }
+
+  closeSimplification(): void {
+    this.simplificationController?.abort();
+    this.simplificationController = undefined;
+    this.simplificationRequestId += 1;
+    this.simplificationOpen.set(false);
+    this.simplificationLoading.set(false);
+  }
+
+  onSimplificationDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.simplificationOpen()) {
+      this.closeSimplification();
+    }
+  }
+
+  private async loadSimplification(): Promise<void> {
+    const source = this.simplificationSource();
+    if (!source || this.simplificationLoading()) return;
+
+    this.simplificationController?.abort();
+    const controller = new AbortController();
+    this.simplificationController = controller;
+    const requestId = ++this.simplificationRequestId;
+    this.simplificationLoading.set(true);
+    this.simplificationText.set(null);
+    this.simplificationError.set(null);
+
+    try {
+      const result = await this.nlpService.simplifyText({ text: source.text }, controller.signal);
+      if (!this.isCurrentSimplificationRequest(requestId, source)) return;
+      this.simplificationText.set(result.simplified);
+    } catch (error: unknown) {
+      if (isAbortError(error)) return;
+      if (!this.isCurrentSimplificationRequest(requestId, source)) return;
+      if (error instanceof NlpRequestError) {
+        this.simplificationError.set(error.kind);
+      } else {
+        this.simplificationError.set('request');
+      }
+    } finally {
+      if (requestId === this.simplificationRequestId) {
+        this.simplificationLoading.set(false);
+      }
+    }
+  }
+
+  private isCurrentSimplificationRequest(
+    requestId: number,
+    source: SimplificationContext,
+  ): boolean {
+    return (
+      requestId === this.simplificationRequestId &&
+      this.simplificationOpen() &&
+      this.messageId() === source.messageId &&
+      this.messageContent().trim() === source.text
+    );
   }
 
   openExplanation(): void {
