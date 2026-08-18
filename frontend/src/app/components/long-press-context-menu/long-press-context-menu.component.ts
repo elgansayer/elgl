@@ -1,7 +1,20 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { NlpRequestError, NlpService } from '../../services/nlp.service';
+
+interface ExplainGrammarContext {
+  messageId: string;
+  original: string;
+  corrected: string;
+}
+
+type ExplanationError = 'rate_limit' | 'empty' | 'auth' | 'request';
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -25,7 +38,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
         [showCloseButton]="false"
         class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 px-4 py-3 gap-1 sm:max-w-sm"
       >
-        <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doReply()">
+        <button
+          hlmBtn
+          variant="ghost"
+          size="touch"
+          class="w-full justify-start"
+          (click)="doReply()"
+        >
           {{ 'context_menu.reply' | t }}
         </button>
 
@@ -54,7 +73,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
             {{ 'context_menu.transliterate' | t }}
           </button>
 
-          <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doSpeak()">
+          <button
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
+            (click)="doSpeak()"
+          >
             {{ 'context_menu.speak' | t }}
           </button>
 
@@ -76,6 +101,18 @@ import { TranslatePipe } from '../../services/translate.pipe';
             (click)="doRequestCorrection()"
           >
             {{ 'context_menu.requestCorrection' | t }}
+          </button>
+        }
+
+        @if (canExplainCorrection()) {
+          <button
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
+            (click)="openExplanation()"
+          >
+            {{ 'moments.explanation' | t }}
           </button>
         }
 
@@ -120,6 +157,74 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </button>
       </hlm-dialog-content>
     </hlm-dialog>
+
+    <hlm-dialog
+      [state]="explanationDialogState()"
+      (stateChanged)="onExplanationDialogStateChanged($event)"
+    >
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full max-w-lg bg-surface-200 rounded-sheet shadow-lift border border-surface-100 p-5"
+      >
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>{{ 'moments.explanation' | t }}</h2>
+          <p hlmDialogDescription>{{ 'correction.explainPlaceholder' | t }}</p>
+        </hlm-dialog-header>
+
+        @if (explanationSource(); as source) {
+          <div class="space-y-3 text-sm">
+            <div>
+              <p class="font-semibold text-text-secondary">{{ 'moments.originalSentence' | t }}</p>
+              <p class="mt-1 whitespace-pre-wrap text-text-primary">{{ source.original }}</p>
+            </div>
+            <div>
+              <p class="font-semibold text-text-secondary">{{ 'moments.correctedSentence' | t }}</p>
+              <p class="mt-1 whitespace-pre-wrap text-text-primary">{{ source.corrected }}</p>
+            </div>
+          </div>
+        }
+
+        @if (explanationLoading()) {
+          <p role="status" aria-live="polite" class="py-4 text-sm text-text-secondary">
+            {{ 'common.loading' | t }}
+          </p>
+        } @else if (explanationError()) {
+          <div
+            role="alert"
+            class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+            [attr.data-error-kind]="explanationError()"
+          >
+            {{ 'common.error_generic' | t }}
+          </div>
+        } @else if (explanationText(); as explanation) {
+          <p
+            class="whitespace-pre-wrap text-sm leading-relaxed text-text-primary"
+            aria-live="polite"
+          >
+            {{ explanation }}
+          </p>
+        }
+
+        <hlm-dialog-footer class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          @if (explanationError()) {
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              [disabled]="explanationLoading()"
+              (click)="retryExplanation()"
+            >
+              {{ 'common.retry' | t }}
+            </button>
+          }
+          <button hlmBtn type="button" size="touch" (click)="closeExplanation()">
+            {{ 'common.close' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
   styles: [
     `
@@ -133,6 +238,8 @@ export class LongPressContextMenuComponent {
   readonly messageId = input.required<string>();
   readonly messageContent = input<string>('');
   readonly messageType = input<string>('text');
+  readonly correctionOriginal = input<string | null>(null);
+  readonly correctionCorrected = input<string | null>(null);
   readonly senderId = input.required<string>();
   readonly roomId = input.required<string>();
   readonly isBlocked = input(false);
@@ -152,11 +259,30 @@ export class LongPressContextMenuComponent {
   readonly correct = output<{ messageId: string; content: string }>();
   readonly requestCorrection = output<{ messageId: string; content: string }>();
 
-  menuVisible = signal(false);
+  readonly menuVisible = signal(false);
   readonly dialogState = computed<HlmDialogState>(() => (this.menuVisible() ? 'open' : 'closed'));
+  readonly canExplainCorrection = computed(() => {
+    return (
+      this.messageType() === 'correction' &&
+      Boolean(this.correctionOriginal()?.trim()) &&
+      Boolean(this.correctionCorrected()?.trim())
+    );
+  });
 
+  readonly explanationOpen = signal(false);
+  readonly explanationLoading = signal(false);
+  readonly explanationText = signal<string | null>(null);
+  readonly explanationError = signal<ExplanationError | null>(null);
+  readonly explanationSource = signal<ExplainGrammarContext | null>(null);
+  readonly explanationDialogState = computed<HlmDialogState>(() =>
+    this.explanationOpen() ? 'open' : 'closed',
+  );
+
+  private readonly nlpService = inject(NlpService);
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
+  private explanationController?: AbortController;
+  private explanationRequestId = 0;
 
   onTouchStart(event: TouchEvent) {
     if (event.touches.length !== 1) return;
@@ -210,6 +336,82 @@ export class LongPressContextMenuComponent {
     if (state === 'closed' && this.menuVisible()) {
       this.menuVisible.set(false);
     }
+  }
+
+  openExplanation(): void {
+    const original = this.correctionOriginal()?.trim();
+    const corrected = this.correctionCorrected()?.trim();
+    if (!this.canExplainCorrection() || !original || !corrected) return;
+
+    this.closeMenu();
+    this.explanationSource.set({ messageId: this.messageId(), original, corrected });
+    this.explanationText.set(null);
+    this.explanationError.set(null);
+    this.explanationOpen.set(true);
+    void this.loadExplanation();
+  }
+
+  retryExplanation(): void {
+    if (this.explanationLoading() || !this.explanationSource()) return;
+    void this.loadExplanation();
+  }
+
+  closeExplanation(): void {
+    this.explanationController?.abort();
+    this.explanationController = undefined;
+    this.explanationRequestId += 1;
+    this.explanationOpen.set(false);
+    this.explanationLoading.set(false);
+  }
+
+  onExplanationDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.explanationOpen()) {
+      this.closeExplanation();
+    }
+  }
+
+  private async loadExplanation(): Promise<void> {
+    const source = this.explanationSource();
+    if (!source || this.explanationLoading()) return;
+
+    this.explanationController?.abort();
+    const controller = new AbortController();
+    this.explanationController = controller;
+    const requestId = ++this.explanationRequestId;
+    this.explanationLoading.set(true);
+    this.explanationText.set(null);
+    this.explanationError.set(null);
+
+    try {
+      const result = await this.nlpService.explainGrammar(
+        { original: source.original, corrected: source.corrected },
+        controller.signal,
+      );
+      if (!this.isCurrentExplanationRequest(requestId, source)) return;
+      this.explanationText.set(result.explanation);
+    } catch (error: unknown) {
+      if (isAbortError(error)) return;
+      if (!this.isCurrentExplanationRequest(requestId, source)) return;
+      if (error instanceof NlpRequestError) {
+        this.explanationError.set(error.kind);
+      } else {
+        this.explanationError.set('request');
+      }
+    } finally {
+      if (requestId === this.explanationRequestId) {
+        this.explanationLoading.set(false);
+      }
+    }
+  }
+
+  private isCurrentExplanationRequest(requestId: number, source: ExplainGrammarContext): boolean {
+    return (
+      requestId === this.explanationRequestId &&
+      this.explanationOpen() &&
+      this.messageId() === source.messageId &&
+      this.correctionOriginal()?.trim() === source.original &&
+      this.correctionCorrected()?.trim() === source.corrected
+    );
   }
 
   doReply() {

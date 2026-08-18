@@ -1,3 +1,4 @@
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    await_refresh,
     provider_status_snapshot,
     queue_snapshot,
     refresh_jobs,
@@ -19,6 +21,32 @@ from openhands_factory.models import Job, JobState, Task
 
 def job(identifier: str, priority: int, state: JobState = JobState.DISCOVERED) -> Job:
     return Job(Task(identifier, f"Task {identifier}", "Body", "github-issue", priority), state)
+
+
+def pull_request_job(
+    identifier: str,
+    priority: int = 5,
+    state: JobState = JobState.DISCOVERED,
+) -> Job:
+    task = Task(
+        identifier,
+        f"Pull request {identifier}",
+        "Body",
+        "github-pull-request",
+        priority,
+        pr_branch=f"agent/change-{identifier}",
+    )
+    return Job(task, state)
+
+
+def factory_pull_request_job(
+    identifier: str,
+    state: JobState = JobState.REVIEWING,
+) -> Job:
+    factory_job = job(identifier, priority=5, state=state)
+    factory_job.pull_request = int(identifier) + 1000
+    factory_job.branch = f"factory/change-{identifier}"
+    return factory_job
 
 
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
@@ -33,6 +61,107 @@ def test_select_batch_fills_parallel_capacity_by_priority() -> None:
     selected = select_batch(jobs, 3)
 
     assert [item.task.identifier for item in selected] == ["10", "11", "12"]
+
+
+def test_select_batch_reserves_one_parallel_slot_for_pull_request_review() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "11": job("11", 0),
+        "12": job("12", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 3)
+
+    assert [item.task.identifier for item in selected] == ["7348", "10", "11"]
+
+
+def test_select_batch_prioritises_review_with_one_worker() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["7348"]
+
+
+def test_select_batch_prioritises_factory_created_pull_request_work() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "594": factory_pull_request_job("594", JobState.QUALITY_REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2)
+
+    assert [item.task.identifier for item in selected] == ["594", "10"]
+
+
+def test_select_batch_prioritises_pr_draft_before_new_implementation() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "594": job("594", 5, JobState.PR_DRAFT),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["594"]
+
+
+def test_select_batch_admits_only_one_pull_request_lane() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
+def test_select_batch_respects_zero_capacity() -> None:
+    selected = select_batch({"7348": pull_request_job("7348")}, 0)
+
+    assert selected == []
+
+
+def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "11": job("11", 0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+        "7348": pull_request_job("7348"),
+    }
+
+    selected = select_batch(jobs, 2, {"7347"})
+
+    assert [item.task.identifier for item in selected] == ["10", "11"]
+
+
+def test_select_batch_skips_other_pull_requests_while_review_is_active() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7346": pull_request_job("7346", priority=0),
+        "7347": pull_request_job("7347", state=JobState.REVIEWING),
+    }
+
+    selected = select_batch(jobs, 2, {"7347"})
+
+    assert [item.task.identifier for item in selected] == ["10"]
+
+
+def test_select_batch_treats_active_factory_created_pr_as_review_lane() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "594": factory_pull_request_job("594"),
+        "7346": pull_request_job("7346", priority=0),
+    }
+
+    selected = select_batch(jobs, 2, {"594"})
+
+    assert [item.task.identifier for item in selected] == ["10"]
 
 
 def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -> None:
@@ -179,6 +308,47 @@ def test_refresh_jobs_preserves_durable_queue_after_control_plane_failure() -> N
     assert retry_at == 40.0
 
 
+def test_await_refresh_publishes_heartbeat_while_control_plane_is_busy() -> None:
+    attempts = 0
+    heartbeats: list[str] = []
+
+    class RefreshFuture:
+        def result(self, timeout: float | None = None) -> tuple[dict[str, Job], float]:
+            nonlocal attempts
+            assert timeout == 10.0
+            attempts += 1
+            if attempts == 1:
+                raise FutureTimeoutError
+            return {"42": job("42", 0)}, 30.0
+
+        def done(self) -> bool:
+            return attempts > 1
+
+    jobs, retry_at = await_refresh(  # type: ignore[arg-type]
+        RefreshFuture(),
+        lambda: heartbeats.append("published"),
+    )
+
+    assert set(jobs) == {"42"}
+    assert retry_at == 30.0
+    assert heartbeats == ["published"]
+
+
+def test_await_refresh_propagates_timeout_raised_by_completed_refresh() -> None:
+    class FailedRefreshFuture:
+        def result(self, timeout: float | None = None) -> tuple[dict[str, Job], float]:
+            raise FutureTimeoutError("GitHub request timed out")
+
+        def done(self) -> bool:
+            return True
+
+    with pytest.raises(FutureTimeoutError, match="GitHub request timed out"):
+        await_refresh(  # type: ignore[arg-type]
+            FailedRefreshFuture(),
+            lambda: pytest.fail("completed failure must not publish a heartbeat"),
+        )
+
+
 def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -203,6 +373,29 @@ def test_daemon_remains_running_when_all_providers_are_temporarily_unusable(
 
     assert result == 0
     assert loop_calls == [True]
+
+
+def test_daemon_publishes_heartbeat_before_first_scheduling_cycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(max_parallel_jobs=1)  # type: ignore[assignment]
+    daemon.stopping = False
+    writes: list[str] = []
+
+    def record_state(
+        status: str,
+        active: object,
+        active_started_at: object | None = None,
+    ) -> None:
+        writes.append(status)
+        if status == "running":
+            daemon.stopping = True
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", record_state)
+
+    assert daemon._loop() == 0
+    assert writes == ["running", "stopped"]
 
 
 def test_storage_reserve_blocks_and_recovers_scheduling(

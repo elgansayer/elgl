@@ -1,12 +1,17 @@
 {
   "name": "frontend",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "ng": "ng",
+    "generate:help-about": "node scripts/generate-help-about-data.mjs",
+    "test:help-about-data": "node --test scripts/generate-help-about-data.test.mjs",
+    "prestart": "npm run generate:help-about",
     "start": "ng serve",
+    "prebuild": "npm run generate:help-about",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "pretest": "npm run test:help-about-data",
     "test": "ng test --no-watch",
     "check:control-flow": "if grep -rnE '\\*ngIf|\\*ngFor|\\*ngSwitch|\\*ngSwitchCase|\\*ngSwitchDefault' src --include='*.html'; then echo 'Use Angular control flow syntax only: @if/@for/@switch.' && exit 1; else echo 'Angular control flow check passed.'; fi",
     "check:template-bindings": "if grep -rnE '\\[ngClass\\]|\\[ngStyle\\]' src --include='*.html' --include='*.ts'; then echo 'Use native class/style bindings only.' && exit 1; else echo 'Template binding check passed.'; fi",
