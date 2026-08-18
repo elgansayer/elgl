@@ -43,6 +43,7 @@ interface CropBox {
             class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
             (click)="fileInput.click()"
             (keydown.enter)="fileInput.click()"
+            (keydown.space)="fileInput.click(); $event.preventDefault()"
             tabindex="0"
             role="button"
           >

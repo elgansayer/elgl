@@ -176,8 +176,8 @@ class TaskStore:
     def acquire(self, task: Task, owner: str, now: datetime | None = None) -> Lease:
         """Atomically claim a logical task, idempotently for the existing owner."""
 
-        current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
+            current = now or datetime.now(UTC)
             self._assert_generation_current()
             leases = self.leases(current)
             task_key = task.logical_key
@@ -203,8 +203,8 @@ class TaskStore:
     def renew(self, task_id: str, owner: str, now: datetime | None = None) -> Lease:
         """Renew an active lease only when the durable logical owner still matches."""
 
-        current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
+            current = now or datetime.now(UTC)
             self._assert_generation_current()
             leases = self.leases(current)
             task_key = self._task_key(task_id)
@@ -235,8 +235,8 @@ class TaskStore:
             self._write_leases(leases)
 
     def prune_expired_leases(self, now: datetime | None = None) -> list[str]:
-        current = now or datetime.now(UTC)
         with self._lease_lock, self._exclusive_lease_file_lock():
+            current = now or datetime.now(UTC)
             self._assert_generation_current()
             payload = read_json(
                 self.lease_path,
@@ -296,8 +296,8 @@ class TaskStore:
     def _lease_is_active(self, lease: Lease, current: datetime) -> bool:
         if lease.expires_at is None:
             return False
-        maximum_expiry = current + timedelta(minutes=self.lease_minutes)
         maximum_clock_skew = current + timedelta(minutes=1)
+        maximum_expiry = maximum_clock_skew + timedelta(minutes=self.lease_minutes)
         return (
             lease.acquired_at <= maximum_clock_skew and current < lease.expires_at <= maximum_expiry
         )

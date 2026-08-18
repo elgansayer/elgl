@@ -49,6 +49,22 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.currentCoverUrl()).toBe('');
   });
 
+  it('should open the file picker from the keyboard with Space', () => {
+    const fileInput = fixture.nativeElement.querySelector('input[type="file"]');
+    const click = vi.spyOn(fileInput, 'click');
+    const trigger = fixture.nativeElement.querySelector('[role="button"]');
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    trigger.dispatchEvent(event);
+
+    expect(click).toHaveBeenCalledOnce();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('should set image source via FileReader on file selection', async () => {
     const file = new File(['dummy image'], 'test.jpg', { type: 'image/jpeg' });
     const fileInput = fixture.nativeElement.querySelector('input[type="file"]');

@@ -16,7 +16,16 @@
       button:focus-visible, .action-link:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
       input, textarea, select { background: Field; color: FieldText; inline-size: min(100%, 22rem); }
       textarea { min-block-size: 6rem; padding-block: 0.75rem; }
-      .informational-region { border-inline-start: 4px solid Highlight; border-inline-end: 0; background: color-mix(in srgb, CanvasText 6%, Canvas); }
+      .cultural-tip-grid { display: grid; gap: 0.75rem; }
+      .informational-region { border-inline-start: 4px solid Highlight; border-radius: 1rem; background: color-mix(in srgb, CanvasText 6%, Canvas); padding: 0.75rem 1rem; box-shadow: 0 1px 2px color-mix(in srgb, CanvasText 4%, transparent), 0 4px 14px color-mix(in srgb, CanvasText 8%, transparent); }
+      .informational-region h3 { margin-block: 0 0.25rem; }
+      .informational-region p { margin-block: 0; color: color-mix(in srgb, CanvasText 72%, Canvas); }
+      .informational-region.theme-dark { color-scheme: dark; }
+      .translation-grid { display: grid; gap: 0.75rem; }
+      .translation-card { border: 1px solid ButtonBorder; border-radius: 0.75rem; padding: 0.875rem; background: color-mix(in srgb, CanvasText 5%, Canvas); }
+      .translation-card p { margin-block: 0 0.5rem; }
+      .translation-status { margin-block: 0.5rem 0; color: LinkText; }
+      .translation-status.error { color: MarkText; background: Mark; border-radius: 0.5rem; padding: 0.5rem; }
       .dialog-stage { background: color-mix(in srgb, CanvasText 60%, transparent); padding: 1rem; border-radius: 0.75rem; }
       .dialog-panel { margin-inline: auto; max-inline-size: 28rem; border: 1px solid ButtonBorder; border-radius: 0.75rem; background: Canvas; color: CanvasText; box-shadow: 0 1rem 3rem color-mix(in srgb, CanvasText 24%, transparent); }
       .dialog-header, .dialog-body, .dialog-footer { padding: 1rem; }
@@ -29,8 +38,9 @@
       .celebration-card { inline-size: min(100%, 28rem); padding: 1.25rem; border: 1px solid Highlight; border-radius: 1.25rem; text-align: center; background: linear-gradient(90deg, Highlight, Mark); color: MarkText; box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 16%, transparent); }
       .celebration-card .gift { display: block; font-size: 3rem; }
       .icon-control { min-inline-size: 44px; padding-inline: 0; border-radius: 0.75rem; }
+      @media (min-width: 48rem) { .cultural-tip-grid, .translation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .informational-region { padding: 1rem 1.25rem; } }
       @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-      @media (forced-colors: active) { section, .dialog-panel, .celebration-card { border-color: CanvasText; } }
+      @media (forced-colors: active) { section, .dialog-panel, .celebration-card, .informational-region, .translation-card { border-color: CanvasText; } }
     </style>
   </head>
   <body>
@@ -44,15 +54,60 @@
         <p>Navigation actions remain native anchors while composing the same Helm button primitive and focus treatment as command buttons.</p>
         <div class="row"><button>Primary</button><button>Secondary</button><button disabled>Disabled</button><a class="action-link" href="#fields">Navigation action</a></div>
       </section>
+      <section aria-labelledby="device-lock-interaction-title">
+        <h2 id="device-lock-interaction-title">Device lock interaction</h2>
+        <p>The unlock action remains a native Spartan button. While platform authentication is active, the same action is disabled and exposes a busy state so repeated activation cannot start overlapping credential requests.</p>
+        <div class="row">
+          <button type="button">Unlock</button>
+          <button type="button" disabled aria-busy="true">Unlock</button>
+        </div>
+      </section>
       <section aria-labelledby="static-feedback-title" aria-describedby="static-feedback-message">
         <div aria-hidden="true">😕</div>
         <h2 id="static-feedback-title">Static feedback state</h2>
-        <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region.</p>
-        <div class="row"><button type="button">Back</button></div>
+        <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region. Navigation back to the dashboard remains a native link composed with the Spartan button treatment.</p>
+        <div class="row"><a class="action-link" href="/dashboard">Back</a></div>
       </section>
-      <section class="informational-region" role="region" aria-label="Cultural guide">
-        <h2>Cultural guide</h2>
-        <p>A read-only cultural tip remains a native named region under Relay presentation authority; it does not acquire a Spartan interaction primitive solely for visual composition.</p>
+      <section>
+        <h2>Cultural guide callout</h2>
+        <p>A read-only cultural tip stays a native named region under Relay presentation authority. The surface uses theme-aware semantic background, text, radius and elevation roles without acquiring a Spartan interaction primitive.</p>
+        <div class="cultural-tip-grid">
+          <article class="informational-region" role="region" aria-label="Cultural guide light mobile state">
+            <h3>Cultural guide</h3>
+            <p>In Japan, a small bow is a common greeting. Keep the guide readable as normal document text at narrow widths.</p>
+          </article>
+          <article class="informational-region theme-dark" role="region" aria-label="Cultural guide dark wider state">
+            <h3>Cultural guide</h3>
+            <p>Relay semantic surface and text roles preserve the same hierarchy in dark mode and at wider breakpoints.</p>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="profile-translation-title">
+        <h2 id="profile-translation-title">Profile bio translation states</h2>
+        <p>Discovery cards and full profiles keep the original bio visible until a current translation succeeds. Spartan actions expose native disabled and busy semantics during requests, and failures remain retryable with an announced status instead of replacing profile text.</p>
+        <div class="translation-grid">
+          <article class="translation-card">
+            <strong>Loading</strong>
+            <p lang="ja">日本語を勉強しています。</p>
+            <button type="button" disabled aria-busy="true">Translating...</button>
+          </article>
+          <article class="translation-card">
+            <strong>Failure and retry</strong>
+            <p lang="ja">日本語を勉強しています。</p>
+            <button type="button" aria-describedby="translation-error">Translate bio</button>
+            <p id="translation-error" class="translation-status error" role="status" aria-live="polite">Something went wrong. Please try again.</p>
+          </article>
+          <article class="translation-card">
+            <strong>Translated</strong>
+            <p>I am studying Japanese.</p>
+            <button type="button">Show original</button>
+          </article>
+          <article class="translation-card" dir="rtl">
+            <strong>RTL retry</strong>
+            <p lang="ar">أتعلم اليابانية.</p>
+            <button type="button">ترجمة النبذة</button>
+          </article>
+        </div>
       </section>
       <section id="fields">
         <h2>Fields</h2>
@@ -73,6 +128,20 @@
               <label>Language pair <select><option>English ↔ Japanese</option></select></label>
             </div>
             <div class="dialog-footer"><button>Cancel</button><button>Launch stage</button></div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>Controlled daily-login dialog</h2>
+        <p>The reward CTA delegates dismissal to the Spartan dialog-close primitive. Feature code observes the resulting dialog state change and emits its parent-facing close event instead of owning a separate click-to-close path.</p>
+        <div class="dialog-stage">
+          <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="daily-login-title" aria-describedby="daily-login-description">
+            <div class="dialog-body" style="text-align: center">
+              <div aria-hidden="true" style="font-size: 3rem">🎁</div>
+              <strong id="daily-login-title">Daily reward</strong>
+              <p id="daily-login-description">You earned 10 coins for checking in today.</p>
+              <button type="button">Collect reward</button>
+            </div>
           </div>
         </div>
       </section>

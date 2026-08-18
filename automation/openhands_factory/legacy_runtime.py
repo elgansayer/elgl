@@ -118,18 +118,30 @@ def detect_legacy_state_paths(
 
 
 def detect_legacy_processes() -> list[LegacyFinding]:
-    """Find known unrestricted executors without exposing their full command lines."""
+    """Find known background executors without exposing their full command lines.
+
+    A provider attached to an operator terminal is not an autonomous runtime
+    owner. Isolated Factory worktrees can safely coexist with that interactive
+    session, while a detached provider process remains a fail-closed finding.
+    """
 
     try:
-        result = _run(("ps", "-eo", "pid=,args="))
+        result = _run(("ps", "-eo", "pid=,tty=,args="))
     except (OSError, subprocess.TimeoutExpired):
         return []
     if result.returncode != 0:
         return []
     findings: list[LegacyFinding] = []
     for line in result.stdout.splitlines():
-        pid_text, separator, command = line.strip().partition(" ")
-        if not separator or not pid_text.isdigit() or int(pid_text) == os.getpid():
+        pid_text, separator, remainder = line.strip().partition(" ")
+        tty, tty_separator, command = remainder.strip().partition(" ")
+        if (
+            not separator
+            or not tty_separator
+            or not pid_text.isdigit()
+            or int(pid_text) == os.getpid()
+            or tty not in {"?", "-"}
+        ):
             continue
         for marker in LEGACY_PROCESS_MARKERS:
             if marker not in command:
@@ -139,7 +151,7 @@ def detect_legacy_processes() -> list[LegacyFinding]:
                     "process",
                     marker,
                     True,
-                    "retired or unrestricted provider process is running",
+                    "retired or unrestricted background provider process is running",
                 )
             )
             break
