@@ -30,7 +30,7 @@ def test_unrestricted_claude_process_is_reported_without_command_leakage(monkeyp
     command = "claude --dangerously-skip-permissions secret-looking-argument"
     monkeypatch.setattr(
         "openhands_factory.legacy_runtime._run",
-        lambda arguments: CompletedProcess(arguments, 0, f"4321 {command}\n", ""),
+        lambda arguments: CompletedProcess(arguments, 0, f"4321 ? {command}\n", ""),
     )
 
     findings = detect_legacy_processes()
@@ -39,3 +39,13 @@ def test_unrestricted_claude_process_is_reported_without_command_leakage(monkeyp
     assert findings[0].active
     assert findings[0].identifier == "claude --dangerously-skip-permissions"
     assert "secret-looking-argument" not in findings[0].detail
+
+
+def test_interactive_claude_process_is_not_a_competing_runtime(monkeypatch) -> None:
+    command = "claude --dangerously-skip-permissions"
+    monkeypatch.setattr(
+        "openhands_factory.legacy_runtime._run",
+        lambda arguments: CompletedProcess(arguments, 0, f"4321 pts/4 {command}\n", ""),
+    )
+
+    assert detect_legacy_processes() == []

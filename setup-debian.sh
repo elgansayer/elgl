@@ -115,7 +115,8 @@ python3 -m venv "$FACTORY_ROOT/venv-0.1.0"
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install --upgrade 'pip==25.2'
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install 'uv==0.12.5'
 VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
-  --active --frozen --no-editable --extra development --project "$REPOSITORY_SOURCE/automation"
+  --active --frozen --inexact --no-editable --extra development \
+  --project "$REPOSITORY_SOURCE/automation"
 ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
 for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/repository/admin-portal"; do

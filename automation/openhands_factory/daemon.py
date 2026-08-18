@@ -6,15 +6,18 @@ import logging
 import signal
 import time
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
 from openhands_factory.agents.base import ProviderHealth
+from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
@@ -53,8 +56,50 @@ def provider_status_snapshot(
     ]
 
 
+def release_review_capacity_after(
+    router: AgentRouter,
+    task_id: str,
+    _future: Future[Job | None],
+) -> None:
+    """Release a review reservation regardless of worker completion outcome."""
+
+    router.release_review_capacity(task_id)
+
+
+def is_review_lane_job(job: Job) -> bool:
+    """Return whether a job is advancing an existing or immediately ready PR."""
+
+    return (
+        job.task.source == "github-pull-request"
+        or job.pull_request is not None
+        or job.state is JobState.PR_DRAFT
+    )
+
+
 def is_new_github_issue(job: Job) -> bool:
+    """Return whether the job is entering the Factory from issue discovery."""
+
     return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+
+
+def select_issue_admitted(
+    candidates: list[Job],
+    limit: int,
+    new_issue_slots: int | None,
+) -> list[Job]:
+    """Fill capacity with progressing work before bounded new issue intake."""
+
+    if limit <= 0:
+        return []
+    if new_issue_slots is None:
+        return candidates[:limit]
+
+    progressing = [job for job in candidates if not is_new_github_issue(job)]
+    discovered_issues = [job for job in candidates if is_new_github_issue(job)]
+    selected = progressing[:limit]
+    remaining = max(0, limit - len(selected))
+    selected.extend(discovered_issues[: min(remaining, max(0, new_issue_slots))])
+    return selected
 
 
 def select_batch(
@@ -64,6 +109,8 @@ def select_batch(
     now: datetime | None = None,
     new_issue_slots: int | None = None,
 ) -> list[Job]:
+    if limit <= 0:
+        return []
     excluded = excluded_task_ids or set()
     current = now or datetime.now(UTC)
     candidates = [
@@ -74,18 +121,27 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    if new_issue_slots is None:
-        return candidates[:limit]
+    review_is_active = any(
+        item.task.identifier in excluded and is_review_lane_job(item) for item in jobs.values()
+    )
+    if review_is_active:
+        return select_issue_admitted(
+            [item for item in candidates if not is_review_lane_job(item)],
+            limit,
+            new_issue_slots,
+        )
 
-    # Pipeline states already in progress, plus incoming pull-request review tasks,
-    # are never delayed by the new-issue cadence. Fill remaining worker capacity with
-    # only the configured number of newly discovered issues.
-    progressing = [job for job in candidates if not is_new_github_issue(job)]
-    discovered_issues = [job for job in candidates if is_new_github_issue(job)]
-    selected = progressing[:limit]
-    remaining = max(0, limit - len(selected))
-    selected.extend(discovered_issues[: min(remaining, max(0, new_issue_slots))])
-    return selected
+    review = next((item for item in candidates if is_review_lane_job(item)), None)
+    if review is None:
+        return select_issue_admitted(candidates, limit, new_issue_slots)
+
+    # Submit the merge-queue lane first. The router reserves provider capacity
+    # for this job before issue workers can consume every healthy subscription.
+    remaining = [item for item in candidates if not is_review_lane_job(item)]
+    return [
+        review,
+        *select_issue_admitted(remaining, limit - 1, new_issue_slots),
+    ]
 
 
 def refresh_jobs(
@@ -101,6 +157,24 @@ def refresh_jobs(
     except FactoryError as error:
         LOGGER.warning("Factory refresh deferred after control-plane failure: %s", error)
         return pipeline.jobs.load(), now + max(cooldown_seconds, 30)
+
+
+def await_refresh(
+    future: Future[tuple[dict[str, Job], float]],
+    publish_heartbeat: Callable[[], None],
+    heartbeat_seconds: float = 10.0,
+) -> tuple[dict[str, Job], float]:
+    """Keep daemon liveness current while control-plane reconciliation blocks."""
+
+    while True:
+        try:
+            return future.result(timeout=heartbeat_seconds)
+        except FutureTimeoutError:
+            if future.done():
+                # A completed refresh may itself have raised TimeoutError. Do not
+                # misreport that failure as an ordinary heartbeat interval.
+                return future.result()
+            publish_heartbeat()
 
 
 def queue_snapshot(
@@ -287,12 +361,17 @@ class FactoryDaemon:
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
         architect_future: Future[None] | None = None
+        # Publish liveness before the first provider probe and GitHub refresh.
+        # A large queue can make that first scheduling cycle slower than the
+        # watchdog interval, but the daemon already owns its generation here.
+        self._write_daemon_state("running", active, active_started_at)
         with (
             ThreadPoolExecutor(
                 max_workers=self.config.max_parallel_jobs,
                 thread_name_prefix="factory-worker",
             ) as workers,
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-control") as control,
         ):
             while not self.stopping:
                 self._assert_owner()
@@ -324,6 +403,8 @@ class FactoryDaemon:
                             ),
                         )
                         recovered_circuits = recover_due_quarantines(self.pipeline.jobs)
+                        if recovered_circuits:
+                            self.pipeline.request_label_reconciliation()
                         for task_id in recovered_circuits:
                             self.pipeline.tasks.release(task_id)
                             LOGGER.warning(
@@ -331,11 +412,16 @@ class FactoryDaemon:
                                 "retry evidence was preserved",
                                 task_id,
                             )
-                        jobs, next_refresh_at = refresh_jobs(
+                        refresh_future = control.submit(
+                            refresh_jobs,
                             self.pipeline,
                             active_task_ids,
                             now,
                             self.config.cooldown_seconds,
+                        )
+                        jobs, next_refresh_at = await_refresh(
+                            refresh_future,
+                            lambda: self._write_daemon_state("running", active, active_started_at),
                         )
                         recovered = self.pipeline.jobs.recover_abandoned_attempts(
                             active_task_ids,
@@ -375,7 +461,23 @@ class FactoryDaemon:
                             verification_slots=self.verification_slots,
                             agent_router=self.pipeline.router,
                         )
-                        future = workers.submit(worker.run_job, job.task.identifier)
+                        review_priority = is_review_lane_job(job)
+                        if review_priority:
+                            self.pipeline.router.reserve_review_capacity(job.task.identifier)
+                        try:
+                            future = workers.submit(worker.run_job, job.task.identifier)
+                        except Exception:
+                            if review_priority:
+                                self.pipeline.router.release_review_capacity(job.task.identifier)
+                            raise
+                        if review_priority:
+                            future.add_done_callback(
+                                partial(
+                                    release_review_capacity_after,
+                                    self.pipeline.router,
+                                    job.task.identifier,
+                                )
+                            )
                         active[future] = job.task.identifier
                         active_started_at[job.task.identifier] = datetime.now(UTC).isoformat()
                         LOGGER.info("Scheduled task %s", job.task.identifier)

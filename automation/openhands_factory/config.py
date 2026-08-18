@@ -369,6 +369,7 @@ class FactoryConfig(BaseModel):
     # allowing in-flight implementation, review, CI repair, and PR work to continue.
     new_issue_interval_seconds: int = 0
     new_issues_per_interval: int = 1
+    label_reconciliation_batch_size: int = 25
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     provider_slot_wait_seconds: int = 30
@@ -422,6 +423,13 @@ class FactoryConfig(BaseModel):
     def non_negative_issue_interval(cls, value: int) -> int:
         if value < 0:
             raise ValueError("new issue interval cannot be negative")
+        return value
+
+    @field_validator("label_reconciliation_batch_size")
+    @classmethod
+    def bounded_label_reconciliation_batch(cls, value: int) -> int:
+        if not 1 <= value <= 100:
+            raise ValueError("label reconciliation batch size must be between 1 and 100")
         return value
 
     @model_validator(mode="after")
@@ -553,6 +561,9 @@ class FactoryConfig(BaseModel):
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
                 new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
                 new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
+                label_reconciliation_batch_size=int(
+                    env.get("FACTORY_LABEL_RECONCILIATION_BATCH_SIZE", "25")
+                ),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),

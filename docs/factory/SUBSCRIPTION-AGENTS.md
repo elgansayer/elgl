@@ -12,7 +12,8 @@ FACTORY_HOME=/var/lib/hellotalk-factory/home
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
 ```
 
-The service has a non-login shell on many hosts. Use `sudo -u ... env` as shown instead of changing its shell.
+The service has a non-login shell on many hosts. Use `sudo -u ... env -i` as shown instead of changing its shell.
+The empty starting environment prevents an operator's provider keys and sessions from changing the probe result.
 Install CLIs into the service user's local path or expose a root-owned executable in `/usr/local/bin`.
 
 Never store vendor API keys in the subscription CLI environment. `provider_environment()` strips common API key,
@@ -31,8 +32,8 @@ Official setup: [Claude Code setup](https://code.claude.com/docs/en/setup).
 Install using Anthropic's current native installer, then authenticate as the service user:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth login
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth login
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   claude auth status --json
 ```
 
@@ -52,9 +53,9 @@ Install the current CLI and authenticate with the ChatGPT subscription. Device a
 for a headless host:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   codex login --device-auth
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
 ```
 
 The adapter requires `login status` to identify ChatGPT authentication. It uses `codex exec`, workspace-write
@@ -81,17 +82,17 @@ that retired API route and writes `GEMINI_ENABLED=false`; direct Google routing 
 Install Antigravity 1.1.1 or newer as the service user, then complete Google sign-in once:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash'
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy
 ```
 
 After authentication, exit without starting repository work. These probes list local version and account-visible
 models but do not start a model task:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy --version
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy --version
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 The production entry uses `command=agy`, `cli_variant=antigravity`, and the account-visible
@@ -115,17 +116,29 @@ available through Gemini CLI.
 Official setup: [OpenCode CLI](https://opencode.ai/docs/cli/) and
 [OpenCode providers](https://opencode.ai/docs/providers/).
 
-Install OpenCode using its current supported installation method. Start the TUI once as the service user and use
-`/connect` to configure OpenCode Go, or use the supported auth command when appropriate for the installed release:
+Install OpenCode using its current supported installation method. OpenCode 1.18.15 supports selecting OpenCode Go
+directly from the login command. It prompts for the credential without placing it in process arguments:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+  opencode auth login --provider opencode-go
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+  opencode models opencode-go
 ```
 
+Do not export `OPENCODE_GO_API_KEY` from a repository `.env`, a shell profile, the systemd environment, or a
+command argument for the direct provider. The direct adapter reads the CLI-owned service-user credential and
+deliberately strips API-key variables. If a key was put in a repository file, remove it and rotate any value that
+was also pasted into chat, command history, or logs.
+
 The adapter considers the provider healthy only when `auth list` identifies OpenCode Go and `models opencode-go`
-contains every configured default and phase model. OpenCode documents its credentials under the service user's
-XDG data directory. Let the CLI own that location and its permissions; do not copy or commit the credential file.
+contains every configured default and phase model. Those probes prove credential discovery and catalogue access,
+not remaining subscription capacity. A tiny repository-free generation can still report `insufficient balance`.
+That result is `PROVIDER_QUOTA`, not an authentication failure. Wait for capacity or fund the workspace instead
+of repeatedly replacing credentials from the same exhausted workspace. OpenCode documents its credentials under
+the service user's XDG data directory. Let the CLI own that location and its permissions; do not copy or commit
+the credential file.
 
 The non-interactive adapter uses `opencode run`, a mode `0600` temporary prompt attachment inside the isolated
 worktree, an explicit model, pure output, automatic tool operation, and a bounded process lifetime. The temporary
@@ -144,10 +157,15 @@ silent model substitution.
 OpenHands remains behind the same router but uses the existing SDK conversation runner. It is `emergency_only` in
 the production policy. Subscription-first operation does not authorise unrestricted PAYG usage.
 
+If no independent OpenHands or OpenAI SDK credential is available, set `providers.openhands.enabled` to `false`
+in the root-owned operator `agents.json`. Keep the adapter in source and route definitions so it can be enabled
+later, but do not send a task through a stale OAuth session or reuse the same exhausted OpenCode Go workspace as
+if it were an independent fallback.
+
 The legacy OpenHands authentication command remains available where its subscription transport is configured:
 
 ```bash
-sudo -u hellotalk-factory env HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   /opt/hellotalk-factory/venv/bin/hellotalk-factory auth openai
 ```
 
@@ -193,9 +211,11 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory prov
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 ```
 
-Online doctor also verifies that one active GitHub ruleset without bypass actors requires pull requests,
-`CI / required`, and `factory/independent-review` on the configured base branch. A healthy provider cannot
-compensate for a merge policy that permits another actor to bypass independent review.
+Online doctor also verifies a layered GitHub policy on the configured base branch. A baseline ruleset must require
+pull requests and `CI / required`. Independent review must be required by either that ruleset or a review-only
+ruleset. The exact repository-owner user may be the sole pull-request-only bypass actor on both rulesets. Factory
+automation still requires both statuses and never invokes the manual path. See
+[MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 Required context names alone do not prove who published a legacy commit status. Before granting repository write
 access beyond the Factory operator, provision a dedicated GitHub App for Factory review attestations and pin each
@@ -209,7 +229,9 @@ new structured review approves the exact current SHA.
 `providers check` is also the service's bounded preflight. It requires no competing legacy executor,
 authenticated repository access, and the same merge policy. Zero usable providers is a warning rather than a
 startup failure: the daemon remains online, retains durable work, and retries when health or cooldown state
-recovers. OpenAI SDK OAuth is also an optional warning when another configured provider can execute the work.
+recovers. Detached unrestricted provider processes still fail closed, while a provider attached to an operator
+TTY is not classified as an autonomous runtime owner. OpenAI SDK OAuth is also an optional warning when another
+configured provider can execute the work.
 An activation canary still requires at least one usable provider.
 
 Normal CI uses fake providers and never requires real subscriptions. Optional live smoke tests must be explicitly
