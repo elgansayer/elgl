@@ -15,6 +15,7 @@ from typing import Protocol
 
 from filelock import FileLock
 
+from openhands_factory.agents.base import AgentFailureKind
 from openhands_factory.config import FactoryConfig
 from openhands_factory.github import GitHubClient, IssueComment
 from openhands_factory.state import atomic_write_json, read_json
@@ -27,6 +28,7 @@ HEARTBEAT_FRESH_SECONDS = 120
 GIBIBYTE = 1024**3
 MINIMUM_TREND_INTERVAL_SECONDS = 60
 MINIMUM_TREND_CHANGE_BYTES = 64 * 1024**2
+FAILURE_CLASS_NAMES = frozenset(item.value for item in AgentFailureKind)
 
 
 class ControlPanelGitHub(Protocol):
@@ -195,7 +197,17 @@ def _provider_snapshot(
 def _metrics_snapshot(config: FactoryConfig) -> list[dict[str, object]]:
     payload = _read_mapping(config.state_dir / "metrics.json")
     records = payload.get("providers")
-    totals: dict[str, dict[str, int]] = {}
+    numeric_keys = (
+        "calls",
+        "successes",
+        "failures",
+        "fallbacks",
+        "rate_limits",
+        "authentication_failures",
+        "quota_failures",
+        "timeouts",
+    )
+    totals: dict[str, dict[str, object]] = {}
     if isinstance(records, list):
         for item in records:
             record = _mapping(item)
@@ -210,12 +222,38 @@ def _metrics_snapshot(config: FactoryConfig) -> list[dict[str, object]]:
                     "failures": 0,
                     "fallbacks": 0,
                     "rate_limits": 0,
+                    "authentication_failures": 0,
+                    "quota_failures": 0,
                     "timeouts": 0,
+                    "failure_counts": {},
                 },
             )
-            for key in current:
-                current[key] += max(_integer(record.get(key)), 0)
+            for key in numeric_keys:
+                current[key] = _integer(current.get(key)) + max(_integer(record.get(key)), 0)
+            current_failures = _mapping(current.get("failure_counts"))
+            for kind, count in _mapping(record.get("failure_counts")).items():
+                if kind not in FAILURE_CLASS_NAMES:
+                    continue
+                current_failures[kind] = _integer(current_failures.get(kind)) + max(
+                    _integer(count), 0
+                )
+            current["failure_counts"] = current_failures
     return [{"provider": provider, **values} for provider, values in sorted(totals.items())]
+
+
+def _failure_class_summary(metric: Mapping[str, object]) -> str:
+    counts = [
+        (kind, count)
+        for kind, value in _mapping(metric.get("failure_counts")).items()
+        if kind in FAILURE_CLASS_NAMES and (count := _integer(value)) > 0
+    ]
+    ordered = sorted(counts, key=lambda item: (-item[1], item[0]))
+    if not ordered:
+        return "none"
+    visible = ordered[:4]
+    summary = ", ".join(f"{kind}={count}" for kind, count in visible)
+    hidden_total = sum(count for _, count in ordered[4:])
+    return f"{summary}, other={hidden_total}" if hidden_total else summary
 
 
 def _storage_snapshot(
@@ -513,9 +551,12 @@ def render_status_markdown(
                             "failures",
                             "fallbacks",
                             "rate_limits",
+                            "authentication_failures",
+                            "quota_failures",
                             "timeouts",
                         )
                     ]
+                    + [_failure_class_summary(metric)]
                 )
             )
     lines.extend(
@@ -524,8 +565,19 @@ def render_status_markdown(
             "### Provider outcomes",
             "",
             *_markdown_table(
-                ("Provider", "Calls", "Success", "Failure", "Fallback", "Rate limit", "Timeout"),
-                metric_rows or [("none", "0", "0", "0", "0", "0", "0")],
+                (
+                    "Provider",
+                    "Calls",
+                    "Success",
+                    "Failure",
+                    "Fallback",
+                    "Rate limit",
+                    "Auth",
+                    "Quota",
+                    "Timeout",
+                    "Failure classes",
+                ),
+                metric_rows or [("none", "0", "0", "0", "0", "0", "0", "0", "0", "none")],
             ),
             "",
             "### Controls",

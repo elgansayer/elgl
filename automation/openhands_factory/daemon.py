@@ -29,7 +29,8 @@ from openhands_factory.generation import (
     activate_generation,
     assert_generation_current,
 )
-from openhands_factory.models import Job
+from openhands_factory.issue_admission import IssueAdmissionGate
+from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
@@ -65,11 +66,48 @@ def release_review_capacity_after(
     router.release_review_capacity(task_id)
 
 
+def is_review_lane_job(job: Job) -> bool:
+    """Return whether a job is advancing an existing or immediately ready PR."""
+
+    return (
+        job.task.source == "github-pull-request"
+        or job.pull_request is not None
+        or job.state is JobState.PR_DRAFT
+    )
+
+
+def is_new_github_issue(job: Job) -> bool:
+    """Return whether the job is entering the Factory from issue discovery."""
+
+    return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
+
+
+def select_issue_admitted(
+    candidates: list[Job],
+    limit: int,
+    new_issue_slots: int | None,
+) -> list[Job]:
+    """Fill capacity with progressing work before bounded new issue intake."""
+
+    if limit <= 0:
+        return []
+    if new_issue_slots is None:
+        return candidates[:limit]
+
+    progressing = [job for job in candidates if not is_new_github_issue(job)]
+    discovered_issues = [job for job in candidates if is_new_github_issue(job)]
+    selected = progressing[:limit]
+    remaining = max(0, limit - len(selected))
+    selected.extend(discovered_issues[: min(remaining, max(0, new_issue_slots))])
+    return selected
+
+
 def select_batch(
     jobs: dict[str, Job],
     limit: int,
     excluded_task_ids: set[str] | None = None,
     now: datetime | None = None,
+    new_issue_slots: int | None = None,
 ) -> list[Job]:
     if limit <= 0:
         return []
@@ -84,23 +122,26 @@ def select_batch(
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     review_is_active = any(
-        item.task.identifier in excluded and item.task.source == "github-pull-request"
-        for item in jobs.values()
+        item.task.identifier in excluded and is_review_lane_job(item) for item in jobs.values()
     )
     if review_is_active:
-        return [item for item in candidates if item.task.source != "github-pull-request"][:limit]
+        return select_issue_admitted(
+            [item for item in candidates if not is_review_lane_job(item)],
+            limit,
+            new_issue_slots,
+        )
 
-    review = next(
-        (item for item in candidates if item.task.source == "github-pull-request"),
-        None,
-    )
+    review = next((item for item in candidates if is_review_lane_job(item)), None)
     if review is None:
-        return candidates[:limit]
+        return select_issue_admitted(candidates, limit, new_issue_slots)
 
     # Submit the merge-queue lane first. The router reserves provider capacity
     # for this job before issue workers can consume every healthy subscription.
-    remaining = [item for item in candidates if item.task.source != "github-pull-request"]
-    return [review, *remaining[: max(limit - 1, 0)]]
+    remaining = [item for item in candidates if not is_review_lane_job(item)]
+    return [
+        review,
+        *select_issue_admitted(remaining, limit - 1, new_issue_slots),
+    ]
 
 
 def refresh_jobs(
@@ -210,9 +251,18 @@ class FactoryDaemon:
         self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
         self.pipeline = FactoryPipeline(config)
+        self.issue_admission = self._issue_admission_gate(config)
         self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+
+    @staticmethod
+    def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
+        return IssueAdmissionGate(
+            config.state_dir / "issue-admissions.json",
+            interval_seconds=config.new_issue_interval_seconds,
+            max_admissions=config.new_issues_per_interval,
+        )
 
     @property
     def control_path(self) -> Path:
@@ -262,6 +312,7 @@ class FactoryDaemon:
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
         self.pipeline = FactoryPipeline(self.config)
+        self.issue_admission = self._issue_admission_gate(self.config)
         LOGGER.info(
             "Activated Factory generation %s runtime=%s",
             generation.identifier,
@@ -352,6 +403,8 @@ class FactoryDaemon:
                             ),
                         )
                         recovered_circuits = recover_due_quarantines(self.pipeline.jobs)
+                        if recovered_circuits:
+                            self.pipeline.request_label_reconciliation()
                         for task_id in recovered_circuits:
                             self.pipeline.tasks.release(task_id)
                             LOGGER.warning(
@@ -385,14 +438,30 @@ class FactoryDaemon:
                             jobs = self.pipeline.jobs.load()
                     else:
                         jobs = self.pipeline.jobs.load()
-                    for job in select_batch(jobs, capacity, active_task_ids):
+                    scheduler_time = datetime.now(UTC)
+                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    for job in select_batch(
+                        jobs,
+                        capacity,
+                        active_task_ids,
+                        now=scheduler_time,
+                        new_issue_slots=new_issue_slots,
+                    ):
                         self._assert_owner()
+                        if is_new_github_issue(job) and not self.issue_admission.admit(
+                            job.task.identifier, scheduler_time
+                        ):
+                            LOGGER.info(
+                                "New-issue admission interval is full; deferred task %s",
+                                job.task.identifier,
+                            )
+                            continue
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
                             agent_router=self.pipeline.router,
                         )
-                        review_priority = job.task.source == "github-pull-request"
+                        review_priority = is_review_lane_job(job)
                         if review_priority:
                             self.pipeline.router.reserve_review_capacity(job.task.identifier)
                         try:
@@ -463,6 +532,7 @@ class FactoryDaemon:
                 "storage_blocked": self.storage_blocked,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "active_started_at": active_started_at or {},
+                "issue_admission": self.issue_admission.snapshot(),
                 "queue": queue_snapshot(jobs, active_task_ids),
                 "providers": provider_status_snapshot(self.provider_health),
             },

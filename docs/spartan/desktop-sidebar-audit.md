@@ -6,6 +6,12 @@ Target: `frontend/src/app/components/desktop-sidebar`
 
 Program dependency: #5462 (`Spartan UI 0001`), completed before this audit.
 
+## Implementation status
+
+Issue #6102 implements the audit's active-route correction while retaining native anchors and Angular Router ownership. Active primary and economy links now use `ariaCurrentWhenActive="page"`, inactive links omit `aria-current`, and the component suite is enabled with focused coverage for route inventory, native link semantics, focus treatment and active-route state. The mapped component-system preview records the same active navigation contract.
+
+The remaining sections preserve the original audit baseline and longer-term opportunities. Statements describing `[attr.aria-current]="false"` or the skipped suite refer to the pre-#6102 implementation.
+
 ## Scope
 
 This document is the implementation baseline for migrating and maintaining the desktop sidebar under the repository's Spartan Brain / Spartan Helm / Relay architecture.

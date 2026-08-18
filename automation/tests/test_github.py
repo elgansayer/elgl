@@ -260,6 +260,66 @@ def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
     )
 
 
+def test_requeue_can_silently_clear_automatic_recovery_labels(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    requeued = client.requeue_quarantined_issues([33], announce=False)
+
+    assert requeued == [33]
+    assert len(runner.calls) == 1
+    assert "--remove-label" in runner.calls[0]
+    assert all("comment" not in call for call in runner.calls)
+
+
+def test_release_active_issues_restores_required_intake_without_comments(
+    tmp_path: Path,
+) -> None:
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_ready_label=True,
+        ready_label="factory-ready",
+    )
+
+    released = client.release_active_issues([35])
+
+    assert released == [35]
+    assert any("--remove-label" in call and "factory-active" in call for call in runner.calls)
+    assert any("--add-label" in call and "factory-ready" in call for call in runner.calls)
+    assert all("comment" not in call for call in runner.calls)
+
+
+def test_list_active_issues_unions_current_and_retired_ownership(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"number": 34}]), ""),
+            ProcessResult(0, json.dumps([{"number": 34}, {"number": 35}]), ""),
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    active = client.list_active_issues()
+
+    assert active == [34, 35]
+    assert any("factory-active" in call for call in runner.calls)
+    assert any("swarm-active" in call for call in runner.calls)
+
+
+def test_release_active_issues_preserves_admission_when_ready_labels_are_optional(
+    tmp_path: Path,
+) -> None:
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.release_active_issues([36])
+
+    assert any("--add-label" in call and "factory-ready" in call for call in runner.calls)
+
+
 def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     tmp_path: Path,
 ) -> None:

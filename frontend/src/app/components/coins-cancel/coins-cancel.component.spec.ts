@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { CoinsCancelComponent } from './coins-cancel.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -23,7 +24,10 @@ describe('CoinsCancelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CoinsCancelComponent, TranslatePipe],
-      providers: [{ provide: I18nService, useClass: MockI18nService }],
+      providers: [
+        { provide: I18nService, useClass: MockI18nService },
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CoinsCancelComponent);
@@ -54,13 +58,16 @@ describe('CoinsCancelComponent', () => {
     expect(decorativeEmoji.textContent).toContain('😕');
   });
 
-  it('should keep the back action keyboard focusable and touch-sized', () => {
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+  it('should use a native Spartan navigation link for the back action', () => {
+    const backLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
 
-    expect(button.type).toBe('button');
-    expect(button.getAttribute('size')).toBe('touch');
-    button.focus();
-    expect(document.activeElement).toBe(button);
+    expect(backLink).toBeTruthy();
+    expect(backLink.getAttribute('href')).toBe('/dashboard');
+    expect(backLink.getAttribute('size')).toBe('touch');
+    expect(backLink.hasAttribute('role')).toBe(false);
+    expect(backLink.hasAttribute('tabindex')).toBe(false);
+    backLink.focus();
+    expect(document.activeElement).toBe(backLink);
   });
 
   it('should use fluid layout primitives that preserve reflow at high zoom', () => {
@@ -94,7 +101,7 @@ describe('CoinsCancelComponent', () => {
     expect(text).toContain('coinsCancel.message');
   });
 
-  it('should display back button', () => {
+  it('should display back action', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('coinsCancel.backBtn');
   });
