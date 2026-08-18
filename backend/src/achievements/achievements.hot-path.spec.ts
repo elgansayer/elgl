@@ -4,7 +4,14 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 function makeBuilder(response: unknown) {
   const builder: any = {};
-  for (const method of ['select', 'eq', 'order', 'single', 'returns', 'upsert']) {
+  for (const method of [
+    'select',
+    'eq',
+    'order',
+    'single',
+    'returns',
+    'upsert',
+  ]) {
     builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.then = (
