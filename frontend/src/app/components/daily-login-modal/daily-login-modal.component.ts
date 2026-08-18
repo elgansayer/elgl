@@ -35,7 +35,7 @@ export class DailyLoginModalComponent {
   readonly coins = input(0);
   readonly open = input(true);
   readonly closed = output<void>();
-  readonly dialogTitleId = 'daily-login-title-' + Math.random().toString(36).substring(2, 9);
+  readonly dialogTitleId = 'daily-login-title-' + crypto.randomUUID();
   readonly dialogState = computed<HlmDialogState>(() => this.open() ? 'open' : 'closed');
 
   onDialogStateChanged(state: HlmDialogState): void {

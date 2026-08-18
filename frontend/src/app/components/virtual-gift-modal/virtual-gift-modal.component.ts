@@ -197,8 +197,8 @@ export class VirtualGiftModalComponent {
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly titleId = 'virtual-gift-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'virtual-gift-subtitle-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'virtual-gift-title-' + crypto.randomUUID();
+  readonly subtitleId = 'virtual-gift-subtitle-' + crypto.randomUUID();
 
   readonly effectiveBalance = computed(
     (): number => this.economyStore.coinsBalance() - this.deductedAmount(),
