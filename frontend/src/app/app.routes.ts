@@ -60,7 +60,7 @@ export const routes: Routes = [
   {
     path: 'audio-rooms',
     loadComponent: () =>
-      import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
+      import('./components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
     path: 'classrooms',
@@ -421,7 +421,7 @@ export const routes: Routes = [
   {
     path: 'message-filters',
     loadComponent: () =>
-      import('./pages/message-filter-settings/message-filter-settings.component').then(
+      import('./pages/settings/message-filter-settings/message-filter-settings.component').then(
         (m) => m.MessageFilterSettingsComponent,
       ),
     title: 'Message Filter Settings - HelloTalk',

@@ -3,7 +3,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { ChatModule } from '../chat/chat.module';
 import { InterestsModule } from '../interests/interests.module';
 import { GroupsController } from './groups.controller';
-import { CommunitiesController } from './communities.controller';
+import { CommunitiesController } from '../communities/communities.controller';
 import { GroupsService } from './groups.service';
 
 @Module({
