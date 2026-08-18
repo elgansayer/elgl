@@ -104,18 +104,20 @@ describe('PasswordResetService', () => {
 
       await service.requestPasswordReset({ email: 'target@example.com' });
 
-      expect(
-        mockSupabaseClient.auth.admin.listUsers,
-      ).toHaveBeenNthCalledWith(1, {
-        page: 1,
-        perPage: 1000,
-      });
-      expect(
-        mockSupabaseClient.auth.admin.listUsers,
-      ).toHaveBeenNthCalledWith(2, {
-        page: 2,
-        perPage: 1000,
-      });
+      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(
+        1,
+        {
+          page: 1,
+          perPage: 1000,
+        },
+      );
+      expect(mockSupabaseClient.auth.admin.listUsers).toHaveBeenNthCalledWith(
+        2,
+        {
+          page: 2,
+          perPage: 1000,
+        },
+      );
       expect(mockEmailService.sendPasswordResetEmail).toHaveBeenCalledTimes(1);
     });
 
