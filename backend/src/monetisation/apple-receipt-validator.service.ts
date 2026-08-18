@@ -72,7 +72,9 @@ export class AppleReceiptValidatorService {
 
     if (env === 'production') {
       if (!secret || secret === 'test-apple-secret') {
-        throw new Error('APPLE_SHARED_SECRET must be configured securely in production');
+        throw new Error(
+          'APPLE_SHARED_SECRET must be configured securely in production',
+        );
       }
     } else {
       if (!secret) {

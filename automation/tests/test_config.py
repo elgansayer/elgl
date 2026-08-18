@@ -48,6 +48,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
     assert '"$FACTORY_STATE/recovery"' in setup
     assert "uv==0.12.5" in setup
+    assert "--inexact" in setup
     assert "bash -c \\" in setup
     assert 'cd "$1" && exec podman build' in setup
     assert '"$1/Containerfile" "$1"' in setup
@@ -102,8 +103,12 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
         encoding="utf-8"
     )
 
-    assert "uv sync" in deploy
-    assert "--active --frozen --no-editable --extra development" in deploy
+    assert '"$FACTORY_UV" sync' in deploy
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert "FACTORY_UV_VERSION=0.12.5" in deploy
+    assert '"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install' in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
+    assert "Factory dependency refresh removed the pinned uv executable" in deploy
     assert '"$FACTORY_CHECKOUT/admin-portal"' in deploy
     assert 'npm ci --prefix "$directory"' in deploy
     assert "npm exec -- cypress install" in deploy
@@ -111,6 +116,20 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'bash -c \'cd "$1" && exec podman build' in deploy
     assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
+
+
+def test_deployment_repairs_and_preserves_the_pinned_uv_bootstrap() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    repair = deploy.index('"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install')
+    refresh = deploy.index('"$FACTORY_UV" sync')
+    survival_check = deploy.index("Factory dependency refresh removed the pinned uv executable")
+
+    assert repair < refresh < survival_check
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
 
 
 def test_fast_deployment_reuses_only_verified_dependencies_and_worker_image() -> None:

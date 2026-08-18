@@ -182,7 +182,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(6);
+    expect(buttons.length).toBe(7);
   });
 
   it('should simplify the exact message text from the context menu', async () => {
@@ -200,20 +200,26 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.simplificationText()).toBe('Hello.');
   });
 
-  it('should classify simplification rate-limit failures and keep the dialog open', async () => {
-    nlpService.simplifyText.mockRejectedValue(
-      new NlpRequestError('rate_limit', 'Too many requests', 429, 10),
-    );
+  it.each([
+    ['rate_limit', 'You have made too many simplification requests. Please wait and try again.'],
+    ['auth', 'Sign in again to simplify this message.'],
+    ['empty', 'No simplified text was returned. Please try again.'],
+    ['request', 'This message could not be simplified. Check your connection and try again.'],
+  ] as const)(
+    'should render the %s simplification failure and keep the dialog open',
+    async (kind, message) => {
+      nlpService.simplifyText.mockRejectedValue(new NlpRequestError(kind, 'Request failed'));
 
-    component.openSimplification();
-    await fixture.whenStable();
-    fixture.detectChanges();
+      component.openSimplification();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
-    expect(component.simplificationOpen()).toBe(true);
-    expect(component.simplificationError()).toBe('rate_limit');
-    const alert = document.body.querySelector('[role="alert"][data-error-kind="rate_limit"]');
-    expect(alert).toBeTruthy();
-  });
+      expect(component.simplificationOpen()).toBe(true);
+      expect(component.simplificationError()).toBe(kind);
+      const alert = document.body.querySelector(`[role="alert"][data-error-kind="${kind}"]`);
+      expect(alert?.textContent).toContain(message);
+    },
+  );
 
   it('should prevent duplicate simplification requests while one is in flight', () => {
     const pending = deferred<{ original: string; simplified: string }>();
@@ -261,7 +267,9 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const dialogs = Array.from(document.body.querySelectorAll('[role="dialog"]'));
-    const dialog = dialogs.find((element) => element.textContent?.includes('<img src=x onerror=alert(1)>'));
+    const dialog = dialogs.find((element) =>
+      element.textContent?.includes('<img src=x onerror=alert(1)>'),
+    );
     expect(dialog?.textContent).toContain('<img src=x onerror=alert(1)>');
     expect(dialog?.querySelector('img')).toBeNull();
   });
@@ -272,6 +280,27 @@ describe('LongPressContextMenuComponent', () => {
     component.onSimplificationDialogStateChanged('closed');
 
     expect(component.simplificationOpen()).toBe(false);
+  });
+
+  it('should cancel a pending long press and simplification request when destroyed', async () => {
+    vi.useFakeTimers();
+    const pending = deferred<{ original: string; simplified: string }>();
+    nlpService.simplifyText.mockReturnValue(pending.promise);
+
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
+    component.openSimplification();
+    const requestSignal = nlpService.simplifyText.mock.calls[0][1];
+
+    fixture.destroy();
+
+    expect(requestSignal.aborted).toBe(true);
+    vi.advanceTimersByTime(600);
+    expect(component.menuVisible()).toBe(false);
+
+    pending.resolve({ original: 'Hello world', simplified: 'stale' });
+    await Promise.resolve();
+    expect(component.simplificationText()).toBeNull();
+    vi.useRealTimers();
   });
 
   it('should expose grammar explanation only for a correction with both text variants', async () => {
@@ -416,6 +445,24 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.explanationOpen()).toBe(false);
   });
 
+  it('should abort a pending explanation request when destroyed', () => {
+    const pending = deferred<{
+      original: string;
+      corrected: string;
+      explanation: string;
+    }>();
+    nlpService.explainGrammar.mockReturnValue(pending.promise);
+    fixture.componentRef.setInput('messageType', 'correction');
+    fixture.componentRef.setInput('correctionOriginal', 'wrong');
+    fixture.componentRef.setInput('correctionCorrected', 'right');
+
+    component.openExplanation();
+    const requestSignal = nlpService.explainGrammar.mock.calls[0][1];
+    fixture.destroy();
+
+    expect(requestSignal.aborted).toBe(true);
+  });
+
   it('should emit block toggled to true when the sender is not yet blocked', () => {
     vi.spyOn(component.block, 'emit');
     component.menuVisible.set(true);
@@ -439,6 +486,25 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.menuVisible()).toBe(true);
 
     vi.useRealTimers();
+  });
+
+  it('should open the menu from its keyboard-accessible action', () => {
+    const trigger = fixture.debugElement.query(By.css('.message-actions-trigger'));
+
+    trigger.nativeElement.click();
+
+    expect(component.menuVisible()).toBe(true);
+    expect(trigger.attributes['aria-haspopup']).toBe('dialog');
+  });
+
+  it('should open the menu from the native context-menu gesture', () => {
+    const event = new MouseEvent('contextmenu', { cancelable: true });
+    const preventDefault = vi.spyOn(event, 'preventDefault');
+
+    component.onContextMenu(event);
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(component.menuVisible()).toBe(true);
   });
 
   it('should not open the menu if the mouse is released before the long press threshold', () => {
@@ -473,7 +539,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(12);
+    expect(buttons.length).toBe(13);
   });
 
   it('should render every action through the Spartan Helm button directive', () => {
@@ -481,7 +547,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const helmButtons = fixture.debugElement.queryAll(By.css('button[data-slot="button"]'));
-    expect(helmButtons.length).toBe(12);
+    expect(helmButtons.length).toBe(13);
   });
 
   it('should emit block toggled to false when the sender is already blocked', () => {

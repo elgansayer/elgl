@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -32,10 +32,24 @@ function isAbortError(error: unknown): boolean {
       (mousedown)="onMouseDown($event)"
       (mouseup)="onMouseUp()"
       (mouseleave)="onMouseCancel()"
+      (contextmenu)="onContextMenu($event)"
       style="display: contents"
     >
       <ng-content />
     </div>
+
+    <button
+      hlmBtn
+      type="button"
+      variant="secondary"
+      size="sm"
+      class="message-actions-trigger sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[9999] focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="menuVisible()"
+      (click)="openMenu()"
+    >
+      {{ 'context_menu.open' | t }}
+    </button>
 
     <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
       <hlm-dialog-content
@@ -205,7 +219,20 @@ function isAbortError(error: unknown): boolean {
             class="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
             [attr.data-error-kind]="simplificationError()"
           >
-            {{ 'common.error_generic' | t }}
+            @switch (simplificationError()) {
+              @case ('rate_limit') {
+                {{ 'chatRoom.simplifyErrorRateLimit' | t }}
+              }
+              @case ('auth') {
+                {{ 'chatRoom.simplifyErrorAuth' | t }}
+              }
+              @case ('empty') {
+                {{ 'chatRoom.simplifyErrorEmpty' | t }}
+              }
+              @default {
+                {{ 'chatRoom.simplifyErrorRequest' | t }}
+              }
+            }
           </div>
         } @else if (simplificationText(); as simplified) {
           <p
@@ -366,12 +393,25 @@ export class LongPressContextMenuComponent {
   );
 
   private readonly nlpService = inject(NlpService);
+  private readonly destroyRef = inject(DestroyRef);
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
   private simplificationController?: AbortController;
   private simplificationRequestId = 0;
   private explanationController?: AbortController;
   private explanationRequestId = 0;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.cancelTimer();
+      this.simplificationController?.abort();
+      this.explanationController?.abort();
+      this.simplificationController = undefined;
+      this.explanationController = undefined;
+      this.simplificationRequestId += 1;
+      this.explanationRequestId += 1;
+    });
+  }
 
   onTouchStart(event: TouchEvent) {
     if (event.touches.length !== 1) return;
@@ -399,10 +439,20 @@ export class LongPressContextMenuComponent {
     this.cancelTimer();
   }
 
+  onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    this.openMenu();
+  }
+
+  openMenu(): void {
+    this.cancelTimer();
+    this.menuVisible.set(true);
+  }
+
   private startTimer() {
     this.cancelTimer();
     this.longPressTimer = setTimeout(() => {
-      this.menuVisible.set(true);
+      this.openMenu();
     }, this.LONG_PRESS_DURATION);
   }
 
