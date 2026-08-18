@@ -41,6 +41,26 @@ describe('App routes', () => {
     }
   });
 
+  it('should redirect consolidated paths to their canonical roots', () => {
+    const redirects: Record<string, string> = {
+      proficiency: 'diagnostic-quiz',
+      groups: 'communities',
+      visitors: 'profile/visitors',
+      vip: 'subscription',
+      'my-subscription': 'subscription',
+      'message-filters': 'settings/message-filters',
+      help: 'support',
+      'help-about': 'support',
+    };
+
+    for (const [path, redirectTo] of Object.entries(redirects)) {
+      const route = routes.find((r) => r.path === path);
+      expect(route).toBeDefined();
+      expect(route?.redirectTo).toBe(redirectTo);
+      expect(route?.pathMatch).toBe('full');
+    }
+  });
+
   it('should use lazy loading for routes that have loadComponent defined', () => {
     const lazyRoutes = routes.filter((r) => r.path && r.loadComponent);
     expect(lazyRoutes.length).toBeGreaterThan(0);

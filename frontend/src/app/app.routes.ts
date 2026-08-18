@@ -29,11 +29,8 @@ export const routes: Routes = [
   },
   {
     path: 'proficiency',
-    loadComponent: () =>
-      import('./components/proficiency-assessment/proficiency-assessment.component').then(
-        (m) => m.ProficiencyAssessmentComponent,
-      ),
-    title: 'Proficiency Assessment - HelloTalk',
+    redirectTo: 'diagnostic-quiz',
+    pathMatch: 'full',
   },
   {
     path: 'moments',
@@ -82,11 +79,8 @@ export const routes: Routes = [
   },
   {
     path: 'groups',
-    loadComponent: () =>
-      import('./components/groups-discovery/groups-discovery.component').then(
-        (m) => m.GroupsDiscoveryComponent,
-      ),
-    title: 'Groups Discovery - HelloTalk',
+    redirectTo: 'communities',
+    pathMatch: 'full',
   },
   {
     path: 'groups/create',
@@ -177,10 +171,8 @@ export const routes: Routes = [
   },
   {
     path: 'visitors',
-    loadComponent: () =>
-      import('./components/visitor-logs/visitor-logs.component').then(
-        (m) => m.VisitorLogsComponent,
-      ),
+    redirectTo: 'profile/visitors',
+    pathMatch: 'full',
   },
   {
     path: 'profile/visitors',
@@ -296,8 +288,8 @@ export const routes: Routes = [
   },
   {
     path: 'vip',
-    loadComponent: () => import('./pages/vip/vip.component').then((m) => m.VipComponent),
-    title: 'VIP Subscription - HelloTalk',
+    redirectTo: 'subscription',
+    pathMatch: 'full',
   },
   {
     path: 'subscription',
@@ -358,9 +350,8 @@ export const routes: Routes = [
   },
   {
     path: 'help',
-    loadComponent: () =>
-      import('./pages/help-centre/help-centre.component').then((m) => m.HelpCentreComponent),
-    title: 'Help Centre - HelloTalk',
+    redirectTo: 'support',
+    pathMatch: 'full',
   },
   {
     path: 'support',
@@ -420,11 +411,8 @@ export const routes: Routes = [
   },
   {
     path: 'message-filters',
-    loadComponent: () =>
-      import('./pages/message-filter-settings/message-filter-settings.component').then(
-        (m) => m.MessageFilterSettingsComponent,
-      ),
-    title: 'Message Filter Settings - HelloTalk',
+    redirectTo: 'settings/message-filters',
+    pathMatch: 'full',
   },
   {
     path: 'chat-settings',
@@ -463,9 +451,8 @@ export const routes: Routes = [
   },
   {
     path: 'help-about',
-    loadComponent: () =>
-      import('./pages/help-about/help-about.component').then((m) => m.HelpAboutComponent),
-    title: 'Help & About - HelloTalk',
+    redirectTo: 'support',
+    pathMatch: 'full',
   },
   {
     path: 'ai-conversation',
@@ -580,11 +567,8 @@ export const routes: Routes = [
   },
   {
     path: 'my-subscription',
-    loadComponent: () =>
-      import('./pages/my-subscription/my-subscription.component').then(
-        (m) => m.MySubscriptionComponent,
-      ),
-    title: 'My Subscription - HelloTalk',
+    redirectTo: 'subscription',
+    pathMatch: 'full',
   },
   {
     path: 'escrow',
