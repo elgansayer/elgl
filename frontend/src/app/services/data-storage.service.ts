@@ -44,17 +44,30 @@ export class DataStorageService {
     if ('caches' in window) {
       try {
         const cacheNames = await caches.keys();
-        for (const cacheName of cacheNames) {
-          const cache = await caches.open(cacheName);
-          const requests = await cache.keys();
-          for (const request of requests) {
-            const response = await cache.match(request);
-            if (response) {
-              const blob = await response.clone().blob();
-              total += blob.size;
-            }
-          }
-        }
+        const cacheSizes = await Promise.all(
+          cacheNames.map(async (cacheName) => {
+            let cacheTotal = 0;
+            const cache = await caches.open(cacheName);
+            const responses = await cache.matchAll();
+
+            await Promise.all(
+              responses.map(async (response) => {
+                const contentLength = response.headers.get('content-length');
+                if (contentLength) {
+                  const size = parseInt(contentLength, 10);
+                  if (!isNaN(size)) {
+                    cacheTotal += size;
+                    return;
+                  }
+                }
+                const blob = await response.clone().blob();
+                cacheTotal += blob.size;
+              })
+            );
+            return cacheTotal;
+          })
+        );
+        total += cacheSizes.reduce((a, b) => a + b, 0);
       } catch {
         // Cache API estimation unavailable
       }
