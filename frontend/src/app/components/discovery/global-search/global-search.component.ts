@@ -4,7 +4,10 @@ import { Component, inject, output, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import { SearchFilterParams } from '../../../services/discovery.service';
-import { ALL_LANGUAGE_CODES, getLanguageFlag } from '../../primitives/language-picker/language-picker.component';
+import {
+  ALL_LANGUAGE_CODES,
+  getLanguageFlag,
+} from '../../primitives/language-picker/language-picker.component';
 
 export interface TranslatedLanguage {
   code: string;

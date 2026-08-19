@@ -28,7 +28,13 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [HlmButton, TranslatePipe, WordDefinitionModalComponent, AppCardComponent, AppChipComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    WordDefinitionModalComponent,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './audio-sync-reader.component.html',
   styleUrls: ['./audio-sync-reader.component.scss'],
 })

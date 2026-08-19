@@ -32,7 +32,8 @@ import { EconomyStore } from '../../services/economy.store';
               {{ 'audioRoom.tipModalSubtitle' | t }}
             </p>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'common.close' | t"
@@ -63,7 +64,8 @@ import { EconomyStore } from '../../services/economy.store';
           <legend class="sr-only">{{ 'audioRoom.tipPresetLabel' | t }}</legend>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             @for (amount of presetAmounts(); track amount) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="selectAmount(amount)"
                 [class]="
                   'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
@@ -85,7 +87,8 @@ import { EconomyStore } from '../../services/economy.store';
           <label [for]="customAmountId" class="sr-only">{{
             'audioRoom.tipCustomAmountLabel' | t
           }}</label>
-          <input hlmInput
+          <input
+            hlmInput
             [id]="customAmountId"
             type="number"
             [ngModel]="customAmount()"
@@ -94,7 +97,8 @@ import { EconomyStore } from '../../services/economy.store';
             min="1"
             class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-vip focus:outline-none"
           />
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
             class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
@@ -106,13 +110,15 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
             [disabled]="
               !selectedAmount() ||
               selectedAmount()! < 1 ||
@@ -164,9 +170,9 @@ export class TipHostModalComponent {
 
   readonly presetAmounts = signal<number[]>([10, 50, 100, 500]);
 
-  readonly titleId = 'tip-host-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'tip-host-subtitle-' + Math.random().toString(36).substring(2, 9);
-  readonly customAmountId = 'tip-host-custom-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'tip-host-title-' + crypto.randomUUID();
+  readonly subtitleId = 'tip-host-subtitle-' + crypto.randomUUID();
+  readonly customAmountId = 'tip-host-custom-' + crypto.randomUUID();
 
   selectAmount(amount: number): void {
     if (amount >= 1) {

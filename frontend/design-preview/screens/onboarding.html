@@ -302,11 +302,13 @@
     <p class="caption">
       Shown at step 1 of 4 (native-language select) - the same shell hosts a target-language
       checklist, the embedded <code>app-diagnostic-quiz</code> at step 3, and a display-name input
-      at step 4, each swapped in place of this field. This file also fixes a real bug found while
-      building this preview: the component's original classes (<code>surface</code>,
+      at step 4, each swapped in place of this field. Completing step 4 now continues directly to
+      <code>/ai-conversation</code>, while the application root also opens that active learning
+      surface; onboarding remains available explicitly at <code>/onboarding</code>. This file also
+      records the existing token repair: the component's original classes (<code>surface</code>,
       <code>text-on-surface</code>, <code>bg-surface-variant</code>) matched no token in
-      <code>tailwind.config.js</code> at all, so the shipped onboarding flow was rendering
-      essentially unstyled before this session's fix.
+      <code>tailwind.config.js</code>, so the shipped onboarding flow rendered essentially unstyled
+      before that repair.
     </p>
 
     <script>
