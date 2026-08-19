@@ -192,10 +192,16 @@ export class CloudflareStreamService {
     init: RequestInit,
     predicate: (value: unknown) => value is T,
   ): Promise<T> {
-    const headers = new Headers(init.headers);
-    headers.set('Authorization', `Bearer ${this.apiToken}`);
-    headers.set('Content-Type', 'application/json');
-    headers.set('Accept', 'application/json');
+    const rawHeaders =
+      init.headers instanceof Headers
+        ? Object.fromEntries(init.headers.entries())
+        : (init.headers as Record<string, string> | undefined) ?? {};
+    const headers: Record<string, string> = {
+      ...rawHeaders,
+      Authorization: `Bearer ${this.apiToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
 
     const response = await fetch(
       `${CLOUDFLARE_API_BASE_URL}/accounts/${encodeURIComponent(
