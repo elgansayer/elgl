@@ -64,16 +64,16 @@ overwrites a sibling worker transition.
 
 ## Default production route
 
-| Phase | Ordered candidates |
-| --- | --- |
-| Planning | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Architecture | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Implementation | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Phase           | Ordered candidates                                   |
+| --------------- | ---------------------------------------------------- |
+| Planning        | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Architecture    | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Implementation  | Claude, Codex, Google, OpenCode, OpenHands emergency |
 | Security review | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Quality repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| Code review | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| CI repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| General action | OpenCode, Google, Codex, Claude, OpenHands emergency |
+| Quality repair  | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| Code review     | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| CI repair       | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| General action  | OpenCode, Google, Codex, Claude, OpenHands emergency |
 
 The route is configuration, not hard-coded business logic. The initial production file keeps Google disabled
 until its service-user authentication and non-interactive output contract pass a canary. OpenHands is

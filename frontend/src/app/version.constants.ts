@@ -1,7 +1,4 @@
-import {
-  GENERATED_APP_VERSION,
-  GENERATED_BUILD_NUMBER,
-} from './generated/build-info.generated';
+import { GENERATED_APP_VERSION, GENERATED_BUILD_NUMBER } from './generated/build-info.generated';
 
 /** The current application version as deployed to the stores. */
 export const APP_VERSION = GENERATED_APP_VERSION;

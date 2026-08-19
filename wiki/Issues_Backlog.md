@@ -1,6 +1,6 @@
 # 📋 Consolidated Product Backlog
 
-*Organized by complete user outcomes rather than individual technical chores.*
+_Organized by complete user outcomes rather than individual technical chores._
 
 ## Real-Time Communication & Messaging
 
@@ -12,7 +12,7 @@
 - Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
 - Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
 - Build Create Group UI supporting up to 50 users.
-- Build Favourites bookmarking functionality:   `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and...
+- Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and...
 - Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar).
 - Build HTML5 Canvas Doodle Pad component in chat modal.
 - Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
@@ -166,7 +166,7 @@
 - Epic: WebRTC Edge Cases: Handle Bluetooth headset interrupts and background audio state for LiveKit
 - Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
 - Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the
-- Implement Create Event modal requiring fields:  Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person),...
+- Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person),...
 - Implement Host Moderation controls (Mute speaker, kick off stage).
 - Implement Invite Co-Host split-screen video layout.
 - Implement Raise Hand button and Approve Speaker modal for Hosts.
@@ -201,14 +201,14 @@
 - Add Hide Online Status and Hide VIP Status toggles.
 - Allow VIP users to select custom primary accent colours.
 - Allow spending virtual coins to unlock animated sticker packs.
-- Build Angular Who Viewed Me component (`VisitorLogsComponent`):  blur visitor avatars and names if user is on the free tier (`is_vip ===...
+- Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip ===...
 - Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
 - Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
 - Build Restore Purchases button for app store compliance.
 - Build VIP Profile Visitor Log UI with blurred cards for free users.
 - Build Virtual Gift picker modal with coin balance auto-deduction.
 - Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent):   unlimited AI, 3 target languages, location spoofing, incognito profile views.......
+- Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.......
 - Epic: Economy Anti-Cheat: Server-side App Store receipt validation for coin purchases (e.g., verifying a 10 UKP / 12.50 USD transaction)
 - Epic: State Management: Audit RxJS subscriptions and migrate to Angular Signals where possible to prevent memory leaks
 - Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
@@ -258,6 +258,5 @@
 - Implement IndexedDB message queuing for offline chat composition.
 - Implement WebSocket connection rate limiting in Centrifugo.
 - Implement WebSockets typing indicators (User is typing...).
-- Implement the NestJS OpenGraph parser service:   fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET...
+- Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET...
 - build a new agent workflow to check for security issues and vulnerability
-

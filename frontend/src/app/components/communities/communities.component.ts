@@ -12,20 +12,23 @@ import { CommunitiesService } from '../../services/communities.service';
     <div class="p-4">
       <h1 class="text-2xl font-bold mb-4 text-text-primary">{{ 'communities.title' | t }}</h1>
       <form (ngSubmit)="create()" class="mb-6 flex gap-2">
-        <input hlmInput
+        <input
+          hlmInput
           [(ngModel)]="newName"
           name="name"
           required
           class="rounded-app border border-surface-100 bg-surface-300 p-2 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
           placeholder="{{ 'communities.namePlaceholder' | t }}"
         />
-        <input hlmInput
+        <input
+          hlmInput
           [(ngModel)]="newDescription"
           name="description"
           placeholder="{{ 'communities.descriptionPlaceholder' | t }}"
           class="rounded-app border border-surface-100 bg-surface-300 p-2 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
-        <button hlmBtn
+        <button
+          hlmBtn
           type="submit"
           class="bg-primary text-on-fill rounded-app p-2 hover:bg-primary/90 transition-colors"
         >

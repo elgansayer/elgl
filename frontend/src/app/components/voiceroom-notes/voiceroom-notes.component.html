@@ -20,7 +20,8 @@
             <li class="rounded-lg bg-surface-200 ps-3 pe-3 pt-2 pb-2">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-xs font-semibold text-secondary">{{ note.author_name }}</p>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   class="text-xs text-danger/70 hover:text-danger transition-colors"
                   (click)="deleteNote(note.id)"
                   [attr.aria-label]="'voices.notes.delete' | t"
@@ -48,7 +49,8 @@
   </div>
 
   <form class="flex flex-col gap-2 border-t border-surface-100 p-3" (submit)="addNote()">
-    <textarea hlmTextarea
+    <textarea
+      hlmTextarea
       [value]="content()"
       (input)="onContentInput($event)"
       placeholder="{{ 'voices.notes.content_placeholder' | t }}"
@@ -59,7 +61,8 @@
 
     <label class="flex items-center gap-2">
       <span class="text-xs text-text-secondary">{{ 'voices.notes.vocabulary_label' | t }}</span>
-      <input hlmInput
+      <input
+        hlmInput
         [value]="vocabulary()"
         (input)="onVocabularyInput($event)"
         placeholder="{{ 'voices.notes.vocabulary_placeholder' | t }}"
@@ -68,7 +71,8 @@
       />
     </label>
 
-    <button hlmBtn
+    <button
+      hlmBtn
       type="submit"
       class="mt-1 rounded-app bg-primary px-4 py-2 text-sm font-bold text-on-fill transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="isPosting() || !content().trim()"

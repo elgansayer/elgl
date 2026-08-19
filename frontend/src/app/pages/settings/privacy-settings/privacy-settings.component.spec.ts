@@ -25,9 +25,7 @@ describe('PrivacySettingsComponent', () => {
     goBack.mockReset();
 
     addMutedWord.mockImplementation((word) => {
-      mutedWords.update((previous) =>
-        previous.includes(word) ? previous : [...previous, word],
-      );
+      mutedWords.update((previous) => (previous.includes(word) ? previous : [...previous, word]));
     });
     removeMutedWord.mockImplementation((word) => {
       mutedWords.update((previous) => previous.filter((item) => item !== word));
@@ -76,7 +74,9 @@ describe('PrivacySettingsComponent', () => {
   });
 
   it('exposes a screen-reader name for the muted-word input and add action', () => {
-    const input = fixture.nativeElement.querySelector('input[type="text"]') as HTMLInputElement | null;
+    const input = fixture.nativeElement.querySelector(
+      'input[type="text"]',
+    ) as HTMLInputElement | null;
     const addButton = fixture.nativeElement.querySelector(
       'button[aria-label="privacy.hub.addMutedWord"]',
     ) as HTMLButtonElement | null;
