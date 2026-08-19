@@ -186,7 +186,15 @@ worker_input_fingerprint() {
 }
 
 worker_image_id() {
+  # Rootless Podman re-enters the invoking working directory during its
+  # namespace setup for `image inspect` (unlike cheap subcommands such as
+  # `--version`). If the operator's checkout lives under a private-mode home
+  # directory, that directory is unreadable to the service user and Podman
+  # fails silently. --chdir moves the child into a directory the service
+  # user owns before Podman runs, matching the intent of the `cd` already
+  # used for the worker image build below.
   runuser -u hellotalk-factory -- env \
+    --chdir=/var/lib/hellotalk-factory/home \
     HOME=/var/lib/hellotalk-factory/home \
     podman image inspect --format '{{.Id}}' "$WORKER_IMAGE" 2>/dev/null
 }
