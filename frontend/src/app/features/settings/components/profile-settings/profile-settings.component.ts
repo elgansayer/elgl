@@ -112,14 +112,13 @@ export class ProfileSettingsComponent implements OnInit {
       });
     }
 
-    this.profileForm.valueChanges.pipe(
-      debounceTime(500),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(() => {
-      if (this.profileForm.valid) {
-        this.save();
-      }
-    });
+    this.profileForm.valueChanges
+      .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.profileForm.valid) {
+          this.save();
+        }
+      });
   }
 
   addTargetLanguage() {

@@ -49,7 +49,8 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
           {{ 'backupRestore.selectRoom' | t }}
           <hlm-native-select
             selectId="roomSelect"
-            class="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary" selectClass="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
+            class="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
+            selectClass="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="selectedRoom()"
             (change)="onRoomChange($event)"
           >
@@ -63,7 +64,8 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
       }
 
       <div class="flex flex-col gap-3 sm:flex-row">
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 disabled:opacity-50"
           [disabled]="!selectedRoom()"
@@ -86,7 +88,8 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
           />
         </label>
 
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-on-fill hover:bg-success/90 disabled:opacity-50"
           [disabled]="!selectedRoom() || !importFile()"

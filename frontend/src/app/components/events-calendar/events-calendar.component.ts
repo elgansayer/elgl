@@ -9,7 +9,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
-  standalone: true,
   imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary p-4">

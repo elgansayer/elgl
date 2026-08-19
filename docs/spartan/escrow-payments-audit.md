@@ -83,32 +83,32 @@ The rest of this audit records the target exactly as it exists so follow-up tick
 
 ## Complete control and state inventory
 
-| Element / behavior | Current implementation | Current owner | Target owner | Audit action |
-| --- | --- | --- | --- | --- |
-| Page shell | `min-h-screen bg-surface-500 text-text-primary` | Feature composition | Relay/app screen composition | Converge with canonical `app-screen`/page composition if retained |
-| Offline banner | native `div`, `role="alert"`, semantic warning tokens | Feature + network state | Relay status/banner presentation | Keep behavior; reuse approved feedback primitive if one exists |
-| Sync pending operations | native `button` + `hlmBtn` | Feature async state + Spartan Button | Relay Button or direct Helm if no wrapper fits | Preserve; add correct busy semantics and duplicate guard |
-| Back action | native icon `button` + `hlmBtn`, `Location.back()` | Browser history + Spartan Button | Native button + approved icon-button presentation | Preserve route/history contract |
-| Page heading | translated native `h1` | Feature content | Native semantics + Relay typography | Keep |
-| Help action | native `button` + `hlmBtn` | Feature/onboarding service | Native Button + feature product behavior | Do not invent a new tour primitive |
-| Status filter strip | six native `button` + `hlmBtn` pills | Feature signal + manual selected classes | Spartan accessible single-selection primitive + Relay pill/segmented presentation | Replace manual selection semantics if target retained |
-| Selected status state | `selectedStatus` signal | Feature | Feature value, Spartan selection mechanics | Keep value; fix behavior gap |
-| Loading state | custom spinner `div` with `role="status"` | Feature/resource | Relay loading/skeleton presentation | Prefer shared loading primitive |
-| Empty state | custom icon/text block | Feature | `AppEmptyStateComponent` | Replace if target retained |
-| Transaction surface | bespoke `div` card | Feature | `AppCardComponent` | Replace/converge |
-| Status badge | bespoke `span` with dynamic classes | Feature | `AppPillComponent`/Relay status badge | Replace/converge |
-| Coin amount | text with `text-vip` | Feature presentation | Relay semantic currency presentation | Preserve meaning, review VIP token usage |
-| Metadata row | native spans + bullets | Feature content | Native semantics + Relay typography | Keep; localize service type if required |
-| Release action | native `button` + `hlmBtn` | Feature mutation + Spartan Button | Button plus explicit high-impact confirmation policy | Preserve API boundary; strengthen pending/confirmation semantics |
-| Refund action | native `button` + `hlmBtn` | Feature mutation + Spartan Button | Button plus explicit high-impact confirmation policy | Preserve API boundary; strengthen pending/confirmation semantics |
-| Dispute action | native `button` + `hlmBtn` | Feature mutation + Spartan Button | Button plus dispute-reason flow owned by feature/Dialog/form primitives | Current empty-reason call is a product gap |
-| Error state | `error` signal only | Feature | Relay error/status presentation | Must become visible/announced if target retained |
-| Success state | `successMessage` signal only | Feature | Relay toast/status presentation | Must become visible/announced if target retained |
-| Offline operation count | `EscrowService.pendingOperationCount` | Service/offline store | Service state surfaced by feature | Preserve |
-| Escrow list loading | Angular `resource()` | Feature/service | Feature resource state | Preserve or converge with canonical page |
-| Onboarding hint | `afterNextRender` + `showToast()` + onboarding shim | Feature | Feature product behavior + Relay toast | Re-evaluate dead behavior; do not move into Spartan |
-| Analytics | none | N/A | N/A | Do not add as incidental migration work |
-| Overlay behavior | none in current target | N/A | N/A | Only add Dialog for an explicit product need such as dispute/confirmation |
+| Element / behavior      | Current implementation                                | Current owner                            | Target owner                                                                      | Audit action                                                              |
+| ----------------------- | ----------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Page shell              | `min-h-screen bg-surface-500 text-text-primary`       | Feature composition                      | Relay/app screen composition                                                      | Converge with canonical `app-screen`/page composition if retained         |
+| Offline banner          | native `div`, `role="alert"`, semantic warning tokens | Feature + network state                  | Relay status/banner presentation                                                  | Keep behavior; reuse approved feedback primitive if one exists            |
+| Sync pending operations | native `button` + `hlmBtn`                            | Feature async state + Spartan Button     | Relay Button or direct Helm if no wrapper fits                                    | Preserve; add correct busy semantics and duplicate guard                  |
+| Back action             | native icon `button` + `hlmBtn`, `Location.back()`    | Browser history + Spartan Button         | Native button + approved icon-button presentation                                 | Preserve route/history contract                                           |
+| Page heading            | translated native `h1`                                | Feature content                          | Native semantics + Relay typography                                               | Keep                                                                      |
+| Help action             | native `button` + `hlmBtn`                            | Feature/onboarding service               | Native Button + feature product behavior                                          | Do not invent a new tour primitive                                        |
+| Status filter strip     | six native `button` + `hlmBtn` pills                  | Feature signal + manual selected classes | Spartan accessible single-selection primitive + Relay pill/segmented presentation | Replace manual selection semantics if target retained                     |
+| Selected status state   | `selectedStatus` signal                               | Feature                                  | Feature value, Spartan selection mechanics                                        | Keep value; fix behavior gap                                              |
+| Loading state           | custom spinner `div` with `role="status"`             | Feature/resource                         | Relay loading/skeleton presentation                                               | Prefer shared loading primitive                                           |
+| Empty state             | custom icon/text block                                | Feature                                  | `AppEmptyStateComponent`                                                          | Replace if target retained                                                |
+| Transaction surface     | bespoke `div` card                                    | Feature                                  | `AppCardComponent`                                                                | Replace/converge                                                          |
+| Status badge            | bespoke `span` with dynamic classes                   | Feature                                  | `AppPillComponent`/Relay status badge                                             | Replace/converge                                                          |
+| Coin amount             | text with `text-vip`                                  | Feature presentation                     | Relay semantic currency presentation                                              | Preserve meaning, review VIP token usage                                  |
+| Metadata row            | native spans + bullets                                | Feature content                          | Native semantics + Relay typography                                               | Keep; localize service type if required                                   |
+| Release action          | native `button` + `hlmBtn`                            | Feature mutation + Spartan Button        | Button plus explicit high-impact confirmation policy                              | Preserve API boundary; strengthen pending/confirmation semantics          |
+| Refund action           | native `button` + `hlmBtn`                            | Feature mutation + Spartan Button        | Button plus explicit high-impact confirmation policy                              | Preserve API boundary; strengthen pending/confirmation semantics          |
+| Dispute action          | native `button` + `hlmBtn`                            | Feature mutation + Spartan Button        | Button plus dispute-reason flow owned by feature/Dialog/form primitives           | Current empty-reason call is a product gap                                |
+| Error state             | `error` signal only                                   | Feature                                  | Relay error/status presentation                                                   | Must become visible/announced if target retained                          |
+| Success state           | `successMessage` signal only                          | Feature                                  | Relay toast/status presentation                                                   | Must become visible/announced if target retained                          |
+| Offline operation count | `EscrowService.pendingOperationCount`                 | Service/offline store                    | Service state surfaced by feature                                                 | Preserve                                                                  |
+| Escrow list loading     | Angular `resource()`                                  | Feature/service                          | Feature resource state                                                            | Preserve or converge with canonical page                                  |
+| Onboarding hint         | `afterNextRender` + `showToast()` + onboarding shim   | Feature                                  | Feature product behavior + Relay toast                                            | Re-evaluate dead behavior; do not move into Spartan                       |
+| Analytics               | none                                                  | N/A                                      | N/A                                                                               | Do not add as incidental migration work                                   |
+| Overlay behavior        | none in current target                                | N/A                                      | N/A                                                                               | Only add Dialog for an explicit product need such as dispute/confirmation |
 
 Every currently rendered interactive element is classified above.
 
@@ -228,13 +228,13 @@ The target currently has these state sources:
 
 ### Load states
 
-| State | Trigger | Current UI | Required follow-up if retained |
-| --- | --- | --- | --- |
-| Loading | `escrowsResource` loader active | custom spinner | shared loading/skeleton state |
-| Load success with rows | `listEscrows()` returns rows | all rows | preserve |
-| Load success empty | returns `[]` | empty state | preserve with shared empty primitive |
-| Load failure | service throws | `error` set, resource returns `[]` | show true error/retry instead of empty state |
-| Offline load | service reads IndexedDB cache | offline banner + cached rows/empty | preserve and distinguish stale/cache semantics only if product contract requires |
+| State                  | Trigger                         | Current UI                         | Required follow-up if retained                                                   |
+| ---------------------- | ------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
+| Loading                | `escrowsResource` loader active | custom spinner                     | shared loading/skeleton state                                                    |
+| Load success with rows | `listEscrows()` returns rows    | all rows                           | preserve                                                                         |
+| Load success empty     | returns `[]`                    | empty state                        | preserve with shared empty primitive                                             |
+| Load failure           | service throws                  | `error` set, resource returns `[]` | show true error/retry instead of empty state                                     |
+| Offline load           | service reads IndexedDB cache   | offline banner + cached rows/empty | preserve and distinguish stale/cache semantics only if product contract requires |
 
 ### Filter state bug
 
