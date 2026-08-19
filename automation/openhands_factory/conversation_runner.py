@@ -50,6 +50,17 @@ class ConversationProtocol(Protocol):
 ConversationFactory = Callable[..., ConversationProtocol]
 
 
+def _silence_child_output() -> None:
+    """Keep SDK transcripts and third-party diagnostics out of daemon logs."""
+
+    sink = os.open(os.devnull, os.O_WRONLY)
+    try:
+        os.dup2(sink, 1)
+        os.dup2(sink, 2)
+    finally:
+        os.close(sink)
+
+
 class ConversationProviderError(FactoryError):
     """A typed provider-side SDK failure preserved for the outer AgentRouter."""
 
@@ -87,6 +98,7 @@ def _conversation_process(
 ) -> None:
     """Run the SDK in its own process group so the parent can cancel every child."""
     os.setsid()
+    _silence_child_output()
     conversation: ConversationProtocol | None = None
     outcome: dict[str, object] = {"completed": False, "error": "Conversation did not start"}
 
