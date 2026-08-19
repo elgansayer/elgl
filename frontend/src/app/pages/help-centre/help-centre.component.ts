@@ -11,7 +11,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div class="max-w-3xl mx-auto px-4 py-6">
       <h1 class="text-2xl font-bold mb-4">{{ 'help.centre.title' | t }}</h1>
 
-      <input hlmInput
+      <input
+        hlmInput
         type="text"
         [value]="searchQuery()"
         (input)="updateSearch($event)"
@@ -21,7 +22,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- category pills -->
       <div class="flex flex-wrap gap-2 mb-4">
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="whitespace-nowrap rounded-full px-4 py-1 text-sm font-medium transition-colors"
           [class.bg-accent]="selectedCategory() === null"
@@ -33,7 +35,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'discovery.filterAll' | t }}
         </button>
         @for (cat of categories.value() ?? []; track cat) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="whitespace-nowrap rounded-full px-4 py-1 text-sm font-medium transition-colors"
             [class.bg-accent]="selectedCategory() === cat"
@@ -61,7 +64,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <!-- pagination -->
         <div class="flex items-center justify-between mt-4">
-          <button hlmBtn
+          <button
+            hlmBtn
             class="rounded bg-surface-200 px-3 py-1 disabled:opacity-40"
             [disabled]="page() <= 1"
             (click)="prevPage()"
@@ -69,7 +73,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             &larr;
           </button>
           <span class="text-sm">{{ page() }} / {{ totalPages() }}</span>
-          <button hlmBtn
+          <button
+            hlmBtn
             class="rounded bg-surface-200 px-3 py-1 disabled:opacity-40"
             [disabled]="(articles.value()?.items?.length ?? 0) < 10"
             (click)="nextPage()"

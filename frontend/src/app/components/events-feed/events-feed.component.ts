@@ -14,7 +14,8 @@ import { firstValueFrom } from 'rxjs';
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
-      <button hlmBtn
+      <button
+        hlmBtn
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'upcoming'"
         [class.text-on-fill]="status() === 'upcoming'"
@@ -22,7 +23,8 @@ import { firstValueFrom } from 'rxjs';
       >
         {{ 'events.filter_upcoming' | t }}
       </button>
-      <button hlmBtn
+      <button
+        hlmBtn
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'past'"
         [class.text-on-fill]="status() === 'past'"
@@ -34,7 +36,8 @@ import { firstValueFrom } from 'rxjs';
       <hlm-native-select
         [value]="languagePair() ?? ''"
         (change)="onLanguageChange($any($event.target).value)"
-        class="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm" selectClass="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
+        class="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
+        selectClass="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>
         <option value="en-es">English ↔ Spanish</option>
@@ -73,7 +76,8 @@ import { firstValueFrom } from 'rxjs';
         }
       </div>
       @if (hasMore()) {
-        <button hlmBtn
+        <button
+          hlmBtn
           class="mt-4 w-full py-2 bg-surface-300 border border-surface-100 text-text-primary rounded text-sm font-medium disabled:opacity-50"
           [disabled]="isLoading()"
           (click)="loadMore()"

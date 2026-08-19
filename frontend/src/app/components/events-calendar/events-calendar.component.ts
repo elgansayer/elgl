@@ -19,14 +19,16 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
         <!-- Month Navigation -->
         <div class="flex items-center justify-between mb-6">
-          <button hlmBtn
+          <button
+            hlmBtn
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="previousMonth()"
           >
             &lsaquo; {{ 'events.calendar.prev' | t }}
           </button>
           <span class="text-lg font-semibold">{{ monthLabel() }}</span>
-          <button hlmBtn
+          <button
+            hlmBtn
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="nextMonth()"
           >

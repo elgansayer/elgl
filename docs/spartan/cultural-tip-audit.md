@@ -2,17 +2,17 @@
 
 ## Context
 
-| Item | Current implementation |
-| --- | --- |
-| Component | `frontend/src/app/components/cultural-tip/cultural-tip.component.ts` |
-| Service | `frontend/src/app/services/cultural-guide.service.ts` |
-| Tests | `frontend/src/app/components/cultural-tip/cultural-tip.component.spec.ts` |
-| Route ownership | None. The host decides where the component is placed. |
-| Interaction model | Read-only informational callout. There are no controls or focus targets. |
-| Data source | `CulturalGuideService.guide(language)` via Angular `resource()` |
-| Existing Spartan usage | None required by the current interaction model. |
-| Relay ownership | Surface, border, spacing, typography, theme tokens and responsive presentation. |
-| Architecture prerequisite | #5462, completed. |
+| Item                      | Current implementation                                                          |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| Component                 | `frontend/src/app/components/cultural-tip/cultural-tip.component.ts`            |
+| Service                   | `frontend/src/app/services/cultural-guide.service.ts`                           |
+| Tests                     | `frontend/src/app/components/cultural-tip/cultural-tip.component.spec.ts`       |
+| Route ownership           | None. The host decides where the component is placed.                           |
+| Interaction model         | Read-only informational callout. There are no controls or focus targets.        |
+| Data source               | `CulturalGuideService.guide(language)` via Angular `resource()`                 |
+| Existing Spartan usage    | None required by the current interaction model.                                 |
+| Relay ownership           | Surface, border, spacing, typography, theme tokens and responsive presentation. |
+| Architecture prerequisite | #5462, completed.                                                               |
 
 ## Executive mapping
 
@@ -21,19 +21,19 @@ Spartan Brain behavior primitive merely to satisfy the migration programme. Its 
 Relay-owned composition that uses the approved semantic token system and preserves native heading
 and paragraph semantics.
 
-| Surface/state | Current behavior | Target owner | Migration decision |
-| --- | --- | --- | --- |
-| Tip container | Conditional `<div role="region">` with an accent start border | Relay/app composition | Keep a non-interactive informational surface. Use `AppCardComponent` only if its visual contract is intentionally desired; otherwise keep a dedicated Relay callout composition. |
-| Region label | `aria-labelledby="cultural-tip-heading"` | Native accessibility semantics | Preserve an accessible name if the region landmark remains, but remove the fixed-ID collision risk. |
-| Heading | Translated `h3` using `text-heading` | Native HTML + Relay typography | Preserve translation and semantic heading intent; do not introduce a Spartan primitive. |
-| Guide body | Server-provided text in a `p` using `text-body` | Native HTML + Relay typography | Preserve as readable body copy. Do not translate it a second time in the client. |
-| Loading | Nothing is rendered | Angular resource state | Preserve unless product requirements explicitly introduce a loading affordance. |
-| Empty | `null` guide produces no UI | Service/resource contract | Preserve. |
-| Error | Service converts request failures to `null`, so no UI is rendered | Service contract | Preserve unless a separate issue intentionally changes error UX. |
-| Language change | Resource parameters change and the guide is fetched again | Angular resource + service | Preserve reactive refetch behavior. |
-| Overlay | None | N/A | Do not add one. |
-| Navigation | None | N/A | Do not add one. |
-| Analytics | None | N/A | Do not add one as part of primitive conversion. |
+| Surface/state   | Current behavior                                                  | Target owner                   | Migration decision                                                                                                                                                               |
+| --------------- | ----------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tip container   | Conditional `<div role="region">` with an accent start border     | Relay/app composition          | Keep a non-interactive informational surface. Use `AppCardComponent` only if its visual contract is intentionally desired; otherwise keep a dedicated Relay callout composition. |
+| Region label    | `aria-labelledby="cultural-tip-heading"`                          | Native accessibility semantics | Preserve an accessible name if the region landmark remains, but remove the fixed-ID collision risk.                                                                              |
+| Heading         | Translated `h3` using `text-heading`                              | Native HTML + Relay typography | Preserve translation and semantic heading intent; do not introduce a Spartan primitive.                                                                                          |
+| Guide body      | Server-provided text in a `p` using `text-body`                   | Native HTML + Relay typography | Preserve as readable body copy. Do not translate it a second time in the client.                                                                                                 |
+| Loading         | Nothing is rendered                                               | Angular resource state         | Preserve unless product requirements explicitly introduce a loading affordance.                                                                                                  |
+| Empty           | `null` guide produces no UI                                       | Service/resource contract      | Preserve.                                                                                                                                                                        |
+| Error           | Service converts request failures to `null`, so no UI is rendered | Service contract               | Preserve unless a separate issue intentionally changes error UX.                                                                                                                 |
+| Language change | Resource parameters change and the guide is fetched again         | Angular resource + service     | Preserve reactive refetch behavior.                                                                                                                                              |
+| Overlay         | None                                                              | N/A                            | Do not add one.                                                                                                                                                                  |
+| Navigation      | None                                                              | N/A                            | Do not add one.                                                                                                                                                                  |
+| Analytics       | None                                                              | N/A                            | Do not add one as part of primitive conversion.                                                                                                                                  |
 
 ## Current component inventory
 
@@ -232,18 +232,18 @@ Primitive conversion must not accidentally add any of these behaviors.
 
 ## Migration risks
 
-| Risk | Why it matters | Required guard |
-| --- | --- | --- |
-| Duplicate heading IDs | Multiple tips can produce invalid repeated `cultural-tip-heading` IDs and ambiguous `aria-labelledby` targets. | Use unique IDs or a different accessible-name strategy before relying on the landmark contract. |
-| Accidental interactive card semantics | A card helper can add `role="button"`, tabindex and pressed state that do not belong here. | Keep the target composition non-interactive. |
-| Visual over-migration | Standard card shadow/border/padding can materially change the compact callout. | Compare intended Relay treatment before swapping to `AppCardComponent`. |
-| Lost logical-direction styling | Physical left/right utilities regress RTL. | Retain start/end logical utilities. |
-| Resource refetch regression | Flattening the resource into one-time initialization would leave stale language content. | Keep the input-driven resource contract and its existing refetch test. |
-| Error-state behavior drift | The service deliberately normalizes request errors to `null`. | Do not invent an error panel/retry flow in this conversion. |
-| Loading announcement noise | Adding a generic live region can create repeated announcements on language changes. | Preserve silent loading unless a separate UX decision changes it. |
-| Translation ownership confusion | Translating the backend guide as a frontend key would display wrong/missing text. | Translate the title only; render the guide as content. |
-| Token drift | `bg-surface-2` may not match the canonical current surface ramp. | Validate and replace with the supported semantic Relay token if necessary. |
-| Heading hierarchy mismatch | Hard-coded `h3` may be wrong in some host contexts. | Verify usages before final conversion and preserve a coherent document outline. |
+| Risk                                  | Why it matters                                                                                                 | Required guard                                                                                  |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Duplicate heading IDs                 | Multiple tips can produce invalid repeated `cultural-tip-heading` IDs and ambiguous `aria-labelledby` targets. | Use unique IDs or a different accessible-name strategy before relying on the landmark contract. |
+| Accidental interactive card semantics | A card helper can add `role="button"`, tabindex and pressed state that do not belong here.                     | Keep the target composition non-interactive.                                                    |
+| Visual over-migration                 | Standard card shadow/border/padding can materially change the compact callout.                                 | Compare intended Relay treatment before swapping to `AppCardComponent`.                         |
+| Lost logical-direction styling        | Physical left/right utilities regress RTL.                                                                     | Retain start/end logical utilities.                                                             |
+| Resource refetch regression           | Flattening the resource into one-time initialization would leave stale language content.                       | Keep the input-driven resource contract and its existing refetch test.                          |
+| Error-state behavior drift            | The service deliberately normalizes request errors to `null`.                                                  | Do not invent an error panel/retry flow in this conversion.                                     |
+| Loading announcement noise            | Adding a generic live region can create repeated announcements on language changes.                            | Preserve silent loading unless a separate UX decision changes it.                               |
+| Translation ownership confusion       | Translating the backend guide as a frontend key would display wrong/missing text.                              | Translate the title only; render the guide as content.                                          |
+| Token drift                           | `bg-surface-2` may not match the canonical current surface ramp.                                               | Validate and replace with the supported semantic Relay token if necessary.                      |
+| Heading hierarchy mismatch            | Hard-coded `h3` may be wrong in some host contexts.                                                            | Verify usages before final conversion and preserve a coherent document outline.                 |
 
 ## Existing test coverage
 

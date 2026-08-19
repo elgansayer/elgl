@@ -43,6 +43,11 @@ export async function fetchWithExponentialBackoff(
       return response;
     }
 
+    // Consume body to free up the socket for connection reuse (keep-alive)
+    if (typeof response.arrayBuffer === 'function') {
+      await response.arrayBuffer().catch(() => {});
+    }
+
     if (attempt < maxRetries) {
       const computedDelay = Math.min(
         baseDelayMs * Math.pow(2, attempt),
