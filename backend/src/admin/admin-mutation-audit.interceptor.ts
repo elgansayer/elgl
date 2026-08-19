@@ -53,8 +53,13 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     const routePath = request.route?.path ?? request.path;
     const rawTargetId = request.params?.id ?? request.params?.blockId;
     const targetId = Array.isArray(rawTargetId) ? rawTargetId[0] : rawTargetId;
-    const targetType = request.params?.blockId ? 'block' : targetId ? 'user' : 'admin-resource';
-    const action = `${method.toLowerCase()} ${request.baseUrl}${routePath}`.slice(0, 160);
+    const targetType = request.params?.blockId
+      ? 'block'
+      : targetId
+        ? 'user'
+        : 'admin-resource';
+    const action =
+      `${method.toLowerCase()} ${request.baseUrl}${routePath}`.slice(0, 160);
 
     const record = (outcome: 'success' | 'failed') =>
       this.audit.record({

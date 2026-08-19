@@ -23,9 +23,7 @@ describe('validationSchema', () => {
       'test-r2-service-token-with-at-least-32-characters',
     );
     expect(value.CLOUDFLARE_R2_PUBLIC_URL).toBe('https://cdn.example.com');
-    expect(value.CLOUDFLARE_R2_SOURCE_HOSTS).toBe(
-      'recordings.example.com',
-    );
+    expect(value.CLOUDFLARE_R2_SOURCE_HOSTS).toBe('recordings.example.com');
     expect(value.CLOUDFLARE_R2_UPLOAD_TTL_SECONDS).toBe(3600);
     expect(value.CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES).toBe(26214400);
     expect(value.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES).toBe(104857600);
