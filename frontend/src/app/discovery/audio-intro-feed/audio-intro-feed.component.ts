@@ -31,7 +31,8 @@ import { getLanguageFlag } from '../../components/primitives/language-picker/lan
               {{ user.native_languages?.join(', ') }} → {{ user.target_languages?.join(', ') }}
             </p>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="togglePlay(user.id, user.audio_intro_url)"
             class="ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary"
           >
@@ -42,8 +43,7 @@ import { getLanguageFlag } from '../../components/primitives/language-picker/lan
             }
           </button>
         </div>
-      }
-      @empty {
+      } @empty {
         @if (!isLoading()) {
           <div class="flex flex-col items-center py-12 text-text-secondary">
             <span class="i-ph-microphone-slash text-4xl mb-2"></span>

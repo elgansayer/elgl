@@ -71,13 +71,28 @@ type ReviewGrade = 'again' | 'good' | 'known';
               </div>
 
               <div class="mt-6 flex items-center justify-center gap-3">
-                <button hlmBtn type="button" (click)="grade('again')" class="btn-grade btn-grade-again">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('again')"
+                  class="btn-grade btn-grade-again"
+                >
                   {{ 'vocabulary.againBtn' | t }}
                 </button>
-                <button hlmBtn type="button" (click)="grade('good')" class="btn-grade btn-grade-good">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('good')"
+                  class="btn-grade btn-grade-good"
+                >
                   {{ 'vocabulary.goodBtn' | t }}
                 </button>
-                <button hlmBtn type="button" (click)="grade('known')" class="btn-grade btn-grade-known">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('known')"
+                  class="btn-grade btn-grade-known"
+                >
                   {{ 'vocabulary.knownBtn' | t }}
                 </button>
               </div>

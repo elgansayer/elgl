@@ -24,10 +24,7 @@ describe('CoinsCancelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CoinsCancelComponent, TranslatePipe],
-      providers: [
-        { provide: I18nService, useClass: MockI18nService },
-        provideRouter([]),
-      ],
+      providers: [{ provide: I18nService, useClass: MockI18nService }, provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CoinsCancelComponent);

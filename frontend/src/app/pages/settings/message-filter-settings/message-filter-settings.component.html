@@ -41,7 +41,8 @@
             <label class="block text-xs text-text-secondary mb-1" for="age-min">
               {{ 'settings.messageFilters.ageMin' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="age-min"
               type="number"
               min="0"
@@ -56,7 +57,8 @@
             <label class="block text-xs text-text-secondary mb-1" for="age-max">
               {{ 'settings.messageFilters.ageMax' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="age-max"
               type="number"
               min="0"
@@ -80,7 +82,8 @@
         </p>
         <div class="flex flex-wrap gap-2">
           @for (lang of languages; track lang.code) {
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="toggleLanguage(lang.code)"
               class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
@@ -120,7 +123,8 @@
         </p>
         <div class="flex flex-wrap gap-2">
           @for (g of genderOptions; track g.code) {
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="toggleGender(g.code)"
               class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
@@ -139,7 +143,8 @@
 
       <!-- Save Button -->
       <div class="pt-4">
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="saveFilters()"
           [disabled]="isSaving()"
           class="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-fill transition-opacity hover:opacity-90 disabled:opacity-50"

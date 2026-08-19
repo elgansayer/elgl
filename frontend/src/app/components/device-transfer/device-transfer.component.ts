@@ -23,7 +23,11 @@ import { SupabaseService } from '../../services/supabase.service';
         <div class="bg-card p-4 rounded-lg break-all">
           <code>{{ deviceLink() }}</code>
         </div>
-        <button hlmBtn class="mt-4 px-6 py-2 bg-accent text-on-fill rounded-full" (click)="copyLink()">
+        <button
+          hlmBtn
+          class="mt-4 px-6 py-2 bg-accent text-on-fill rounded-full"
+          (click)="copyLink()"
+        >
           Copy Link
         </button>
         <p class="mt-2 text-sm opacity-70">Link expires in 5 minutes.</p>

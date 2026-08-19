@@ -8,7 +8,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
