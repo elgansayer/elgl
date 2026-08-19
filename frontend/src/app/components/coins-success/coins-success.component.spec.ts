@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { CoinsSuccessComponent } from './coins-success.component';
 import { EconomyStore } from '../../services/economy.store';
@@ -36,6 +36,7 @@ describe('CoinsSuccessComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CoinsSuccessComponent, TranslatePipe],
       providers: [
+        provideRouter([]),
         { provide: I18nService, useClass: MockI18nService },
         { provide: EconomyStore, useValue: mockStore },
         {
@@ -45,7 +46,6 @@ describe('CoinsSuccessComponent', () => {
             snapshot: { queryParams: { session_id: 'stripe_test_session' } },
           },
         },
-        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -68,50 +68,56 @@ describe('CoinsSuccessComponent', () => {
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
-  it('exposes a labelled main landmark and live status region', () => {
-    const main = fixture.nativeElement.querySelector('main');
-    const title = fixture.nativeElement.querySelector('#coins-success-title');
-    const status = fixture.nativeElement.querySelector('#coins-success-status');
+  it('should use Relay semantic surface, radius, and elevation tokens', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
 
-    expect(main).toBeTruthy();
-    expect(title).toBeTruthy();
-    expect(status).toBeTruthy();
-    expect(main.getAttribute('aria-labelledby')).toBe('coins-success-title');
-    expect(main.getAttribute('aria-describedby')).toBe('coins-success-status');
-    expect(status.getAttribute('role')).toBe('status');
-    expect(status.getAttribute('aria-live')).toBe('polite');
-  });
-
-  it('keeps deterministic native keyboard and touch semantics for the dashboard action', () => {
-    const interactiveElements = fixture.nativeElement.querySelectorAll(
-      'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    expect([...page.classList]).toEqual(expect.arrayContaining(['bg-surface-500']));
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining([
+        'bg-surface-200',
+        'border-surface-100',
+        'rounded-card',
+        'shadow-card',
+        'text-center',
+      ]),
     );
-    const dashboardButton = fixture.nativeElement.querySelector('button');
-
-    expect(interactiveElements).toHaveLength(1);
-    expect(dashboardButton).toBeTruthy();
-    expect(dashboardButton.getAttribute('type')).toBe('button');
-    expect(dashboardButton.textContent).toContain('coinsSuccess.dashboardBtn');
+    expect(panel.className).not.toMatch(
+      /\b(?:bg|text|border)-(?:black|white|slate|gray|red|blue|green|amber|purple|pink)(?:-|\b)/,
+    );
   });
 
-  it('keeps the page reflow-safe instead of clipping content at high zoom', () => {
-    const main = fixture.nativeElement.querySelector('main');
-    const content = fixture.nativeElement.querySelector('main > div');
+  it('should use mobile-first spacing with wider breakpoint refinements', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
 
-    expect(main.classList.contains('min-h-screen')).toBe(true);
-    expect(main.classList.contains('h-screen')).toBe(false);
-    expect(main.classList.contains('overflow-hidden')).toBe(false);
-    expect(content.classList.contains('w-full')).toBe(true);
-    expect(content.classList.contains('max-w-md')).toBe(true);
+    expect([...page.classList]).toEqual(
+      expect.arrayContaining(['px-4', 'py-6', 'sm:px-6', 'sm:py-10', 'lg:px-8']),
+    );
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining(['px-5', 'py-8', 'sm:px-8', 'sm:py-10', 'lg:px-10', 'lg:py-12']),
+    );
+    expect([...dashboardLink.classList]).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
   });
 
   it('should transition to confirmed view when confirmed', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
-    // With session_id present and confirmCoinPurchase resolving to true,
-    // status should transition to 'confirmed'
     expect(text).toContain('coinsSuccess.title');
     expect(text).not.toContain('coinsSuccess.pending');
+  });
+
+  it('should use a native Spartan navigation link for the dashboard action', () => {
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+
+    expect(dashboardLink).toBeTruthy();
+    expect(dashboardLink.getAttribute('href')).toBe('/dashboard');
+    expect(dashboardLink.getAttribute('size')).toBe('touch');
+    expect(dashboardLink.hasAttribute('role')).toBe(false);
+    expect(dashboardLink.hasAttribute('tabindex')).toBe(false);
+    dashboardLink.focus();
+    expect(document.activeElement).toBe(dashboardLink);
   });
 });

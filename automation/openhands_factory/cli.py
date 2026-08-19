@@ -86,6 +86,8 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("alert-daemon-failed")
     backlog = subcommands.add_parser("backlog")
     backlog.add_argument("action", choices=("requeue-quarantined",))
+    backlog.add_argument("--issue", type=int, action="append")
+    backlog.add_argument("--announce", action="store_true")
     return result
 
 
@@ -132,6 +134,7 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
             Check(
                 "openai-subscription-online",
                 True,
+                "optional OpenHands SDK OAuth, separate from Codex CLI: "
                 f"{oauth.kind}: {oauth.detail}",
                 warning=not oauth.passed,
             )
@@ -153,7 +156,7 @@ def _provider_startup_checks(config: FactoryConfig) -> list[Check]:
         Check(
             "openai-subscription-online",
             True,
-            f"{oauth.kind}: {oauth.detail}",
+            f"optional OpenHands SDK OAuth, separate from Codex CLI: {oauth.kind}: {oauth.detail}",
             warning=not oauth.passed,
         )
     )
@@ -278,13 +281,21 @@ def main(arguments: list[str] | None = None) -> int:
                 config.state_dir / "jobs.json",
                 max_repeated_failures=config.max_consecutive_failures,
             )
-            labelled = {str(issue) for issue in github.list_quarantined_issues()}
-            durable = {
-                task_id for task_id, job in jobs.load().items() if job.state is JobState.QUARANTINED
-            }
-            targets = labelled | durable
+            if args.issue:
+                targets = {str(issue) for issue in args.issue}
+            else:
+                labelled = {str(issue) for issue in github.list_quarantined_issues()}
+                durable = {
+                    task_id
+                    for task_id, job in jobs.load().items()
+                    if job.state is JobState.QUARANTINED
+                }
+                targets = labelled | durable
             numeric_targets = sorted(int(task_id) for task_id in targets if task_id.isdigit())
-            github_requeued = github.requeue_quarantined_issues(numeric_targets)
+            github_requeued = github.requeue_quarantined_issues(
+                numeric_targets,
+                announce=args.announce,
+            )
             durable_requeued = jobs.requeue_quarantined(targets)
             print(
                 json.dumps(

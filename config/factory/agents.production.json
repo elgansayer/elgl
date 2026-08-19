@@ -24,7 +24,7 @@
       "runtime_paths": [".local/bin", ".npm-global"]
     },
     "google": {
-      "enabled": false,
+      "enabled": true,
       "command": "agy",
       "cli_variant": "antigravity",
       "auth_mode": "subscription",
