@@ -25,8 +25,38 @@ const MOMENT_DRAFT_KEY = 'draft_moment';
 export class DraftService {
   private readonly authService = inject(AuthService);
 
-  private isAvailable(): boolean {
-    return typeof localStorage !== 'undefined';
+  private getStorage(): Storage | null {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private read(key: string): string | null {
+    try {
+      return this.getStorage()?.getItem(key) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private write(key: string, value: string): void {
+    try {
+      this.getStorage()?.setItem(key, value);
+    } catch {
+      // Draft persistence is best-effort. A blocked or full storage area must not break composing.
+    }
+  }
+
+  private remove(key: string): void {
+    try {
+      this.getStorage()?.removeItem(key);
+    } catch {
+      // Clearing a draft is best-effort for the same reason as saving it.
+    }
   }
 
   private getUserPrefix(): string {
@@ -49,28 +79,24 @@ export class DraftService {
   // ---- Chat drafts (legacy: text only) ----
 
   saveChatDraft(roomId: string, text: string): void {
-    if (!this.isAvailable()) return;
     if (text.trim()) {
-      localStorage.setItem(this.chatKey(roomId), text);
+      this.write(this.chatKey(roomId), text);
     } else {
       this.clearChatDraft(roomId);
     }
   }
 
   loadChatDraft(roomId: string): string {
-    if (!this.isAvailable()) return '';
-    return localStorage.getItem(this.chatKey(roomId)) ?? '';
+    return this.read(this.chatKey(roomId)) ?? '';
   }
 
   clearChatDraft(roomId: string): void {
-    if (!this.isAvailable()) return;
-    localStorage.removeItem(this.chatKey(roomId));
+    this.remove(this.chatKey(roomId));
   }
 
   // ---- Chat drafts (v2: enriched with reply/correction state) ----
 
   saveChatDraftV2(roomId: string, draft: ChatDraft): void {
-    if (!this.isAvailable()) return;
     const hasContent =
       (draft.textInput && draft.textInput.trim()) ||
       (draft.originalText && draft.originalText.trim()) ||
@@ -79,15 +105,14 @@ export class DraftService {
       draft.replyToId;
 
     if (hasContent) {
-      localStorage.setItem(this.chatV2Key(roomId), JSON.stringify(draft));
+      this.write(this.chatV2Key(roomId), JSON.stringify(draft));
     } else {
       this.clearChatDraftV2(roomId);
     }
   }
 
   loadChatDraftV2(roomId: string): ChatDraft | null {
-    if (!this.isAvailable()) return null;
-    const raw = localStorage.getItem(this.chatV2Key(roomId));
+    const raw = this.read(this.chatV2Key(roomId));
     if (!raw) return null;
     try {
       const d: Record<string, unknown> = JSON.parse(raw);
@@ -95,11 +120,25 @@ export class DraftService {
       const result: ChatDraft = {};
       let hasValid = false;
 
-      if (typeof d['textInput'] === 'string') { result.textInput = d['textInput']; hasValid = true; }
-      if (d['replyToId'] === null || typeof d['replyToId'] === 'string') { result.replyToId = d['replyToId']; }
-      if (typeof d['originalText'] === 'string') { result.originalText = d['originalText']; hasValid = true; }
-      if (typeof d['correctedText'] === 'string') { result.correctedText = d['correctedText']; hasValid = true; }
-      if (typeof d['explanationText'] === 'string') { result.explanationText = d['explanationText']; hasValid = true; }
+      if (typeof d['textInput'] === 'string') {
+        result.textInput = d['textInput'];
+        hasValid = true;
+      }
+      if (d['replyToId'] === null || typeof d['replyToId'] === 'string') {
+        result.replyToId = d['replyToId'];
+      }
+      if (typeof d['originalText'] === 'string') {
+        result.originalText = d['originalText'];
+        hasValid = true;
+      }
+      if (typeof d['correctedText'] === 'string') {
+        result.correctedText = d['correctedText'];
+        hasValid = true;
+      }
+      if (typeof d['explanationText'] === 'string') {
+        result.explanationText = d['explanationText'];
+        hasValid = true;
+      }
 
       return hasValid ? result : null;
     } catch {
@@ -108,28 +147,24 @@ export class DraftService {
   }
 
   clearChatDraftV2(roomId: string): void {
-    if (!this.isAvailable()) return;
-    localStorage.removeItem(this.chatV2Key(roomId));
+    this.remove(this.chatV2Key(roomId));
   }
 
   // ---- Moment drafts ----
 
   saveMomentDraft(draft: MomentDraft): void {
-    if (!this.isAvailable()) return;
     const hasContent =
-      (draft.text && draft.text.trim()) ||
-      (draft.mediaUrls && draft.mediaUrls.length > 0);
+      (draft.text && draft.text.trim()) || (draft.mediaUrls && draft.mediaUrls.length > 0);
 
     if (hasContent) {
-      localStorage.setItem(this.momentKey(), JSON.stringify(draft));
+      this.write(this.momentKey(), JSON.stringify(draft));
     } else {
       this.clearMomentDraft();
     }
   }
 
   loadMomentDraft(): MomentDraft | null {
-    if (!this.isAvailable()) return null;
-    const raw = localStorage.getItem(this.momentKey());
+    const raw = this.read(this.momentKey());
     if (!raw) return null;
     try {
       const parsed: unknown = JSON.parse(raw);
@@ -138,16 +173,24 @@ export class DraftService {
       const result: MomentDraft = {};
       let hasValidField = false;
 
-      if (typeof d['text'] === 'string') { result.text = d['text']; hasValidField = true; }
+      if (typeof d['text'] === 'string') {
+        result.text = d['text'];
+        hasValidField = true;
+      }
       if (Array.isArray(d['mediaUrls'])) {
-        result.mediaUrls = (d['mediaUrls'] as unknown[]).filter((u): u is string => typeof u === 'string');
+        result.mediaUrls = (d['mediaUrls'] as unknown[]).filter(
+          (url): url is string => typeof url === 'string',
+        );
         if (result.mediaUrls.length > 0) hasValidField = true;
       }
       if (d['mediaType'] === 'none' || d['mediaType'] === 'images' || d['mediaType'] === 'audio') {
         result.mediaType = d['mediaType'];
         hasValidField = true;
       }
-      if (typeof d['targetLanguage'] === 'string') { result.targetLanguage = d['targetLanguage']; hasValidField = true; }
+      if (typeof d['targetLanguage'] === 'string') {
+        result.targetLanguage = d['targetLanguage'];
+        hasValidField = true;
+      }
       if (typeof d['voiceDurationSec'] === 'number' || d['voiceDurationSec'] === null) {
         result.voiceDurationSec = d['voiceDurationSec'];
         hasValidField = true;
@@ -160,7 +203,6 @@ export class DraftService {
   }
 
   clearMomentDraft(): void {
-    if (!this.isAvailable()) return;
-    localStorage.removeItem(this.momentKey());
+    this.remove(this.momentKey());
   }
 }
