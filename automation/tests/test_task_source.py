@@ -163,6 +163,18 @@ def test_parallel_acquisitions_preserve_every_distinct_logical_lease(tmp_path: P
     assert set(store.leases()) == {task.logical_key for task in tasks}
 
 
+def test_near_future_lease_survives_tolerated_clock_skew(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path, lease_minutes=30)
+    now = datetime.now(UTC)
+    first = Task("1", "First task", "body", "github", 0)
+    second = Task("2", "Second task", "body", "github", 0)
+
+    store.acquire(first, "factory", now + timedelta(seconds=30))
+    store.acquire(second, "factory", now)
+
+    assert set(store.leases(now)) == {first.logical_key, second.logical_key}
+
+
 def test_prune_expired_leases_persists_only_active_leases(tmp_path: Path) -> None:
     store = TaskStore(tmp_path, lease_minutes=1)
     now = datetime.now(UTC)
