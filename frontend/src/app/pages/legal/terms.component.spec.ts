@@ -27,8 +27,6 @@ const TERMS_DOCUMENT: LegalDocument = {
 };
 
 describe('TermsComponent', () => {
-  let component: TermsComponent;
-  let fixture: ComponentFixture<TermsComponent>;
   let legalService: LegalService;
 
   beforeEach(async () => {
@@ -43,64 +41,70 @@ describe('TermsComponent', () => {
       .compileComponents();
 
     legalService = TestBed.inject(LegalService);
-    vi.spyOn(legalService, 'fetchTermsOfService').mockResolvedValue(TERMS_DOCUMENT);
-
-    fixture = TestBed.createComponent(TermsComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  function createFixture(): ComponentFixture<TermsComponent> {
+    const fixture = TestBed.createComponent(TermsComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('should create', async () => {
+    vi.spyOn(legalService, 'fetchTermsOfService').mockResolvedValue(TERMS_DOCUMENT);
+    const fixture = createFixture();
+    await fixture.whenStable();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
   it('should load terms of service from LegalService', async () => {
+    const fetchTerms = vi
+      .spyOn(legalService, 'fetchTermsOfService')
+      .mockResolvedValue(TERMS_DOCUMENT);
+    const fixture = createFixture();
+
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(legalService.fetchTermsOfService).toHaveBeenCalled();
-    expect(component.termsResource.value()?.title).toBe('Terms of Service');
+
+    expect(fetchTerms).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.termsResource.value()?.title).toBe('Terms of Service');
   });
 
   it('should expose an accessible loading state while terms are pending', () => {
-    const fetchTerms = vi.mocked(legalService.fetchTermsOfService);
-    fetchTerms.mockReset();
-    fetchTerms.mockImplementation(() => new Promise<LegalDocument>(() => undefined));
+    vi.spyOn(legalService, 'fetchTermsOfService').mockImplementation(
+      () => new Promise<LegalDocument>(() => undefined),
+    );
+    const fixture = createFixture();
 
-    const loadingFixture = TestBed.createComponent(TermsComponent);
-    loadingFixture.detectChanges();
-
-    const loading = loadingFixture.nativeElement.querySelector('[data-testid="terms-loading"]');
+    const loading = fixture.nativeElement.querySelector('[data-testid="terms-loading"]');
     expect(loading).toBeTruthy();
     expect(loading.getAttribute('aria-busy')).toBe('true');
-    expect(loadingFixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
   });
 
   it('should render an alert and retry after a load failure', async () => {
-    const fetchTerms = vi.mocked(legalService.fetchTermsOfService);
-    fetchTerms.mockReset();
-    fetchTerms
+    const fetchTerms = vi
+      .spyOn(legalService, 'fetchTermsOfService')
       .mockRejectedValueOnce(new Error('network unavailable'))
       .mockResolvedValueOnce(TERMS_DOCUMENT);
+    const fixture = createFixture();
 
-    const errorFixture = TestBed.createComponent(TermsComponent);
-    errorFixture.detectChanges();
-    await errorFixture.whenStable();
-    errorFixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    expect(errorFixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
-    const retryButton = errorFixture.nativeElement.querySelector(
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+    const retryButton = fixture.nativeElement.querySelector(
       '[data-testid="terms-retry"]',
     ) as HTMLButtonElement;
     expect(retryButton).toBeTruthy();
     expect(retryButton.type).toBe('button');
 
     retryButton.click();
-    errorFixture.detectChanges();
-    await errorFixture.whenStable();
-    errorFixture.detectChanges();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(fetchTerms).toHaveBeenCalledTimes(2);
-    expect(errorFixture.componentInstance.termsResource.value()?.title).toBe('Terms of Service');
-    expect(errorFixture.nativeElement.querySelector('[role="alert"]')).toBeFalsy();
+    expect(fixture.componentInstance.termsResource.value()?.title).toBe('Terms of Service');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeFalsy();
   });
 });
