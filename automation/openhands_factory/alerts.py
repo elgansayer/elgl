@@ -39,7 +39,7 @@ def _compact_issue_list(message: str) -> str:
     shown = ",".join(identifiers[:MAX_ALERT_ISSUES])
     remaining = len(identifiers) - MAX_ALERT_ISSUES
     replacement = f"issues={shown},... (+{remaining} more; total={len(identifiers)})"
-    return f"{message[:match.start()]}{replacement}{message[match.end():]}"
+    return f"{message[: match.start()]}{replacement}{message[match.end() :]}"
 
 
 class AlertService:

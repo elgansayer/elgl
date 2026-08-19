@@ -1,8 +1,8 @@
-"""Validated OpenHands provider construction.
+"""Validated inner provider construction for the OpenHands adapter.
 
-Production routing is intentionally narrow: OpenAI subscription OAuth (Codex)
-first, then OpenCode Go. Historical Gemini helpers remain only for state/config
-migration compatibility and are never selected by the production router.
+This compatibility adapter uses OpenAI subscription OAuth first, then the
+optional OpenCode Go API. The outer AgentRouter independently routes direct
+Claude, Codex, Google, OpenCode, and OpenHands execution.
 """
 
 from __future__ import annotations
@@ -84,6 +84,8 @@ def _model_identifiers(payload: object) -> set[str]:
 
 
 def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = None) -> set[str]:
+    if config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API credentials are not configured")
     http = client or httpx.Client()
     response = http.get(
         f"{config.opencode_base_url}/models",
@@ -95,6 +97,8 @@ def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = 
 
 
 def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -> ProviderProfile:
+    if config.opencode_model is None or config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API fallback is not configured")
     available = discover_opencode_models(config, client)
     if config.opencode_model not in available:
         raise ConfigurationError(
@@ -127,7 +131,7 @@ def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = No
 def validate_gemini(
     config: FactoryConfig, client: HttpClient | None = None
 ) -> ProviderProfile | None:
-    """Legacy diagnostic helper; Gemini is not eligible for production routing."""
+    """Legacy API diagnostic; direct Google routing uses the outer adapter."""
     if not config.gemini_enabled:
         return None
     if config.monthly_variable_budget_usd != 0 or not config.gemini_free_tier_only:
@@ -147,8 +151,8 @@ def validate_gemini(
 
 
 def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
-    """Return the authoritative production provider chain."""
-    return [
+    """Return the OpenHands adapter's inner provider chain."""
+    profiles = [
         ProviderProfile(
             ProviderName.OPENAI_SUBSCRIPTION,
             "openai-subscription",
@@ -156,14 +160,18 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
             None,
             None,
         ),
-        ProviderProfile(
-            ProviderName.OPENCODE_GO,
-            config.opencode_profile_name,
-            f"openai/{config.opencode_model}",
-            config.opencode_base_url,
-            config.opencode_api_key,
-        ),
     ]
+    if config.opencode_model is not None and config.opencode_api_key is not None:
+        profiles.append(
+            ProviderProfile(
+                ProviderName.OPENCODE_GO,
+                config.opencode_profile_name,
+                f"openai/{config.opencode_model}",
+                config.opencode_base_url,
+                config.opencode_api_key,
+            )
+        )
+    return profiles
 
 
 def select_provider_decision(
@@ -171,26 +179,26 @@ def select_provider_decision(
     *,
     prefer_different_from: ProviderName | None = None,
 ) -> ProviderDecision:
-    """Choose one provider for a whole OpenHands conversation.
+    """Choose one inner provider for a whole OpenHands conversation.
 
-    The production chain is deliberately fixed to Codex subscription OAuth then
-    OpenCode Go. Historical provider configuration must never silently re-enter
-    autonomous execution. If both production providers are unavailable the
-    caller waits/retries through the Factory bounded-recovery path instead of
-    dispatching a third execution provider.
+    The compatibility chain is deliberately fixed to OpenAI subscription OAuth
+    then OpenCode Go. Historical provider configuration must never silently
+    re-enter autonomous execution. If both inner providers are unavailable the
+    outer router may fall back to another configured adapter.
     """
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
     oauth = inspect_openai_oauth(config)
     openai_breaker = breakers.get(ProviderName.OPENAI_SUBSCRIPTION)
-    openai_usable = oauth.passed and (
-        openai_breaker is None or openai_breaker.permits_call()
-    )
+    openai_usable = oauth.passed and (openai_breaker is None or openai_breaker.permits_call())
     opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
-    opencode_usable = opencode_breaker is None or opencode_breaker.permits_call()
+    opencode_configured = config.opencode_model is not None and config.opencode_api_key is not None
+    opencode_usable = opencode_configured and (
+        opencode_breaker is None or opencode_breaker.permits_call()
+    )
 
-    # Independent review should prefer the other healthy production provider while
-    # remaining provider-stable once the review conversation starts.
+    # Independent review within this adapter should prefer its other healthy inner
+    # provider while remaining provider-stable once the conversation starts.
     if prefer_different_from is ProviderName.OPENAI_SUBSCRIPTION and opencode_usable:
         return ProviderDecision(
             ProviderName.OPENCODE_GO,
@@ -214,8 +222,8 @@ def select_provider_decision(
         return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
 
     raise FactoryError(
-        "Both production model providers are temporarily unavailable "
-        "(Codex subscription OAuth and OpenCode Go); bounded recovery will retry later."
+        "Both OpenHands inner providers are temporarily unavailable "
+        "(OpenAI subscription OAuth and OpenCode Go API); bounded recovery will retry later."
     )
 
 
@@ -242,6 +250,8 @@ def build_llm(
             open_browser=False,
         )
     if selected_provider is ProviderName.OPENCODE_GO:
+        if config.opencode_model is None or config.opencode_api_key is None:
+            raise ConfigurationError("OpenCode Go API fallback is not configured")
         return LLM(
             model=f"openai/{config.opencode_model}",
             api_key=config.opencode_api_key,

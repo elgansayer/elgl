@@ -75,6 +75,18 @@ describe('AppTextareaComponent', () => {
     expect(textareaElement.placeholder).toBe('Tell us about yourself...');
   });
 
+  it('should generate a secure default textarea ID when none is provided', () => {
+    const generatedFixture = TestBed.createComponent(AppTextareaComponent);
+    generatedFixture.detectChanges();
+    const generatedTextarea: HTMLTextAreaElement =
+      generatedFixture.nativeElement.querySelector('textarea');
+
+    expect(generatedTextarea.id).toMatch(
+      /^app-textarea-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    generatedFixture.destroy();
+  });
+
   it('should emit valueChange on input event when not disabled', () => {
     textareaElement.value = 'updated bio text';
     textareaElement.dispatchEvent(new Event('input'));

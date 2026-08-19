@@ -9,6 +9,13 @@ const workflowFiles = readdirSync(workflowDir)
 const actionRefs = new Map();
 const violations = [];
 
+// These workflows publish only to the repository's separate GitHub Wiki git
+// repository. They do not mutate branches in the application repository.
+const wikiPublisherAllowlist = new Set([
+  'daily-wiki-update.yml',
+  'wiki-sync.yml',
+]);
+
 for (const file of workflowFiles) {
   const path = join(workflowDir, file);
   const source = readFileSync(path, 'utf8');
@@ -16,6 +23,24 @@ for (const file of workflowFiles) {
   if (/^\s*pull_request_target\s*:/m.test(source)) {
     violations.push(
       `${file}: pull_request_target is not allowed by the workflow security policy`,
+    );
+  }
+
+  const hasContentsWrite = /^\s*contents:\s*write\s*$/m.test(source);
+  const commitsWithGit = /\bgit\s+commit\b/.test(source);
+  const pushesWithGit = /\bgit\s+push\b/.test(source);
+  const mutatesGitRefsWithGhApi = /\bgh\s+api\b[^\n]*(?:\/git\/refs|\/contents\/)/.test(
+    source,
+  );
+  const isWikiPublisher = wikiPublisherAllowlist.has(file);
+
+  if (
+    hasContentsWrite &&
+    !isWikiPublisher &&
+    ((commitsWithGit && pushesWithGit) || mutatesGitRefsWithGhApi)
+  ) {
+    violations.push(
+      `${file}: GitHub Actions must not commit/push application repository code; route code changes through the VPS OpenHands Factory and pull requests`,
     );
   }
 

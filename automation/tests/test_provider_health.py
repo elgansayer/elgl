@@ -1,8 +1,12 @@
+import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from openhands_factory.models import CircuitState, FailureKind, ProviderName
 from openhands_factory.provider_health import (
+    MAX_RETRY_AFTER_SECONDS,
     CircuitBreaker,
+    ProviderHealthStore,
     classify_failure,
     extract_retry_after_seconds,
 )
@@ -62,13 +66,19 @@ def test_breaker_honours_a_longer_provider_reported_wait_over_the_default_cooldo
 
 
 def test_breaker_caps_an_absurd_provider_reported_wait() -> None:
-    from openhands_factory.provider_health import MAX_RETRY_AFTER_SECONDS
-
     now = datetime.now(UTC)
     breaker = CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, 1, 300)
     breaker.record_failure(FailureKind.RATE_LIMIT, now, retry_after_seconds=10**9)
     assert not breaker.permits_call(now + timedelta(seconds=MAX_RETRY_AFTER_SECONDS - 1))
     assert breaker.permits_call(now + timedelta(seconds=MAX_RETRY_AFTER_SECONDS + 1))
+
+
+def test_breaker_clamps_a_negative_provider_reported_wait() -> None:
+    breaker = CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, 1, 300)
+
+    breaker.record_failure(FailureKind.RATE_LIMIT, retry_after_seconds=-1)
+
+    assert breaker.retry_after_seconds == 0
 
 
 def test_success_clears_a_previous_retry_after_override() -> None:
@@ -79,3 +89,118 @@ def test_success_clears_a_previous_retry_after_override() -> None:
     breaker.record_failure(FailureKind.TRANSIENT, now)
     # A fresh failure with no reported wait must not inherit the earlier override.
     assert breaker.permits_call(now + timedelta(seconds=301))
+
+
+def test_invalid_persisted_state_fails_closed_for_one_bounded_cooldown(tmp_path: Path) -> None:
+    now = datetime(2026, 8, 17, 1, 0, tzinfo=UTC)
+    path = tmp_path / "health.json"
+    path.write_text(
+        json.dumps(
+            {
+                "breakers": [
+                    {
+                        "provider": ProviderName.OPENAI_SUBSCRIPTION.value,
+                        "failure_threshold": 3,
+                        "cooldown_seconds": 300,
+                        "state": "corrupt-state",
+                        "consecutive_failures": 1,
+                        "opened_at": "not-a-timestamp",
+                        "retry_after_seconds": None,
+                    }
+                ]
+            }
+        )
+    )
+
+    breaker = ProviderHealthStore(path).load(now=now)[0]
+
+    assert breaker.state is CircuitState.OPEN
+    assert breaker.opened_at == now
+    assert breaker.consecutive_failures == breaker.failure_threshold
+    assert not breaker.permits_call(now + timedelta(seconds=299))
+    assert breaker.permits_call(now + timedelta(seconds=301))
+
+
+def test_corrupt_open_timestamp_restarts_cooldown_instead_of_wedging_provider(
+    tmp_path: Path,
+) -> None:
+    now = datetime(2026, 8, 17, 1, 0, tzinfo=UTC)
+    path = tmp_path / "health.json"
+    path.write_text(
+        json.dumps(
+            {
+                "breakers": [
+                    {
+                        "provider": ProviderName.OPENCODE_GO.value,
+                        "failure_threshold": 2,
+                        "cooldown_seconds": 120,
+                        "state": CircuitState.OPEN.value,
+                        "consecutive_failures": 2,
+                        "opened_at": "broken",
+                        "retry_after_seconds": 10**12,
+                    }
+                ]
+            }
+        )
+    )
+
+    breaker = ProviderHealthStore(path).load(now=now)[0]
+
+    assert breaker.opened_at == now
+    assert breaker.retry_after_seconds == MAX_RETRY_AFTER_SECONDS
+    assert not breaker.permits_call(now + timedelta(days=6, hours=23))
+    assert breaker.permits_call(now + timedelta(days=7, seconds=1))
+
+
+def test_future_open_timestamp_is_clamped_to_restart_time(tmp_path: Path) -> None:
+    now = datetime(2026, 8, 17, 1, 0, tzinfo=UTC)
+    path = tmp_path / "health.json"
+    path.write_text(
+        json.dumps(
+            {
+                "breakers": [
+                    {
+                        "provider": ProviderName.OPENCODE_GO.value,
+                        "failure_threshold": 2,
+                        "cooldown_seconds": 60,
+                        "state": CircuitState.OPEN.value,
+                        "consecutive_failures": 2,
+                        "opened_at": (now + timedelta(days=365)).isoformat(),
+                        "retry_after_seconds": None,
+                    }
+                ]
+            }
+        )
+    )
+
+    breaker = ProviderHealthStore(path).load(now=now)[0]
+
+    assert breaker.opened_at == now
+    assert not breaker.permits_call(now + timedelta(seconds=59))
+    assert breaker.permits_call(now + timedelta(seconds=61))
+
+
+def test_unknown_provider_entry_is_ignored_without_losing_known_provider(tmp_path: Path) -> None:
+    path = tmp_path / "health.json"
+    path.write_text(
+        json.dumps(
+            {
+                "breakers": [
+                    {"provider": "retired-provider", "state": "open"},
+                    {
+                        "provider": ProviderName.OPENCODE_GO.value,
+                        "failure_threshold": 2,
+                        "cooldown_seconds": 60,
+                        "state": CircuitState.CLOSED.value,
+                        "consecutive_failures": 0,
+                        "opened_at": None,
+                        "retry_after_seconds": None,
+                    },
+                ]
+            }
+        )
+    )
+
+    breakers = ProviderHealthStore(path).load()
+
+    assert [breaker.provider for breaker in breakers] == [ProviderName.OPENCODE_GO]

@@ -3,7 +3,8 @@
   role="group"
   [attr.aria-label]="'audioPlayer.groupLabel' | t"
 >
-  <button hlmBtn
+  <button
+    hlmBtn
     type="button"
     (click)="togglePlay()"
     [disabled]="hasError()"

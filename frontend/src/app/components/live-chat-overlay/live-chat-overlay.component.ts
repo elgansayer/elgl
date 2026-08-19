@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   DestroyRef,
+  Injector,
   afterNextRender,
   inject,
   input,
@@ -49,8 +50,12 @@ interface CentrifugoMessageData {
           <div
             class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
           >
-            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{ msg.senderName }}</span>
-            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{ msg.text }}</span>
+            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
+              msg.senderName
+            }}</span>
+            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
+              msg.text
+            }}</span>
           </div>
         }
       </div>
@@ -93,6 +98,7 @@ export class LiveChatOverlayComponent implements OnInit {
   centrifugo = inject(CentrifugoService);
   i18n = inject(I18nService);
   destroyRef = inject(DestroyRef);
+  private injector = inject(Injector);
 
   messages = signal<LiveMessage[]>([]);
   channelName = '';
@@ -120,7 +126,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
       if (event.type === 'text') {
         this.addMessage({
-          id: event.id || Math.random().toString(36).substring(2),
+          id: event.id || crypto.randomUUID(),
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
@@ -150,14 +156,17 @@ export class LiveChatOverlayComponent implements OnInit {
   }
 
   scrollToBottom() {
-    afterNextRender(() => {
-      const el = this.scrollContainer()?.nativeElement;
-      if (el) {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    });
+    afterNextRender(
+      () => {
+        const el = this.scrollContainer()?.nativeElement;
+        if (el) {
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

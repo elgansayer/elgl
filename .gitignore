@@ -19,7 +19,7 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-# Build outputs
+# Build and test outputs
 dist/
 build/
 out/
@@ -27,6 +27,11 @@ out/
 .next/
 .cache/
 coverage/
+test-results/
+**/test-results/
+**/playwright-report/
+**/cypress/screenshots/
+**/cypress/videos/
 
 # Environment files & secrets
 .env
@@ -42,6 +47,7 @@ coverage/
 ehthumbs.db
 Thumbs.db
 
+# Local AI/agent runtime noise. Tool instruction directories remain tracked.
 .aider*
 claude.log
 current_claude.log
@@ -50,15 +56,11 @@ STUCK_LOG.md
 e2e/ux-snapshots/
 e2e/test-results/
 e2e/playwright-report/
-
-# Swarm log noise (never commit these - they grow unbounded)
 qa_errors.log
 qa_aider.log
 test_errors.log
 ux_capture.log
 
-
-node_modules
 .tasks/i18n-fix-*.md
 analysis/
 __pycache__/
