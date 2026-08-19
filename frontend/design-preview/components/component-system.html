@@ -114,11 +114,27 @@
           <button type="button" disabled aria-busy="true">Unlock</button>
         </div>
       </section>
-      <section aria-labelledby="static-feedback-title" aria-describedby="static-feedback-message">
-        <div aria-hidden="true">😕</div>
-        <h2 id="static-feedback-title">Static feedback state</h2>
-        <p id="static-feedback-message">Named feedback content stays discoverable without announcing a static page as a live region. Navigation back to the dashboard remains a native link composed with the Spartan button treatment.</p>
-        <div class="row"><a class="action-link" href="/dashboard">Back</a></div>
+      <section aria-labelledby="checkout-cancellation-title">
+        <h2 id="checkout-cancellation-title">Checkout cancellation Relay states</h2>
+        <p>The cancellation return stays on the Relay canvas, uses the same semantic result-card hierarchy as checkout success, and keeps dashboard navigation as a native Spartan-styled link. Mobile keeps the action full-width while wider layouts return it to intrinsic sizing.</p>
+        <div class="checkout-states">
+          <div class="checkout-preview light" aria-label="Checkout cancellation light mobile preview">
+            <article class="checkout-card" aria-labelledby="checkout-cancellation-light-title" aria-describedby="checkout-cancellation-light-message">
+              <span class="status-icon" aria-hidden="true">😕</span>
+              <h3 id="checkout-cancellation-light-title">Purchase cancelled</h3>
+              <p id="checkout-cancellation-light-message">No charge was made. You can return to the dashboard.</p>
+              <a class="action-link checkout-action" href="/dashboard">Back to dashboard</a>
+            </article>
+          </div>
+          <div class="checkout-preview dark wide" aria-label="Checkout cancellation dark desktop preview">
+            <article class="checkout-card" aria-labelledby="checkout-cancellation-dark-title" aria-describedby="checkout-cancellation-dark-message">
+              <span class="status-icon" aria-hidden="true">😕</span>
+              <h3 id="checkout-cancellation-dark-title">Purchase cancelled</h3>
+              <p id="checkout-cancellation-dark-message">No charge was made. You can return to the dashboard.</p>
+              <a class="action-link checkout-action" href="/dashboard">Back to dashboard</a>
+            </article>
+          </div>
+        </div>
       </section>
       <section aria-labelledby="checkout-confirmation-title">
         <h2 id="checkout-confirmation-title">Checkout confirmation Relay states</h2>
