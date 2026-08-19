@@ -23,6 +23,13 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
   styleUrls: ['./correction-modal.component.scss'],
 })
 export class CorrectionModalComponent implements OnInit {
+
+  readonly quickTags = ["Natural phrasing", "Grammar", "Typo", "Vocabulary"];
+
+  addQuickTag(tag: string): void {
+    const current = this.explanation().trim();
+    this.explanation.set(current ? `${current} [${tag}]` : `[${tag}]`);
+  }
   originalText = input.required<string>();
   authorName = input('');
 
