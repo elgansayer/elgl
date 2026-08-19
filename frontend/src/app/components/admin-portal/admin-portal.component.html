@@ -9,7 +9,8 @@
     [attr.aria-label]="'admin.searchLabel' | t"
   >
     <label class="sr-only" for="admin-user-search">{{ 'admin.searchLabel' | t }}</label>
-    <input hlmInput
+    <input
+      hlmInput
       id="admin-user-search"
       type="search"
       class="flex-1 rounded-lg border border-surface-100 bg-surface-200 ps-3 pe-3 pt-2 pb-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -17,7 +18,8 @@
       (input)="onSearchInput($any($event.target).value)"
       [attr.placeholder]="'admin.searchPlaceholder' | t"
     />
-    <button hlmBtn
+    <button
+      hlmBtn
       type="submit"
       class="app-pill bg-primary text-on-fill px-4"
       [attr.aria-label]="'admin.searchBtn' | t"
@@ -107,7 +109,8 @@
                   />
                 </div>
 
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   class="app-pill border border-surface-100"
                   [disabled]="vipUpdatingId() === user.id"
@@ -120,7 +123,8 @@
                   {{ (user.is_vip ? 'admin.revokeVipBtn' : 'admin.grantVipBtn') | t }}
                 </button>
 
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   class="app-pill bg-warning hover:bg-warning/90 text-on-fill border-warning"
                   [disabled]="moderationActingId() === user.id"
@@ -130,7 +134,8 @@
                   {{ 'admin.warnBtn' | t }}
                 </button>
 
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   class="app-pill bg-danger hover:bg-danger/90 text-on-fill border-danger"
                   [disabled]="moderationActingId() === user.id"
@@ -184,7 +189,8 @@
         class="flex items-center justify-between mt-4"
         [attr.aria-label]="'admin.paginationAria' | t"
       >
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="app-pill border border-surface-100"
           [disabled]="page() <= 1"
@@ -196,7 +202,8 @@
         <span class="text-sm text-text-secondary" role="status">
           {{ 'admin.pageIndicator' | t: { page: page(), totalPages: totalPages() } }}
         </span>
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="app-pill border border-surface-100"
           [disabled]="page() >= totalPages()"

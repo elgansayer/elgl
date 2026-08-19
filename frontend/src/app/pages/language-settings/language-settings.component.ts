@@ -14,7 +14,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         class="sticky top-0 z-10 flex items-center justify-between bg-surface-100 ps-4 pe-4 pt-4 pb-4 border-b border-surface-200"
       >
         <div class="flex items-center gap-3">
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="goBack()"
             class="p-2 -ms-2 rounded-full hover:bg-surface-200 transition-colors"
             [attr.aria-label]="'common.back' | t"
@@ -44,7 +45,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm"
           >
             @for (lang of langs; track lang.code) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 type="button"
                 (click)="selectLang(lang.code)"
                 class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors border-b border-surface-200 last:border-b-0"

@@ -38,7 +38,8 @@ type TabId = (typeof TAB_IDS)[number];
 @Component({
   selector: 'app-reading-engine',
   standalone: true,
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     TranslatePipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
@@ -70,7 +71,8 @@ type TabId = (typeof TAB_IDS)[number];
         [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t"
       >
         @for (tabId of tabIds; track tabId) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             role="tab"
             [id]="'reading-tab-' + tabId"
@@ -222,7 +224,8 @@ type TabId = (typeof TAB_IDS)[number];
                 <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{
                   'readingEngine.filterDifficulty' | t
                 }}</span>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   (click)="setFilter(null)"
                   [attr.aria-pressed]="!filterDifficulty()"
@@ -234,7 +237,8 @@ type TabId = (typeof TAB_IDS)[number];
                   {{ 'readingEngine.filterAll' | t }}
                 </button>
                 @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="setFilter(diff)"
                     [attr.aria-pressed]="filterDifficulty() === diff"
@@ -252,7 +256,8 @@ type TabId = (typeof TAB_IDS)[number];
                 <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{
                   'readingEngine.filterTopic' | t
                 }}</span>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   (click)="setTopicFilter(null)"
                   [attr.aria-pressed]="!filterTopic()"
@@ -264,7 +269,8 @@ type TabId = (typeof TAB_IDS)[number];
                   {{ 'readingEngine.filterAll' | t }}
                 </button>
                 @for (topic of distinctTopics(); track topic) {
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="setTopicFilter(topic)"
                     [attr.aria-pressed]="filterTopic() === topic"
@@ -279,7 +285,8 @@ type TabId = (typeof TAB_IDS)[number];
               </div>
 
               @if (filterDifficulty() || filterTopic()) {
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   (click)="clearFilters()"
                   class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0"

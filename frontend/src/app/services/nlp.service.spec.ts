@@ -61,7 +61,10 @@ describe('NlpService', () => {
 
   it('posts trimmed text to the authenticated simplification endpoint', async () => {
     fetchSpy.mockResolvedValue(
-      response({ original: 'Although it rained, we continued.', simplified: 'It rained. We continued.' }),
+      response({
+        original: 'Although it rained, we continued.',
+        simplified: 'It rained. We continued.',
+      }),
     );
 
     const result = await service.simplifyText({ text: '  Although it rained, we continued.  ' });
