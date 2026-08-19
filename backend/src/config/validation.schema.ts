@@ -36,8 +36,7 @@ const testDefaults: Record<string, string> = {
   CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES: '104857600',
   CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS: '30000',
   CLOUDFLARE_STREAM_ACCOUNT_ID: 'test-cloudflare-account-id',
-  CLOUDFLARE_STREAM_API_TOKEN:
-    'test-cloudflare-stream-api-token',
+  CLOUDFLARE_STREAM_API_TOKEN: 'test-cloudflare-stream-api-token',
   CLOUDFLARE_STREAM_ALLOWED_ORIGINS: 'http://localhost:4200',
   CLOUDFLARE_STREAM_POLL_INTERVAL_MS: '5000',
   CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS: '120000',
