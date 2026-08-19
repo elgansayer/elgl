@@ -1,11 +1,14 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, input, effect } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { DiscoveryService } from '../../services/discovery.service';
+import { AuthService } from '../../services/auth.service';
+import { DirectConversationService } from '../../services/direct-conversation.service';
+import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 import { AchievementsComponent } from '../../achievements/achievements.component';
 
@@ -24,8 +27,12 @@ import { AchievementsComponent } from '../../achievements/achievements.component
 })
 export class UserDetailComponent {
   private location = inject(Location);
+  private router = inject(Router);
   private userService = inject(UserService);
   private discoveryService = inject(DiscoveryService);
+  private authService = inject(AuthService);
+  private directConversationService = inject(DirectConversationService);
+  private relationshipService = inject(ProfileRelationshipService);
   private readonly i18n = inject(I18nService);
   private translationContextKey = '';
 
@@ -36,12 +43,21 @@ export class UserDetailComponent {
   readonly errorMessage = signal<string>('');
 
   readonly isFollowing = signal<boolean>(false);
+  readonly isFollowingPending = signal<boolean>(false);
+  readonly followErrorKey = signal<string>('');
   readonly isLiked = signal<boolean>(false);
+
+  readonly isOpeningChat = signal<boolean>(false);
+  readonly chatErrorKey = signal<string>('');
 
   readonly translatedBioText = signal<string>('');
   readonly showTranslated = signal<boolean>(false);
   readonly isTranslating = signal<boolean>(false);
   readonly translationErrorKey = signal<string>('');
+
+  readonly isOwnProfile = computed(
+    () => this.profile()?.id === this.authService.currentUser()?.id,
+  );
 
   constructor() {
     effect(() => {
@@ -58,6 +74,8 @@ export class UserDetailComponent {
       this.showTranslated.set(false);
       this.isTranslating.set(false);
       this.translationErrorKey.set('');
+      this.followErrorKey.set('');
+      this.chatErrorKey.set('');
     });
   }
 
@@ -67,6 +85,7 @@ export class UserDetailComponent {
 
   async loadProfile(id: string): Promise<void> {
     this.isLoading.set(true);
+    this.errorMessage.set('');
     try {
       const data = await this.userService.getUserProfile(id);
       if (data) {
@@ -100,6 +119,14 @@ export class UserDetailComponent {
 
   translationStatusId(): string {
     return `user-detail-bio-translation-status-${this.userId()}`;
+  }
+
+  followStatusId(): string {
+    return `user-detail-follow-status-${this.userId()}`;
+  }
+
+  chatStatusId(): string {
+    return `user-detail-chat-status-${this.userId()}`;
   }
 
   async toggleTranslation(): Promise<void> {
@@ -146,26 +173,49 @@ export class UserDetailComponent {
 
   async toggleFollow(): Promise<void> {
     const p = this.profile();
-    if (!p) return;
+    if (!p || this.isOwnProfile() || this.isFollowingPending()) return;
 
     const currentlyFollowing = this.isFollowing();
+    this.followErrorKey.set('');
+    this.isFollowingPending.set(true);
     this.isFollowing.set(!currentlyFollowing);
 
     try {
       if (currentlyFollowing) {
-        await this.userService.unfollowUser(p.id);
+        await this.relationshipService.unfollow(p.id);
       } else {
-        await this.userService.followUser(p.id);
+        await this.relationshipService.follow(p.id);
       }
-    } catch (e) {
+    } catch {
       this.isFollowing.set(currentlyFollowing);
-      console.error('Follow error:', e);
+      this.followErrorKey.set('common.error_generic');
+    } finally {
+      this.isFollowingPending.set(false);
+    }
+  }
+
+  async openConversation(): Promise<void> {
+    const p = this.profile();
+    if (!p || this.isOwnProfile() || this.isOpeningChat()) return;
+
+    this.chatErrorKey.set('');
+    this.isOpeningChat.set(true);
+    try {
+      const roomId = await this.directConversationService.openOrCreate(p.id);
+      const navigated = await this.router.navigate(['/chat', roomId]);
+      if (!navigated) {
+        throw new Error('Unable to navigate to conversation');
+      }
+    } catch {
+      this.chatErrorKey.set('common.error_generic');
+    } finally {
+      this.isOpeningChat.set(false);
     }
   }
 
   async toggleLike(): Promise<void> {
     const p = this.profile();
-    if (!p) return;
+    if (!p || this.isOwnProfile()) return;
 
     const currentlyLiked = this.isLiked();
     this.isLiked.set(!currentlyLiked);
