@@ -81,3 +81,7 @@
 ## 2026-08-17 - [Optimize Sequential Updates and Creation via Bulk Operations]
 **Learning:** In `backend/src/quests/quests.service.ts`, iterating through arrays to sequentially fetch and insert missing default quests, or update existing active quests (`await supabase.from...update()`), causes significant N+1 network latency. Sequential I/O inside a loop severely degrades API route response times.
 **Action:** Replace single sequential reads/inserts in `ensureDefaults` with a single bulk `.select()` followed by an in-memory difference calculation using a `Set`, culminating in one bulk `.insert()`. When updating independent rows inside a loop like `incrementProgress`, replace the sequential `await` operations with a mapped array of promises passed to `Promise.allSettled()` to allow parallel concurrent execution.
+
+## 2026-08-18 - [Optimize Aggregator Loops using Promise.all]
+**Learning:** In the backend `metrics` aggregators, sequentially awaiting queries inside a loop significantly degraded aggregation performance.
+**Action:** When updating or querying multiple rows based on an array or iterable, use `.map` combined with `Promise.all` to convert a series of N sequential network calls into 1 concurrent block. This will significantly speed up metric aggregations and other loops across the application.
