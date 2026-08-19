@@ -1414,7 +1414,8 @@ const EMOJI_CATEGORIES = [
     >
       <!-- Search -->
       <div class="p-2 border-b border-surface-100">
-        <input hlmInput
+        <input
+          hlmInput
           type="text"
           [(ngModel)]="searchQuery"
           placeholder="Search emoji..."
@@ -1427,7 +1428,7 @@ const EMOJI_CATEGORIES = [
         class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide"
         name="emojiCategory"
         [value]="selectedCategory()"
-        (valueChange)="selectCategory($any($event))"
+        (valueChange)="selectCategory($event)"
         aria-label="Emoji category"
       >
         @for (cat of categories; track cat.name) {
@@ -1455,7 +1456,8 @@ const EMOJI_CATEGORIES = [
       <div class="overflow-y-auto max-h-48 p-2">
         <div class="grid grid-cols-8 gap-1">
           @for (emoji of filteredEmojis(); track emoji) {
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="selectEmoji(emoji)"
               class="w-8 h-8 flex items-center justify-center text-lg hover:bg-surface-100 rounded transition-colors"
@@ -1498,8 +1500,8 @@ export class EmojiPickerComponent {
     return cat.emojis.filter((e) => e.includes(query));
   });
 
-  selectCategory(category: string): void {
-    if (this.categories.some((candidate) => candidate.name === category)) {
+  selectCategory(category: string | null | undefined): void {
+    if (typeof category === 'string' && this.categories.some((candidate) => candidate.name === category)) {
       this.selectedCategory.set(category);
     }
   }

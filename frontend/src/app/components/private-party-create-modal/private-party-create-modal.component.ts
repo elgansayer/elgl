@@ -86,19 +86,18 @@ export class PrivatePartyCreateModalComponent implements OnInit {
   friends = signal<FriendProfile[]>([]);
   isLoadingFriends = signal<boolean>(false);
 
-  readonly isValid = computed(() =>
-    this.title().trim().length > 0
-    && this.languagePair().length > 0
-    && this.topicTag().length > 0
-    && this.selectedFriendIds().length > 0,
+  readonly isValid = computed(
+    () =>
+      this.title().trim().length > 0 &&
+      this.languagePair().length > 0 &&
+      this.topicTag().length > 0 &&
+      this.selectedFriendIds().length > 0,
   );
 
   readonly filteredFriends = computed(() => {
     const query = this.friendSearchQuery().toLowerCase().trim();
     if (!query) return this.friends();
-    return this.friends().filter(
-      (f) => (f.display_name ?? '').toLowerCase().includes(query),
-    );
+    return this.friends().filter((f) => (f.display_name ?? '').toLowerCase().includes(query));
   });
 
   ngOnInit(): void {
@@ -125,9 +124,7 @@ export class PrivatePartyCreateModalComponent implements OnInit {
 
   toggleFriend(friendId: string): void {
     this.selectedFriendIds.update((ids) =>
-      ids.includes(friendId)
-        ? ids.filter((id) => id !== friendId)
-        : [...ids, friendId],
+      ids.includes(friendId) ? ids.filter((id) => id !== friendId) : [...ids, friendId],
     );
   }
 

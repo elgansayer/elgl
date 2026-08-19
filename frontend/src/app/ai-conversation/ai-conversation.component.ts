@@ -21,7 +21,15 @@ interface ChatMessage {
 @Component({
   selector: 'app-ai-conversation',
   standalone: true,
-  imports: [HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe, TokenisedTextComponent, WordDefinitionModalComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    TokenisedTextComponent,
+    WordDefinitionModalComponent,
+  ],
   host: {
     class: 'flex flex-col h-full bg-surface-500 text-text-primary',
   },
@@ -33,7 +41,8 @@ interface ChatMessage {
           {{ 'aiConversation.chooseScenarioDesc' | t }}
         </p>
         @for (scenario of scenarioList(); track scenario.id) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="startScenario(scenario)"
             class="flex items-center gap-3 w-full text-start bg-surface-200 hover:bg-surface-300 active:bg-surface-400 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -46,7 +55,8 @@ interface ChatMessage {
     } @else {
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-200">
         <div class="flex items-center gap-2">
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="backToScenarios()"
             class="text-text-secondary hover:text-text-primary p-1"
@@ -84,7 +94,13 @@ interface ChatMessage {
               [class.text-on-fill]="msg.from === 'user'"
               [class.text-text-primary]="msg.from === 'ai'"
             >
-              <div class="whitespace-pre-wrap break-words"><app-tokenised-text [text]="msg.text" [language]="targetLanguage()" (wordClicked)="onWordClicked($event)"></app-tokenised-text></div>
+              <div class="whitespace-pre-wrap break-words">
+                <app-tokenised-text
+                  [text]="msg.text"
+                  [language]="targetLanguage()"
+                  (wordClicked)="onWordClicked($event)"
+                ></app-tokenised-text>
+              </div>
               @if (msg.from === 'user') {
                 <div
                   class="absolute -end-1.5 bottom-2 w-0 h-0
@@ -114,7 +130,8 @@ interface ChatMessage {
 
       <div class="ps-4 pe-4 pb-4">
         <div class="flex items-center gap-2 bg-surface-200 rounded-full ps-4 pe-2 py-2">
-          <input hlmInput
+          <input
+            hlmInput
             type="text"
             class="flex-1 bg-transparent text-text-primary placeholder-text-secondary outline-none ps-0 pe-0"
             [placeholder]="'aiConversation.typeMessage' | t"
@@ -123,7 +140,8 @@ interface ChatMessage {
             (keydown.enter)="send()"
             [disabled]="isLoading()"
           />
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="send()"
             [disabled]="isLoading() || !inputText().trim()"
@@ -153,7 +171,6 @@ export class AiConversationComponent implements OnInit {
     initialValue: EMPTY_SCENARIO_LIST,
   });
 
-
   readonly selectedScenario = signal<Scenario | null>(null);
   readonly messages = signal<ChatMessage[]>([]);
   readonly inputText = signal('');
@@ -173,7 +190,6 @@ export class AiConversationComponent implements OnInit {
     this.activeWordToken.set(event.token);
     this.activeWordContext.set(event.context);
   }
-
 
   private currentScenarioId: string | undefined;
 

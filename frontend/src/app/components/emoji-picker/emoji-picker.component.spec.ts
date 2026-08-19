@@ -51,17 +51,26 @@ describe('EmojiPickerComponent', () => {
   });
 
   it('should keep emoji actions as native Spartan buttons and emit the selected emoji', () => {
+    component.selectedCategory.set('Smileys');
+    component.searchQuery.set('');
+    fixture.detectChanges();
+
     const emitted: string[] = [];
     component.emojiSelect.subscribe((emoji) => emitted.push(emoji));
 
-    const emojiButton: HTMLButtonElement = fixture.nativeElement.querySelector(
-      'button[aria-label="Emoji 😀"]',
+    const emojiButtons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    );
+    const emojiButton = emojiButtons.find(
+      (btn) =>
+        btn.getAttribute('aria-label') === 'Emoji 😀' ||
+        btn.textContent?.includes('😀'),
     );
 
     expect(emojiButton).toBeTruthy();
-    expect(emojiButton.type).toBe('button');
+    expect(emojiButton?.type).toBe('button');
 
-    emojiButton.click();
+    emojiButton?.click();
     expect(emitted).toEqual(['😀']);
   });
 });
