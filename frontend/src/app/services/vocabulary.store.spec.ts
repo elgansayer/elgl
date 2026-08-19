@@ -8,7 +8,7 @@ import { SrsOfflineService } from './srs-offline.service';
 import { SrsCircuitBreakerService } from './srs-circuit-breaker.service';
 import { environment } from '../../environments/environment';
 
-describe.skip('VocabularyStore', () => {
+describe('VocabularyStore', () => {
   let store: VocabularyStore;
   let httpMock: HttpTestingController;
   let authSpy: { getAccessToken: ReturnType<typeof vi.fn> };
@@ -19,6 +19,7 @@ describe.skip('VocabularyStore', () => {
     getCachedDueReviews: ReturnType<typeof vi.fn>;
     queueSrsReview: ReturnType<typeof vi.fn>;
     syncQueuedReviews: ReturnType<typeof vi.fn>;
+    online: ReturnType<typeof vi.fn>;
   };
 
   let circuitBreakerSpy: {
@@ -56,6 +57,7 @@ describe.skip('VocabularyStore', () => {
       getCachedDueReviews: vi.fn().mockResolvedValue([]),
       queueSrsReview: vi.fn().mockResolvedValue(undefined),
       syncQueuedReviews: vi.fn().mockResolvedValue({ synced: 0, failed: 0 }),
+      online: vi.fn().mockReturnValue(true),
     };
 
     circuitBreakerSpy = {
@@ -92,9 +94,10 @@ describe.skip('VocabularyStore', () => {
   afterEach(() => {
     httpMock.verify();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  describe.skip('initial state', () => {
+  describe('initial state', () => {
     it('should be created', () => {
       expect(store).toBeTruthy();
     });
@@ -116,7 +119,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadAllFlashcards', () => {
+  describe('loadAllFlashcards', () => {
     it('should set isLoading to true while loading and false after', async () => {
       const promise = store.loadAllFlashcards();
       expect(store.isLoading()).toBe(true);
@@ -167,7 +170,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadDueReviews', () => {
+  describe('loadDueReviews', () => {
     it('should fetch due reviews and update the signal', async () => {
       const promise = store.loadDueReviews();
 
@@ -193,7 +196,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('getWordStatus', () => {
+  describe('getWordStatus', () => {
     it('should return level 0 with secondary-accent styling for unknown words', () => {
       const status = store.getWordStatus('unknown');
       expect(status.level).toBe(0);
@@ -232,7 +235,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('saveWord', () => {
+  describe('saveWord', () => {
     it('should POST and prepend the new flashcard to allFlashcards', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
@@ -273,7 +276,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('updateSrsLevel', () => {
+  describe('updateSrsLevel', () => {
     it('should PATCH and update the flashcard in all signals', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
@@ -322,7 +325,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('translateWordOrSentence', () => {
+  describe('translateWordOrSentence', () => {
     it('should POST to the NLP translate endpoint', async () => {
       const translationResult = {
         original_text: 'hello',
@@ -356,7 +359,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('checkGrammar', () => {
+  describe('checkGrammar', () => {
     it('should POST to the NLP grammar-check endpoint', async () => {
       const grammarResult = {
         original: 'hola',
@@ -377,7 +380,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('scorePronunciation', () => {
+  describe('scorePronunciation', () => {
     it('should POST to the NLP pronunciation-score endpoint', async () => {
       const scoreResult = {
         overall_score: 85,
@@ -401,7 +404,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('haptic feedback', () => {
+  describe('haptic feedback', () => {
     it('should vibrate with success buzz for known words (srs >= 4)', async () => {
       const vibrateSpy = vi.fn();
       vi.stubGlobal('navigator', { vibrate: vibrateSpy });
@@ -445,7 +448,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('getHeaders', () => {
+  describe('getHeaders', () => {
     it('should use empty token when getAccessToken returns undefined', async () => {
       authSpy.getAccessToken.mockReturnValue(undefined);
 
@@ -471,7 +474,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('html sanitisation', () => {
+  describe('html sanitisation', () => {
     it('should sanitise HTML in flashcard text fields loaded from server', async () => {
       const maliciousCard = {
         ...mockFlashcard,
@@ -544,7 +547,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('signal consistency', () => {
+  describe('signal consistency', () => {
     it('should keep allFlashcards and flashcardMap in sync after loadAllFlashcards', async () => {
       const cards = [
         { ...mockFlashcard, id: '1', word_token: 'hello' },
@@ -601,7 +604,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadDueReviews signal behaviour', () => {
+  describe('loadDueReviews signal behaviour', () => {
     it('should not modify isLoading while fetching due reviews', async () => {
       expect(store.isLoading()).toBe(false);
       const promise = store.loadDueReviews();
@@ -633,7 +636,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('error handling for write operations', () => {
+  describe('error handling for write operations', () => {
     it('should handle saveWord failure gracefully', async () => {
       const promise = store.saveWord({ word_token: 'fail', translation: 'fallar' });
       httpMock
@@ -650,6 +653,7 @@ describe.skip('VocabularyStore', () => {
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
       // jsdom returns undefined for navigator.onLine, which would trigger offline fallback.
       vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
+      srsOfflineSpy.online.mockReturnValue(false);
 
       // jsdom defaults navigator.onLine to false, so the offline path will activate
       const promise = store.updateSrsLevel('1', 2);
@@ -705,7 +709,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('isLoading signal state transitions', () => {
+  describe('isLoading signal state transitions', () => {
     it('should set isLoading true while loadAllFlashcards is in-flight', async () => {
       expect(store.isLoading()).toBe(false);
       const promise = store.loadAllFlashcards();
@@ -742,7 +746,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadAllFlashcards signal edge cases', () => {
+  describe('loadAllFlashcards signal edge cases', () => {
     it('should handle empty array response', async () => {
       const promise = store.loadAllFlashcards();
       httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
@@ -769,7 +773,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('getWordStatus boundary SRS levels', () => {
+  describe('getWordStatus boundary SRS levels', () => {
     it('should return secondary-accent styling for level 0 (new)', () => {
       const status = store.getWordStatus('newword');
       expect(status.level).toBe(0);
@@ -810,7 +814,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('saveWord signal integrity', () => {
+  describe('saveWord signal integrity', () => {
     it('should not affect existing unrelated flashcards when saving a new word', async () => {
       const existingCard = {
         ...mockFlashcard,
@@ -845,7 +849,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('updateSrsLevel signal integrity', () => {
+  describe('updateSrsLevel signal integrity', () => {
     it('should not mutate other flashcards when updating SRS', async () => {
       const cardB = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'b' };
       store.allFlashcards.set([mockFlashcard, cardB]);
@@ -866,7 +870,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('concurrent signal updates', () => {
+  describe('concurrent signal updates', () => {
     it('should handle rapid successive saveWord calls maintaining integrity', async () => {
       const card1 = { ...mockFlashcard, id: 'a', word_token: 'a', translation: 'A' };
       const card2 = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'B' };
@@ -888,7 +892,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('NLP endpoints comprehensive coverage', () => {
+  describe('NLP endpoints comprehensive coverage', () => {
     it('should send authorisation header with translateWordOrSentence', async () => {
       const promise = store.translateWordOrSentence('test', 'fr');
       const req = httpMock.expectOne(`${environment.apiUrl}/nlp/translate`);
@@ -1005,6 +1009,7 @@ describe.skip('VocabularyStore', () => {
 
     it('should be true when navigator.onLine is false', () => {
       vi.stubGlobal('navigator', { onLine: false, vibrate: vi.fn() });
+      srsOfflineSpy.online.mockReturnValue(false);
       expect(store.isOffline()).toBe(true);
     });
   });
