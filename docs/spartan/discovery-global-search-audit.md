@@ -52,22 +52,22 @@ There is no local loading, error, disabled or submitting state because this comp
 
 ## Existing primitive inventory
 
-| Element / behaviour | Current implementation | Current state owner | Target owner | Migration action |
-| --- | --- | --- | --- | --- |
-| Search-region container | Feature `<div role="search">` with Relay token utilities | Feature | Feature composition / Relay tokens | Preserve semantic region; align surface tokens in visual ticket |
-| Search heading | Native `h2` with translated copy | Feature | Native semantics / Relay typography | Preserve |
-| Native-language label | Native `<label for>` | Feature | Relay Select label composition | Move into `AppSelectComponent` label API if practical |
-| Native-language control | `HlmNativeSelect` with feature-owned classes | `nativeLanguages` signal | Relay `AppSelectComponent` over Helm native select | Migrate to Relay wrapper |
-| Target-language label | Native `<label for>` | Feature | Relay Select label composition | Move into `AppSelectComponent` label API if practical |
-| Target-language control | `HlmNativeSelect` with feature-owned classes | `targetLanguage` signal | Relay `AppSelectComponent` over Helm native select | Migrate to Relay wrapper |
-| Proficiency label | Native `<label for>` | Feature | Relay Select label composition | Move into `AppSelectComponent` label API if practical |
-| Proficiency control | `HlmNativeSelect` with feature-owned classes | `level` signal | Relay `AppSelectComponent` over Helm native select | Migrate to Relay wrapper |
-| Language option list | Native `<option>` elements from `availableLanguages()` | Computed signal | Native option semantics inside Relay Select | Preserve |
-| Proficiency option list | Native `<option>` elements from `levels` | Component constant | Native option semantics inside Relay Select | Preserve |
-| Search action | `<button hlmBtn>` plus feature-owned visual classes | Feature action | Relay `AppButtonPrimaryComponent` over Spartan Button | Migrate to Relay wrapper |
-| Filter output | `output<SearchFilterParams>()` | Feature | Feature | Preserve contract, subject to clear-filter defect below |
-| Language display names | `Intl.DisplayNames` | Computed signal | Feature/shared language data | Preserve until shared language metadata is deliberately centralised |
-| Flag decoration | `getLanguageFlag()` | Shared language utility | Shared language presentation data | Preserve; keep decorative meaning distinct from accessible name |
+| Element / behaviour     | Current implementation                                   | Current state owner      | Target owner                                          | Migration action                                                    |
+| ----------------------- | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| Search-region container | Feature `<div role="search">` with Relay token utilities | Feature                  | Feature composition / Relay tokens                    | Preserve semantic region; align surface tokens in visual ticket     |
+| Search heading          | Native `h2` with translated copy                         | Feature                  | Native semantics / Relay typography                   | Preserve                                                            |
+| Native-language label   | Native `<label for>`                                     | Feature                  | Relay Select label composition                        | Move into `AppSelectComponent` label API if practical               |
+| Native-language control | `HlmNativeSelect` with feature-owned classes             | `nativeLanguages` signal | Relay `AppSelectComponent` over Helm native select    | Migrate to Relay wrapper                                            |
+| Target-language label   | Native `<label for>`                                     | Feature                  | Relay Select label composition                        | Move into `AppSelectComponent` label API if practical               |
+| Target-language control | `HlmNativeSelect` with feature-owned classes             | `targetLanguage` signal  | Relay `AppSelectComponent` over Helm native select    | Migrate to Relay wrapper                                            |
+| Proficiency label       | Native `<label for>`                                     | Feature                  | Relay Select label composition                        | Move into `AppSelectComponent` label API if practical               |
+| Proficiency control     | `HlmNativeSelect` with feature-owned classes             | `level` signal           | Relay `AppSelectComponent` over Helm native select    | Migrate to Relay wrapper                                            |
+| Language option list    | Native `<option>` elements from `availableLanguages()`   | Computed signal          | Native option semantics inside Relay Select           | Preserve                                                            |
+| Proficiency option list | Native `<option>` elements from `levels`                 | Component constant       | Native option semantics inside Relay Select           | Preserve                                                            |
+| Search action           | `<button hlmBtn>` plus feature-owned visual classes      | Feature action           | Relay `AppButtonPrimaryComponent` over Spartan Button | Migrate to Relay wrapper                                            |
+| Filter output           | `output<SearchFilterParams>()`                           | Feature                  | Feature                                               | Preserve contract, subject to clear-filter defect below             |
+| Language display names  | `Intl.DisplayNames`                                      | Computed signal          | Feature/shared language data                          | Preserve until shared language metadata is deliberately centralised |
+| Flag decoration         | `getLanguageFlag()`                                      | Shared language utility  | Shared language presentation data                     | Preserve; keep decorative meaning distinct from accessible name     |
 
 ## Spartan ownership decision
 

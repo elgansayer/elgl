@@ -491,7 +491,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["codex"].model == "gpt-5.6-sol"
     assert factory_config.agents.providers["codex"].enabled
     assert factory_config.agents.providers["codex"].credential_paths == [".codex"]
-    assert factory_config.agents.providers["google"].enabled is False
+    assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"

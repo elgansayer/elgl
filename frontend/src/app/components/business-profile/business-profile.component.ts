@@ -24,7 +24,8 @@ export interface CatalogItem {
         <label class="mb-1 block text-sm font-medium" for="businessName">{{
           'profile.businessName' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="businessName"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
           [value]="businessName()"
@@ -35,7 +36,8 @@ export interface CatalogItem {
         <label class="mb-1 mt-4 block text-sm font-medium" for="businessHours">{{
           'profile.businessHours' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="businessHours"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
           [value]="businessHours()"
@@ -46,7 +48,8 @@ export interface CatalogItem {
         <label class="mb-1 mt-4 block text-sm font-medium" for="website">{{
           'profile.website' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="website"
           type="url"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
@@ -63,7 +66,8 @@ export interface CatalogItem {
           <label for="catalog-name-{{ item.id }}" class="mb-1 block text-sm font-medium">{{
             'profile.catalogNamePlaceholder' | t
           }}</label>
-          <input hlmInput
+          <input
+            hlmInput
             id="catalog-name-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.name"
@@ -74,7 +78,8 @@ export interface CatalogItem {
           <label for="catalog-desc-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
             'profile.catalogDescPlaceholder' | t
           }}</label>
-          <textarea hlmTextarea
+          <textarea
+            hlmTextarea
             id="catalog-desc-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.description"
@@ -86,7 +91,8 @@ export interface CatalogItem {
           <label for="catalog-price-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
             'profile.catalogPricePlaceholder' | t
           }}</label>
-          <input hlmInput
+          <input
+            hlmInput
             id="catalog-price-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.price"
@@ -97,7 +103,8 @@ export interface CatalogItem {
           <label for="catalog-image-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
             'profile.catalogImagePlaceholder' | t
           }}</label>
-          <input hlmInput
+          <input
+            hlmInput
             id="catalog-image-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.imageUrl ?? ''"
@@ -105,7 +112,8 @@ export interface CatalogItem {
             [placeholder]="'profile.catalogImagePlaceholder' | t"
           />
 
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="mt-3 rounded-lg bg-danger px-3 py-1 text-on-fill hover:bg-danger/90"
             (click)="removeItem(item.id)"
@@ -117,7 +125,8 @@ export interface CatalogItem {
         <p class="text-text-muted">{{ 'profile.noCatalogItems' | t }}</p>
       }
 
-      <button hlmBtn
+      <button
+        hlmBtn
         type="button"
         class="mt-2 rounded-lg bg-primary px-4 py-2 font-medium text-on-fill hover:bg-primary-dark"
         (click)="addItem()"
@@ -126,7 +135,8 @@ export interface CatalogItem {
       </button>
 
       <div class="mt-8 flex items-center gap-3">
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="rounded-lg bg-success px-4 py-2 font-medium text-on-fill hover:bg-success/90"
           (click)="save()"

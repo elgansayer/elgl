@@ -18,7 +18,8 @@
       <div class="text-center text-white">
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
         <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
-        <button hlmBtn
+        <button
+          hlmBtn
           class="rounded-pill bg-primary text-on-fill px-8 py-3 text-sm font-semibold shadow-xl hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-fill focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           (click)="authService.unlockApp()"
           [attr.aria-label]="'app_lock.unlock_btn' | t"
@@ -72,7 +73,8 @@
           </span>
         }
       </a>
-      <button hlmBtn
+      <button
+        hlmBtn
         type="button"
         class="p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         (click)="startProductTour()"
@@ -82,7 +84,8 @@
         <span class="text-xl leading-none">🎯</span>
       </button>
       @if (biometricControlsVisible()) {
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
           (click)="toggleBiometricLock()"
