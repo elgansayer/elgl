@@ -8,6 +8,10 @@ LOG_DIR=/var/log/hellotalk-factory
 # already-authenticated CLI subscriptions instead of a separate service
 # account with its own credential set.
 FACTORY_USER=dev
+FACTORY_HOME=/home/dev
+# Optional secondary data volume. When mounted, worker image storage is kept
+# there; see the Podman storage relocation block below.
+FACTORY_SECONDARY_VOLUME=/mnt/HC_Volume_106574422
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this command as root.' >&2
@@ -105,6 +109,26 @@ if [ -d "$STATE_DIR/repository/.git" ]; then
   runuser -u "$FACTORY_USER" -- \
     git -C "$STATE_DIR/repository" config --add credential.helper \
     '!gh auth git-credential'
+fi
+
+# Worker image builds accumulate rootless Podman graph-storage layers
+# permanently. Keep that storage on the secondary volume, when one is
+# mounted, instead of letting repeated builds tighten root disk headroom.
+if [ -d "$FACTORY_SECONDARY_VOLUME" ] && mountpoint -q "$FACTORY_SECONDARY_VOLUME"; then
+  podman_storage="$FACTORY_SECONDARY_VOLUME/podman-storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$podman_storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$FACTORY_HOME/.config/containers"
+  podman_storage_conf="$FACTORY_HOME/.config/containers/storage.conf"
+  if [ ! -f "$podman_storage_conf" ]; then
+    cat > "$podman_storage_conf" <<EOF
+[storage]
+driver = "overlay"
+graphroot = "$podman_storage"
+
+[storage.options]
+EOF
+    chown "$FACTORY_USER:$FACTORY_USER" "$podman_storage_conf"
+  fi
 fi
 
 echo "Factory host repaired. Environment backup: $backup"
