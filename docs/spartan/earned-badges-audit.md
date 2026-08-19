@@ -56,16 +56,16 @@ That error collapsing is part of the current upstream behaviour and must not be 
 
 ## State inventory
 
-| State | Current trigger | Current rendering | Intended migration ownership |
-| --- | --- | --- | --- |
-| Initial / unavailable badge state | `earnedBadges() === null` | `badges.none` | Feature/data state; presentational empty state in Relay |
-| No earned statuses | `isVip === false` and `isSeriousLearner === false` | `badges.none` | Feature state; Relay presentation |
-| VIP only | `isVip === true` | Crown + translated VIP pill | Relay static badge/pill presentation |
-| Serious Learner only | `isSeriousLearner === true` | Graduation-cap + translated Serious Learner pill | Relay static badge/pill presentation |
-| VIP + Serious Learner | both flags true | Two wrapping pills | Relay static badge-group presentation |
-| VIP tier present | `vipTier` loaded by `AuthService` | Not rendered | Feature data only; preserve as non-visual data unless product requirements change |
-| Upstream query error | `getEarnedBadges()` query fails | Indistinguishable from no badges | Data/service concern; do not invent UI semantics in #6159 |
-| Unexpected refresh rejection | `refreshEarnedBadges()` catches | signal becomes `null`, therefore `badges.none` | Data/service concern; currently indistinguishable from empty |
+| State                             | Current trigger                                    | Current rendering                                | Intended migration ownership                                                      |
+| --------------------------------- | -------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Initial / unavailable badge state | `earnedBadges() === null`                          | `badges.none`                                    | Feature/data state; presentational empty state in Relay                           |
+| No earned statuses                | `isVip === false` and `isSeriousLearner === false` | `badges.none`                                    | Feature state; Relay presentation                                                 |
+| VIP only                          | `isVip === true`                                   | Crown + translated VIP pill                      | Relay static badge/pill presentation                                              |
+| Serious Learner only              | `isSeriousLearner === true`                        | Graduation-cap + translated Serious Learner pill | Relay static badge/pill presentation                                              |
+| VIP + Serious Learner             | both flags true                                    | Two wrapping pills                               | Relay static badge-group presentation                                             |
+| VIP tier present                  | `vipTier` loaded by `AuthService`                  | Not rendered                                     | Feature data only; preserve as non-visual data unless product requirements change |
+| Upstream query error              | `getEarnedBadges()` query fails                    | Indistinguishable from no badges                 | Data/service concern; do not invent UI semantics in #6159                         |
+| Unexpected refresh rejection      | `refreshEarnedBadges()` catches                    | signal becomes `null`, therefore `badges.none`   | Data/service concern; currently indistinguishable from empty                      |
 
 ### Important state ambiguity
 
@@ -130,17 +130,17 @@ The component must remain a pure presentation consumer of authenticated user sta
 
 The authoritative architecture says static chips, pills, and badges stay in Relay unless interactive semantics require Brain. That rule applies directly here.
 
-| Current element/capability | Current implementation | Target owner | Migration guidance |
-| --- | --- | --- | --- |
-| Badge group | `div.flex.flex-wrap` | Feature composition + Relay presentation | Keep wrapping layout feature-owned unless a reusable badge-group primitive already exists |
-| VIP status badge | styled `<span>` | Relay static pill/badge | Prefer a typed Relay presentation primitive; no Brain |
-| Serious Learner badge | styled `<span>` | Relay static pill/badge | Prefer a typed Relay presentation primitive; no Brain |
-| Decorative crown | text emoji `👑` | Feature/Relay icon slot | Keep decorative when visible text supplies the accessible name |
-| Decorative graduation cap | text emoji `🎓` | Feature/Relay icon slot | Keep decorative when visible text supplies the accessible name |
-| Empty copy | styled `<span>` | Relay presentation | Plain semantic text is sufficient; no Brain |
-| Translation | `TranslatePipe` | Existing i18n layer | Preserve translation ownership |
-| Badge data | `AuthService` signal | Feature/service layer | Do not move auth/data concerns into Relay/Spartan |
-| Loading/error distinction | not represented | Feature/service layer first | Requires explicit data-state contract before a distinct Relay state can be rendered |
+| Current element/capability | Current implementation | Target owner                             | Migration guidance                                                                        |
+| -------------------------- | ---------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Badge group                | `div.flex.flex-wrap`   | Feature composition + Relay presentation | Keep wrapping layout feature-owned unless a reusable badge-group primitive already exists |
+| VIP status badge           | styled `<span>`        | Relay static pill/badge                  | Prefer a typed Relay presentation primitive; no Brain                                     |
+| Serious Learner badge      | styled `<span>`        | Relay static pill/badge                  | Prefer a typed Relay presentation primitive; no Brain                                     |
+| Decorative crown           | text emoji `👑`        | Feature/Relay icon slot                  | Keep decorative when visible text supplies the accessible name                            |
+| Decorative graduation cap  | text emoji `🎓`        | Feature/Relay icon slot                  | Keep decorative when visible text supplies the accessible name                            |
+| Empty copy                 | styled `<span>`        | Relay presentation                       | Plain semantic text is sufficient; no Brain                                               |
+| Translation                | `TranslatePipe`        | Existing i18n layer                      | Preserve translation ownership                                                            |
+| Badge data                 | `AuthService` signal   | Feature/service layer                    | Do not move auth/data concerns into Relay/Spartan                                         |
+| Loading/error distinction  | not represented        | Feature/service layer first              | Requires explicit data-state contract before a distinct Relay state can be rendered       |
 
 ### Existing Relay primitive candidates
 

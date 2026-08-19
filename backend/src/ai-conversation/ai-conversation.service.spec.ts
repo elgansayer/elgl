@@ -52,8 +52,8 @@ describe('AiConversationService', () => {
       getProfile: vi.fn().mockResolvedValue({
         overallProficiency: { level: 'B2' },
         knowledgeItems: new Map([
-          ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }]
-        ])
+          ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
+        ]),
       }),
     };
 

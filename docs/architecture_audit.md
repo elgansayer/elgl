@@ -7,9 +7,11 @@
 We have analyzed all user-facing routes defined in the application (`frontend/src/app/app.routes.ts`) and identified several areas of duplication, redundancy, and fragmented capabilities.
 
 ### 1. Settings & Preferences
+
 The settings and configuration options are heavily fragmented, with multiple top-level routes that should logically be grouped under the `settings/` hierarchy.
 
 **Redundant / Fragmented Paths:**
+
 - `notification-preferences` vs `settings/notification` vs `settings/notification-customization`
 - `chat-settings` (top-level) vs `settings/backup-restore` vs `settings/message-filters`
 - `message-filters` (top-level) vs `settings/message-filters`
@@ -21,9 +23,11 @@ The settings and configuration options are heavily fragmented, with multiple top
 Consolidate all user-specific configurations into a unified settings portal with clear sub-navigation. Deprecate the top-level routes in favor of `settings/*`.
 
 ### 2. Help & Support
+
 There are multiple routes providing help and support resources.
 
 **Redundant Paths:**
+
 - `help` (HelpCentreComponent)
 - `support` (SupportCentreComponent)
 - `help-about` (HelpAboutComponent)
@@ -32,9 +36,11 @@ There are multiple routes providing help and support resources.
 Merge these into a single Help & Support portal at `support` (or `help`), with sub-sections for FAQs, Contact, and About information.
 
 ### 3. Profile & Visitors
+
 Profile visibility and visitor tracking features are split.
 
 **Redundant Paths:**
+
 - `visitors` (VisitorLogsComponent)
 - `profile/visitors` (ProfileVisitorsComponent)
 
@@ -42,9 +48,11 @@ Profile visibility and visitor tracking features are split.
 Unify visitor logging capabilities under `profile/visitors`.
 
 ### 4. Subscription & VIP
+
 The subscription management and onboarding flows are scattered across the top-level namespace.
 
 **Fragmented Paths:**
+
 - `vip` (VipComponent)
 - `subscription` (SubscriptionPageComponent)
 - `my-subscription` (MySubscriptionComponent)
@@ -54,9 +62,11 @@ The subscription management and onboarding flows are scattered across the top-le
 Group under a single portal, e.g., `subscription` for browsing plans, and `settings/subscription` (or `my-subscription`) for managing an active plan.
 
 ### 5. Social & Community
+
 Several major capabilities overlap in the domain of finding groups and communities.
 
 **Overlapping Paths:**
+
 - `groups` and `groups/create`
 - `communities`
 - `language-islands`
@@ -66,13 +76,20 @@ Several major capabilities overlap in the domain of finding groups and communiti
 Group community features under a unified `community` or `discover` hub, providing distinct tabs for different event/group types.
 
 ### 6. Admin vs User Management
+
 There is a slight overlap in terminology between user tools and admin tools.
 
 **Paths:**
+
 - `blocks` (User-facing BlockManagementComponent) vs `admin/blocks` (AdminBlocksComponent)
 
 **Recommendation:**
 Keep admin routes explicitly under `admin/*` but move user-facing `blocks` to `settings/blocks` to avoid namespace ambiguity.
 
 ### Conclusion
+
 To improve discoverability and maintainability, the application's information architecture should follow a strict hierarchical structure, avoiding flat, top-level routes for nested features (especially configuration and settings). Legacy top-level routes should be preserved using route redirects (`redirectTo`) to ensure deep links are not broken.
+
+## Related architecture and technology audits
+
+This document is intentionally limited to routes and information architecture. For framework, package, API, data, realtime, observability, build, testing and platform decisions, see the [2026 Technology Modernization Audit](technology-modernization-audit-2026.md).

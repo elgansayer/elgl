@@ -42,25 +42,25 @@ It performs no network request, storage write, Router navigation, analytics call
 
 ## Existing implementation inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Audit action |
-| --- | --- | --- | --- | --- |
-| Picker panel | `div` with `bg-surface-200`, `border-surface-100`, `rounded-xl`, `shadow-2xl`, `w-72`, `max-h-80` | Feature presentation | Relay / app composition | Keep structure; replace off-contract radius/elevation/fixed sizing where required |
-| Search field | native `input` + `hlmInput` + `[(ngModel)]="searchQuery"` | Feature filter state + Spartan Input presentation | Spartan Helm Input + Field/Label composition + feature state | Keep Input; add accessible label and translation-safe copy |
-| Search placeholder | hard-coded `Search emoji...` | Feature copy | I18n / Field composition | Replace with translation key |
-| Category strip | horizontally scrollable `div` | Feature presentation | Relay layout + Spartan selection primitive | Convert selection semantics; preserve horizontal overflow where useful |
-| Nine category actions | native `button` + `hlmBtn` | Feature category state | Spartan Tabs or Toggle Group, chosen from documented API | Replace ad hoc selection semantics with one approved primitive |
-| Active category style | conditional full class string | Feature styling | Relay semantic variant/state styling | Move to primitive-supported selected state / semantic variant |
-| Emoji grid | native CSS grid | Feature layout | Relay layout | Keep grid concept; make responsive/density-safe |
-| Emoji actions | native `button` + `hlmBtn` | Feature selection | Spartan Button or collection primitive | Keep native activation semantics; review focus strategy for large collections |
-| Emoji accessible name | hard-coded `'Emoji ' + emoji` | Feature copy | I18n + emoji metadata | Replace hard-coded English and provide meaningful names where metadata exists |
-| Search result computation | plain `filteredEmojis()` function | Feature state | Angular `computed()` | Convert to computed derived state |
-| Search matching | `emoji.includes(query)` | Feature filtering | Product/domain logic | Preserve unless a separate metadata/search enhancement intentionally changes it |
-| Empty search state | no dedicated output | Feature presentation | Relay Empty/status composition | Add translated empty result when search yields no emoji |
-| Scrollbar hiding | inline component CSS | Feature presentation | Relay/shared scroll treatment | Reassess; do not hide discoverability without an alternate cue |
-| Emoji selection side effect | `emojiSelect.emit(emoji)` | Feature contract | Feature output | Preserve exactly |
-| Host overlay | none | N/A | Host feature + Spartan overlay primitive | Do not invent inside this component |
-| API/storage/navigation | none | N/A | N/A | Preserve absence |
-| Analytics | none | N/A | N/A | Do not invent during migration |
+| Element / behaviour         | Current implementation                                                                            | State owner                                       | Target owner                                                 | Audit action                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Picker panel                | `div` with `bg-surface-200`, `border-surface-100`, `rounded-xl`, `shadow-2xl`, `w-72`, `max-h-80` | Feature presentation                              | Relay / app composition                                      | Keep structure; replace off-contract radius/elevation/fixed sizing where required |
+| Search field                | native `input` + `hlmInput` + `[(ngModel)]="searchQuery"`                                         | Feature filter state + Spartan Input presentation | Spartan Helm Input + Field/Label composition + feature state | Keep Input; add accessible label and translation-safe copy                        |
+| Search placeholder          | hard-coded `Search emoji...`                                                                      | Feature copy                                      | I18n / Field composition                                     | Replace with translation key                                                      |
+| Category strip              | horizontally scrollable `div`                                                                     | Feature presentation                              | Relay layout + Spartan selection primitive                   | Convert selection semantics; preserve horizontal overflow where useful            |
+| Nine category actions       | native `button` + `hlmBtn`                                                                        | Feature category state                            | Spartan Tabs or Toggle Group, chosen from documented API     | Replace ad hoc selection semantics with one approved primitive                    |
+| Active category style       | conditional full class string                                                                     | Feature styling                                   | Relay semantic variant/state styling                         | Move to primitive-supported selected state / semantic variant                     |
+| Emoji grid                  | native CSS grid                                                                                   | Feature layout                                    | Relay layout                                                 | Keep grid concept; make responsive/density-safe                                   |
+| Emoji actions               | native `button` + `hlmBtn`                                                                        | Feature selection                                 | Spartan Button or collection primitive                       | Keep native activation semantics; review focus strategy for large collections     |
+| Emoji accessible name       | hard-coded `'Emoji ' + emoji`                                                                     | Feature copy                                      | I18n + emoji metadata                                        | Replace hard-coded English and provide meaningful names where metadata exists     |
+| Search result computation   | plain `filteredEmojis()` function                                                                 | Feature state                                     | Angular `computed()`                                         | Convert to computed derived state                                                 |
+| Search matching             | `emoji.includes(query)`                                                                           | Feature filtering                                 | Product/domain logic                                         | Preserve unless a separate metadata/search enhancement intentionally changes it   |
+| Empty search state          | no dedicated output                                                                               | Feature presentation                              | Relay Empty/status composition                               | Add translated empty result when search yields no emoji                           |
+| Scrollbar hiding            | inline component CSS                                                                              | Feature presentation                              | Relay/shared scroll treatment                                | Reassess; do not hide discoverability without an alternate cue                    |
+| Emoji selection side effect | `emojiSelect.emit(emoji)`                                                                         | Feature contract                                  | Feature output                                               | Preserve exactly                                                                  |
+| Host overlay                | none                                                                                              | N/A                                               | Host feature + Spartan overlay primitive                     | Do not invent inside this component                                               |
+| API/storage/navigation      | none                                                                                              | N/A                                               | N/A                                                          | Preserve absence                                                                  |
+| Analytics                   | none                                                                                              | N/A                                               | N/A                                                          | Do not invent during migration                                                    |
 
 Every current interactive element is classified above: one search field, nine category controls, and the generated emoji buttons.
 
@@ -127,14 +127,14 @@ Follow-up work should use Relay radius/elevation/layout roles rather than introd
 
 The current state model is small but has distinct user-visible combinations.
 
-| State | Trigger | Current result | Required ownership |
-| --- | --- | --- | --- |
-| Initial | component renders | Smileys category, empty query | Feature state + Relay presentation |
-| Category changed | category button activated | selected category changes and grid is recomputed | Spartan selection primitive + feature value |
-| Search active with matches | query contains matching emoji glyphs | matching emoji subset in selected category | Feature derived state |
-| Search active without matches | query has no emoji match | empty grid with no explanation | Feature state + Relay Empty/status gap |
-| Emoji selected | emoji button activated | `emojiSelect` emits selected string | Feature output |
-| Host dismissed | controlled by future consumer | no local dismissal contract | Host feature + Spartan overlay |
+| State                         | Trigger                              | Current result                                   | Required ownership                          |
+| ----------------------------- | ------------------------------------ | ------------------------------------------------ | ------------------------------------------- |
+| Initial                       | component renders                    | Smileys category, empty query                    | Feature state + Relay presentation          |
+| Category changed              | category button activated            | selected category changes and grid is recomputed | Spartan selection primitive + feature value |
+| Search active with matches    | query contains matching emoji glyphs | matching emoji subset in selected category       | Feature derived state                       |
+| Search active without matches | query has no emoji match             | empty grid with no explanation                   | Feature state + Relay Empty/status gap      |
+| Emoji selected                | emoji button activated               | `emojiSelect` emits selected string              | Feature output                              |
+| Host dismissed                | controlled by future consumer        | no local dismissal contract                      | Host feature + Spartan overlay              |
 
 ### Derived state
 

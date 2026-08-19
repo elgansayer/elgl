@@ -15,15 +15,21 @@ import { TranslatePipe } from '../../services/translate.pipe';
         [attr.aria-labelledby]="dialogTitleId"
       >
         <div class="text-6xl" aria-hidden="true">🎁</div>
-        <h3 [id]="dialogTitleId" class="text-2xl font-black text-text-primary">{{ 'dailyLoginModal.title' | t }}</h3>
-        <p class="text-text-secondary" aria-live="polite">{{ 'dailyLoginModal.body' | t: { coins: coins() } }}</p>
+        <h3 [id]="dialogTitleId" class="text-2xl font-black text-text-primary">
+          {{ 'dailyLoginModal.title' | t }}
+        </h3>
+        <p class="text-text-secondary" aria-live="polite">
+          {{ 'dailyLoginModal.body' | t: { coins: coins() } }}
+        </p>
         <button
           hlmBtn
           hlmDialogClose
           type="button"
           size="touch"
           class="mt-4 w-full"
-          [attr.aria-label]="('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })"
+          [attr.aria-label]="
+            ('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })
+          "
         >
           {{ 'dailyLoginModal.cta' | t }}
         </button>
@@ -36,7 +42,7 @@ export class DailyLoginModalComponent {
   readonly open = input(true);
   readonly closed = output<void>();
   readonly dialogTitleId = 'daily-login-title-' + crypto.randomUUID();
-  readonly dialogState = computed<HlmDialogState>(() => this.open() ? 'open' : 'closed');
+  readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
 
   onDialogStateChanged(state: HlmDialogState): void {
     if (state === 'closed' && this.open()) this.closed.emit();
