@@ -62,8 +62,40 @@ chmod 0600 "$temporary"
 mv -f "$temporary" "$TARGET"
 trap - EXIT
 
+# A bind-mounted state or log directory whose underlying source was deleted
+# out from under it (e.g. by unrelated host cleanup) keeps serving its stale
+# in-memory contents through the dangling mount, so ordinary reads and writes
+# still appear to work. Only a fresh mount operation against that same target
+# fails, with a misleading error far from this cause. Detect and heal that
+# before anything below relies on either path being a real mount.
+for target in "$STATE_DIR" "$LOG_DIR"; do
+  if findmnt -no SOURCE "$target" 2>/dev/null | grep -q '/deleted$'; then
+    fstab_source=$(awk -v t="$target" '$2 == t { print $1; exit }' /etc/fstab)
+    if [ -z "$fstab_source" ]; then
+      echo "Dangling mount at $target has no /etc/fstab entry to recover from." >&2
+      exit 1
+    fi
+    echo "Recovering dangling mount: $target (source deleted while mounted)."
+    umount "$target"
+    install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$fstab_source"
+    mount "$target"
+  fi
+done
+
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$STATE_DIR" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$LOG_DIR"
-chown -R "$FACTORY_USER:$FACTORY_USER" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery"
+# Recurse over the whole state and log trees, not just the named
+# subdirectories: durable daemon state (jobs.json, agent_health.json, and
+# their .lock/.bak siblings) lives directly under $STATE_DIR, and a host that
+# changed FACTORY_USER since its last repair leaves those files owned by the
+# previous account otherwise.
+chown -R "$FACTORY_USER:$FACTORY_USER" "$STATE_DIR" "$LOG_DIR"
+# /opt/hellotalk-factory and /etc/hellotalk-factory are only ever created
+# once, at first-time bootstrap (setup-debian.sh), with the group set to
+# whichever FACTORY_USER was configured at that time. A later change to
+# FACTORY_USER does not revisit them, so repair keeps their group current on
+# every run instead.
+chgrp "$FACTORY_USER" /opt/hellotalk-factory /etc/hellotalk-factory
+chgrp "$FACTORY_USER" /etc/hellotalk-factory/agents.json 2>/dev/null || true
 
 if [ -d "$STATE_DIR/repository/.git" ]; then
   runuser -u "$FACTORY_USER" -- \
