@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, ErrorHandler, computed, inject, input, output, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 
@@ -126,6 +126,7 @@ export class TokenisedTextComponent {
   readonly transliterationService = inject(TransliterationService);
   private readonly flashcardService = inject(FlashcardService);
   private readonly chatService = inject(ChatService);
+  private readonly errorHandler = inject(ErrorHandler);
 
   text = input<string>('');
   language = input('en');
@@ -223,7 +224,12 @@ export class TokenisedTextComponent {
       );
       this.flashcardSelection.set(null);
     } catch (error) {
-      console.error('Failed to create flashcard from selected text:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      const selectionError = new Error(
+        `[SRS:TokenisedText] createSelectionFlashcard failed: ${message}`,
+      );
+      if (error instanceof Error && error.stack) selectionError.stack = error.stack;
+      this.errorHandler.handleError(selectionError);
       this.flashcardError.set(true);
       showErrorToast(this.i18n.translate('common.error_generic'));
     } finally {
