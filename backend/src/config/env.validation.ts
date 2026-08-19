@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, validateSync } from 'class-validator';
+import { IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
 
 export class EnvironmentVariables {
   @IsNumber()
@@ -78,16 +78,53 @@ export class EnvironmentVariables {
   LIVEKIT_RTC_STUN_SERVERS?: string;
 
   @IsString()
-  CLOUDFLARE_R2_ENDPOINT!: string;
+  CLOUDFLARE_R2_GATEWAY_URL!: string;
 
   @IsString()
-  CLOUDFLARE_R2_ACCESS_KEY_ID!: string;
+  CLOUDFLARE_R2_SIGNING_SECRET!: string;
 
   @IsString()
-  CLOUDFLARE_R2_SECRET_ACCESS_KEY!: string;
+  CLOUDFLARE_R2_SERVICE_TOKEN!: string;
 
   @IsString()
-  CLOUDFLARE_R2_BUCKET!: string;
+  CLOUDFLARE_R2_PUBLIC_URL!: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_SOURCE_HOSTS?: string;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_UPLOAD_TTL_SECONDS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS?: number;
+
+  // Temporary LiveKit Egress compatibility for direct R2 file output.
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_ENDPOINT?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_ACCESS_KEY_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_BUCKET?: string;
 
   @IsString()
   @IsOptional()
