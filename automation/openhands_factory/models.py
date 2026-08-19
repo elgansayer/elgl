@@ -156,6 +156,7 @@ class ProviderUsage:
     capacity_waited_calls: int = 0
     estimated_cost_usd: float = 0.0
     unknown_cost_calls: int = 0
+    failure_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass

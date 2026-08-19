@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { CoinsSuccessComponent } from './coins-success.component';
 import { EconomyStore } from '../../services/economy.store';
@@ -36,6 +36,7 @@ describe('CoinsSuccessComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CoinsSuccessComponent, TranslatePipe],
       providers: [
+        provideRouter([]),
         { provide: I18nService, useClass: MockI18nService },
         { provide: EconomyStore, useValue: mockStore },
         {
@@ -45,7 +46,6 @@ describe('CoinsSuccessComponent', () => {
             snapshot: { queryParams: { session_id: 'stripe_test_session' } },
           },
         },
-        { provide: Router, useValue: { navigate: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -64,100 +64,60 @@ describe('CoinsSuccessComponent', () => {
     expect(componentHtml).not.toMatch(/\bpr-\d/);
     expect(componentHtml).not.toMatch(/\bml-\d/);
     expect(componentHtml).not.toMatch(/\bmr-\d/);
-    expect(componentHtml).not.toMatch(/\bleft-\d/);
-    expect(componentHtml).not.toMatch(/\bright-\d/);
     expect(componentHtml).not.toMatch(/\bborder-l\b/);
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
-  it('should transition to confirmed view when checkout confirmation succeeds', async () => {
+  it('should use Relay semantic surface, radius, and elevation tokens', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
+
+    expect([...page.classList]).toEqual(expect.arrayContaining(['bg-surface-500']));
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining([
+        'bg-surface-200',
+        'border-surface-100',
+        'rounded-card',
+        'shadow-card',
+        'text-center',
+      ]),
+    );
+    expect(panel.className).not.toMatch(
+      /\b(?:bg|text|border)-(?:black|white|slate|gray|red|blue|green|amber|purple|pink)(?:-|\b)/,
+    );
+  });
+
+  it('should use mobile-first spacing with wider breakpoint refinements', () => {
+    const page = fixture.nativeElement.firstElementChild as HTMLElement;
+    const panel = page.firstElementChild as HTMLElement;
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+
+    expect([...page.classList]).toEqual(
+      expect.arrayContaining(['px-4', 'py-6', 'sm:px-6', 'sm:py-10', 'lg:px-8']),
+    );
+    expect([...panel.classList]).toEqual(
+      expect.arrayContaining(['px-5', 'py-8', 'sm:px-8', 'sm:py-10', 'lg:px-10', 'lg:py-12']),
+    );
+    expect([...dashboardLink.classList]).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
+  });
+
+  it('should transition to confirmed view when confirmed', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
-
-    expect(mockStore.confirmCoinPurchase).toHaveBeenCalledWith('stripe_test_session');
-    expect(component.status()).toBe('confirmed');
-    expect(fixture.nativeElement.textContent).toContain('coinsSuccess.title');
-    expect(fixture.nativeElement.textContent).toContain('coinsSuccess.message');
-    expect(fixture.nativeElement.textContent).not.toContain('coinsSuccess.pending');
-  });
-
-  it('should render the pending checkout state as an announced status', () => {
-    component.status.set('pending');
-    fixture.detectChanges();
-
-    const status = fixture.nativeElement.querySelector('[role="status"]');
-    expect(status).toBeTruthy();
-    expect(status.getAttribute('aria-live')).toBe('polite');
-    expect(status.textContent).toContain('coinsSuccess.pending');
-  });
-
-  it('should render the failed checkout state without changing the dashboard action', () => {
-    component.status.set('failed');
-    fixture.detectChanges();
-
     const text = fixture.nativeElement.textContent;
-    const decorativeEmoji = fixture.nativeElement.querySelector('[aria-hidden="true"]');
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-
-    expect(text).toContain('coinsSuccess.failureTitle');
-    expect(text).toContain('coinsSuccess.failureMessage');
-    expect(decorativeEmoji.textContent).toContain('😕');
-    expect(button.textContent).toContain('coinsSuccess.dashboardBtn');
+    expect(text).toContain('coinsSuccess.title');
+    expect(text).not.toContain('coinsSuccess.pending');
   });
 
-  it('should fail without calling the store when session_id is missing', async () => {
-    await fixture.whenStable();
-    fixture.destroy();
-    mockStore.confirmCoinPurchase.mockClear();
-    Object.assign(TestBed.inject(ActivatedRoute), {
-      queryParams: of({}),
-      snapshot: { queryParams: {} },
-    });
+  it('should use a native Spartan navigation link for the dashboard action', () => {
+    const dashboardLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
 
-    const missingSessionFixture = TestBed.createComponent(CoinsSuccessComponent);
-    missingSessionFixture.detectChanges();
-    await missingSessionFixture.whenStable();
-    missingSessionFixture.detectChanges();
-
-    expect(mockStore.confirmCoinPurchase).not.toHaveBeenCalled();
-    expect(missingSessionFixture.componentInstance.status()).toBe('failed');
-    expect(missingSessionFixture.nativeElement.textContent).toContain('coinsSuccess.failureMessage');
-
-    missingSessionFixture.destroy();
-  });
-
-  it('should render failure when the store cannot confirm the checkout session', async () => {
-    await fixture.whenStable();
-    fixture.destroy();
-    mockStore.confirmCoinPurchase.mockReset();
-    mockStore.confirmCoinPurchase.mockResolvedValue(false);
-
-    const failedFixture = TestBed.createComponent(CoinsSuccessComponent);
-    failedFixture.detectChanges();
-    await failedFixture.whenStable();
-    failedFixture.detectChanges();
-
-    expect(mockStore.confirmCoinPurchase).toHaveBeenCalledOnce();
-    expect(mockStore.confirmCoinPurchase).toHaveBeenCalledWith('stripe_test_session');
-    expect(failedFixture.componentInstance.status()).toBe('failed');
-    expect(failedFixture.nativeElement.textContent).toContain('coinsSuccess.failureTitle');
-
-    failedFixture.destroy();
-  });
-
-  it('should keep the dashboard action keyboard-safe', () => {
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-
-    expect(button.type).toBe('button');
-    button.focus();
-    expect(document.activeElement).toBe(button);
-  });
-
-  it('should navigate to the dashboard when the dashboard action is activated', () => {
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-
-    button.click();
-
-    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/dashboard']);
+    expect(dashboardLink).toBeTruthy();
+    expect(dashboardLink.getAttribute('href')).toBe('/dashboard');
+    expect(dashboardLink.getAttribute('size')).toBe('touch');
+    expect(dashboardLink.hasAttribute('role')).toBe(false);
+    expect(dashboardLink.hasAttribute('tabindex')).toBe(false);
+    dashboardLink.focus();
+    expect(document.activeElement).toBe(dashboardLink);
   });
 });

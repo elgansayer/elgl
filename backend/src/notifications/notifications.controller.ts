@@ -14,7 +14,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NotificationsService } from './notifications.service';
 import { NotificationDto } from './dto/notification.dto';
-import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { UpdateNotificationPreferencesDto } from '../notification-preferences/dto/update-notification-preferences.dto';
 
 @Controller('notifications')
 @UseGuards(SupabaseAuthGuard)

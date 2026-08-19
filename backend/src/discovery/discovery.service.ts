@@ -315,7 +315,8 @@ export class DiscoveryService {
             const blockedIds = blockedIdsList[entryIdx];
             let filtered = matchIds.filter((id) => id !== entry.userId);
             if (blockedIds.length > 0) {
-              filtered = filtered.filter((id) => !blockedIds.includes(id));
+              const blockedSet = new Set(blockedIds);
+              filtered = filtered.filter((id) => !blockedSet.has(id));
             }
             const topN = filtered.slice(0, 10);
             if (topN.length > 0) {
@@ -547,8 +548,9 @@ export class DiscoveryService {
           distance_metres: undefined,
         }));
         if (blockedIds.length > 0) {
+          const blockedSet = new Set(blockedIds);
           fallbackResults = fallbackResults.filter(
-            (u) => !blockedIds.includes(u.id),
+            (u) => !blockedSet.has(u.id),
           );
         }
         if (query.level) {
@@ -577,7 +579,8 @@ export class DiscoveryService {
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
       if (blockedIds.length > 0) {
-        rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+        const blockedSet = new Set(blockedIds);
+        rpcResults = rpcResults.filter((u) => !blockedSet.has(u.id));
       }
       // RPC now handles level, gender, age, and audio_intro filters natively,
       // but interests still needs post-processing since the RPC returns interests column
@@ -609,7 +612,8 @@ export class DiscoveryService {
       distance_metres: item.distance_metres ?? item.distance ?? undefined,
     }));
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
@@ -769,7 +773,8 @@ export class DiscoveryService {
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // Apply voice room active filter
     results = await this.filterByVoiceRoomActive(
@@ -804,7 +809,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -846,7 +852,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -969,7 +976,8 @@ export class DiscoveryService {
 
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -1017,7 +1025,8 @@ export class DiscoveryService {
     if (!voiceRoomActive) return users;
     try {
       const activeHostIds = await this.audioRoomsService.getActiveHostIds();
-      return users.filter((u) => activeHostIds.includes(u.id));
+      const activeHostSet = new Set(activeHostIds);
+      return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
         'Voice room active filter failed, returning unfiltered results',
@@ -1034,7 +1043,8 @@ export class DiscoveryService {
     let filtered = MOCK_USERS as unknown as DiscoveryUser[];
 
     if (blockedIds.length > 0) {
-      filtered = filtered.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      filtered = filtered.filter((u) => !blockedSet.has(u.id));
     }
 
     if (query.native_languages) {
@@ -1225,7 +1235,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     return sanitiseDiscoveryData(results);
   }
