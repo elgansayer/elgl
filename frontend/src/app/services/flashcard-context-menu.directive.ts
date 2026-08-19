@@ -95,9 +95,12 @@ export class FlashcardContextMenuDirective implements OnDestroy {
       const selection = this.getOwnedSelection();
       if (!selection || !this.touchStartPoint) return;
 
-      const rect = selection.range.getBoundingClientRect();
-      const x = rect.width > 0 ? rect.left + rect.width / 2 : this.touchStartPoint.x;
-      const y = rect.height > 0 ? rect.bottom : this.touchStartPoint.y;
+      const rect =
+        typeof selection.range.getBoundingClientRect === 'function'
+          ? selection.range.getBoundingClientRect()
+          : null;
+      const x = rect && rect.width > 0 ? rect.left + rect.width / 2 : this.touchStartPoint.x;
+      const y = rect && rect.height > 0 ? rect.bottom : this.touchStartPoint.y;
       this.showOverlay(x, y, selection);
     }, LONG_PRESS_MS);
   }
