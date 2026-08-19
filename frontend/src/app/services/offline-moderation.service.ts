@@ -110,7 +110,7 @@ export class OfflineModerationService {
     reason?: string,
   ): Promise<string> {
     await this.ensureDB();
-    const id = `mod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `mod_${Date.now()}_${crypto.randomUUID()}`;
     const action: PendingModerationAction = {
       id,
       actionType,
@@ -128,7 +128,9 @@ export class OfflineModerationService {
     await this.ensureDB();
     const all = await this.getAllFromStore<Record<string, unknown>>(STORE_ACTIONS);
     return all
-      .filter((item) => typeof item['actionType'] === 'string' && typeof item['itemId'] === 'string')
+      .filter(
+        (item) => typeof item['actionType'] === 'string' && typeof item['itemId'] === 'string',
+      )
       .map((item) => item as unknown as PendingModerationAction);
   }
 
@@ -159,10 +161,7 @@ export class OfflineModerationService {
 
   async clearAll(): Promise<void> {
     await this.ensureDB();
-    await Promise.all([
-      this.clearStore(STORE_ITEMS),
-      this.clearStore(STORE_ACTIONS),
-    ]);
+    await Promise.all([this.clearStore(STORE_ITEMS), this.clearStore(STORE_ACTIONS)]);
     this.isOfflineMode.set(false);
     this.pendingActionCount.set(0);
   }

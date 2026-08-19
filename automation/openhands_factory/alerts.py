@@ -9,13 +9,14 @@ from datetime import UTC, datetime
 import httpx
 
 from openhands_factory.config import FactoryConfig
+from openhands_factory.generation import FACTORY_RUNTIME_VERSION
 from openhands_factory.redaction import redact_text
 from openhands_factory.state import atomic_write_json, read_json
 
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_COOLDOWN_SECONDS = 1800
-MAX_ALERT_ISSUES = 40
+MAX_ALERT_ISSUES = 8
 MAX_TELEGRAM_TEXT = 4000
 
 
@@ -28,7 +29,7 @@ def _alert_category(message: str) -> str:
 
 
 def _compact_issue_list(message: str) -> str:
-    """Keep large health alerts useful and safely inside Telegram's message limit."""
+    """Keep large health alerts actionable and safely inside Telegram's message limit."""
     match = re.search(r"issues=([0-9,]+)", message)
     if match is None:
         return message
@@ -37,10 +38,8 @@ def _compact_issue_list(message: str) -> str:
         return message
     shown = ",".join(identifiers[:MAX_ALERT_ISSUES])
     remaining = len(identifiers) - MAX_ALERT_ISSUES
-    replacement = (
-        f"issues={shown},... (+{remaining} more; total={len(identifiers)})"
-    )
-    return f"{message[:match.start()]}{replacement}{message[match.end():]}"
+    replacement = f"issues={shown},... (+{remaining} more; total={len(identifiers)})"
+    return f"{message[: match.start()]}{replacement}{message[match.end() :]}"
 
 
 class AlertService:
@@ -55,8 +54,6 @@ class AlertService:
         if self.config.telegram_bot_token is None or self.config.telegram_chat_id is None:
             return False
 
-        # Alerts are keyed by their concrete check/category so a burst of the same
-        # failure collapses without unrelated factory alerts suppressing each other.
         resolved_category = category or _alert_category(message)
         now = datetime.now(UTC)
         state = read_json(self.state_path, {})
@@ -72,6 +69,11 @@ class AlertService:
 
         suppressed = entry.get("suppressed", 0) if entry is not None else 0
         text = _compact_issue_list(message)
+        generation = self.config.factory_generation
+        text = (
+            f"{text}\n\nFactory generation: {generation}\n"
+            f"Factory runtime: {FACTORY_RUNTIME_VERSION}"
+        )
         if suppressed:
             minutes = max(1, self.cooldown_seconds // 60)
             text = (

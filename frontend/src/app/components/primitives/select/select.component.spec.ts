@@ -49,6 +49,9 @@ describe('AppSelectComponent', () => {
 
   it('should create and render projected options', () => {
     expect(selectElement).toBeTruthy();
+    expect(selectElement.id).toMatch(
+      /^app-select-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
     const options = selectElement.querySelectorAll('option');
     expect(options.length).toBe(2);
     expect(options[0].value).toBe('en');

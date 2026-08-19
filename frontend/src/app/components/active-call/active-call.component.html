@@ -19,6 +19,7 @@
     <!-- Mute / Unmute button -->
     <div class="flex flex-col items-center">
       <button
+        hlmBtn
         class="flex flex-col items-center bg-white/20 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleMute()"
         [class.bg-danger]="isMuted()"
@@ -36,6 +37,7 @@
     <!-- Speakerphone button -->
     <div class="flex flex-col items-center">
       <button
+        hlmBtn
         class="flex flex-col items-center bg-white/20 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleSpeaker()"
         [class.bg-secondary]="isSpeakerphone()"
@@ -53,6 +55,7 @@
     <!-- End call button -->
     <div class="flex flex-col items-center">
       <button
+        hlmBtn
         class="flex flex-col items-center bg-danger hover:bg-danger/90 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onEndCall()"
         [attr.aria-label]="'voip.endCall' | t"

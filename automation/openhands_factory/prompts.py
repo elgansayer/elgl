@@ -29,8 +29,12 @@ def build_task_prompt(
     template = (prompt_dir / "task.md").read_text(encoding="utf-8")
     sections = [
         template,
-        f"Task ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}",
         UNTRUSTED_CONTENT_RULE,
+        (
+            "## Begin untrusted task data\n"
+            f"Task ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}\n"
+            "## End untrusted task data"
+        ),
         "Known pre-existing changes to preserve:\n" + "\n".join(str(path) for path in dirty_paths),
         "Required verification:\n" + "\n".join(verification_commands),
     ]
@@ -60,6 +64,9 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = ""
         )
     return (
         f"{instructions}\n\n{UNTRUSTED_CONTENT_RULE}\n\n"
+        "## Begin untrusted task and evidence data\n"
         f"Task ID: {task.identifier}\nTitle: {task.title}\n"
-        f"\n{task.body}\n\n{extra}\n\n{closing}"
+        f"\n{task.body}\n\n{extra}\n"
+        "## End untrusted task and evidence data\n\n"
+        f"{closing}"
     )

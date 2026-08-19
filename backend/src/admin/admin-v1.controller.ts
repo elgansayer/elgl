@@ -113,8 +113,44 @@ export class AdminV1Controller {
       'Reports only healthy/degraded state for core database and Redis dependencies. It intentionally excludes hosts, credentials, connection strings and raw exception details.',
   })
   @ApiOkResponse({ description: 'Bounded system health snapshot' })
-  getSystemHealth(): Promise<AdminSystemHealthSnapshot> {
-    return this.systemHealth.getSnapshot();
+  async getSystemHealth(
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminSystemHealthSnapshot> {
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminSystemHealthSnapshot;
+    try {
+      result = await this.systemHealth.getSnapshot();
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'system.health.read',
+        capabilityKey: 'system.health.read',
+        targetType: 'system-health',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'system.health.read',
+      capabilityKey: 'system.health.read',
+      targetType: 'system-health',
+      outcome: 'success',
+      correlationId,
+      metadata: { source: 'admin-v1' },
+    });
+
+    return result;
   }
 
   @Get('audit')
@@ -126,8 +162,49 @@ export class AdminV1Controller {
       'Returns newest-first sanitized audit summaries with exact-match filters. Private operator notes are intentionally excluded from this initial read contract.',
   })
   @ApiOkResponse({ description: 'Paginated administrative audit events' })
-  listAudit(@Query() query: AdminAuditQueryDto): Promise<AdminAuditListResult> {
-    return this.auditQuery.list(query);
+  async listAudit(
+    @Query() query: AdminAuditQueryDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminAuditListResult> {
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminAuditListResult;
+    try {
+      result = await this.auditQuery.list(query);
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'audit.events.read',
+        capabilityKey: 'audit.read',
+        targetType: 'admin-audit-log',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'audit.events.read',
+      capabilityKey: 'audit.read',
+      targetType: 'admin-audit-log',
+      outcome: 'success',
+      correlationId,
+      metadata: {
+        resultCount: result.events.length,
+        total: result.total,
+        source: 'admin-v1',
+      },
+    });
+
+    return result;
   }
 
   @Get('moderation/reports')
@@ -139,10 +216,49 @@ export class AdminV1Controller {
       'Returns newest-first report summaries through the dedicated admin API. This read-only queue requires moderation.cases.read and supports exact status and reason-category filters.',
   })
   @ApiOkResponse({ description: 'Paginated moderation reports' })
-  listModerationReports(
+  async listModerationReports(
     @Query() query: AdminReportsQueryDto,
+    @Req() req: AdminAuthRequest,
   ): Promise<AdminReportsListResult> {
-    return this.moderationQuery.list(query);
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminReportsListResult;
+    try {
+      result = await this.moderationQuery.list(query);
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'moderation.reports.read',
+        capabilityKey: 'moderation.cases.read',
+        targetType: 'moderation-report-queue',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'moderation.reports.read',
+      capabilityKey: 'moderation.cases.read',
+      targetType: 'moderation-report-queue',
+      outcome: 'success',
+      correlationId,
+      metadata: {
+        resultCount: result.reports.length,
+        total: result.total,
+        source: 'admin-v1',
+      },
+    });
+
+    return result;
   }
 
   @Get('users')

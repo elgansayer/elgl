@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyDashboardComponent } from '../vocabulary-dashboard/vocabulary-dashboard.component';
@@ -38,6 +39,7 @@ type TabId = (typeof TAB_IDS)[number];
   selector: 'app-reading-engine',
   standalone: true,
   imports: [
+    HlmButton,
     TranslatePipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
@@ -70,6 +72,7 @@ type TabId = (typeof TAB_IDS)[number];
       >
         @for (tabId of tabIds; track tabId) {
           <button
+            hlmBtn
             type="button"
             role="tab"
             [id]="'reading-tab-' + tabId"
@@ -222,6 +225,7 @@ type TabId = (typeof TAB_IDS)[number];
                   'readingEngine.filterDifficulty' | t
                 }}</span>
                 <button
+                  hlmBtn
                   type="button"
                   (click)="setFilter(null)"
                   [attr.aria-pressed]="!filterDifficulty()"
@@ -234,6 +238,7 @@ type TabId = (typeof TAB_IDS)[number];
                 </button>
                 @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
                   <button
+                    hlmBtn
                     type="button"
                     (click)="setFilter(diff)"
                     [attr.aria-pressed]="filterDifficulty() === diff"
@@ -252,6 +257,7 @@ type TabId = (typeof TAB_IDS)[number];
                   'readingEngine.filterTopic' | t
                 }}</span>
                 <button
+                  hlmBtn
                   type="button"
                   (click)="setTopicFilter(null)"
                   [attr.aria-pressed]="!filterTopic()"
@@ -264,6 +270,7 @@ type TabId = (typeof TAB_IDS)[number];
                 </button>
                 @for (topic of distinctTopics(); track topic) {
                   <button
+                    hlmBtn
                     type="button"
                     (click)="setTopicFilter(topic)"
                     [attr.aria-pressed]="filterTopic() === topic"
@@ -279,6 +286,7 @@ type TabId = (typeof TAB_IDS)[number];
 
               @if (filterDifficulty() || filterTopic()) {
                 <button
+                  hlmBtn
                   type="button"
                   (click)="clearFilters()"
                   class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0"

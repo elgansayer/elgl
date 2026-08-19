@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input } from '@angular/core';
 
 import { ReportUserModalService } from './report-user-modal.service';
@@ -5,9 +6,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-report-button',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <button
+      hlmBtn
       type="button"
       (click)="openReportModal()"
       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg

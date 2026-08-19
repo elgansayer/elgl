@@ -72,6 +72,13 @@ export default tseslint.config(
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
-    rules: {},
+    rules: {
+      '@angular-eslint/template/label-has-associated-control': [
+        'error',
+        {
+          controlComponents: ['hlm-checkbox', 'hlm-radio', 'hlm-native-select'],
+        },
+      ],
+    },
   },
 );

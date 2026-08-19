@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+import subprocess
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -22,10 +23,9 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     repository = tmp_path / "repository"
     repository.mkdir()
     (repository / "frontend/node_modules").mkdir(parents=True)
+    (repository / "admin-portal/node_modules").mkdir(parents=True)
     worktree = tmp_path / "worktrees" / "issue-12"
-    runner = Runner(
-        [ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")]
-    )
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")])
     workflow = GitWorkflow(repository, "main", runner)
 
     branch = workflow.prepare_worktree(worktree, "12", "Fix build")
@@ -34,6 +34,7 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert runner.calls[0] == ("git", "fetch", "origin", "main")
     assert runner.calls[2][-1] == "origin/main"
     assert (worktree / "frontend/node_modules").is_symlink()
+    assert (worktree / "admin-portal/node_modules").is_symlink()
 
 
 def test_prepare_worktree_retries_a_transient_lock_collision(
@@ -103,6 +104,43 @@ def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
     assert runner.calls[1] == ("git", "ls-files", "--others", "--exclude-standard")
 
 
+def test_change_fingerprint_detects_additional_edits_in_an_already_dirty_tree(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=repository,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    tracked = repository / "tracked.txt"
+    tracked.write_text("base\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "test: seed repository")
+
+    workflow = GitWorkflow(repository, "main")
+    tracked.write_text("first repair target\n", encoding="utf-8")
+    before = workflow.change_fingerprint()
+    tracked.write_text("second repair target\n", encoding="utf-8")
+    after_tracked_edit = workflow.change_fingerprint()
+    untracked = repository / "new-file.txt"
+    untracked.write_text("one\n", encoding="utf-8")
+    after_untracked_add = workflow.change_fingerprint()
+    untracked.write_text("two\n", encoding="utf-8")
+    after_untracked_edit = workflow.change_fingerprint()
+
+    assert len({before, after_tracked_edit, after_untracked_add, after_untracked_edit}) == 4
+
+
 def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -127,9 +165,7 @@ def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: 
     repository = tmp_path / "repository"
     repository.mkdir()
     worktree = tmp_path / "worktrees" / "pr-99"
-    runner = Runner(
-        [ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")]
-    )
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")])
     workflow = GitWorkflow(repository, "main", runner)
 
     workflow.prepare_pull_request_worktree(worktree, "bolt/optimize-quests")
@@ -159,17 +195,68 @@ def test_push_allows_the_external_branch_a_pull_request_review_job_is_assigned(
     assert runner.calls[0][:2] == ("git", "push")
 
 
+def test_git_token_is_scoped_to_git_process_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    captured: dict[str, object] = {}
+
+    def run(
+        arguments: Sequence[str],
+        cwd: Path,
+        timeout: int = 300,
+        *,
+        environment: Mapping[str, str] | None = None,
+    ) -> ProcessResult:
+        del cwd, timeout
+        captured["arguments"] = tuple(arguments)
+        captured["environment"] = dict(environment or {})
+        return ProcessResult(0, "", "")
+
+    monkeypatch.setenv("DATABASE_URL", "must-not-leak")
+    monkeypatch.setattr("openhands_factory.git_workflow.run_process", run)
+    workflow = GitWorkflow(repository, "main", github_token="repository-token")
+
+    workflow.push("factory/42-token-scope")
+
+    arguments = captured["arguments"]
+    environment = captured["environment"]
+    assert isinstance(arguments, tuple)
+    assert isinstance(environment, dict)
+    assert "repository-token" not in arguments
+    assert environment["GH_TOKEN"] == "repository-token"
+    assert "DATABASE_URL" not in environment
+
+
 def test_push_still_rejects_a_branch_outside_the_assigned_external_branch(
     tmp_path: Path,
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
-    workflow = GitWorkflow(
-        repository, "main", Runner([]), external_branch="bolt/optimize-quests"
-    )
+    workflow = GitWorkflow(repository, "main", Runner([]), external_branch="bolt/optimize-quests")
 
     with pytest.raises(RepositorySafetyError):
         workflow.push("some/other-branch")
+
+
+@pytest.mark.parametrize(
+    "branch",
+    ("--upload-pack=agent", "feature/../main", "feature/.hidden", "feature/main.lock"),
+)
+def test_external_pull_request_branch_must_be_a_safe_git_ref(
+    tmp_path: Path,
+    branch: str,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    workflow = GitWorkflow(repository, "main", Runner([]), external_branch=branch)
+
+    with pytest.raises(RepositorySafetyError, match="Unsafe Git branch name"):
+        workflow.prepare_pull_request_worktree(tmp_path / "worktree", branch)
+
+    with pytest.raises(RepositorySafetyError, match="Unsafe Git branch name"):
+        workflow.push(branch)
 
 
 def test_remove_worktree_rejects_path_outside_factory_root(tmp_path: Path) -> None:

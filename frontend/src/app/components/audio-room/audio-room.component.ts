@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -23,10 +24,7 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
-import {
-  
-  PrivatePartyCreatePayload,
-} from '../private-party-create-modal/private-party-create-modal.component';
+import { PrivatePartyCreatePayload } from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
@@ -37,6 +35,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
 @Component({
   selector: 'app-audio-room',
   imports: [
+    HlmButton,
     TranslatePipe,
     RoomChatComponent,
     VoiceroomNotesComponent,
@@ -45,7 +44,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
-    
+
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     AppCardComponent,
@@ -56,7 +55,6 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
     TipHostModalComponent,
-    
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],

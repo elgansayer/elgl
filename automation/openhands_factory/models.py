@@ -2,14 +2,58 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
+_TASK_KEY_MARKER = re.compile(
+    r"(?im)^\s*(?:factory[-_ ]task[-_ ]key|logical[-_ ]task[-_ ]key)\s*:\s*"
+    r"([a-z0-9][a-z0-9._:/-]{2,127})\s*$"
+)
+_ISSUE_PREFIX = re.compile(r"^(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)\s+#\d+\s*:\s*", re.I)
+_TITLE_DECORATION = re.compile(r"\s*(?:\(#\d+\)|#\d+)\s*$")
+_TITLE_SPACE = re.compile(r"\s+")
+
+
+def _normalise_task_title(title: str) -> str:
+    """Return the identity-bearing title scope, excluding issue/PR decoration."""
+
+    value = _TITLE_SPACE.sub(" ", title.strip().casefold())
+    value = _ISSUE_PREFIX.sub("", value)
+    value = _TITLE_DECORATION.sub("", value).strip()
+    return value
+
+
+def logical_task_key(title: str, body: str = "") -> str:
+    """Build a stable task identity that is independent of GitHub object numbers.
+
+    An explicit marker is authoritative and lets a task retain its identity across a
+    substantial retitle or a successor issue/PR. Without a marker, use a digest of the
+    normalized semantic title. The Factory already treats identical normalized titles
+    as duplicate issue scope; using the same scope for durable leases extends that
+    invariant across issue numbers, retries, providers, branches, and PR review tasks.
+    """
+
+    marker = _TASK_KEY_MARKER.search(body)
+    if marker:
+        return f"explicit:{marker.group(1).casefold()}"
+    normalized = _normalise_task_title(title)
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
+    return f"title:{digest}"
+
+
+MAX_PROVIDER_HISTORY = 500
+
 
 class ProviderName(StrEnum):
+    """Providers available inside the OpenHands compatibility adapter."""
+
     OPENAI_SUBSCRIPTION = "openai-subscription"
     OPENCODE_GO = "opencode-go"
+    # Retained only so historical provider-health/attribution state can still be
+    # deserialised during migration. The outer AgentRouter never selects this enum.
     GEMINI = "gemini-flash"
 
 
@@ -21,6 +65,8 @@ class FailureKind(StrEnum):
     RATE_LIMIT = "rate-limit"
     MALFORMED_RESPONSE = "malformed-response"
     TOOL = "tool"
+    TASK_TIMEOUT = "task-timeout"
+    VALIDATION = "validation"
 
 
 class CircuitState(StrEnum):
@@ -54,9 +100,12 @@ class Task:
     body: str
     source: str
     priority: int
-    # Set only when source is "github-pull-request": the existing branch to review,
-    # as opposed to a factory/* branch the factory creates for an issue it implements.
     pr_branch: str | None = None
+    triage_tags: frozenset[str] = frozenset()
+
+    @property
+    def logical_key(self) -> str:
+        return logical_task_key(self.title, self.body)
 
 
 @dataclass
@@ -71,21 +120,43 @@ class Job:
     quality_repairs: int = 0
     last_error: str | None = None
     next_attempt_at: datetime | None = None
+    failure_counts: dict[str, int] = field(default_factory=dict)
+    last_failure_kind: str | None = None
+    last_failure_fingerprint: str | None = None
+    repeated_failure_count: int = 0
+    quarantine_reason: str | None = None
+    quarantined_at: datetime | None = None
+    quarantine_notification_pending: bool = False
+    factory_generation: str = "unknown"
+    implementation_provider: str | None = None
+    review_provider: str | None = None
+    security_provider: str | None = None
+    last_provider_failure: str | None = None
+    provider_failover_count: int = 0
+    review_findings: list[str] = field(default_factory=list)
+    provider_history: list[dict[str, str | int | float | bool | None]] = field(default_factory=list)
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
 class ProviderUsage:
-    provider: ProviderName
+    provider: str
     model: str
+    phase: str = "unknown"
     calls: int = 0
     successes: int = 0
     failures: int = 0
     fallbacks: int = 0
     rate_limits: int = 0
     authentication_failures: int = 0
+    quota_failures: int = 0
+    timeouts: int = 0
+    total_duration_seconds: float = 0.0
+    capacity_wait_seconds: float = 0.0
+    capacity_waited_calls: int = 0
     estimated_cost_usd: float = 0.0
     unknown_cost_calls: int = 0
+    failure_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -94,3 +165,5 @@ class Lease:
     owner: str
     acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
+    factory_generation: str = "unknown"
+    task_key: str | None = None
