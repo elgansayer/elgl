@@ -378,19 +378,21 @@ export class HobbyTagsService {
     }
 
     if (tagsNeedingTranslation.length > 0) {
-      const allBaseWords: string[] = [];
       const wordToTagMap = new Map<string, string[]>();
 
       for (const tnt of tagsNeedingTranslation) {
         const baseVocab = this.getBaseVocabulary(tnt.tagName);
         for (const bv of baseVocab) {
-          if (!wordToTagMap.has(bv.word)) {
-            wordToTagMap.set(bv.word, []);
-            allBaseWords.push(bv.word);
+          let tags = wordToTagMap.get(bv.word);
+          if (!tags) {
+            tags = [];
+            wordToTagMap.set(bv.word, tags);
           }
-          wordToTagMap.get(bv.word)!.push(tnt.tagName);
+          tags.push(tnt.tagName);
         }
       }
+
+      const allBaseWords = Array.from(wordToTagMap.keys());
 
       const translations = await this.translateVocabulary(
         allBaseWords,
