@@ -58,7 +58,7 @@
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
   "dependencies": {
-    "@ngx-translate/core": "^15.0.0",
+    "@ngx-translate/core": "^18.0.0",
     "@ngx-translate/http-loader": "^18.0.0",
     "xss": "^1.0.15"
   },
