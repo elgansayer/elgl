@@ -1,4 +1,4 @@
-"""Provider attribution helpers for the active OpenHands Factory."""
+"""Inner-provider attribution helpers for the OpenHands adapter."""
 
 from __future__ import annotations
 
@@ -13,16 +13,30 @@ from openhands_factory.models import FailureKind, ProviderName
 from openhands_factory.state import atomic_write_json, read_json
 
 
-def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
+def _is_attribution_payload(value: object) -> bool:
+    return isinstance(value, dict) and isinstance(value.get("attempts"), list)
+
+
+def provider_model(config: FactoryConfig, provider: ProviderName, role: str | None = None) -> str:
     if provider is ProviderName.OPENAI_SUBSCRIPTION:
+        if role in ("architect", "review") and config.planning_model is not None:
+            return config.planning_model
+        if role == "implementation" and config.terminal_execution_model is not None:
+            return config.terminal_execution_model
+        if role == "ci-repair" and config.bulk_ci_repair_model is not None:
+            return config.bulk_ci_repair_model
         return config.openai_model
     if provider is ProviderName.OPENCODE_GO:
         if config.opencode_model is None:
-            raise ConfigurationError("OpenCode Go was selected without a configured model")
+            raise ConfigurationError("OpenCode Go API fallback is not configured")
         return f"openai/{config.opencode_model}"
+    if provider is ProviderName.GEMINI:
+        if role == "triage":
+            return "gemini-3.6-flash"
+        return config.gemini_model
     raise ConfigurationError(
-        f"Provider {provider.value!r} is historical-only; active OpenHands routing uses "
-        "Codex subscription OAuth with optional OpenCode Go fallback"
+        f"Provider {provider.value!r} is historical-only inside OpenHands; "
+        "the compatibility chain is OpenAI subscription OAuth then OpenCode Go"
     )
 
 
@@ -51,7 +65,11 @@ class ProviderAttributionStore:
         self.lock = FileLock(str(path) + ".lock")
 
     def _attempts(self) -> list[dict[str, object]]:
-        payload = read_json(self.path, {"attempts": []})
+        payload = read_json(
+            self.path,
+            {"attempts": []},
+            validator=_is_attribution_payload,
+        )
         attempts = payload.get("attempts", []) if isinstance(payload, dict) else []
         return [item for item in attempts if isinstance(item, dict)]
 
@@ -110,4 +128,8 @@ class ProviderAttributionStore:
                     "recorded_at": datetime.now(UTC).isoformat(),
                 }
             )
-            atomic_write_json(self.path, {"attempts": attempts[-5000:]})
+            atomic_write_json(
+                self.path,
+                {"attempts": attempts[-5000:]},
+                validator=_is_attribution_payload,
+            )

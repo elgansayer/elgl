@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -45,6 +48,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 @Component({
   selector: 'app-discovery',
   imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmButton,
     FormsModule,
     TranslatePipe,
     ScrollablePillsComponent,
@@ -115,8 +121,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
   readonly commonInterestTags: readonly string[] = [
-    'sports', 'music', 'travel', 'photography', 'gaming', 'cooking',
-    'reading', 'movies', 'fitness', 'art', 'technology', 'nature',
+    'sports',
+    'music',
+    'travel',
+    'photography',
+    'gaming',
+    'cooking',
+    'reading',
+    'movies',
+    'fitness',
+    'art',
+    'technology',
+    'nature',
   ];
   readonly showAllInterests = signal(false);
   readonly visibleInterestTags = computed(() =>

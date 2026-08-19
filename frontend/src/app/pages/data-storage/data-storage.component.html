@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'dataStorage.pageTitle' | t }}</h1>
@@ -42,6 +42,7 @@
         class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
       >
         <button
+          hlmBtn
           (click)="clearCache()"
           [disabled]="isClearingCache()"
           class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
@@ -59,6 +60,7 @@
         </button>
 
         <button
+          hlmBtn
           (click)="deleteOldMedia()"
           [disabled]="isDeletingOldMedia()"
           class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
@@ -93,8 +95,7 @@
             }}</span>
             <span class="text-xs text-text-secondary">{{ 'dataStorage.cellularDesc' | t }}</span>
           </div>
-          <input
-            type="checkbox"
+          <hlm-checkbox
             [checked]="cellularAutoDownload()"
             (change)="toggleCellular()"
             class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"

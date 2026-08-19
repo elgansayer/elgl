@@ -1,8 +1,8 @@
-"""Validated OpenHands provider construction.
+"""Validated inner provider construction for the OpenHands adapter.
 
-The active OpenHands-on-VPS LLM chain uses OpenAI subscription OAuth (Codex) first.
-OpenCode Go is an optional configured fallback. Historical Gemini helpers remain only
-for state/config migration compatibility and are never selected by production routing.
+This compatibility adapter uses OpenAI subscription OAuth first, then the
+optional OpenCode Go API. The outer AgentRouter independently routes direct
+Claude, Codex, Google, OpenCode, and OpenHands execution.
 """
 
 from __future__ import annotations
@@ -83,18 +83,13 @@ def _model_identifiers(payload: object) -> set[str]:
     return identifiers
 
 
-def _opencode_credentials(config: FactoryConfig) -> tuple[SecretStr, str]:
-    if config.opencode_api_key is None or config.opencode_model is None:
-        raise ConfigurationError("OpenCode Go is not configured")
-    return config.opencode_api_key, config.opencode_model
-
-
 def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = None) -> set[str]:
-    api_key, _ = _opencode_credentials(config)
+    if config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API credentials are not configured")
     http = client or httpx.Client()
     response = http.get(
         f"{config.opencode_base_url}/models",
-        headers={"Authorization": f"Bearer {api_key.get_secret_value()}"},
+        headers={"Authorization": f"Bearer {config.opencode_api_key.get_secret_value()}"},
         timeout=20,
     )
     response.raise_for_status()
@@ -102,18 +97,20 @@ def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = 
 
 
 def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -> ProviderProfile:
-    api_key, model = _opencode_credentials(config)
+    if config.opencode_model is None or config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API fallback is not configured")
     available = discover_opencode_models(config, client)
-    if model not in available:
+    if config.opencode_model not in available:
         raise ConfigurationError(
-            f"Configured OpenCode Go model {model!r} is not in the authenticated catalogue"
+            f"Configured OpenCode Go model {config.opencode_model!r} is not in the "
+            "authenticated catalogue"
         )
     return ProviderProfile(
         name=ProviderName.OPENCODE_GO,
         profile_name=config.opencode_profile_name,
-        model=f"openai/{model}",
+        model=f"openai/{config.opencode_model}",
         base_url=config.opencode_base_url,
-        api_key=api_key,
+        api_key=config.opencode_api_key,
     )
 
 
@@ -134,7 +131,7 @@ def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = No
 def validate_gemini(
     config: FactoryConfig, client: HttpClient | None = None
 ) -> ProviderProfile | None:
-    """Legacy diagnostic helper; Gemini is not eligible for production routing."""
+    """Legacy API diagnostic; direct Google routing uses the outer adapter."""
     if not config.gemini_enabled:
         return None
     if config.monthly_variable_budget_usd != 0 or not config.gemini_free_tier_only:
@@ -154,7 +151,7 @@ def validate_gemini(
 
 
 def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
-    """Return the authoritative OpenHands LLM chain for this host."""
+    """Return the OpenHands adapter's inner provider chain."""
     profiles = [
         ProviderProfile(
             ProviderName.OPENAI_SUBSCRIPTION,
@@ -162,17 +159,16 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
             config.openai_model,
             None,
             None,
-        )
+        ),
     ]
-    if config.opencode_go_enabled:
-        api_key, model = _opencode_credentials(config)
+    if config.opencode_model is not None and config.opencode_api_key is not None:
         profiles.append(
             ProviderProfile(
                 ProviderName.OPENCODE_GO,
                 config.opencode_profile_name,
-                f"openai/{model}",
+                f"openai/{config.opencode_model}",
                 config.opencode_base_url,
-                api_key,
+                config.opencode_api_key,
             )
         )
     return profiles
@@ -183,20 +179,26 @@ def select_provider_decision(
     *,
     prefer_different_from: ProviderName | None = None,
 ) -> ProviderDecision:
-    """Choose one stable OpenHands LLM provider for a whole conversation."""
+    """Choose one inner provider for a whole OpenHands conversation.
+
+    The compatibility chain is deliberately fixed to OpenAI subscription OAuth
+    then OpenCode Go. Historical provider configuration must never silently
+    re-enter autonomous execution. If both inner providers are unavailable the
+    outer router may fall back to another configured adapter.
+    """
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
     oauth = inspect_openai_oauth(config)
     openai_breaker = breakers.get(ProviderName.OPENAI_SUBSCRIPTION)
-    openai_usable = oauth.passed and (
-        openai_breaker is None or openai_breaker.permits_call()
-    )
-
+    openai_usable = oauth.passed and (openai_breaker is None or openai_breaker.permits_call())
     opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
-    opencode_usable = config.opencode_go_enabled and (
+    opencode_configured = config.opencode_model is not None and config.opencode_api_key is not None
+    opencode_usable = opencode_configured and (
         opencode_breaker is None or opencode_breaker.permits_call()
     )
 
+    # Independent review within this adapter should prefer its other healthy inner
+    # provider while remaining provider-stable once the conversation starts.
     if prefer_different_from is ProviderName.OPENAI_SUBSCRIPTION and opencode_usable:
         return ProviderDecision(
             ProviderName.OPENCODE_GO,
@@ -219,10 +221,10 @@ def select_provider_decision(
     if opencode_usable:
         return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
 
-    configured = "Codex subscription OAuth"
-    if config.opencode_go_enabled:
-        configured += " and OpenCode Go"
-    raise FactoryError(f"No configured OpenHands LLM provider is currently available ({configured})")
+    raise FactoryError(
+        "Both OpenHands inner providers are temporarily unavailable "
+        "(OpenAI subscription OAuth and OpenCode Go API); bounded recovery will retry later."
+    )
 
 
 def select_primary_provider(config: FactoryConfig) -> ProviderName:
@@ -230,27 +232,34 @@ def select_primary_provider(config: FactoryConfig) -> ProviderName:
     return select_provider_decision(config).provider
 
 
-def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LLM:
-    """Construct this conversation's sole LLM, with no per-call fallback chain."""
+def build_llm(
+    config: FactoryConfig,
+    provider: ProviderName | None = None,
+    role: str | None = None,
+) -> LLM:
+    """Construct this OpenHands conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
+
+    from openhands_factory.provider_runtime import provider_model
 
     selected_provider = provider or select_primary_provider(config)
     if selected_provider is ProviderName.OPENAI_SUBSCRIPTION:
         return LLM.subscription_login(
             vendor="openai",
-            model=config.openai_model,
+            model=provider_model(config, selected_provider, role=role),
             open_browser=False,
         )
     if selected_provider is ProviderName.OPENCODE_GO:
-        api_key, model = _opencode_credentials(config)
+        if config.opencode_model is None or config.opencode_api_key is None:
+            raise ConfigurationError("OpenCode Go API fallback is not configured")
         return LLM(
-            model=f"openai/{model}",
-            api_key=api_key,
+            model=f"openai/{config.opencode_model}",
+            api_key=config.opencode_api_key,
             base_url=config.opencode_base_url,
             usage_id=config.opencode_profile_name,
             reasoning_effort="none",
         )
     raise ConfigurationError(
         f"Provider {selected_provider.value!r} is historical-only and is not eligible "
-        "for production factory conversations"
+        "for production OpenHands conversations"
     )

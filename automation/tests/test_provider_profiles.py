@@ -50,18 +50,11 @@ def config(**overrides: str) -> FactoryConfig:
 
 def test_default_provider_policy_is_codex_oauth_then_opencode() -> None:
     factory_config = config()
-    assert factory_config.openai_model == "gpt-5.2-codex"
+    assert factory_config.openai_model == "gpt-5.6-sol"
     assert factory_config.gemini_enabled is False
     assert [profile.name for profile in ordered_profiles(factory_config)] == [
         ProviderName.OPENAI_SUBSCRIPTION,
         ProviderName.OPENCODE_GO,
-    ]
-
-
-def test_codex_only_configuration_has_no_unconfigured_fallback() -> None:
-    factory_config = FactoryConfig.from_environment({"GITHUB_TOKEN": "not-a-real-token"})
-    assert [profile.name for profile in ordered_profiles(factory_config)] == [
-        ProviderName.OPENAI_SUBSCRIPTION
     ]
 
 
@@ -95,13 +88,9 @@ def test_opencode_catalogue_rejects_unlisted_model() -> None:
         validate_opencode(config(), Client({"data": [{"id": "different-model"}]}))
 
 
-def test_validate_opencode_rejects_unconfigured_fallback() -> None:
-    factory_config = FactoryConfig.from_environment({"GITHUB_TOKEN": "not-a-real-token"})
-    with pytest.raises(ConfigurationError, match="OpenCode Go is not configured"):
-        validate_opencode(factory_config, Client({"data": []}))
-
-
-def test_factory_waits_when_both_configured_providers_are_unavailable(tmp_path: Path) -> None:
+def test_factory_waits_when_both_openhands_inner_providers_are_unavailable(
+    tmp_path: Path,
+) -> None:
     factory_config = config(
         FACTORY_STATE_DIR=str(tmp_path),
         OPENCODE_GO_MODEL="deepseek-v4-flash",
@@ -118,5 +107,5 @@ def test_factory_waits_when_both_configured_providers_are_unavailable(tmp_path: 
             )
         ]
     )
-    with pytest.raises(FactoryError, match="No configured OpenHands LLM provider"):
+    with pytest.raises(FactoryError, match="Both OpenHands inner providers"):
         select_primary_provider(factory_config)

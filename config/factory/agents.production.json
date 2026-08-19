@@ -1,0 +1,97 @@
+{
+  "routing_enabled": true,
+  "providers": {
+    "claude": {
+      "enabled": true,
+      "command": "claude",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "fable",
+      "max_turns": 100,
+      "credential_paths": [".claude", ".claude.json"],
+      "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"]
+    },
+    "codex": {
+      "enabled": true,
+      "command": "codex",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "gpt-5.6-sol",
+      "max_turns": 100,
+      "credential_paths": [".codex"],
+      "runtime_paths": [".local/bin", ".npm-global"]
+    },
+    "google": {
+      "enabled": false,
+      "command": "agy",
+      "cli_variant": "antigravity",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "gemini-3.1-pro-high",
+      "credential_paths": [".gemini"],
+      "runtime_paths": [".local/bin", ".npm-global"]
+    },
+    "opencode": {
+      "enabled": true,
+      "command": "opencode",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "opencode-go/kimi-k3",
+      "credential_paths": [".config/opencode", ".local/share/opencode"],
+      "runtime_paths": [".local/bin", ".npm-global", ".opencode"],
+      "phase_models": {
+        "planning": "opencode-go/qwen3.8-max",
+        "architecture": "opencode-go/qwen3.8-max",
+        "security_review": "opencode-go/qwen3.8-max",
+        "code_review": "opencode-go/qwen3.8-max",
+        "general_action": "opencode-go/kimi-k2.7-code"
+      }
+    },
+    "openhands": {
+      "enabled": true,
+      "auth_mode": "api",
+      "transport": "openhands-sdk",
+      "emergency_only": true,
+      "max_concurrency": 1,
+      "model": "gpt-5.6-sol"
+    }
+  },
+  "routing": {
+    "planning": ["claude", "codex", "google", "opencode", "openhands"],
+    "architecture": ["claude", "codex", "google", "opencode", "openhands"],
+    "implementation": ["claude", "codex", "google", "opencode", "openhands"],
+    "security_review": ["claude", "codex", "google", "opencode", "openhands"],
+    "quality_repair": ["codex", "claude", "google", "opencode", "openhands"],
+    "code_review": ["codex", "claude", "google", "opencode", "openhands"],
+    "ci_repair": ["codex", "claude", "google", "opencode", "openhands"],
+    "general_action": ["opencode", "google", "codex", "claude", "openhands"],
+    "skip_busy_providers": true,
+    "same_provider_retries": 1
+  },
+  "timeouts": {
+    "planning": 1200,
+    "architecture": 1800,
+    "implementation": 3600,
+    "security_review": 1800,
+    "quality_repair": 3600,
+    "code_review": 1800,
+    "ci_repair": 3600,
+    "general_action": 1800
+  },
+  "circuit_breaker": {
+    "failure_threshold": 2,
+    "default_cooldown_seconds": 300,
+    "rate_limit_cooldown_seconds": 300,
+    "quota_cooldown_seconds": 3600,
+    "auth_cooldown_seconds": 900,
+    "unavailable_cooldown_seconds": 300,
+    "transport_cooldown_seconds": 300,
+    "timeout_cooldown_seconds": 300,
+    "crash_cooldown_seconds": 300,
+    "invalid_output_cooldown_seconds": 60
+  }
+}

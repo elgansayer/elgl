@@ -1,6 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { vi } from 'vitest';
 import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
@@ -42,7 +44,9 @@ describe('ProfileComponent', () => {
     mockUserService = {
       getMyProfile: vi.fn().mockResolvedValue(makeProfile()),
       getMyVisitors: vi.fn().mockResolvedValue([]),
-      updateMyProfile: vi.fn().mockImplementation((partial) => Promise.resolve(makeProfile(partial))),
+      updateMyProfile: vi
+        .fn()
+        .mockImplementation((partial) => Promise.resolve(makeProfile(partial))),
       updatePrivacySettings: vi.fn().mockResolvedValue(makeProfile()),
     };
 
@@ -81,11 +85,11 @@ describe('ProfileComponent', () => {
     fixture.componentInstance.toggleEdit();
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
-      'input[name="incognitoVisits"]',
+    const checkbox: HTMLElement | null = fixture.nativeElement.querySelector(
+      'hlm-checkbox[name="incognitoVisits"]',
     );
     expect(checkbox).not.toBeNull();
-    expect(checkbox?.disabled).toBe(true);
+    expect(checkbox?.hasAttribute('data-disabled')).toBe(true);
   });
 
   it('should enable the incognito visits toggle for VIP users and reflect its saved state', async () => {
@@ -97,12 +101,15 @@ describe('ProfileComponent', () => {
     fixture.componentInstance.toggleEdit();
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
-      'input[name="incognitoVisits"]',
+    const checkbox: HTMLElement | null = fixture.nativeElement.querySelector(
+      'hlm-checkbox[name="incognitoVisits"]',
     );
     expect(checkbox).not.toBeNull();
-    expect(checkbox?.disabled).toBe(false);
-    expect(checkbox?.checked).toBe(true);
+    expect(checkbox?.hasAttribute('data-disabled')).toBe(false);
+
+    const checkboxDebug = fixture.debugElement.query(By.directive(HlmCheckbox));
+    expect(checkboxDebug).not.toBeNull();
+    expect((checkboxDebug.componentInstance as HlmCheckbox).checked()).toBe(true);
   });
 
   it('should not send incognito_visits=true for a non-VIP user on save', async () => {

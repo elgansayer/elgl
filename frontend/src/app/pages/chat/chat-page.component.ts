@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -17,7 +19,7 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [FormsModule, DatePipe, TranslatePipe],
+  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -25,6 +27,7 @@ interface AiChatMessage {
         <div class="p-4">
           <h2 class="text-lg font-semibold mb-4">{{ 'chat.rooms' | t }}</h2>
           <button
+            hlmBtn
             (click)="startAiPartner()"
             class="mb-4 w-full ps-3 pe-3 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors"
           >
@@ -34,6 +37,7 @@ interface AiChatMessage {
             <div
               (click)="selectRoom(room)"
               (keydown.enter)="selectRoom(room)"
+              (keydown.space)="selectRoom(room); $event.preventDefault()"
               tabindex="0"
               role="button"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
@@ -75,6 +79,7 @@ interface AiChatMessage {
                   <h3 class="font-semibold">{{ 'aiPartner.title' | t }}</h3>
                 }
                 <button
+                  hlmBtn
                   (click)="closeAiPartner()"
                   class="ms-auto text-sm text-text-muted hover:underline"
                 >
@@ -97,6 +102,7 @@ interface AiChatMessage {
                 } @else {
                   @for (scenario of aiScenarios(); track scenario.id) {
                     <button
+                      hlmBtn
                       type="button"
                       (click)="selectAiScenario(scenario)"
                       class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -106,6 +112,7 @@ interface AiChatMessage {
                     </button>
                   }
                   <button
+                    hlmBtn
                     type="button"
                     (click)="selectAiScenario(null)"
                     class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -154,6 +161,7 @@ interface AiChatMessage {
               <div class="p-4 border-t border-surface-100">
                 <div class="flex gap-2">
                   <input
+                    hlmInput
                     [ngModel]="aiInput()"
                     (ngModelChange)="aiInput.set($event)"
                     (keyup.enter)="sendAiMessage()"
@@ -161,6 +169,7 @@ interface AiChatMessage {
                     class="flex-1 ps-3 pe-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <button
+                    hlmBtn
                     (click)="sendAiMessage()"
                     [disabled]="aiLoading() || !aiInput().trim()"
                     class="ps-3 pe-3 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-50"
@@ -188,6 +197,7 @@ interface AiChatMessage {
                     <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
                   </div>
                   <button
+                    hlmBtn
                     (click)="exportChat()"
                     class="ms-auto p-2 text-sm text-text-muted hover:text-text transition-colors"
                   >
@@ -226,6 +236,7 @@ interface AiChatMessage {
                           <p class="text-xs text-text-muted">{{ 'chat.statusReply' | t }}</p>
                           <p class="text-sm">{{ msg.status_reply_payload.status_text }}</p>
                           <button
+                            hlmBtn
                             (click)="replyToStatus(msg)"
                             class="text-xs text-primary hover:underline"
                           >
@@ -268,6 +279,7 @@ interface AiChatMessage {
                       }
                       @if (msg.is_view_once && !msg.viewed_at) {
                         <button
+                          hlmBtn
                           (click)="viewMedia(msg)"
                           class="text-sm text-primary underline mt-1"
                         >
@@ -281,12 +293,14 @@ interface AiChatMessage {
                       >
                         @if (msg.sender_id !== currentUserId()) {
                           <button
+                            hlmBtn
                             (click)="openCorrection(msg)"
                             class="text-xs text-warning hover:underline"
                           >
                             Correct
                           </button>
                           <button
+                            hlmBtn
                             (click)="requestCorrection(msg)"
                             class="text-xs text-primary hover:underline"
                           >
@@ -295,6 +309,7 @@ interface AiChatMessage {
                         }
                         @if (msg.sender_id === currentUserId() && msg.message_type === 'text') {
                           <button
+                            hlmBtn
                             (click)="openFix(msg)"
                             class="text-xs text-secondary hover:underline"
                           >
@@ -399,12 +414,14 @@ interface AiChatMessage {
                       {{ correctionTargetMessage()?.text_content }}
                     </p>
                     <input
+                      hlmInput
                       [ngModel]="correctionText()"
                       (ngModelChange)="correctionText.set($event)"
                       placeholder="Corrected text..."
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
                     <input
+                      hlmInput
                       [ngModel]="correctionExplanation()"
                       (ngModelChange)="correctionExplanation.set($event)"
                       placeholder="Explanation (optional)"
@@ -412,12 +429,14 @@ interface AiChatMessage {
                     />
                     <div class="flex gap-2">
                       <button
+                        hlmBtn
                         (click)="submitCorrection()"
                         class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/80 transition-colors text-sm"
                       >
                         Send Correction
                       </button>
                       <button
+                        hlmBtn
                         (click)="cancelCorrection()"
                         class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
                       >
@@ -434,12 +453,14 @@ interface AiChatMessage {
                   <div class="space-y-2">
                     <p class="text-sm font-semibold">Fix your message</p>
                     <input
+                      hlmInput
                       [ngModel]="fixText()"
                       (ngModelChange)="fixText.set($event)"
                       placeholder="Corrected text..."
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
                     <input
+                      hlmInput
                       [ngModel]="fixExplanation()"
                       (ngModelChange)="fixExplanation.set($event)"
                       placeholder="Explanation (optional)"
@@ -447,12 +468,14 @@ interface AiChatMessage {
                     />
                     <div class="flex gap-2">
                       <button
+                        hlmBtn
                         (click)="submitFix()"
                         class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors text-sm"
                       >
                         Fix Message
                       </button>
                       <button
+                        hlmBtn
                         (click)="cancelFix()"
                         class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
                       >
@@ -467,6 +490,7 @@ interface AiChatMessage {
               <div class="p-4 border-t border-surface-100 ">
                 <div class="flex gap-2">
                   <input
+                    hlmInput
                     [ngModel]="newMessageText()"
                     (ngModelChange)="newMessageText.set($event)"
                     (keyup.enter)="sendMessage()"
@@ -474,6 +498,7 @@ interface AiChatMessage {
                     class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary  "
                   />
                   <button
+                    hlmBtn
                     (click)="sendMessage()"
                     class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors"
                   >
