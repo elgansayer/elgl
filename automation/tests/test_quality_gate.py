@@ -35,7 +35,7 @@ def test_check_quality_gate_allows_test_mock() -> None:
     workflow.runner.return_value = Mock(
         stdout="""+++ b/backend/test/app.e2e-spec.ts
 @@ -1 +1,2 @@
-+    return { id: 1, name: "mock user" };
++    const mockData = 'mock';
 """
     )
     findings = check_quality_gate(workflow, "main")

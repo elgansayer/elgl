@@ -51,7 +51,8 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
           <div class="flex justify-center gap-6">
             <!-- Incoming call actions -->
             @if (callDirection() === 'incoming' && callState() === 'ringing') {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="acceptCall()"
                 class="w-16 h-16 rounded-full bg-success hover:bg-success/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
@@ -64,7 +65,8 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="rejectCall()"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
@@ -85,7 +87,8 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               callState() === 'connected' ||
               callState() === 'connecting'
             ) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="toggleMute()"
                 [class]="
                   isMuted()
@@ -107,7 +110,8 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="toggleVideo()"
                 [class]="
                   isVideoEnabled()
@@ -129,7 +133,8 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="endCall()"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >

@@ -37,7 +37,7 @@ export class AppInputComponent {
   readonly disabled = input<boolean>(false);
   readonly readonly = input<boolean>(false);
   readonly label = input<string>('');
-  readonly inputId = input<string>('app-input-' + Math.random().toString(36).substring(2, 9));
+  readonly inputId = input<string>('app-input-' + crypto.randomUUID());
   readonly customClass = input<string>('');
 
   readonly valueChange = output<string>();
