@@ -501,6 +501,42 @@
       .device-lock-preview.wide .device-lock-action {
         inline-size: auto;
       }
+      .document-viewer-states {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        align-items: start;
+      }
+      .document-viewer-preview {
+        box-sizing: border-box;
+        inline-size: 100%;
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 4%, Canvas);
+        color: CanvasText;
+      }
+      .document-viewer-preview.dark {
+        color-scheme: dark;
+      }
+      .document-viewer-card {
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 7%, Canvas);
+        box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 10%, transparent);
+      }
+      .document-viewer-card h3 {
+        margin-block: 0 0.75rem;
+      }
+      .document-viewer-card p {
+        margin-block: 0 0.75rem;
+        color: color-mix(in srgb, CanvasText 72%, Canvas);
+      }
+      .document-viewer-preview.wide {
+        padding: 2rem;
+      }
+      .document-viewer-preview.wide .document-viewer-card {
+        padding: 2rem;
+      }
       @media (forced-colors: active) {
         section,
         .dialog-panel,
@@ -510,6 +546,7 @@
         .create-group-preview,
         .sidebar-preview,
         .device-lock-preview,
+        .document-viewer-card,
         .checkout-card,
         .lightbox-stage {
           border-color: CanvasText;
@@ -904,6 +941,26 @@
               </div>
             </div>
             <button class="create-action">Create group</button>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="document-viewer-preview-title">
+        <h2 id="document-viewer-preview-title">Document viewer Relay theme states</h2>
+        <p>The document viewer uses neutral Relay surface and text roles in both themes. Mobile starts with compact padding at the 390px baseline, while wider tablet and desktop layouts increase the page and card spacing without changing the projected document contract.</p>
+        <div class="document-viewer-states">
+          <article class="document-viewer-preview" aria-label="Document viewer light mobile preview">
+            <div class="document-viewer-card">
+              <h3>Privacy policy</h3>
+              <p>Your privacy controls and account choices remain readable without a dark-only typography override.</p>
+              <p>Long document text wraps naturally within the semantic Relay card surface.</p>
+            </div>
+          </article>
+          <article class="document-viewer-preview dark wide" aria-label="Document viewer dark desktop preview">
+            <div class="document-viewer-card">
+              <h3>Terms of service</h3>
+              <p>The same semantic surface hierarchy adapts to dark mode while retaining text contrast and wider spacing.</p>
+              <p>Projected content inherits the active theme rather than forcing an inverted prose palette.</p>
+            </div>
           </article>
         </div>
       </section>
