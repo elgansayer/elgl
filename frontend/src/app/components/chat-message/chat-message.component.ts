@@ -12,6 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
+import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
   selector: 'app-chat-message',
@@ -22,6 +23,7 @@ import { environment } from '../../../environments/environment';
     TranslatePipe,
     CulturalTipComponent,
     LinkPreviewCardComponent,
+    VisualDiffComponent,
   ],
   template: `
     @if (!isBlocked()) {
@@ -118,15 +120,12 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'correction' && message().correction_payload) {
               <div class="space-y-1">
-                <p class="text-sm line-through opacity-75">
-                  {{ message().correction_payload!.original }}
-                </p>
-                <p class="text-sm font-medium">{{ message().correction_payload!.corrected }}</p>
-                @if (message().correction_payload!.explanation) {
-                  <p class="text-xs opacity-75 mt-1">
-                    {{ message().correction_payload!.explanation }}
-                  </p>
-                }
+                <app-visual-diff
+                  [original]="message().correction_payload!.original"
+                  [corrected]="message().correction_payload!.corrected"
+                  [explanation]="message().correction_payload!.explanation"
+                  [showActions]="true"
+                ></app-visual-diff>
               </div>
             }
 

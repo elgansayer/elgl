@@ -16,6 +16,7 @@ import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
+import { LearnerKnowledgeModule } from './learner-knowledge/learner-knowledge.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { DecksModule } from './decks/decks.module';
@@ -175,6 +176,7 @@ import { LivekitModule } from './livekit/livekit.module';
     MetricsModule,
     ReadingEngineModule,
     CloudflareModule,
+    LearnerKnowledgeModule,
   ],
   controllers: [AppController],
   providers: [
