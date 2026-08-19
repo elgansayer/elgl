@@ -21,7 +21,7 @@ def test_check_quality_gate_blocks_production_mock() -> None:
     workflow.runner.return_value = Mock(
         stdout="""+++ b/backend/src/app.service.ts
 @@ -1 +1,2 @@
-+    // TODO: implement
++    return { id: 1, name: "mock user" };
 """
     )
     findings = check_quality_gate(workflow, "main")
