@@ -7,7 +7,6 @@ import { LegalService } from '../../services/legal.service';
   selector: 'app-terms',
   imports: [HlmButton, LegalDocumentViewerComponent],
   template: `
-    @let doc = termsResource.value();
     @if (termsResource.isLoading()) {
       <main
         class="min-h-screen bg-surface-500 px-4 py-8 text-text-secondary"
@@ -45,12 +44,15 @@ import { LegalService } from '../../services/legal.service';
           </button>
         </section>
       </main>
-    } @else if (doc) {
-      <app-legal-document-viewer
-        [title]="doc.title"
-        [lastUpdated]="doc.lastUpdated"
-        [sections]="doc.sections"
-      ></app-legal-document-viewer>
+    } @else if (termsResource.hasValue()) {
+      @let doc = termsResource.value();
+      @if (doc) {
+        <app-legal-document-viewer
+          [title]="doc.title"
+          [lastUpdated]="doc.lastUpdated"
+          [sections]="doc.sections"
+        ></app-legal-document-viewer>
+      }
     }
   `,
 })

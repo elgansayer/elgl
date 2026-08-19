@@ -758,6 +758,24 @@
         </div>
       </section>
       <section>
+        <h2>Correction dialog interaction</h2>
+        <p>The correction editor delegates overlay dismissal, Escape handling, focus containment and focus restoration to the owned Spartan dialog primitive. Relay keeps the correction fields, diff presentation and action layout while feature code retains validation and submit payload rules.</p>
+        <div class="dialog-stage">
+          <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="correction-dialog-title">
+            <div class="dialog-header">
+              <strong id="correction-dialog-title">Correct sentence</strong>
+              <button type="button" aria-label="Cancel correction">×</button>
+            </div>
+            <div class="dialog-body">
+              <p>Original: “I goes to market yesterday.”</p>
+              <label for="preview-correction">Corrected sentence <textarea id="preview-correction">I went to the market yesterday.</textarea></label>
+              <label for="preview-explanation">Explanation <input id="preview-explanation" value="Use the past tense." /></label>
+            </div>
+            <div class="dialog-footer"><button type="button">Cancel</button><button type="button">Send correction</button></div>
+          </div>
+        </div>
+      </section>
+      <section>
         <h2>Gift notification overlay</h2>
         <p>
           Gift celebrations remain non-modal live notifications. Relay owns the celebratory surface
