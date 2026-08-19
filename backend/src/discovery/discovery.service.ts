@@ -74,7 +74,10 @@ export class DiscoveryService {
       try {
         await redis.del('partner_of_week_ids');
       } catch (err) {
-        this.logger.error('Failed to clear stale Partner of the Week cache', err);
+        this.logger.error(
+          'Failed to clear stale Partner of the Week cache',
+          err,
+        );
       }
     };
 
@@ -98,7 +101,10 @@ export class DiscoveryService {
         .limit(50);
 
       if (error) {
-        this.logger.error('Failed to fetch Partner of the Week candidates', error);
+        this.logger.error(
+          'Failed to fetch Partner of the Week candidates',
+          error,
+        );
         await clearStalePartnerCache();
         return;
       }
@@ -207,10 +213,7 @@ export class DiscoveryService {
           id: c.id,
           composite: computeComposite(c),
         }))
-        .sort(
-          (a, b) =>
-            b.composite - a.composite || a.id.localeCompare(b.id),
-        );
+        .sort((a, b) => b.composite - a.composite || a.id.localeCompare(b.id));
 
       const top10 = ranked.slice(0, 10);
       const partnerIds = top10.map((r) => r.id);
