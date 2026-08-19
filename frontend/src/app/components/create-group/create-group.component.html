@@ -43,6 +43,7 @@
               type="text"
               [(ngModel)]="searchQuery"
               (ngModelChange)="searchUsers()"
+              (keydown.enter)="$event.preventDefault()"
               class="search-input"
               [placeholder]="'group.searchPlaceholder' | t"
               [disabled]="!canAddMore()"
