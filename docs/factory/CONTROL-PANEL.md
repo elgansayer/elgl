@@ -20,7 +20,8 @@ health timer is running. The issue reports:
 - pause state and up to ten active issue links;
 - bounded queue totals and state counts;
 - enabled providers, transport, selected model, last observed health and retry time;
-- aggregate calls, successes, failures, fallbacks, rate limits and timeouts;
+- aggregate calls, successes, failures, fallbacks, rate limits, authentication failures, quota failures,
+  timeouts and bounded typed failure classes;
 - root and Factory-state storage use, free-space reserve, health, and bounded trend projection.
 
 The top indicator is healthy only when the daemon heartbeat and recovery timer are current and at least one
@@ -31,7 +32,7 @@ A warning, critical, or unreadable root or Factory-state volume also prevents a 
 projection compares adjacent watchdog samples only after a meaningful decline, so it is an early warning rather
 than a capacity guarantee. See [HOST-STORAGE.md](HOST-STORAGE.md) for thresholds, retention and recovery.
 
-The panel never includes prompts, transcripts, issue bodies, environment variables, provider diagnostics,
+The panel never includes prompts, transcripts, issue bodies, environment variables, raw provider diagnostics,
 credential paths, tokens or raw exception text. A stale panel timestamp is a dead-man signal: it means the
 watchdog, host or GitHub publishing path may be unavailable even if the last displayed state was green.
 
@@ -105,9 +106,18 @@ git pull --ff-only origin main
 sudo scripts/deploy-and-start-factory.sh --use-existing-credentials
 ```
 
+For a repeated unchanged deployment, add `--fast`. The verified fast path preserves all startup and online
+diagnostics while reusing only dependency trees and the worker image whose deployment fingerprints still match.
+Its first run performs the normal expensive phases to establish trusted cache records.
+
+Startup diagnostics use the exact `HOME` and `PATH` configured on `hellotalk-factory.service`. Do not diagnose
+provider installation with a bare service-user sudo command: sudo's secure path can hide the authenticated CLI
+binaries even while the daemon is using them successfully.
+
 Deployment also installs the bounded persistent-journal policy and vacuums archived entries. It does not prune
 Docker automatically. Inspect or perform the separately bounded host maintenance command as documented in
-[HOST-STORAGE.md](HOST-STORAGE.md).
+[HOST-STORAGE.md](HOST-STORAGE.md). The deploy exit trap restores the daemon and watchdog when an upgrade fails
+after entering its maintenance window, provided each unit was active before deployment began.
 
 After deployment, confirm that the panel issue exists and that its service, timer and heartbeat rows are green.
 If publication fails, run `dashboard sync --force` as the service user and inspect the health service journal:

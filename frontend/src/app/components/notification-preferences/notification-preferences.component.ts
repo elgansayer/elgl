@@ -57,7 +57,8 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-start">{{
                 'notification_preferences.quiet_hours_start' | t
               }}</label>
-              <input hlmInput
+              <input
+                hlmInput
                 id="quiet-hours-start"
                 type="time"
                 [value]="quietStart()"
@@ -69,7 +70,8 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-end">{{
                 'notification_preferences.quiet_hours_end' | t
               }}</label>
-              <input hlmInput
+              <input
+                hlmInput
                 id="quiet-hours-end"
                 type="time"
                 [value]="quietEnd()"
@@ -81,14 +83,16 @@ import {
         </div>
 
         <div class="mt-6 flex gap-3">
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="reset()"
             class="rounded-app border border-surface-100 text-text-secondary hover:bg-surface-300 transition-colors px-4 py-2 text-sm font-semibold"
           >
             {{ 'common.reset' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="save()"
             class="rounded-app bg-primary text-on-fill hover:bg-primary/90 transition-colors px-4 py-2 text-sm font-semibold"
@@ -153,34 +157,7 @@ export class NotificationPreferencesComponent {
 
   private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
     const p = this.prefs();
-    if (!p) return undefined;
-    // explicit switch to avoid any / type assertion
-    switch (cat) {
-      case 'new_message':
-        return p.new_message;
-      case 'call_invite':
-        return p.call_invite;
-      case 'moment_like':
-        return p.moment_like;
-      case 'moment_comment':
-        return p.moment_comment;
-      case 'correction':
-        return p.correction;
-      case 'gift':
-        return p.gift;
-      case 'profile_view':
-        return p.profile_view;
-      case 'study_reminder':
-        return p.study_reminder;
-      case 'friend_request':
-        return p.friend_request;
-      case 'audio_room_invite':
-        return p.audio_room_invite;
-      case 'new_follower':
-        return p.new_follower;
-      default:
-        return undefined;
-    }
+    return p?.[cat];
   }
 
   channelEnabled(cat: NotificationCategory, ch: 'push' | 'badge'): boolean {
@@ -198,11 +175,13 @@ export class NotificationPreferencesComponent {
   }
 
   toggle(cat: NotificationCategory, ch: 'push' | 'badge'): void {
+    const p = this.prefs();
+    if (!p) return;
     const cp = this.categoryPref(cat);
     if (!cp) return;
     const newVal = !cp[ch];
     this.service
-      .toggleCategoryChannel(cat, ch, newVal, this.prefs()!)
+      .toggleCategoryChannel(cat, ch, newVal, p)
       .then((updated) => {
         this.prefs.set(updated);
         this.doNotDisturb.set(updated.do_not_disturb);

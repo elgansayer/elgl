@@ -212,10 +212,12 @@ export class HobbyTagsService {
         })
         .pipe(
           catchError(() => {
-            const userTags = this.mockUserTags.filter((ut) => ut.hobby_tag);
             const result: VocabularyItem[] = [];
-            for (const ut of userTags) {
-              const tag = ut.hobby_tag!;
+            for (const ut of this.mockUserTags) {
+              if (!ut.hobby_tag) continue;
+              const tag = ut.hobby_tag;
+              const hobby_tag_info = { icon: tag.icon, name: tag.name };
+              const context_sentence = `Learn this word from your ${tag.name} hobby vocabulary.`;
               for (const vocab of tag.target_vocabulary) {
                 if (!language || vocab.language === language) {
                   result.push({
@@ -224,8 +226,8 @@ export class HobbyTagsService {
                     translation: vocab.translation,
                     hobbyTagName: tag.name,
                     difficulty: 'beginner',
-                    context_sentence: `Learn this word from your ${tag.name} hobby vocabulary.`,
-                    hobby_tag: { icon: tag.icon, name: tag.name },
+                    context_sentence,
+                    hobby_tag: hobby_tag_info,
                   });
                 }
               }

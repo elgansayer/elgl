@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { EconomyStore } from '../../services/economy.store';
@@ -7,10 +7,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-coins-success',
-  imports: [TranslatePipe, ...HlmButtonImports],
+  imports: [TranslatePipe, RouterLink, ...HlmButtonImports],
   template: `
-    <div class="flex min-h-screen items-center justify-center bg-surface-500 px-4">
-      <div class="w-full max-w-md text-center">
+    <div
+      class="flex min-h-screen items-center justify-center bg-surface-500 px-4 py-6 sm:px-6 sm:py-10 lg:px-8"
+    >
+      <div
+        class="w-full max-w-md rounded-card border border-surface-100 bg-surface-200 px-5 py-8 text-center shadow-card sm:px-8 sm:py-10 lg:px-10 lg:py-12"
+      >
         <div class="mb-6 text-5xl sm:text-6xl" aria-hidden="true">
           {{ status() === 'failed' ? '😕' : '🎉' }}
         </div>
@@ -27,16 +31,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
             ) | t
           }}
         </p>
-        <button hlmBtn type="button" size="touch" (click)="goToDashboard()">
+        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/dashboard">
           {{ 'coinsSuccess.dashboardBtn' | t }}
-        </button>
+        </a>
       </div>
     </div>
   `,
 })
 export class CoinsSuccessComponent {
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private economyStore = inject(EconomyStore);
 
   readonly status = signal<'pending' | 'confirmed' | 'failed'>('pending');
@@ -54,9 +57,5 @@ export class CoinsSuccessComponent {
     }
     const confirmed = await this.economyStore.confirmCoinPurchase(sessionId);
     this.status.set(confirmed ? 'confirmed' : 'failed');
-  }
-
-  goToDashboard(): void {
-    this.router.navigate(['/dashboard']);
   }
 }

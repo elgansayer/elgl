@@ -49,7 +49,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 @Component({
   selector: 'app-root',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,

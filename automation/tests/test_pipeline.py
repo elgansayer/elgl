@@ -31,6 +31,12 @@ class GitHub:
         self.pull_requests: list[Task] = []
         self.open_issue_titles: set[str] = set()
         self.created_issues: list[tuple[str, str, tuple[str, ...]]] = []
+        self.quarantined_issues: list[int] = []
+        self.requeued_quarantines: list[tuple[list[int], bool]] = []
+        self.quarantine_list_calls = 0
+        self.active_issues: list[int] = []
+        self.released_active_issues: list[list[int]] = []
+        self.active_list_calls = 0
         self._next_issue_number = 200
 
     def ensure_factory_labels(self) -> None:
@@ -55,6 +61,35 @@ class GitHub:
 
     def remove_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.removed_labels.append((issue, labels))
+
+    def list_quarantined_issues(self, limit: int = 10_000) -> list[int]:
+        del limit
+        self.quarantine_list_calls += 1
+        return list(self.quarantined_issues)
+
+    def requeue_quarantined_issues(
+        self,
+        issues: list[int] | None = None,
+        *,
+        announce: bool = True,
+    ) -> list[int]:
+        selected = sorted(set(issues or self.quarantined_issues))
+        self.requeued_quarantines.append((selected, announce))
+        self.quarantined_issues = [
+            issue for issue in self.quarantined_issues if issue not in selected
+        ]
+        return selected
+
+    def list_active_issues(self, limit: int = 10_000) -> list[int]:
+        del limit
+        self.active_list_calls += 1
+        return list(self.active_issues)
+
+    def release_active_issues(self, issues: list[int]) -> list[int]:
+        selected = sorted(set(issues))
+        self.released_active_issues.append(selected)
+        self.active_issues = [issue for issue in self.active_issues if issue not in selected]
+        return selected
 
     def add_comment(self, number: int, body: str) -> None:
         self.comments.append((number, body))
@@ -285,6 +320,84 @@ def test_refresh_creates_durable_discovered_job(tmp_path: Path) -> None:
     assert restored["42"].task.title == "Fix build"
 
 
+def test_refresh_silently_reconciles_stale_github_quarantine_labels(
+    tmp_path: Path,
+) -> None:
+    github = GitHub()
+    github.quarantined_issues = [42]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.DISCOVERED
+    assert github.requeued_quarantines == [([42], False)]
+    assert github.comments == []
+
+
+def test_refresh_preserves_labels_backed_by_durable_quarantine(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.jobs.reconcile(github.tasks)["42"]
+    job.state = JobState.QUARANTINED
+    job.quarantine_reason = "Repeated deterministic task failure"
+    pipeline.jobs.save_job(job)
+    github.quarantined_issues = [42]
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.QUARANTINED
+    assert github.requeued_quarantines == []
+    assert github.quarantined_issues == [42]
+
+
+def test_refresh_reconciles_labels_only_on_startup_or_explicit_request(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+
+    pipeline.refresh()
+    pipeline.refresh()
+    assert github.quarantine_list_calls == 1
+
+    github.quarantined_issues = [43]
+    pipeline.request_label_reconciliation()
+    pipeline.refresh()
+
+    assert github.quarantine_list_calls == 2
+    assert github.requeued_quarantines == [([43], False)]
+
+
+def test_refresh_reconciles_stale_active_labels_in_bounded_batches(tmp_path: Path) -> None:
+    github = GitHub()
+    github.active_issues = [40, 41, 42]
+    factory_config = config(tmp_path).model_copy(update={"label_reconciliation_batch_size": 2})
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+
+    pipeline.refresh()
+    assert github.released_active_issues == [[40, 41]]
+    assert pipeline.active_label_reconciliation_pending
+
+    pipeline.refresh()
+    assert github.released_active_issues == [[40, 41], [42]]
+    assert not pipeline.active_label_reconciliation_pending
+
+    pipeline.refresh()
+    assert github.active_list_calls == 2
+
+
+def test_refresh_preserves_durable_and_protected_active_owners(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    durable = pipeline.jobs.reconcile(github.tasks)["42"]
+    durable.state = JobState.IMPLEMENTING
+    pipeline.jobs.save_job(durable)
+    github.active_issues = [42, 43]
+
+    pipeline.refresh({"43"})
+
+    assert github.released_active_issues == []
+    assert github.active_issues == [42, 43]
+
+
 def test_refresh_releases_closed_issue_before_pull_request(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -400,7 +513,17 @@ def test_refresh_releases_a_pull_request_closed_while_under_review(
     assert removed == [worktree]
 
 
-@pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
+@pytest.mark.parametrize(
+    "initial_state",
+    [
+        JobState.VERIFYING,
+        JobState.QUALITY_REPAIRING,
+        JobState.REVIEWING,
+        JobState.CI_PENDING,
+        JobState.REPAIRING,
+        JobState.MERGE_QUEUED,
+    ],
+)
 def test_changed_pull_request_head_invalidates_review_and_rebuilds_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -427,6 +550,7 @@ def test_changed_pull_request_head_invalidates_review_and_rebuilds_worktree(
         branch="external/refresh-review",
         pull_request=77,
         head_sha="reviewed-head",
+        review_findings=["stale finding from reviewed-head"],
     )
     pipeline.jobs.save({"77": job})
     removed: list[tuple[Path, bool]] = []
@@ -453,6 +577,7 @@ def test_changed_pull_request_head_invalidates_review_and_rebuilds_worktree(
     assert result is not None
     assert result.state is JobState.REVIEWING
     assert result.head_sha == "new-head"
+    assert result.review_findings == []
     assert github.removed_labels == [(77, ("factory-reviewed", "factory-review"))]
     assert removed == [(worktree, False)]
     assert prepared == [(worktree, "external/refresh-review")]
@@ -464,6 +589,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
+        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
     ]
@@ -512,6 +638,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         JobState.DONE,
     ]
     assert github.closed == [42]
+    assert (42, ("factory-active", "swarm-active")) in github.removed_labels
     assert github.reviewed == ["abcdef1234567"]
     assert [number for number, _ in github.comments].count(42) == 1
     assert [number for number, _ in github.comments].count(99) == 3
@@ -534,6 +661,7 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
         )
     ]
     github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
         PullRequestStatus(77, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False),
     ]
@@ -579,6 +707,9 @@ def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+    ]
     pushed: list[str] = []
 
     def fake_push(workflow: GitWorkflow, branch: str) -> None:
@@ -633,6 +764,9 @@ def test_verified_repair_of_existing_pull_request_returns_to_review_without_new_
 ) -> None:
     factory_config = config(tmp_path)
     github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "old-head", True, False)
+    ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
     job = Job(
@@ -774,6 +908,10 @@ def test_review_report_is_removed_before_repository_change_detection(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+    ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
     _seed_prompts(worktree / "automation/prompts")
@@ -787,7 +925,7 @@ def test_review_report_is_removed_before_repository_change_detection(
     )
     pipeline = FactoryPipeline(
         factory_config,
-        github=GitHub(),  # type: ignore[arg-type]
+        github=github,  # type: ignore[arg-type]
         conversations=Conversations(),  # type: ignore[arg-type]
     )
     pipeline.jobs.save({"77": job})
@@ -809,6 +947,10 @@ def test_valid_rejected_review_routes_to_quality_repair(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False)
+    ]
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
     _seed_prompts(worktree / "automation/prompts")
@@ -822,7 +964,7 @@ def test_valid_rejected_review_routes_to_quality_repair(
     )
     pipeline = FactoryPipeline(
         factory_config,
-        github=GitHub(),  # type: ignore[arg-type]
+        github=github,  # type: ignore[arg-type]
         conversations=RejectingReviewConversations(),  # type: ignore[arg-type]
     )
     pipeline.jobs.save({"77": job})
@@ -994,7 +1136,7 @@ def test_repeated_identical_task_failure_opens_recoverable_quarantine(
     assert len(github.comments) == 1
 
 
-def test_provider_output_failure_does_not_consume_task_attempts_or_quarantine(
+def test_no_change_task_failure_is_bounded_without_disabling_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github = GitHub()
@@ -1010,15 +1152,22 @@ def test_provider_output_failure_does_not_consume_task_attempts_or_quarantine(
     monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: "unchanged")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
-    result = None
-    for _ in range(3):
-        result = pipeline.run_job("42")
+    first = pipeline.run_job("42")
+    second = pipeline.run_job("42")
+    third = pipeline.run_job("42")
 
-    assert result is not None and result.state is JobState.IMPLEMENTING
-    assert result.attempts == 0
-    assert result.next_attempt_at is not None
+    assert first is not None and first.attempts == 1
+    assert second is not None and second.attempts == 2
+    assert third is not None and third.attempts == 3
+    assert third.state is JobState.QUARANTINED
+    assert third.next_attempt_at is None
+    assert [entry.get("failure_classification") for entry in third.provider_history[-3:]] == [
+        "task_failure",
+        "task_failure",
+        "task_failure",
+    ]
     assert github.closed == []
-    assert not any(labels == ("factory-quarantined", "needs-human") for _, labels in github.labels)
+    assert (42, ("factory-quarantined", "needs-human")) in github.labels
     assert not any("already satisfied" in body for _, body in github.comments)
 
 
