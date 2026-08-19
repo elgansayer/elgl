@@ -109,26 +109,27 @@ export class EnvironmentVariables {
   @IsOptional()
   CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS?: number;
 
-  // Temporary LiveKit Egress compatibility for direct R2 file output.
   @IsString()
-  @IsOptional()
-  CLOUDFLARE_R2_ENDPOINT?: string;
+  CLOUDFLARE_STREAM_ACCOUNT_ID!: string;
+
+  @IsString()
+  CLOUDFLARE_STREAM_API_TOKEN!: string;
 
   @IsString()
   @IsOptional()
-  CLOUDFLARE_R2_ACCESS_KEY_ID?: string;
+  CLOUDFLARE_STREAM_ALLOWED_ORIGINS?: string;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  CLOUDFLARE_R2_SECRET_ACCESS_KEY?: string;
+  CLOUDFLARE_STREAM_POLL_INTERVAL_MS?: number;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  CLOUDFLARE_R2_BUCKET?: string;
+  CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS?: number;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  CLOUDFLARE_R2_PUBLIC_DOMAIN?: string;
+  CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS?: number;
 
   @IsString()
   DEEPL_API_KEY!: string;
@@ -139,6 +140,18 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   AZURE_TRANSLATOR_REGION?: string;
+
+  @IsString()
+  @IsOptional()
+  AZURE_SPEECH_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  AZURE_SPEECH_REGION?: string;
+
+  @IsNumber()
+  @IsOptional()
+  AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS?: number;
 
   @IsString()
   STRIPE_SECRET_KEY!: string;
