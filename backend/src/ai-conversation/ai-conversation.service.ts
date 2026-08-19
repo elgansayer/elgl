@@ -6,7 +6,10 @@ import { FlashcardsService } from '../flashcards/flashcards.service';
 import { StudyStreakService } from '../study-streak/study-streak.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
-import { LearnerKnowledgeService, LearnerKnowledgeProfile } from '../learner-knowledge/learner-knowledge.service';
+import {
+  LearnerKnowledgeService,
+  LearnerKnowledgeProfile,
+} from '../learner-knowledge/learner-knowledge.service';
 
 export interface Scenario {
   id: string;
@@ -242,9 +245,15 @@ The user's role: Someone practising casual English.
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
     let learnerKnowledge: LearnerKnowledgeProfile | null = null;
     try {
-      learnerKnowledge = await this.learnerKnowledgeService.getProfile(userId, 'en');
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(
+        userId,
+        'en',
+      );
     } catch (e) {
-      this.logger.warn(`Failed to fetch learner knowledge profile for user ${userId}`, e);
+      this.logger.warn(
+        `Failed to fetch learner knowledge profile for user ${userId}`,
+        e,
+      );
     }
 
     let systemPrompt = scenario?.systemPrompt;
@@ -257,7 +266,12 @@ The user's role: Someone practising casual English.
           .catch(() => []),
         this.studyStreakService.getStreak(userId).catch(() => 0),
       ]);
-      systemPrompt = this.getDefaultSystemPrompt(profile, flashcards, streak, learnerKnowledge);
+      systemPrompt = this.getDefaultSystemPrompt(
+        profile,
+        flashcards,
+        streak,
+        learnerKnowledge,
+      );
     }
     const scenarioName = scenario?.name ?? 'free conversation';
 
@@ -290,7 +304,10 @@ The user's role: Someone practising casual English.
   ): string {
     const targetLanguages = profile?.target_languages?.join(', ') || 'English';
     const interests = profile?.interests?.join(', ') || 'various topics';
-    const level = learnerKnowledge?.overallProficiency?.level || profile?.proficiency_level || 'beginner/intermediate';
+    const level =
+      learnerKnowledge?.overallProficiency?.level ||
+      profile?.proficiency_level ||
+      'beginner/intermediate';
 
     let flashcardContext = '';
     if (flashcards && flashcards.length > 0) {
@@ -300,9 +317,11 @@ The user's role: Someone practising casual English.
 
     let knowledgeContext = '';
     if (learnerKnowledge) {
-      const strugglingItems = Array.from(learnerKnowledge.knowledgeItems.values())
-        .filter(item => item.status === 'struggling')
-        .map(item => item.id.replace('vocab:', ''))
+      const strugglingItems = Array.from(
+        learnerKnowledge.knowledgeItems.values(),
+      )
+        .filter((item) => item.status === 'struggling')
+        .map((item) => item.id.replace('vocab:', ''))
         .join(', ');
 
       if (strugglingItems) {

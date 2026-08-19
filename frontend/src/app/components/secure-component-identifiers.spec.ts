@@ -13,14 +13,11 @@ const SECURE_IDENTIFIER_SOURCES = [
 ] as const;
 
 describe('secure component identifiers', () => {
-  it.each(SECURE_IDENTIFIER_SOURCES)(
-    'uses Web Crypto for $path',
-    ({ path, occurrences }) => {
-      const source = readFileSync(resolve(__dirname, path), 'utf8');
-      const secureCalls = source.match(/crypto\.randomUUID\(\)/g) ?? [];
+  it.each(SECURE_IDENTIFIER_SOURCES)('uses Web Crypto for $path', ({ path, occurrences }) => {
+    const source = readFileSync(resolve(__dirname, path), 'utf8');
+    const secureCalls = source.match(/crypto\.randomUUID\(\)/g) ?? [];
 
-      expect(secureCalls).toHaveLength(occurrences);
-      expect(source).not.toContain('Math.random().toString(36)');
-    },
-  );
+    expect(secureCalls).toHaveLength(occurrences);
+    expect(source).not.toContain('Math.random().toString(36)');
+  });
 });

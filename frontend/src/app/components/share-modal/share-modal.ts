@@ -19,19 +19,19 @@ export interface ShareEntity {
   standalone: true,
   imports: [HlmInput, HlmButton, TranslatePipe, A11yClickableDirective],
   templateUrl: './share-modal.html',
-  styleUrls: ['./share-modal.scss']
+  styleUrls: ['./share-modal.scss'],
 })
 export class ShareModalComponent {
   readonly i18n = inject(I18nService);
-  
+
   // Inputs
   readonly entity = input.required<ShareEntity>();
   readonly isOpen = input<boolean>(false);
-  
+
   // Outputs
   readonly closed = output<void>();
   readonly sharedToChat = output<string>(); // emits chat ID or generic indicator
-  
+
   // State
   readonly isCopying = signal(false);
   readonly shareUrl = computed(() => `${this.entity().externalLink}?ref=user_token_123`);

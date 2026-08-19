@@ -1,5 +1,13 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, input, output, inject, afterNextRender, signal, OnDestroy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  inject,
+  afterNextRender,
+  signal,
+  OnDestroy,
+} from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
@@ -98,7 +106,7 @@ export class ActiveCallComponent implements OnDestroy {
       await this.livekitService.joinRoom(
         this.roomName(),
         userId,
-        false,               // not a video call
+        false, // not a video call
       );
       await this.livekitService.publishTracks();
 
