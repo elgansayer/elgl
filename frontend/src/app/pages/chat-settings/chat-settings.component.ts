@@ -23,7 +23,8 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.auto_translate_desc' | t
             }}</span>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             role="switch"
             [attr.aria-checked]="autoTranslate()"
             [attr.aria-label]="'chat_settings.auto_translate' | t"
@@ -48,7 +49,8 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.read_receipts_desc' | t
             }}</span>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             role="switch"
             [attr.aria-checked]="readReceipts()"
             [attr.aria-label]="'chat_settings.read_receipts' | t"
@@ -73,7 +75,8 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.enter_to_send_desc' | t
             }}</span>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             role="switch"
             [attr.aria-checked]="enterToSend()"
             [attr.aria-label]="'chat_settings.enter_to_send' | t"
@@ -92,7 +95,8 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
 
         <!-- Reset to defaults -->
         <div class="mt-8 text-center">
-          <button hlmBtn
+          <button
+            hlmBtn
             class="text-primary text-sm underline decoration-primary"
             (click)="resetToDefaults()"
           >

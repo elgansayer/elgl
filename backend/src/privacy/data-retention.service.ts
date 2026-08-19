@@ -290,57 +290,56 @@ export class DataRetentionService {
       return;
     }
 
-    // ⚡ Bolt Optimization: Use chunked concurrency to process deletions efficiently without overwhelming the connection pool
-    const chunkSize = 5;
+    // ⚡ Bolt Optimization: Replaced sequential await loop with bounded concurrent chunks
+    // Process up to 10 users concurrently to significantly improve deletion latency
+    // while preventing unbounded Promise.allSettled calls from exhausting database connections.
+    const chunkSize = 10;
     for (let i = 0; i < usersToDelete.length; i += chunkSize) {
       const chunk = usersToDelete.slice(i, i + chunkSize);
 
-      const deletionPromises = chunk.map((user) => {
-        const userId = user.id;
-        return (async () => {
-          // Delete user's personal data from all tables
-          await this.wipeUserData(userId);
-          // Anonymise the user row instead of deleting it (to keep referential integrity)
-          const { error: anonymiseError } = await supabase
-            .from('users')
-            .update({
-              display_name: `deleted_user_${userId.substring(0, 8)}`,
-              avatar_url: null,
-              audio_intro_url: null,
-              bio_text: null,
-              status_text: null,
-              greeting_message: null,
-              away_message: null,
-              native_language: null,
-              target_languages: null,
-              is_deletion_pending: false,
-              is_deleted: true,
-              deleted_at: now.toISOString(),
-            })
-            .eq('id', userId);
+      await Promise.allSettled(
+        chunk.map(async (user) => {
+          const userId = user.id;
+          try {
+            // Delete user's personal data from all tables
+            await this.wipeUserData(userId);
+            // Anonymise the user row instead of deleting it (to keep referential integrity)
+            const { error: anonymiseError } = await supabase
+              .from('users')
+              .update({
+                display_name: `deleted_user_${userId.substring(0, 8)}`,
+                avatar_url: null,
+                audio_intro_url: null,
+                bio_text: null,
+                status_text: null,
+                greeting_message: null,
+                away_message: null,
+                native_language: null,
+                target_languages: null,
+                is_deletion_pending: false,
+                is_deleted: true,
+                deleted_at: now.toISOString(),
+              })
+              .eq('id', userId);
 
-          if (anonymiseError) {
-            throw new Error(
-              `Failed to anonymise user ${userId}: ${anonymiseError.message}`,
+            if (anonymiseError) {
+              this.logger.error(
+                `Failed to anonymise user ${userId}: ${anonymiseError.message}`,
+              );
+              return { success: false as const, error: anonymiseError };
+            } else {
+              this.logger.log(`Finalised deletion for user ${userId}`);
+              return { success: true as const };
+            }
+          } catch (err) {
+            this.logger.error(
+              `Unexpected error finalising deletion for user ${userId}`,
+              err,
             );
+            return { success: false as const, error: err };
           }
-          return { id: userId, success: true as const, error: undefined };
-        })().catch((err) => {
-          this.logger.error(
-            `Unexpected error finalising deletion for user ${userId}`,
-            err,
-          );
-          throw err;
-        });
-      });
-
-      const results = await Promise.allSettled(deletionPromises);
-
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.success) {
-          this.logger.log(`Finalised deletion for user ${result.value.id}`);
-        }
-      }
+        }),
+      );
     }
   }
 

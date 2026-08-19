@@ -348,6 +348,25 @@ class JobStore:
             jobs[job.task.identifier] = job
             self._save_raw(jobs)
 
+    def save_reconciled_jobs(self, reconciled: list[Job]) -> None:
+        """Merge inactive jobs retired by one control-plane reconciliation pass.
+
+        The caller excludes live worker identifiers before collecting this batch.
+        Loading and writing the full durable queue once preserves concurrent sibling
+        transitions without turning a large stale-worktree cleanup into one complete
+        queue rewrite per retired job.
+        """
+
+        if not reconciled:
+            return
+        with self._process_lock, self.file_lock:
+            self._assert_generation_current()
+            jobs = self._load()
+            for job in reconciled:
+                self._stamp(job)
+                jobs[job.task.identifier] = job
+            self._save_raw(jobs)
+
     def recover_abandoned_attempts(
         self,
         protected_task_ids: set[str],

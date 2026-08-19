@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import time
@@ -51,6 +53,14 @@ class PullRequestStatus:
     checks_pending: bool
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
+
+
+@dataclass(frozen=True)
+class IssueComment:
+    identifier: int
+    author: str
+    body: str
+    created_at: str
 
 
 def issue_priority(labels: set[str]) -> int:
@@ -183,6 +193,7 @@ class GitHubClient:
             if labels.intersection(
                 {
                     "factory-skip",
+                    "factory-status",
                     "duplicate",
                     "needs-human",
                     "factory-epic",
@@ -209,10 +220,11 @@ class GitHubClient:
                 {self.ready_label, "factory-active", "guardian-alert"}
             ):
                 continue
-            # Pull-request review uses priority 5 (see
+            # Pull-request review defaults to priority 5 (see
             # collect_open_pull_requests). Labelled critical and high issues
-            # run before reviews, while ordinary and low-priority backlog work
-            # runs afterwards. Lower values run first in select_batch.
+            # run before ordinary reviews, while ordinary and low-priority
+            # backlog work runs afterwards. Lower values run first in
+            # select_batch.
             priority = issue_priority(labels)
             tasks.append(
                 Task(
@@ -277,15 +289,12 @@ class GitHubClient:
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-pull-request",
-                    # Below guardian-alert issues (0) but above ordinary issue
-                    # work (10, see collect_open_issues): reviewing an
-                    # already-written external PR is typically fast (no
-                    # implementation needed) and often carries its own urgency
-                    # - security or performance fixes from other automated
-                    # systems - so it should not sit behind a long backlog of
-                    # fresh issue implementations at equal priority, the way
-                    # it did before this ordering existed.
-                    priority=5,
+                    # Normal reviews sit below guardian-alert issues (0) but
+                    # above ordinary issue work (10). Trusted urgency labels
+                    # can promote a PR within the bounded review lane, which
+                    # lets a bootstrap or security repair reach its required
+                    # independent review without bypassing merge protection.
+                    priority=min(5, issue_priority(labels)),
                     pr_branch=head_ref,
                 )
             )
@@ -343,6 +352,98 @@ class GitHubClient:
         except ValueError as error:
             raise FactoryError(f"Could not parse issue URL: {url}") from error
 
+    def find_open_issue_by_title(self, title: str, *, required_label: str) -> int | None:
+        output = self._run(
+            (
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--limit",
+                "100",
+                "--search",
+                f'"{title}" in:title label:{required_label}',
+                "--json",
+                "number,title,labels",
+            )
+        )
+        matches: list[int] = []
+        for item in json.loads(output):
+            if not isinstance(item, dict) or item.get("title") != title:
+                continue
+            labels = item.get("labels")
+            label_items = labels if isinstance(labels, list) else []
+            label_names = {
+                name
+                for label in label_items
+                if isinstance(label, dict)
+                if isinstance((name := label.get("name")), str)
+            }
+            number = item.get("number")
+            if required_label in label_names and isinstance(number, int):
+                matches.append(number)
+        return min(matches) if matches else None
+
+    def update_issue(self, issue: int, *, title: str, body: str) -> None:
+        self._run(
+            (
+                "gh",
+                "issue",
+                "edit",
+                str(issue),
+                "--repo",
+                self.repository,
+                "--title",
+                title,
+                "--body",
+                body,
+            )
+        )
+
+    def list_issue_comments(self, issue: int, *, after: int = 0) -> list[IssueComment]:
+        output = self._run(
+            (
+                "gh",
+                "api",
+                "--method",
+                "GET",
+                f"repos/{self.repository}/issues/{issue}/comments",
+                "-f",
+                "per_page=100",
+                "--paginate",
+                "--jq",
+                ".[] | @base64",
+            )
+        )
+        comments: list[IssueComment] = []
+        items: list[object] = []
+        for encoded in output.splitlines():
+            try:
+                decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
+                items.append(json.loads(decoded))
+            except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise FactoryError("Could not parse GitHub issue comments") from error
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            identifier = item.get("id")
+            author = item.get("user")
+            login = author.get("login") if isinstance(author, dict) else None
+            body = item.get("body")
+            created_at = item.get("created_at")
+            if (
+                isinstance(identifier, int)
+                and identifier > after
+                and isinstance(login, str)
+                and isinstance(body, str)
+                and isinstance(created_at, str)
+            ):
+                comments.append(IssueComment(identifier, login, body, created_at))
+        return sorted(comments, key=lambda item: item.identifier)
+
     def ensure_factory_labels(self) -> None:
         labels = {
             "factory-ready": "1d76db",
@@ -353,6 +454,7 @@ class GitHubClient:
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
+            "factory-status": "0969da",
         }
         for name, colour in labels.items():
             self._run(
@@ -415,14 +517,56 @@ class GitHubClient:
         )
         return sorted(int(item["number"]) for item in json.loads(output))
 
-    def requeue_quarantined_issues(self, issues: list[int] | None = None) -> list[int]:
+    def list_active_issues(self, limit: int = 10_000) -> list[int]:
+        """List open issues carrying a current or retired ownership marker."""
+
+        active: set[int] = set()
+        for label in ("factory-active", "swarm-active"):
+            output = self._run(
+                (
+                    "gh",
+                    "issue",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--state",
+                    "open",
+                    "--label",
+                    label,
+                    "--limit",
+                    str(limit),
+                    "--json",
+                    "number",
+                )
+            )
+            active.update(int(item["number"]) for item in json.loads(output))
+        return sorted(active)
+
+    def release_active_issues(self, issues: list[int]) -> list[int]:
+        """Release stale ownership without removing the issue from trusted intake."""
+
+        released: list[int] = []
+        for issue in sorted(set(issues)):
+            self.remove_issue_labels(issue, ("factory-active", "swarm-active"))
+            # factory-active is an admission label as well as an ownership marker.
+            # Preserve that admission explicitly when releasing stale ownership,
+            # even when labelled intake is not globally mandatory.
+            self.add_issue_labels(issue, (self.ready_label,))
+            released.append(issue)
+        return released
+
+    def requeue_quarantined_issues(
+        self,
+        issues: list[int] | None = None,
+        *,
+        announce: bool = True,
+    ) -> list[int]:
         """Clear a resolved-cause quarantine so an issue is eligible for a clean retry.
 
         Quarantine is a circuit breaker: it exists so a genuinely broken task cannot
-        loop forever, not to permanently withhold work. Once the operator has fixed the
-        systemic cause (a bug, a stale collision with another pipeline), the affected
-        issues need to be moved back into the pool by hand, since only a human can judge
-        that the cause is actually resolved.
+        loop forever, not to permanently withhold work. Automatic bounded recovery uses
+        this operation without comments after its cooldown. Operators can also use it
+        for an earlier targeted reset after fixing a known systemic cause.
         """
         requeued: list[int] = []
         for issue in sorted(set(issues if issues is not None else self.list_quarantined_issues())):
@@ -432,12 +576,13 @@ class GitHubClient:
             )
             if self.require_ready_label:
                 self.add_issue_labels(issue, (self.ready_label,))
-            self.add_comment(
-                issue,
-                "Clearing the quarantine labels on this issue after an operator "
-                "confirmed the underlying cause is resolved. It is eligible for a "
-                "clean retry.",
-            )
+            if announce:
+                self.add_comment(
+                    issue,
+                    "Clearing the quarantine labels on this issue after an operator "
+                    "confirmed the underlying cause is resolved. It is eligible for a "
+                    "clean retry.",
+                )
             requeued.append(issue)
         return requeued
 

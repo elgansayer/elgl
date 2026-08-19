@@ -126,7 +126,10 @@ def run_isolated_verification_process(
     log_dir = Path(os.environ.get("FACTORY_LOG_DIR", "/var/log/hellotalk-factory"))
     repository = Path(os.environ.get("FACTORY_REPOSITORY", str(resolved_workspace)))
     service_home = state_dir / "home"
-    virtual_environment = str(Path(sys.executable).resolve().parent.parent)
+    # Resolving a virtual environment's Python executable follows its symlink to
+    # the system interpreter and loses the environment's bin directory. sys.prefix
+    # remains the owning environment and therefore exposes uv inside the sandbox.
+    virtual_environment = str(Path(sys.prefix).resolve())
     environment = {
         "CI": "1",
         "CYPRESS_CACHE_FOLDER": "/tmp/cypress-cache",

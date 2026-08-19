@@ -179,6 +179,16 @@ class AgentsConfig(BaseModel):
                 model="fable",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
+                phase_models={
+                    "planning": "opus",
+                    "architecture": "opus",
+                    "security_review": "opus",
+                    "implementation": "sonnet",
+                    "quality_repair": "haiku",
+                    "code_review": "haiku",
+                    "ci_repair": "haiku",
+                    "general_action": "fable",
+                },
             ),
             "codex": ProviderConfig(
                 enabled=True,
@@ -189,7 +199,7 @@ class AgentsConfig(BaseModel):
                 runtime_paths=[".local/bin", ".npm-global"],
             ),
             "google": ProviderConfig(
-                enabled=False,
+                enabled=True,
                 command="agy",
                 cli_variant="antigravity",
                 auth_mode="subscription",
@@ -198,7 +208,7 @@ class AgentsConfig(BaseModel):
                 runtime_paths=[".local/bin", ".npm-global"],
             ),
             "opencode": ProviderConfig(
-                enabled=False,
+                enabled=True,
                 command="opencode",
                 auth_mode="subscription",
                 model="opencode-go/kimi-k3",
@@ -209,6 +219,8 @@ class AgentsConfig(BaseModel):
                     "architecture": "opencode-go/qwen3.8-max",
                     "security_review": "opencode-go/qwen3.8-max",
                     "code_review": "opencode-go/qwen3.8-max",
+                    "quality_repair": "opencode-go/kimi-k2.7-code",
+                    "ci_repair": "opencode-go/kimi-k2.7-code",
                     "general_action": "opencode-go/kimi-k2.7-code",
                 },
             ),
@@ -364,6 +376,12 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    # Zero preserves the historical unlimited admission behaviour. Production can
+    # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
+    # allowing in-flight implementation, review, CI repair, and PR work to continue.
+    new_issue_interval_seconds: int = 0
+    new_issues_per_interval: int = 1
+    label_reconciliation_batch_size: int = 25
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     provider_slot_wait_seconds: int = 30
@@ -372,10 +390,14 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    review_lane_first: bool = True
+    review_reserve_provider_slot: bool = True
+    review_lane_max_concurrent: int = 1
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
     trusted_github_actors: frozenset[str] = frozenset({"elgansayer"})
+    control_github_actors: frozenset[str] = frozenset({"elgansayer"})
     require_ready_label: bool = False
     ready_label: str = "factory-ready"
     telegram_bot_token: SecretStr | None = None
@@ -398,16 +420,32 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
         "gemini_max_concurrent_conversations",
         "provider_slot_wait_seconds",
         "architect_max_new_issues",
+        "review_lane_max_concurrent",
     )
     @classmethod
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("new_issue_interval_seconds")
+    @classmethod
+    def non_negative_issue_interval(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("new issue interval cannot be negative")
+        return value
+
+    @field_validator("label_reconciliation_batch_size")
+    @classmethod
+    def bounded_label_reconciliation_batch(cls, value: int) -> int:
+        if not 1 <= value <= 100:
+            raise ValueError("label reconciliation batch size must be between 1 and 100")
         return value
 
     @model_validator(mode="after")
@@ -471,6 +509,11 @@ class FactoryConfig(BaseModel):
             for actor in env.get("FACTORY_TRUSTED_GITHUB_ACTORS", repository_owner).split(",")
             if actor.strip()
         )
+        control_github_actors = frozenset(
+            actor.strip().casefold()
+            for actor in env.get("FACTORY_CONTROL_GITHUB_ACTORS", repository_owner).split(",")
+            if actor.strip()
+        )
 
         try:
             return cls(
@@ -532,6 +575,11 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
+                new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
+                label_reconciliation_batch_size=int(
+                    env.get("FACTORY_LABEL_RECONCILIATION_BATCH_SIZE", "25")
+                ),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
@@ -540,10 +588,14 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
+                review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
                 trusted_github_actors=trusted_github_actors,
+                control_github_actors=control_github_actors,
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),
                 ready_label=env.get("FACTORY_READY_LABEL", "factory-ready"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])

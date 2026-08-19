@@ -1,6 +1,6 @@
 # GitHub Copilot repository instructions
 
-Copilot inherits the repository's central engineering and UI authorities. Before frontend work, read `AGENTS.md`, `frontend/AGENTS.md`, `DESIGN.md`, `docs/agent-ui-governance.md`, `docs/spartan-relay-architecture.md`, and `docs/claude-design-two-way-sync.md`.
+Copilot starts from the repository's central engineering and UI guidance. Before frontend work, read `AGENTS.md`, `frontend/AGENTS.md`, `DESIGN.md`, `docs/agent-ui-governance.md`, `docs/spartan-relay-architecture.md`, and `docs/claude-design-two-way-sync.md`.
 
 Relay is the application-facing visual/component authority. Spartan owns supported accessible interaction mechanics through the repository-owned Helm layer. Do not introduce direct Brain imports in feature code when Relay/Helm owns the capability, and do not recreate focus, keyboard, overlay, menu, dialog, selection, tabs, forms or combobox state already provided by Spartan.
 
@@ -8,7 +8,11 @@ Claude Design is the two-way design-intent/review workspace. Material visual or 
 
 Preserve semantic tokens, first-class light/dark themes, per-user accent semantics, RTL/logical direction, i18n, keyboard and screen-reader accessibility, high zoom/reflow, reduced motion, forced colours and deliberate responsive layouts. Original product screenshots are reference evidence, not strict styling authority.
 
-Detailed Angular, TypeScript, API, security, testing and verification rules remain authoritative in `AGENTS.md` and `frontend/AGENTS.md`; do not preserve stale copied audit findings here. Before recurring workflows, use the current repository skills under `.agents/skills/`, `.claude/skills/`, or other explicitly maintained skill locations as appropriate.
+Detailed Angular, TypeScript, API, security, testing, and verification guidance lives in `AGENTS.md` and
+`frontend/AGENTS.md`. Treat it as strong, editable defaults while continuing to obey mechanically enforced checks
+and safety requirements. Do not preserve stale copied audit findings here. Before recurring workflows, use the
+current repository skills under `.agents/skills/`, `.claude/skills/`, or other explicitly maintained skill
+locations as appropriate.
 
 Relevant frontend work must pass the normal verification gates plus:
 

@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from subprocess import CompletedProcess
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,7 @@ from openhands_factory.doctor import (
     Check,
     agent_provider_checks,
     daemon_health_check,
+    disk_space_checks,
     git_credential_helper_check,
     github_merge_policy_check,
     github_repository_access_check,
@@ -170,7 +172,31 @@ def test_doctor_reports_openai_subscription_credentials(
     )
     checks = {check.name: check for check in run_doctor(factory_config)}
     assert checks["openai-subscription"].passed
-    assert checks["openai-subscription"].detail == "gpt-5.6-sol"
+    assert checks["openai-subscription"].detail == (
+        "optional OpenHands SDK OAuth model=gpt-5.6-sol"
+    )
+
+
+def test_doctor_checks_root_and_factory_state_volumes_separately(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory_config = config(tmp_path)
+    factory_config.state_dir.mkdir()
+    gibibyte = 1024**3
+
+    def disk_usage(path: Path) -> SimpleNamespace:
+        free = 2 * gibibyte if path == Path("/") else 20 * gibibyte
+        return SimpleNamespace(free=free)
+
+    monkeypatch.setattr("openhands_factory.doctor.shutil.disk_usage", disk_usage)
+
+    checks = {check.name: check for check in disk_space_checks(factory_config)}
+
+    assert not checks["disk-free:root"].passed
+    assert "root: 2.0 GiB available" in checks["disk-free:root"].detail
+    assert checks["disk-free"].passed
+    assert "factory state: 20.0 GiB available" in checks["disk-free"].detail
 
 
 def test_doctor_reports_missing_systemd_analyse_without_crashing(
@@ -325,9 +351,103 @@ def test_online_merge_policy_requires_pull_requests_and_factory_statuses(
 
     assert check.passed
     assert "required-statuses=CI / required,factory/independent-review" in check.detail
-    assert "no-bypass-ruleset=42" in check.detail
+    assert "baseline-ruleset=42" in check.detail
+    assert "review-ruleset=42" in check.detail
+    assert "manual-review-bypass=disabled" in check.detail
     assert all(environment["GH_TOKEN"] == "token" for environment in environments)
     assert "token" not in check.detail
+
+
+def test_online_merge_policy_allows_exact_owner_to_bypass_review_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rules = [
+        {"type": "pull_request", "parameters": {}, "ruleset_id": 42},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 42,
+            "parameters": {"required_status_checks": [{"context": "CI / required"}]},
+        },
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 43,
+            "parameters": {"required_status_checks": [{"context": "factory/independent-review"}]},
+        },
+    ]
+
+    def run(arguments: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
+        del kwargs
+        payload: object = rules
+        if arguments[-1].endswith("/rulesets/42"):
+            payload = {"enforcement": "active", "bypass_actors": []}
+        elif arguments[-1].endswith("/rulesets/43"):
+            payload = {
+                "enforcement": "active",
+                "bypass_actors": [
+                    {
+                        "actor_id": 6_216_372,
+                        "actor_type": "User",
+                        "bypass_mode": "pull_request",
+                    }
+                ],
+            }
+        elif arguments[-1] == "users/elgansayer":
+            payload = {"id": 6_216_372, "login": "elgansayer", "type": "User"}
+        return CompletedProcess(arguments, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = github_merge_policy_check(config(tmp_path))
+
+    assert check.passed
+    assert "baseline-ruleset=42" in check.detail
+    assert "review-ruleset=43" in check.detail
+    assert "manual-ci-bypass=disabled" in check.detail
+    assert "manual-review-bypass=elgansayer; ruleset=43" in check.detail
+
+
+def test_online_merge_policy_allows_exact_owner_to_bypass_all_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rules = [
+        {"type": "pull_request", "parameters": {}, "ruleset_id": 42},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 42,
+            "parameters": {"required_status_checks": [{"context": "CI / required"}]},
+        },
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 43,
+            "parameters": {"required_status_checks": [{"context": "factory/independent-review"}]},
+        },
+    ]
+    owner_bypass = [
+        {
+            "actor_id": 6_216_372,
+            "actor_type": "User",
+            "bypass_mode": "pull_request",
+        }
+    ]
+
+    def run(arguments: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
+        del kwargs
+        payload: object = rules
+        if arguments[-1].endswith(("/rulesets/42", "/rulesets/43")):
+            payload = {"enforcement": "active", "bypass_actors": owner_bypass}
+        elif arguments[-1] == "users/elgansayer":
+            payload = {"id": 6_216_372, "login": "elgansayer", "type": "User"}
+        return CompletedProcess(arguments, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = github_merge_policy_check(config(tmp_path))
+
+    assert check.passed
+    assert "baseline-ruleset=42" in check.detail
+    assert "review-ruleset=43" in check.detail
+    assert "manual-ci-bypass=elgansayer; ruleset=42" in check.detail
+    assert "manual-review-bypass=elgansayer; ruleset=43" in check.detail
 
 
 @pytest.mark.parametrize(
@@ -401,7 +521,118 @@ def test_online_merge_policy_rejects_complete_ruleset_with_bypass_actors(
     check = github_merge_policy_check(config(tmp_path))
 
     assert not check.passed
-    assert "no complete active ruleset without bypass actors" in check.detail
+    assert "no active ruleset requiring pull requests and CI" in check.detail
+
+
+@pytest.mark.parametrize(
+    "bypass_actors",
+    [
+        [
+            {
+                "actor_id": 123,
+                "actor_type": "User",
+                "bypass_mode": "pull_request",
+            }
+        ],
+        [
+            {
+                "actor_id": 6_216_372,
+                "actor_type": "User",
+                "bypass_mode": "always",
+            }
+        ],
+        [
+            {
+                "actor_id": 6_216_372,
+                "actor_type": "RepositoryRole",
+                "bypass_mode": "pull_request",
+            }
+        ],
+    ],
+)
+def test_online_merge_policy_rejects_broad_or_wrong_manual_review_bypass(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    bypass_actors: list[dict[str, object]],
+) -> None:
+    rules = [
+        {"type": "pull_request", "parameters": {}, "ruleset_id": 42},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 42,
+            "parameters": {"required_status_checks": [{"context": "CI / required"}]},
+        },
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 43,
+            "parameters": {"required_status_checks": [{"context": "factory/independent-review"}]},
+        },
+    ]
+
+    def run(arguments: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
+        del kwargs
+        payload: object = rules
+        if arguments[-1].endswith("/rulesets/42"):
+            payload = {"enforcement": "active", "bypass_actors": []}
+        elif arguments[-1].endswith("/rulesets/43"):
+            payload = {"enforcement": "active", "bypass_actors": bypass_actors}
+        elif arguments[-1] == "users/elgansayer":
+            payload = {"id": 6_216_372, "login": "elgansayer", "type": "User"}
+        return CompletedProcess(arguments, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = github_merge_policy_check(config(tmp_path))
+
+    assert not check.passed
+    assert "baseline-ruleset=42" in check.detail
+    assert "no active independent-review ruleset with an allowed bypass policy" in check.detail
+
+
+def test_online_merge_policy_rejects_owner_bypass_on_non_review_rule(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rules = [
+        {"type": "pull_request", "parameters": {}, "ruleset_id": 42},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 42,
+            "parameters": {"required_status_checks": [{"context": "CI / required"}]},
+        },
+        {"type": "non_fast_forward", "parameters": {}, "ruleset_id": 43},
+        {
+            "type": "required_status_checks",
+            "ruleset_id": 43,
+            "parameters": {"required_status_checks": [{"context": "factory/independent-review"}]},
+        },
+    ]
+
+    def run(arguments: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
+        del kwargs
+        payload: object = rules
+        if arguments[-1].endswith("/rulesets/42"):
+            payload = {"enforcement": "active", "bypass_actors": []}
+        elif arguments[-1].endswith("/rulesets/43"):
+            payload = {
+                "enforcement": "active",
+                "bypass_actors": [
+                    {
+                        "actor_id": 6_216_372,
+                        "actor_type": "User",
+                        "bypass_mode": "pull_request",
+                    }
+                ],
+            }
+        elif arguments[-1] == "users/elgansayer":
+            payload = {"id": 6_216_372, "login": "elgansayer", "type": "User"}
+        return CompletedProcess(arguments, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = github_merge_policy_check(config(tmp_path))
+
+    assert not check.passed
+    assert "no active independent-review ruleset with an allowed bypass policy" in check.detail
 
 
 def test_provider_startup_uses_aggregate_health_and_merge_safety(
@@ -506,6 +737,14 @@ def test_agent_diagnostics_warn_when_no_provider_is_temporarily_usable(
         lambda provider: unavailable(provider.name),
     )
     monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: unavailable(provider.name),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
+        lambda provider: unavailable(provider.name),
+    )
+    monkeypatch.setattr(
         "openhands_factory.doctor.openai_credentials_available",
         lambda _config: False,
     )
@@ -549,6 +788,14 @@ def test_agent_diagnostics_ignore_capacity_from_a_previous_daemon_generation(
         lambda provider: healthy(provider.name),
     )
     monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: healthy(provider.name),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
+        lambda provider: healthy(provider.name),
+    )
+    monkeypatch.setattr(
         "openhands_factory.doctor.openai_credentials_available",
         lambda _config: False,
     )
@@ -579,6 +826,22 @@ def test_agent_diagnostics_report_persisted_circuit_and_retry_time(
     )
     monkeypatch.setattr(
         "openhands_factory.agents.CodexProvider.health",
+        lambda provider: ProviderHealth(
+            provider.name,
+            ProviderStatus.HEALTHY,
+            datetime.now(UTC),
+        ),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: ProviderHealth(
+            provider.name,
+            ProviderStatus.HEALTHY,
+            datetime.now(UTC),
+        ),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
         lambda provider: ProviderHealth(
             provider.name,
             ProviderStatus.HEALTHY,

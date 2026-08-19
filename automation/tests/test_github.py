@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 from collections.abc import Mapping, Sequence
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
 from openhands_factory.repository_guard import ProcessResult
 
@@ -17,6 +19,12 @@ class Runner:
     def __call__(self, arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         self.calls.append(tuple(arguments))
         return self.results.pop(0)
+
+
+def encoded_api_items(items: list[object]) -> str:
+    return "\n".join(
+        base64.b64encode(json.dumps(item).encode("utf-8")).decode("ascii") for item in items
+    )
 
 
 def test_collect_prioritises_labels_and_skips_quarantined(tmp_path: Path) -> None:
@@ -50,6 +58,12 @@ def test_collect_prioritises_labels_and_skips_quarantined(tmp_path: Path) -> Non
             "title": "Human decision",
             "body": "Blocked",
             "labels": [{"name": "needs-human"}],
+        },
+        {
+            "number": 15,
+            "title": "Factory control panel",
+            "body": "Operational status",
+            "labels": [{"name": "factory-status"}],
         },
     ]
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -246,6 +260,66 @@ def test_requeue_restores_required_intake_label(tmp_path: Path) -> None:
     )
 
 
+def test_requeue_can_silently_clear_automatic_recovery_labels(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    requeued = client.requeue_quarantined_issues([33], announce=False)
+
+    assert requeued == [33]
+    assert len(runner.calls) == 1
+    assert "--remove-label" in runner.calls[0]
+    assert all("comment" not in call for call in runner.calls)
+
+
+def test_release_active_issues_restores_required_intake_without_comments(
+    tmp_path: Path,
+) -> None:
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    client = GitHubClient(
+        "owner/repo",
+        tmp_path,
+        "secret",
+        runner,
+        require_ready_label=True,
+        ready_label="factory-ready",
+    )
+
+    released = client.release_active_issues([35])
+
+    assert released == [35]
+    assert any("--remove-label" in call and "factory-active" in call for call in runner.calls)
+    assert any("--add-label" in call and "factory-ready" in call for call in runner.calls)
+    assert all("comment" not in call for call in runner.calls)
+
+
+def test_list_active_issues_unions_current_and_retired_ownership(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"number": 34}]), ""),
+            ProcessResult(0, json.dumps([{"number": 34}, {"number": 35}]), ""),
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    active = client.list_active_issues()
+
+    assert active == [34, 35]
+    assert any("factory-active" in call for call in runner.calls)
+    assert any("swarm-active" in call for call in runner.calls)
+
+
+def test_release_active_issues_preserves_admission_when_ready_labels_are_optional(
+    tmp_path: Path,
+) -> None:
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.release_active_issues([36])
+
+    assert any("--add-label" in call and "factory-ready" in call for call in runner.calls)
+
+
 def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     tmp_path: Path,
 ) -> None:
@@ -280,7 +354,10 @@ def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
             "body": "Body",
             "headRefName": "sentinel/fix-thing",
             "isDraft": False,
-            "labels": [{"name": "factory-reviewed"}],
+            "labels": [
+                {"name": "factory-reviewed"},
+                {"name": "priority:critical"},
+            ],
         },
         {
             "number": 44,
@@ -320,6 +397,7 @@ def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     # a long backlog of fresh issue implementations at equal priority, but
     # below guardian-alert issues (0), which stay most urgent.
     assert tasks[0].priority == 5
+    assert tasks[1].priority == 1
     assert tasks[2].pr_branch == "factory/architect-2026-w34-cycle"
 
 
@@ -434,6 +512,107 @@ def test_create_issue_parses_number_and_applies_labels(tmp_path: Path) -> None:
 
     assert number == 55
     assert "--label" in runner.calls[0] and "architect-proposed" in runner.calls[0]
+
+
+def test_find_control_panel_issue_requires_exact_title_and_status_label(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 61,
+            "title": "Factory control panel preview",
+            "labels": [{"name": "factory-status"}],
+        },
+        {
+            "number": 62,
+            "title": "Factory control panel",
+            "labels": [{"name": "factory-status"}, {"name": "factory-skip"}],
+        },
+        {
+            "number": 63,
+            "title": "Factory control panel",
+            "labels": [],
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    issue = client.find_open_issue_by_title(
+        "Factory control panel",
+        required_label="factory-status",
+    )
+
+    assert issue == 62
+    assert '"Factory control panel" in:title label:factory-status' in runner.calls[0]
+
+
+def test_issue_update_uses_fixed_argv_without_a_shell(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.update_issue(62, title="Factory control panel", body="Status: healthy")
+
+    assert runner.calls[0][:4] == ("gh", "issue", "edit", "62")
+    assert "Status: healthy" in runner.calls[0]
+
+
+def test_issue_comments_are_typed_sorted_and_filtered_after_cursor(tmp_path: Path) -> None:
+    payload = [
+        {
+            "id": 12,
+            "body": "/factory pause",
+            "created_at": "2026-08-17T12:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {
+            "id": 10,
+            "body": "older",
+            "created_at": "2026-08-17T11:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {"id": "invalid", "body": "ignored", "user": {"login": "owner"}},
+    ]
+    runner = Runner([ProcessResult(0, encoded_api_items(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    comments = client.list_issue_comments(62, after=10)
+
+    assert [(comment.identifier, comment.author, comment.body) for comment in comments] == [
+        (12, "owner", "/factory pause")
+    ]
+    assert "repos/owner/repo/issues/62/comments" in runner.calls[0]
+    assert "--paginate" in runner.calls[0]
+    assert "--jq" in runner.calls[0]
+    assert "--slurp" not in runner.calls[0]
+
+
+def test_paginated_issue_comment_records_are_decoded(tmp_path: Path) -> None:
+    payload = [
+        {
+            "id": 20,
+            "body": "/factory status",
+            "created_at": "2026-08-17T12:00:00Z",
+            "user": {"login": "owner"},
+        },
+        {
+            "id": 21,
+            "body": "/factory resume",
+            "created_at": "2026-08-17T12:01:00Z",
+            "user": {"login": "owner"},
+        },
+    ]
+    runner = Runner([ProcessResult(0, encoded_api_items(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    comments = client.list_issue_comments(62)
+
+    assert [comment.identifier for comment in comments] == [20, 21]
+
+
+def test_malformed_issue_comment_output_fails_closed(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "not-base64", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    with pytest.raises(FactoryError, match="Could not parse GitHub issue comments"):
+        client.list_issue_comments(62)
 
 
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:

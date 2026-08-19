@@ -25,7 +25,7 @@ eligible GitHub issues and external pull requests
   -> provider-rotated repair with current failed-check evidence when needed
   -> verification and independent review repeat after every code change
   -> scheduled merge gate validates labels, SHA status, and every required check
-  -> squash merge without administrator bypass
+  -> autonomous squash merge without administrator bypass
   -> issue closure only after GitHub reports MERGED
 ```
 
@@ -35,19 +35,20 @@ the current head to review.
 
 ## Components
 
-| Component | Responsibility |
-| --- | --- |
-| `automation/openhands_factory/daemon.py` | Single-owner scheduling, abandoned-attempt recovery, pause, generation, and shutdown |
-| `automation/openhands_factory/pipeline.py` | Durable issue-to-merge state machine and repository safety gates |
-| `automation/openhands_factory/agents/` | Provider protocol, adapters, policy, process runner, health, and router |
-| `automation/openhands_factory/jobs.py` | Backwards-compatible durable state and retry authority |
-| `automation/openhands_factory/provider_capacity.py` | Cross-process, generation-aware provider concurrency leases |
-| `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport |
-| `automation/openhands_factory/github.py` | Typed issue, PR, label, check, status, and merge boundary |
-| `.github/workflows/ci.yml` | Application and Factory verification plus `CI / required` |
-| `.github/workflows/factory-merge.yml` | Final fail-closed merge gate for reviewed pull requests |
-| `config/systemd/hellotalk-factory.service` | Always-on daemon from the dedicated `main` checkout |
-| `config/systemd/hellotalk-factory-health.timer` | Periodic read-only health and restart supervision |
+| Component                                             | Responsibility                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `automation/openhands_factory/daemon.py`              | Single-owner scheduling, abandoned-attempt recovery, pause, generation, and shutdown |
+| `automation/openhands_factory/pipeline.py`            | Durable issue-to-merge state machine and repository safety gates                     |
+| `automation/openhands_factory/agents/`                | Provider protocol, adapters, policy, process runner, health, and router              |
+| `automation/openhands_factory/jobs.py`                | Backwards-compatible durable state and retry authority                               |
+| `automation/openhands_factory/provider_capacity.py`   | Cross-process, generation-aware provider concurrency leases                          |
+| `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport                                            |
+| `automation/openhands_factory/github.py`              | Typed issue, PR, label, check, status, and merge boundary                            |
+| `automation/openhands_factory/control_panel.py`       | Sanitised GitHub status issue and bounded operator commands                          |
+| `.github/workflows/ci.yml`                            | Application and Factory verification plus `CI / required`                            |
+| `.github/workflows/factory-merge.yml`                 | Final fail-closed merge gate for reviewed pull requests                              |
+| `config/systemd/hellotalk-factory.service`            | Always-on daemon from the dedicated `main` checkout                                  |
+| `config/systemd/hellotalk-factory-health.timer`       | Periodic read-only health and restart supervision                                    |
 
 ## Guarantees
 
@@ -69,16 +70,23 @@ the current head to review.
 - A reviewed head that becomes behind `main` loses eligibility, receives an expected-SHA base update, and is
   verified and reviewed again.
 - The merge call is atomically bound to the inspected head SHA with `--match-head-commit`.
-- `CI / required` and `factory/independent-review` must both report literal `SUCCESS`. Missing, skipped, neutral,
-  pending, or failed required contexts fail closed.
-- One active GitHub ruleset on `main` must have no bypass actors and require pull requests plus both canonical
-  statuses. The scheduled workflow is not a substitute for a server-side rule because another authenticated
-  account could otherwise merge around Factory review. Pin each status to its expected GitHub App integration;
-  a context name alone does not attest its publisher.
+- `CI / required` and `factory/independent-review` must both report literal `SUCCESS` for autonomous merge.
+  Missing, skipped, neutral, pending, or failed required contexts fail closed.
+- A baseline ruleset on `main` requires pull requests and strict `CI / required`. A review-only ruleset requires
+  `factory/independent-review`. The sole optional bypass actor on either ruleset is the exact repository-owner
+  user in pull-request mode. Roles, teams, apps, deploy keys, direct pushes, and always-mode bypasses remain
+  prohibited. Factory automation still requires both statuses and never invokes the manual path. Pin each status
+  to its expected GitHub App integration; a context name alone does not attest its publisher.
 - A human `CHANGES_REQUESTED` review blocks merge.
 - GitHub comments describe user-visible lifecycle changes and never expose credentials or routine provider
   fallback noise.
+- The `factory-status` issue is a projection of authoritative daemon state. Only exact pause, resume, status, and
+  restart comments from `FACTORY_CONTROL_GITHUB_ACTORS` are accepted; no comment can execute arbitrary code or
+  bypass merge safety.
 - The pre-push quality gate rejects provider credential directories, high-confidence tokens, and private keys.
+
+The owner-only pull-request override is documented in
+[`docs/factory/MANUAL-MERGE.md`](../../docs/factory/MANUAL-MERGE.md). Factory automation never invokes it.
 
 ## Parallelism and recovery
 

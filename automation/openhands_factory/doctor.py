@@ -261,12 +261,120 @@ def github_repository_access_check(config: FactoryConfig) -> Check:
     )
 
 
+def _ruleset_contexts(rules: list[dict[object, object]]) -> set[str]:
+    contexts: set[str] = set()
+    for rule in rules:
+        if rule.get("type") != "required_status_checks":
+            continue
+        parameters = rule.get("parameters")
+        if not isinstance(parameters, dict):
+            continue
+        checks = parameters.get("required_status_checks")
+        if not isinstance(checks, list):
+            continue
+        contexts.update(
+            context
+            for check in checks
+            if isinstance(check, dict)
+            and isinstance((context := check.get("context")), str)
+            and context
+        )
+    return contexts
+
+
+def _ruleset_details(
+    config: FactoryConfig,
+    environment: dict[str, str],
+    ruleset_id: int,
+) -> dict[object, object] | None:
+    try:
+        result = subprocess.run(
+            (
+                "gh",
+                "api",
+                f"repos/{config.github_repository}/rulesets/{ruleset_id}",
+            ),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=environment,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        details = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    return details if isinstance(details, dict) else None
+
+
+def _repository_owner_user(
+    config: FactoryConfig,
+    environment: dict[str, str],
+) -> tuple[int, str] | None:
+    owner, separator, _repository = config.github_repository.partition("/")
+    if not separator or owner.casefold() not in config.control_github_actors:
+        return None
+    try:
+        result = subprocess.run(
+            ("gh", "api", f"users/{owner}"),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env=environment,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        account = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(account, dict):
+        return None
+    actor_id = account.get("id")
+    login = account.get("login")
+    if (
+        not isinstance(actor_id, int)
+        or isinstance(actor_id, bool)
+        or not isinstance(login, str)
+        or login.casefold() != owner.casefold()
+        or account.get("type") != "User"
+    ):
+        return None
+    return actor_id, login
+
+
+def _is_exact_owner_pull_request_bypass(
+    bypass_actors: object,
+    owner: tuple[int, str] | None,
+) -> bool:
+    if owner is None or not isinstance(bypass_actors, list) or len(bypass_actors) != 1:
+        return False
+    actor = bypass_actors[0]
+    if not isinstance(actor, dict):
+        return False
+    owner_id, _login = owner
+    return (
+        actor.get("actor_id") == owner_id
+        and actor.get("actor_type") == "User"
+        and actor.get("bypass_mode") == "pull_request"
+    )
+
+
 def github_merge_policy_check(config: FactoryConfig) -> Check:
     """Prove GitHub enforces the Factory's fail-closed merge statuses.
 
-    Repository rules must require a pull request and both SHA-scoped status
-    contexts on the configured base branch. This validates context enforcement,
-    not the GitHub App identity that published each context.
+    A baseline ruleset must require pull requests and CI. The exact repository
+    owner may be its sole bypass actor in audited pull-request mode. Independent
+    review may live in that ruleset or in a review-only ruleset with the same
+    bounded owner policy. This validates context enforcement, not the GitHub App
+    identity that published each context.
     """
 
     environment = {
@@ -331,59 +439,58 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
                 required_contexts.add(context)
 
     missing = sorted(REQUIRED_FACTORY_MERGE_CHECKS - required_contexts)
-    complete_rulesets: list[int] = []
+    details_by_id = {
+        ruleset_id: details
+        for ruleset_id in rules_by_id
+        if (details := _ruleset_details(config, environment, ruleset_id)) is not None
+    }
+    baseline_rulesets: list[int] = []
+    review_rulesets: list[int] = []
+    manual_ci_rulesets: list[int] = []
+    manual_review_rulesets: list[int] = []
+    manual_bypass_actor: str | None = None
+    owner_lookup_complete = False
+    owner: tuple[int, str] | None = None
+
     for ruleset_id, ruleset_rules in rules_by_id.items():
-        has_pull_request = any(rule.get("type") == "pull_request" for rule in ruleset_rules)
-        contexts: set[str] = set()
-        for rule in ruleset_rules:
-            if rule.get("type") != "required_status_checks":
-                continue
-            parameters = rule.get("parameters")
-            if not isinstance(parameters, dict):
-                continue
-            checks = parameters.get("required_status_checks")
-            if not isinstance(checks, list):
-                continue
-            contexts.update(
-                context
-                for check in checks
-                if isinstance(check, dict)
-                and isinstance((context := check.get("context")), str)
-                and context
-            )
-        if has_pull_request and REQUIRED_FACTORY_MERGE_CHECKS.issubset(contexts):
-            complete_rulesets.append(ruleset_id)
-
-    no_bypass_rulesets: list[int] = []
-    for ruleset_id in complete_rulesets:
-        try:
-            detail_result = subprocess.run(
-                (
-                    "gh",
-                    "api",
-                    f"repos/{config.github_repository}/rulesets/{ruleset_id}",
-                ),
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=False,
-                env=environment,
-            )
-        except OSError:
+        details = details_by_id.get(ruleset_id)
+        if details is None or details.get("enforcement") != "active":
             continue
-        if detail_result.returncode != 0:
-            continue
-        try:
-            details = json.loads(detail_result.stdout)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(details, dict):
-            continue
+        contexts = _ruleset_contexts(ruleset_rules)
         bypass_actors = details.get("bypass_actors")
-        if details.get("enforcement") == "active" and bypass_actors == []:
-            no_bypass_rulesets.append(ruleset_id)
+        has_pull_request = any(rule.get("type") == "pull_request" for rule in ruleset_rules)
+        exact_owner_bypass = False
+        if bypass_actors != []:
+            if not owner_lookup_complete:
+                owner = _repository_owner_user(config, environment)
+                owner_lookup_complete = True
+            exact_owner_bypass = _is_exact_owner_pull_request_bypass(bypass_actors, owner)
+            if exact_owner_bypass and owner is not None:
+                manual_bypass_actor = owner[1]
+        allowed_bypass = bypass_actors == [] or exact_owner_bypass
+        is_baseline = has_pull_request and "CI / required" in contexts and allowed_bypass
+        if is_baseline:
+            baseline_rulesets.append(ruleset_id)
+            if exact_owner_bypass:
+                manual_ci_rulesets.append(ruleset_id)
+        if "factory/independent-review" not in contexts:
+            continue
+        if bypass_actors == []:
+            review_rulesets.append(ruleset_id)
+            continue
 
-    passed = pull_request_required and not missing and bool(no_bypass_rulesets)
+        review_only = contexts == {"factory/independent-review"} and all(
+            rule.get("type") == "required_status_checks" for rule in ruleset_rules
+        )
+        if not review_only and not is_baseline:
+            continue
+        if exact_owner_bypass:
+            review_rulesets.append(ruleset_id)
+            manual_review_rulesets.append(ruleset_id)
+
+    passed = (
+        pull_request_required and not missing and bool(baseline_rulesets) and bool(review_rulesets)
+    )
     detail_parts = [
         f"pull-request-rule={'present' if pull_request_required else 'missing'}",
         (
@@ -392,9 +499,26 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             else "missing-statuses=" + ",".join(missing)
         ),
         (
-            "no-bypass-ruleset=" + ",".join(str(value) for value in no_bypass_rulesets)
-            if no_bypass_rulesets
-            else "no complete active ruleset without bypass actors"
+            "baseline-ruleset=" + ",".join(str(value) for value in baseline_rulesets)
+            if baseline_rulesets
+            else "no active ruleset requiring pull requests and CI with an allowed bypass policy"
+        ),
+        (
+            "review-ruleset=" + ",".join(str(value) for value in review_rulesets)
+            if review_rulesets
+            else "no active independent-review ruleset with an allowed bypass policy"
+        ),
+        (
+            f"manual-ci-bypass={manual_bypass_actor}; ruleset="
+            + ",".join(str(value) for value in manual_ci_rulesets)
+            if manual_bypass_actor is not None and manual_ci_rulesets
+            else "manual-ci-bypass=disabled"
+        ),
+        (
+            f"manual-review-bypass={manual_bypass_actor}; ruleset="
+            + ",".join(str(value) for value in manual_review_rulesets)
+            if manual_bypass_actor is not None and manual_review_rulesets
+            else "manual-review-bypass=disabled"
         ),
     ]
     return Check("github-merge-policy", passed, "; ".join(detail_parts))
@@ -723,9 +847,17 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
         openhands_usable = False
     usable += int(openhands_usable)
     openhands_health = openhands_breaker.get_health()
+    openhands_source = (
+        "openai-oauth"
+        if openai_credentials_available(config)
+        else "opencode-go-api"
+        if config.opencode_api_key is not None and config.opencode_model is not None
+        else "none"
+    )
     openhands_detail = (
         "healthy; transport=openhands-sdk; emergency-only="
-        f"{str(bool(openhands and openhands.emergency_only)).lower()}; circuit=closed"
+        f"{str(bool(openhands and openhands.emergency_only)).lower()}; "
+        f"credential-source={openhands_source}; circuit=closed"
         if openhands_usable
         else "disabled or authentication unavailable"
     )
@@ -805,7 +937,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         Check(
             "openai-subscription",
             True,
-            config.openai_model if openai_ready else "OAuth credentials missing or unavailable",
+            (
+                f"optional OpenHands SDK OAuth model={config.openai_model}"
+                if openai_ready
+                else (
+                    "optional OpenHands SDK OAuth missing or unavailable; "
+                    "Codex CLI auth is separate"
+                )
+            ),
             warning=not openai_ready,
         )
     )
@@ -822,15 +961,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
                 "ready" if exists_and_writable else "missing or not writable",
             )
         )
-    usage = shutil.disk_usage(config.state_dir if config.state_dir.exists() else Path("/"))
-    free_gib = usage.free / 1024**3
-    checks.append(
-        Check(
-            "disk-free",
-            free_gib >= config.minimum_free_disk_gib,
-            f"{free_gib:.1f} GiB available, {config.minimum_free_disk_gib:.1f} GiB required",
-        )
-    )
+    checks.extend(disk_space_checks(config))
     for script in (
         config.repository / "scripts/verify-constitution.mjs",
         config.repository / "scripts/check-conflict-markers.mjs",
@@ -874,5 +1005,29 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     else:
         checks.append(
             Check("systemd-unit", systemd.returncode == 0, systemd.stderr.strip() or "valid")
+        )
+    return checks
+
+
+def disk_space_checks(config: FactoryConfig) -> list[Check]:
+    """Check root separately from the potentially secondary-backed Factory state."""
+
+    checks: list[Check] = []
+    for name, label, path in (
+        ("disk-free:root", "root", Path("/")),
+        ("disk-free", "factory state", config.state_dir),
+    ):
+        try:
+            free_gib = shutil.disk_usage(path).free / 1024**3
+        except OSError as error:
+            checks.append(Check(name, False, f"{label}: unavailable ({type(error).__name__})"))
+            continue
+        checks.append(
+            Check(
+                name,
+                free_gib >= config.minimum_free_disk_gib,
+                f"{label}: {free_gib:.1f} GiB available, "
+                f"{config.minimum_free_disk_gib:.1f} GiB required",
+            )
         )
     return checks

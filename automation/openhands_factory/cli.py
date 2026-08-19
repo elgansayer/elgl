@@ -6,17 +6,15 @@ import argparse
 import json
 import os
 import sys
+from typing import TYPE_CHECKING
 
 from openhands_factory.alerts import AlertService
 from openhands_factory.authentication import authenticate_openai
 from openhands_factory.config import FactoryConfig
-from openhands_factory.daemon import FactoryDaemon, set_paused
-from openhands_factory.doctor import (
-    Check,
-    agent_provider_checks,
-    github_merge_policy_check,
-    github_repository_access_check,
-    run_doctor,
+from openhands_factory.control_panel import (
+    FactoryControlPanel,
+    build_status_snapshot,
+    render_status_markdown,
 )
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
@@ -29,6 +27,33 @@ from openhands_factory.process_security import protect_process_credentials
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
 from openhands_factory.state import read_json
 from openhands_factory.task_source import TaskStore
+
+if TYPE_CHECKING:
+    from openhands_factory.doctor import Check
+
+
+def run_doctor(config: FactoryConfig, *, online: bool) -> list[Check]:
+    from openhands_factory.doctor import run_doctor as implementation
+
+    return implementation(config, online=online)
+
+
+def agent_provider_checks(config: FactoryConfig) -> list[Check]:
+    from openhands_factory.doctor import agent_provider_checks as implementation
+
+    return implementation(config)
+
+
+def github_repository_access_check(config: FactoryConfig) -> Check:
+    from openhands_factory.doctor import github_repository_access_check as implementation
+
+    return implementation(config)
+
+
+def github_merge_policy_check(config: FactoryConfig) -> Check:
+    from openhands_factory.doctor import github_merge_policy_check as implementation
+
+    return implementation(config)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -54,10 +79,15 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("pause")
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
+    dashboard = subcommands.add_parser("dashboard")
+    dashboard.add_argument("action", choices=("show", "sync"))
+    dashboard.add_argument("--force", action="store_true")
     subcommands.add_parser("reconcile")
     subcommands.add_parser("alert-daemon-failed")
     backlog = subcommands.add_parser("backlog")
     backlog.add_argument("action", choices=("requeue-quarantined",))
+    backlog.add_argument("--issue", type=int, action="append")
+    backlog.add_argument("--announce", action="store_true")
     return result
 
 
@@ -74,6 +104,8 @@ def _config() -> FactoryConfig:
 
 
 def _legacy_checks() -> list[Check]:
+    from openhands_factory.doctor import Check
+
     findings = detect_legacy_runtime()
     if not findings:
         return [Check("legacy-runtime", True, "no retired swarm runtime artifacts detected")]
@@ -92,6 +124,8 @@ def _legacy_checks() -> list[Check]:
 
 
 def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
+    from openhands_factory.doctor import Check
+
     checks = run_doctor(config, online=online)
     checks.extend(_legacy_checks())
     if online:
@@ -100,6 +134,7 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
             Check(
                 "openai-subscription-online",
                 True,
+                "optional OpenHands SDK OAuth, separate from Codex CLI: "
                 f"{oauth.kind}: {oauth.detail}",
                 warning=not oauth.passed,
             )
@@ -110,6 +145,8 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
 def _provider_startup_checks(config: FactoryConfig) -> list[Check]:
     """Return the bounded read-only gates required before daemon activation."""
 
+    from openhands_factory.doctor import Check
+
     checks = agent_provider_checks(config)
     checks.extend(_legacy_checks())
     checks.append(github_repository_access_check(config))
@@ -119,7 +156,7 @@ def _provider_startup_checks(config: FactoryConfig) -> list[Check]:
         Check(
             "openai-subscription-online",
             True,
-            f"{oauth.kind}: {oauth.detail}",
+            f"optional OpenHands SDK OAuth, separate from Codex CLI: {oauth.kind}: {oauth.detail}",
             warning=not oauth.passed,
         )
     )
@@ -185,8 +222,12 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "daemon":
+            from openhands_factory.daemon import FactoryDaemon
+
             return FactoryDaemon(config).run()
         if args.command in {"pause", "resume"}:
+            from openhands_factory.daemon import set_paused
+
             set_paused(config, args.command == "pause")
             print(f"Factory {args.command}d")
             return 0
@@ -199,6 +240,25 @@ def main(arguments: list[str] | None = None) -> int:
             return 0
         if args.command == "metrics":
             print(json.dumps(MetricsStore(config.state_dir / "metrics.json").snapshot(), indent=2))
+            return 0
+        if args.command == "dashboard":
+            if args.action == "show":
+                snapshot = build_status_snapshot(config)
+                print(render_status_markdown(snapshot, config.github_repository))
+                return 0
+            result = FactoryControlPanel(config).sync(force=args.force)
+            print(
+                json.dumps(
+                    {
+                        "issue": result.issue,
+                        "issue_url": result.issue_url,
+                        "status": result.status,
+                        "published": result.published,
+                        "command": result.command,
+                    },
+                    indent=2,
+                )
+            )
             return 0
         if args.command == "reconcile":
             expired = TaskStore(config.state_dir).prune_expired_leases()
@@ -221,13 +281,21 @@ def main(arguments: list[str] | None = None) -> int:
                 config.state_dir / "jobs.json",
                 max_repeated_failures=config.max_consecutive_failures,
             )
-            labelled = {str(issue) for issue in github.list_quarantined_issues()}
-            durable = {
-                task_id for task_id, job in jobs.load().items() if job.state is JobState.QUARANTINED
-            }
-            targets = labelled | durable
+            if args.issue:
+                targets = {str(issue) for issue in args.issue}
+            else:
+                labelled = {str(issue) for issue in github.list_quarantined_issues()}
+                durable = {
+                    task_id
+                    for task_id, job in jobs.load().items()
+                    if job.state is JobState.QUARANTINED
+                }
+                targets = labelled | durable
             numeric_targets = sorted(int(task_id) for task_id in targets if task_id.isdigit())
-            github_requeued = github.requeue_quarantined_issues(numeric_targets)
+            github_requeued = github.requeue_quarantined_issues(
+                numeric_targets,
+                announce=args.announce,
+            )
             durable_requeued = jobs.requeue_quarantined(targets)
             print(
                 json.dumps(
