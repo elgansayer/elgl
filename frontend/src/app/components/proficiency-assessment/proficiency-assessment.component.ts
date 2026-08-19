@@ -25,7 +25,11 @@ import { UserService } from '../../services/user.service';
         class="w-full mb-4"
       />
 
-      <button hlmBtn class="bg-primary text-on-fill px-6 py-2 rounded-lg" (click)="submitAssessment()">
+      <button
+        hlmBtn
+        class="bg-primary text-on-fill px-6 py-2 rounded-lg"
+        (click)="submitAssessment()"
+      >
         {{ 'proficiency.submit' | t }}
       </button>
 

@@ -11,7 +11,8 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [HlmNativeSelect, 
+  imports: [
+    HlmNativeSelect,
     FormsModule,
     TranslatePipe,
     AppSkeletonLoaderComponent,
@@ -30,15 +31,33 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 id="trust-safety-title" class="flex items-center gap-2 text-xl font-black text-text-primary">{{ 'safety.title' | t }}</h3>
-            <p id="trust-safety-description" class="text-xs text-text-secondary">{{ 'safety.subtitle' | t: { name: targetName() } }}</p>
+            <h3
+              id="trust-safety-title"
+              class="flex items-center gap-2 text-xl font-black text-text-primary"
+            >
+              {{ 'safety.title' | t }}
+            </h3>
+            <p id="trust-safety-description" class="text-xs text-text-secondary">
+              {{ 'safety.subtitle' | t: { name: targetName() } }}
+            </p>
           </div>
-          <button hlmBtn type="button" variant="ghost" size="icon-touch" (click)="closed.emit()" [attr.aria-label]="'safety.closeBtn' | t">
+          <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="icon-touch"
+            (click)="closed.emit()"
+            [attr.aria-label]="'safety.closeBtn' | t"
+          >
             <span aria-hidden="true">✕</span>
           </button>
         </div>
 
-        <div class="flex gap-1 rounded-2xl bg-surface-100 p-1" role="tablist" [attr.aria-label]="'safety.tabListLabel' | t">
+        <div
+          class="flex gap-1 rounded-2xl bg-surface-100 p-1"
+          role="tablist"
+          [attr.aria-label]="'safety.tabListLabel' | t"
+        >
           <button
             hlmBtn
             id="trust-safety-tab-report"
@@ -78,16 +97,36 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
         </div>
 
         @if (mode() === 'report') {
-          <div id="trust-safety-panel-report" role="tabpanel" tabindex="0" aria-labelledby="trust-safety-tab-report" class="space-y-3 text-xs">
+          <div
+            id="trust-safety-panel-report"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-report"
+            class="space-y-3 text-xs"
+          >
             @if (categoriesLoading()) {
-              <div class="space-y-2" aria-busy="true" [attr.aria-label]="'safety.categoriesLoading' | t">
+              <div
+                class="space-y-2"
+                aria-busy="true"
+                [attr.aria-label]="'safety.categoriesLoading' | t"
+              >
                 <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
                 <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
               </div>
             } @else {
               <div>
-                <label for="report-reason-select" class="mb-1 block ps-1 font-bold text-text-primary">{{ 'safety.reasonLabel' | t }}</label>
-                <hlm-native-select selectId="report-reason-select" [(ngModel)]="reportReason" aria-required="true" class="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium" selectClass="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium">
+                <label
+                  for="report-reason-select"
+                  class="mb-1 block ps-1 font-bold text-text-primary"
+                  >{{ 'safety.reasonLabel' | t }}</label
+                >
+                <hlm-native-select
+                  selectId="report-reason-select"
+                  [(ngModel)]="reportReason"
+                  aria-required="true"
+                  class="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium"
+                  selectClass="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium"
+                >
                   @for (category of reportCategories(); track category.value) {
                     <option [value]="category.value">{{ category.label }}</option>
                   }
@@ -95,7 +134,11 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
               </div>
             }
             <div>
-              <label for="report-details-textarea" class="mb-1 block ps-1 font-bold text-text-primary">{{ 'safety.detailsLabel' | t }}</label>
+              <label
+                for="report-details-textarea"
+                class="mb-1 block ps-1 font-bold text-text-primary"
+                >{{ 'safety.detailsLabel' | t }}</label
+              >
               <textarea
                 hlmTextarea
                 id="report-details-textarea"
@@ -106,9 +149,19 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             </div>
           </div>
         } @else {
-          <div id="trust-safety-panel-block" role="tabpanel" tabindex="0" aria-labelledby="trust-safety-tab-block">
-            <div class="space-y-2 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-xs" role="alert">
-              <span class="block font-bold text-danger">{{ 'safety.blockWarning' | t: { name: targetName() } }}</span>
+          <div
+            id="trust-safety-panel-block"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-block"
+          >
+            <div
+              class="space-y-2 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-xs"
+              role="alert"
+            >
+              <span class="block font-bold text-danger">{{
+                'safety.blockWarning' | t: { name: targetName() }
+              }}</span>
               <ul class="list-inside list-disc space-y-1 text-text-primary">
                 <li>{{ 'safety.blockList1' | t }}</li>
                 <li>{{ 'safety.blockList2' | t }}</li>
@@ -119,13 +172,28 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
         }
 
         <div class="flex justify-end gap-3 border-t border-surface-100 pt-2">
-          <button hlmBtn type="button" variant="secondary" size="touch" (click)="closed.emit()">{{ 'safety.cancelBtn' | t }}</button>
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="closed.emit()">
+            {{ 'safety.cancelBtn' | t }}
+          </button>
           @if (mode() === 'report') {
-            <button hlmBtn type="button" size="touch" (click)="submitReport()" [attr.aria-label]="'safety.submitReportAria' | t: { name: targetName() }">
+            <button
+              hlmBtn
+              type="button"
+              size="touch"
+              (click)="submitReport()"
+              [attr.aria-label]="'safety.submitReportAria' | t: { name: targetName() }"
+            >
               {{ 'safety.submitReportBtn' | t }}
             </button>
           } @else {
-            <button hlmBtn type="button" variant="destructive-solid" size="touch" (click)="confirmBlock()" [attr.aria-label]="'safety.confirmBlockAria' | t: { name: targetName() }">
+            <button
+              hlmBtn
+              type="button"
+              variant="destructive-solid"
+              size="touch"
+              (click)="confirmBlock()"
+              [attr.aria-label]="'safety.confirmBlockAria' | t: { name: targetName() }"
+            >
               {{ 'safety.confirmBlockBtn' | t }}
             </button>
           }
@@ -143,7 +211,7 @@ export class TrustSafetyModalComponent {
   readonly store = inject(EconomyStore);
   private readonly safetyService = inject(SafetyService);
   readonly mode = signal<'report' | 'block'>('report');
-  readonly dialogState = computed<HlmDialogState>(() => this.open() ? 'open' : 'closed');
+  readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
   reportReason = 'harassment';
   reportDetails = '';
   readonly categoriesLoading = signal(false);
@@ -183,8 +251,10 @@ export class TrustSafetyModalComponent {
     const tabs: Array<'report' | 'block'> = ['report', 'block'];
     const currentIndex = tabs.indexOf(currentTab);
     let nextIndex = currentIndex;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % tabs.length;
-    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+      nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
     if (nextIndex !== currentIndex) {
       event.preventDefault();
       this.mode.set(tabs[nextIndex]);

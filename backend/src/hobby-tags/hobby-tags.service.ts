@@ -386,11 +386,9 @@ export class HobbyTagsService {
         for (const bv of baseVocab) {
           if (!wordToTagMap.has(bv.word)) {
             wordToTagMap.set(bv.word, []);
-          }
-          wordToTagMap.get(bv.word)!.push(tnt.tagName);
-          if (!allBaseWords.includes(bv.word)) {
             allBaseWords.push(bv.word);
           }
+          wordToTagMap.get(bv.word)!.push(tnt.tagName);
         }
       }
 
