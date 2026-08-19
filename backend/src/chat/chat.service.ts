@@ -2137,10 +2137,14 @@ export class ChatService {
       .in('id', roomIds);
 
     const labelSet = new Set<string>();
-    for (const r of rooms ?? []) {
-      const roomLabels: string[] = r.labels ?? [];
-      for (const l of roomLabels) {
-        labelSet.add(l);
+    if (rooms) {
+      for (let i = 0, len = rooms.length; i < len; i++) {
+        const labels = rooms[i].labels;
+        if (labels) {
+          for (let j = 0, llen = labels.length; j < llen; j++) {
+            labelSet.add(labels[j]);
+          }
+        }
       }
     }
     return Array.from(labelSet);

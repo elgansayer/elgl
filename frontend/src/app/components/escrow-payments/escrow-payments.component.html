@@ -14,7 +14,8 @@
   <!-- Sync pending operations button -->
   @if (pendingOperationCount() > 0 && isOnline()) {
     <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 pt-3">
-      <button hlmBtn
+      <button
+        hlmBtn
         (click)="handleSync()"
         [disabled]="actionInProgress()"
         class="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 text-on-fill font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-xs sm:text-sm"
@@ -26,7 +27,8 @@
 
   <!-- Header -->
   <div class="flex items-center gap-3 ps-3 pe-3 sm:ps-4 sm:pe-4 py-3 sm:py-4">
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="goBack()"
       class="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-100 hover:bg-surface-200 transition-colors"
       aria-label="{{ 'common.back' | t }}"
@@ -41,7 +43,8 @@
       </svg>
     </button>
     <h1 class="text-lg sm:text-xl lg:text-2xl font-bold">{{ 'escrow.title' | t }}</h1>
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="startOnboardingTour()"
       class="ms-auto flex items-center justify-center w-10 h-10 rounded-xl bg-primary hover:bg-primary-dark transition-colors text-sm text-on-fill"
       aria-label="{{ 'escrow.onboarding.helpBtn' | t }}"
@@ -54,7 +57,8 @@
   <!-- Status filter pills -->
   <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 pb-3 flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
     @for (filter of statusFilters; track filter.value) {
-      <button hlmBtn
+      <button
+        hlmBtn
         (click)="setStatusFilter(filter.value)"
         class="whitespace-nowrap ps-3 pe-3 sm:ps-4 sm:pe-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors"
         [class.bg-primary]="selectedStatus() === filter.value"
@@ -116,21 +120,24 @@
           <!-- Action buttons -->
           @if (escrow.status === 'pending') {
             <div class="flex flex-col sm:flex-row gap-2">
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="handleRelease(escrow.id)"
                 [disabled]="actionInProgress()"
                 class="w-full sm:w-auto sm:flex-1 bg-success hover:bg-success/90 disabled:opacity-50 text-on-fill font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"
               >
                 {{ 'escrow.releaseAction' | t }}
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="handleRefund(escrow.id)"
                 [disabled]="actionInProgress()"
                 class="w-full sm:w-auto sm:flex-1 bg-surface-100 hover:bg-surface-200 disabled:opacity-50 text-text-primary font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"
               >
                 {{ 'escrow.refundAction' | t }}
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="handleDispute(escrow.id)"
                 [disabled]="actionInProgress()"
                 class="w-full sm:w-auto sm:flex-1 bg-danger/80 hover:bg-danger disabled:opacity-50 text-on-fill font-semibold py-2 sm:py-2.5 ps-3 pe-3 sm:ps-4 sm:pe-4 rounded-xl text-xs sm:text-sm transition-colors"

@@ -19,7 +19,11 @@ describe('PasswordResetController (unit)', () => {
   });
 
   describe('requestPasswordReset', () => {
-    it('should call service and return a generic success message', async () => {
+    const genericResponse = {
+      message: 'If the email address exists, a reset link has been sent.',
+    };
+
+    it('calls the service and returns a generic success message', async () => {
       resetService.requestPasswordReset.mockResolvedValue(undefined);
 
       const result = await controller.requestPasswordReset({
@@ -29,23 +33,24 @@ describe('PasswordResetController (unit)', () => {
       expect(resetService.requestPasswordReset).toHaveBeenCalledWith({
         email: 'user@example.com',
       });
-      expect(result).toEqual({
-        message: 'If the email address exists, a reset link has been sent.',
-      });
+      expect(result).toEqual(genericResponse);
     });
 
-    it('should return success message even if service throws (to not leak info)', async () => {
-      resetService.requestPasswordReset.mockRejectedValue(undefined);
+    it('returns the same generic response when the service fails', async () => {
+      resetService.requestPasswordReset.mockRejectedValue(
+        new Error('email provider unavailable'),
+      );
 
-      // It will throw; controller does not catch it – that's by design, callers see error
-      await expect(
-        controller.requestPasswordReset({ email: 'bad@example.com' }),
-      ).rejects.toBeUndefined();
+      const result = await controller.requestPasswordReset({
+        email: 'user@example.com',
+      });
+
+      expect(result).toEqual(genericResponse);
     });
   });
 
   describe('resetPassword', () => {
-    it('should call service and return success message', async () => {
+    it('calls the service and returns success message', async () => {
       resetService.resetPassword.mockResolvedValue(undefined);
 
       const result = await controller.resetPassword({
@@ -61,10 +66,21 @@ describe('PasswordResetController (unit)', () => {
         message: 'Password has been successfully reset.',
       });
     });
+
+    it('preserves reset failures for invalid or unusable tokens', async () => {
+      const failure = new Error('invalid reset token');
+      resetService.resetPassword.mockRejectedValue(failure);
+
+      await expect(
+        controller.resetPassword({
+          token: 'invalid-token',
+          newPassword: 'newPass123!',
+        }),
+      ).rejects.toBe(failure);
+    });
   });
 
   describe('throttle configuration for password reset endpoints', () => {
-    // Metadata keys used by @nestjs/throttler for the default named throttler.
     const throttleLimitKey = 'THROTTLER:LIMITdefault';
     const throttleTtlKey = 'THROTTLER:TTLdefault';
 
@@ -78,7 +94,7 @@ describe('PasswordResetController (unit)', () => {
     ];
 
     it.each(throttledEndpoints)(
-      'should limit $method to $limit requests per $ttl ms window',
+      'limits $method to $limit requests per $ttl ms window',
       ({ method, limit, ttl }) => {
         const handler = PasswordResetController.prototype[method];
 
