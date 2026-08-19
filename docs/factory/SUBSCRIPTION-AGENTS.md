@@ -101,10 +101,10 @@ slash-command expansion, selects high effort, bounds print mode, enables the CLI
 requests inside the Factory-controlled worktree. The outer Factory process runner still owns the final timeout
 and process-group termination. Recheck `agy models` before enabling Google because account entitlements can differ.
 
-The provider remains disabled in the initial production file. Enable it only after `agy models` succeeds as
-`hellotalk-factory`, doctor reports it healthy, and one harmless service-user canary proves headless edits and
-captured output. The health gate rejects Antigravity older than 1.1.1 and uses `agy models` as the non-generation
-authentication probe.
+The provider is enabled in the production file after `agy models` succeeded as `hellotalk-factory` and doctor
+reported it healthy on the production host. Keep the same gate after every CLI or credential change: require a
+harmless service-user canary before accepting production work. The health gate rejects Antigravity older than
+1.1.1 and uses `agy models` as the non-generation authentication probe.
 
 To retain Gemini CLI for an eligible deployment, configure `command=gemini` and `cli_variant=gemini`. That path
 uses Gemini headless prompt mode, a fixed command-line instruction, Factory content on stdin, `model=auto`, text
