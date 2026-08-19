@@ -32,7 +32,8 @@ import { showToast } from '../../services/toast.service';
           {{ 'diagnosticQuiz.errorTitle' | t }}
         </h3>
         <p class="text-text-muted text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           (click)="reloadQuestions()"
           class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-fill font-medium transition-colors"
@@ -120,7 +121,8 @@ import { showToast } from '../../services/toast.service';
         <div
           class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-surface-400/60 border-t border-primary/10"
         >
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="previous()"
             [disabled]="isFirstQuestion()"
@@ -130,7 +132,8 @@ import { showToast } from '../../services/toast.service';
           </button>
 
           @if (isLastQuestion()) {
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed() || isSubmitting()"
@@ -145,7 +148,8 @@ import { showToast } from '../../services/toast.service';
               {{ 'diagnosticQuiz.submit' | t }}
             </button>
           } @else {
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed()"

@@ -18,9 +18,7 @@ describe('CoverPhotoCropperComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CoverPhotoCropperComponent, ImageCropperComponent],
-      providers: [
-        { provide: TranslatePipe, useClass: MockTranslatePipe },
-      ],
+      providers: [{ provide: TranslatePipe, useClass: MockTranslatePipe }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CoverPhotoCropperComponent);

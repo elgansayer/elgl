@@ -11,7 +11,14 @@ import { AchievementsComponent } from '../../achievements/achievements.component
 
 @Component({
   selector: 'app-user-detail',
-  imports: [HlmButton, CommonModule, RouterLink, TranslatePipe, ReportButtonComponent, AchievementsComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    RouterLink,
+    TranslatePipe,
+    ReportButtonComponent,
+    AchievementsComponent,
+  ],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
 })

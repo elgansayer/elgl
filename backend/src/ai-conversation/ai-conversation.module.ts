@@ -8,7 +8,13 @@ import { StudyStreakModule } from '../study-streak/study-streak.module';
 import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 
 @Module({
-  imports: [LlmProxyModule, UsersModule, FlashcardsModule, StudyStreakModule, LearnerKnowledgeModule],
+  imports: [
+    LlmProxyModule,
+    UsersModule,
+    FlashcardsModule,
+    StudyStreakModule,
+    LearnerKnowledgeModule,
+  ],
   controllers: [AiConversationController],
   providers: [AiConversationService],
   exports: [AiConversationService],

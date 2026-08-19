@@ -1,6 +1,6 @@
 # 📋 Consolidated Product Backlog
 
-*Organized by complete user outcomes rather than individual technical chores.*
+_Organized by complete user outcomes rather than individual technical chores._
 
 ## Real-Time Communication & Messaging
 
