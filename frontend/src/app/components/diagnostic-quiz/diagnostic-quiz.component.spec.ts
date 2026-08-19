@@ -89,16 +89,17 @@ describe('DiagnosticQuizComponent', () => {
     expect(group.querySelector('[aria-pressed]')).toBeNull();
   });
 
-  it('should update the current answer through the Spartan radio group', async () => {
+  it('should store numeric values emitted by the Spartan radio group', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('/api/quiz/questions?language=en');
     req.flush(mockQuestions);
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const radios = fixture.nativeElement.querySelectorAll('hlm-radio brn-radio');
-    expect(radios.length).toBe(4);
-    radios[1].click();
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+
+    component.selectOption('q1', 2);
     fixture.detectChanges();
 
     expect(component.answers()).toEqual({ q1: 2 });
