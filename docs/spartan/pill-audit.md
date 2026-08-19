@@ -29,12 +29,12 @@ Program dependency #5462 is completed and defines the Relay / Spartan ownership 
 
 `AppPillComponent` exposes four signal inputs and no outputs.
 
-| Input | Type | Default | Contract |
-| --- | --- | --- | --- |
-| `label` | `string` | empty string | When non-empty, renders the label and suppresses projected content. |
-| `colour` | `primary \| success \| warning \| danger \| info \| neutral` | `neutral` | Selects the semantic Relay colour treatment. |
-| `size` | `sm \| md` | `md` | Selects compact or default logical padding and text size. |
-| `customClass` | `string` | empty string | Appends caller classes after the primitive-owned classes. |
+| Input         | Type                                                         | Default      | Contract                                                            |
+| ------------- | ------------------------------------------------------------ | ------------ | ------------------------------------------------------------------- |
+| `label`       | `string`                                                     | empty string | When non-empty, renders the label and suppresses projected content. |
+| `colour`      | `primary \| success \| warning \| danger \| info \| neutral` | `neutral`    | Selects the semantic Relay colour treatment.                        |
+| `size`        | `sm \| md`                                                   | `md`         | Selects compact or default logical padding and text size.           |
+| `customClass` | `string`                                                     | empty string | Appends caller classes after the primitive-owned classes.           |
 
 Content precedence is deterministic:
 
@@ -63,23 +63,23 @@ rounded-pill
 
 Size variants are:
 
-| Size | Classes |
-| --- | --- |
+| Size | Classes                    |
+| ---- | -------------------------- |
 | `sm` | `ps-2 pe-2 py-0.5 text-xs` |
-| `md` | `ps-3 pe-3 py-1 text-sm` |
+| `md` | `ps-3 pe-3 py-1 text-sm`   |
 
 The component uses logical inline padding (`ps` / `pe`), so the primitive itself is RTL-safe.
 
 ## Colour state inventory
 
-| `colour` | Relay mapping | Text treatment | Current hover class |
-| --- | --- | --- | --- |
-| `primary` | `bg-primary` | `text-on-fill` | `hover:bg-primary/90` |
-| `success` | `bg-success` | `text-on-fill` | `hover:bg-success/90` |
-| `warning` | `bg-warning` | `text-on-fill` | `hover:bg-warning/90` |
-| `danger` | `bg-danger` | `text-on-fill` | `hover:bg-danger/90` |
-| `info` | `bg-secondary` | `text-on-fill` | `hover:bg-secondary/90` |
-| `neutral` | `bg-surface-100` | `text-text-primary` | `hover:bg-surface-50` |
+| `colour`  | Relay mapping    | Text treatment      | Current hover class     |
+| --------- | ---------------- | ------------------- | ----------------------- |
+| `primary` | `bg-primary`     | `text-on-fill`      | `hover:bg-primary/90`   |
+| `success` | `bg-success`     | `text-on-fill`      | `hover:bg-success/90`   |
+| `warning` | `bg-warning`     | `text-on-fill`      | `hover:bg-warning/90`   |
+| `danger`  | `bg-danger`      | `text-on-fill`      | `hover:bg-danger/90`    |
+| `info`    | `bg-secondary`   | `text-on-fill`      | `hover:bg-secondary/90` |
+| `neutral` | `bg-surface-100` | `text-text-primary` | `hover:bg-surface-50`   |
 
 All current colours use Relay semantic tokens. Saturated fills pair with `text-on-fill`, preserving the light/dark contrast strategy and the user-configurable primary accent.
 
@@ -124,19 +124,19 @@ No current state or control is intentionally left unclassified.
 
 ## Ownership map
 
-| Element / behaviour | Owner | Migration rule |
-| --- | --- | --- |
-| Static pill container | Relay `AppPillComponent` | Keep as presentation-only. |
-| Semantic colour variants | Relay tokens | Preserve `primary`, `secondary`, semantic status colours, surfaces, and `on-fill`. |
-| Radius | Relay `rounded-pill` token | Preserve the pill semantic radius. |
-| Size and spacing | Relay primitive | Keep mobile-safe logical padding and avoid physical-direction utilities. |
-| Label / projected content | Caller + Relay composition | Caller owns localisation and content semantics. |
-| Selection | Not owned by `app-pill` | Use a radio, toggle, chip, segmented control, or other appropriate interactive primitive. |
-| Activation | Not owned by `app-pill` | Use a native link/button or Relay/Spartan control. |
-| Keyboard / focus mechanics | None | Do not invent focusability for static content. |
-| Dialog / popover / menu | None | No Spartan overlay primitive applies. |
-| Feature state | Caller | Keep business state outside Relay. |
-| Analytics / navigation | Caller | `app-pill` must remain free of route and telemetry side effects. |
+| Element / behaviour        | Owner                      | Migration rule                                                                            |
+| -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| Static pill container      | Relay `AppPillComponent`   | Keep as presentation-only.                                                                |
+| Semantic colour variants   | Relay tokens               | Preserve `primary`, `secondary`, semantic status colours, surfaces, and `on-fill`.        |
+| Radius                     | Relay `rounded-pill` token | Preserve the pill semantic radius.                                                        |
+| Size and spacing           | Relay primitive            | Keep mobile-safe logical padding and avoid physical-direction utilities.                  |
+| Label / projected content  | Caller + Relay composition | Caller owns localisation and content semantics.                                           |
+| Selection                  | Not owned by `app-pill`    | Use a radio, toggle, chip, segmented control, or other appropriate interactive primitive. |
+| Activation                 | Not owned by `app-pill`    | Use a native link/button or Relay/Spartan control.                                        |
+| Keyboard / focus mechanics | None                       | Do not invent focusability for static content.                                            |
+| Dialog / popover / menu    | None                       | No Spartan overlay primitive applies.                                                     |
+| Feature state              | Caller                     | Keep business state outside Relay.                                                        |
+| Analytics / navigation     | Caller                     | `app-pill` must remain free of route and telemetry side effects.                          |
 
 ## Spartan ownership decision
 

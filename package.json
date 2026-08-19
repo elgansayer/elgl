@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
-  "engines": {"node": ">=22.0.0", "npm": ">=10.0.0"},
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
   "packageManager": "npm@10.9.8",
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
@@ -54,7 +57,21 @@
     "format:check": "prettier --check .",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
-  "dependencies": {"@ngx-translate/core": "^15.0.0", "@ngx-translate/http-loader": "^8.0.0", "xss": "^1.0.15"},
-  "devDependencies": {"@eslint/js": "^10.0.1", "artillery": "^2.0.34", "husky": "^9.1.7", "lint-staged": "^15.2.10", "prettier": "^3.3.3"},
-  "lint-staged": {"*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": ["prettier --write"]}
+  "dependencies": {
+    "@ngx-translate/core": "^15.0.0",
+    "@ngx-translate/http-loader": "^8.0.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "artillery": "^2.0.34",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
+  },
+  "lint-staged": {
+    "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
 }
