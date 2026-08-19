@@ -377,7 +377,7 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "jobs-stalled" not in watchdog
     for directive in (
         "PrivateTmp=true",
-        "ProtectHome=tmpfs",
+        "ProtectHome=false",
         "BindPaths=/run/user",
         "ProtectKernelModules=true",
         "ProtectKernelLogs=true",
@@ -635,10 +635,8 @@ def test_start_script_uses_the_systemd_service_path_for_online_doctor() -> None:
         if line.startswith("Environment=PATH=")
     )
 
-    assert "FACTORY_HOME=/var/lib/hellotalk-factory/home" in start_script
-    service_path_expression = service_path.replace(
-        "/var/lib/hellotalk-factory/home", "$FACTORY_HOME"
-    )
+    assert "FACTORY_HOME=/home/dev" in start_script
+    service_path_expression = service_path.replace("/home/dev", "$FACTORY_HOME")
     assert f'FACTORY_SERVICE_PATH="{service_path_expression}"' in start_script
     assert 'export HOME="$FACTORY_HOME"' in start_script
     path_export = 'export PATH="$FACTORY_SERVICE_PATH"'
