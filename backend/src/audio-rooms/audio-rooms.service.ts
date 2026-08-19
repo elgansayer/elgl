@@ -1181,14 +1181,14 @@ export class AudioRoomsService implements OnModuleInit {
       room.room_name,
     );
 
-    const recordingUrl =
-      egressRecordingUrl ||
-      dto.recording_url ||
-      `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
+    const recordingUrl = egressRecordingUrl || dto.recording_url || null;
 
-    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
-    let transcriptText =
-      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+    // Generate a transcript only when an authoritative recording exists.
+    let transcriptText = recordingUrl
+      ? await this.transcriptEgress.generateTranscriptFromAudioUrl(
+          recordingUrl,
+        )
+      : '';
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available
