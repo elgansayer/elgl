@@ -60,11 +60,14 @@ def test_health_probe_exception_marks_provider_unavailable() -> None:
     task = Task("1", "test", "", "issue", 1)
     job = Job(task=task)
 
-    assert router.acquire(
-        phase=AgentPhase.IMPLEMENTATION,
-        task=task,
-        job=job,
-    ) is None
+    assert (
+        router.acquire(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=task,
+            job=job,
+        )
+        is None
+    )
 
 
 def test_retry_after_hint_is_persisted_in_breaker_and_deferral() -> None:
