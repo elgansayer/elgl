@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, output, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -1404,7 +1406,7 @@ const EMOJI_CATEGORIES = [
 
 @Component({
   selector: 'app-emoji-picker',
-  imports: [FormsModule],
+  imports: [HlmInput, HlmButton, FormsModule],
   template: `
     <div
       class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-80 overflow-hidden"
@@ -1412,6 +1414,7 @@ const EMOJI_CATEGORIES = [
       <!-- Search -->
       <div class="p-2 border-b border-surface-100">
         <input
+          hlmInput
           type="text"
           [(ngModel)]="searchQuery"
           placeholder="Search emoji..."
@@ -1423,6 +1426,7 @@ const EMOJI_CATEGORIES = [
       <div class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide">
         @for (cat of categories; track cat.name) {
           <button
+            hlmBtn
             (click)="selectedCategory.set(cat.name)"
             [class]="
               selectedCategory() === cat.name
@@ -1440,6 +1444,7 @@ const EMOJI_CATEGORIES = [
         <div class="grid grid-cols-8 gap-1">
           @for (emoji of filteredEmojis(); track emoji) {
             <button
+              hlmBtn
               (click)="selectEmoji(emoji)"
               class="w-8 h-8 flex items-center justify-center text-lg hover:bg-surface-100 rounded transition-colors"
               [attr.aria-label]="'Emoji ' + emoji"

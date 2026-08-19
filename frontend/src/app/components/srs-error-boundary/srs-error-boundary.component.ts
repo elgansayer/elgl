@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject, ErrorHandler, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -68,7 +69,7 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
 @Component({
   selector: 'app-srs-error-boundary',
   standalone: true,
-  imports: [TranslatePipe, AppButtonPrimaryComponent],
+  imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
@@ -96,6 +97,7 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
             </app-button-primary>
             @if (showReportButton()) {
               <button
+                hlmBtn
                 type="button"
                 (click)="reportCrash()"
                 class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"

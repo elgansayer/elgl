@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +12,7 @@ import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-create-group',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
   templateUrl: './create-group.component.html',
   styleUrls: ['./create-group.component.scss'],
 })
@@ -51,8 +53,12 @@ export class CreateGroupComponent {
         (u) =>
           !this.selectedMemberIds().includes(u.id) &&
           (u.display_name?.toLowerCase().includes(query.toLowerCase()) ||
-            u.native_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
-            u.target_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
+            u.native_languages?.some((l: string) =>
+              l.toLowerCase().includes(query.toLowerCase()),
+            ) ||
+            u.target_languages?.some((l: string) =>
+              l.toLowerCase().includes(query.toLowerCase()),
+            ) ||
             u.id.toLowerCase().includes(query.toLowerCase())),
       );
       this.searchResults.set(filtered.slice(0, 20));
@@ -72,9 +78,7 @@ export class CreateGroupComponent {
   }
 
   removeMember(profile: UserProfile): void {
-    this.selectedMembers.update((members) =>
-      members.filter((m) => m.id !== profile.id),
-    );
+    this.selectedMembers.update((members) => members.filter((m) => m.id !== profile.id));
   }
 
   async createGroup(): Promise<void> {

@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -6,7 +9,7 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
   selector: 'app-correction-modal',
-  imports: [FormsModule, TranslatePipe, VisualDiffComponent],
+  imports: [HlmTextarea, HlmInput, HlmButton, FormsModule, TranslatePipe, VisualDiffComponent],
   templateUrl: './correction-modal.component.html',
   styleUrls: ['./correction-modal.component.scss'],
 })

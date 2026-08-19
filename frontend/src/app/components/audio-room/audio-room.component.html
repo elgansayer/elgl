@@ -17,6 +17,7 @@
         <div class="flex flex-wrap gap-2">
           @if (!store.isSpeaker()) {
             <button
+              hlmBtn
               (click)="raiseHand()"
               class="rounded-app bg-warning ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-on-fill"
               [attr.aria-label]="'audioRoom.raiseHandBtn' | t"
@@ -25,6 +26,7 @@
             </button>
           }
           <button
+            hlmBtn
             (click)="showGiftModal.set(true)"
             class="rounded-app bg-vip ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
             [attr.aria-label]="'audioRoom.giftHostBtn' | t"
@@ -32,6 +34,7 @@
             {{ 'audioRoom.giftHostBtn' | t }}
           </button>
           <button
+            hlmBtn
             (click)="showTipModal.set(true)"
             class="rounded-app bg-vip ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
           >
@@ -46,6 +49,7 @@
           </app-button-secondary>
           @if (room.host_id === authService.currentUser()?.id) {
             <button
+              hlmBtn
               (click)="openPollForm()"
               class="rounded-app bg-primary ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
               [attr.aria-label]="'quickPoll.createBtn' | t"
@@ -53,6 +57,7 @@
               {{ 'quickPoll.createBtn' | t }}
             </button>
             <button
+              hlmBtn
               (click)="archive()"
               class="rounded-app bg-danger ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
               [attr.aria-label]="'audioRoom.endArchiveBtn' | t"
@@ -69,6 +74,7 @@
           </app-button-secondary>
           @if (authService.currentUser()?.is_vip) {
             <button
+              hlmBtn
               (click)="showExclusivePicker.set(!showExclusivePicker())"
               class="rounded-app bg-gradient-to-r from-vip to-accent ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-on-fill"
               [attr.aria-label]="'audioRoom.exclusiveEmojiBtn' | t"
@@ -96,6 +102,7 @@
         <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">
           @for (emoji of exclusiveEmojis(); track emoji.emojiId) {
             <button
+              hlmBtn
               (click)="selectExclusiveEmoji(emoji.emojiId)"
               class="flex flex-col items-center justify-center rounded-lg bg-vip/20 p-2 hover:bg-vip/30 transition-colors"
               title="{{ emoji.name }}"
@@ -216,6 +223,7 @@
                     <div class="mt-2 flex flex-col gap-1">
                       @if (!participant.isMuted) {
                         <button
+                          hlmBtn
                           (click)="mute(participant.user_id)"
                           class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-warning/20"
                           [attr.aria-label]="'audioRoom.muteBtn' | t"
@@ -224,6 +232,7 @@
                         </button>
                       }
                       <button
+                        hlmBtn
                         (click)="demote(participant.user_id)"
                         class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-danger/20"
                         [attr.aria-label]="'audioRoom.demoteBtn' | t"
@@ -248,6 +257,7 @@
           ) {
             <div class="flex justify-center pt-2">
               <button
+                hlmBtn
                 (click)="showApprovalModal.set(true)"
                 class="rounded-app bg-warning ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-on-fill hover:bg-warning/80 transition-colors shadow-glow"
                 [attr.aria-label]="'audioRoom.raisedHandsTitle' | t"
@@ -264,6 +274,7 @@
 
           @if (currentPollId()) {
             <button
+              hlmBtn
               (click)="viewPollResults(currentPollId()!)"
               class="mt-2 rounded-app bg-primary/20 text-primary ps-3 pe-3 pt-2 pb-2 text-xs font-bold w-full"
               [attr.aria-label]="'quickPoll.viewPollResultsBtn' | t"
@@ -336,6 +347,7 @@
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div class="w-full max-w-md relative">
           <button
+            hlmBtn
             (click)="showPollResultsModal.set(false)"
             class="absolute top-2 end-2 text-surface-400 hover:text-text-primary"
             aria-label="Close"
@@ -434,6 +446,7 @@
       <div class="flex flex-wrap gap-2 overflow-x-auto pb-2">
         @for (group of store.roomsByLanguage(); track group.language_pair) {
           <button
+            hlmBtn
             (click)="selectLanguageGroup(group.language_pair)"
             class="rounded-card border px-3 py-2 text-xs font-bold transition-colors"
             [class.border-primary]="store.selectedLanguageGroup() === group.language_pair"

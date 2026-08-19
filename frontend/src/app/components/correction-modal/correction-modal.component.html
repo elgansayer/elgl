@@ -17,6 +17,7 @@
         </h2>
       </div>
       <button
+        hlmBtn
         aria-label="Close modal"
         (click)="closeModal()"
         class="p-1 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-300 transition-colors"
@@ -34,6 +35,7 @@
             {{ 'moments.ghostOriginal' | t }}
           </label>
           <button
+            hlmBtn
             (click)="onOriginalClick()"
             class="text-[11px] text-neon-blue hover:underline"
             [attr.aria-label]="'moments.resetGhost' | t"
@@ -58,6 +60,7 @@
           {{ 'moments.correctedSentence' | t }}
         </label>
         <textarea
+          hlmTextarea
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
@@ -74,7 +77,11 @@
           <label class="block text-xs font-bold text-warning uppercase tracking-wider mb-1">
             {{ 'moments.liveDiffPreview' | t }}
           </label>
-          <app-visual-diff [original]="originalText()" [corrected]="correctedText()">
+          <app-visual-diff
+            [original]="originalText()"
+            [corrected]="correctedText()"
+            [showActions]="true"
+          >
           </app-visual-diff>
         </div>
       }
@@ -85,6 +92,7 @@
           {{ 'moments.explanation' | t }} ({{ 'common.optional' | t }})
         </label>
         <input
+          hlmInput
           type="text"
           [ngModel]="explanation()"
           (ngModelChange)="explanation.set($event)"
@@ -100,6 +108,7 @@
       class="p-4 bg-surface-400 border-t border-surface-100 flex items-center justify-end gap-3"
     >
       <button
+        hlmBtn
         aria-label="Close modal"
         (click)="closeModal()"
         class="px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-300 transition-colors"
@@ -107,6 +116,7 @@
         {{ 'common.cancel' | t }}
       </button>
       <button
+        hlmBtn
         (click)="submitCorrection()"
         [disabled]="!correctedText().trim() || correctedText().trim() === originalText().trim()"
         class="px-5 py-2 text-xs font-bold text-on-fill bg-gradient-to-r from-primary to-secondary rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"

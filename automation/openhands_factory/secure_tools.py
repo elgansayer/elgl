@@ -33,7 +33,6 @@ def podman_run_arguments(
     resource_limits: bool = True,
     userns: str = "keep-id",
     cgroup_manager: str | None = None,
-    pid_host: bool = False,
     cgroups: str | None = None,
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
@@ -68,8 +67,6 @@ def podman_run_arguments(
     ]
     if cgroup_manager:
         arguments.insert(1, f"--cgroup-manager={cgroup_manager}")
-    if pid_host:
-        arguments.insert(1, "--pid=host")
     if cgroups:
         arguments.insert(1, f"--cgroups={cgroups}")
     if resource_limits:
@@ -95,6 +92,7 @@ def podman_run_arguments(
         "frontend/node_modules",
         "backend/node_modules",
         "e2e/node_modules",
+        "admin-portal/node_modules",
     ):
         dependency_path = repository / relative
         if dependency_path.is_dir():
@@ -186,7 +184,6 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                         resource_limits=False,
                         userns="host",
                         cgroup_manager="cgroupfs",
-                        pid_host=True,
                         cgroups="no-conmon",
                     ),
                 ]

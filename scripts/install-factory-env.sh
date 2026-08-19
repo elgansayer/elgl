@@ -21,7 +21,7 @@ if [ -e "$TARGET" ] && [ ! -r "$TARGET" ]; then
   exit 1
 fi
 if [ ! -e "$TARGET" ]; then
-  install -o root -g hellotalk-factory -m 0640 /dev/null "$TARGET"
+  install -o root -g root -m 0600 /dev/null "$TARGET"
 fi
 
 temporary=$(mktemp "$target_dir/.factory.env.XXXXXX")
@@ -30,7 +30,7 @@ umask 077
 
 awk -v source="$SOURCE" '
   function is_factory_key(key) {
-    return key ~ /^(OPENHANDS_OPENAI_MODEL$|OPENCODE_GO_|GEMINI_|GITHUB_TOKEN$|GITHUB_REPOSITORY$|TELEGRAM_)/
+    return key ~ /^(OPENHANDS_OPENAI_MODEL$|OPENCODE_GO_|GITHUB_TOKEN$|GITHUB_REPOSITORY$|TELEGRAM_)/
   }
   BEGIN {
     while ((getline line < source) > 0) {
@@ -48,6 +48,13 @@ awk -v source="$SOURCE" '
     key = $0
     sub(/^[[:space:]]*/, "", key)
     sub(/[[:space:]]*=.*$/, "", key)
+    if (key == "GEMINI_ENABLED") {
+      if (!gemini_disabled_written) {
+        print "GEMINI_ENABLED=false"
+        gemini_disabled_written = 1
+      }
+      next
+    }
     if (key in source_line) {
       print source_line[key]
       delete source_line[key]
@@ -56,6 +63,9 @@ awk -v source="$SOURCE" '
     print
   }
   END {
+    if (!gemini_disabled_written) {
+      print "GEMINI_ENABLED=false"
+    }
     for (position = 1; position <= source_count; position++) {
       key = source_order[position]
       if (key in source_line) {
@@ -66,8 +76,8 @@ awk -v source="$SOURCE" '
   }
 ' "$TARGET" "$SOURCE" > "$temporary"
 
-chown root:hellotalk-factory "$temporary"
-chmod 0640 "$temporary"
+chown root:root "$temporary"
+chmod 0600 "$temporary"
 mv -f "$temporary" "$TARGET"
 trap - EXIT
 echo "Factory environment updated from $SOURCE without printing secret values."

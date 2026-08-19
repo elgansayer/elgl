@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
@@ -9,7 +10,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   standalone: true,
-  imports: [TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary p-4">
       <div class="max-w-2xl mx-auto">
@@ -19,6 +20,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Month Navigation -->
         <div class="flex items-center justify-between mb-6">
           <button
+            hlmBtn
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="previousMonth()"
           >
@@ -26,6 +28,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           </button>
           <span class="text-lg font-semibold">{{ monthLabel() }}</span>
           <button
+            hlmBtn
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="nextMonth()"
           >

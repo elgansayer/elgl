@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,7 +9,7 @@ import { getLanguageFlag } from '../../components/primitives/language-picker/lan
 
 @Component({
   selector: 'app-audio-intro-feed',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
     @if (isLoading()) {
       <div class="flex justify-center py-8">
@@ -31,6 +32,7 @@ import { getLanguageFlag } from '../../components/primitives/language-picker/lan
             </p>
           </div>
           <button
+            hlmBtn
             (click)="togglePlay(user.id, user.audio_intro_url)"
             class="ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary"
           >
@@ -41,8 +43,7 @@ import { getLanguageFlag } from '../../components/primitives/language-picker/lan
             }
           </button>
         </div>
-      }
-      @empty {
+      } @empty {
         @if (!isLoading()) {
           <div class="flex flex-col items-center py-12 text-text-secondary">
             <span class="i-ph-microphone-slash text-4xl mb-2"></span>

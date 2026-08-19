@@ -4,6 +4,7 @@
       <span>{{ 'doodle.title' | t }}</span>
     </h3>
     <button
+      hlmBtn
       aria-label="Cancel doodle"
       (click)="cancel()"
       class="text-text-muted hover:text-text-secondary font-bold text-xl"
@@ -37,6 +38,7 @@
       }}</span>
       @for (color of colors; track color) {
         <button
+          hlmBtn
           [attr.aria-label]="'Select ' + color"
           (click)="setColor(color)"
           [class]="
@@ -56,6 +58,7 @@
       }}</span>
       @for (w of [2, 4, 8, 14]; track w) {
         <button
+          hlmBtn
           (click)="setBrushWidth(w)"
           [class]="
             'px-2.5 py-1 rounded-lg text-xs font-bold transition-all ' +

@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { Component, inject, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,7 +8,7 @@ import { I18nService } from '../../services/i18n.service';
 @Component({
   selector: 'app-gdpr',
   standalone: true,
-  imports: [TranslatePipe, ...HlmButtonImports],
+  imports: [HlmCheckbox, TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="app-screen bg-surface-50">
       <header class="app-header">
@@ -32,7 +33,9 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.archiveSection' | t }}
           </h2>
-          <div class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm">
+          <div
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.archiveInfo' | t }}</p>
             <button
               hlmBtn
@@ -58,11 +61,12 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.deleteSection' | t }}
           </h2>
-          <div class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm">
+          <div
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
             <label class="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
+              <hlm-checkbox
                 [checked]="confirmDelete()"
                 (change)="confirmDelete.set(!confirmDelete())"
                 class="h-5 w-5 rounded border-surface-300 text-danger"
