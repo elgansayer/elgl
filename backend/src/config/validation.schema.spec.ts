@@ -31,17 +31,23 @@ describe('validationSchema', () => {
     expect(value.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES).toBe(104857600);
     expect(value.CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS).toBe(30000);
 
-    expect(value.CLOUDFLARE_R2_ENDPOINT).toBe(
-      'https://example.r2.cloudflarestorage.com',
+    expect(value.CLOUDFLARE_STREAM_ACCOUNT_ID).toBe(
+      'test-cloudflare-account-id',
     );
-    expect(value.CLOUDFLARE_R2_ACCESS_KEY_ID).toBe(
-      'test-r2-egress-access-key-id',
+    expect(value.CLOUDFLARE_STREAM_API_TOKEN).toBe(
+      'test-cloudflare-stream-api-token',
     );
-    expect(value.CLOUDFLARE_R2_BUCKET).toBe('test-egress-bucket');
+    expect(value.CLOUDFLARE_STREAM_ALLOWED_ORIGINS).toBe(
+      'http://localhost:4200',
+    );
+    expect(value.CLOUDFLARE_STREAM_POLL_INTERVAL_MS).toBe(5000);
+    expect(value.CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS).toBe(120000);
+    expect(value.CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS).toBe(1);
+    expect(value.AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS).toBe(600000);
     expect(value.TRANSFER_SECRET).toBe('test-transfer-secret');
   });
 
-  it('preserves explicitly provided gateway limits and URLs', () => {
+  it('preserves explicitly provided gateway, stream and provider limits', () => {
     const env = {
       TRANSFER_SECRET: 'my-transfer-secret',
       CLOUDFLARE_R2_GATEWAY_URL: 'https://r2-gateway.example.com',
@@ -56,6 +62,15 @@ describe('validationSchema', () => {
       CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: '1024',
       CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES: '2048',
       CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS: '5000',
+      CLOUDFLARE_STREAM_ACCOUNT_ID: 'account-123',
+      CLOUDFLARE_STREAM_API_TOKEN:
+        'custom-stream-token-with-at-least-20-characters',
+      CLOUDFLARE_STREAM_ALLOWED_ORIGINS:
+        'https://app.example.com,https://admin.example.com',
+      CLOUDFLARE_STREAM_POLL_INTERVAL_MS: '250',
+      CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS: '30000',
+      CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS: '7',
+      AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS: '120000',
     };
 
     const { error, value } = validationSchema.validate(env);
@@ -71,13 +86,27 @@ describe('validationSchema', () => {
     expect(value.CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES).toBe(1024);
     expect(value.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES).toBe(2048);
     expect(value.CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS).toBe(5000);
+    expect(value.CLOUDFLARE_STREAM_ACCOUNT_ID).toBe('account-123');
+    expect(value.CLOUDFLARE_STREAM_ALLOWED_ORIGINS).toBe(
+      'https://app.example.com,https://admin.example.com',
+    );
+    expect(value.CLOUDFLARE_STREAM_POLL_INTERVAL_MS).toBe(250);
+    expect(value.CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS).toBe(30000);
+    expect(value.CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS).toBe(7);
+    expect(value.AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS).toBe(120000);
   });
 
-  it('rejects weak gateway secrets and invalid limits', () => {
+  it('rejects weak secrets and invalid limits', () => {
     expect(
       validationSchema.validate({
         TRANSFER_SECRET: 'test-transfer-secret',
         CLOUDFLARE_R2_SIGNING_SECRET: 'short',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_STREAM_API_TOKEN: 'short',
       }).error,
     ).toBeDefined();
     expect(
@@ -90,6 +119,12 @@ describe('validationSchema', () => {
       validationSchema.validate({
         TRANSFER_SECRET: 'test-transfer-secret',
         CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: '0',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS: '31',
       }).error,
     ).toBeDefined();
   });
