@@ -1,21 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ConfirmService } from '../../services/confirm.service';
-import { I18nService } from '../../services/i18n.service';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
-
-class MockI18nService {
-  translate(key: string, params?: Record<string, unknown>): string {
-    if (!params) {
-      return key;
-    }
-
-    let result = key;
-    for (const [name, value] of Object.entries(params)) {
-      result = result.replace(`{${name}}`, String(value));
-    }
-    return result;
-  }
-}
 
 describe('ConfirmDialogComponent', () => {
   let component: ConfirmDialogComponent;
@@ -25,7 +11,6 @@ describe('ConfirmDialogComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ConfirmDialogComponent],
-      providers: [{ provide: I18nService, useClass: MockI18nService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConfirmDialogComponent);
@@ -36,60 +21,133 @@ describe('ConfirmDialogComponent', () => {
 
   afterEach(() => {
     confirmService.dismiss(false);
-    fixture.destroy();
   });
 
-  it('should create closed when no confirmation is pending', () => {
+  function openConfirmation(message = 'Confirm this action'): Promise<boolean> {
+    const result = confirmService.confirm(message);
+    fixture.detectChanges();
+    return result;
+  }
+
+  function actionButtons() {
+    return fixture.debugElement.queryAll(By.css('button[data-slot="button"]'));
+  }
+
+  it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should derive dialog state from the pending confirmation', async () => {
+    expect(component.dialogState()).toBe('closed');
+
+    const result = openConfirmation();
+
+    expect(component.dialogState()).toBe('open');
+
+    confirmService.dismiss(false);
+    fixture.detectChanges();
+
+    await expect(result).resolves.toBe(false);
     expect(component.dialogState()).toBe('closed');
   });
 
-  it('should use Relay sheet radius and elevation tokens for the dialog surface', async () => {
-    void confirmService.confirm('Remove this item?');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+  it('should render native touch-sized Spartan actions', () => {
+    openConfirmation();
 
-    const dialog = document.body.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    const buttons = actionButtons();
 
-    expect(dialog).not.toBeNull();
-    expect(dialog?.classList.contains('rounded-sheet')).toBe(true);
-    expect(dialog?.classList.contains('shadow-lift')).toBe(true);
-    expect(dialog?.classList.contains('border-surface-100')).toBe(true);
-    expect(dialog?.classList.contains('bg-surface-200')).toBe(true);
-    expect(dialog?.classList.contains('rounded-2xl')).toBe(false);
-    expect(dialog?.classList.contains('shadow-2xl')).toBe(false);
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) {
+      expect(button.nativeElement.tagName).toBe('BUTTON');
+      expect(button.nativeElement.type).toBe('button');
+      expect(button.nativeElement.getAttribute('data-slot')).toBe('button');
+      expect(button.nativeElement.classList.contains('min-h-11')).toBe(true);
+      expect(button.nativeElement.textContent.trim()).not.toBe('');
+    }
   });
 
-  it('should stack full-width actions on mobile and restore the desktop action row', async () => {
-    void confirmService.confirm('Remove this item?');
+  it('should resolve false when the Cancel action is activated', async () => {
+    const result = openConfirmation();
+    const [cancelButton] = actionButtons();
+
+    cancelButton.nativeElement.click();
     fixture.detectChanges();
-    await fixture.whenStable();
+
+    await expect(result).resolves.toBe(false);
+    expect(confirmService.confirmState()).toBeNull();
+  });
+
+  it('should resolve true when the Confirm action is activated', async () => {
+    const result = openConfirmation();
+    const [, confirmButton] = actionButtons();
+
+    confirmButton.nativeElement.click();
     fixture.detectChanges();
 
-    const dialog = document.body.querySelector<HTMLElement>('[data-slot="dialog-content"]');
-    const actionRow = dialog?.querySelector<HTMLElement>('div.flex');
-    const buttons = dialog?.querySelectorAll<HTMLButtonElement>('button');
+    await expect(result).resolves.toBe(true);
+    expect(confirmService.confirmState()).toBeNull();
+  });
 
-    expect(actionRow).not.toBeNull();
-    expect(actionRow?.classList.contains('flex-col')).toBe(true);
-    expect(actionRow?.classList.contains('sm:flex-row')).toBe(true);
-    expect(actionRow?.classList.contains('sm:justify-end')).toBe(true);
-    expect(buttons).toHaveLength(2);
+  it('should treat a Spartan dialog close transition as cancellation', async () => {
+    const result = openConfirmation();
 
-    if (!buttons) {
-      return;
-    }
+    component.onDialogStateChanged('closed');
+    fixture.detectChanges();
 
-    for (const button of buttons) {
-      expect(button.type).toBe('button');
-      expect(button.classList.contains('w-full')).toBe(true);
-      expect(button.classList.contains('sm:w-auto')).toBe(true);
-      expect(button.getAttribute('size')).toBe('touch');
-    }
+    await expect(result).resolves.toBe(false);
+    expect(confirmService.confirmState()).toBeNull();
+  });
 
-    expect(buttons[0].classList.contains('bg-secondary')).toBe(true);
-    expect(buttons[1].classList.contains('bg-primary')).toBe(true);
-    expect(buttons[1].classList.contains('text-primary-foreground')).toBe(true);
+  it('should not dismiss for an open state event', async () => {
+    const result = openConfirmation();
+    const state = confirmService.confirmState();
+
+    component.onDialogStateChanged('open');
+
+    expect(confirmService.confirmState()).toBe(state);
+
+    confirmService.dismiss(true);
+    await expect(result).resolves.toBe(true);
+  });
+
+  it('should not resolve twice after the confirmation state has cleared', () => {
+    const resolve = vi.fn();
+    confirmService.confirmState.set({
+      message: 'Confirm this action',
+      resolve,
+    });
+
+    component.onDialogStateChanged('closed');
+    component.onDialogStateChanged('closed');
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(resolve).toHaveBeenCalledWith(false);
+    expect(confirmService.confirmState()).toBeNull();
+  });
+
+  it('should keep a valid accessible relationship to the confirmation message', () => {
+    openConfirmation('Delete this draft?');
+
+    const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
+    const message = fixture.debugElement.query(By.css('#confirm-message'));
+
+    expect(dialogContent).not.toBeNull();
+    expect(message).not.toBeNull();
+    expect(dialogContent.nativeElement.getAttribute('aria-labelledby')).toBe('confirm-message');
+    expect(message.nativeElement.textContent).toContain('Delete this draft?');
+  });
+
+  it('should preserve direction-neutral, reflow-safe action layout', () => {
+    openConfirmation();
+
+    const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
+    const actionRow = dialogContent.query(By.css('div.flex'));
+    const renderedHtml = dialogContent.nativeElement.outerHTML;
+
+    expect(dialogContent.nativeElement.classList.contains('w-full')).toBe(true);
+    expect(dialogContent.nativeElement.classList.contains('max-w-sm')).toBe(true);
+    expect(actionRow.nativeElement.classList.contains('gap-3')).toBe(true);
+    expect(actionRow.nativeElement.classList.contains('sm:justify-end')).toBe(true);
+    expect(renderedHtml).not.toMatch(/\b(?:ml|mr|pl|pr|left|right)-/);
   });
 });

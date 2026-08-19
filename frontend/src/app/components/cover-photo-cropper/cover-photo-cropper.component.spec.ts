@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CoverPhotoCropperComponent } from './cover-photo-cropper.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { PipeTransform } from '@angular/core';
@@ -13,20 +13,20 @@ class MockTranslatePipe implements PipeTransform {
 
 describe('CoverPhotoCropperComponent', () => {
   let component: CoverPhotoCropperComponent;
+  let fixture: ComponentFixture<CoverPhotoCropperComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CoverPhotoCropperComponent, ImageCropperComponent],
-      providers: [
-        { provide: TranslatePipe, useClass: MockTranslatePipe },
-      ],
+      providers: [{ provide: TranslatePipe, useClass: MockTranslatePipe }],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(CoverPhotoCropperComponent);
+    fixture = TestBed.createComponent(CoverPhotoCropperComponent);
     component = fixture.componentInstance;
 
     const testFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
     fixture.componentRef.setInput('imageFile', testFile);
+    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -80,5 +80,21 @@ describe('CoverPhotoCropperComponent', () => {
 
     component.cancelCrop.emit();
     expect(emitted).toHaveBeenCalled();
+  });
+
+  it('should cancel from the keyboard with Space', () => {
+    const emitted = vi.fn();
+    component.cancelCrop.subscribe(emitted);
+    const overlay = fixture.nativeElement.querySelector('.fixed');
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    overlay.dispatchEvent(event);
+
+    expect(emitted).toHaveBeenCalledOnce();
+    expect(event.defaultPrevented).toBe(true);
   });
 });

@@ -1,0 +1,102 @@
+name: Explicit content security boundary patch
+
+on:
+  push:
+    branches:
+      - feat/explicit-content-security-boundaries
+    paths:
+      - .github/workflows/content-security-boundary-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/explicit-content-security-boundaries
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Register the content module and verification command
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const appPath = 'backend/src/app.module.ts';
+          let app = fs.readFileSync(appPath, 'utf8');
+          const importLine =
+            "import { ContentSecurityModule } from './common/content/content-security.module';\n";
+          if (!app.includes(importLine)) {
+            const anchor =
+              "import { RetryModule } from './common/retry/retry.module';\n";
+            if (!app.includes(anchor)) {
+              throw new Error('AppModule retry import anchor was not found');
+            }
+            app = app.replace(anchor, `${anchor}${importLine}`);
+          }
+          if (!app.includes('    ContentSecurityModule,')) {
+            const anchor = '    SharedLoggerModule,\n';
+            if (!app.includes(anchor)) {
+              throw new Error('AppModule shared logger import-array anchor was not found');
+            }
+            app = app.replace(anchor, `${anchor}    ContentSecurityModule,\n`);
+          }
+          fs.writeFileSync(appPath, app);
+
+          const packagePath = 'package.json';
+          const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          manifest.scripts['check:content-security-boundaries'] =
+            'node scripts/verify-content-security-boundaries.mjs';
+          if (!manifest.scripts.verify.includes('check:content-security-boundaries')) {
+            const anchor = 'npm run check:language-result-semantics &&';
+            if (!manifest.scripts.verify.includes(anchor)) {
+              throw new Error('Language-result verification anchor is missing');
+            }
+            manifest.scripts.verify = manifest.scripts.verify.replace(
+              anchor,
+              `${anchor} npm run check:content-security-boundaries &&`,
+            );
+          }
+          fs.writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+      - name: Install, format and verify
+        run: |
+          cd backend
+          npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          npx prettier --write \
+            src/main.ts \
+            src/app.module.ts \
+            src/common/content/content-security.module.ts \
+            src/common/content/rich-text-sanitiser.service.ts \
+            src/common/content/rich-text-sanitiser.service.spec.ts \
+            src/common/pipes/sanitise-html.pipe.ts \
+            src/common/pipes/sanitise-rich-html.pipe.ts \
+            src/common/pipes/sanitise-rich-html.pipe.spec.ts
+          npm run lint:check
+          npm run build
+          npx vitest run \
+            src/common/content/rich-text-sanitiser.service.spec.ts \
+            src/common/pipes/sanitise-rich-html.pipe.spec.ts
+          cd ..
+          node scripts/verify-content-security-boundaries.mjs
+          node scripts/verify-language-result-semantics.mjs
+          node scripts/verify-no-runtime-fallbacks.mjs
+
+      - name: Commit the explicit content boundary
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json backend/src docs/content-security-boundaries.md scripts/verify-content-security-boundaries.mjs
+          git commit -m 'refactor(security): make rich HTML sanitisation explicit'
+          git push origin HEAD:feat/explicit-content-security-boundaries

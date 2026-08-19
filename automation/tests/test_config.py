@@ -38,6 +38,38 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_quarantine_recovery_cli_is_targetable_and_quiet_by_default() -> None:
+    defaults = cli.parser().parse_args(["backlog", "requeue-quarantined"])
+    selected = cli.parser().parse_args(
+        [
+            "backlog",
+            "requeue-quarantined",
+            "--issue",
+            "42",
+            "--issue",
+            "43",
+            "--announce",
+        ]
+    )
+
+    assert defaults.issue is None
+    assert defaults.announce is False
+    assert selected.issue == [42, 43]
+    assert selected.announce is True
+
+
+def test_active_label_reconciliation_batch_is_typed_and_bounded() -> None:
+    configured = FactoryConfig.from_environment(
+        environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="17")
+    )
+
+    assert configured.label_reconciliation_batch_size == 17
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="0"))
+    with pytest.raises(ConfigurationError, match="batch size must be between 1 and 100"):
+        FactoryConfig.from_environment(environment(FACTORY_LABEL_RECONCILIATION_BATCH_SIZE="101"))
+
+
 def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
 
@@ -48,6 +80,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
     assert '"$FACTORY_STATE/recovery"' in setup
     assert "uv==0.12.5" in setup
+    assert "--inexact" in setup
     assert "bash -c \\" in setup
     assert 'cd "$1" && exec podman build' in setup
     assert '"$1/Containerfile" "$1"' in setup
@@ -65,6 +98,28 @@ def test_deployment_is_pinned_to_clean_main() -> None:
     assert "status --porcelain" in deploy
 
 
+def test_failed_deployment_restores_previously_active_factory_units() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    trap = deploy.index("trap cleanup EXIT")
+    stop_timer = deploy.index("systemctl stop hellotalk-factory-health.timer")
+    stop_watchdog = deploy.index("systemctl stop hellotalk-factory-health.service")
+    stop_daemon = deploy.index("systemctl stop hellotalk-factory.service")
+    start = deploy.index('"$WORKTREE/scripts/start-factory.sh"')
+    completed = deploy.index("DEPLOYMENT_SUCCEEDED=true", start)
+
+    assert trap < stop_timer < stop_watchdog < stop_daemon < start < completed
+    assert "FACTORY_MAINTENANCE_STARTED=true" in deploy
+    assert "Factory supervision units did not stop cleanly" in deploy
+    assert 'if [ "$FACTORY_SERVICE_WAS_ACTIVE" = true ]; then' in deploy
+    assert "systemctl start hellotalk-factory.service" in deploy
+    assert 'if [ "$FACTORY_HEALTH_TIMER_WAS_ACTIVE" = true ]; then' in deploy
+    assert "systemctl start hellotalk-factory-health.timer" in deploy
+    assert "Factory deployment failed; restoring the previously active supervision units." in deploy
+
+
 def test_deployment_preserves_operator_agent_routing_configuration() -> None:
     deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
         encoding="utf-8"
@@ -80,8 +135,12 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
         encoding="utf-8"
     )
 
-    assert "uv sync" in deploy
-    assert "--active --frozen --no-editable --extra development" in deploy
+    assert '"$FACTORY_UV" sync' in deploy
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert "FACTORY_UV_VERSION=0.12.5" in deploy
+    assert '"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install' in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
+    assert "Factory dependency refresh removed the pinned uv executable" in deploy
     assert '"$FACTORY_CHECKOUT/admin-portal"' in deploy
     assert 'npm ci --prefix "$directory"' in deploy
     assert "npm exec -- cypress install" in deploy
@@ -89,6 +148,57 @@ def test_deployment_refreshes_all_runtime_dependencies_and_worker_image() -> Non
     assert 'bash -c \'cd "$1" && exec podman build' in deploy
     assert '"$1/Containerfile" "$1"' in deploy
     assert "localhost/hellotalk-factory-worker:current" in deploy
+
+
+def test_deployment_repairs_and_preserves_the_pinned_uv_bootstrap() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    repair = deploy.index('"$FACTORY_VIRTUAL_ENV/bin/python" -m pip install')
+    refresh = deploy.index('"$FACTORY_UV" sync')
+    survival_check = deploy.index("Factory dependency refresh removed the pinned uv executable")
+
+    assert repair < refresh < survival_check
+    assert "--active --frozen --inexact --no-editable --extra development" in deploy
+    assert '"uv==$FACTORY_UV_VERSION"' in deploy
+
+
+def test_fast_deployment_reuses_only_verified_dependencies_and_worker_image() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--fast) FAST_DEPLOY=true" in deploy
+    assert "npm_input_fingerprint" in deploy
+    assert 'sha256sum "$directory/package.json" "$directory/package-lock.json"' in deploy
+    assert "sha256sum node_modules/.package-lock.json" in deploy
+    assert "find node_modules -type f -name package.json" in deploy
+    assert "find node_modules/.bin" in deploy
+    assert 'git -C "$WORKTREE" ls-files -s -- automation' in deploy
+    assert "podman image inspect --format '{{.Id}}'" in deploy
+    assert "npm_cache_is_current" in deploy
+    assert "worker_cache_is_current" in deploy
+    assert deploy.index('npm ci --prefix "$directory"') < deploy.index(
+        'record_npm_cache "$directory" "$cache_file"'
+    )
+    assert deploy.index("podman build --cgroup-manager=cgroupfs") < deploy.index(
+        'record_worker_cache "$worker_cache_file"'
+    )
+
+
+def test_deployment_serialises_runs_and_drains_the_active_watchdog() -> None:
+    deploy = (Path(__file__).parents[2] / "scripts/deploy-and-start-factory.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "hellotalk-factory-deploy.lock" in deploy
+    assert 'flock -n "$deploy_lock_fd"' in deploy
+    stop_timer = deploy.index("systemctl stop hellotalk-factory-health.timer")
+    stop_watchdog = deploy.index("systemctl stop hellotalk-factory-health.service")
+    stop_daemon = deploy.index("systemctl stop hellotalk-factory.service")
+    dependency_refresh = deploy.index('npm ci --prefix "$directory"')
+    assert stop_timer < stop_watchdog < stop_daemon < dependency_refresh
 
 
 def test_deployment_installs_bounded_host_storage_policy() -> None:
@@ -253,6 +363,9 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "Delegate=yes" not in unit
     assert "OnUnitActiveSec=2min" in timer
     assert 'systemctl restart "$SERVICE"' in watchdog
+    assert "FACTORY_WATCHDOG_RESTART_GRACE_SECONDS:-30" in watchdog
+    assert 'sleep "$RESTART_GRACE_SECONDS"' in watchdog
+    assert "sleep 20" not in watchdog
     assert "for attempt in 1 2 3" in watchdog
     assert "alert-daemon-failed" in watchdog
     assert "active_started_at" in watchdog
@@ -378,7 +491,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["codex"].model == "gpt-5.6-sol"
     assert factory_config.agents.providers["codex"].enabled
     assert factory_config.agents.providers["codex"].credential_paths == [".codex"]
-    assert factory_config.agents.providers["google"].enabled is False
+    assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
@@ -504,11 +617,33 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_AGENTS_CONFIG=/etc/hellotalk-factory/agents.json" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
     assert "FACTORY_MAX_PARALLEL_JOBS=3" in template
+    assert "FACTORY_LABEL_RECONCILIATION_BATCH_SIZE=25" in template
     assert "FACTORY_REQUIRE_TRUSTED_INTAKE=true" in template
     assert "FACTORY_TRUSTED_GITHUB_ACTORS=elgansayer,app/github-actions" in template
     assert "FACTORY_CONTROL_GITHUB_ACTORS=elgansayer" in template
     assert f"FACTORY_ARCHITECTURE={EXPECTED_FACTORY_ARCHITECTURE}" in template
     assert "GEMINI_ENABLED=false" in template
+
+
+def test_start_script_uses_the_systemd_service_path_for_online_doctor() -> None:
+    root = Path(__file__).parents[2]
+    start_script = (root / "scripts/start-factory.sh").read_text(encoding="utf-8")
+    service = (root / "config/systemd/hellotalk-factory.service").read_text(encoding="utf-8")
+    service_path = next(
+        line.removeprefix("Environment=PATH=")
+        for line in service.splitlines()
+        if line.startswith("Environment=PATH=")
+    )
+
+    assert "FACTORY_HOME=/var/lib/hellotalk-factory/home" in start_script
+    service_path_expression = service_path.replace(
+        "/var/lib/hellotalk-factory/home", "$FACTORY_HOME"
+    )
+    assert f'FACTORY_SERVICE_PATH="{service_path_expression}"' in start_script
+    assert 'export HOME="$FACTORY_HOME"' in start_script
+    path_export = 'export PATH="$FACTORY_SERVICE_PATH"'
+    assert path_export in start_script
+    assert start_script.index(path_export) < start_script.index("doctor --online")
 
 
 def test_host_repair_preserves_the_production_parallelism_limit() -> None:
