@@ -537,6 +537,108 @@
       .document-viewer-preview.wide .document-viewer-card {
         padding: 2rem;
       }
+      .cover-uploader-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      }
+      .cover-uploader-demo {
+        padding: 0.75rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: Canvas;
+        color: CanvasText;
+        box-shadow: 0 0.25rem 0.875rem color-mix(in srgb, CanvasText 8%, transparent);
+      }
+      .cover-uploader-demo.light {
+        color-scheme: light;
+      }
+      .cover-uploader-demo.dark {
+        color-scheme: dark;
+      }
+      .cover-photo-frame {
+        position: relative;
+        min-block-size: 10rem;
+        overflow: hidden;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, color-mix(in srgb, CanvasText 5%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+      }
+      .cover-photo-overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: color-mix(in srgb, Canvas 90%, transparent);
+        color: CanvasText;
+        text-align: center;
+      }
+      .cover-photo-overlay strong {
+        display: block;
+      }
+      .cover-crop-stage {
+        position: relative;
+        min-block-size: 10rem;
+        overflow: hidden;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, color-mix(in srgb, Highlight 20%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+      }
+      .cover-crop-stage::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, CanvasText 55%, transparent);
+      }
+      .cover-crop-window {
+        position: absolute;
+        z-index: 1;
+        inset-block-start: 32%;
+        inset-inline: 10%;
+        block-size: 36%;
+        border: 2px solid Highlight;
+      }
+      .cover-crop-window::before,
+      .cover-crop-window::after {
+        content: '';
+        position: absolute;
+        inline-size: 0.75rem;
+        block-size: 0.75rem;
+        border: 2px solid MarkText;
+        border-radius: 9999px;
+        background: Highlight;
+      }
+      .cover-crop-window::before {
+        inset-block-start: -0.45rem;
+        inset-inline-start: -0.45rem;
+      }
+      .cover-crop-window::after {
+        inset-block-end: -0.45rem;
+        inset-inline-end: -0.45rem;
+      }
+      .cover-actions {
+        display: grid;
+        gap: 0.5rem;
+        margin-block-start: 0.75rem;
+      }
+      .cover-actions button {
+        inline-size: 100%;
+      }
+      .viewport-label {
+        margin-block: 0 0.5rem;
+        font-size: 0.8125rem;
+        color: GrayText;
+      }
+      @media (min-width: 640px) {
+        .cover-actions {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .cover-actions button {
+          inline-size: auto;
+        }
+      }
       @media (forced-colors: active) {
         section,
         .dialog-panel,
@@ -547,6 +649,9 @@
         .sidebar-preview,
         .device-lock-preview,
         .document-viewer-card,
+        .cover-uploader-demo,
+        .cover-photo-frame,
+        .cover-crop-stage,
         .checkout-card,
         .lightbox-stage {
           border-color: CanvasText;
@@ -962,6 +1067,24 @@
               <p>Projected content inherits the active theme rather than forcing an inverted prose palette.</p>
             </div>
           </article>
+        </div>
+      </section>
+      <section>
+        <h2>Cover photo uploader theme and responsive parity</h2>
+        <p>Relay owns the card radius, surface, elevation and theme-aware media treatment. Spartan owns the action controls. At the 390px baseline actions stack to full width; tablet and desktop layouts return to wrapped inline actions.</p>
+        <div class="cover-uploader-grid">
+          <div class="cover-uploader-demo light">
+            <p class="viewport-label">Light theme · 390px mobile contract</p>
+            <div class="cover-photo-frame">
+              <div class="cover-photo-overlay"><div><strong>Add cover photo</strong><span>Theme-aware Relay surface over media</span></div></div>
+            </div>
+            <div class="cover-actions"><button>Crop</button><button>Upload</button><button>Cancel</button></div>
+          </div>
+          <div class="cover-uploader-demo dark">
+            <p class="viewport-label">Dark theme · tablet / desktop crop contract</p>
+            <div class="cover-crop-stage" aria-label="Cover crop preview"><div class="cover-crop-window"></div></div>
+            <div class="cover-actions"><button>Apply crop</button><button>Cancel</button><button>Upload</button></div>
+          </div>
         </div>
       </section>
       <section dir="rtl">
