@@ -22,19 +22,19 @@ This audit maps the Gift Animation Overlay to the current Relay + Spartan author
 
 The component observes `GiftAnimationService.currentAnimation()` and renders only while an animation exists. The service owns visibility, queueing and dismissal; the component owns presentation and Lottie lifecycle.
 
-| Surface / state | Current owner | Design-system authority | Migration rule |
-| --- | --- | --- | --- |
-| Full viewport notification layer | Feature composition | Relay layout/tokens | Keep non-modal and pointer-transparent except real controls. |
-| Screen-dimming visual layer | Feature composition | Relay semantic surface tokens | Replace physical black with a semantic surface/scrim role. |
-| Lottie animation | Feature + `lottie-web` | Feature media | Keep decorative and `aria-hidden`; honour global reduced-motion policy. |
-| Gift icon | Feature content | Feature | Preserve as visible content; do not add focus behaviour. |
-| Broadcast title | Feature + i18n | Relay typography + app i18n | Preserve localised title and content hierarchy. |
-| Broadcast description | Feature + i18n | Relay typography + app i18n | Preserve localised sender/receiver/gift/cost announcement. |
-| Gift banner | Feature composition | Relay visual tokens | Remove off-token colour and timing values. |
-| Dismiss action | Spartan Helm `HlmButton` | Spartan Helm + Relay presentation | Keep the owned button primitive; add an explicit localised accessible name. |
-| Visible state | `GiftAnimationService.isVisible` | Feature state | Preserve fade-out behaviour without moving state into the button primitive. |
-| Queue / next gift | `GiftAnimationService` | Feature state | Do not move queue policy into Relay or Spartan. |
-| Lottie destroy/reload | Component lifecycle | Feature media | Preserve cleanup on replacement and destroy. |
+| Surface / state                  | Current owner                    | Design-system authority           | Migration rule                                                              |
+| -------------------------------- | -------------------------------- | --------------------------------- | --------------------------------------------------------------------------- |
+| Full viewport notification layer | Feature composition              | Relay layout/tokens               | Keep non-modal and pointer-transparent except real controls.                |
+| Screen-dimming visual layer      | Feature composition              | Relay semantic surface tokens     | Replace physical black with a semantic surface/scrim role.                  |
+| Lottie animation                 | Feature + `lottie-web`           | Feature media                     | Keep decorative and `aria-hidden`; honour global reduced-motion policy.     |
+| Gift icon                        | Feature content                  | Feature                           | Preserve as visible content; do not add focus behaviour.                    |
+| Broadcast title                  | Feature + i18n                   | Relay typography + app i18n       | Preserve localised title and content hierarchy.                             |
+| Broadcast description            | Feature + i18n                   | Relay typography + app i18n       | Preserve localised sender/receiver/gift/cost announcement.                  |
+| Gift banner                      | Feature composition              | Relay visual tokens               | Remove off-token colour and timing values.                                  |
+| Dismiss action                   | Spartan Helm `HlmButton`         | Spartan Helm + Relay presentation | Keep the owned button primitive; add an explicit localised accessible name. |
+| Visible state                    | `GiftAnimationService.isVisible` | Feature state                     | Preserve fade-out behaviour without moving state into the button primitive. |
+| Queue / next gift                | `GiftAnimationService`           | Feature state                     | Do not move queue policy into Relay or Spartan.                             |
+| Lottie destroy/reload            | Component lifecycle              | Feature media                     | Preserve cleanup on replacement and destroy.                                |
 
 No current interactive element is omitted from this mapping. The dismiss button is the only user-operable control.
 
