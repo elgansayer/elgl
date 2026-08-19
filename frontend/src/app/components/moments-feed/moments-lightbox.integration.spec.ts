@@ -47,7 +47,7 @@ describe('Moments lightbox integration', () => {
   });
 
   it('delegates modal focus, backdrop and Escape ownership to Spartan Dialog', () => {
-    expect(lightboxComponentSource).toContain("HlmDialogImports");
+    expect(lightboxComponentSource).toContain('HlmDialogImports');
     expect(lightboxTemplate).toContain('<hlm-dialog');
     expect(lightboxTemplate).toContain('*hlmDialogPortal');
     expect(lightboxTemplate).toContain('(stateChanged)="onDialogStateChanged($event)"');

@@ -14,21 +14,21 @@ The component currently owns no network requests, persistence, analytics, applic
 
 ## Current UI inventory
 
-| Element / state | Current implementation | Behaviour owner | Intended ownership |
-| --- | --- | --- | --- |
-| Viewer shell | `.toc-shell.surface-panel` wrapper | Relay/app CSS | Relay presentation |
-| Table-of-contents landmark | Native `<nav>` | Browser semantics | Native HTML, presented by Relay |
-| Table-of-contents list | Native `<ol>` with flattened `<li>` entries | Browser semantics | Native HTML |
-| Section links | Native `<a href="#section-id">` | Browser fragment navigation | Native HTML; Relay owns appearance |
-| Section number | Computed decimal string such as `1`, `1.1`, `2` | `DocumentViewerComponent` | Feature/app logic |
-| Document content landmark | Native `<main>` | Browser semantics | Native HTML, subject to embedding review |
-| Section container | Native `<section id="…">` | Browser semantics | Native HTML |
-| Section heading | Native `<h2 id="…-heading">` | Browser semantics | Native HTML + Relay typography |
-| Section relationship | `aria-labelledby` from section to heading | Component template | Native accessibility contract |
-| Section body | `NgTemplateOutlet` / caller `TemplateRef` | Caller | Caller-owned content |
-| Nested section input | Recursive `children` model | Component | Feature/app data contract |
-| Flattened section state | `computed()` from required `sections` input | Angular signals | Feature/app state |
-| Empty input | Empty TOC and empty content landmarks remain rendered | Component | Explicitly decide during follow-up |
+| Element / state            | Current implementation                                | Behaviour owner             | Intended ownership                       |
+| -------------------------- | ----------------------------------------------------- | --------------------------- | ---------------------------------------- |
+| Viewer shell               | `.toc-shell.surface-panel` wrapper                    | Relay/app CSS               | Relay presentation                       |
+| Table-of-contents landmark | Native `<nav>`                                        | Browser semantics           | Native HTML, presented by Relay          |
+| Table-of-contents list     | Native `<ol>` with flattened `<li>` entries           | Browser semantics           | Native HTML                              |
+| Section links              | Native `<a href="#section-id">`                       | Browser fragment navigation | Native HTML; Relay owns appearance       |
+| Section number             | Computed decimal string such as `1`, `1.1`, `2`       | `DocumentViewerComponent`   | Feature/app logic                        |
+| Document content landmark  | Native `<main>`                                       | Browser semantics           | Native HTML, subject to embedding review |
+| Section container          | Native `<section id="…">`                             | Browser semantics           | Native HTML                              |
+| Section heading            | Native `<h2 id="…-heading">`                          | Browser semantics           | Native HTML + Relay typography           |
+| Section relationship       | `aria-labelledby` from section to heading             | Component template          | Native accessibility contract            |
+| Section body               | `NgTemplateOutlet` / caller `TemplateRef`             | Caller                      | Caller-owned content                     |
+| Nested section input       | Recursive `children` model                            | Component                   | Feature/app data contract                |
+| Flattened section state    | `computed()` from required `sections` input           | Angular signals             | Feature/app state                        |
+| Empty input                | Empty TOC and empty content landmarks remain rendered | Component                   | Explicitly decide during follow-up       |
 
 There are no buttons, form controls, menus, tabs, popovers, tooltips, dialogs, drawers, overlays, toasts, pending indicators, disabled controls, or error controls in this component.
 

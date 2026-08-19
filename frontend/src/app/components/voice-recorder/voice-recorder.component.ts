@@ -11,7 +11,13 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 
 @Component({
   selector: 'app-voice-recorder',
-  imports: [HlmButton, TranslatePipe, AppCardComponent, AppChipComponent, AppButtonPrimaryComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })

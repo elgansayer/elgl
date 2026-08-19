@@ -36,9 +36,7 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h2')?.textContent).toContain(
-      'errorBoundary.title',
-    );
+    expect(compiled.querySelector('h2')?.textContent).toContain('errorBoundary.title');
     expect(compiled.textContent).toContain('Test rendering crash');
     expect(reportEconomyCrash).toHaveBeenCalledTimes(1);
     expect(reportEconomyCrash).toHaveBeenCalledWith(error, {
@@ -88,12 +86,8 @@ describe('ErrorBoundaryComponent', () => {
     component.handleBoundaryError(new Error('Temporary error'));
     fixture.detectChanges();
 
-    const buttons = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-    );
-    const retry = buttons.find((button) =>
-      button.textContent?.includes('errorBoundary.retry'),
-    );
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+    const retry = buttons.find((button) => button.textContent?.includes('errorBoundary.retry'));
     expect(retry).toBeDefined();
 
     retry?.click();
@@ -146,8 +140,6 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('h2')).toBeNull();
-    expect(
-      fixture.debugElement.queryAll(By.directive(HlmButton)),
-    ).toHaveLength(0);
+    expect(fixture.debugElement.queryAll(By.directive(HlmButton))).toHaveLength(0);
   });
 });

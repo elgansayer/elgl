@@ -5,7 +5,8 @@ import {
   viewChild,
   Input,
   Output,
-  EventEmitter, OnDestroy,
+  EventEmitter,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -106,11 +107,10 @@ export class AudioRecorderComponent implements OnDestroy {
     this.uploading = true;
     this.error = '';
     try {
-      const { uploadUrl, mediaUrl } =
-        await this.audioIntroService.getPresignedUploadUrl(
-          `audio_intro_${Date.now()}.webm`,
-          blob.type,
-        );
+      const { uploadUrl, mediaUrl } = await this.audioIntroService.getPresignedUploadUrl(
+        `audio_intro_${Date.now()}.webm`,
+        blob.type,
+      );
 
       const uploadResp = await fetch(uploadUrl, {
         method: 'PUT',

@@ -32,7 +32,8 @@ interface FaqItem {
 
 @Component({
   selector: 'app-vip',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     JoyrideModule,
     TranslatePipe,
     AppButtonPrimaryComponent,
