@@ -14,7 +14,15 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  imports: [HlmButton, CommonModule, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {

@@ -39,7 +39,8 @@ ProtectHome=tmpfs
 BindPaths=/run/user
 ProtectKernelTunables=false
 ProtectKernelModules=true
-ProtectKernelLogs=true
+# Do not enable ProtectKernelLogs here: provider and verification sandboxes
+# require nested private proc mounts through unshare --mount-proc.
 # Rootless Podman receives only this service's delegated cgroup subtree. This is
 # required for the per-worker CPU, memory and process limits below the parent cap.
 Delegate=yes

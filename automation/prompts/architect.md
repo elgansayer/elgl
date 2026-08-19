@@ -19,6 +19,7 @@ proposed titles are not close duplicates of each other; a separate process will 
 every issue already open, so do not worry about seeing the existing backlog.
 
 The JSON must strictly follow this schema:
+
 ```json
 {
   "new_issues": [

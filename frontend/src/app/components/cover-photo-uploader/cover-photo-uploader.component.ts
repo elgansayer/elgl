@@ -43,6 +43,7 @@ interface CropBox {
             class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
             (click)="fileInput.click()"
             (keydown.enter)="fileInput.click()"
+            (keydown.space)="fileInput.click(); $event.preventDefault()"
             tabindex="0"
             role="button"
           >
@@ -143,34 +144,39 @@ interface CropBox {
           <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="startCropping()"
                 class="px-4 py-2 bg-surface-200 text-text-primary rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
                 {{ 'common.crop' | t }}
               </button>
             } @else {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="applyCrop()"
                 class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary-dark transition-colors text-sm"
               >
                 {{ 'common.applyCrop' | t }}
               </button>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="cancelCrop()"
                 class="px-4 py-2 bg-surface-100 text-text-primary rounded-lg hover:bg-surface-200 transition-colors text-sm"
               >
                 {{ 'common.cancel' | t }}
               </button>
             }
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="uploadCropped()"
               [disabled]="isUploading()"
               class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/90 transition-colors text-sm disabled:opacity-50"
             >
               {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
             </button>
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="reset()"
               class="px-4 py-2 bg-danger text-on-fill rounded-lg hover:bg-danger/90 transition-colors text-sm"
             >

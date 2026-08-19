@@ -54,9 +54,9 @@ describe('Relay + Spartan visual contracts', () => {
   it('captures deterministic repository-owned preview states', () => {
     cy.readFile<VisualMatrix>('../visual-contract.matrix.json').then((matrix) => {
       for (const contract of matrix.contracts) {
-        const captureStates = contract.states.filter((state) => automatedStates.has(state));
+        for (const state of contract.states) {
+          if (!automatedStates.has(state)) continue;
 
-        for (const state of captureStates) {
           const url = `/${contract.previewPath}`;
           cy.visit(url);
           cy.get('body').should('be.visible');

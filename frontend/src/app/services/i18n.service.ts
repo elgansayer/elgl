@@ -876,6 +876,12 @@ export class I18nService {
     'chatRoom.simplifyBtn': 'Simplify',
     'chatRoom.simplifying': 'Simplifying...',
     'chatRoom.simplifiedTitle': '✅ Simplified:',
+    'chatRoom.simplifyErrorRateLimit':
+      'You have made too many simplification requests. Please wait and try again.',
+    'chatRoom.simplifyErrorAuth': 'Sign in again to simplify this message.',
+    'chatRoom.simplifyErrorEmpty': 'No simplified text was returned. Please try again.',
+    'chatRoom.simplifyErrorRequest':
+      'This message could not be simplified. Check your connection and try again.',
     'chatRoom.edited': 'Edited',
     'chatRoom.saving': 'Saving...',
     'chatRoom.editBtn': 'Edit',
@@ -1716,6 +1722,7 @@ export class I18nService {
     'tts.unsupported': 'Text-to-speech is not supported in this browser environment.',
 
     // Context Menu
+    'context_menu.open': 'Open message actions',
     'context_menu.reply': 'Reply',
     'context_menu.copy': 'Copy',
     'context_menu.translate': 'Translate',
