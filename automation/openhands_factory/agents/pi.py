@@ -15,9 +15,12 @@ from openhands_factory.agents.process import ProcessResult
 class PiProvider(CLIProvider):
     name = "pi"
     default_command = "pi"
-    default_model = "google/gemini-3.7-flash"
+    default_model = "github-copilot/claude-sonnet-5"
     default_credential_paths = (".pi",)
-    default_runtime_paths = (".local/bin",)
+    # pi's native installer places its executable in .local/bin as a symlink
+    # into .local/lib/node_modules; both must be mounted or the sandboxed
+    # process cannot resolve the symlink target.
+    default_runtime_paths = (".local/bin", ".local/lib")
 
     @staticmethod
     def _full_prompt(request: AgentRequest) -> str:
