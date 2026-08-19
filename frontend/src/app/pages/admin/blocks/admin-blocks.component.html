@@ -47,7 +47,9 @@
               </div>
             }
             <div>
-              <p class="font-medium text-text-primary">{{ user.blocked_name ?? user.display_name ?? '' }}</p>
+              <p class="font-medium text-text-primary">
+                {{ user.blocked_name ?? user.display_name ?? '' }}
+              </p>
               @if (user.native_language || user.target_languages?.length) {
                 <p class="text-sm text-text-secondary">
                   {{ user.native_language ?? '' }} →
@@ -61,7 +63,8 @@
               </p>
             </div>
           </div>
-          <button hlmBtn
+          <button
+            hlmBtn
             class="px-3 py-1.5 bg-danger text-on-fill rounded-lg text-sm hover:bg-danger/90 transition-colors disabled:opacity-50"
             (click)="onUnblock(user)"
             [disabled]="isUnblocking(user.id)"

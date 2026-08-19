@@ -41,18 +41,18 @@ There is no user-triggered mutation, submit action, retry control, menu, dialog,
 
 ## Ownership map
 
-| Element / state | Owner | Rule |
-| --- | --- | --- |
-| Card shell | Relay `AppCardComponent` | Preserve the non-interactive default card. |
-| Heading | Feature composition + app i18n | Preserve semantic heading structure. |
-| Loading state | Feature async state + Relay presentation | Preserve visible pending feedback. |
-| Resolved tip | Feature composition | Render returned text as content, not as a translation key. |
-| Error fallback | Feature data state | Preserve localised fallback without exposing transport details. |
-| Missing tip fallback | Feature data state | Preserve as a distinct tested cause even though copy matches the error state. |
-| Authentication lookup | `AuthService` | Keep token ownership outside Relay and Spartan. |
-| Network read | Feature loader | Preserve authenticated GET semantics. |
-| Interactive controls | None | Do not invent controls as part of design-system convergence. |
-| Dialog / overlay state | None | No Spartan overlay primitive is applicable. |
+| Element / state        | Owner                                    | Rule                                                                          |
+| ---------------------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| Card shell             | Relay `AppCardComponent`                 | Preserve the non-interactive default card.                                    |
+| Heading                | Feature composition + app i18n           | Preserve semantic heading structure.                                          |
+| Loading state          | Feature async state + Relay presentation | Preserve visible pending feedback.                                            |
+| Resolved tip           | Feature composition                      | Render returned text as content, not as a translation key.                    |
+| Error fallback         | Feature data state                       | Preserve localised fallback without exposing transport details.               |
+| Missing tip fallback   | Feature data state                       | Preserve as a distinct tested cause even though copy matches the error state. |
+| Authentication lookup  | `AuthService`                            | Keep token ownership outside Relay and Spartan.                               |
+| Network read           | Feature loader                           | Preserve authenticated GET semantics.                                         |
+| Interactive controls   | None                                     | Do not invent controls as part of design-system convergence.                  |
+| Dialog / overlay state | None                                     | No Spartan overlay primitive is applicable.                                   |
 
 No current control or async state is intentionally left unclassified.
 

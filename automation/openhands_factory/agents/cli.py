@@ -52,9 +52,12 @@ _AUTH_MARKERS = (
 _QUOTA_MARKERS = (
     "quota exhausted",
     "quota exceeded",
+    "individual quota reached",
     "usage limit reached",
     "subscription limit",
     "credit balance",
+    "insufficient balance",
+    "monthly spend limit",
 )
 _RATE_LIMIT_MARKERS = (
     "rate limit",
@@ -108,6 +111,16 @@ def extract_retry_after_seconds(value: str) -> int | None:
         match = re.search(pattern, value)
         if match:
             return min(int(match.group(1)), 7 * 24 * 3600)
+    duration = re.search(
+        r"(?i)resets?\s+in\s+"
+        r"(?:(\d+)\s*(?:h|hours?)\s*)?"
+        r"(?:(\d+)\s*(?:m|minutes?)\s*)?"
+        r"(?:(\d+)\s*(?:s|seconds?)\s*)?",
+        value,
+    )
+    if duration and any(part is not None for part in duration.groups()):
+        hours, minutes, seconds = (int(part or 0) for part in duration.groups())
+        return min(hours * 3600 + minutes * 60 + seconds, 7 * 24 * 3600)
     return None
 
 

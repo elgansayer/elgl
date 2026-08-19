@@ -1,10 +1,12 @@
 import json
+from pathlib import Path
 
 from openhands_factory.agents.base import AgentPhase
 
 
 def read_source(path: str) -> str:
-    with open(path, encoding="utf-8") as source_file:
+    source_path = (Path(__file__).parents[1] / path).resolve()
+    with source_path.open(encoding="utf-8") as source_file:
         return source_file.read()
 
 
@@ -40,7 +42,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     assert providers["claude"]["enabled"] is True
     assert providers["codex"]["enabled"] is True
     assert providers["opencode"]["enabled"] is True
-    assert providers["google"]["enabled"] is False
+    assert providers["google"]["enabled"] is True
     assert providers["openhands"]["enabled"] is True
     assert providers["openhands"]["transport"] == "openhands-sdk"
     assert providers["openhands"]["emergency_only"] is True

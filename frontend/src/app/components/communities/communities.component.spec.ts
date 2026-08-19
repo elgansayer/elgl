@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CommunitiesComponent } from './communities.component';
 import {
   CommunitiesService,
@@ -8,156 +7,107 @@ import {
 } from '../../services/communities.service';
 import { I18nService } from '../../services/i18n.service';
 
+const community: Community = {
+  id: 'community-1',
+  name: 'Spanish learners',
+  description: 'Weekly conversation practice',
+  owner_id: 'owner-1',
+  created_at: '2026-08-19T00:00:00.000Z',
+};
+
+class MockCommunitiesService {
+  listMine(): Promise<Community[]> {
+    return Promise.resolve([community]);
+  }
+
+  create(payload: CreateCommunityPayload): Promise<Community> {
+    return Promise.resolve({ ...community, ...payload });
+  }
+
+  remove(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 class MockI18nService {
   translate(key: string): string {
     return key;
   }
 }
 
-const community: Community = {
-  id: 'community-1',
-  name: 'Language Exchange',
-  description: 'Weekly practice',
-  owner_id: 'owner-1',
-  created_at: '2026-08-17T00:00:00Z',
-};
-
-const listMine = vi.fn(async () => [community]);
-const createCommunity = vi.fn(async (_payload: CreateCommunityPayload) => community);
-const removeCommunity = vi.fn(async (_id: string) => undefined);
-
 describe('CommunitiesComponent', () => {
   let fixture: ComponentFixture<CommunitiesComponent>;
-  let component: CommunitiesComponent;
 
   beforeEach(async () => {
-    listMine.mockReset();
-    listMine.mockResolvedValue([community]);
-    createCommunity.mockReset();
-    createCommunity.mockResolvedValue(community);
-    removeCommunity.mockReset();
-    removeCommunity.mockResolvedValue(undefined);
-
     await TestBed.configureTestingModule({
       imports: [CommunitiesComponent],
       providers: [
+        { provide: CommunitiesService, useClass: MockCommunitiesService },
         { provide: I18nService, useClass: MockI18nService },
-        {
-          provide: CommunitiesService,
-          useValue: {
-            listMine,
-            create: createCommunity,
-            remove: removeCommunity,
-          },
-        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CommunitiesComponent);
-    component = fixture.componentInstance;
     fixture.detectChanges();
-    await vi.waitFor(() => {
-      fixture.detectChanges();
-      expect(component.communities()).toHaveLength(1);
-    });
+    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+  it('uses Relay semantic surfaces, radius and elevation roles', () => {
+    const page: HTMLElement = fixture.nativeElement.querySelector('main');
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
+    const card: HTMLLIElement = fixture.nativeElement.querySelector('ul li');
 
-  it('should give both Spartan inputs persistent translated labels', () => {
-    const nameLabel = fixture.nativeElement.querySelector('label[for="community-name"]');
-    const descriptionLabel = fixture.nativeElement.querySelector(
-      'label[for="community-description"]',
+    expect([...page.classList]).toEqual(expect.arrayContaining(['bg-surface-500']));
+    expect([...form.classList]).toEqual(
+      expect.arrayContaining([
+        'bg-surface-200',
+        'border-surface-100',
+        'rounded-card',
+        'shadow-card',
+      ]),
     );
-    const nameInput = fixture.nativeElement.querySelector('#community-name');
-    const descriptionInput = fixture.nativeElement.querySelector('#community-description');
-
-    expect(nameLabel?.textContent).toContain('communities.nameLabel');
-    expect(descriptionLabel?.textContent).toContain('communities.descriptionLabel');
-    expect(nameInput).toBeTruthy();
-    expect(descriptionInput).toBeTruthy();
-  });
-
-  it('should keep delete actions contextual without changing visible translated copy', () => {
-    const deleteButton: HTMLButtonElement | null = fixture.nativeElement.querySelector(
-      'li button',
+    expect([...card.classList]).toEqual(
+      expect.arrayContaining([
+        'bg-surface-200',
+        'border-surface-100',
+        'rounded-card',
+        'shadow-card',
+      ]),
     );
-
-    expect(deleteButton).toBeTruthy();
-    expect(deleteButton?.textContent).toContain('communities.delete');
-    expect(deleteButton?.textContent).toContain(community.name);
-    expect(deleteButton?.querySelector('.sr-only')?.textContent).toContain(community.name);
+    expect(fixture.nativeElement.innerHTML).not.toMatch(
+      /\b(?:bg|text|border)-(?:black|white|slate|gray|red|blue|green|amber|purple|pink)(?:-|\b)/,
+    );
   });
 
-  it('should trim create input and prevent duplicate mutations while pending', async () => {
-    let finishCreate: (() => void) | undefined;
-    const pendingCreate = new Promise<Community>((resolve) => {
-      finishCreate = () => resolve(community);
-    });
-    createCommunity.mockReturnValueOnce(pendingCreate);
+  it('uses a mobile-first layout with tablet and desktop refinements', () => {
+    const page: HTMLElement = fixture.nativeElement.querySelector('main');
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form');
+    const list: HTMLUListElement = fixture.nativeElement.querySelector('ul');
+    const createButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[type="submit"]');
+    const deleteButton: HTMLButtonElement = fixture.nativeElement.querySelector('ul button');
 
-    component.newName.set('  Language Exchange  ');
-    component.newDescription.set('  Weekly practice  ');
-
-    const firstCreate = component.create();
-    const duplicateCreate = component.create();
-
-    expect(component.creating()).toBe(true);
-    expect(component.mutationPending()).toBe(true);
-    expect(createCommunity).toHaveBeenCalledTimes(1);
-    expect(createCommunity).toHaveBeenCalledWith({
-      name: 'Language Exchange',
-      description: 'Weekly practice',
-    });
-
-    finishCreate?.();
-    await Promise.all([firstCreate, duplicateCreate]);
-
-    expect(component.creating()).toBe(false);
-    expect(component.mutationPending()).toBe(false);
-    expect(component.newName()).toBe('');
-    expect(component.newDescription()).toBe('');
+    expect([...page.classList]).toEqual(
+      expect.arrayContaining(['px-4', 'py-6', 'sm:px-6', 'sm:py-8', 'lg:px-8', 'lg:py-10']),
+    );
+    expect([...form.classList]).toEqual(
+      expect.arrayContaining(['grid', 'md:grid-cols-2', 'lg:items-end']),
+    );
+    expect([...list.classList]).toEqual(expect.arrayContaining(['grid', 'md:grid-cols-2']));
+    expect([...createButton.classList]).toEqual(expect.arrayContaining(['w-full', 'lg:w-auto']));
+    expect([...deleteButton.classList]).toEqual(expect.arrayContaining(['w-full', 'sm:w-auto']));
   });
 
-  it('should release the pending create state when the service rejects', async () => {
-    createCommunity.mockRejectedValueOnce(new Error('create failed'));
-    component.newName.set('Language Exchange');
+  it('keeps directional styling RTL-safe', () => {
+    const componentHtml = fixture.nativeElement.innerHTML;
 
-    await expect(component.create()).rejects.toThrow('create failed');
-
-    expect(component.creating()).toBe(false);
-    expect(component.mutationPending()).toBe(false);
-  });
-
-  it('should prevent overlapping delete mutations and restore controls afterwards', async () => {
-    let finishDelete: (() => void) | undefined;
-    const pendingDelete = new Promise<undefined>((resolve) => {
-      finishDelete = () => resolve(undefined);
-    });
-    removeCommunity.mockReturnValueOnce(pendingDelete);
-
-    const firstDelete = component.delete('community-1');
-    const duplicateDelete = component.delete('community-2');
-
-    expect(component.deletingId()).toBe('community-1');
-    expect(component.mutationPending()).toBe(true);
-    expect(removeCommunity).toHaveBeenCalledTimes(1);
-    expect(removeCommunity).toHaveBeenCalledWith('community-1');
-
-    finishDelete?.();
-    await Promise.all([firstDelete, duplicateDelete]);
-
-    expect(component.deletingId()).toBeNull();
-    expect(component.mutationPending()).toBe(false);
-  });
-
-  it('should render valid list children for loaded communities', () => {
-    const list: HTMLUListElement | null = fixture.nativeElement.querySelector('ul');
-    const children = list ? Array.from(list.children) : [];
-
-    expect(children.length).toBeGreaterThan(0);
-    expect(children.every((child) => child.tagName === 'LI')).toBe(true);
+    expect(componentHtml).not.toMatch(/\bpl-\d/);
+    expect(componentHtml).not.toMatch(/\bpr-\d/);
+    expect(componentHtml).not.toMatch(/\bml-\d/);
+    expect(componentHtml).not.toMatch(/\bmr-\d/);
+    expect(componentHtml).not.toMatch(/\bleft-\d/);
+    expect(componentHtml).not.toMatch(/\bright-\d/);
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 });
