@@ -62,14 +62,14 @@ describe('SafetyService muted words', () => {
     localStorage.setItem(ownerKey('user-a'), '["alpha"]');
     localStorage.setItem(ownerKey('user-b'), '["beta"]');
 
-    expect(service.isMutedWord('alpha')).toBe(true);
-    expect(service.isMutedWord('beta')).toBe(false);
-
     currentUser.set({ id: 'user-b' });
-
     expect(service.isMutedWord('alpha')).toBe(false);
     expect(service.isMutedWord('beta')).toBe(true);
-    expect(service.mutedWords()).toEqual(['beta']);
+
+    currentUser.set({ id: 'user-a' });
+    expect(service.isMutedWord('alpha')).toBe(true);
+    expect(service.isMutedWord('beta')).toBe(false);
+    expect(service.mutedWords()).toEqual(['alpha']);
   });
 
   it('migrates the legacy device-global value only for an authenticated account', () => {
