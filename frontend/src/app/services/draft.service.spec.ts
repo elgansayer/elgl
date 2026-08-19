@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { DraftService } from './draft.service';
 import { AuthService } from './auth.service';
@@ -18,6 +18,10 @@ describe('DraftService', () => {
     });
 
     service = TestBed.inject(DraftService);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('chat drafts', () => {
@@ -47,6 +51,24 @@ describe('DraftService', () => {
       service.saveChatDraft('room-2', 'Message in room 2');
       expect(service.loadChatDraft('room-1')).toBe('Message in room 1');
       expect(service.loadChatDraft('room-2')).toBe('Message in room 2');
+    });
+
+    it('persists and restores enriched chat draft state', () => {
+      service.saveChatDraftV2('room-1', {
+        textInput: 'Replying now',
+        replyToId: 'message-7',
+        originalText: 'helo',
+        correctedText: 'hello',
+        explanationText: 'Spelling correction',
+      });
+
+      expect(service.loadChatDraftV2('room-1')).toEqual({
+        textInput: 'Replying now',
+        replyToId: 'message-7',
+        originalText: 'helo',
+        correctedText: 'hello',
+        explanationText: 'Spelling correction',
+      });
     });
   });
 
@@ -88,13 +110,48 @@ describe('DraftService', () => {
         targetLanguage: 'ja',
       });
     });
+
+    it('ignores malformed persisted JSON', () => {
+      localStorage.setItem('ht_test-user-1_draft_moment', '{not-json');
+      expect(service.loadMomentDraft()).toBeNull();
+    });
+  });
+
+  describe('storage failures', () => {
+    it('does not interrupt composing when storage writes fail', () => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      });
+
+      expect(() => service.saveChatDraft('room-1', 'Keep typing')).not.toThrow();
+      expect(() => service.saveMomentDraft({ text: 'Keep composing' })).not.toThrow();
+    });
+
+    it('returns safe empty values when storage reads fail', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Storage blocked', 'SecurityError');
+      });
+
+      expect(service.loadChatDraft('room-1')).toBe('');
+      expect(service.loadChatDraftV2('room-1')).toBeNull();
+      expect(service.loadMomentDraft()).toBeNull();
+    });
+
+    it('does not interrupt successful sends when storage cleanup fails', () => {
+      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+        throw new DOMException('Storage blocked', 'SecurityError');
+      });
+
+      expect(() => service.clearChatDraft('room-1')).not.toThrow();
+      expect(() => service.clearChatDraftV2('room-1')).not.toThrow();
+      expect(() => service.clearMomentDraft()).not.toThrow();
+    });
   });
 
   describe('user-scoped keys', () => {
     it('uses user ID in storage key', () => {
       service.saveChatDraft('room-1', 'User 1 draft');
 
-      // Switch to a different user
       mockAuth.currentUser = () => ({ id: 'test-user-2' });
       expect(service.loadChatDraft('room-1')).toBe('');
     });
