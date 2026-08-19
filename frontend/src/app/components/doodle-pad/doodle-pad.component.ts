@@ -95,18 +95,22 @@ export class DoodlePadComponent {
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  setColor(color: string): void {
-    this.currentColor = color;
+  setColor(color: string | null | undefined): void {
+    if (typeof color === 'string' && this.colors.includes(color)) {
+      this.currentColor = color;
+    }
   }
 
   setBrushWidth(width: number): void {
     this.brushWidth = width;
   }
 
-  setBrushWidthFromValue(value: string): void {
-    const width = Number(value);
-    if (this.brushWidths.includes(width)) {
-      this.setBrushWidth(width);
+  setBrushWidthFromValue(value: string | null | undefined): void {
+    if (typeof value === 'string') {
+      const width = Number(value);
+      if (this.brushWidths.includes(width)) {
+        this.setBrushWidth(width);
+      }
     }
   }
 

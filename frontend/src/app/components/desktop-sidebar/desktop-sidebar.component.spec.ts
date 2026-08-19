@@ -79,7 +79,8 @@ describe('DesktopSidebarComponent', () => {
     fixture.detectChanges();
 
     const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
-    const momentsLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/moments"]');
+    const momentsLink: HTMLAnchorElement =
+      fixture.nativeElement.querySelector('a[href="/moments"]');
 
     expect(chatLink.getAttribute('aria-current')).toBe('page');
     expect(momentsLink.hasAttribute('aria-current')).toBe(false);

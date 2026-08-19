@@ -43,7 +43,7 @@
         name="doodle-color"
         class="flex items-center gap-2"
         [value]="currentColor"
-        (valueChange)="setColor($any($event))"
+        (valueChange)="setColor($event)"
       >
         @for (color of colors; track color; let index = $index) {
           <label
@@ -80,7 +80,7 @@
         name="doodle-brush-width"
         class="flex items-center gap-2"
         [value]="brushWidth.toString()"
-        (valueChange)="setBrushWidthFromValue($any($event))"
+        (valueChange)="setBrushWidthFromValue($event)"
       >
         @for (width of brushWidths; track width) {
           <label

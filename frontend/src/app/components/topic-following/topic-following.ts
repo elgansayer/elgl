@@ -8,19 +8,19 @@ import { TranslatePipe } from '../../services/translate.pipe';
   standalone: true,
   imports: [HlmButton, TranslatePipe],
   templateUrl: './topic-following.html',
-  styleUrls: ['./topic-following.scss']
+  styleUrls: ['./topic-following.scss'],
 })
 export class TopicFollowingComponent {
   readonly i18n = inject(I18nService);
-  readonly topics = signal<{id: string, name: string, isFollowing: boolean}[]>([
+  readonly topics = signal<{ id: string; name: string; isFollowing: boolean }[]>([
     { id: '1', name: '#languagelearning', isFollowing: false },
     { id: '2', name: '#polyglot', isFollowing: true },
-    { id: '3', name: '#culturalexchange', isFollowing: false }
+    { id: '3', name: '#culturalexchange', isFollowing: false },
   ]);
 
   toggleFollow(topicId: string) {
-    this.topics.update(topics => topics.map(t => 
-      t.id === topicId ? { ...t, isFollowing: !t.isFollowing } : t
-    ));
+    this.topics.update((topics) =>
+      topics.map((t) => (t.id === topicId ? { ...t, isFollowing: !t.isFollowing } : t)),
+    );
   }
 }

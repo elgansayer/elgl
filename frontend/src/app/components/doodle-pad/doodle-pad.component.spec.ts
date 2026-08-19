@@ -70,9 +70,6 @@ describe('DoodlePadComponent', () => {
       .overrideComponent(DoodlePadComponent, {
         remove: { imports: [TranslatePipe] },
         add: { imports: [MockTranslatePipe] },
-        set: {
-          styles: [],
-        },
       })
       .compileComponents();
 

@@ -41,7 +41,8 @@ export interface LanguageQuestion {
           <p class="text-text-primary">{{ q.question_text }}</p>
           <div class="grid grid-cols-1 gap-2">
             @for (opt of q.question_options; track opt) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 type="button"
                 class="text-start px-3 py-2 rounded border border-surface-hover bg-surface-alt text-text-primary hover:bg-surface-hover transition"
                 (click)="submitAnswer(q.id, opt)"

@@ -43,26 +43,26 @@ The component owns short-lived UI state only. It does not persist the transfer r
 
 ## Existing implementation inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Audit action |
-| --- | --- | --- | --- | --- |
-| Page/content shell | `app-card` with column layout | Feature composition | Relay / app composition | Keep |
-| Page heading | translated native `h2` | Feature content | Native semantics + Relay typography | Keep |
-| Supporting copy | translated `p` + semantic text token | Feature content | Relay text role | Keep |
-| Generate-transfer action | native `button` + `hlmBtn` | Spartan Button | Spartan Helm / approved Relay Button boundary | Keep |
-| Generate API call | `AuthService.generateDeviceLink()` | Auth service | Service/API boundary | Preserve outside UI primitives |
-| Dialog open/close | `hlm-dialog`, `hlm-dialog-content`, `brnDialogContent` | Spartan Dialog + feature state | Spartan Brain/Helm Dialog | Keep; harden state owner |
-| Dialog title | translated `h3` with fixed ID | Feature content | Native semantics + Dialog labelling contract | Keep content; verify relationship and ID safety |
-| QR rendering | `QRCode.toBlob()` + native `img` | Feature/browser integration | Native image + feature integration | Keep |
-| QR Blob URL lifetime | `URL.createObjectURL` / `URL.revokeObjectURL` | Feature lifecycle | Feature/browser integration | Preserve and test |
-| Transfer link | native external `a` | Browser/native navigation | Native anchor + Relay presentation | Keep native anchor |
-| Cancel action | native `button` + `hlmBtn` outline variant | Spartan Button | Spartan Helm / approved Relay Button boundary | Keep |
-| Unauthenticated redirect | `router.navigateByUrl('/login')` | Feature route guard fallback | Angular Router / auth route contract | Preserve |
-| Request pending | no explicit visual state | Feature async flow | Feature state + Relay feedback | Gap |
-| Request failure | service returns `null`; no feedback | Service + feature | Feature feedback composition | Gap |
-| QR generation pending/failure | no explicit visual state or recovery | Feature/browser integration | Feature state + Relay feedback | Gap |
-| Dialog cancellation | `cancelTransfer()` resets local transfer state | Feature lifecycle | Feature + Spartan close lifecycle | Keep |
-| Component teardown | revokes Blob URL and clears state | Feature lifecycle | Feature | Keep |
-| Analytics | none in component | N/A | N/A | Do not invent during migration |
+| Element / behaviour           | Current implementation                                 | State owner                    | Target owner                                  | Audit action                                    |
+| ----------------------------- | ------------------------------------------------------ | ------------------------------ | --------------------------------------------- | ----------------------------------------------- |
+| Page/content shell            | `app-card` with column layout                          | Feature composition            | Relay / app composition                       | Keep                                            |
+| Page heading                  | translated native `h2`                                 | Feature content                | Native semantics + Relay typography           | Keep                                            |
+| Supporting copy               | translated `p` + semantic text token                   | Feature content                | Relay text role                               | Keep                                            |
+| Generate-transfer action      | native `button` + `hlmBtn`                             | Spartan Button                 | Spartan Helm / approved Relay Button boundary | Keep                                            |
+| Generate API call             | `AuthService.generateDeviceLink()`                     | Auth service                   | Service/API boundary                          | Preserve outside UI primitives                  |
+| Dialog open/close             | `hlm-dialog`, `hlm-dialog-content`, `brnDialogContent` | Spartan Dialog + feature state | Spartan Brain/Helm Dialog                     | Keep; harden state owner                        |
+| Dialog title                  | translated `h3` with fixed ID                          | Feature content                | Native semantics + Dialog labelling contract  | Keep content; verify relationship and ID safety |
+| QR rendering                  | `QRCode.toBlob()` + native `img`                       | Feature/browser integration    | Native image + feature integration            | Keep                                            |
+| QR Blob URL lifetime          | `URL.createObjectURL` / `URL.revokeObjectURL`          | Feature lifecycle              | Feature/browser integration                   | Preserve and test                               |
+| Transfer link                 | native external `a`                                    | Browser/native navigation      | Native anchor + Relay presentation            | Keep native anchor                              |
+| Cancel action                 | native `button` + `hlmBtn` outline variant             | Spartan Button                 | Spartan Helm / approved Relay Button boundary | Keep                                            |
+| Unauthenticated redirect      | `router.navigateByUrl('/login')`                       | Feature route guard fallback   | Angular Router / auth route contract          | Preserve                                        |
+| Request pending               | no explicit visual state                               | Feature async flow             | Feature state + Relay feedback                | Gap                                             |
+| Request failure               | service returns `null`; no feedback                    | Service + feature              | Feature feedback composition                  | Gap                                             |
+| QR generation pending/failure | no explicit visual state or recovery                   | Feature/browser integration    | Feature state + Relay feedback                | Gap                                             |
+| Dialog cancellation           | `cancelTransfer()` resets local transfer state         | Feature lifecycle              | Feature + Spartan close lifecycle             | Keep                                            |
+| Component teardown            | revokes Blob URL and clears state                      | Feature lifecycle              | Feature                                       | Keep                                            |
+| Analytics                     | none in component                                      | N/A                            | N/A                                           | Do not invent during migration                  |
 
 Every current app-specific visual or interactive control is therefore classified. No bespoke interaction state machine remains that requires a new Spartan primitive.
 
@@ -123,19 +123,19 @@ The migration must not move authentication, transfer generation, Blob lifecycle 
 
 The component has more meaningful states than the current UI exposes.
 
-| State | Trigger | Current user-visible result | Required ownership |
-| --- | --- | --- | --- |
-| Unauthenticated browser | route initializes without `accessToken` | navigate to `/login` | Feature + Router |
-| Idle authenticated | route renders | card, description and launch button | Feature + Relay |
-| Generate request pending | user activates launch button | no explicit busy state; button remains activatable | Feature async state gap |
-| Generate request fails | service catches error and returns `null` | remains idle with no visible explanation | Feature feedback gap |
-| Generate response succeeds | API returns link/token/expiry | QR generation begins in browser | Service + feature |
-| QR generation pending | `QRCode.toBlob()` is awaiting completion | no intermediate status | Feature/browser state gap |
-| Dialog ready in browser | transfer link + QR Blob URL available | Dialog opens with QR, raw link and cancel | Feature + Spartan Dialog |
-| Dialog ready during SSR | response exists but browser APIs are skipped | Dialog state can be set without a QR image | Feature/SSR contract |
-| User cancels | cancel button activated | local link/QR cleared, Dialog closes | Feature + Spartan lifecycle |
-| Dialog dismisses | Escape/backdrop/other Spartan close path | `(closed)` calls cancellation/reset | Spartan + feature lifecycle |
-| Component destroyed | Angular teardown | Blob URL revoked and local state cleared | Feature lifecycle |
+| State                      | Trigger                                      | Current user-visible result                        | Required ownership          |
+| -------------------------- | -------------------------------------------- | -------------------------------------------------- | --------------------------- |
+| Unauthenticated browser    | route initializes without `accessToken`      | navigate to `/login`                               | Feature + Router            |
+| Idle authenticated         | route renders                                | card, description and launch button                | Feature + Relay             |
+| Generate request pending   | user activates launch button                 | no explicit busy state; button remains activatable | Feature async state gap     |
+| Generate request fails     | service catches error and returns `null`     | remains idle with no visible explanation           | Feature feedback gap        |
+| Generate response succeeds | API returns link/token/expiry                | QR generation begins in browser                    | Service + feature           |
+| QR generation pending      | `QRCode.toBlob()` is awaiting completion     | no intermediate status                             | Feature/browser state gap   |
+| Dialog ready in browser    | transfer link + QR Blob URL available        | Dialog opens with QR, raw link and cancel          | Feature + Spartan Dialog    |
+| Dialog ready during SSR    | response exists but browser APIs are skipped | Dialog state can be set without a QR image         | Feature/SSR contract        |
+| User cancels               | cancel button activated                      | local link/QR cleared, Dialog closes               | Feature + Spartan lifecycle |
+| Dialog dismisses           | Escape/backdrop/other Spartan close path     | `(closed)` calls cancellation/reset                | Spartan + feature lifecycle |
+| Component destroyed        | Angular teardown                             | Blob URL revoked and local state cleared           | Feature lifecycle           |
 
 ### Current open-state representation
 

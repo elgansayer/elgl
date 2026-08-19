@@ -5,6 +5,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { StudyStreakService } from '../study-streak/study-streak.service';
+import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 
 describe('AiConversationService', () => {
   let service: AiConversationService;
@@ -16,6 +17,7 @@ describe('AiConversationService', () => {
   let usersService: { getProfile: vi.Mock };
   let flashcardsService: { getFlashcards: vi.Mock };
   let studyStreakService: { getStreak: vi.Mock };
+  let learnerKnowledgeService: { getProfile: vi.Mock };
   let redisMock: {
     incr: Mock;
     expire: Mock;
@@ -46,12 +48,22 @@ describe('AiConversationService', () => {
       getStreak: vi.fn().mockResolvedValue(5),
     };
 
+    learnerKnowledgeService = {
+      getProfile: vi.fn().mockResolvedValue({
+        overallProficiency: { level: 'B2' },
+        knowledgeItems: new Map([
+          ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
+        ]),
+      }),
+    };
+
     service = new AiConversationService(
       llmProxy as unknown as LlmProxyService,
       supabaseService as unknown as SupabaseService,
       usersService as unknown as UsersService,
       flashcardsService as unknown as FlashcardsService,
       studyStreakService as unknown as StudyStreakService,
+      learnerKnowledgeService as unknown as LearnerKnowledgeService,
     );
   });
 
