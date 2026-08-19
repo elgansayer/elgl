@@ -737,6 +737,14 @@ def test_agent_diagnostics_warn_when_no_provider_is_temporarily_usable(
         lambda provider: unavailable(provider.name),
     )
     monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: unavailable(provider.name),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
+        lambda provider: unavailable(provider.name),
+    )
+    monkeypatch.setattr(
         "openhands_factory.doctor.openai_credentials_available",
         lambda _config: False,
     )
@@ -780,6 +788,14 @@ def test_agent_diagnostics_ignore_capacity_from_a_previous_daemon_generation(
         lambda provider: healthy(provider.name),
     )
     monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: healthy(provider.name),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
+        lambda provider: healthy(provider.name),
+    )
+    monkeypatch.setattr(
         "openhands_factory.doctor.openai_credentials_available",
         lambda _config: False,
     )
@@ -810,6 +826,22 @@ def test_agent_diagnostics_report_persisted_circuit_and_retry_time(
     )
     monkeypatch.setattr(
         "openhands_factory.agents.CodexProvider.health",
+        lambda provider: ProviderHealth(
+            provider.name,
+            ProviderStatus.HEALTHY,
+            datetime.now(UTC),
+        ),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.GoogleAgentProvider.health",
+        lambda provider: ProviderHealth(
+            provider.name,
+            ProviderStatus.HEALTHY,
+            datetime.now(UTC),
+        ),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.agents.OpenCodeProvider.health",
         lambda provider: ProviderHealth(
             provider.name,
             ProviderStatus.HEALTHY,

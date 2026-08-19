@@ -82,6 +82,21 @@ def is_new_github_issue(job: Job) -> bool:
     return job.state is JobState.DISCOVERED and job.task.source == "github-issue"
 
 
+# Lower value = closer to merged. Within a review-lane priority tier, jobs
+# nearer the end of the pipeline are scheduled first so PRs that are already
+# clean (no conflicts, no repair needed) merge and clear out ahead of PRs
+# still stuck earlier in review/repair.
+_REVIEW_STATE_ORDER = {
+    JobState.MERGE_QUEUED: 0,
+    JobState.READY_TO_MERGE: 1,
+    JobState.CI_PENDING: 2,
+    JobState.REVIEWING: 3,
+    JobState.QUALITY_REPAIRING: 4,
+    JobState.REPAIRING: 5,
+    JobState.PR_DRAFT: 6,
+}
+
+
 def select_issue_admitted(
     candidates: list[Job],
     limit: int,
@@ -108,6 +123,8 @@ def select_batch(
     excluded_task_ids: set[str] | None = None,
     now: datetime | None = None,
     new_issue_slots: int | None = None,
+    review_first: bool = True,
+    review_lane_max_concurrent: int = 1,
 ) -> list[Job]:
     if limit <= 0:
         return []
@@ -121,27 +138,40 @@ def select_batch(
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
-    review_is_active = any(
-        item.task.identifier in excluded and is_review_lane_job(item) for item in jobs.values()
+
+    active_review_count = sum(
+        1
+        for item in jobs.values()
+        if item.task.identifier in excluded and is_review_lane_job(item)
     )
-    if review_is_active:
-        return select_issue_admitted(
-            [item for item in candidates if not is_review_lane_job(item)],
-            limit,
-            new_issue_slots,
-        )
+    review_capacity = max(0, review_lane_max_concurrent - active_review_count)
 
-    review = next((item for item in candidates if is_review_lane_job(item)), None)
-    if review is None:
-        return select_issue_admitted(candidates, limit, new_issue_slots)
-
-    # Submit the merge-queue lane first. The router reserves provider capacity
-    # for this job before issue workers can consume every healthy subscription.
     remaining = [item for item in candidates if not is_review_lane_job(item)]
-    return [
-        review,
-        *select_issue_admitted(remaining, limit - 1, new_issue_slots),
-    ]
+    review_ready = sorted(
+        (item for item in candidates if is_review_lane_job(item)),
+        key=lambda item: (
+            item.task.priority,
+            _REVIEW_STATE_ORDER.get(item.state, len(_REVIEW_STATE_ORDER)),
+            int(item.task.identifier),
+        ),
+    )[:review_capacity]
+
+    if not review_ready:
+        return select_issue_admitted(remaining, limit, new_issue_slots)
+
+    if review_first:
+        # Submit the merge-queue lane first, up to review_lane_max_concurrent jobs
+        # in flight at once. The router reserves provider capacity for these jobs
+        # before issue workers can consume every healthy subscription.
+        issue_capacity = max(0, limit - len(review_ready))
+        return [*review_ready, *select_issue_admitted(remaining, issue_capacity, new_issue_slots)]
+
+    selected = select_issue_admitted(remaining, limit, new_issue_slots)
+    free_capacity = limit - len(selected)
+    if free_capacity <= 0:
+        return selected
+    selected.extend(review_ready[:free_capacity])
+    return selected
 
 
 def refresh_jobs(
@@ -446,6 +476,8 @@ class FactoryDaemon:
                         active_task_ids,
                         now=scheduler_time,
                         new_issue_slots=new_issue_slots,
+                        review_first=self.config.review_lane_first,
+                        review_lane_max_concurrent=self.config.review_lane_max_concurrent,
                     ):
                         self._assert_owner()
                         if is_new_github_issue(job) and not self.issue_admission.admit(
@@ -462,15 +494,18 @@ class FactoryDaemon:
                             agent_router=self.pipeline.router,
                         )
                         review_priority = is_review_lane_job(job)
-                        if review_priority:
+                        reserve_review_slot = (
+                            self.config.review_reserve_provider_slot and review_priority
+                        )
+                        if reserve_review_slot:
                             self.pipeline.router.reserve_review_capacity(job.task.identifier)
                         try:
                             future = workers.submit(worker.run_job, job.task.identifier)
                         except Exception:
-                            if review_priority:
+                            if reserve_review_slot:
                                 self.pipeline.router.release_review_capacity(job.task.identifier)
                             raise
-                        if review_priority:
+                        if reserve_review_slot:
                             future.add_done_callback(
                                 partial(
                                     release_review_capacity_after,

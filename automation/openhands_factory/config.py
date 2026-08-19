@@ -179,6 +179,16 @@ class AgentsConfig(BaseModel):
                 model="fable",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
+                phase_models={
+                    "planning": "opus",
+                    "architecture": "opus",
+                    "security_review": "opus",
+                    "implementation": "sonnet",
+                    "quality_repair": "haiku",
+                    "code_review": "haiku",
+                    "ci_repair": "haiku",
+                    "general_action": "fable",
+                },
             ),
             "codex": ProviderConfig(
                 enabled=True,
@@ -189,7 +199,7 @@ class AgentsConfig(BaseModel):
                 runtime_paths=[".local/bin", ".npm-global"],
             ),
             "google": ProviderConfig(
-                enabled=False,
+                enabled=True,
                 command="agy",
                 cli_variant="antigravity",
                 auth_mode="subscription",
@@ -198,7 +208,7 @@ class AgentsConfig(BaseModel):
                 runtime_paths=[".local/bin", ".npm-global"],
             ),
             "opencode": ProviderConfig(
-                enabled=False,
+                enabled=True,
                 command="opencode",
                 auth_mode="subscription",
                 model="opencode-go/kimi-k3",
@@ -209,6 +219,8 @@ class AgentsConfig(BaseModel):
                     "architecture": "opencode-go/qwen3.8-max",
                     "security_review": "opencode-go/qwen3.8-max",
                     "code_review": "opencode-go/qwen3.8-max",
+                    "quality_repair": "opencode-go/kimi-k2.7-code",
+                    "ci_repair": "opencode-go/kimi-k2.7-code",
                     "general_action": "opencode-go/kimi-k2.7-code",
                 },
             ),
@@ -378,6 +390,9 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    review_lane_first: bool = True
+    review_reserve_provider_slot: bool = True
+    review_lane_max_concurrent: int = 1
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -411,6 +426,7 @@ class FactoryConfig(BaseModel):
         "gemini_max_concurrent_conversations",
         "provider_slot_wait_seconds",
         "architect_max_new_issues",
+        "review_lane_max_concurrent",
     )
     @classmethod
     def positive_limits(cls, value: int) -> int:
@@ -572,6 +588,11 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
+                review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
+                review_lane_max_concurrent=int(
+                    env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")
+                ),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
