@@ -249,7 +249,7 @@ export class R2Service {
         'Content-Type': source.contentType,
         'Content-Length': String(source.bytes.byteLength),
       },
-      body: source.bytes,
+      body: Buffer.from(source.bytes),
       signal: AbortSignal.timeout(this.sourceFetchTimeoutMs),
     });
     const metadata = await this.readGatewayJson(

@@ -152,7 +152,7 @@ export class CloudflareStreamService {
     await this.request<unknown>(
       `/stream/live_inputs/${encodeURIComponent(inputId)}`,
       { method: 'DELETE' },
-      () => true,
+      (val: unknown): val is unknown => true,
     );
   }
 
