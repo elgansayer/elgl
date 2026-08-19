@@ -30,7 +30,11 @@ from openhands_factory.agents.process import (
 )
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.config import AgentsConfig
-from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
+from openhands_factory.exceptions import (
+    AgentTaskFailure,
+    FactoryError,
+    ProviderCapacityUnavailable,
+)
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import MAX_PROVIDER_HISTORY, Job, ProviderName, Task
 from openhands_factory.provider_capacity import ProviderCapacityStore
@@ -339,6 +343,24 @@ def test_process_failure_classification(text: str, kind: AgentFailureKind) -> No
         assert failure.retry_after_seconds == 30
 
 
+@pytest.mark.parametrize(
+    ("text", "retry_after_seconds"),
+    [
+        ("Individual quota reached. Resets in 2h12m46s.", 7966),
+        ("Insufficient balance. Manage your billing.", None),
+        ("You've hit your monthly spend limit.", None),
+    ],
+)
+def test_provider_quota_messages_are_classified_without_transport_retries(
+    text: str,
+    retry_after_seconds: int | None,
+) -> None:
+    failure = classify_process_failure(ProcessResult(("agent",), 1, "", text, False, False, 0.1))
+
+    assert failure.kind is AgentFailureKind.PROVIDER_QUOTA
+    assert failure.retry_after_seconds == retry_after_seconds
+
+
 def test_health_store_allows_only_one_half_open_probe(tmp_path: Path) -> None:
     store = AgentHealthStore(tmp_path / "health.json")
     breaker = AgentCircuitBreaker("first", 1, 1)
@@ -509,6 +531,40 @@ def test_router_skips_cross_process_busy_provider(tmp_path: Path) -> None:
     assert second.calls == 1
     assert job.provider_failover_count == 1
     assert job.last_provider_failure == "first:busy"
+
+
+def test_router_reserves_provider_slot_for_pull_request_review(tmp_path: Path) -> None:
+    provider = Provider("first")
+    capacity = ProviderCapacityStore(tmp_path)
+    capacity.acquire("first", limit=2, owner="active-issue", wait_seconds=0, lease_seconds=60)
+    router = AgentRouter(
+        [provider],
+        capacity_store=capacity,
+        provider_limits={"first": 2},
+        skip_busy_providers=True,
+    )
+    router.reserve_review_capacity("7348")
+    issue_request, issue_job = request(tmp_path)
+
+    with pytest.raises(ProviderCapacityUnavailable, match="busy"):
+        router.run(issue_request, issue_job)
+
+    review_task = Task("7348", "Review", "Body", "github-pull-request", 5)
+    review_request = AgentRequest(
+        AgentPhase.CODE_REVIEW,
+        review_task,
+        "review it",
+        tmp_path,
+    )
+    review_job = Job(review_task)
+
+    result = router.run(review_request, review_job)
+
+    assert result.provider == "first"
+    assert provider.calls == 1
+    assert capacity.snapshot()["first"] == 1
+    router.release_review_capacity("7348")
+    capacity.release("first", owner="active-issue")
 
 
 def test_router_capacity_lease_covers_every_same_provider_attempt(tmp_path: Path) -> None:
@@ -737,9 +793,40 @@ def test_router_records_phase_metrics_for_fallback(tmp_path: Path) -> None:
     assert isinstance(providers, list)
     by_provider = {entry["provider"]: entry for entry in providers}
     assert by_provider["first"]["rate_limits"] == 1
+    assert by_provider["first"]["failure_counts"] == {"provider_rate_limit": 1}
     assert by_provider["first"]["phase"] == "implementation"
     assert by_provider["second"]["successes"] == 1
     assert by_provider["second"]["fallbacks"] == 1
+    assert by_provider["second"]["failure_counts"] == {}
+
+
+def test_metrics_restore_legacy_records_without_failure_counts(tmp_path: Path) -> None:
+    path = tmp_path / "metrics.json"
+    path.write_text(
+        json.dumps(
+            {
+                "providers": [
+                    {
+                        "provider": "codex",
+                        "model": "legacy-model",
+                        "phase": "implementation",
+                        "calls": 3,
+                        "successes": 1,
+                        "failures": 2,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    providers = MetricsStore(path).snapshot()["providers"]
+
+    assert isinstance(providers, list)
+    assert providers[0]["calls"] == 3
+    assert providers[0]["successes"] == 1
+    assert providers[0]["failures"] == 2
+    assert providers[0]["failure_counts"] == {}
 
 
 def test_capacity_store_discards_malformed_and_expired_entries(tmp_path: Path) -> None:
@@ -822,6 +909,36 @@ def test_invalid_structured_output_retries_then_falls_back(tmp_path: Path) -> No
         AgentFailureKind.INVALID_AGENT_OUTPUT.value,
         AgentFailureKind.INVALID_AGENT_OUTPUT.value,
     ]
+
+
+def test_task_validation_failure_does_not_retry_or_open_provider_circuit(
+    tmp_path: Path,
+) -> None:
+    first = Provider("first")
+    second = Provider("second")
+    agent_request, job = request(tmp_path)
+
+    def validate() -> None:
+        raise AgentTaskFailure("Implementation produced no changes")
+
+    agent_request.validate_output = validate
+    router = AgentRouter(
+        [first, second],
+        policy=OrderedPolicy(),
+        same_provider_retries=1,
+        failure_threshold=1,
+    )
+
+    result = router.run(agent_request, job)
+
+    assert not result.success
+    assert result.provider == "first"
+    assert result.failure is not None
+    assert result.failure.kind is AgentFailureKind.TASK_FAILURE
+    assert first.calls == 1
+    assert second.calls == 0
+    assert router._memory_breakers["first"].state == "closed"
+    assert job.provider_history[-1]["failure_classification"] == "task_failure"
 
 
 def test_no_provider_does_not_mutate_task_attempt_count(tmp_path: Path) -> None:

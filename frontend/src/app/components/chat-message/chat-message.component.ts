@@ -12,15 +12,18 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
+import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     CommonModule,
     LongPressContextMenuComponent,
     TranslatePipe,
     CulturalTipComponent,
     LinkPreviewCardComponent,
+    VisualDiffComponent,
   ],
   template: `
     @if (!isBlocked()) {
@@ -31,6 +34,8 @@ import { environment } from '../../../environments/environment';
         [messageId]="message().id"
         [messageContent]="message().text_content ?? ''"
         [messageType]="message().message_type"
+        [correctionOriginal]="message().correction_payload?.original ?? null"
+        [correctionCorrected]="message().correction_payload?.corrected ?? null"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
         [isBlocked]="isBlocked()"
@@ -84,31 +89,12 @@ import { environment } from '../../../environments/environment';
                   [siteName]="lp.siteName"
                 ></app-link-preview-card>
               }
-              <button hlmBtn
-                (click)="simplifyText()"
-                class="text-xs text-secondary ms-2 mt-1"
-                [disabled]="simplifying()"
-              >
-                @if (simplifying()) {
-                  {{ 'chatRoom.simplifying' | t }}
-                } @else {
-                  {{ 'chatRoom.simplifyBtn' | t }}
-                }
-              </button>
-            }
-            @if (simplifiedText(); as simplified) {
-              <div class="mt-1 ps-4 border-s-2 border-success text-xs text-success">
-                <p>{{ 'chatRoom.simplifiedTitle' | t }}</p>
-                <p>{{ simplified }}</p>
-                <button hlmBtn (click)="simplifiedText.set(null)" class="text-danger text-xs ms-1">
-                  {{ 'common.close' | t }}
-                </button>
-              </div>
             }
 
             @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
-                <button hlmBtn
+                <button
+                  hlmBtn
                   [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
                   (click)="playVoice()"
                   class="p-2 rounded-full hover:bg-black/10"
@@ -134,15 +120,12 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'correction' && message().correction_payload) {
               <div class="space-y-1">
-                <p class="text-sm line-through opacity-75">
-                  {{ message().correction_payload!.original }}
-                </p>
-                <p class="text-sm font-medium">{{ message().correction_payload!.corrected }}</p>
-                @if (message().correction_payload!.explanation) {
-                  <p class="text-xs opacity-75 mt-1">
-                    {{ message().correction_payload!.explanation }}
-                  </p>
-                }
+                <app-visual-diff
+                  [original]="message().correction_payload!.original"
+                  [corrected]="message().correction_payload!.corrected"
+                  [explanation]="message().correction_payload!.explanation"
+                  [showActions]="true"
+                ></app-visual-diff>
               </div>
             }
 
@@ -290,8 +273,6 @@ export class ChatMessageComponent {
   private i18n = inject(I18nService);
 
   isBlocked = signal(false);
-  simplifiedText = signal<string | null>(null);
-  simplifying = signal(false);
   voiceTranscription = signal<string | null>(null);
   voiceTranscribing = signal(false);
 
@@ -370,30 +351,6 @@ export class ChatMessageComponent {
       this.voiceTranscription.set(null);
     } finally {
       this.voiceTranscribing.set(false);
-    }
-  }
-
-  async simplifyText(): Promise<void> {
-    if (this.simplifying() || this.message().message_type !== 'text') return;
-    const text = this.message().text_content ?? '';
-    if (!text) return;
-    this.simplifying.set(true);
-    this.simplifiedText.set(null);
-    try {
-      const res = await fetch(`${environment.apiUrl}/nlp/simplify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) {
-        throw new Error('Simplify request failed');
-      }
-      const data = await res.json();
-      this.simplifiedText.set(data.simplified);
-    } catch (err) {
-      console.error('Simplify error:', err);
-    } finally {
-      this.simplifying.set(false);
     }
   }
 

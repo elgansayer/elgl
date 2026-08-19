@@ -35,10 +35,16 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       />
       @if (previewUrl()) {
         <div class="flex gap-2 mt-4 justify-end">
-          <button hlmBtn type="button" class="btn-secondary px-4 py-2 rounded-lg" (click)="cancel()">
+          <button
+            hlmBtn
+            type="button"
+            class="btn-secondary px-4 py-2 rounded-lg"
+            (click)="cancel()"
+          >
             {{ 'coverPhoto.cancel' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="btn-primary px-6 py-2 rounded-lg"
             (click)="save()"

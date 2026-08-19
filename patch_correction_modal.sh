@@ -1,6 +1,0 @@
-#!/bin/bash
-cat frontend/src/app/components/correction-modal/correction-modal.component.ts | sed -e 's/export class CorrectionModalComponent implements OnInit {/export class CorrectionModalComponent implements OnInit {\n\n  readonly quickTags = ["Natural phrasing", "Grammar", "Typo", "Vocabulary"];\n\n  addQuickTag(tag: string): void {\n    const current = this.explanation().trim();\n    this.explanation.set(current ? `${current} [${tag}]` : `[${tag}]`);\n  }/g' > temp.ts
-mv temp.ts frontend/src/app/components/correction-modal/correction-modal.component.ts
-
-cat frontend/src/app/components/correction-modal/correction-modal.component.html | sed -e 's/\[attr.aria-label\]=".*explainPlaceholder.*"/\[attr.aria-label\]="'\''correction.explainPlaceholder'\'' | t"\n        \/>\n        <div class="flex flex-wrap gap-2 mt-2">\n          @for (tag of quickTags; track tag) {\n            <button hlmBtn size="sm" variant="outline" (click)="addQuickTag(tag)" class="text-[10px] py-0.5 px-2 h-auto rounded-full border-surface-200 text-text-secondary hover:text-text-primary hover:bg-surface-200 transition-colors">\n              + {{ tag }}\n            <\/button>\n          }\n        <\/div>/g' > temp.html
-mv temp.html frontend/src/app/components/correction-modal/correction-modal.component.html
