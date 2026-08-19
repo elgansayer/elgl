@@ -69,9 +69,7 @@ describe('HelpAboutComponent', () => {
     expect(compiled.textContent).toContain('MIT');
 
     const link = compiled.querySelector('a');
-    expect(link?.getAttribute('href')).toBe(
-      'https://www.npmjs.com/package/@angular/core/v/22.1.1',
-    );
+    expect(link?.getAttribute('href')).toBe('https://www.npmjs.com/package/@angular/core/v/22.1.1');
     expect(link?.getAttribute('target')).toBe('_blank');
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
   });

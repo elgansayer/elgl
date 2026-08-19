@@ -4,8 +4,7 @@
     [showCloseButton]="false"
     class="fixed inset-0 z-[100] !m-0 !h-dvh !w-screen !max-w-none !rounded-none !bg-black/95 !p-0 !ring-0 backdrop-blur-sm"
     [attr.aria-label]="
-      'lightbox.imageAlt'
-        | t: { current: currentIndex() + 1, total: images().length }
+      'lightbox.imageAlt' | t: { current: currentIndex() + 1, total: images().length }
     "
     (touchstart)="onTouchStart($event)"
     (touchend)="onTouchEnd($event)"
@@ -106,8 +105,7 @@
             [class.bg-white/30]="i !== currentIndex()"
             class="min-h-6 min-w-6 rounded-full p-0 transition-colors duration-200"
             [attr.aria-label]="'lightbox.indicator' | t: { current: i + 1, total: images().length }"
-          >
-          </button>
+          ></button>
         }
       </div>
     }

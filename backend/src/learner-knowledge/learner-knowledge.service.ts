@@ -58,17 +58,29 @@ export class LearnerKnowledgeService {
     private readonly momentsService: MomentsService,
   ) {}
 
-  async getProfile(userId: string, language: string): Promise<LearnerKnowledgeProfile> {
-    this.logger.debug(`Fetching unified learner profile for user ${userId} in ${language}`);
+  async getProfile(
+    userId: string,
+    language: string,
+  ): Promise<LearnerKnowledgeProfile> {
+    this.logger.debug(
+      `Fetching unified learner profile for user ${userId} in ${language}`,
+    );
 
     // Fetch data from various sources (Mock implementation for now based on design doc)
-    const [flashcards, vocabulary, assessments, lessons, momentsCounts] = await Promise.all([
-      this.flashcardsService.getFlashcards(userId, undefined, 20).catch(() => []),
-      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
-      this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
-      this.lessonsService.listLessons().catch(() => []), // Placeholder
-      this.momentsService.getLifetimeCounts(userId).catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-    ]);
+    const [flashcards, vocabulary, assessments, lessons, momentsCounts] =
+      await Promise.all([
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 20)
+          .catch(() => []),
+        this.hobbyTagsService
+          .getUserVocabulary(userId, language)
+          .catch(() => []),
+        this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
+        this.lessonsService.listLessons().catch(() => []), // Placeholder
+        this.momentsService
+          .getLifetimeCounts(userId)
+          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      ]);
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
@@ -78,9 +90,9 @@ export class LearnerKnowledgeService {
       if (f.repetitions > 5 && (f.srs_level || 0) > 3) {
         status = 'known';
       } else if (f.repetitions > 0 && f.easiness_factor < 2.0) {
-         status = 'struggling';
+        status = 'struggling';
       } else if (f.repetitions > 0) {
-         status = 'learning';
+        status = 'learning';
       }
 
       knowledgeItems.set(`vocab:${f.word_token}`, {
@@ -95,11 +107,13 @@ export class LearnerKnowledgeService {
     });
 
     // Extract recent encounters from lessons (mock logic)
-    const recentEncounters: RecentEncounter[] = lessons.slice(0, 3).map((l: any) => ({
-      topic: l.title || 'Unknown Topic',
-      source: 'lesson',
-      timestamp: new Date(l.created_at || Date.now()),
-    }));
+    const recentEncounters: RecentEncounter[] = lessons
+      .slice(0, 3)
+      .map((l: any) => ({
+        topic: l.title || 'Unknown Topic',
+        source: 'lesson',
+        timestamp: new Date(l.created_at || Date.now()),
+      }));
 
     // Synthesize the profile
     return {

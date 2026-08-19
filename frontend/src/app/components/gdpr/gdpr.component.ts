@@ -33,7 +33,9 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.archiveSection' | t }}
           </h2>
-          <div class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm">
+          <div
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.archiveInfo' | t }}</p>
             <button
               hlmBtn
@@ -59,7 +61,9 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.deleteSection' | t }}
           </h2>
-          <div class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm">
+          <div
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
             <label class="flex cursor-pointer items-center gap-2">
               <hlm-checkbox
