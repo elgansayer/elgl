@@ -1,5 +1,7 @@
 # HelloTalk Information Architecture Audit
 
+> **Scope note (2026-08-19):** This document audits user-facing routes and information architecture. The repository-wide framework, package, platform and subsystem assessment is maintained separately in [`technology-modernisation-audit-2026-08.md`](./technology-modernisation-audit-2026-08.md), with execution sequencing in [`technology-modernisation-roadmap.md`](./technology-modernisation-roadmap.md) and tracking issue #7458. Do not use this route audit as the source of truth for backend, database, UI-platform, offline, automation or dependency decisions.
+
 ## Route Mapping and Capability Analysis
 
 We have analyzed all user-facing routes defined in the application (`frontend/src/app/app.routes.ts`) and identified several areas of duplication, redundancy, and fragmented capabilities.

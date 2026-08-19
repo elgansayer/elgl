@@ -89,25 +89,25 @@ The current feed does not render description, category, participant count, RSVP 
 
 ## Existing control and state inventory
 
-| Element / state | Current implementation | Current owner | Target owner | Required action |
-| --- | --- | --- | --- | --- |
-| Page heading | Native `h1` | Feature presentation | Feature / Relay typography | Preserve semantics |
-| Upcoming filter | `<button hlmBtn>` with manual selected classes | Feature signal plus Helm Button | Spartan selection behaviour plus Relay presentation | Migrate selected semantics without changing query |
-| Past filter | `<button hlmBtn>` with manual selected classes | Feature signal plus Helm Button | Spartan selection behaviour plus Relay presentation | Migrate selected semantics without changing query |
-| Language filter | Direct `<hlm-native-select>` with duplicated call-site classes | Feature signal plus Helm Native Select | Existing `AppSelectComponent` | Converge on Relay wrapper |
-| All-languages option | Translated option | Feature | Relay/native select content | Preserve |
-| Ten language-pair options | Hard-coded English option labels | Feature | I18n/language data | Replace hard-coded labels in implementation stage |
-| Initial loading | Plain paragraph | Feature request state | Relay loading presentation | Add explicit accessible status |
-| Loaded event list | Hand-styled repeated `div` cards | Feature presentation | `AppCardComponent` | Converge presentation only |
-| Event title | Native heading | Event data | Native semantic content | Preserve |
-| Event date/time | Angular `DatePipe` | Feature presentation | Locale-aware presentation | Verify locale follows app language |
-| Optional location | Native paragraph | Event data | Native semantic content | Preserve user/content data |
-| Optional host name | Native paragraph with translated wrapper copy | Event data | Native semantic content | Preserve |
-| Empty first page | No visible state | Feature request state | Relay empty-state presentation | Add explicit empty state |
-| Request failure | Exception swallowed | Feature request state | Relay error presentation plus retry action | Add explicit failure state |
-| Load-more action | `<button hlmBtn>` with custom classes | Feature request state plus Helm Button | Relay/Helm Button | Preserve action, use approved touch sizing and pending state |
-| Load-more pending | Button disabled, visible text switches to loading | Feature request state | Feature state plus Relay/Helm Button | Preserve, add useful busy semantics |
-| End of pagination | `hasMore=false`, no footer message | Feature state | Feature / presentation | Preserve unless product deliberately adds completion copy |
+| Element / state           | Current implementation                                         | Current owner                          | Target owner                                        | Required action                                              |
+| ------------------------- | -------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| Page heading              | Native `h1`                                                    | Feature presentation                   | Feature / Relay typography                          | Preserve semantics                                           |
+| Upcoming filter           | `<button hlmBtn>` with manual selected classes                 | Feature signal plus Helm Button        | Spartan selection behaviour plus Relay presentation | Migrate selected semantics without changing query            |
+| Past filter               | `<button hlmBtn>` with manual selected classes                 | Feature signal plus Helm Button        | Spartan selection behaviour plus Relay presentation | Migrate selected semantics without changing query            |
+| Language filter           | Direct `<hlm-native-select>` with duplicated call-site classes | Feature signal plus Helm Native Select | Existing `AppSelectComponent`                       | Converge on Relay wrapper                                    |
+| All-languages option      | Translated option                                              | Feature                                | Relay/native select content                         | Preserve                                                     |
+| Ten language-pair options | Hard-coded English option labels                               | Feature                                | I18n/language data                                  | Replace hard-coded labels in implementation stage            |
+| Initial loading           | Plain paragraph                                                | Feature request state                  | Relay loading presentation                          | Add explicit accessible status                               |
+| Loaded event list         | Hand-styled repeated `div` cards                               | Feature presentation                   | `AppCardComponent`                                  | Converge presentation only                                   |
+| Event title               | Native heading                                                 | Event data                             | Native semantic content                             | Preserve                                                     |
+| Event date/time           | Angular `DatePipe`                                             | Feature presentation                   | Locale-aware presentation                           | Verify locale follows app language                           |
+| Optional location         | Native paragraph                                               | Event data                             | Native semantic content                             | Preserve user/content data                                   |
+| Optional host name        | Native paragraph with translated wrapper copy                  | Event data                             | Native semantic content                             | Preserve                                                     |
+| Empty first page          | No visible state                                               | Feature request state                  | Relay empty-state presentation                      | Add explicit empty state                                     |
+| Request failure           | Exception swallowed                                            | Feature request state                  | Relay error presentation plus retry action          | Add explicit failure state                                   |
+| Load-more action          | `<button hlmBtn>` with custom classes                          | Feature request state plus Helm Button | Relay/Helm Button                                   | Preserve action, use approved touch sizing and pending state |
+| Load-more pending         | Button disabled, visible text switches to loading              | Feature request state                  | Feature state plus Relay/Helm Button                | Preserve, add useful busy semantics                          |
+| End of pagination         | `hasMore=false`, no footer message                             | Feature state                          | Feature / presentation                              | Preserve unless product deliberately adds completion copy    |
 
 ## Spartan ownership decision
 
@@ -158,14 +158,14 @@ These are Relay presentation concerns. `AppEmptyStateComponent` already exists f
 
 ## Data and side-effect map
 
-| Trigger | Request | Mutation | Navigation | Analytics | Contract |
-| --- | --- | --- | --- | --- | --- |
-| Component bootstrap | `GET /events?status=upcoming&page=1&limit=20` | None | None | None | Load first upcoming page |
-| Select Upcoming | `GET /events?status=upcoming&page=1&limit=20` | None | None | None | Reset list to upcoming events |
-| Select Past | `GET /events?status=past&page=1&limit=20` | None | None | None | Reset list to past events |
-| Select language pair | `GET /events` plus `language_pair` and current status | None | None | None | Reset list to filtered page 1 |
-| Clear language pair | `GET /events` without `language_pair` | None | None | None | Reset list to all languages |
-| Load more | `GET /events` with incremented page | None | None | None | Append the next page |
+| Trigger              | Request                                               | Mutation | Navigation | Analytics | Contract                      |
+| -------------------- | ----------------------------------------------------- | -------- | ---------- | --------- | ----------------------------- |
+| Component bootstrap  | `GET /events?status=upcoming&page=1&limit=20`         | None     | None       | None      | Load first upcoming page      |
+| Select Upcoming      | `GET /events?status=upcoming&page=1&limit=20`         | None     | None       | None      | Reset list to upcoming events |
+| Select Past          | `GET /events?status=past&page=1&limit=20`             | None     | None       | None      | Reset list to past events     |
+| Select language pair | `GET /events` plus `language_pair` and current status | None     | None       | None      | Reset list to filtered page 1 |
+| Clear language pair  | `GET /events` without `language_pair`                 | None     | None       | None      | Reset list to all languages   |
+| Load more            | `GET /events` with incremented page                   | None     | None       | None      | Append the next page          |
 
 The NestJS `GET /events` controller uses `SupabaseAuthGuard`, so unauthenticated API requests are rejected. The route itself currently has no route-level guard in the reviewed route declaration. The migration must not weaken API authentication or move data access around NestJS.
 

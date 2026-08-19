@@ -47,61 +47,61 @@ Reject or defer a candidate when it:
 
 ## Current stack map
 
-| Area | Current repository position | Audit decision |
-| --- | --- | --- |
-| Main web application | Angular 22 standalone components, signals, SSR/hydration, service worker | Keep and harden. No React/Vue rewrite. |
-| Component behaviour | Spartan Brain with repository checks | Keep and complete adoption through existing issues. |
-| Product presentation | Relay-owned shells, tokens, themes, density, typography, visual contracts | Keep. This is intentional product ownership, not accidental home-grown behaviour. |
-| Styling | Tailwind CSS 4 plus Relay design tokens | Keep, while enforcing semantic tokens and logical properties. |
-| Admin portal | Separate Angular 22 application | Keep separate for privilege isolation; share generated contracts and approved primitives, not runtime authority. |
-| Backend | NestJS 11 | Keep. Consolidate contracts and infrastructure behind modules/adapters. |
-| Database/auth | Supabase PostgreSQL, PostGIS, RLS, Auth | Keep and make authoritative. Remove competing migration/type authorities. |
-| ORM/migrations | Supabase SQL plus TypeORM dependency/history | Converge under #7449. Do not replace wholesale with Prisma or Drizzle. |
-| Realtime messaging | Centrifugo plus Redis | Keep. Do not replace with Socket.IO without an unmet protocol requirement and benchmark. |
-| Audio/video | LiveKit | Keep. It is an SFU/media concern, not a generic websocket concern. |
-| Object storage | Cloudflare R2 through the S3 SDK | Keep behind a storage adapter and contract tests. |
-| Background work | Nest schedule/event emitter; README also names BullMQ | Reconcile implementation and documentation. Use a durable Redis queue for durable work through existing queue issues. |
-| API documentation | Nest Swagger/OpenAPI support | Promote to an authoritative versioned contract. |
-| Client transport | Hand-written Angular HTTP services | Replace incrementally with generated SDKs behind domain facades. |
-| Logs/metrics | Pino, `prom-client`, StatsD/Datadog tooling, Prometheus/Grafana compose services | Keep. Add OpenTelemetry context/tracing incrementally rather than replacing all telemetry. |
-| Testing | Vitest, Cypress, deterministic visual capture and many repository-specific static gates | Keep. Consolidate fixtures/contracts; do not force one universal test tool. |
-| Package management | Four npm roots and lockfiles; root scripts use directory changes | Converge to npm workspaces, then trial Nx. |
-| Agent automation | Typed, phase-specific, multi-provider OpenHands Factory | Keep. The provider-neutral architecture is already present. |
+| Area                 | Current repository position                                                             | Audit decision                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Main web application | Angular 22 standalone components, signals, SSR/hydration, service worker                | Keep and harden. No React/Vue rewrite.                                                                                |
+| Component behaviour  | Spartan Brain with repository checks                                                    | Keep and complete adoption through existing issues.                                                                   |
+| Product presentation | Relay-owned shells, tokens, themes, density, typography, visual contracts               | Keep. This is intentional product ownership, not accidental home-grown behaviour.                                     |
+| Styling              | Tailwind CSS 4 plus Relay design tokens                                                 | Keep, while enforcing semantic tokens and logical properties.                                                         |
+| Admin portal         | Separate Angular 22 application                                                         | Keep separate for privilege isolation; share generated contracts and approved primitives, not runtime authority.      |
+| Backend              | NestJS 11                                                                               | Keep. Consolidate contracts and infrastructure behind modules/adapters.                                               |
+| Database/auth        | Supabase PostgreSQL, PostGIS, RLS, Auth                                                 | Keep and make authoritative. Remove competing migration/type authorities.                                             |
+| ORM/migrations       | Supabase SQL plus TypeORM dependency/history                                            | Converge under #7449. Do not replace wholesale with Prisma or Drizzle.                                                |
+| Realtime messaging   | Centrifugo plus Redis                                                                   | Keep. Do not replace with Socket.IO without an unmet protocol requirement and benchmark.                              |
+| Audio/video          | LiveKit                                                                                 | Keep. It is an SFU/media concern, not a generic websocket concern.                                                    |
+| Object storage       | Cloudflare R2 through the S3 SDK                                                        | Keep behind a storage adapter and contract tests.                                                                     |
+| Background work      | Nest schedule/event emitter; README also names BullMQ                                   | Reconcile implementation and documentation. Use a durable Redis queue for durable work through existing queue issues. |
+| API documentation    | Nest Swagger/OpenAPI support                                                            | Promote to an authoritative versioned contract.                                                                       |
+| Client transport     | Hand-written Angular HTTP services                                                      | Replace incrementally with generated SDKs behind domain facades.                                                      |
+| Logs/metrics         | Pino, `prom-client`, StatsD/Datadog tooling, Prometheus/Grafana compose services        | Keep. Add OpenTelemetry context/tracing incrementally rather than replacing all telemetry.                            |
+| Testing              | Vitest, Cypress, deterministic visual capture and many repository-specific static gates | Keep. Consolidate fixtures/contracts; do not force one universal test tool.                                           |
+| Package management   | Four npm roots and lockfiles; root scripts use directory changes                        | Converge to npm workspaces, then trial Nx.                                                                            |
+| Agent automation     | Typed, phase-specific, multi-provider OpenHands Factory                                 | Keep. The provider-neutral architecture is already present.                                                           |
 
 ## Technology radar
 
 ### Adopt now
 
-| Technology or pattern | Purpose | Why now | Work item |
-| --- | --- | --- | --- |
-| npm workspaces | One package graph, deterministic root install, workspace-scoped scripts | Current manifests and lockfiles drift and root orchestration relies on repeated directory changes | #7441 |
-| Supabase CLI migration authority | One deployable schema history including RLS, functions, grants, extensions and indexes | The repository currently has competing schema/migration paths | #7449 |
-| Generated Supabase database types | Remove hand-written row/RPC drift | Database schema is already the natural source of truth | #7449 and CI roadmap #5365 |
-| Deterministic OpenAPI export | Authoritative REST contract | Nest Swagger exists, but contract governance and client drift remain fragmented | #7443 |
-| Generated Angular SDK | Shared transport DTOs and endpoint methods | Main and admin applications duplicate HTTP contracts | #7447, #3876 |
-| `provideAppInitializer()` and modern Angular motion APIs | Remove upgrade blockers | Existing providers are deprecated and one is scheduled for Angular 23 removal | #7442 |
-| Supabase MFA assurance levels and server-verified passkeys | One authentication assurance authority | Current custom TOTP/WebAuthn ownership creates security and policy fragmentation | #7446 |
+| Technology or pattern                                      | Purpose                                                                                | Why now                                                                                           | Work item                  |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------- |
+| npm workspaces                                             | One package graph, deterministic root install, workspace-scoped scripts                | Current manifests and lockfiles drift and root orchestration relies on repeated directory changes | #7441                      |
+| Supabase CLI migration authority                           | One deployable schema history including RLS, functions, grants, extensions and indexes | The repository currently has competing schema/migration paths                                     | #7449                      |
+| Generated Supabase database types                          | Remove hand-written row/RPC drift                                                      | Database schema is already the natural source of truth                                            | #7449 and CI roadmap #5365 |
+| Deterministic OpenAPI export                               | Authoritative REST contract                                                            | Nest Swagger exists, but contract governance and client drift remain fragmented                   | #7443                      |
+| Generated Angular SDK                                      | Shared transport DTOs and endpoint methods                                             | Main and admin applications duplicate HTTP contracts                                              | #7447, #3876               |
+| `provideAppInitializer()` and modern Angular motion APIs   | Remove upgrade blockers                                                                | Existing providers are deprecated and one is scheduled for Angular 23 removal                     | #7442                      |
+| Supabase MFA assurance levels and server-verified passkeys | One authentication assurance authority                                                 | Current custom TOTP/WebAuthn ownership creates security and policy fragmentation                  | #7446                      |
 
 ### Trial with a fixed exit decision
 
-| Technology or pattern | Trial | Decision gate |
-| --- | --- | --- |
-| Nx task graph and local cache | Add incrementally after npm workspace convergence | Keep only when affected selection is correct and measured CI/local savings exceed configuration and cache-risk costs. Remote caching requires a separate trust review. |
-| Storybook Angular Vite | 8 to 12 representative Relay/Spartan components | Keep only when it improves component discovery, interaction testing and accessibility without duplicating the existing visual-state source of truth. |
-| OpenTelemetry for NestJS | Trace context across HTTP, Redis, Supabase calls, queues, Centrifugo publication, storage and external APIs | Keep when traces explain real incidents/SLO failures and cardinality/cost remain controlled. Browser instrumentation remains a separate later decision. |
-| OpenFeature-compatible server API | Provider-neutral feature flag evaluation around the server-authoritative flag service | Keep when it simplifies application code without moving authorization or sensitive targeting decisions into clients. |
-| Kysely or a narrow typed SQL adapter | Transaction-heavy server paths only, after #7449 | Introduce only where generated Supabase types/query builder cannot express required atomicity and measured maintainability improves. It must not own migrations. |
+| Technology or pattern                | Trial                                                                                                       | Decision gate                                                                                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nx task graph and local cache        | Add incrementally after npm workspace convergence                                                           | Keep only when affected selection is correct and measured CI/local savings exceed configuration and cache-risk costs. Remote caching requires a separate trust review. |
+| Storybook Angular Vite               | 8 to 12 representative Relay/Spartan components                                                             | Keep only when it improves component discovery, interaction testing and accessibility without duplicating the existing visual-state source of truth.                   |
+| OpenTelemetry for NestJS             | Trace context across HTTP, Redis, Supabase calls, queues, Centrifugo publication, storage and external APIs | Keep when traces explain real incidents/SLO failures and cardinality/cost remain controlled. Browser instrumentation remains a separate later decision.                |
+| OpenFeature-compatible server API    | Provider-neutral feature flag evaluation around the server-authoritative flag service                       | Keep when it simplifies application code without moving authorization or sensitive targeting decisions into clients.                                                   |
+| Kysely or a narrow typed SQL adapter | Transaction-heavy server paths only, after #7449                                                            | Introduce only where generated Supabase types/query builder cannot express required atomicity and measured maintainability improves. It must not own migrations.       |
 
 ### Assess only when a product requirement appears
 
-| Candidate | Trigger required before evaluation |
-| --- | --- |
-| Capacitor | A committed iOS/Android distribution requirement, native plugin requirements, notification/deep-link/background constraints, and an app-store operating model. |
-| Tauri | A committed desktop product requirement and measurements showing a smaller shell materially improves install size, memory, security or updates over the current web/PWA path. |
-| Typesense, Meilisearch or OpenSearch | PostgreSQL search misses documented relevance, latency, multilingual, typo-tolerance or scale SLOs on a representative corpus. |
-| Dedicated workflow engine such as Temporal | Business workflows require durable multi-step orchestration, compensation, long sleeps and human intervention beyond BullMQ/job-state patterns. |
-| ClickHouse or a warehouse | Product analytics or audit queries exceed PostgreSQL/retention/cost limits and have a governed event schema. |
-| Sentry or another hosted error platform | Existing logs, metrics and tracing cannot meet incident-response needs and data residency, PII, retention and cost are approved. |
+| Candidate                                  | Trigger required before evaluation                                                                                                                                            |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Capacitor                                  | A committed iOS/Android distribution requirement, native plugin requirements, notification/deep-link/background constraints, and an app-store operating model.                |
+| Tauri                                      | A committed desktop product requirement and measurements showing a smaller shell materially improves install size, memory, security or updates over the current web/PWA path. |
+| Typesense, Meilisearch or OpenSearch       | PostgreSQL search misses documented relevance, latency, multilingual, typo-tolerance or scale SLOs on a representative corpus.                                                |
+| Dedicated workflow engine such as Temporal | Business workflows require durable multi-step orchestration, compensation, long sleeps and human intervention beyond BullMQ/job-state patterns.                               |
+| ClickHouse or a warehouse                  | Product analytics or audit queries exceed PostgreSQL/retention/cost limits and have a governed event schema.                                                                  |
+| Sentry or another hosted error platform    | Existing logs, metrics and tracing cannot meet incident-response needs and data residency, PII, retention and cost are approved.                                              |
 
 ### Keep or reject broad replacement
 
