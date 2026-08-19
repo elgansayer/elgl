@@ -56,7 +56,7 @@
     "joi": "^18.2.3",
     "jsdom": "26.1.0",
     "jsonwebtoken": "^9.0.3",
-    "jwks-rsa": "3.2.0",
+    "jwks-rsa": "4.1.0",
     "livekit-server-sdk": "^2.17.0",
     "nestjs-pino": "^4.6.1",
     "node-nlp": "^5.0.0-alpha.5",
