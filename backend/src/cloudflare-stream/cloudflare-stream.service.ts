@@ -192,18 +192,18 @@ export class CloudflareStreamService {
     init: RequestInit,
     predicate: (value: unknown) => value is T,
   ): Promise<T> {
+    const headers = new Headers(init.headers);
+    headers.set('Authorization', `Bearer ${this.apiToken}`);
+    headers.set('Content-Type', 'application/json');
+    headers.set('Accept', 'application/json');
+
     const response = await fetch(
       `${CLOUDFLARE_API_BASE_URL}/accounts/${encodeURIComponent(
         this.accountId,
       )}${path}`,
       {
         ...init,
-        headers: {
-          Authorization: `Bearer ${this.apiToken}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(init.headers ?? {}),
-        },
+        headers,
         signal:
           init.signal ??
           AbortSignal.timeout(Math.min(this.recordingTimeoutMs, 30000)),
@@ -224,7 +224,10 @@ export class CloudflareStreamService {
     }
     if (!response.ok || !envelope.success) {
       const message =
-        envelope.errors?.map((error) => error.message).filter(Boolean).join('; ') ||
+        envelope.errors
+          ?.map((error) => error.message)
+          .filter(Boolean)
+          .join('; ') ||
         `Cloudflare Stream request failed with status ${response.status}`;
       throw new Error(message);
     }
@@ -281,7 +284,7 @@ function joinRtmpsUrl(baseUrl: string, streamKey: string): string {
   if (!baseUrl.startsWith('rtmps://')) {
     throw new Error('Cloudflare Stream returned a non-RTMPS ingest URL');
   }
-  if (!streamKey || /[\u0000-\u001f\u007f]/.test(streamKey)) {
+  if (!streamKey || containsControlCharacter(streamKey)) {
     throw new Error('Cloudflare Stream returned an invalid stream key');
   }
   return `${baseUrl.replace(/\/+$/, '')}/${streamKey}`;
@@ -289,6 +292,16 @@ function joinRtmpsUrl(baseUrl: string, streamKey: string): string {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function containsControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
