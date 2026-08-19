@@ -51,9 +51,7 @@ export class FlashcardService {
 
   async getHealth(): Promise<SrsHealthStatus> {
     try {
-      const result = await firstValueFrom(
-        this.http.get<SrsHealthStatus>(`${this.baseUrl}/health`),
-      );
+      const result = await firstValueFrom(this.http.get<SrsHealthStatus>(`${this.baseUrl}/health`));
       this.degraded = result.mode === 'degraded';
       return result;
     } catch {

@@ -17,9 +17,7 @@ const COMPONENT_SOURCE = readFileSync(
 );
 
 // Extract inline template between template: ` and `,\n})
-const templateMatch = COMPONENT_SOURCE.match(
-  /template:\s*`([\s\S]*?)`,\n\}\)/
-);
+const templateMatch = COMPONENT_SOURCE.match(/template:\s*`([\s\S]*?)`,\n\}\)/);
 const TEMPLATE = templateMatch ? templateMatch[1] : '';
 
 describe('CoinEconomyDashboard RTL Logical CSS Audit (ps-, pe-)', () => {

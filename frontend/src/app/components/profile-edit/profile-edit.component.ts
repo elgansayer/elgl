@@ -10,7 +10,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [HlmNativeSelect, HlmInput, HlmButton, FormsModule, CoverPhotoCropperComponent, TranslatePipe],
+  imports: [
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    CoverPhotoCropperComponent,
+    TranslatePipe,
+  ],
   template: `
     <div class="max-w-2xl mx-auto p-6">
       <h2 class="text-2xl font-bold text-text-primary mb-6">{{ 'profileEdit.title' | t }}</h2>
@@ -46,7 +53,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             </div>
           }
 
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="fileInput.click()"
             class="absolute bottom-3 end-3 px-4 py-2 text-sm font-medium text-on-fill bg-primary hover:bg-primary-dark rounded-lg transition-colors"
           >
@@ -70,7 +78,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.displayName' | t }}</label
           >
-          <input hlmInput
+          <input
+            hlmInput
             id="displayNameInput"
             [(ngModel)]="displayName"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -83,7 +92,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <hlm-native-select
             selectId="genderSelect"
             [(ngModel)]="gender"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent" selectClass="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+            selectClass="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option value="">{{ 'profileEdit.genderNone' | t }}</option>
             <option value="male">{{ 'profileEdit.genderMale' | t }}</option>
@@ -99,7 +109,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.businessName' | t }}</label
           >
-          <input hlmInput
+          <input
+            hlmInput
             id="businessNameInput"
             [(ngModel)]="businessName"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -111,7 +122,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.businessHours' | t }}</label
           >
-          <input hlmInput
+          <input
+            hlmInput
             id="businessHoursInput"
             [(ngModel)]="businessHours"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -121,7 +133,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1">{{
             'profileEdit.websiteUrl' | t
           }}</label>
-          <input hlmInput
+          <input
+            hlmInput
             id="websiteUrlInput"
             [(ngModel)]="websiteUrl"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -129,7 +142,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
       </div>
 
-      <button hlmBtn
+      <button
+        hlmBtn
         (click)="saveProfile()"
         class="mt-6 w-full py-3 text-on-fill bg-primary hover:bg-primary-dark rounded-lg font-medium transition-colors"
       >

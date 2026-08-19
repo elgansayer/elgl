@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 process.env.TRANSFER_SECRET = 'test-transfer-secret';
+process.env.FRONTEND_URL = 'http://localhost:4200';
 
 vi.mock('jwks-rsa', () => ({
   default: vi.fn().mockImplementation(() => ({
