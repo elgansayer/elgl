@@ -501,6 +501,11 @@ class TestAgentProviders(unittest.TestCase):
         self.assertIn("gemini-3.1-pro-high", runner.commands[0])
         self.assertNotIn("auto", runner.commands[0])
         self.assertEqual(runner.stdin, ["do it"])
+        self.assertIn("--add-dir", runner.commands[0])
+        self.assertEqual(
+            runner.commands[0][runner.commands[0].index("--add-dir") + 1],
+            "/tmp",
+        )
 
     def test_gemini_provider_remains_configurable(self):
         runner = FakeProcessRunner("google success")
