@@ -35,38 +35,33 @@ jobs:
 
           const audioPath = 'backend/src/audio-rooms/audio-rooms.service.ts';
           const audioSource = fs.readFileSync(audioPath, 'utf8');
-          const oldAudioBlock = [
-            '    try {',
-            '      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);',
-            '    } catch (error) {',
-            "      this.logger.error('Failed to upload recording to R2', error);",
-            "      throw new Error('Failed to upload recording to R2');",
-            '    }',
+          const oldRecordingBlock = [
+            '    const recordingUrl =',
+            '      egressRecordingUrl ||',
+            '      dto.recording_url ||',
+            '      `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;',
             '',
-            '    // Update the room record with the R2 URL',
-            '    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;',
+            '    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)',
+            '    let transcriptText =',
+            '      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);',
           ].join('\n');
-          const newAudioBlock = [
-            '    let r2RecordingUrl: string;',
-            '    try {',
-            '      r2RecordingUrl = await this.r2Service.uploadFromUrl(',
-            '        r2Key,',
-            '        recordingUrl,',
-            '      );',
-            '    } catch (error) {',
-            "      this.logger.error('Failed to upload recording to R2', error);",
-            "      throw new Error('Failed to upload recording to R2');",
-            '    }',
+          const newRecordingBlock = [
+            '    const recordingUrl = egressRecordingUrl || dto.recording_url || null;',
             '',
-            '    // Store the URL confirmed by the Cloudflare R2 gateway.',
+            '    // Generate a transcript only when an authoritative recording exists.',
+            '    let transcriptText = recordingUrl',
+            '      ? await this.transcriptEgress.generateTranscriptFromAudioUrl(',
+            '          recordingUrl,',
+            '        )',
+            "      : '';",
           ].join('\n');
 
-          if (!audioSource.includes(oldAudioBlock)) {
-            throw new Error('Expected audio-room R2 migration block was not found');
+          if (!audioSource.includes(oldRecordingBlock)) {
+            throw new Error('Expected audio-room recording fallback was not found');
           }
           fs.writeFileSync(
             audioPath,
-            audioSource.replace(oldAudioBlock, newAudioBlock),
+            audioSource.replace(oldRecordingBlock, newRecordingBlock),
           );
 
           const envPath = '.env.example';
