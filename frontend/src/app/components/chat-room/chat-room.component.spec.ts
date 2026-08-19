@@ -253,8 +253,14 @@ describe('ChatRoomComponent (threaded replies)', () => {
       const downPreventDefault = vi.fn();
       const upPreventDefault = vi.fn();
 
-      component.onComposerKeydown({ key: 'ArrowDown', preventDefault: downPreventDefault } as unknown as KeyboardEvent);
-      component.onComposerKeydown({ key: 'ArrowUp', preventDefault: upPreventDefault } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowDown',
+        preventDefault: downPreventDefault,
+      } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowUp',
+        preventDefault: upPreventDefault,
+      } as unknown as KeyboardEvent);
 
       expect(downPreventDefault).not.toHaveBeenCalled();
       expect(upPreventDefault).not.toHaveBeenCalled();
@@ -275,7 +281,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
     it('Enter sends the message when no mention list is open', () => {
       component.textInput = 'Just a message';
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'Enter',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),

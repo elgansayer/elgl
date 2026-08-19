@@ -58,7 +58,7 @@ chmod 0600 "$temporary"
 mv -f "$temporary" "$TARGET"
 trap - EXIT
 
-install -d -o hellotalk-factory -g hellotalk-factory -m 0750 "$STATE_DIR" "$STATE_DIR/home" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$LOG_DIR"
+install -d -o hellotalk-factory -g hellotalk-factory -m 0750 "$STATE_DIR" "$STATE_DIR/home" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$LOG_DIR"
 chown -R hellotalk-factory:hellotalk-factory "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$STATE_DIR/home"
 chmod 0700 "$STATE_DIR/home"
 

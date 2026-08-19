@@ -25,14 +25,16 @@ import { DiscoveryService } from '../../services/discovery.service';
             {{ profile().display_name | sanitiseHtml }}
           </h3>
           <p class="text-text-secondary text-xs sm:text-sm truncate">
-            {{ (profile().native_languages?.join(', ') ?? '') | sanitiseHtml }}
+            {{ profile().native_languages?.join(', ') ?? '' | sanitiseHtml }}
             →
-            {{ (profile().target_languages?.join(', ') ?? '') | sanitiseHtml }}
+            {{ profile().target_languages?.join(', ') ?? '' | sanitiseHtml }}
           </p>
         </div>
       </div>
       @if (displayBio(); as bio) {
-        <p class="mt-2 text-text-secondary text-xs sm:text-sm line-clamp-2">{{ bio | sanitiseHtml }}</p>
+        <p class="mt-2 text-text-secondary text-xs sm:text-sm line-clamp-2">
+          {{ bio | sanitiseHtml }}
+        </p>
         @if (profile()?.bio_text) {
           <button
             hlmBtn
