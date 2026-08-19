@@ -149,7 +149,6 @@
       <button hlmBtn
         type="submit"
         class="create-btn"
-        (click)="createGroup()"
         [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
         [attr.aria-busy]="isCreating()"
         [attr.aria-label]="(isCreating() ? 'group.creatingBtn' : 'group.createBtn') | t"
