@@ -140,9 +140,7 @@ def select_batch(
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
 
     active_review_count = sum(
-        1
-        for item in jobs.values()
-        if item.task.identifier in excluded and is_review_lane_job(item)
+        1 for item in jobs.values() if item.task.identifier in excluded and is_review_lane_job(item)
     )
     review_capacity = max(0, review_lane_max_concurrent - active_review_count)
 

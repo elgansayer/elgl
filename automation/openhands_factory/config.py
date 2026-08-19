@@ -590,9 +590,7 @@ class FactoryConfig(BaseModel):
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
-                review_lane_max_concurrent=int(
-                    env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")
-                ),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),
