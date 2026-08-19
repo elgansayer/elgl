@@ -87,3 +87,7 @@ Keep admin routes explicitly under `admin/*` but move user-facing `blocks` to `s
 ### Conclusion
 
 To improve discoverability and maintainability, the application's information architecture should follow a strict hierarchical structure, avoiding flat, top-level routes for nested features (especially configuration and settings). Legacy top-level routes should be preserved using route redirects (`redirectTo`) to ensure deep links are not broken.
+
+## Related architecture and technology audits
+
+This document is intentionally limited to routes and information architecture. For framework, package, API, data, realtime, observability, build, testing and platform decisions, see the [2026 Technology Modernization Audit](technology-modernization-audit-2026.md).
