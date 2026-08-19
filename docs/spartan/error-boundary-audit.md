@@ -33,11 +33,11 @@ The component has no route of its own and performs no navigation.
 
 ### Inputs
 
-| Input | Current default | Contract |
-| --- | --- | --- |
-| `fullPage` | `false` | Adds `min-h-screen` to the fallback container when true |
-| `showRetry` | `true` | Controls whether the Retry action is rendered |
-| `context` | `'economy'` | String forwarded as `boundaryContext` in economy crash telemetry |
+| Input       | Current default | Contract                                                         |
+| ----------- | --------------- | ---------------------------------------------------------------- |
+| `fullPage`  | `false`         | Adds `min-h-screen` to the fallback container when true          |
+| `showRetry` | `true`          | Controls whether the Retry action is rendered                    |
+| `context`   | `'economy'`     | String forwarded as `boundaryContext` in economy crash telemetry |
 
 There are no outputs.
 
@@ -45,26 +45,26 @@ The lack of a Retry output is significant. `resetError()` only clears this compo
 
 ### Internal state
 
-| State | Type | Purpose |
-| --- | --- | --- |
-| `hasError` | signal | Switches between projected content and fallback UI |
-| `errorSummary` | signal | Stores the visible diagnostic message |
-| `lastError` | private `Error | null` | Retains the captured error for a later manual report |
+| State          | Type           | Purpose                                            |
+| -------------- | -------------- | -------------------------------------------------- |
+| `hasError`     | signal         | Switches between projected content and fallback UI |
+| `errorSummary` | signal         | Stores the visible diagnostic message              |
+| `lastError`    | private `Error | null`                                              | Retains the captured error for a later manual report |
 
 ## Complete state inventory
 
-| State | Trigger | Current rendering / behaviour | Target owner |
-| --- | --- | --- | --- |
-| Healthy | initial state or `resetError()` | projected content only | Feature composition |
-| Error captured | `handleBoundaryError(error)` | projected content replaced by fallback | Feature state + Relay presentation |
-| Full-page error | `hasError` and `fullPage === true` | fallback gains `min-h-screen` | App composition |
-| Embedded error | `hasError` and `fullPage === false` | fallback has minimum 300px height | App composition |
-| Retry available | `showRetry === true` | Retry and Report buttons render | Feature configuration + Spartan Helm |
-| Retry hidden | `showRetry === false` | Report button only | Feature configuration + Spartan Helm |
-| Reset | Retry button or direct `resetError()` call | clears error state and restores projected content | Feature state |
-| Automatic report | every `handleBoundaryError()` call | crash is sent through `EconomyErrorHandlerService` | Reporting service |
-| Manual report | Report button with a retained `lastError` | same error is reported again with a smaller context payload | Reporting service |
-| Report with no retained error | direct `reportCrash()` before capture or after reset | no-op | Feature guard |
+| State                         | Trigger                                              | Current rendering / behaviour                               | Target owner                         |
+| ----------------------------- | ---------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------ |
+| Healthy                       | initial state or `resetError()`                      | projected content only                                      | Feature composition                  |
+| Error captured                | `handleBoundaryError(error)`                         | projected content replaced by fallback                      | Feature state + Relay presentation   |
+| Full-page error               | `hasError` and `fullPage === true`                   | fallback gains `min-h-screen`                               | App composition                      |
+| Embedded error                | `hasError` and `fullPage === false`                  | fallback has minimum 300px height                           | App composition                      |
+| Retry available               | `showRetry === true`                                 | Retry and Report buttons render                             | Feature configuration + Spartan Helm |
+| Retry hidden                  | `showRetry === false`                                | Report button only                                          | Feature configuration + Spartan Helm |
+| Reset                         | Retry button or direct `resetError()` call           | clears error state and restores projected content           | Feature state                        |
+| Automatic report              | every `handleBoundaryError()` call                   | crash is sent through `EconomyErrorHandlerService`          | Reporting service                    |
+| Manual report                 | Report button with a retained `lastError`            | same error is reported again with a smaller context payload | Reporting service                    |
+| Report with no retained error | direct `reportCrash()` before capture or after reset | no-op                                                       | Feature guard                        |
 
 There is no loading, pending, success or failure UI for report delivery because reporting is deliberately fire-and-forget.
 
@@ -72,10 +72,10 @@ There is no loading, pending, success or failure UI for report delivery because 
 
 There are exactly two interactive controls in the component.
 
-| Control | Visibility | Current implementation | Behaviour | Target ownership |
-| --- | --- | --- | --- | --- |
-| Retry | `showRetry()` | native `<button hlmBtn type="button" size="touch">` | calls `resetError()` | Spartan Helm Button + feature recovery state |
-| Report | always in fallback | native `<button hlmBtn type="button" variant="secondary" size="touch">` | calls `reportCrash()` | Spartan Helm Button + reporting service |
+| Control | Visibility         | Current implementation                                                  | Behaviour             | Target ownership                             |
+| ------- | ------------------ | ----------------------------------------------------------------------- | --------------------- | -------------------------------------------- |
+| Retry   | `showRetry()`      | native `<button hlmBtn type="button" size="touch">`                     | calls `resetError()`  | Spartan Helm Button + feature recovery state |
+| Report  | always in fallback | native `<button hlmBtn type="button" variant="secondary" size="touch">` | calls `reportCrash()` | Spartan Helm Button + reporting service      |
 
 No link, input, checkbox, select, menu, dialog, sheet, popover, tooltip or custom pointer target exists in the component.
 
@@ -167,7 +167,7 @@ A future host may need a real retry output similar to domain-specific error boun
 reportEconomyCrash(error, {
   boundaryContext: context(),
   renderingError: true,
-})
+});
 ```
 
 ### Manual report
@@ -177,7 +177,7 @@ reportEconomyCrash(error, {
 ```ts
 reportEconomyCrash(lastError, {
   boundaryContext: context(),
-})
+});
 ```
 
 The manual report therefore omits `renderingError: true` even when reporting the exact same rendering failure. Preserve current behaviour unless the reporting contract is deliberately normalised with service tests.
@@ -406,19 +406,19 @@ No animation is currently present, so reduced-motion requirements are naturally 
 
 ## Bespoke utility inventory
 
-| Current styling / utility | Ownership assessment | Follow-up direction |
-| --- | --- | --- |
-| `min-h-[300px]` | feature/layout-specific arbitrary size | Validate against embedded hosts; keep only if the minimum is intentional |
-| conditional `min-h-screen` | host/layout behaviour | Verify mobile viewport behaviour; do not let it take route-shell ownership |
-| `p-8` | app composition | Revisit for 390px and 400% zoom |
-| `max-w-md` | app composition | Reasonable reading-width guard; verify long translations |
-| `text-5xl` coin glyph | decorative feature identity | Reconsider if component becomes generic |
-| `text-xl font-bold` | app typography | Align with Relay type scale during visual pass |
-| `font-mono text-xs text-text-muted` | technical-detail presentation | Prefer not to expose raw diagnostics; otherwise keep semantic text role |
-| `break-all` | overflow guard | Replace with safer wrapping/bidi treatment if detail remains |
-| `flex justify-center gap-3` | app layout | Add wrap/stack behaviour for narrow/high-zoom states |
-| `hlmBtn size="touch"` | Spartan Helm interaction | Keep |
-| `hlmBtn variant="secondary" size="touch"` | Spartan Helm interaction | Keep |
+| Current styling / utility                 | Ownership assessment                   | Follow-up direction                                                        |
+| ----------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------- |
+| `min-h-[300px]`                           | feature/layout-specific arbitrary size | Validate against embedded hosts; keep only if the minimum is intentional   |
+| conditional `min-h-screen`                | host/layout behaviour                  | Verify mobile viewport behaviour; do not let it take route-shell ownership |
+| `p-8`                                     | app composition                        | Revisit for 390px and 400% zoom                                            |
+| `max-w-md`                                | app composition                        | Reasonable reading-width guard; verify long translations                   |
+| `text-5xl` coin glyph                     | decorative feature identity            | Reconsider if component becomes generic                                    |
+| `text-xl font-bold`                       | app typography                         | Align with Relay type scale during visual pass                             |
+| `font-mono text-xs text-text-muted`       | technical-detail presentation          | Prefer not to expose raw diagnostics; otherwise keep semantic text role    |
+| `break-all`                               | overflow guard                         | Replace with safer wrapping/bidi treatment if detail remains               |
+| `flex justify-center gap-3`               | app layout                             | Add wrap/stack behaviour for narrow/high-zoom states                       |
+| `hlmBtn size="touch"`                     | Spartan Helm interaction               | Keep                                                                       |
+| `hlmBtn variant="secondary" size="touch"` | Spartan Helm interaction               | Keep                                                                       |
 
 Tailwind layout utilities are not inherently a migration problem. The boundary should keep feature-owned layout where no Relay primitive provides value.
 

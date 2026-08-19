@@ -38,10 +38,10 @@ There are no dialogs, sheets, menus, popovers, tooltips, form fields, selects, c
 
 ### Inputs
 
-| Input | Current default | Contract |
-| --- | --- | --- |
-| `context` | `{ component: 'unknown' }` | Supplies component/operation/filter/language/count/sort/radius metadata for diagnostics |
-| `showReportButton` | `true` | Controls whether the manual-report action is rendered |
+| Input              | Current default            | Contract                                                                                |
+| ------------------ | -------------------------- | --------------------------------------------------------------------------------------- |
+| `context`          | `{ component: 'unknown' }` | Supplies component/operation/filter/language/count/sort/radius metadata for diagnostics |
+| `showReportButton` | `true`                     | Controls whether the manual-report action is rendered                                   |
 
 `DiscoveryErrorContext` can carry:
 
@@ -57,34 +57,34 @@ There are no dialogs, sheets, menus, popovers, tooltips, form fields, selects, c
 
 ### Outputs
 
-| Output | Trigger | Current host behaviour |
-| --- | --- | --- |
-| `retry` | `resetError()` | Discovery binds this to `searchPartners()` |
+| Output        | Trigger         | Current host behaviour                                      |
+| ------------- | --------------- | ----------------------------------------------------------- |
+| `retry`       | `resetError()`  | Discovery binds this to `searchPartners()`                  |
 | `reportError` | `reportCrash()` | Optional parent notification containing the current context |
 
 The Spartan / Relay conversion must preserve these contracts unless a separate feature change explicitly revises them.
 
 ## Complete state inventory
 
-| State | Trigger | Current rendering / behaviour | Target owner |
-| --- | --- | --- | --- |
-| Healthy | initial state or successful reset | projected Discovery content only | Feature composition |
-| Error captured | `captureError(error, message?, metadata?)` | projected content replaced by error card | Feature state + Relay presentation |
-| Error with message | `errorMessage()` non-empty | message rendered in a monospace detail panel | Feature, with privacy hardening required |
-| Repeated error | `errorCount() > 1` | extra diagnostic hint rendered | Feature, but currently not translation-safe |
-| Report action available | `showReportButton() === true` | Retry plus Report controls | Feature configuration + Spartan buttons |
-| Report action hidden | `showReportButton() === false` | Retry only | Feature configuration |
-| Report requested | `reportCrash()` called | success-coloured acknowledgement appears immediately | Feature state, but delivery is not actually confirmed |
-| Reset | Retry action | error/message/report/count state cleared, then `retry` emitted | Feature state |
+| State                   | Trigger                                    | Current rendering / behaviour                                  | Target owner                                          |
+| ----------------------- | ------------------------------------------ | -------------------------------------------------------------- | ----------------------------------------------------- |
+| Healthy                 | initial state or successful reset          | projected Discovery content only                               | Feature composition                                   |
+| Error captured          | `captureError(error, message?, metadata?)` | projected content replaced by error card                       | Feature state + Relay presentation                    |
+| Error with message      | `errorMessage()` non-empty                 | message rendered in a monospace detail panel                   | Feature, with privacy hardening required              |
+| Repeated error          | `errorCount() > 1`                         | extra diagnostic hint rendered                                 | Feature, but currently not translation-safe           |
+| Report action available | `showReportButton() === true`              | Retry plus Report controls                                     | Feature configuration + Spartan buttons               |
+| Report action hidden    | `showReportButton() === false`             | Retry only                                                     | Feature configuration                                 |
+| Report requested        | `reportCrash()` called                     | success-coloured acknowledgement appears immediately           | Feature state, but delivery is not actually confirmed |
+| Reset                   | Retry action                               | error/message/report/count state cleared, then `retry` emitted | Feature state                                         |
 
 There is no loading or pending state for reporting because reporting is fire-and-forget.
 
 ## Complete control inventory
 
-| Control | Current implementation | Behaviour | Target ownership | Audit action |
-| --- | --- | --- | --- | --- |
-| Retry | `app-button-primary` wrapper | calls `resetError()`, clears local error state, emits `retry` | Approved repository composition over Spartan Helm Button | Preserve behaviour; converge wrapper/import strategy if programme standard requires it |
-| Report error | native `<button hlmBtn>` | calls `reportCrash()` | Spartan Helm Button | Keep native semantics; use an approved secondary/outline variant rather than feature-owned button styling |
+| Control      | Current implementation       | Behaviour                                                     | Target ownership                                         | Audit action                                                                                              |
+| ------------ | ---------------------------- | ------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Retry        | `app-button-primary` wrapper | calls `resetError()`, clears local error state, emits `retry` | Approved repository composition over Spartan Helm Button | Preserve behaviour; converge wrapper/import strategy if programme standard requires it                    |
+| Report error | native `<button hlmBtn>`     | calls `reportCrash()`                                         | Spartan Helm Button                                      | Keep native semantics; use an approved secondary/outline variant rather than feature-owned button styling |
 
 There are exactly two interactive controls in the boundary. No interactive element is omitted from this mapping.
 
@@ -349,18 +349,18 @@ The current `flex flex-wrap justify-center gap-3` behaviour is a good baseline u
 
 ## Styling and bespoke utility inventory
 
-| Current styling | Ownership assessment | Follow-up direction |
-| --- | --- | --- |
-| `rounded-sheet` | Relay semantic radius | Keep |
-| `border-danger/30 bg-danger/10` | Relay status presentation | Keep if contrast checks pass |
-| `text-danger` | Relay status text | Keep |
-| `bg-surface-200` | Relay surface role | Keep |
-| `text-text-secondary`, `text-text-muted` | Relay text roles | Keep |
-| `text-success` | Relay success role | Keep |
-| `max-w-md`, spacing, centring | App composition | Keep after reflow testing |
-| `text-[11px]` | bespoke micro typography | Review against design-system type scale and accessibility |
-| Report `rounded-app border ... ps-4 pe-4 pt-2.5 pb-2.5 ... hover:*` | feature-owned button appearance | Replace with shared Spartan variant/size |
-| Retry `customClass="text-xs"` | feature-owned wrapper override | Prefer canonical size/typography variant |
+| Current styling                                                     | Ownership assessment            | Follow-up direction                                       |
+| ------------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------- |
+| `rounded-sheet`                                                     | Relay semantic radius           | Keep                                                      |
+| `border-danger/30 bg-danger/10`                                     | Relay status presentation       | Keep if contrast checks pass                              |
+| `text-danger`                                                       | Relay status text               | Keep                                                      |
+| `bg-surface-200`                                                    | Relay surface role              | Keep                                                      |
+| `text-text-secondary`, `text-text-muted`                            | Relay text roles                | Keep                                                      |
+| `text-success`                                                      | Relay success role              | Keep                                                      |
+| `max-w-md`, spacing, centring                                       | App composition                 | Keep after reflow testing                                 |
+| `text-[11px]`                                                       | bespoke micro typography        | Review against design-system type scale and accessibility |
+| Report `rounded-app border ... ps-4 pe-4 pt-2.5 pb-2.5 ... hover:*` | feature-owned button appearance | Replace with shared Spartan variant/size                  |
+| Retry `customClass="text-xs"`                                       | feature-owned wrapper override  | Prefer canonical size/typography variant                  |
 
 The audit does not require eliminating every Tailwind layout utility. Relay owns semantic visual roles; feature composition still owns necessary layout.
 

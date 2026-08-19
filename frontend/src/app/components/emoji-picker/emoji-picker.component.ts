@@ -1413,7 +1413,8 @@ const EMOJI_CATEGORIES = [
     >
       <!-- Search -->
       <div class="p-2 border-b border-surface-100">
-        <input hlmInput
+        <input
+          hlmInput
           type="text"
           [(ngModel)]="searchQuery"
           placeholder="Search emoji..."
@@ -1424,7 +1425,8 @@ const EMOJI_CATEGORIES = [
       <!-- Category tabs -->
       <div class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide">
         @for (cat of categories; track cat.name) {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="selectedCategory.set(cat.name)"
             [class]="
               selectedCategory() === cat.name
@@ -1441,7 +1443,8 @@ const EMOJI_CATEGORIES = [
       <div class="overflow-y-auto max-h-48 p-2">
         <div class="grid grid-cols-8 gap-1">
           @for (emoji of filteredEmojis(); track emoji) {
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="selectEmoji(emoji)"
               class="w-8 h-8 flex items-center justify-center text-lg hover:bg-surface-100 rounded transition-colors"
               [attr.aria-label]="'Emoji ' + emoji"

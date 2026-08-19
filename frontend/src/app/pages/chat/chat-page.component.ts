@@ -26,7 +26,8 @@ interface AiChatMessage {
       <aside class="w-80 border-e border-surface-100  overflow-y-auto">
         <div class="p-4">
           <h2 class="text-lg font-semibold mb-4">{{ 'chat.rooms' | t }}</h2>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="startAiPartner()"
             class="mb-4 w-full ps-3 pe-3 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors"
           >
@@ -77,7 +78,8 @@ interface AiChatMessage {
                   <span class="text-xl" aria-hidden="true">🤖</span>
                   <h3 class="font-semibold">{{ 'aiPartner.title' | t }}</h3>
                 }
-                <button hlmBtn
+                <button
+                  hlmBtn
                   (click)="closeAiPartner()"
                   class="ms-auto text-sm text-text-muted hover:underline"
                 >
@@ -99,7 +101,8 @@ interface AiChatMessage {
                   <p class="text-sm text-text-muted animate-pulse">{{ 'common.loading' | t }}</p>
                 } @else {
                   @for (scenario of aiScenarios(); track scenario.id) {
-                    <button hlmBtn
+                    <button
+                      hlmBtn
                       type="button"
                       (click)="selectAiScenario(scenario)"
                       class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -108,7 +111,8 @@ interface AiChatMessage {
                       <span class="text-sm">{{ scenario.name }}</span>
                     </button>
                   }
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="selectAiScenario(null)"
                     class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -156,14 +160,16 @@ interface AiChatMessage {
               <!-- AI input -->
               <div class="p-4 border-t border-surface-100">
                 <div class="flex gap-2">
-                  <input hlmInput
+                  <input
+                    hlmInput
                     [ngModel]="aiInput()"
                     (ngModelChange)="aiInput.set($event)"
                     (keyup.enter)="sendAiMessage()"
                     [placeholder]="'aiPartner.inputPlaceholder' | t"
                     class="flex-1 ps-3 pe-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="sendAiMessage()"
                     [disabled]="aiLoading() || !aiInput().trim()"
                     class="ps-3 pe-3 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors disabled:opacity-50"
@@ -190,7 +196,8 @@ interface AiChatMessage {
                     <h3 class="font-semibold">{{ room.title }}</h3>
                     <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
                   </div>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="exportChat()"
                     class="ms-auto p-2 text-sm text-text-muted hover:text-text transition-colors"
                   >
@@ -228,7 +235,8 @@ interface AiChatMessage {
                         <div class="space-y-1">
                           <p class="text-xs text-text-muted">{{ 'chat.statusReply' | t }}</p>
                           <p class="text-sm">{{ msg.status_reply_payload.status_text }}</p>
-                          <button hlmBtn
+                          <button
+                            hlmBtn
                             (click)="replyToStatus(msg)"
                             class="text-xs text-primary hover:underline"
                           >
@@ -270,7 +278,8 @@ interface AiChatMessage {
                         />
                       }
                       @if (msg.is_view_once && !msg.viewed_at) {
-                        <button hlmBtn
+                        <button
+                          hlmBtn
                           (click)="viewMedia(msg)"
                           class="text-sm text-primary underline mt-1"
                         >
@@ -283,13 +292,15 @@ interface AiChatMessage {
                         class="mt-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         @if (msg.sender_id !== currentUserId()) {
-                          <button hlmBtn
+                          <button
+                            hlmBtn
                             (click)="openCorrection(msg)"
                             class="text-xs text-warning hover:underline"
                           >
                             Correct
                           </button>
-                          <button hlmBtn
+                          <button
+                            hlmBtn
                             (click)="requestCorrection(msg)"
                             class="text-xs text-primary hover:underline"
                           >
@@ -297,7 +308,8 @@ interface AiChatMessage {
                           </button>
                         }
                         @if (msg.sender_id === currentUserId() && msg.message_type === 'text') {
-                          <button hlmBtn
+                          <button
+                            hlmBtn
                             (click)="openFix(msg)"
                             class="text-xs text-secondary hover:underline"
                           >
@@ -401,26 +413,30 @@ interface AiChatMessage {
                     <p class="text-xs text-text-muted line-through">
                       {{ correctionTargetMessage()?.text_content }}
                     </p>
-                    <input hlmInput
+                    <input
+                      hlmInput
                       [ngModel]="correctionText()"
                       (ngModelChange)="correctionText.set($event)"
                       placeholder="Corrected text..."
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
-                    <input hlmInput
+                    <input
+                      hlmInput
                       [ngModel]="correctionExplanation()"
                       (ngModelChange)="correctionExplanation.set($event)"
                       placeholder="Explanation (optional)"
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
                     <div class="flex gap-2">
-                      <button hlmBtn
+                      <button
+                        hlmBtn
                         (click)="submitCorrection()"
                         class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/80 transition-colors text-sm"
                       >
                         Send Correction
                       </button>
-                      <button hlmBtn
+                      <button
+                        hlmBtn
                         (click)="cancelCorrection()"
                         class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
                       >
@@ -436,26 +452,30 @@ interface AiChatMessage {
                 <div class="p-4 border-t border-surface-100 bg-surface-200/50">
                   <div class="space-y-2">
                     <p class="text-sm font-semibold">Fix your message</p>
-                    <input hlmInput
+                    <input
+                      hlmInput
                       [ngModel]="fixText()"
                       (ngModelChange)="fixText.set($event)"
                       placeholder="Corrected text..."
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
-                    <input hlmInput
+                    <input
+                      hlmInput
                       [ngModel]="fixExplanation()"
                       (ngModelChange)="fixExplanation.set($event)"
                       placeholder="Explanation (optional)"
                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-success "
                     />
                     <div class="flex gap-2">
-                      <button hlmBtn
+                      <button
+                        hlmBtn
                         (click)="submitFix()"
                         class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors text-sm"
                       >
                         Fix Message
                       </button>
-                      <button hlmBtn
+                      <button
+                        hlmBtn
                         (click)="cancelFix()"
                         class="px-4 py-2 bg-surface-300 text-text-muted rounded-lg hover:bg-surface-400 transition-colors text-sm"
                       >
@@ -469,14 +489,16 @@ interface AiChatMessage {
               <!-- Input -->
               <div class="p-4 border-t border-surface-100 ">
                 <div class="flex gap-2">
-                  <input hlmInput
+                  <input
+                    hlmInput
                     [ngModel]="newMessageText()"
                     (ngModelChange)="newMessageText.set($event)"
                     (keyup.enter)="sendMessage()"
                     placeholder="Type a message..."
                     class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary  "
                   />
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="sendMessage()"
                     class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary/80 transition-colors"
                   >

@@ -35,20 +35,20 @@ the current head to review.
 
 ## Components
 
-| Component | Responsibility |
-| --- | --- |
-| `automation/openhands_factory/daemon.py` | Single-owner scheduling, abandoned-attempt recovery, pause, generation, and shutdown |
-| `automation/openhands_factory/pipeline.py` | Durable issue-to-merge state machine and repository safety gates |
-| `automation/openhands_factory/agents/` | Provider protocol, adapters, policy, process runner, health, and router |
-| `automation/openhands_factory/jobs.py` | Backwards-compatible durable state and retry authority |
-| `automation/openhands_factory/provider_capacity.py` | Cross-process, generation-aware provider concurrency leases |
-| `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport |
-| `automation/openhands_factory/github.py` | Typed issue, PR, label, check, status, and merge boundary |
-| `automation/openhands_factory/control_panel.py` | Sanitised GitHub status issue and bounded operator commands |
-| `.github/workflows/ci.yml` | Application and Factory verification plus `CI / required` |
-| `.github/workflows/factory-merge.yml` | Final fail-closed merge gate for reviewed pull requests |
-| `config/systemd/hellotalk-factory.service` | Always-on daemon from the dedicated `main` checkout |
-| `config/systemd/hellotalk-factory-health.timer` | Periodic read-only health and restart supervision |
+| Component                                             | Responsibility                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `automation/openhands_factory/daemon.py`              | Single-owner scheduling, abandoned-attempt recovery, pause, generation, and shutdown |
+| `automation/openhands_factory/pipeline.py`            | Durable issue-to-merge state machine and repository safety gates                     |
+| `automation/openhands_factory/agents/`                | Provider protocol, adapters, policy, process runner, health, and router              |
+| `automation/openhands_factory/jobs.py`                | Backwards-compatible durable state and retry authority                               |
+| `automation/openhands_factory/provider_capacity.py`   | Cross-process, generation-aware provider concurrency leases                          |
+| `automation/openhands_factory/conversation_runner.py` | Existing OpenHands SDK provider transport                                            |
+| `automation/openhands_factory/github.py`              | Typed issue, PR, label, check, status, and merge boundary                            |
+| `automation/openhands_factory/control_panel.py`       | Sanitised GitHub status issue and bounded operator commands                          |
+| `.github/workflows/ci.yml`                            | Application and Factory verification plus `CI / required`                            |
+| `.github/workflows/factory-merge.yml`                 | Final fail-closed merge gate for reviewed pull requests                              |
+| `config/systemd/hellotalk-factory.service`            | Always-on daemon from the dedicated `main` checkout                                  |
+| `config/systemd/hellotalk-factory-health.timer`       | Periodic read-only health and restart supervision                                    |
 
 ## Guarantees
 
