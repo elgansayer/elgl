@@ -1,0 +1,104 @@
+name: Truthful runtime branch patch v2
+
+on:
+  push:
+    branches:
+      - feat/truthful-runtime-failures
+    paths:
+      - .github/workflows/truthful-runtime-branch-patch-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/truthful-runtime-failures
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Apply the browser and root verification migration
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const recorderPath = 'frontend/src/app/components/voice-recorder/voice-recorder.component.ts';
+          let recorder = fs.readFileSync(recorderPath, 'utf8');
+          if (recorder.includes('/uploads/mock-')) {
+            const lines = recorder.split('\n');
+            const targetIndex = lines.findIndex((line) => line.includes('/uploads/mock-'));
+            const indent = lines[targetIndex].match(/^\s*/)?.[0] ?? '';
+            lines.splice(
+              targetIndex,
+              1,
+              `${indent}// Keep the recording local; a failed upload is not a sent recording.`,
+              `${indent}return;`,
+            );
+            recorder = lines.join('\n');
+          }
+          if (recorder.includes('/uploads/mock-')) {
+            throw new Error('Synthetic voice-recorder URL remains');
+          }
+          fs.writeFileSync(recorderPath, recorder);
+
+          const packagePath = 'package.json';
+          const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+          manifest.scripts['check:no-runtime-fallbacks'] =
+            'node scripts/verify-no-runtime-fallbacks.mjs';
+          if (!manifest.scripts.verify.includes('check:no-runtime-fallbacks')) {
+            const anchor = 'npm run check:no-aws-sdk &&';
+            if (!manifest.scripts.verify.includes(anchor)) {
+              throw new Error('Root verify AWS guard anchor is missing');
+            }
+            manifest.scripts.verify = manifest.scripts.verify.replace(
+              anchor,
+              `${anchor} npm run check:no-runtime-fallbacks &&`,
+            );
+          }
+          fs.writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+      - name: Install and verify
+        run: |
+          cd frontend
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx prettier --write src/app/components/voice-recorder/voice-recorder.component.ts
+          npm run build
+          cd ../backend
+          npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          npx prettier --write \
+            src/notifications/notifications.service.ts \
+            src/notifications/notifications.service.spec.ts \
+            src/discovery/discovery.service.ts \
+            src/discovery/discovery.service.spec.ts \
+            src/users/users.service.ts \
+            src/users/users.service.spec.ts
+          npm run build
+          npx vitest run \
+            src/notifications/notifications.service.spec.ts \
+            src/discovery/discovery.service.spec.ts \
+            src/users/users.service.spec.ts
+          cd ..
+          node scripts/verify-no-runtime-fallbacks.mjs
+
+      - name: Commit migration output
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package.json frontend/src/app/components/voice-recorder/voice-recorder.component.ts backend/src scripts/verify-no-runtime-fallbacks.mjs
+          if git diff --cached --quiet; then
+            echo 'No patch changes required.'
+            exit 0
+          fi
+          git commit -m 'fix(correctness): finish truthful runtime failure migration'
+          git push origin HEAD:feat/truthful-runtime-failures

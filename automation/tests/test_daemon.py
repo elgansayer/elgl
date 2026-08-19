@@ -127,6 +127,43 @@ def test_select_batch_respects_zero_capacity() -> None:
     assert selected == []
 
 
+def test_select_batch_admits_multiple_pull_requests_when_lane_widened() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7348", "10"]
+
+
+def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7346": pull_request_job("7346", priority=0, state=JobState.REVIEWING),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3, {"7346"}, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
+def test_select_batch_prefers_review_jobs_closer_to_merge() -> None:
+    jobs = {
+        "7346": pull_request_job("7346", state=JobState.PR_DRAFT),
+        "7347": pull_request_job("7347", state=JobState.READY_TO_MERGE),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7348"]
+
+
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
     jobs = {
         "10": job("10", 0),
