@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { CoverPhotoCropperComponent } from './cover-photo-cropper.component';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { PipeTransform } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ImageCropperComponent } from 'ngx-image-cropper';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { TranslatePipe } from '../../services/translate.pipe';
+import { CoverPhotoCropperComponent } from './cover-photo-cropper.component';
 
 class MockTranslatePipe implements PipeTransform {
   transform(value: string): string {
@@ -29,8 +30,9 @@ describe('CoverPhotoCropperComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('should create with the Spartan dialog open', () => {
     expect(component).toBeTruthy();
+    expect(component.dialogState()).toBe('open');
   });
 
   it('should store cropped blob on imageCropped event', () => {
@@ -44,9 +46,8 @@ describe('CoverPhotoCropperComponent', () => {
     component.onImageCropped({ blob: testBlob });
     expect(component.croppedBlob()).toBe(testBlob);
 
-    // When blob is null, the guard `if (event.blob)` prevents update, so old value persists
     component.onImageCropped({ blob: null });
-    expect(component.croppedBlob()).not.toBeNull();
+    expect(component.croppedBlob()).toBe(testBlob);
   });
 
   it('should emit saveCover when save is called with a blob', () => {
@@ -70,31 +71,37 @@ describe('CoverPhotoCropperComponent', () => {
     expect(emitted).not.toHaveBeenCalled();
   });
 
-  it('should handle loadImageFailed gracefully', () => {
-    expect(() => component.onLoadImageFailed()).not.toThrow();
-  });
-
-  it('should emit cancelCrop directly', () => {
+  it('should emit cancellation when the Spartan dialog is dismissed', () => {
     const emitted = vi.fn();
     component.cancelCrop.subscribe(emitted);
 
-    component.cancelCrop.emit();
-    expect(emitted).toHaveBeenCalled();
-  });
+    component.onDialogStateChanged('closed');
 
-  it('should cancel from the keyboard with Space', () => {
+    expect(component.dialogState()).toBe('closed');
+    expect(emitted).toHaveBeenCalledOnce();
+  });
+  it('should close and emit cancellation from the cancel action', () => {
     const emitted = vi.fn();
     component.cancelCrop.subscribe(emitted);
-    const overlay = fixture.nativeElement.querySelector('.fixed');
-    const event = new KeyboardEvent('keydown', {
-      key: ' ',
-      bubbles: true,
-      cancelable: true,
-    });
 
-    overlay.dispatchEvent(event);
+    component.cancel();
+
+    expect(component.dialogState()).toBe('closed');
+    expect(emitted).toHaveBeenCalledOnce();
+  });
+
+  it('should not emit duplicate cancellation after already closing', () => {
+    const emitted = vi.fn();
+    component.cancelCrop.subscribe(emitted);
+
+    component.cancel();
+    component.onDialogStateChanged('closed');
+    component.cancel();
 
     expect(emitted).toHaveBeenCalledOnce();
-    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('should handle loadImageFailed gracefully', () => {
+    expect(() => component.onLoadImageFailed()).not.toThrow();
   });
 });
