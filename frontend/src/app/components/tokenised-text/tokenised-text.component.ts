@@ -3,6 +3,7 @@ import { Component, input, output, inject, computed } from '@angular/core';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
+import { FlashcardContextMenuDirective } from '../../services/flashcard-context-menu.directive';
 
 export interface TokenSegment {
   segment: string;
@@ -17,9 +18,15 @@ interface ParsedTokens {
 
 @Component({
   selector: 'app-tokenised-text',
-  imports: [],
+  imports: [FlashcardContextMenuDirective],
   template: `
-    <div class="inline leading-relaxed select-text font-medium text-base">
+    <div
+      appFlashcardContextMenu
+      [sourceLanguage]="language()"
+      [targetLanguage]="flashcardTargetLanguage()"
+      [selectionContext]="text()"
+      class="inline leading-relaxed select-text font-medium text-base"
+    >
       @for (token of tokens(); track token.index) {
         <span
           (click)="onTokenClick(token)"
@@ -59,6 +66,10 @@ export class TokenisedTextComponent {
   text = input<string>('');
   language = input('en');
   wordClicked = output<{ token: string; context: string }>();
+
+  readonly flashcardTargetLanguage = computed(
+    () => this.i18n.currentLang().split('-')[0] || 'en',
+  );
 
   private readonly parsed = computed<ParsedTokens>(() => {
     if (typeof Intl === 'undefined' || !Intl.Segmenter) {
