@@ -32,10 +32,12 @@ interface OwnedSelection {
   },
 })
 export class FlashcardContextMenuDirective implements OnDestroy {
-  /** Optional hint sent to the translation provider for selected text. */
+  /** Optional language hint associated with the source content. */
   readonly sourceLanguage = input<string | undefined>(undefined);
   /** Language the selected phrase should be translated into before creating the card. */
   readonly targetLanguage = input<string>('en');
+  /** Exact source context to persist with the card instead of derived rendered text. */
+  readonly selectionContext = input<string | undefined>(undefined);
 
   private readonly flashcardService = inject(FlashcardService);
   private readonly chatService = inject(ChatService);
@@ -44,6 +46,7 @@ export class FlashcardContextMenuDirective implements OnDestroy {
   private readonly i18n = inject(I18nService);
 
   private overlay: HTMLButtonElement | null = null;
+  private previouslyFocused: HTMLElement | null = null;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private touchStartPoint: { x: number; y: number } | null = null;
   private creating = false;
@@ -79,6 +82,11 @@ export class FlashcardContextMenuDirective implements OnDestroy {
       this.clearLongPressTimer();
       return;
     }
+
+    // A long press on selected text belongs to this interaction. Stop the outer
+    // whole-message long-press menu from racing it without preventing native
+    // scrolling or text selection.
+    event.stopPropagation();
 
     const touch = event.touches[0];
     this.touchStartPoint = { x: touch.clientX, y: touch.clientY };
@@ -131,20 +139,23 @@ export class FlashcardContextMenuDirective implements OnDestroy {
 
     return {
       text,
-      context: (host.textContent ?? '').trim(),
+      context: (this.selectionContext() ?? host.textContent ?? '').trim(),
       range,
     };
   }
 
   private containsNode(host: HTMLElement, node: Node): boolean {
-    return node === host || host.contains(node.nodeType === Node.TEXT_NODE ? node.parentNode : node);
+    const candidate = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+    return node === host || (candidate !== null && host.contains(candidate));
   }
 
   private showOverlay(x: number, y: number, selection: OwnedSelection): void {
     this.removeOverlay();
+    this.previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const button = document.createElement('button');
     button.type = 'button';
+    button.dataset['testid'] = 'selection-flashcard-action';
     button.className =
       'fixed z-50 min-h-11 rounded-card border border-surface-100 bg-surface-200 px-4 py-2 text-sm font-bold text-text-primary shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-wait disabled:opacity-60';
     button.textContent = this.i18n.translate('common.save');
@@ -225,8 +236,9 @@ export class FlashcardContextMenuDirective implements OnDestroy {
     document.removeEventListener('keydown', this.onDocumentKeyDown, true);
 
     if (restoreFocus) {
-      this.elRef.nativeElement.focus({ preventScroll: true });
+      this.previouslyFocused?.focus({ preventScroll: true });
     }
+    this.previouslyFocused = null;
   }
 
   private clearLongPressTimer(): void {
