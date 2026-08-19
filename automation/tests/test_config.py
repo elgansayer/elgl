@@ -465,7 +465,7 @@ def test_agent_routing_rejects_a_phase_without_an_enabled_provider(tmp_path: Pat
     config_path = tmp_path / "agents.json"
     config_path.write_text(
         '{"routing_enabled": true, "providers": {'
-        '"codex": {"enabled": false}, "openhands": {"enabled": true}}, '
+        '"codex": {"enabled": false}, "pi": {"enabled": true}}, '
         '"routing": {"implementation": ["codex"]}}',
         encoding="utf-8",
     )
@@ -510,26 +510,30 @@ def test_production_agent_configuration_loads() -> None:
         == "opencode-go/kimi-k2.7-code"
     )
     assert factory_config.agents.providers["openhands"].emergency_only
+    assert not factory_config.agents.providers["openhands"].enabled
+    assert factory_config.agents.providers["pi"].enabled
+    assert factory_config.agents.providers["pi"].model == "google/gemini-3.7-flash"
+    assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
         "claude",
         "codex",
         "google",
         "opencode",
-        "openhands",
+        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
         "codex",
         "claude",
         "google",
         "opencode",
-        "openhands",
+        "pi",
     ]
     assert factory_config.agents.routing.general_action == [
         "opencode",
         "google",
         "codex",
         "claude",
-        "openhands",
+        "pi",
     ]
 
 
