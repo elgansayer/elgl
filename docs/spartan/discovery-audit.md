@@ -35,49 +35,49 @@ There is no product analytics call in the main component. Error boundaries may r
 
 The surface currently exposes these route contracts:
 
-| Source | Destination | Contract to preserve |
-| --- | --- | --- |
-| Header notification affordance | `/notifications` | Native navigation link |
-| Non-VIP gender upsell | `/vip` | VIP upgrade link |
-| Non-VIP distance upsell | `/vip` | VIP upgrade link |
-| Promotional banner CTA | `/vip` | VIP upgrade action |
-| Partner card | `/chat/:partnerId` | Starts/opens conversation |
-| Partner avatar region | `/profile/user/:partnerId` in current template | Profile-navigation intent; verify against the canonical route table before implementation |
-| Gradient action button | `/chat/:partnerId` | Starts/opens conversation |
+| Source                         | Destination                                    | Contract to preserve                                                                      |
+| ------------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Header notification affordance | `/notifications`                               | Native navigation link                                                                    |
+| Non-VIP gender upsell          | `/vip`                                         | VIP upgrade link                                                                          |
+| Non-VIP distance upsell        | `/vip`                                         | VIP upgrade link                                                                          |
+| Promotional banner CTA         | `/vip`                                         | VIP upgrade action                                                                        |
+| Partner card                   | `/chat/:partnerId`                             | Starts/opens conversation                                                                 |
+| Partner avatar region          | `/profile/user/:partnerId` in current template | Profile-navigation intent; verify against the canonical route table before implementation |
+| Gradient action button         | `/chat/:partnerId`                             | Starts/opens conversation                                                                 |
 
 The route table defines `/profile/:userId`, while this template currently uses `/profile/user/:partnerId`. The implementation ticket must verify whether a redirect/deep-link adapter intentionally supports the latter before preserving or correcting it. Do not silently change this contract as part of primitive conversion.
 
 ## Complete control inventory
 
-| Element / behaviour | Current implementation | State / side-effect owner | Target owner | Migration action |
-| --- | --- | --- | --- | --- |
-| Notifications action | Native `<a routerLink>` | Angular Router | Native link plus Relay tokens | Preserve native link semantics and touch target |
-| Top discovery filters | `app-scrollable-pills` | `selectedFilter` and `onFilterSelect()` | Relay selectable-pill primitive | Preserve child API; converge child primitive independently |
-| Target-language choices | Repeated `<button hlmBtn role="radio">` | `selectedTargetLanguage` | Accessible single-select group, preferably approved Relay wrapper over native/Spartan radio semantics | Replace hand-modelled radio semantics only after capability verification |
-| Any-language choice | `<button hlmBtn role="radio">` | `selectedTargetLanguage` | Same single-select group as target languages | Migrate with language choices |
-| Language picker | `app-language-picker` | Child plus `setLanguage()` | Relay language picker over Spartan Combobox | Preserve parent event/value contract |
-| Any-interest choice | `<button hlmBtn role="radio">` | `selectedInterests` | Accessible single-select chip/radio group | Migrate with interest choices |
-| Interest tag choices | Repeated `<button hlmBtn role="radio">` | `selectedInterests` | Accessible single-select chip/radio group | Preserve one-interest-at-a-time behaviour |
-| Show more / less interests | `<button hlmBtn>` | `showAllInterests` | Relay/Helm Button | Preserve local expansion behaviour and focus |
-| Sort selector | `hlm-native-select` | `selectedSort` | Spartan Helm/native Select, or approved Relay Select when available | Preserve finite single-select semantics |
-| Gender selector | `hlm-native-select`, VIP-disabled | `selectedGender`, `isVip` | Spartan Helm/native Select plus feature gating | Preserve disabled state and VIP-only request parameter |
-| Gender VIP note | Native `<a routerLink="/vip">` | Router | Native link plus Relay VIP presentation | Preserve |
-| Age range | `app-age-range-slider` | `ageRangeMin`, `ageRangeMax` | Dedicated Relay feature primitive | Preserve child contract; detailed work belongs to its own ticket |
-| Distance | `app-distance-slider` | `selectedDistanceKm`, `isVip` | Dedicated Relay feature primitive | Preserve VIP gating and debounced search |
-| Distance VIP note | Native `/vip` link | Router | Native link plus Relay VIP presentation | Preserve |
-| Serious learner mode | `hlm-checkbox` | `seriousLearnerMode`; persists through `UserService` | Spartan Helm Checkbox plus feature orchestration | Preserve persistence-before-state-change behaviour |
-| Voice-room-active filter | `hlm-checkbox` | `voiceRoomActive` | Spartan Helm Checkbox plus feature orchestration | Preserve immediate search behaviour |
-| Promotional banner dismiss | `<button hlmBtn>` | `showBanner` | Relay/Helm Button | Preserve local, non-persistent dismissal |
-| Promotional banner VIP CTA | `<button hlmBtn [routerLink]>` | Router | Prefer native link composed with approved button presentation | Preserve `/vip` destination and accessible name |
-| Global search | `app-global-search` | Child emits `searchFilters` | Dedicated Relay feature component | Preserve parent event contract; audit internally under its own ticket |
-| Outer discovery error retry/report | `app-discovery-error-boundary` | Child error state / `GlobalErrorHandler` | Dedicated Relay error boundary using Spartan buttons | Preserve boundary contract; detailed work belongs to its own ticket |
-| Map/content error retry/report | `app-discovery-map-error-boundary` | Child error state / `GlobalErrorHandler` | Relay error presentation plus Spartan Button | Preserve retry and report semantics |
-| Search error retry | `app-empty-state` action | `searchPartners()` | Relay Empty State action | Preserve |
-| No-results reset | `app-empty-state` action | `resetFilters()` | Relay Empty State action | Preserve full reset semantics |
-| Partner-card primary action | `[routerLink]` on `<article>` | Router | Native link/card-link composition | Replace implicit clickable article mechanics with explicit link semantics |
-| Partner avatar profile action | Nested `[routerLink]` on `<div>` | Router | Native profile link | Preserve independent profile intent without nested interactive ambiguity |
-| Audio intro play/pause | `<button hlmBtn>` | `HTMLAudioElement`, `playingPartnerId` | Spartan/Relay Button plus feature-owned media state | Preserve pressed state and single-active-audio policy |
-| Partner chat CTA | `app-gradient-button [routerLink]` | Router | Relay Button/Link primitive | Preserve chat destination; remove duplicate competing click ownership where possible |
+| Element / behaviour                | Current implementation                  | State / side-effect owner                            | Target owner                                                                                          | Migration action                                                                     |
+| ---------------------------------- | --------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Notifications action               | Native `<a routerLink>`                 | Angular Router                                       | Native link plus Relay tokens                                                                         | Preserve native link semantics and touch target                                      |
+| Top discovery filters              | `app-scrollable-pills`                  | `selectedFilter` and `onFilterSelect()`              | Relay selectable-pill primitive                                                                       | Preserve child API; converge child primitive independently                           |
+| Target-language choices            | Repeated `<button hlmBtn role="radio">` | `selectedTargetLanguage`                             | Accessible single-select group, preferably approved Relay wrapper over native/Spartan radio semantics | Replace hand-modelled radio semantics only after capability verification             |
+| Any-language choice                | `<button hlmBtn role="radio">`          | `selectedTargetLanguage`                             | Same single-select group as target languages                                                          | Migrate with language choices                                                        |
+| Language picker                    | `app-language-picker`                   | Child plus `setLanguage()`                           | Relay language picker over Spartan Combobox                                                           | Preserve parent event/value contract                                                 |
+| Any-interest choice                | `<button hlmBtn role="radio">`          | `selectedInterests`                                  | Accessible single-select chip/radio group                                                             | Migrate with interest choices                                                        |
+| Interest tag choices               | Repeated `<button hlmBtn role="radio">` | `selectedInterests`                                  | Accessible single-select chip/radio group                                                             | Preserve one-interest-at-a-time behaviour                                            |
+| Show more / less interests         | `<button hlmBtn>`                       | `showAllInterests`                                   | Relay/Helm Button                                                                                     | Preserve local expansion behaviour and focus                                         |
+| Sort selector                      | `hlm-native-select`                     | `selectedSort`                                       | Spartan Helm/native Select, or approved Relay Select when available                                   | Preserve finite single-select semantics                                              |
+| Gender selector                    | `hlm-native-select`, VIP-disabled       | `selectedGender`, `isVip`                            | Spartan Helm/native Select plus feature gating                                                        | Preserve disabled state and VIP-only request parameter                               |
+| Gender VIP note                    | Native `<a routerLink="/vip">`          | Router                                               | Native link plus Relay VIP presentation                                                               | Preserve                                                                             |
+| Age range                          | `app-age-range-slider`                  | `ageRangeMin`, `ageRangeMax`                         | Dedicated Relay feature primitive                                                                     | Preserve child contract; detailed work belongs to its own ticket                     |
+| Distance                           | `app-distance-slider`                   | `selectedDistanceKm`, `isVip`                        | Dedicated Relay feature primitive                                                                     | Preserve VIP gating and debounced search                                             |
+| Distance VIP note                  | Native `/vip` link                      | Router                                               | Native link plus Relay VIP presentation                                                               | Preserve                                                                             |
+| Serious learner mode               | `hlm-checkbox`                          | `seriousLearnerMode`; persists through `UserService` | Spartan Helm Checkbox plus feature orchestration                                                      | Preserve persistence-before-state-change behaviour                                   |
+| Voice-room-active filter           | `hlm-checkbox`                          | `voiceRoomActive`                                    | Spartan Helm Checkbox plus feature orchestration                                                      | Preserve immediate search behaviour                                                  |
+| Promotional banner dismiss         | `<button hlmBtn>`                       | `showBanner`                                         | Relay/Helm Button                                                                                     | Preserve local, non-persistent dismissal                                             |
+| Promotional banner VIP CTA         | `<button hlmBtn [routerLink]>`          | Router                                               | Prefer native link composed with approved button presentation                                         | Preserve `/vip` destination and accessible name                                      |
+| Global search                      | `app-global-search`                     | Child emits `searchFilters`                          | Dedicated Relay feature component                                                                     | Preserve parent event contract; audit internally under its own ticket                |
+| Outer discovery error retry/report | `app-discovery-error-boundary`          | Child error state / `GlobalErrorHandler`             | Dedicated Relay error boundary using Spartan buttons                                                  | Preserve boundary contract; detailed work belongs to its own ticket                  |
+| Map/content error retry/report     | `app-discovery-map-error-boundary`      | Child error state / `GlobalErrorHandler`             | Relay error presentation plus Spartan Button                                                          | Preserve retry and report semantics                                                  |
+| Search error retry                 | `app-empty-state` action                | `searchPartners()`                                   | Relay Empty State action                                                                              | Preserve                                                                             |
+| No-results reset                   | `app-empty-state` action                | `resetFilters()`                                     | Relay Empty State action                                                                              | Preserve full reset semantics                                                        |
+| Partner-card primary action        | `[routerLink]` on `<article>`           | Router                                               | Native link/card-link composition                                                                     | Replace implicit clickable article mechanics with explicit link semantics            |
+| Partner avatar profile action      | Nested `[routerLink]` on `<div>`        | Router                                               | Native profile link                                                                                   | Preserve independent profile intent without nested interactive ambiguity             |
+| Audio intro play/pause             | `<button hlmBtn>`                       | `HTMLAudioElement`, `playingPartnerId`               | Spartan/Relay Button plus feature-owned media state                                                   | Preserve pressed state and single-active-audio policy                                |
+| Partner chat CTA                   | `app-gradient-button [routerLink]`      | Router                                               | Relay Button/Link primitive                                                                           | Preserve chat destination; remove duplicate competing click ownership where possible |
 
 No menu, popover, dialog, drawer or focus-trapped overlay is rendered directly by the main discovery component.
 
@@ -222,18 +222,18 @@ Preserve these service boundaries. Do not invent new visible onboarding controls
 
 ## Service and side-effect boundaries
 
-| Boundary | Current operation | Ownership rule |
-| --- | --- | --- |
-| `DiscoveryService.findPartners()` | Partner search, offline/cache policy and enrichment | Feature/service, never Relay/Spartan |
-| `UserService.getMyProfile()` | Initial language/mode data | Feature data layer |
-| `UserService.updateMyProfile()` | Persist serious learner mode | Feature data layer |
-| `SafetyService.getBlockedIdsAsync()` | Exclusion list | Feature/safety layer |
-| `OfflineDiscoveryCacheService` signals | Offline presentation inputs | Service truth, Relay presentation only |
-| `DiscoveryOnboardingService` | Discovery tour | Feature side effect |
-| `MatchmakingOnboardingService` | Matchmaking tour state | Feature side effect |
-| `GlobalErrorHandler` in child boundary | Error reporting | Infrastructure, not UI primitive |
-| `HTMLAudioElement` | Audio-intro playback | Feature media side effect |
-| Angular Router | Notifications, VIP, profile and chat navigation | Feature route contract |
+| Boundary                               | Current operation                                   | Ownership rule                         |
+| -------------------------------------- | --------------------------------------------------- | -------------------------------------- |
+| `DiscoveryService.findPartners()`      | Partner search, offline/cache policy and enrichment | Feature/service, never Relay/Spartan   |
+| `UserService.getMyProfile()`           | Initial language/mode data                          | Feature data layer                     |
+| `UserService.updateMyProfile()`        | Persist serious learner mode                        | Feature data layer                     |
+| `SafetyService.getBlockedIdsAsync()`   | Exclusion list                                      | Feature/safety layer                   |
+| `OfflineDiscoveryCacheService` signals | Offline presentation inputs                         | Service truth, Relay presentation only |
+| `DiscoveryOnboardingService`           | Discovery tour                                      | Feature side effect                    |
+| `MatchmakingOnboardingService`         | Matchmaking tour state                              | Feature side effect                    |
+| `GlobalErrorHandler` in child boundary | Error reporting                                     | Infrastructure, not UI primitive       |
+| `HTMLAudioElement`                     | Audio-intro playback                                | Feature media side effect              |
+| Angular Router                         | Notifications, VIP, profile and chat navigation     | Feature route contract                 |
 
 No direct database call exists in the component. No product analytics hook was found in the audited files.
 

@@ -15,7 +15,9 @@ import { AppButtonPrimaryComponent } from '../../../components/primitives/button
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [HlmInput, HlmButton, 
+  imports: [
+    HlmInput,
+    HlmButton,
     TranslatePipe,
     FormsModule,
     FontScaleSliderComponent,

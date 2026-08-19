@@ -15,7 +15,15 @@ import { I18nService } from '../../services/i18n.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 @Component({
   selector: 'app-settings',
-  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
+  imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    TranslatePipe,
+    RouterModule,
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })

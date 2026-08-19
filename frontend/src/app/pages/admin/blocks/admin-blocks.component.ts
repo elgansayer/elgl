@@ -10,7 +10,8 @@ import { CrashReportService } from '../../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     TranslatePipe,
     DatePipe,
     AppCardComponent,
