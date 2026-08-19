@@ -126,8 +126,9 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     workspace = tmp_path / "state" / "worktrees" / "task"
     repository = tmp_path / "state" / "repository"
     log_dir = tmp_path / "log"
+    virtual_environment = tmp_path / "factory-venv"
     workdir = workspace / "frontend"
-    for directory in (repository, log_dir, workdir):
+    for directory in (repository, log_dir, virtual_environment / "bin", workdir):
         directory.mkdir(parents=True)
     captured: dict[str, object] = {}
 
@@ -144,6 +145,7 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     monkeypatch.setenv("FACTORY_LOG_DIR", str(log_dir))
     monkeypatch.setenv("FACTORY_REPOSITORY", str(repository))
     monkeypatch.setenv("GITHUB_TOKEN", "must-not-propagate")
+    monkeypatch.setattr("openhands_factory.verification.sys.prefix", str(virtual_environment))
     monkeypatch.setattr("openhands_factory.verification.run_process", fake_run_process)
 
     result = run_isolated_verification_process(
@@ -167,3 +169,4 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
+    assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")

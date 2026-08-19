@@ -75,6 +75,44 @@ describe('DiagnosticQuizComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('How well can you introduce yourself?');
   });
 
+  it('should expose each question as one labelled Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group).toBeTruthy();
+    expect(group.getAttribute('aria-labelledby')).toBe('diagnostic-question-0');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+    expect(group.querySelector('[aria-pressed]')).toBeNull();
+  });
+
+  it('should store numeric values emitted by the Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+
+    component.selectOption('q1', 2);
+    fixture.detectChanges();
+
+    expect(component.answers()).toEqual({ q1: 2 });
+    expect(component.canProceed()).toBe(true);
+  });
+
+  it('should ignore malformed non-numeric answer values', () => {
+    component.selectOption('q1', '2');
+    component.selectOption('q1', Number.NaN);
+
+    expect(component.answers()).toEqual({});
+  });
+
   it('should show error state when API fails', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('/api/quiz/questions?language=en');
