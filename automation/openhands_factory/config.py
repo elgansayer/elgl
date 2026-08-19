@@ -418,6 +418,14 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
+    # failures) is a bounded cooldown, not a dead end: a fully autonomous
+    # deployment with no operator triage step needs a task to come back and
+    # try again on its own on a short horizon, not sit inert for a day.
+    # Durable failure counters, the fingerprint, and last_error are preserved
+    # across this recovery, so a genuinely broken task simply re-quarantines
+    # after its next few attempts rather than tight-looping.
+    quarantine_recovery_minutes: int = 30
     review_lane_first: bool = True
     review_reserve_provider_slot: bool = True
     review_lane_max_concurrent: int = 1
@@ -455,6 +463,7 @@ class FactoryConfig(BaseModel):
         "provider_slot_wait_seconds",
         "architect_max_new_issues",
         "review_lane_max_concurrent",
+        "quarantine_recovery_minutes",
     )
     @classmethod
     def positive_limits(cls, value: int) -> int:
@@ -616,6 +625,9 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                quarantine_recovery_minutes=int(
+                    env.get("FACTORY_QUARANTINE_RECOVERY_MINUTES", "30")
+                ),
                 review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
                 review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
                 review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
