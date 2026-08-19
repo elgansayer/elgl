@@ -512,7 +512,7 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
     assert factory_config.agents.providers["pi"].enabled
-    assert factory_config.agents.providers["pi"].model == "google/gemini-3.7-flash"
+    assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
     assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
         "claude",

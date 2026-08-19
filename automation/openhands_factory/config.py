@@ -235,9 +235,12 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="pi",
                 auth_mode="subscription",
-                model="google/gemini-3.7-flash",
+                model="github-copilot/claude-sonnet-5",
                 credential_paths=[".pi"],
-                runtime_paths=[".local/bin"],
+                # pi's native installer places its executable in .local/bin as a
+                # symlink into .local/lib/node_modules; both must be mounted or
+                # the sandboxed process cannot resolve the symlink target.
+                runtime_paths=[".local/bin", ".local/lib"],
             ),
         }
     )
@@ -284,7 +287,7 @@ class AgentsConfig(BaseModel):
                 },
                 "pi": {
                     "credential_paths": [".pi"],
-                    "runtime_paths": [".local/bin"],
+                    "runtime_paths": [".local/bin", ".local/lib"],
                 },
             }.get(str(name), {})
             for key, default in defaults.items():

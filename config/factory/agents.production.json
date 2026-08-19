@@ -65,9 +65,9 @@
       "auth_mode": "subscription",
       "transport": "cli",
       "max_concurrency": 2,
-      "model": "google/gemini-3.7-flash",
+      "model": "github-copilot/claude-sonnet-5",
       "credential_paths": [".pi"],
-      "runtime_paths": [".local/bin"]
+      "runtime_paths": [".local/bin", ".local/lib"]
     }
   },
   "routing": {
