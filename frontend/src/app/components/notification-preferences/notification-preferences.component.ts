@@ -57,7 +57,8 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-start">{{
                 'notification_preferences.quiet_hours_start' | t
               }}</label>
-              <input hlmInput
+              <input
+                hlmInput
                 id="quiet-hours-start"
                 type="time"
                 [value]="quietStart()"
@@ -69,7 +70,8 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-end">{{
                 'notification_preferences.quiet_hours_end' | t
               }}</label>
-              <input hlmInput
+              <input
+                hlmInput
                 id="quiet-hours-end"
                 type="time"
                 [value]="quietEnd()"
@@ -81,14 +83,16 @@ import {
         </div>
 
         <div class="mt-6 flex gap-3">
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="reset()"
             class="rounded-app border border-surface-100 text-text-secondary hover:bg-surface-300 transition-colors px-4 py-2 text-sm font-semibold"
           >
             {{ 'common.reset' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="save()"
             class="rounded-app bg-primary text-on-fill hover:bg-primary/90 transition-colors px-4 py-2 text-sm font-semibold"

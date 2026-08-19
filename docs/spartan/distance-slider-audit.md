@@ -18,13 +18,13 @@ The current control already relies on the browser's native range-input interacti
 
 `DistanceSliderComponent` exposes four inputs and one output:
 
-| Contract | Default | Meaning |
-| --- | ---: | --- |
-| `minKm` | `1` | Minimum allowed distance in kilometres |
-| `maxKm` | `200` | Maximum allowed distance in kilometres |
-| `initialDistanceKm` | `undefined` | Parent-provided starting/current distance |
-| `disabled` | `false` | Disables the native range input |
-| `distanceChanged` | n/a | Emits a clamped kilometre value for user-driven `input` events |
+| Contract            |     Default | Meaning                                                        |
+| ------------------- | ----------: | -------------------------------------------------------------- |
+| `minKm`             |         `1` | Minimum allowed distance in kilometres                         |
+| `maxKm`             |       `200` | Maximum allowed distance in kilometres                         |
+| `initialDistanceKm` | `undefined` | Parent-provided starting/current distance                      |
+| `disabled`          |     `false` | Disables the native range input                                |
+| `distanceChanged`   |         n/a | Emits a clamped kilometre value for user-driven `input` events |
 
 Internal `currentDistanceKm` starts at 50 km. An Angular `effect()` copies `initialDistanceKm` into that signal whenever the input changes. The effect does **not** emit `distanceChanged`; only `onChange()` emits.
 
@@ -34,24 +34,24 @@ The native range has `step="1"` and clamps user-driven values into `[minKm, maxK
 
 ## Complete control and state inventory
 
-| Element / state | Current implementation | Current owner | Target owner | Migration action |
-| --- | --- | --- | --- | --- |
-| Distance label | Native `<label for="distance-range-slider">` with translated radius text | Feature presentation / `TranslatePipe` | Relay presentation | Preserve the label relationship; make the ID instance-safe |
-| Slider interaction | Native `<input type="range">` | Browser/native range semantics | Native range or an approved Spartan Slider capability | Do not recreate keyboard/pointer behaviour in feature code |
-| Minimum value | `[min]="minKm()"` | Component input | Feature contract | Preserve |
-| Maximum value | `[max]="maxKm()"` | Component input | Feature contract | Preserve |
-| Current value | `[value]="currentDistanceKm()"` | Component signal | Feature state | Preserve single source of truth |
-| Step size | `step="1"` | Native input | Native/primitive | Preserve unless product requirements change |
-| Disabled state | `[disabled]="disabled()"` plus opacity/cursor utilities | Native input plus Relay presentation | Native/primitive semantics plus Relay styling | Preserve native `disabled`; avoid `aria-disabled` shims |
-| User input | `(input)="onChange($event)"` | Component feature logic | Feature value adaptation | Keep only clamping/output adaptation; primitive owns interaction |
-| Output | `distanceChanged.emit(clamped)` | Component | Feature contract | Preserve kilometre payload |
-| ARIA numeric state | `aria-valuemin`, `aria-valuemax`, `aria-valuenow` | Feature template | Native range semantics already expose these values | Prefer native semantics; only add ARIA where it improves the accessible contract |
-| Accessible value text | Hard-coded `"{{ currentDistanceKm() }} km"` | Feature template | Translation/localisation layer | Replace hard-coded unit wording with translation-safe/localised text |
-| Track | Custom WebKit/Firefox pseudo-element CSS | Feature CSS | Relay presentation / approved slider Helm | Replace bespoke/off-contract token usage |
-| Thumb | Custom WebKit/Firefox pseudo-element CSS | Feature CSS | Relay presentation / approved slider Helm | Preserve product accent while using valid Relay tokens |
-| Accent colour | `[style.accent-color]="'var(--color-primary)'"` | Relay primary token | Relay | Preserve per-user/theme primary behaviour if the selected implementation still needs it |
-| Empty/loading/error states | None | n/a | n/a | Do not invent async states in this child |
-| Overlay/focus trap | None | n/a | n/a | No Dialog/Popover/Menu primitive is required |
+| Element / state            | Current implementation                                                   | Current owner                          | Target owner                                          | Migration action                                                                        |
+| -------------------------- | ------------------------------------------------------------------------ | -------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Distance label             | Native `<label for="distance-range-slider">` with translated radius text | Feature presentation / `TranslatePipe` | Relay presentation                                    | Preserve the label relationship; make the ID instance-safe                              |
+| Slider interaction         | Native `<input type="range">`                                            | Browser/native range semantics         | Native range or an approved Spartan Slider capability | Do not recreate keyboard/pointer behaviour in feature code                              |
+| Minimum value              | `[min]="minKm()"`                                                        | Component input                        | Feature contract                                      | Preserve                                                                                |
+| Maximum value              | `[max]="maxKm()"`                                                        | Component input                        | Feature contract                                      | Preserve                                                                                |
+| Current value              | `[value]="currentDistanceKm()"`                                          | Component signal                       | Feature state                                         | Preserve single source of truth                                                         |
+| Step size                  | `step="1"`                                                               | Native input                           | Native/primitive                                      | Preserve unless product requirements change                                             |
+| Disabled state             | `[disabled]="disabled()"` plus opacity/cursor utilities                  | Native input plus Relay presentation   | Native/primitive semantics plus Relay styling         | Preserve native `disabled`; avoid `aria-disabled` shims                                 |
+| User input                 | `(input)="onChange($event)"`                                             | Component feature logic                | Feature value adaptation                              | Keep only clamping/output adaptation; primitive owns interaction                        |
+| Output                     | `distanceChanged.emit(clamped)`                                          | Component                              | Feature contract                                      | Preserve kilometre payload                                                              |
+| ARIA numeric state         | `aria-valuemin`, `aria-valuemax`, `aria-valuenow`                        | Feature template                       | Native range semantics already expose these values    | Prefer native semantics; only add ARIA where it improves the accessible contract        |
+| Accessible value text      | Hard-coded `"{{ currentDistanceKm() }} km"`                              | Feature template                       | Translation/localisation layer                        | Replace hard-coded unit wording with translation-safe/localised text                    |
+| Track                      | Custom WebKit/Firefox pseudo-element CSS                                 | Feature CSS                            | Relay presentation / approved slider Helm             | Replace bespoke/off-contract token usage                                                |
+| Thumb                      | Custom WebKit/Firefox pseudo-element CSS                                 | Feature CSS                            | Relay presentation / approved slider Helm             | Preserve product accent while using valid Relay tokens                                  |
+| Accent colour              | `[style.accent-color]="'var(--color-primary)'"`                          | Relay primary token                    | Relay                                                 | Preserve per-user/theme primary behaviour if the selected implementation still needs it |
+| Empty/loading/error states | None                                                                     | n/a                                    | n/a                                                   | Do not invent async states in this child                                                |
+| Overlay/focus trap         | None                                                                     | n/a                                    | n/a                                                   | No Dialog/Popover/Menu primitive is required                                            |
 
 There is exactly one interactive element in this component.
 
