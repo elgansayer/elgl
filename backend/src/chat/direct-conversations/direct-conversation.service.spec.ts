@@ -14,6 +14,7 @@ function makeQuery(response: QueryResponse) {
   for (const method of ['select', 'eq', 'in', 'upsert']) {
     query[method] = vi.fn(() => query);
   }
+  query['maybeSingle'] = vi.fn(() => Promise.resolve(response));
   query['then'] = (
     resolve: (value: QueryResponse) => unknown,
     reject?: (reason: unknown) => unknown,
@@ -23,6 +24,7 @@ function makeQuery(response: QueryResponse) {
     eq: ReturnType<typeof vi.fn>;
     in: ReturnType<typeof vi.fn>;
     upsert: ReturnType<typeof vi.fn>;
+    maybeSingle: ReturnType<typeof vi.fn>;
     then: unknown;
   };
 }
