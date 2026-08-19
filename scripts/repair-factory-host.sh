@@ -4,6 +4,10 @@ set -euo pipefail
 TARGET=/etc/hellotalk-factory/factory.env
 STATE_DIR=/var/lib/hellotalk-factory
 LOG_DIR=/var/log/hellotalk-factory
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this command as root.' >&2
@@ -58,16 +62,15 @@ chmod 0600 "$temporary"
 mv -f "$temporary" "$TARGET"
 trap - EXIT
 
-install -d -o hellotalk-factory -g hellotalk-factory -m 0750 "$STATE_DIR" "$STATE_DIR/home" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$LOG_DIR"
-chown -R hellotalk-factory:hellotalk-factory "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$STATE_DIR/home"
-chmod 0700 "$STATE_DIR/home"
+install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$STATE_DIR" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery" "$LOG_DIR"
+chown -R "$FACTORY_USER:$FACTORY_USER" "$STATE_DIR/repository" "$STATE_DIR/profiles" "$STATE_DIR/worktrees" "$STATE_DIR/recovery"
 
 if [ -d "$STATE_DIR/repository/.git" ]; then
-  runuser -u hellotalk-factory -- \
+  runuser -u "$FACTORY_USER" -- \
     git -C "$STATE_DIR/repository" config --unset-all credential.helper || true
-  runuser -u hellotalk-factory -- \
+  runuser -u "$FACTORY_USER" -- \
     git -C "$STATE_DIR/repository" config --add credential.helper ''
-  runuser -u hellotalk-factory -- \
+  runuser -u "$FACTORY_USER" -- \
     git -C "$STATE_DIR/repository" config --add credential.helper \
     '!gh auth git-credential'
 fi
