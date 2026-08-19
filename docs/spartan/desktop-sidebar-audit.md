@@ -6,6 +6,12 @@ Target: `frontend/src/app/components/desktop-sidebar`
 
 Program dependency: #5462 (`Spartan UI 0001`), completed before this audit.
 
+## Implementation status
+
+Issue #6102 implements the audit's active-route correction while retaining native anchors and Angular Router ownership. Active primary and economy links now use `ariaCurrentWhenActive="page"`, inactive links omit `aria-current`, and the component suite is enabled with focused coverage for route inventory, native link semantics, focus treatment and active-route state. The mapped component-system preview records the same active navigation contract.
+
+The remaining sections preserve the original audit baseline and longer-term opportunities. Statements describing `[attr.aria-current]="false"` or the skipped suite refer to the pre-#6102 implementation.
+
 ## Scope
 
 This document is the implementation baseline for migrating and maintaining the desktop sidebar under the repository's Spartan Brain / Spartan Helm / Relay architecture.
@@ -50,55 +56,55 @@ The sidebar is hidden below the Tailwind `lg` breakpoint. Mobile navigation is t
 
 ## Existing implementation inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Action |
-| --- | --- | --- | --- | --- |
-| Navigation landmark | Native `<nav>` with translated `aria-label` | Native semantics | Feature shell / Relay composition | Keep native semantics |
-| Desktop visibility | `hidden lg:flex` | Responsive layout | Relay / app shell | Preserve |
-| Fixed sidebar geometry | `w-64 h-full`, column layout | Feature layout | Relay / app shell | Preserve unless design contract changes |
-| Sidebar surface | `bg-surface-200 border-e border-surface-100` | Relay tokens | Relay | Keep semantic tokens |
-| Product title | translated `app.title` text | App content | Relay / app composition | Keep |
-| Primary navigation list | Native `<ul>` / `<li>` | Native semantics | Feature shell / Relay composition | Keep semantic list structure |
-| Primary route links | Native `<a>` + `RouterLink` | Angular Router | Angular Router plus approved Relay navigation item | Preserve route/link semantics |
-| Active visual state | `RouterLinkActive="bg-surface-100 text-primary"` | Angular Router | Angular Router plus Relay tokens | Preserve |
-| Active accessibility state | `[attr.aria-current]="false"` on primary links | Feature template | Angular Router / navigation item | Fix during migration: current page must be exposed programmatically |
-| Route matching | `routerLinkActiveOptions` from `item.exact`; all current values are `false` | Feature config + Router | Feature route contract | Preserve unless route policy explicitly changes |
-| Primary icons | Decorative Unicode emoji with `aria-hidden="true"` | App presentation | Relay / icon composition | Preserve semantics; use approved icon stack if visuals change |
-| Unread state | `UnreadCounterService.tabCount(item.tab)` | UnreadCounterService | Feature data + Relay badge presentation | Preserve |
-| Unread badge visibility | Render only when count is greater than zero | Feature template | Feature state + Relay presentation | Preserve |
-| Unread badge cap | Values greater than 99 render as `99+` | Feature template | Product behaviour | Preserve |
-| Unread badge styling | `bg-danger text-on-fill`, logical `ms-auto` | Relay tokens | Relay | Keep semantic roles |
-| Coin Economy label | Translated `coinEco.sectionTitle` span | App content | Relay / semantic group labelling | Preserve copy; improve grouping semantics if practical |
-| Shop link | `/shop`, translated label | Angular Router | Navigation item | Preserve |
-| Sticker Store link | `/sticker-store`, translated label | Angular Router | Navigation item | Preserve |
-| VIP link | `/vip`, translated label | Angular Router | Navigation item | Preserve |
-| Economy active state | `RouterLinkActive="bg-surface-100 text-primary"` | Angular Router | Angular Router plus Relay tokens | Preserve |
-| Joyride Shop step | `tourShopNav` with translated title/text, `stepPosition="end"` | `ngx-joyride` | Existing tour integration | Preserve exactly unless a separate tour migration is approved |
-| Joyride Sticker step | `tourStickerNav` with translated title/text, `stepPosition="end"` | `ngx-joyride` | Existing tour integration | Preserve exactly |
-| Joyride VIP step | `tourVipNav` with translated title/text, `stepPosition="end"` | `ngx-joyride` | Existing tour integration | Preserve exactly |
-| Settings link | `/settings` native RouterLink | Angular Router | Navigation item | Preserve |
-| Settings active styling | No `RouterLinkActive` currently | None | Navigation policy | Record as current divergence; decide explicitly in implementation |
-| Focus indication | Focus-visible primary ring and offset on every link | Feature Tailwind utilities | Shared navigation item / Relay | Preserve or centralise without weakening visibility |
-| Hover state | Semantic surface/text token changes | Relay tokens | Relay | Preserve |
-| Colour transition | `transition-colors` | Presentation | Relay | Preserve unless motion policy changes |
-| Analytics | No analytics hook in this component | None | Feature/application layer | Do not invent as part of migration |
-| API/mutation | No API call or mutation in this component | None | Outside component | Do not add |
-| Overlay mechanics | No local overlay; Joyride may render its own guided-tour overlay | `ngx-joyride` | Existing tour provider | Do not replace incidentally |
+| Element / behaviour        | Current implementation                                                      | State owner                | Target owner                                       | Action                                                              |
+| -------------------------- | --------------------------------------------------------------------------- | -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
+| Navigation landmark        | Native `<nav>` with translated `aria-label`                                 | Native semantics           | Feature shell / Relay composition                  | Keep native semantics                                               |
+| Desktop visibility         | `hidden lg:flex`                                                            | Responsive layout          | Relay / app shell                                  | Preserve                                                            |
+| Fixed sidebar geometry     | `w-64 h-full`, column layout                                                | Feature layout             | Relay / app shell                                  | Preserve unless design contract changes                             |
+| Sidebar surface            | `bg-surface-200 border-e border-surface-100`                                | Relay tokens               | Relay                                              | Keep semantic tokens                                                |
+| Product title              | translated `app.title` text                                                 | App content                | Relay / app composition                            | Keep                                                                |
+| Primary navigation list    | Native `<ul>` / `<li>`                                                      | Native semantics           | Feature shell / Relay composition                  | Keep semantic list structure                                        |
+| Primary route links        | Native `<a>` + `RouterLink`                                                 | Angular Router             | Angular Router plus approved Relay navigation item | Preserve route/link semantics                                       |
+| Active visual state        | `RouterLinkActive="bg-surface-100 text-primary"`                            | Angular Router             | Angular Router plus Relay tokens                   | Preserve                                                            |
+| Active accessibility state | `[attr.aria-current]="false"` on primary links                              | Feature template           | Angular Router / navigation item                   | Fix during migration: current page must be exposed programmatically |
+| Route matching             | `routerLinkActiveOptions` from `item.exact`; all current values are `false` | Feature config + Router    | Feature route contract                             | Preserve unless route policy explicitly changes                     |
+| Primary icons              | Decorative Unicode emoji with `aria-hidden="true"`                          | App presentation           | Relay / icon composition                           | Preserve semantics; use approved icon stack if visuals change       |
+| Unread state               | `UnreadCounterService.tabCount(item.tab)`                                   | UnreadCounterService       | Feature data + Relay badge presentation            | Preserve                                                            |
+| Unread badge visibility    | Render only when count is greater than zero                                 | Feature template           | Feature state + Relay presentation                 | Preserve                                                            |
+| Unread badge cap           | Values greater than 99 render as `99+`                                      | Feature template           | Product behaviour                                  | Preserve                                                            |
+| Unread badge styling       | `bg-danger text-on-fill`, logical `ms-auto`                                 | Relay tokens               | Relay                                              | Keep semantic roles                                                 |
+| Coin Economy label         | Translated `coinEco.sectionTitle` span                                      | App content                | Relay / semantic group labelling                   | Preserve copy; improve grouping semantics if practical              |
+| Shop link                  | `/shop`, translated label                                                   | Angular Router             | Navigation item                                    | Preserve                                                            |
+| Sticker Store link         | `/sticker-store`, translated label                                          | Angular Router             | Navigation item                                    | Preserve                                                            |
+| VIP link                   | `/vip`, translated label                                                    | Angular Router             | Navigation item                                    | Preserve                                                            |
+| Economy active state       | `RouterLinkActive="bg-surface-100 text-primary"`                            | Angular Router             | Angular Router plus Relay tokens                   | Preserve                                                            |
+| Joyride Shop step          | `tourShopNav` with translated title/text, `stepPosition="end"`              | `ngx-joyride`              | Existing tour integration                          | Preserve exactly unless a separate tour migration is approved       |
+| Joyride Sticker step       | `tourStickerNav` with translated title/text, `stepPosition="end"`           | `ngx-joyride`              | Existing tour integration                          | Preserve exactly                                                    |
+| Joyride VIP step           | `tourVipNav` with translated title/text, `stepPosition="end"`               | `ngx-joyride`              | Existing tour integration                          | Preserve exactly                                                    |
+| Settings link              | `/settings` native RouterLink                                               | Angular Router             | Navigation item                                    | Preserve                                                            |
+| Settings active styling    | No `RouterLinkActive` currently                                             | None                       | Navigation policy                                  | Record as current divergence; decide explicitly in implementation   |
+| Focus indication           | Focus-visible primary ring and offset on every link                         | Feature Tailwind utilities | Shared navigation item / Relay                     | Preserve or centralise without weakening visibility                 |
+| Hover state                | Semantic surface/text token changes                                         | Relay tokens               | Relay                                              | Preserve                                                            |
+| Colour transition          | `transition-colors`                                                         | Presentation               | Relay                                              | Preserve unless motion policy changes                               |
+| Analytics                  | No analytics hook in this component                                         | None                       | Feature/application layer                          | Do not invent as part of migration                                  |
+| API/mutation               | No API call or mutation in this component                                   | None                       | Outside component                                  | Do not add                                                          |
+| Overlay mechanics          | No local overlay; Joyride may render its own guided-tour overlay            | `ngx-joyride`              | Existing tour provider                             | Do not replace incidentally                                         |
 
 ## Route contract
 
 All current sidebar destinations exist in the application route table and are part of the behaviour contract.
 
-| Surface | Route | Translation key | Unread source | Notes |
-| --- | --- | --- | --- | --- |
-| Chat | `/chat` | `nav.helloTalk` | `chat` | Descendant matching currently allowed |
-| Moments | `/moments` | `nav.moments` | `moments` | Descendant matching currently allowed |
-| Discovery | `/discovery` | `nav.connect` | `discovery` | Descendant matching currently allowed |
-| Audio Rooms | `/audio-rooms` | `nav.liveRooms` | `audioRooms` | Descendant matching currently allowed |
-| Profile | `/profile` | `nav.profile` | `profile` | Uses notification count through `UnreadCounterService` |
-| Shop | `/shop` | `nav.shop` | none | Joyride step target |
-| Sticker Store | `/sticker-store` | `nav.stickerStore` | none | Joyride step target |
-| VIP | `/vip` | `nav.vip` | none | Joyride step target |
-| Settings | `/settings` | `nav.settings` | none | Bottom-pinned link, no active style today |
+| Surface       | Route            | Translation key    | Unread source | Notes                                                  |
+| ------------- | ---------------- | ------------------ | ------------- | ------------------------------------------------------ |
+| Chat          | `/chat`          | `nav.helloTalk`    | `chat`        | Descendant matching currently allowed                  |
+| Moments       | `/moments`       | `nav.moments`      | `moments`     | Descendant matching currently allowed                  |
+| Discovery     | `/discovery`     | `nav.connect`      | `discovery`   | Descendant matching currently allowed                  |
+| Audio Rooms   | `/audio-rooms`   | `nav.liveRooms`    | `audioRooms`  | Descendant matching currently allowed                  |
+| Profile       | `/profile`       | `nav.profile`      | `profile`     | Uses notification count through `UnreadCounterService` |
+| Shop          | `/shop`          | `nav.shop`         | none          | Joyride step target                                    |
+| Sticker Store | `/sticker-store` | `nav.stickerStore` | none          | Joyride step target                                    |
+| VIP           | `/vip`           | `nav.vip`          | none          | Joyride step target                                    |
+| Settings      | `/settings`      | `nav.settings`     | none          | Bottom-pinned link, no active style today              |
 
 The implementation stage must not rename, redirect or broaden these routes as an incidental design-system change. If route ownership changes elsewhere, the sidebar should consume that separately reviewed contract.
 
@@ -106,15 +112,15 @@ The implementation stage must not rename, redirect or broaden these routes as an
 
 The component has no local writable signal state. Its rendered state is derived from viewport, Router state and `UnreadCounterService`.
 
-| State dimension | Values | User-visible result |
-| --- | --- | --- |
-| Viewport | below `lg` / `lg` and above | Sidebar hidden / sidebar displayed |
-| Route state | inactive / active | Default link / active token treatment |
-| Primary unread count | 0 / 1-99 / 100+ | no badge / numeric badge / `99+` |
-| Tour state | inactive / matching Shop, Sticker or VIP step | ordinary link / link acts as the Joyride target |
-| Theme | light / dark | Relay semantic tokens resolve to the current theme |
-| Primary accent | default / user-customised | active text and focus ring follow the current primary token |
-| Direction | LTR / RTL | logical borders and badge spacing mirror automatically |
+| State dimension      | Values                                        | User-visible result                                         |
+| -------------------- | --------------------------------------------- | ----------------------------------------------------------- |
+| Viewport             | below `lg` / `lg` and above                   | Sidebar hidden / sidebar displayed                          |
+| Route state          | inactive / active                             | Default link / active token treatment                       |
+| Primary unread count | 0 / 1-99 / 100+                               | no badge / numeric badge / `99+`                            |
+| Tour state           | inactive / matching Shop, Sticker or VIP step | ordinary link / link acts as the Joyride target             |
+| Theme                | light / dark                                  | Relay semantic tokens resolve to the current theme          |
+| Primary accent       | default / user-customised                     | active text and focus ring follow the current primary token |
+| Direction            | LTR / RTL                                     | logical borders and badge spacing mirror automatically      |
 
 There is no component-owned loading, error, retry, success, disabled, pending or optimistic state.
 
@@ -369,27 +375,27 @@ Do not generate a Sidebar merely because it appears in the Spartan catalogue. Th
 
 The existing skipped test suite should be re-enabled and expanded to cover at least:
 
-| Scenario | Expected contract |
-| --- | --- |
-| Component creation | Sidebar mounts with required services/router |
-| Landmark | One labelled navigation landmark is exposed |
-| Route inventory | Exactly the intended nine route links are rendered |
-| Primary routes | `/chat`, `/moments`, `/discovery`, `/audio-rooms`, `/profile` remain present |
-| Economy routes | `/shop`, `/sticker-store`, `/vip` remain present |
-| Settings route | `/settings` remains present |
-| Active route | Active focusable link receives Relay active treatment |
-| Active accessibility | Active link exposes `aria-current="page"`; inactive links do not |
-| Settings state | The deliberate Settings active-state policy is covered |
-| Unread zero | No badge is rendered |
-| Unread 1-99 | Current count renders and is accessible with useful context |
-| Unread 100+ | Visual value is capped at `99+` |
-| Reactivity | Updating each service signal updates the matching badge |
-| Focus | Every link remains keyboard focusable with visible focus treatment |
-| Translation | Landmark, navigation and section labels come from translation keys |
-| RTL | No physical-direction utilities are introduced and badge alignment mirrors |
-| Joyride | All three step identifiers and translated title/text bindings remain attached to the intended anchors |
-| Theme | Active/focus/badge roles use Relay semantic tokens |
-| Reflow | Desktop-to-mobile handoff preserves destination access at high zoom |
+| Scenario             | Expected contract                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| Component creation   | Sidebar mounts with required services/router                                                          |
+| Landmark             | One labelled navigation landmark is exposed                                                           |
+| Route inventory      | Exactly the intended nine route links are rendered                                                    |
+| Primary routes       | `/chat`, `/moments`, `/discovery`, `/audio-rooms`, `/profile` remain present                          |
+| Economy routes       | `/shop`, `/sticker-store`, `/vip` remain present                                                      |
+| Settings route       | `/settings` remains present                                                                           |
+| Active route         | Active focusable link receives Relay active treatment                                                 |
+| Active accessibility | Active link exposes `aria-current="page"`; inactive links do not                                      |
+| Settings state       | The deliberate Settings active-state policy is covered                                                |
+| Unread zero          | No badge is rendered                                                                                  |
+| Unread 1-99          | Current count renders and is accessible with useful context                                           |
+| Unread 100+          | Visual value is capped at `99+`                                                                       |
+| Reactivity           | Updating each service signal updates the matching badge                                               |
+| Focus                | Every link remains keyboard focusable with visible focus treatment                                    |
+| Translation          | Landmark, navigation and section labels come from translation keys                                    |
+| RTL                  | No physical-direction utilities are introduced and badge alignment mirrors                            |
+| Joyride              | All three step identifiers and translated title/text bindings remain attached to the intended anchors |
+| Theme                | Active/focus/badge roles use Relay semantic tokens                                                    |
+| Reflow               | Desktop-to-mobile handoff preserves destination access at high zoom                                   |
 
 For DOM/visual concerns that are brittle in unit tests, add or update the repository's existing E2E/visual coverage rather than asserting internal Spartan implementation details.
 

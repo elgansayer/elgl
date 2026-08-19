@@ -273,6 +273,32 @@ def test_load_normalises_legacy_provider_metadata_and_missing_timestamp(
     assert restored.updated_at.tzinfo is UTC
 
 
+def test_reconciliation_batch_preserves_sibling_worker_transition(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    jobs = store.reconcile(
+        [
+            Task("270", "Closed task", "", "github-issue", 0),
+            Task("271", "Live sibling", "", "github-issue", 0),
+        ]
+    )
+    retired = jobs["270"]
+    retired.state = JobState.DONE
+    retired.attempts = 2
+    retired.last_error = "Issue closed before pull request creation"
+
+    sibling = jobs["271"]
+    sibling.state = JobState.IMPLEMENTING
+    sibling.branch = "factory/issue-271-live-sibling"
+    store.save_job(sibling)
+    store.save_reconciled_jobs([retired])
+
+    restored = store.load()
+    assert restored["270"].state is JobState.DONE
+    assert restored["270"].next_attempt_at is None
+    assert restored["271"].state is JobState.IMPLEMENTING
+    assert restored["271"].branch == "factory/issue-271-live-sibling"
+
+
 def test_load_trims_legacy_provider_history_to_the_diagnostic_bound(tmp_path: Path) -> None:
     path = tmp_path / "jobs.json"
     history = [{"sequence": sequence} for sequence in range(MAX_PROVIDER_HISTORY + 10)]

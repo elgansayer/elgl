@@ -1,5 +1,5 @@
 import { PipeTransform } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ImageCropperComponent } from 'ngx-image-cropper';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,6 +14,7 @@ class MockTranslatePipe implements PipeTransform {
 
 describe('CoverPhotoCropperComponent', () => {
   let component: CoverPhotoCropperComponent;
+  let fixture: ComponentFixture<CoverPhotoCropperComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -21,11 +22,12 @@ describe('CoverPhotoCropperComponent', () => {
       providers: [{ provide: TranslatePipe, useClass: MockTranslatePipe }],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(CoverPhotoCropperComponent);
+    fixture = TestBed.createComponent(CoverPhotoCropperComponent);
     component = fixture.componentInstance;
 
     const testFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
     fixture.componentRef.setInput('imageFile', testFile);
+    fixture.detectChanges();
   });
 
   it('should create with the Spartan dialog open', () => {
@@ -78,7 +80,6 @@ describe('CoverPhotoCropperComponent', () => {
     expect(component.dialogState()).toBe('closed');
     expect(emitted).toHaveBeenCalledOnce();
   });
-
   it('should close and emit cancellation from the cancel action', () => {
     const emitted = vi.fn();
     component.cancelCrop.subscribe(emitted);

@@ -10,14 +10,16 @@ import { FormsModule } from '@angular/forms';
   template: `
     <div class="bg-surface-300 p-4 rounded-xl shadow-lg">
       <h3 class="text-lg font-semibold mb-3 text-text-primary">{{ 'quickPoll.title' | t }}</h3>
-      <input hlmInput
+      <input
+        hlmInput
         [(ngModel)]="question"
         class="w-full p-2 rounded bg-surface-200 border-s border-surface-100 mb-2 text-text-primary"
         placeholder="{{ 'quickPoll.questionPlaceholder' | t }}"
       />
       @for (opt of options(); track $index) {
         <div class="flex items-center gap-2 mb-1">
-          <input hlmInput
+          <input
+            hlmInput
             [(ngModel)]="options()[$index]"
             class="flex-1 p-2 rounded bg-surface-200 border-s border-surface-100 text-text-primary"
             [placeholder]="'quickPoll.optionPlaceholder' | t: { n: $index + 1 }"
@@ -33,7 +35,8 @@ import { FormsModule } from '@angular/forms';
         {{ 'quickPoll.addOption' | t }}
       </button>
       <div class="flex justify-end gap-2">
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="cancelled.emit()"
           class="px-4 py-2 rounded bg-surface-100 text-text-primary"
         >

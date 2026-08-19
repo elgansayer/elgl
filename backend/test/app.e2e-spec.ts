@@ -89,6 +89,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     process.env.STRIPE_MONTHLY_PRICE_ID = 'price_monthly_test';
     process.env.STRIPE_YEARLY_PRICE_ID = 'price_yearly_test';
     process.env.JWT_SECRET = 'test-jwt-secret';
+    process.env.TRANSFER_SECRET = 'test-transfer-secret';
     process.env.NODE_ENV = 'test';
     process.env.APPLE_SHARED_SECRET = 'test-apple-secret';
     process.env.APPLE_ROOT_CA_CERT_1 = 'test-apple-ca-cert-1';
@@ -303,6 +304,14 @@ describe('HelloTalk API E2E Integration Suite', () => {
           expect(res.body.target_language).toBe('es');
           expect(res.body.translations['nav.discover']).toBe('🌍 Descubrir');
         });
+    });
+
+    it('/nlp/simplify (POST) - should simplify an authenticated message', () => {
+      return request(app.getHttpServer())
+        .post('/nlp/simplify')
+        .send({ text: 'A complex sentence' })
+        .expect(201)
+        .expect({ original: 'hello', simplified: 'hello' });
     });
 
     it('/monetisation/webhooks/stripe (POST) - should process Stripe webhooks cleanly', () => {

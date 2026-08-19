@@ -26,8 +26,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [maintainAspectRatio]="true"
             [aspectRatio]="3 / 1"
             [resizeToWidth]="1200"
-            [resizeToHeight]="400"
-            format="jpeg"
+            [cropperMinWidth]="300"
+            [onlyScaleDown]="true"
+            format="webp"
             (imageCropped)="onImageCropped($event)"
             (loadImageFailed)="onLoadImageFailed()"
           />
