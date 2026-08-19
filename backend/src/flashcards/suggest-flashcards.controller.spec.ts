@@ -2,7 +2,7 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SuggestFlashcardsController } from './suggest-flashcards.controller';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 describe('SuggestFlashcardsController', () => {

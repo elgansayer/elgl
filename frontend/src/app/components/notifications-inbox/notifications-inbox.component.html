@@ -8,7 +8,8 @@
         {{ unreadCount() }}
       </span>
     }
-    <button hlmBtn
+    <button
+      hlmBtn
       class="text-sm text-text-muted hover:text-text-primary cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"
