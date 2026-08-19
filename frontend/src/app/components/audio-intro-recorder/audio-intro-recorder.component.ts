@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, output, signal, inject, input, DestroyRef } from '@angular/core';
 import { interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -7,7 +8,7 @@ import { UserService } from '../../services/user.service';
 @Component({
   selector: 'app-audio-intro-recorder',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],
 })

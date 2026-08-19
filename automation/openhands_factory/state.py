@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -22,16 +23,30 @@ def _fsync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
-def _is_valid_json(path: Path) -> bool:
+def _accepted(value: Any, validator: Callable[[Any], bool] | None) -> bool:
+    if validator is None:
+        return True
+    try:
+        return validator(value)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return False
+
+
+def _is_valid_json(path: Path, validator: Callable[[Any], bool] | None = None) -> bool:
     try:
         with path.open(encoding="utf-8") as handle:
-            json.load(handle)
+            value = json.load(handle)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return False
-    return True
+    return _accepted(value, validator)
 
 
-def atomic_write_json(path: Path, value: object) -> None:
+def atomic_write_json(
+    path: Path,
+    value: object,
+    *,
+    validator: Callable[[Any], bool] | None = None,
+) -> None:
     """Write JSON durably while retaining the previous valid generation.
 
     The primary file is replaced atomically. Before replacement, a valid previous
@@ -39,6 +54,8 @@ def atomic_write_json(path: Path, value: object) -> None:
     leaves at least one complete generation available to ``read_json``. Corrupt
     primaries are never promoted over a known-good backup.
     """
+    if not _accepted(value, validator):
+        raise ValueError(f"Refusing to write invalid JSON payload schema: {path}")
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     backup = _backup_path(path)
@@ -50,7 +67,7 @@ def atomic_write_json(path: Path, value: object) -> None:
             handle.flush()
             os.fsync(handle.fileno())
 
-        if path.exists() and _is_valid_json(path):
+        if path.exists() and _is_valid_json(path, validator):
             os.replace(path, backup)
         os.replace(temporary_name, path)
         _fsync_directory(path.parent)
@@ -64,7 +81,12 @@ def _load_json(path: Path) -> Any:
         return json.load(handle)
 
 
-def read_json(path: Path, default: Any) -> Any:
+def read_json(
+    path: Path,
+    default: Any,
+    *,
+    validator: Callable[[Any], bool] | None = None,
+) -> Any:
     """Read the primary generation, falling back to the last known-good backup.
 
     Missing state with no backup still returns the caller-provided default. A
@@ -75,11 +97,22 @@ def read_json(path: Path, default: Any) -> Any:
     backup = _backup_path(path)
     if path.exists():
         try:
-            return _load_json(path)
+            value = _load_json(path)
         except (UnicodeDecodeError, json.JSONDecodeError):
-            if backup.exists():
-                return _load_json(backup)
-            raise
+            value = None
+        else:
+            if _accepted(value, validator):
+                return value
+        if backup.exists():
+            backup_value = _load_json(backup)
+            if _accepted(backup_value, validator):
+                return backup_value
+        if value is None:
+            return _load_json(path)
+        raise ValueError(f"Invalid JSON payload schema: {path}")
     if backup.exists():
-        return _load_json(backup)
+        backup_value = _load_json(backup)
+        if _accepted(backup_value, validator):
+            return backup_value
+        raise ValueError(f"Invalid JSON backup payload schema: {backup}")
     return default

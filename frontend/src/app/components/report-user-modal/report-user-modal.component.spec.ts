@@ -47,12 +47,11 @@ describe('ReportUserModalComponent', () => {
       expect(templateContent).toContain('-me-2');
     });
 
-    it('should use logical pseudo-element positioning (after:start)', () => {
-      expect(templateContent).toContain('after:start-[2px]');
-    });
-
-    it('should support RTL toggle switch translation', () => {
-      expect(templateContent).toContain('rtl:peer-checked:after:-translate-x-full');
+    it('should delegate the block-user control to the owned Spartan checkbox', () => {
+      expect(templateContent).toContain('<hlm-checkbox');
+      expect(templateContent).toContain('[formField]="reportForm.blockUser"');
+      expect(templateContent).not.toContain('after:start-[2px]');
+      expect(templateContent).not.toContain('rtl:peer-checked:after:-translate-x-full');
     });
 
     it('should use block axis border utilities (RTL safe)', () => {
