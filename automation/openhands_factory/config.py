@@ -132,28 +132,28 @@ class AgentsRoutingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     planning: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     architecture: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     implementation: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     security_review: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     quality_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     code_review: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     ci_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     general_action: list[str] = Field(
-        default_factory=lambda: ["opencode", "google", "codex", "claude", "openhands"]
+        default_factory=lambda: ["opencode", "google", "codex", "claude", "pi"]
     )
     skip_busy_providers: bool = True
     same_provider_retries: int = 1
@@ -225,11 +225,19 @@ class AgentsConfig(BaseModel):
                 },
             ),
             "openhands": ProviderConfig(
-                enabled=True,
+                enabled=False,
                 emergency_only=True,
                 auth_mode="api",
                 transport="openhands-sdk",
                 model="gpt-5.6-sol",
+            ),
+            "pi": ProviderConfig(
+                enabled=True,
+                command="pi",
+                auth_mode="subscription",
+                model="google/gemini-3.7-flash",
+                credential_paths=[".pi"],
+                runtime_paths=[".local/bin"],
             ),
         }
     )
@@ -274,6 +282,10 @@ class AgentsConfig(BaseModel):
                     "credential_paths": [".config/opencode", ".local/share/opencode"],
                     "runtime_paths": [".local/bin", ".npm-global", ".opencode"],
                 },
+                "pi": {
+                    "credential_paths": [".pi"],
+                    "runtime_paths": [".local/bin"],
+                },
             }.get(str(name), {})
             for key, default in defaults.items():
                 normalised_provider.setdefault(key, default)
@@ -284,15 +296,28 @@ class AgentsConfig(BaseModel):
 
     @classmethod
     def legacy_openhands_only(cls) -> AgentsConfig:
-        config = cls(routing_enabled=False)
-        for name, provider in config.providers.items():
-            provider.enabled = name == "openhands"
-        config.providers["openhands"].emergency_only = False
+        # openhands now defaults to disabled (config.py's production default has
+        # no working credential for it), so it must be constructed pre-enabled
+        # here rather than enabled after the fact: routing_enabled=False requires
+        # openhands to already be enabled at validation time, which runs during
+        # construction, before any post-construction mutation could take effect.
+        config = cls(
+            routing_enabled=False,
+            providers={
+                "openhands": ProviderConfig(
+                    enabled=True,
+                    emergency_only=False,
+                    auth_mode="api",
+                    transport="openhands-sdk",
+                    model="gpt-5.6-sol",
+                ),
+            },
+        )
         return config
 
     @model_validator(mode="after")
     def validate_provider_names(self) -> AgentsConfig:
-        supported = {"claude", "codex", "google", "opencode", "openhands"}
+        supported = {"claude", "codex", "google", "opencode", "openhands", "pi"}
         declared_unknown = sorted(set(self.providers) - supported)
         if declared_unknown:
             raise ValueError(f"Unknown agent provider(s): {', '.join(declared_unknown)}")
