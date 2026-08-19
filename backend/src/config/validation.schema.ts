@@ -24,12 +24,22 @@ const testDefaults: Record<string, string> = {
   LIVEKIT_TURN_PASSWORD: 'somepassword',
   LIVEKIT_RTC_STUN_SERVERS:
     'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302',
-  CLOUDFLARE_R2_ENDPOINT: 'https://example.r2.cloudflarestorage.com',
-  CLOUDFLARE_R2_ACCESS_KEY_ID: 'test-r2-access-key-id',
-  CLOUDFLARE_R2_SECRET_ACCESS_KEY: 'test-r2-secret-access-key',
-  CLOUDFLARE_R2_BUCKET: 'test-bucket',
-  CLOUDFLARE_R2_PUBLIC_DOMAIN: 'https://cdn.example.com',
+  CLOUDFLARE_R2_GATEWAY_URL: 'http://localhost:8787',
+  CLOUDFLARE_R2_SIGNING_SECRET:
+    'test-r2-signing-secret-with-at-least-32-characters',
+  CLOUDFLARE_R2_SERVICE_TOKEN:
+    'test-r2-service-token-with-at-least-32-characters',
   CLOUDFLARE_R2_PUBLIC_URL: 'https://cdn.example.com',
+  CLOUDFLARE_R2_SOURCE_HOSTS: 'recordings.example.com',
+  CLOUDFLARE_R2_UPLOAD_TTL_SECONDS: '3600',
+  CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: '26214400',
+  CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES: '104857600',
+  CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS: '30000',
+  CLOUDFLARE_R2_ENDPOINT: 'https://example.r2.cloudflarestorage.com',
+  CLOUDFLARE_R2_ACCESS_KEY_ID: 'test-r2-egress-access-key-id',
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: 'test-r2-egress-secret-access-key',
+  CLOUDFLARE_R2_BUCKET: 'test-egress-bucket',
+  CLOUDFLARE_R2_PUBLIC_DOMAIN: 'https://cdn.example.com',
   DEEPL_API_KEY: 'test-deepl-key',
   AZURE_TRANSLATOR_KEY: 'test-azure-key',
   AZURE_TRANSLATOR_REGION: 'global',
@@ -120,7 +130,41 @@ export const validationSchema = Joi.object({
     testDefaults.LIVEKIT_RTC_STUN_SERVERS,
   ),
 
-  // -- Cloudflare R2 (Media Storage) --
+  // -- Cloudflare R2 Worker gateway (application media storage) --
+  CLOUDFLARE_R2_GATEWAY_URL: Joi.string()
+    .uri()
+    .default(testDefaults.CLOUDFLARE_R2_GATEWAY_URL),
+  CLOUDFLARE_R2_SIGNING_SECRET: Joi.string()
+    .min(32)
+    .default(testDefaults.CLOUDFLARE_R2_SIGNING_SECRET),
+  CLOUDFLARE_R2_SERVICE_TOKEN: Joi.string()
+    .min(32)
+    .default(testDefaults.CLOUDFLARE_R2_SERVICE_TOKEN),
+  CLOUDFLARE_R2_PUBLIC_URL: Joi.string()
+    .uri()
+    .default(testDefaults.CLOUDFLARE_R2_PUBLIC_URL),
+  CLOUDFLARE_R2_SOURCE_HOSTS: Joi.string()
+    .allow('')
+    .default(testDefaults.CLOUDFLARE_R2_SOURCE_HOSTS),
+  CLOUDFLARE_R2_UPLOAD_TTL_SECONDS: Joi.number()
+    .integer()
+    .min(60)
+    .max(86400)
+    .default(Number(testDefaults.CLOUDFLARE_R2_UPLOAD_TTL_SECONDS)),
+  CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: Joi.number()
+    .integer()
+    .min(1)
+    .default(Number(testDefaults.CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES)),
+  CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES: Joi.number()
+    .integer()
+    .min(1)
+    .default(Number(testDefaults.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES)),
+  CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .default(Number(testDefaults.CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS)),
+
+  // -- LiveKit Egress R2 compatibility (temporary isolated adapter) --
   CLOUDFLARE_R2_ENDPOINT: Joi.string()
     .uri()
     .default(testDefaults.CLOUDFLARE_R2_ENDPOINT),
@@ -134,9 +178,6 @@ export const validationSchema = Joi.object({
   CLOUDFLARE_R2_PUBLIC_DOMAIN: Joi.string()
     .uri()
     .default(testDefaults.CLOUDFLARE_R2_PUBLIC_DOMAIN),
-  CLOUDFLARE_R2_PUBLIC_URL: Joi.string()
-    .uri()
-    .default(testDefaults.CLOUDFLARE_R2_PUBLIC_URL),
   CLOUDFLARE_API_TOKEN: Joi.string().optional().allow(''),
   CLOUDFLARE_ZONE_ID: Joi.string().optional().allow(''),
 
