@@ -54,7 +54,8 @@ interface CatalogItem {
             >
               {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
-            <button hlmBtn
+            <button
+              hlmBtn
               class="mt-2 w-full rounded-full bg-primary text-on-fill py-1.5 text-xs sm:text-sm font-medium hover:bg-primary/90 transition-colors"
               (click)="addToCart(item.id)"
               [attr.aria-label]="'shop.addToCartAria' | t: { name: item.name }"

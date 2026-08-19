@@ -14,9 +14,9 @@ The model ingests data from the following domains:
 2. **Flashcards (Spaced Repetition System - SRS)**
    - **Data:** `word_token`, `translation`, `srs_level`, `easiness_factor`, `repetitions`, `interval_days`, `next_review_at`.
    - **Signal:**
-     - *Is Learning:* Words currently in the review cycle.
-     - *Repeatedly Gets Wrong:* Low `easiness_factor` or words that frequently reset their `srs_level`.
-     - *Knows:* High `srs_level` and long `interval_days`.
+     - _Is Learning:_ Words currently in the review cycle.
+     - _Repeatedly Gets Wrong:_ Low `easiness_factor` or words that frequently reset their `srs_level`.
+     - _Knows:_ High `srs_level` and long `interval_days`.
 
 3. **Assessments**
    - **Data:** Performance across specific `AssessmentSkill` (speaking, listening, reading, writing, grammar, vocabulary) and `AssessmentCategory` (self_assessment, comprehension, production, interaction) at varying difficulty levels.
@@ -70,7 +70,7 @@ interface KnowledgeItem {
 
   // Metrics
   confidenceScore: number; // Based on SRS easiness, assessment results, and correct usage in chat
-  errorFrequency: number;  // How often this item is corrected in Moments/Chat
+  errorFrequency: number; // How often this item is corrected in Moments/Chat
 
   // Link to raw data
   sourceIds: {
