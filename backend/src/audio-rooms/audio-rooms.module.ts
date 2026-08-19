@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { NlpModule } from '../nlp/nlp.module';
 import { CloudflareModule } from '../cloudflare/cloudflare.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsPreviewController } from './audio-rooms-preview.controller';
 import { AudioRoomsService } from './audio-rooms.service';
@@ -23,6 +24,7 @@ import { TranscriptEgressService } from './transcript-egress.service';
   providers: [
     AudioRoomsService,
     TranscriptEgressService,
+    CloudflareStreamService,
     // LiveKit RoomServiceClient is configured to manage audio room lifecycle.
     {
       provide: 'LIVEKIT_ROOM_SERVICE_CLIENT',
