@@ -27,6 +27,7 @@ describe('GlobalSearchComponent', () => {
           'discovery.any_language': 'Any language',
           'discovery.any_level': 'Any level',
           'discovery.search_button': 'Search Partners',
+          'audioIntro.title': 'Audio Introduction',
           'levels.a1': 'A1 - Beginner',
           'levels.a2': 'A2 - Elementary',
           'levels.b1': 'B1 - Intermediate',
@@ -85,16 +86,22 @@ describe('GlobalSearchComponent', () => {
     component.nativeLanguages.set('es');
     component.targetLanguage.set('fr');
     component.level.set('b1');
+    component.hasAudioIntro.set(true);
     fixture.detectChanges();
 
     component.applyFilters();
 
     expect(emitted).toEqual([
-      { native_languages: 'es', target_language: 'fr', proficiency_level: 'b1' },
+      {
+        native_languages: 'es',
+        target_language: 'fr',
+        proficiency_level: 'b1',
+        has_audio_intro: true,
+      },
     ]);
   });
 
-  it('should emit undefined for unset filters', () => {
+  it('should emit false for the audio intro filter when it is not selected', () => {
     const emitted: unknown[] = [];
     component.searchFilters.subscribe((f) => emitted.push(f));
 
@@ -105,8 +112,36 @@ describe('GlobalSearchComponent', () => {
         native_languages: undefined,
         target_language: undefined,
         proficiency_level: undefined,
+        has_audio_intro: false,
       },
     ]);
+  });
+
+  it('should apply the audio intro filter immediately when toggled', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((f) => emitted.push(f));
+
+    component.toggleHasAudioIntro();
+
+    expect(component.hasAudioIntro()).toBe(true);
+    expect(emitted).toEqual([
+      {
+        native_languages: undefined,
+        target_language: undefined,
+        proficiency_level: undefined,
+        has_audio_intro: true,
+      },
+    ]);
+  });
+
+  it('should render an associated audio intro checkbox label', () => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#global-hasAudioIntro');
+    const label: HTMLLabelElement = fixture.nativeElement.querySelector(
+      'label[for="global-hasAudioIntro"]',
+    );
+
+    expect(input).toBeTruthy();
+    expect(label.textContent?.trim()).toBe('Audio Introduction');
   });
 
   it('should populate availableLanguages with translated names', () => {
