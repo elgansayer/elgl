@@ -99,7 +99,7 @@ import { showToast } from '../../services/toast.service';
                   [aria-label]="
                     'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
                   "
-                  class="w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10 data-[checked=true]:shadow-lg data-[checked=true]:shadow-primary/20"
+                  class="group w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10 data-[checked=true]:shadow-lg data-[checked=true]:shadow-primary/20"
                 >
                   <span
                     class="block text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary"
