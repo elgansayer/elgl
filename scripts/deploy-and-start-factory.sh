@@ -186,7 +186,15 @@ worker_input_fingerprint() {
 }
 
 worker_image_id() {
+  # Rootless Podman re-enters the invoking working directory during its
+  # namespace setup for `image inspect` (unlike cheap subcommands such as
+  # `--version`). If the operator's checkout lives under a private-mode home
+  # directory, that directory is unreadable to the service user and Podman
+  # fails silently. --chdir moves the child into a directory the service
+  # user owns before Podman runs, matching the intent of the `cd` already
+  # used for the worker image build below.
   runuser -u hellotalk-factory -- env \
+    --chdir=/var/lib/hellotalk-factory/home \
     HOME=/var/lib/hellotalk-factory/home \
     podman image inspect --format '{{.Id}}' "$WORKER_IMAGE" 2>/dev/null
 }
@@ -258,12 +266,17 @@ if systemctl is-active --quiet hellotalk-factory-health.timer; then
   FACTORY_HEALTH_TIMER_WAS_ACTIVE=true
 fi
 FACTORY_MAINTENANCE_STARTED=true
-systemctl stop hellotalk-factory-health.timer
+# A first-time deploy, or a host recovering from a partial prior deploy, may
+# have no installed unit files yet: `systemctl stop` on a unit that was never
+# loaded is fatal under `set -e` even though there is nothing to stop. Accept
+# that outcome here; the check below still fails loud if anything real is
+# left running.
+systemctl stop hellotalk-factory-health.timer || true
 # A watchdog invocation already in progress can restart the daemon after the
 # timer is stopped. Drain it before stopping the daemon so dependency refreshes
 # and image replacement never overlap a live scheduler.
-systemctl stop hellotalk-factory-health.service
-systemctl stop hellotalk-factory.service
+systemctl stop hellotalk-factory-health.service || true
+systemctl stop hellotalk-factory.service || true
 if systemctl is-active --quiet hellotalk-factory-health.timer || \
   systemctl is-active --quiet hellotalk-factory-health.service || \
   systemctl is-active --quiet hellotalk-factory.service; then
