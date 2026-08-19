@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PrivacyComponent } from './privacy.component';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { LegalService } from '../../services/legal.service';
+import { LegalService, LegalDocument } from '../../services/legal.service';
 import { Component, input } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -17,6 +17,14 @@ class MockLegalDocumentViewerComponent {
   readonly lastUpdated = input.required<Date | string>();
   readonly sections = input.required<any[]>();
 }
+
+const PRIVACY_DOCUMENT: LegalDocument = {
+  title: 'Privacy Policy',
+  lastUpdated: '2026-07-01',
+  sections: [
+    { id: 'info-collect', heading: '1. Information We Collect', content: 'Test content.' },
+  ],
+};
 
 describe('PrivacyComponent', () => {
   let component: PrivacyComponent;
@@ -35,13 +43,7 @@ describe('PrivacyComponent', () => {
       .compileComponents();
 
     legalService = TestBed.inject(LegalService);
-    vi.spyOn(legalService, 'fetchPrivacyPolicy').mockResolvedValue({
-      title: 'Privacy Policy',
-      lastUpdated: '2026-07-01',
-      sections: [
-        { id: 'info-collect', heading: '1. Information We Collect', content: 'Test content.' },
-      ],
-    });
+    vi.spyOn(legalService, 'fetchPrivacyPolicy').mockResolvedValue(PRIVACY_DOCUMENT);
 
     fixture = TestBed.createComponent(PrivacyComponent);
     component = fixture.componentInstance;
@@ -57,5 +59,48 @@ describe('PrivacyComponent', () => {
     fixture.detectChanges();
     expect(legalService.fetchPrivacyPolicy).toHaveBeenCalled();
     expect(component.privacyResource.value()?.title).toBe('Privacy Policy');
+  });
+
+  it('should expose an accessible loading state while privacy policy is pending', () => {
+    const fetchPrivacy = vi.mocked(legalService.fetchPrivacyPolicy);
+    fetchPrivacy.mockReset();
+    fetchPrivacy.mockImplementation(() => new Promise<LegalDocument>(() => undefined));
+
+    const loadingFixture = TestBed.createComponent(PrivacyComponent);
+    loadingFixture.detectChanges();
+
+    const loading = loadingFixture.nativeElement.querySelector('[data-testid="privacy-loading"]');
+    expect(loading).toBeTruthy();
+    expect(loading.getAttribute('aria-busy')).toBe('true');
+    expect(loadingFixture.nativeElement.querySelector('[role="status"]')).toBeTruthy();
+  });
+
+  it('should render an alert and retry after a load failure', async () => {
+    const fetchPrivacy = vi.mocked(legalService.fetchPrivacyPolicy);
+    fetchPrivacy.mockReset();
+    fetchPrivacy
+      .mockRejectedValueOnce(new Error('network unavailable'))
+      .mockResolvedValueOnce(PRIVACY_DOCUMENT);
+
+    const errorFixture = TestBed.createComponent(PrivacyComponent);
+    errorFixture.detectChanges();
+    await errorFixture.whenStable();
+    errorFixture.detectChanges();
+
+    expect(errorFixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+    const retryButton = errorFixture.nativeElement.querySelector(
+      '[data-testid="privacy-retry"]',
+    ) as HTMLButtonElement;
+    expect(retryButton).toBeTruthy();
+    expect(retryButton.type).toBe('button');
+
+    retryButton.click();
+    errorFixture.detectChanges();
+    await errorFixture.whenStable();
+    errorFixture.detectChanges();
+
+    expect(fetchPrivacy).toHaveBeenCalledTimes(2);
+    expect(errorFixture.componentInstance.privacyResource.value()?.title).toBe('Privacy Policy');
+    expect(errorFixture.nativeElement.querySelector('[role="alert"]')).toBeFalsy();
   });
 });
