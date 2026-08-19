@@ -40,13 +40,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
 
         <div class="flex justify-end gap-3">
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="cancelCrop.emit()"
             class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
           >
             {{ 'common.cancel' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="save()"
             [disabled]="!croppedBlob()"
             class="px-4 py-2 text-sm font-medium text-on-fill bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
