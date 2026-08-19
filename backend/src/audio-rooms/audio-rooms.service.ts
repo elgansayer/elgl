@@ -163,15 +163,18 @@ export class AudioRoomsService implements OnModuleInit {
     const recordingUrl = dto.recording_url;
     const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
 
+    let r2RecordingUrl: string;
     try {
-      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
+      r2RecordingUrl = await this.r2Service.uploadFromUrl(
+        r2Key,
+        recordingUrl,
+      );
     } catch (error) {
       this.logger.error('Failed to upload recording to R2', error);
       throw new Error('Failed to upload recording to R2');
     }
 
-    // Update the room record with the R2 URL
-    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    // Store the URL confirmed by the Cloudflare R2 gateway.
     await supabase
       .from('audio_rooms')
       .update({ recording_url: r2RecordingUrl, is_active: false })
