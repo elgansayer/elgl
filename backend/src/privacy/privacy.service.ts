@@ -16,16 +16,9 @@ export interface PrivacyStatus {
   scheduled_for_deletion_at: string | null;
   latest_archive: {
     requested_at: string;
-    fulfilled_at: string | null;
     download_url: string | null;
     expires_in_seconds: number | null;
   } | null;
-}
-
-interface ArchiveStatusRow {
-  requested_at: string;
-  fulfilled_at: string | null;
-  archive_path: string | null;
 }
 
 @Injectable()
@@ -63,20 +56,16 @@ export class PrivacyService {
       throw new BadRequestException('Failed to upload archive file');
     }
 
-    // 3. Persist only the private object path. A short-lived signed URL is
-    // generated on demand by getStatus(); no durable public download URL is
-    // stored or written to logs.
-    const { error } = await supabase.from('archive_requests').insert(
-      {
-        user_id: userId,
-        requested_at: requestedAt,
-        fulfilled_at: requestedAt,
-        archive_url: null,
-        archive_path: fileName,
-        receipt_id: dto.receipt_id ?? null,
-        app_store: dto.app_store ?? null,
-      } as never,
-    );
+    // 3. The archive_url column is retained for compatibility, but for new
+    // private archives it stores the object path rather than a public URL.
+    // getStatus() turns that path into a short-lived signed URL on demand.
+    const { error } = await supabase.from('archive_requests').insert({
+      user_id: userId,
+      requested_at: requestedAt,
+      archive_url: fileName,
+      receipt_id: dto.receipt_id ?? null,
+      app_store: dto.app_store ?? null,
+    });
 
     if (error) {
       // Best-effort rollback so a failed metadata write does not strand an
@@ -113,8 +102,8 @@ export class PrivacyService {
     }
 
     const { data: archiveRows, error: archiveError } = await supabase
-      .from('archive_requests' as never)
-      .select('requested_at, fulfilled_at, archive_path')
+      .from('archive_requests')
+      .select('requested_at, archive_url')
       .eq('user_id', userId)
       .order('requested_at', { ascending: false })
       .limit(1);
@@ -126,19 +115,19 @@ export class PrivacyService {
       throw new BadRequestException('Failed to load archive status');
     }
 
-    const latestArchive = (
-      (archiveRows ?? []) as unknown as ArchiveStatusRow[]
-    )[0];
+    const latestArchive = archiveRows?.[0] ?? null;
+    const archivePath = latestArchive?.archive_url ?? '';
+    const isPrivateObjectPath =
+      archivePath.length > 0 &&
+      !archivePath.startsWith('http://') &&
+      !archivePath.startsWith('https://');
     let downloadUrl: string | null = null;
     let expiresInSeconds: number | null = null;
 
-    if (latestArchive?.archive_path) {
+    if (isPrivateObjectPath) {
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('gdpr-archives')
-        .createSignedUrl(
-          latestArchive.archive_path,
-          ARCHIVE_DOWNLOAD_TTL_SECONDS,
-        );
+        .createSignedUrl(archivePath, ARCHIVE_DOWNLOAD_TTL_SECONDS);
 
       if (signedUrlError) {
         this.logger.warn(
@@ -151,16 +140,11 @@ export class PrivacyService {
     }
 
     return {
-      is_deletion_pending: Boolean(
-        (user as { is_deletion_pending?: boolean | null }).is_deletion_pending,
-      ),
-      scheduled_for_deletion_at:
-        (user as { scheduled_for_deletion_at?: string | null })
-          .scheduled_for_deletion_at ?? null,
+      is_deletion_pending: Boolean(user.is_deletion_pending),
+      scheduled_for_deletion_at: user.scheduled_for_deletion_at ?? null,
       latest_archive: latestArchive
         ? {
             requested_at: latestArchive.requested_at,
-            fulfilled_at: latestArchive.fulfilled_at,
             download_url: downloadUrl,
             expires_in_seconds: expiresInSeconds,
           }
