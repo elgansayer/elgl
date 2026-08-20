@@ -70,12 +70,12 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('should render the search button', () => {
-    const button = fixture.nativeElement.querySelector('button');
+    const button = fixture.nativeElement.querySelector('button[hlmBtn]');
     expect(button.textContent.trim()).toBe('Search Partners');
   });
 
   it('should have aria-label on search button', () => {
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[hlmBtn]');
     expect(button.getAttribute('aria-label')).toBe('Search Partners');
   });
 
@@ -157,14 +157,7 @@ describe('GlobalSearchComponent', () => {
 
   it('should have six proficiency levels', () => {
     expect(component.levels.length).toBe(6);
-    expect(component.levels.map((l) => l.value)).toEqual([
-      'a1',
-      'a2',
-      'b1',
-      'b2',
-      'c1',
-      'c2',
-    ]);
+    expect(component.levels.map((l) => l.value)).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
   });
 
   it('should react to select changes', () => {
@@ -186,8 +179,9 @@ describe('GlobalSearchComponent', () => {
 
     expect(component.targetLanguage()).toBe('fr');
 
-    const levelSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#global-proficiencyLevel');
+    const levelSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '#global-proficiencyLevel',
+    );
 
     levelSelect.value = 'c1';
     levelSelect.dispatchEvent(new Event('change'));

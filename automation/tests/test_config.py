@@ -470,7 +470,7 @@ def test_agent_routing_rejects_a_phase_without_an_enabled_provider(tmp_path: Pat
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="implementation.*no enabled provider"):
+    with pytest.raises(ConfigurationError, match=r"implementation.*no enabled provider"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -566,7 +566,7 @@ def test_agent_routing_rejects_google_variant_on_another_provider(tmp_path: Path
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="cli_variant.*google"):
+    with pytest.raises(ConfigurationError, match=r"cli_variant.*google"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -579,7 +579,7 @@ def test_agent_routing_rejects_a_transport_the_adapter_would_ignore(tmp_path: Pa
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="codex.*requires transport.*cli"):
+    with pytest.raises(ConfigurationError, match=r"codex.*requires transport.*cli"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -593,7 +593,7 @@ def test_openhands_transport_defaults_to_the_sdk_and_rejects_an_explicit_cli(
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="openhands.*requires transport.*openhands-sdk"):
+    with pytest.raises(ConfigurationError, match=r"openhands.*requires transport.*openhands-sdk"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -606,7 +606,7 @@ def test_subscription_provider_rejects_api_auth_mode(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="codex.*requires auth_mode.*subscription"):
+    with pytest.raises(ConfigurationError, match=r"codex.*requires auth_mode.*subscription"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
