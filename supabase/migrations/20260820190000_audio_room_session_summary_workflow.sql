@@ -27,9 +27,17 @@ BEGIN
   END IF;
 END $$;
 
--- The application has always treated room_id as one transcript/summary job per
--- room (all existing writes use ON CONFLICT(room_id)). Make that contract
--- explicit so duplicate archive callbacks are idempotent at the database layer.
+-- Older installations did not enforce one transcript row per room. Preserve the
+-- newest row before adding the unique index so migration replay cannot fail on
+-- historical duplicate archive callbacks.
+DELETE FROM public.audio_room_transcripts older
+USING public.audio_room_transcripts newer
+WHERE older.room_id = newer.room_id
+  AND (
+    older.created_at < newer.created_at
+    OR (older.created_at = newer.created_at AND older.id < newer.id)
+  );
+
 CREATE UNIQUE INDEX IF NOT EXISTS audio_room_transcripts_room_id_unique
   ON public.audio_room_transcripts (room_id);
 
@@ -97,6 +105,38 @@ CREATE POLICY "Room participants can view transcripts"
         )
     )
   );
+
+-- Account deletion in this application is a soft-delete. Purge archive-derived
+-- learning data hosted by that account and revoke that user's participation as
+-- soon as is_deleted transitions to true. Room deletion already cascades the
+-- transcript and participation rows through their foreign keys.
+CREATE OR REPLACE FUNCTION public.purge_audio_room_archive_data_on_user_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.is_deleted = TRUE AND COALESCE(OLD.is_deleted, FALSE) = FALSE THEN
+    DELETE FROM public.audio_room_transcripts transcript
+    USING public.audio_rooms room
+    WHERE transcript.room_id = room.id
+      AND room.host_id = NEW.id;
+
+    DELETE FROM public.audio_room_participants
+    WHERE user_id = NEW.id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_purge_audio_room_archive_data_on_user_delete
+  ON public.users;
+CREATE TRIGGER trg_purge_audio_room_archive_data_on_user_delete
+AFTER UPDATE OF is_deleted ON public.users
+FOR EACH ROW
+EXECUTE FUNCTION public.purge_audio_room_archive_data_on_user_delete();
 
 COMMENT ON COLUMN public.audio_room_transcripts.summary_status IS
   'Durable AI summary job state: pending, processing, ready, or failed.';
