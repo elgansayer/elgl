@@ -106,6 +106,11 @@ export class ChatRoomComponent implements OnDestroy {
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
+  readonly conversationStarters = signal<string[]>([]);
+  readonly conversationStartersLoading = signal(false);
+  readonly conversationStartersError = signal(false);
+  readonly conversationStartersDismissed = signal(false);
+  readonly composerHasText = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
@@ -124,6 +129,14 @@ export class ChatRoomComponent implements OnDestroy {
     const blocked = this.blockedUserIds();
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
   });
+  readonly showConversationStarters = computed(
+    () =>
+      !this.isLoading() &&
+      this.messages().length === 0 &&
+      this.participants().length === 2 &&
+      !this.composerHasText() &&
+      !this.conversationStartersDismissed(),
+  );
 
   readonly replyingTo = signal<ChatMessage | null>(null);
   readonly highlightedMessageId = signal<string | null>(null);
@@ -152,6 +165,7 @@ export class ChatRoomComponent implements OnDestroy {
   });
   private mentionRangeStart = 0;
   private mentionRangeEnd = 0;
+  private conversationStarterRequestKey: string | null = null;
 
   readonly mentionItemToString = (value: unknown): string => {
     if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
@@ -186,6 +200,7 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   private async initializeRoom(): Promise<void> {
+    this.resetConversationStarters();
     await this.loadRoomDetails();
     if (this.isLocked()) {
       this.pendingUnlock.set(true);
@@ -200,8 +215,77 @@ export class ChatRoomComponent implements OnDestroy {
     this.restoreDraft();
     await this.setupRealTime();
     await this.loadParticipants();
+    await this.loadConversationStarters();
     await this.resolvePartnerLanguage();
     await this.loadAutoPlayPreference();
+  }
+
+  private resetConversationStarters(): void {
+    this.conversationStarters.set([]);
+    this.conversationStartersLoading.set(false);
+    this.conversationStartersError.set(false);
+    this.conversationStartersDismissed.set(false);
+    this.composerHasText.set(false);
+    this.conversationStarterRequestKey = null;
+  }
+
+  async loadConversationStarters(): Promise<void> {
+    if (
+      this.isLoading() ||
+      this.messages().length !== 0 ||
+      this.composerHasText() ||
+      this.participants().length !== 2
+    ) {
+      return;
+    }
+
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    const partner = this.participants().find((member) => member.user_id !== currentUserId);
+    if (!partner || this.blockedUserIds().includes(partner.user_id)) return;
+
+    const requestRoomId = this.roomId;
+    const requestKey = `${requestRoomId}:${partner.user_id}`;
+    if (
+      this.conversationStarterRequestKey === requestKey &&
+      (this.conversationStartersLoading() ||
+        this.conversationStarters().length > 0 ||
+        this.conversationStartersError())
+    ) {
+      return;
+    }
+
+    this.conversationStarterRequestKey = requestKey;
+    this.conversationStartersLoading.set(true);
+    this.conversationStartersError.set(false);
+
+    try {
+      const suggestions = await this.chatService.getConversationStarters(partner.user_id);
+      if (this.roomId !== requestRoomId || this.messages().length !== 0) return;
+      const cleanSuggestions = suggestions
+        .filter((suggestion) => typeof suggestion === 'string' && suggestion.trim().length > 0)
+        .map((suggestion) => suggestion.trim())
+        .slice(0, 3);
+      this.conversationStarters.set(cleanSuggestions);
+      this.conversationStartersError.set(cleanSuggestions.length === 0);
+    } catch {
+      if (this.roomId !== requestRoomId) return;
+      this.conversationStarters.set([]);
+      this.conversationStartersError.set(true);
+    } finally {
+      if (this.conversationStarterRequestKey === requestKey) {
+        this.conversationStartersLoading.set(false);
+      }
+    }
+  }
+
+  selectConversationStarter(suggestion: string): void {
+    if (!this.showConversationStarters() || !suggestion.trim()) return;
+    this.textInput = suggestion.trim();
+    this.composerHasText.set(true);
+    this.conversationStartersDismissed.set(true);
+    this.mentionQuery.set(null);
+    this.saveChatDrafts();
   }
 
   private async loadAutoPlayPreference(): Promise<void> {
@@ -313,6 +397,10 @@ export class ChatRoomComponent implements OnDestroy {
       if (v2Draft.explanationText) this.explanationText = v2Draft.explanationText;
       if (v2Draft.replyToId) this._restoredReplyToId = v2Draft.replyToId;
     }
+
+    const hasDraftText = this.textInput.trim().length > 0;
+    this.composerHasText.set(hasDraftText);
+    if (hasDraftText) this.conversationStartersDismissed.set(true);
   }
 
   private clearChatDrafts(): void {
@@ -327,6 +415,7 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
+      if (data.length > 0) this.conversationStartersDismissed.set(true);
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
         if (target) this.replyingTo.set(target);
@@ -347,6 +436,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
       const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
+        this.conversationStartersDismissed.set(true);
         this.messages.update((list) => [...list, payload.message!]);
       } else if (payload?.typing) {
         this.isTyping.set(true);
@@ -364,6 +454,9 @@ export class ChatRoomComponent implements OnDestroy {
   onComposerInput(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
+    const hasText = target.value.trim().length > 0;
+    this.composerHasText.set(hasText);
+    if (hasText) this.conversationStartersDismissed.set(true);
     const cursor = target.selectionStart ?? target.value.length;
     const textBeforeCursor = target.value.slice(0, cursor);
     const match = /@([\wÀ-ɏ؀-ۿ]*)$/.exec(textBeforeCursor);
@@ -409,6 +502,8 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
       this.textInput = '';
+      this.composerHasText.set(false);
+      this.conversationStartersDismissed.set(true);
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
