@@ -1,6 +1,6 @@
 import type { Mock } from 'vitest';
 import { ConfigService } from '@nestjs/config';
-import { ForbiddenException, HttpException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { ConversationStarterService } from './conversation-starter.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
@@ -190,6 +190,6 @@ describe('ConversationStarterService', () => {
 
     await expect(service.getSuggestions(currentUserId, partnerId)).rejects.toMatchObject({
       status: 429,
-    } satisfies Partial<HttpException>);
+    });
   });
 });
