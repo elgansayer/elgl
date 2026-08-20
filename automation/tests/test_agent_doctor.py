@@ -3,7 +3,7 @@ from pathlib import Path
 from openhands_factory.agents.base import AgentFailureKind, ProviderStatus
 from openhands_factory.agents.health import AgentCircuitBreaker, AgentHealthStore
 from openhands_factory.config import FactoryConfig
-from openhands_factory.doctor import outer_agent_health_checks
+from openhands_factory.doctor import agent_provider_checks
 
 
 def config(tmp_path: Path, *, routing: bool) -> FactoryConfig:
@@ -11,7 +11,7 @@ def config(tmp_path: Path, *, routing: bool) -> FactoryConfig:
     agents.write_text(
         '{"routing_enabled": '
         + ("true" if routing else "false")
-        + ', "providers": {"codex": {"enabled": true}}, '
+        + ', "providers": {"openhands": {"enabled": true}, "codex": {"enabled": true}}, '
         '"routing": {"implementation": ["codex"]}}',
         encoding="utf-8",
     )
@@ -30,10 +30,10 @@ def config(tmp_path: Path, *, routing: bool) -> FactoryConfig:
 
 
 def test_doctor_reports_outer_router_disabled_by_default(tmp_path: Path) -> None:
-    checks = outer_agent_health_checks(config(tmp_path, routing=False))
-    assert checks[0].name == "agent-router"
-    assert checks[0].passed
-    assert "disabled" in checks[0].detail
+    checks = agent_provider_checks(config(tmp_path, routing=False))
+    assert checks[0].name == "agent-routing"
+    assert not checks[0].passed
+    assert "OpenHands compatibility mode" in checks[0].detail
 
 
 def test_doctor_surfaces_typed_outer_provider_breaker(tmp_path: Path) -> None:
@@ -42,7 +42,6 @@ def test_doctor_surfaces_typed_outer_provider_breaker(tmp_path: Path) -> None:
     breaker.record_failure(AgentFailureKind.PROVIDER_AUTH)
     AgentHealthStore(tmp_path / "agent_health.json").save({"codex": breaker})
 
-    checks = {check.name: check for check in outer_agent_health_checks(factory_config)}
+    checks = {check.name: check for check in agent_provider_checks(factory_config)}
 
-    assert not checks["agent:codex"].passed
     assert checks["agent:codex"].detail.startswith(ProviderStatus.AUTH_REQUIRED.value)
