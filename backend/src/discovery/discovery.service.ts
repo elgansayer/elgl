@@ -14,6 +14,11 @@ import {
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
+import {
+  getSeriousLearnerActiveSince,
+  isActiveSeriousLearner,
+  SERIOUS_LEARNER_MIN_STREAK_DAYS,
+} from './serious-learner.policy';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -55,7 +60,7 @@ export class DiscoveryService {
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   // Multi-signal ranking algorithm:
   //   1. Fetch a candidate pool: discoverable, complete users with correction_ratio > 0.5,
-  //      and at least a 7-day study streak, ordered by descending correction_ratio (top 50).
+  //      and an active 7-day study streak, ordered by descending correction_ratio (top 50).
   //   2. For each candidate, fetch their corrector rating score via CorrectorScoreService.
   //   3. Compute a weighted composite score:
   //        - Correction ratio .................. 30 %
@@ -82,13 +87,17 @@ export class DiscoveryService {
     };
 
     try {
+      const seriousLearnerNow = new Date();
+      const seriousLearnerActiveSince =
+        getSeriousLearnerActiveSince(seriousLearnerNow);
+
       // Step 1: Keep the weekly highlight inside the same core visibility boundary
       // as ordinary discovery: hidden or deletion-pending accounts must never be
       // surfaced, and incomplete profiles are not useful recommendations.
       const { data: candidates, error } = await supabase
         .from('users')
         .select(
-          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days, last_active_at',
         )
         .eq('privacy_hide_from_search', false)
         .eq('is_deletion_pending', false)
@@ -96,7 +105,8 @@ export class DiscoveryService {
         .not('native_languages', 'is', null)
         .not('target_languages', 'is', null)
         .gt('correction_ratio', 0.5)
-        .gte('study_streak_days', 7)
+        .gte('study_streak_days', SERIOUS_LEARNER_MIN_STREAK_DAYS)
+        .gte('last_active_at', seriousLearnerActiveSince)
         .order('correction_ratio', { ascending: false })
         .limit(50);
 
@@ -120,7 +130,7 @@ export class DiscoveryService {
           Array.isArray(candidate.target_languages) &&
           candidate.target_languages.length > 0 &&
           (candidate.correction_ratio ?? 0) > 0.5 &&
-          (candidate.study_streak_days ?? 0) >= 7,
+          isActiveSeriousLearner(candidate, seriousLearnerNow),
       );
 
       if (!qualifiedCandidates || qualifiedCandidates.length === 0) {
@@ -401,6 +411,17 @@ export class DiscoveryService {
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
+    const seriousLearnerOnly =
+      query.serious_learner_only === true ||
+      query.serious_learner_mode === true ||
+      _currentUserProfile?.is_serious_learner === true;
+    if (seriousLearnerOnly) {
+      query.serious_learner_only = true;
+    }
+    const seriousLearnerActiveSince = seriousLearnerOnly
+      ? getSeriousLearnerActiveSince()
+      : null;
+
     let searchLat = query.latitude;
     let searchLon = query.longitude;
 
@@ -442,7 +463,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -466,19 +488,14 @@ export class DiscoveryService {
       ]);
     }
 
-    if (query.serious_learner_only) {
+    if (seriousLearnerOnly && seriousLearnerActiveSince) {
       queryBuilder = queryBuilder
-        .gt('study_streak_days', 7)
-        .gte('correction_ratio', 0.8);
+        .gte('study_streak_days', SERIOUS_LEARNER_MIN_STREAK_DAYS)
+        .gte('last_active_at', seriousLearnerActiveSince);
     }
 
     if (query.level) {
       queryBuilder = queryBuilder.eq('proficiency_level', query.level);
-    }
-
-    // When the user has serious_learner_mode enabled, force serious learner filter
-    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
-      query.serious_learner_only = true;
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -552,7 +569,7 @@ export class DiscoveryService {
           ? [query.native_languages]
           : null,
         filter_target: query.target_language || null,
-        serious_only: Boolean(query.serious_learner_only),
+        serious_only: seriousLearnerOnly,
         filter_level: query.level || null,
         filter_gender:
           _currentUserProfile?.is_vip && query.gender ? query.gender : null,
@@ -742,6 +759,17 @@ export class DiscoveryService {
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
+    const seriousLearnerOnly =
+      query.serious_learner_only === true ||
+      query.serious_learner_mode === true ||
+      currentUserProfile?.is_serious_learner === true;
+    if (seriousLearnerOnly) {
+      query.serious_learner_only = true;
+    }
+    const seriousLearnerActiveSince = seriousLearnerOnly
+      ? getSeriousLearnerActiveSince()
+      : null;
+
     // Apply VIP country/city spoofing
     if (currentUserProfile?.is_vip) {
       if (currentUserProfile.mock_country) {
@@ -758,7 +786,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -780,10 +809,10 @@ export class DiscoveryService {
       ]);
     }
 
-    if (query.serious_learner_only) {
+    if (seriousLearnerOnly && seriousLearnerActiveSince) {
       queryBuilder = queryBuilder
-        .gt('study_streak_days', 7)
-        .gte('correction_ratio', 0.8);
+        .gte('study_streak_days', SERIOUS_LEARNER_MIN_STREAK_DAYS)
+        .gte('last_active_at', seriousLearnerActiveSince);
     }
 
     if (query.level) {
@@ -1097,9 +1126,7 @@ export class DiscoveryService {
     }
 
     if (query.serious_learner_only) {
-      filtered = filtered.filter(
-        (u) => u.study_streak_days > 7 && u.correction_ratio >= 0.8,
-      );
+      filtered = filtered.filter((u) => isActiveSeriousLearner(u));
     }
 
     if (query.age_min !== undefined) {
