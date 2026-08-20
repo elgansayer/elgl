@@ -22,6 +22,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
@@ -36,6 +37,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
     AppEmptyStateComponent,
     AppCardComponent,
     AppButtonPrimaryComponent,
+    A11yClickableDirective,
   ],
   template: `
     <app-srs-error-boundary
@@ -174,9 +176,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   class="flip-card cursor-pointer select-none"
                   [class.is-flipped]="isFlipped()"
                   (click)="flipCard()"
-                  (keydown.enter)="flipCard()"
-                  (keydown.space)="flipCard(); $event.preventDefault()"
-                  role="button"
+                  appA11yClickable
                   tabindex="0"
                   [attr.aria-label]="
                     (isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel')

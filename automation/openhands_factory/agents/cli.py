@@ -104,7 +104,7 @@ def redact_agent_output(value: str) -> str:
 def extract_retry_after_seconds(value: str) -> int | None:
     patterns = (
         r"(?i)retry[-_ ]after(?: seconds)?[\s:=]+(\d+)",
-        r"(?i)resets[_ ]in[_ ]seconds[\s:=]+(\d+)",
+        r'(?i)"?resets[_ ]in[_ ]seconds"?[\s:=]+(\d+)',
         r"(?i)try again in\s+(\d+)\s*seconds?",
     )
     for pattern in patterns:

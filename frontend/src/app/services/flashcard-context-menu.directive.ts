@@ -1,99 +1,115 @@
-import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
-import { FlashcardService } from './flashcard.service';
+import { Directive, ElementRef, OnDestroy, inject, input, output } from '@angular/core';
+
+const LONG_PRESS_MS = 650;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 12;
+
+export interface FlashcardSelectionRequest {
+  text: string;
+  context: string;
+  sourceLanguage?: string;
+}
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',
+    '(touchmove)': 'onTouchMove($event)',
+    '(touchend)': 'onTouchEnd()',
+    '(touchcancel)': 'onTouchEnd()',
   },
 })
-export class FlashcardContextMenuDirective {
-  /** Source language of the selected text (could be read from a data attribute or input). */
-  readonly sourceLanguage = input<string>('en');
+export class FlashcardContextMenuDirective implements OnDestroy {
+  /** Optional language hint associated with the source content. */
+  readonly sourceLanguage = input<string | undefined>(undefined);
+  /** Exact source context to persist with the card instead of derived rendered text. */
+  readonly selectionContext = input<string | undefined>(undefined);
+  /** Requests that the host open its accessible flashcard action surface. */
+  readonly flashcardSelection = output<FlashcardSelectionRequest>();
 
-  private flashcardService = inject(FlashcardService);
-  private elRef = inject<ElementRef<HTMLElement>>(ElementRef);
-  private errorHandler = inject(ErrorHandler);
-
-  private overlay: HTMLElement | null = null;
+  private readonly elRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private touchStartPoint: { x: number; y: number } | null = null;
 
   onContextMenu(event: MouseEvent): void {
+    this.clearLongPressTimer();
+    const selection = this.getOwnedSelection();
+    if (!selection) return;
+
     event.preventDefault();
-    this.removeOverlay();
+    event.stopPropagation();
+    this.flashcardSelection.emit(selection);
+  }
+
+  onTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 1) {
+      this.clearLongPressTimer();
+      return;
+    }
+
+    // Selected-text long press is a separate interaction from the surrounding
+    // whole-message menu. Do not preventDefault: native scrolling and text
+    // selection must continue to work.
+    event.stopPropagation();
+    const touch = event.touches[0];
+    this.touchStartPoint = { x: touch.clientX, y: touch.clientY };
+    this.clearLongPressTimer();
+    this.longPressTimer = setTimeout(() => {
+      const selection = this.getOwnedSelection();
+      if (selection) this.flashcardSelection.emit(selection);
+    }, LONG_PRESS_MS);
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    if (!this.touchStartPoint || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - this.touchStartPoint.x;
+    const dy = touch.clientY - this.touchStartPoint.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+      this.clearLongPressTimer();
+    }
+  }
+
+  onTouchEnd(): void {
+    this.clearLongPressTimer();
+    this.touchStartPoint = null;
+  }
+
+  ngOnDestroy(): void {
+    this.clearLongPressTimer();
+  }
+
+  private getOwnedSelection(): FlashcardSelectionRequest | null {
+    if (typeof window === 'undefined') return null;
 
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) {
-      return;
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+
+    const range = selection.getRangeAt(0);
+    const host = this.elRef.nativeElement;
+    if (!this.containsNode(host, range.startContainer) || !this.containsNode(host, range.endContainer)) {
+      return null;
     }
-    const selectedText = selection.toString().trim();
-    if (!selectedText) {
-      return;
-    }
 
-    const contextText = this.elRef.nativeElement.textContent ?? '';
-    this.showOverlay(event.clientX, event.clientY, selectedText, contextText);
-  }
+    const text = selection.toString().trim();
+    if (!text) return null;
 
-  onTouchStart(_event: TouchEvent): void {
-    /* long-press detection could be added later */
-  }
-
-  private showOverlay(x: number, y: number, word: string, context: string): void {
-    const div = document.createElement('div');
-    div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
-    div.style.left = `${x}px`;
-    div.style.top = `${y}px`;
-    div.textContent = 'Create Flashcard';
-
-    div.addEventListener('click', async () => {
-      try {
-        await this.flashcardService.createFlashcard({
-          word_token: word,
-          original_context: context,
-          translation: word,
-        });
-        // Notify user with a toast if implemented
-      } catch (err) {
-        this.reportError('createFlashcard', err);
-        // Show error toast
-      }
-      this.removeOverlay();
-    });
-
-    this.overlay = div;
-    document.body.appendChild(div);
-
-    const closeHandler: EventListener = (e: Event) => {
-      const target = e.target;
-      if (!target || !(target instanceof Node)) {
-        return;
-      }
-      if (!div.contains(target)) {
-        document.removeEventListener('click', closeHandler);
-        this.removeOverlay();
-      }
+    return {
+      text,
+      context: (this.selectionContext() ?? host.textContent ?? '').trim(),
+      sourceLanguage: this.sourceLanguage()?.trim() || undefined,
     };
-
-    // Delay to avoid immediate close from the context menu event itself
-    setTimeout(() => {
-      document.addEventListener('click', closeHandler);
-    }, 0);
   }
 
-  private removeOverlay(): void {
-    if (this.overlay && this.overlay.parentNode) {
-      this.overlay.parentNode.removeChild(this.overlay);
-    }
-    this.overlay = null;
+  private containsNode(host: HTMLElement, node: Node): boolean {
+    const candidate = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+    return node === host || (candidate !== null && host.contains(candidate));
   }
 
-  private reportError(operation: string, err: unknown): void {
-    const message = err instanceof Error ? err.message : String(err);
-    const ctxError = new Error(`[SRS:FlashcardContextMenu] ${operation} failed: ${message}`);
-    if (err instanceof Error && err.stack) {
-      ctxError.stack = err.stack;
+  private clearLongPressTimer(): void {
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
     }
-    this.errorHandler.handleError(ctxError);
   }
 }
