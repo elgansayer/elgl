@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { lessonSections } from './lesson-content';
@@ -15,7 +16,7 @@ import type { LessonProgress } from './lessons.model';
 
 @Component({
   selector: 'app-lesson-detail',
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, HlmButton, TranslatePipe],
   template: `
     <main class="ps-4 pe-4 py-6" aria-labelledby="lesson-heading">
       <a
@@ -33,6 +34,7 @@ import type { LessonProgress } from './lessons.model';
         <div class="mt-4" role="alert" [attr.data-auth-required]="isUnauthorized()">
           <p class="text-on-surface-secondary">{{ 'common.error' | t }}</p>
           <button
+            hlmBtn
             class="mt-3 min-h-11 rounded-lg bg-surface-elevated px-4 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             type="button"
             (click)="lessonResource.reload()"
@@ -100,6 +102,7 @@ import type { LessonProgress } from './lessons.model';
 
             <nav class="mt-5 flex items-center justify-between gap-3">
               <button
+                hlmBtn
                 class="min-h-11 rounded-lg bg-surface-elevated px-4 py-2 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 type="button"
                 [disabled]="activeIndex() === 0 || isSaving()"
@@ -110,6 +113,7 @@ import type { LessonProgress } from './lessons.model';
 
               @if (activeIndex() < sections().length - 1) {
                 <button
+                  hlmBtn
                   class="min-h-11 rounded-lg bg-accent px-4 py-2 text-accent-content disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   type="button"
                   [disabled]="isSaving()"
@@ -119,6 +123,7 @@ import type { LessonProgress } from './lessons.model';
                 </button>
               } @else {
                 <button
+                  hlmBtn
                   class="min-h-11 rounded-lg bg-accent px-4 py-2 text-accent-content disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   type="button"
                   [disabled]="isSaving() || progress()?.completed"
