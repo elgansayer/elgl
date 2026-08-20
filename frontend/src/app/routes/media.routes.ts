@@ -7,7 +7,6 @@ export const mediaRoutes: Routes = [
       import('../components/audio-room-archive/audio-room-archive.component').then(
         (m) => m.AudioRoomArchiveComponent,
       ),
-    title: 'Audio Room Archives - HelloTalk',
   },
   {
     path: 'audio-rooms',
