@@ -33,7 +33,7 @@ export class AudioRoomTranscriptAccessInterceptor implements NestInterceptor {
     if (request.method !== 'GET') return next.handle();
 
     const path = request.path || request.url.split('?')[0];
-    const match = path.match(/^\/audio-rooms\/([^/]+)\/transcript\/?$/);
+    const match = path.match(/\/audio-rooms\/([^/]+)\/transcript\/?$/);
     if (!match) return next.handle();
 
     const userId = request.user?.id;
