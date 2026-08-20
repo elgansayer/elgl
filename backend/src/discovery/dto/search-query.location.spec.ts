@@ -1,6 +1,6 @@
+import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { describe, expect, it } from '@jest/globals';
 import { SearchQueryDto } from './search-query.dto';
 
 async function errorsFor(input: Record<string, unknown>) {
