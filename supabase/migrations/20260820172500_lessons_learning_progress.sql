@@ -1,4 +1,20 @@
 -- Production learner-facing Lessons support.
+-- The legacy application already models a lessons table, but historical migration
+-- history did not create it. Creating the table conditionally makes clean resets
+-- deterministic while remaining a no-op on deployed databases where it exists.
+CREATE TABLE IF NOT EXISTS public.lessons (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  description TEXT,
+  content_json JSONB,
+  language_code VARCHAR(16) NOT NULL,
+  difficulty_level INTEGER,
+  cover_image_url TEXT,
+  audio_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
 -- Existing lessons stay visible after rollout to preserve current behaviour.
 ALTER TABLE public.lessons
   ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT true,
