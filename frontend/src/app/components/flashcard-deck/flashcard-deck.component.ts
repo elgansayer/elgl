@@ -199,6 +199,7 @@ const DECK_ICONS = [
                     [style.border-color]="deck.colour + '40'"
                     (click)="openDeckDetail(deck)"
                     appA11yClickable
+                    tabindex="0"
                     [attr.aria-label]="'deck.openAriaLabel' | t: { name: deck.name }"
                   >
                     <div
