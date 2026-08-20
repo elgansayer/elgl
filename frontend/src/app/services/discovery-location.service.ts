@@ -98,9 +98,10 @@ export class DiscoveryLocationService {
     });
 
     this.pendingRequest = request;
-    void request.finally(() => {
+    const clearPending = () => {
       if (this.pendingRequest === request) this.pendingRequest = null;
-    });
+    };
+    void request.then(clearPending, clearPending);
     return request;
   }
 
