@@ -40,7 +40,7 @@ The canonical category shape is:
 
 The old frontend-only `badge` field and legacy category names (`direct_messages`, `groups`, `likes`, `voice_rooms`) are not part of this endpoint's contract. Legacy `/notifications/preferences` helpers remain isolated for callers that still need the historical endpoint.
 
-Migration `20260820204500_notification_preferences_timezone.sql` adds the nullable `quiet_hours_timezone` column. The column is nullable to permit a mixed-version rollout and does not rewrite existing rows.
+Migration `20260820204500_notification_preferences_timezone.sql` converges `notification_preferences` into the root Supabase migration history and adds the nullable `quiet_hours_timezone` field. The table was originally defined only by a module-local backend migration, so a clean `supabase db reset` could otherwise reach the timezone migration without having the table. The migration is idempotent: on a fresh database it creates the canonical table, trigger, index, and owner-only RLS policies; on an existing deployment it only adds missing newer fields. Existing rows are not rewritten.
 
 ## Validation and failure behaviour
 
@@ -77,11 +77,11 @@ The repository's normal CI remains authoritative for lint, type checking, unit t
 
 ## Rollout
 
-1. Apply the Supabase migration adding `quiet_hours_timezone`.
+1. Apply the Supabase migration. Existing installations gain `quiet_hours_timezone`; clean installations also converge the canonical notification-preferences table into root migration history.
 2. Deploy the backend. Existing rows continue to work, using UTC when no timezone is stored.
 3. Deploy the frontend. The next scheduled-quiet-hours save records the browser's current IANA timezone and uses the canonical channel contract.
 4. Observe notification-delivery error rates and preference-update validation failures. No private notification content or preference values should be added to logs.
 
 ## Rollback
 
-Roll back frontend and backend application code normally. Leave the nullable timezone column in place; older code ignores it and retaining it avoids a destructive schema rollback. If the new frontend is rolled back before the backend, the backend still accepts existing preference updates that do not include the timezone field. If the new backend is rolled back before the frontend, scheduled saves may persist only the fields understood by that older backend, so application versions should normally be rolled back together.
+Roll back frontend and backend application code normally. Leave the converged notification-preferences schema and nullable timezone column in place; older code ignores the extra field and retaining the schema avoids a destructive database rollback. If the new frontend is rolled back before the backend, the backend still accepts existing preference updates that do not include the timezone field. If the new backend is rolled back before the frontend, scheduled saves may persist only the fields understood by that older backend, so application versions should normally be rolled back together.
