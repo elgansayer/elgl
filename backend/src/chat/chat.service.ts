@@ -87,7 +87,9 @@ export class ChatService {
       const token = await this.centrifugoService.signJwt(payload);
       return token;
     } catch (error) {
-      throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
+      throw new Error(`Failed to generate Centrifugo token: ${error.message}`, {
+        cause: error,
+      });
     }
   }
 

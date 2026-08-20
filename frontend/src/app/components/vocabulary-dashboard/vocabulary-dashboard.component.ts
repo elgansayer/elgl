@@ -48,6 +48,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 [class.is-flipped]="isFlipped()"
                 (click)="flipCard()"
                 appA11yClickable
+                tabindex="0"
                 [attr.aria-pressed]="isFlipped()"
               >
                 <div class="flashcard-inner">
