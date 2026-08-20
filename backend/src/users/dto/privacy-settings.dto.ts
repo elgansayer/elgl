@@ -39,10 +39,4 @@ export class PrivacySettingsDto {
   @IsOptional()
   @IsBoolean()
   privacy_hide_vip_status?: boolean;
-
-  // Accepted for forward-compatible privacy clients. The canonical profile endpoint
-  // currently persists this flag via UpdateProfileDto.
-  @IsOptional()
-  @IsBoolean()
-  privacy_hide_online_status?: boolean;
 }
