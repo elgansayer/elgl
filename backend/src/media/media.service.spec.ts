@@ -116,14 +116,56 @@ describe('MediaService', () => {
     });
   });
 
-  it('rejects unsupported avatar types before issuing an upload URL', async () => {
-    await expect(
-      service.generateAvatarPresignedUrl('user-1', {
-        filename: 'avatar.svg',
-        contentType: 'image/svg+xml',
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+  describe('dedicated presigned uploads', () => {
+    it('creates avatar uploads only in the authenticated users avatar prefix', async () => {
+      const result = await service.generateAvatarPresignedUrl('user-1', {
+        filename: 'profile.webp',
+        contentType: 'image/webp',
+      });
+
+      expect(result.objectKey).toMatch(
+        /^avatars\/user-1\/\d+-[a-f0-9]{16}\.webp$/,
+      );
+      expect(r2ObjectService.createUploadUrl).toHaveBeenCalledWith(
+        result.objectKey,
+        'image/webp',
+      );
+    });
+
+    it('creates audio intro uploads only in the authenticated users audio prefix', async () => {
+      const result = await service.generateAudioIntroPresignedUrl('user-1', {
+        filename: 'hello.m4a',
+        contentType: 'audio/mp4',
+      });
+
+      expect(result.objectKey).toMatch(
+        /^audio-intros\/user-1\/\d+-[a-f0-9]{16}\.m4a$/,
+      );
+      expect(r2ObjectService.createUploadUrl).toHaveBeenCalledWith(
+        result.objectKey,
+        'audio/mp4',
+      );
+    });
+
+    it('rejects unsupported avatar types before issuing an upload URL', async () => {
+      await expect(
+        service.generateAvatarPresignedUrl('user-1', {
+          filename: 'avatar.svg',
+          contentType: 'image/svg+xml',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+    });
+
+    it('rejects unsupported audio intro types before issuing an upload URL', async () => {
+      await expect(
+        service.generateAudioIntroPresignedUrl('user-1', {
+          filename: 'intro.exe',
+          contentType: 'application/octet-stream',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+    });
   });
 
   it('downloads, compresses and overwrites a confirmed cover through the gateway', async () => {
