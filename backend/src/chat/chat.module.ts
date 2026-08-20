@@ -24,6 +24,7 @@ import { QuickRepliesController } from './quick-replies/quick-replies.controller
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
 import { GroupChatController } from './groups/group-chat.controller';
+import { GroupChatCreateService } from './groups/group-chat-create.service';
 import { GroupChatService } from './groups/group-chat.service';
 
 @Module({
@@ -50,6 +51,7 @@ import { GroupChatService } from './groups/group-chat.service';
     ChatLlmService,
     ChatLlmProxyService,
     { provide: ChatService, useClass: GroupAwareChatService },
+    GroupChatCreateService,
     GroupChatService,
     ConversationStarterService,
     SystemMessageService,
@@ -64,6 +66,7 @@ import { GroupChatService } from './groups/group-chat.service';
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    GroupChatCreateService,
     GroupChatService,
     ConversationStarterService,
     SystemMessageService,
