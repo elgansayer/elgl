@@ -16,6 +16,8 @@ describe('PrivacySettingsDto', () => {
     });
 
     const errors = await validate(dto);
-    expect(errors.some((error) => error.property === 'privacy_hide_vip_status')).toBe(true);
+    expect(
+      errors.some((error) => error.property === 'privacy_hide_vip_status'),
+    ).toBe(true);
   });
 });
