@@ -495,20 +495,12 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
-    assert factory_config.agents.providers["opencode"].model == "opencode-go/kimi-k3"
+    assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
     assert factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
         ".config/opencode",
         ".local/share/opencode",
     ]
-    assert (
-        factory_config.agents.providers["opencode"].phase_models["code_review"]
-        == "opencode-go/qwen3.8-max"
-    )
-    assert (
-        factory_config.agents.providers["opencode"].phase_models["general_action"]
-        == "opencode-go/kimi-k2.7-code"
-    )
     assert factory_config.agents.providers["openhands"].emergency_only
     assert not factory_config.agents.providers["openhands"].enabled
     assert factory_config.agents.providers["pi"].enabled

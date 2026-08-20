@@ -46,6 +46,7 @@ interface CropBox {
             class="absolute inset-0 flex cursor-pointer items-center justify-center bg-surface-500/90 text-text-primary opacity-100 transition-opacity duration-base ease-app sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             (click)="fileInput.click()"
             appA11yClickable
+            tabindex="0"
           >
             <div class="text-center">
               <svg

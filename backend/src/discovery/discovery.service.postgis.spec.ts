@@ -191,9 +191,7 @@ describe('DiscoveryService PostGIS partner queries', () => {
       longitude: -2.2426,
     });
 
-    expect(queryBuilder.not).toHaveBeenCalledWith('id', 'in', [
-      'blocked-user',
-    ]);
+    expect(queryBuilder.not).toHaveBeenCalledWith('id', 'in', ['blocked-user']);
     expect(result.map((partner) => partner.id)).toEqual(['allowed-user']);
   });
 

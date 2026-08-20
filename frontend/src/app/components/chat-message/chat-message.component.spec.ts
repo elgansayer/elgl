@@ -105,7 +105,13 @@ describe('ChatMessageComponent', () => {
       addEventListener: vi.fn(),
       play: vi.fn().mockResolvedValue(undefined),
     };
-    const AudioMock = vi.fn(() => audio);
+    // The component calls `new Audio(...)`, and arrow functions have no
+    // [[Construct]] slot - vitest's mock invokes the implementation via
+    // Reflect.construct when called with `new`, which throws for an arrow
+    // function implementation. A plain function expression is constructible.
+    const AudioMock = vi.fn(function AudioMock() {
+      return audio;
+    });
     vi.stubGlobal('Audio', AudioMock);
 
     fixture.componentRef.setInput('message', {
