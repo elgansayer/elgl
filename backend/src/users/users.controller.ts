@@ -41,6 +41,23 @@ export class UsersController {
     private readonly mediaService: MediaService,
   ) {}
 
+  private applyMemberVisibility<T extends Partial<UserProfile>>(
+    profile: T,
+    isSelf: boolean,
+  ): T {
+    if (isSelf) return profile;
+
+    const visibleProfile = { ...profile };
+    if (profile.privacy_hide_online_status) {
+      visibleProfile.last_active_at = undefined;
+    }
+    if (profile.privacy_hide_vip_status) {
+      visibleProfile.is_vip = false;
+      visibleProfile.vip_tier = '';
+    }
+    return visibleProfile;
+  }
+
   @UseGuards(TwoFactorGuard)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Delete('me')
@@ -308,12 +325,22 @@ export class UsersController {
       }
     }
 
-    return profile;
+    return this.applyMemberVisibility(
+      profile,
+      id === (currentUser?.id ?? ''),
+    );
   }
 
   @Get(':id/stats')
-  async getUserStats(@Param('id') id: string): Promise<Partial<UserProfile>> {
-    return this.usersService.getUserStats(id);
+  async getUserStats(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<Partial<UserProfile>> {
+    const stats = await this.usersService.getUserStats(id);
+    return this.applyMemberVisibility(
+      stats,
+      id === (currentUser?.id ?? ''),
+    );
   }
 
   @Get(':id/followers')
