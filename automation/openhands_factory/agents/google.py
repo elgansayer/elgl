@@ -173,6 +173,17 @@ class GoogleAgentProvider(CLIProvider):
             detail=failure.message,
         )
 
+    def prompt_for_stdin(self, prompt: str, prompt_path: Path | None) -> str | None:
+        del prompt_path
+        if self.cli_variant == "antigravity":
+            # --sandbox silently breaks stdin as a prompt channel: with it
+            # set, agy ignores whatever text arrives on stdin and responds
+            # as if it received no real instruction (verified directly,
+            # comparing identical invocations with and without --sandbox).
+            # The prompt must go in argv instead; see build_command.
+            return None
+        return prompt
+
     def build_command(
         self,
         request: AgentRequest,
@@ -186,6 +197,7 @@ class GoogleAgentProvider(CLIProvider):
             command = [
                 *self._prefix(),
                 "-p",
+                self._full_prompt(request),
                 "--output-format",
                 "text",
                 "--effort",
@@ -197,6 +209,16 @@ class GoogleAgentProvider(CLIProvider):
                 "--disable-slash-commands",
                 "--print-timeout",
                 f"{print_timeout}s",
+                # Without an explicit workspace, agy does not treat the
+                # inherited working directory as its target and silently
+                # writes into its own internal scratch directory instead
+                # (verified directly: the CLI's own response names that
+                # path when --add-dir is omitted). Every real edit then
+                # lands outside the task worktree, so change_fingerprint()
+                # sees no diff and the phase is wrongly reported as having
+                # produced no changes.
+                "--add-dir",
+                str(request.cwd),
             ]
             if model and model != "auto":
                 command.extend(("--model", model))
