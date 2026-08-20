@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
@@ -22,7 +23,7 @@ type PrivacyControl = 'online' | 'vip';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
+  imports: [HlmCheckbox, HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
   templateUrl: './privacy-settings.component.html',
 })
 export class PrivacySettingsComponent {
