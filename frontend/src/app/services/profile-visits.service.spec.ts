@@ -1,9 +1,9 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { ProfileVisitsService } from './profile-visits.service';
@@ -32,7 +32,7 @@ describe('ProfileVisitsService', () => {
   afterEach(() => http.verify());
 
   it('requests a bounded visitor page from the canonical endpoint', async () => {
-    const promise = service.getMyVisitors(20, 40);
+    const resultPromise = service.getMyVisitors(20, 40);
     const request = http.expectOne(
       (candidate) =>
         candidate.url === `${environment.apiUrl}/profile-visits/my-visitors` &&
@@ -51,19 +51,23 @@ describe('ProfileVisitsService', () => {
       next_offset: null,
     });
 
-    await expect(promise).resolves.toMatchObject({ offset: 40, has_more: false });
+    const result = await resultPromise;
+    expect(result).toMatchObject({ offset: 40, has_more: false });
   });
 
   it('records a profile view without sending entitlement state in the body', async () => {
-    const promise = service.recordVisit('target-1');
-    const request = http.expectOne(`${environment.apiUrl}/profile-visits/target-1`);
+    const resultPromise = service.recordVisit('target-1');
+    const request = http.expectOne(
+      `${environment.apiUrl}/profile-visits/target-1`,
+    );
 
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeNull();
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     request.flush({ recorded: false, ignored: true, reason: 'duplicate' });
 
-    await expect(promise).resolves.toEqual({
+    const result = await resultPromise;
+    expect(result).toEqual({
       recorded: false,
       ignored: true,
       reason: 'duplicate',
