@@ -110,7 +110,7 @@ describe('PrivacySettingsComponent', () => {
 
     expect(setHideOnlineStatus).toHaveBeenCalledWith(false);
     expect(component.hideOnlineStatus()).toBe(false);
-    expect(component.privacyControlsStatus()).toContain('visible');
+    expect(component.privacyControlsStatus()).toBe('privacy.success');
   });
 
   it('persists the hide-VIP setting', async () => {
@@ -118,7 +118,7 @@ describe('PrivacySettingsComponent', () => {
 
     expect(setHideVipStatus).toHaveBeenCalledWith(true);
     expect(component.hideVipStatus()).toBe(true);
-    expect(component.privacyControlsStatus()).toContain('hidden');
+    expect(component.privacyControlsStatus()).toBe('privacy.success');
   });
 
   it('rolls back a privacy toggle when persistence fails', async () => {
@@ -128,9 +128,9 @@ describe('PrivacySettingsComponent', () => {
     fixture.detectChanges();
 
     expect(component.hideVipStatus()).toBe(false);
-    expect(component.privacyControlsError()).toContain('previous setting');
+    expect(component.privacyControlsError()).toBe('privacy.error');
     const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
-    expect(alert?.textContent).toContain('Could not save');
+    expect(alert?.textContent?.trim()).toBe('privacy.error');
   });
 
   it('shows a retryable unavailable state when controls fail to load', async () => {
@@ -138,11 +138,21 @@ describe('PrivacySettingsComponent', () => {
     await component.loadPrivacyControls();
     fixture.detectChanges();
 
-    expect(component.privacyControlsError()).toContain('Could not load');
+    expect(component.privacyControlsError()).toBe('privacy.loadError');
     const retry = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find((button) => button.textContent?.trim() === 'Retry');
     expect(retry).toBeDefined();
+  });
+
+  it('exposes descriptions for both keyboard-focusable native toggles', () => {
+    const toggles = Array.from(
+      fixture.nativeElement.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>,
+    );
+
+    expect(toggles).toHaveLength(2);
+    expect(toggles.every((toggle) => Boolean(toggle.getAttribute('aria-describedby')))).toBe(true);
+    expect(toggles.every((toggle) => toggle.tabIndex >= 0)).toBe(true);
   });
 
   it('exposes a screen-reader name for the muted-word input and add action', () => {
