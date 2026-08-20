@@ -183,9 +183,7 @@ class AgentsConfig(BaseModel):
                     "planning": "opus",
                     "architecture": "opus",
                     "security_review": "opus",
-                    # Building gets the strongest model; PR-facing phases
-                    # (review, repair loops) get the fastest.
-                    "implementation": "opus",
+                    "implementation": "sonnet",
                     "quality_repair": "haiku",
                     "code_review": "haiku",
                     "ci_repair": "haiku",
@@ -223,19 +221,12 @@ class AgentsConfig(BaseModel):
                 enabled=True,
                 command="opencode",
                 auth_mode="subscription",
-                model="opencode-go/kimi-k3",
+                # opencode-go/deepseek-v4-flash is the fast tier of the
+                # opencode-go catalog (verified via `opencode models`) - used
+                # uniformly rather than split by phase.
+                model="opencode-go/deepseek-v4-flash",
                 credential_paths=[".config/opencode", ".local/share/opencode"],
                 runtime_paths=[".local/bin", ".npm-global", ".opencode"],
-                phase_models={
-                    "planning": "opencode-go/qwen3.8-max",
-                    "architecture": "opencode-go/qwen3.8-max",
-                    "security_review": "opencode-go/qwen3.8-max",
-                    "implementation": "opencode-go/qwen3.8-max",
-                    "code_review": "opencode-go/kimi-k2.7-code",
-                    "quality_repair": "opencode-go/kimi-k2.7-code",
-                    "ci_repair": "opencode-go/kimi-k2.7-code",
-                    "general_action": "opencode-go/kimi-k2.7-code",
-                },
             ),
             "openhands": ProviderConfig(
                 enabled=False,
@@ -258,7 +249,7 @@ class AgentsConfig(BaseModel):
                     "planning": "github-copilot/claude-opus-5",
                     "architecture": "github-copilot/claude-opus-5",
                     "security_review": "github-copilot/claude-opus-5",
-                    "implementation": "github-copilot/claude-opus-5",
+                    "implementation": "github-copilot/claude-sonnet-5",
                     "quality_repair": "github-copilot/claude-haiku-4.5",
                     "code_review": "github-copilot/claude-haiku-4.5",
                     "ci_repair": "github-copilot/claude-haiku-4.5",
