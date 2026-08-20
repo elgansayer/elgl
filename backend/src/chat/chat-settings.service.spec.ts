@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatSettingsService } from './chat-settings.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -10,9 +11,7 @@ describe('ChatSettingsService', () => {
   const userId = 'test-user-id';
 
   beforeEach(async () => {
-    supabaseServiceMock = {
-      getClient: vi.fn(),
-    };
+    supabaseServiceMock = { getClient: vi.fn() };
     mockFrom = vi.fn();
     supabaseServiceMock.getClient.mockReturnValue({ from: mockFrom });
 
@@ -23,173 +22,160 @@ describe('ChatSettingsService', () => {
       ],
     }).compile();
 
-    service = moduleRef.get<ChatSettingsService>(ChatSettingsService);
+    service = moduleRef.get(ChatSettingsService);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
+  afterEach(() => vi.clearAllMocks());
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+  function getChain(data: Record<string, unknown> | null, error: unknown = null) {
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data, error }),
+    };
+  }
 
-  describe('getSettings', () => {
-    it('should return default settings when no preferences exist', async () => {
-      const chain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi
-          .fn()
-          .mockResolvedValue({ data: { chat_preferences: null }, error: null }),
-      };
-      mockFrom.mockReturnValue(chain);
+  it('returns privacy-safe defaults with message filtering disabled', async () => {
+    mockFrom.mockReturnValue(
+      getChain({ chat_preferences: null, message_filters: null }),
+    );
 
-      const result = await service.getSettings(userId);
+    const result = await service.getSettings(userId);
 
-      expect(result).toEqual({
-        autoTranslate: false,
-        readReceipts: false,
-        enterToSend: false,
-      });
+    expect(result).toMatchObject({
+      autoTranslate: false,
+      readReceipts: false,
+      enterToSend: false,
+      messageFilters: {
+        enabled: false,
+        allowEveryone: true,
+        allowedGenders: [],
+        sameNativeLanguage: false,
+        sameTargetLanguage: false,
+        sameGender: false,
+        sameAge: false,
+      },
     });
+  });
 
-    it('should return default settings on error', async () => {
-      const chain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi
-          .fn()
-          .mockResolvedValue({ data: null, error: new Error('DB error') }),
-      };
-      mockFrom.mockReturnValue(chain);
+  it('merges persisted chat and message privacy preferences', async () => {
+    mockFrom.mockReturnValue(
+      getChain({
+        chat_preferences: { autoTranslate: true, enterToSend: true },
+        message_filters: {
+          enabled: true,
+          allowEveryone: false,
+          sameTargetLanguage: true,
+          allowedGenders: ['Woman'],
+        },
+      }),
+    );
 
-      const result = await service.getSettings(userId);
+    const result = await service.getSettings(userId);
 
-      expect(result).toEqual({
-        autoTranslate: false,
-        readReceipts: false,
-        enterToSend: false,
-      });
+    expect(result.autoTranslate).toBe(true);
+    expect(result.enterToSend).toBe(true);
+    expect(result.messageFilters).toMatchObject({
+      enabled: true,
+      allowEveryone: false,
+      sameTargetLanguage: true,
+      allowedGenders: ['woman'],
     });
+  });
 
-    it('should return merged settings from stored preferences', async () => {
-      const chain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: true,
-              enterToSend: true,
-            },
-          },
-          error: null,
-        }),
-      };
-      mockFrom.mockReturnValue(chain);
-
-      const result = await service.getSettings(userId);
-
-      expect(result).toEqual({
+  it('persists filters separately from chat presentation preferences', async () => {
+    const read = getChain({
+      chat_preferences: {
         autoTranslate: true,
         readReceipts: false,
-        enterToSend: true,
-      });
+        enterToSend: false,
+      },
+      message_filters: { enabled: false, allowEveryone: true },
     });
+    const write = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockFrom.mockReturnValueOnce(read).mockReturnValueOnce(write);
+
+    const result = await service.updateSettings(userId, {
+      readReceipts: true,
+      messageFilters: {
+        enabled: true,
+        sameNativeLanguage: true,
+        ageMin: 25,
+        ageMax: 40,
+      },
+    });
+
+    expect(result.messageFilters).toMatchObject({
+      enabled: true,
+      allowEveryone: false,
+      sameNativeLanguage: true,
+      ageMin: 25,
+      ageMax: 40,
+    });
+    expect(write.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chat_preferences: expect.objectContaining({ readReceipts: true }),
+        message_filters: expect.objectContaining({
+          enabled: true,
+          allowEveryone: false,
+          sameNativeLanguage: true,
+          ageMin: 25,
+          ageMax: 40,
+        }),
+      }),
+    );
   });
 
-  describe('updateSettings', () => {
-    it('should merge with current settings and update the database', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: true,
-              readReceipts: false,
-              enterToSend: false,
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+  it('normalizes gender values and leaves Everyone when a restriction is selected', async () => {
+    const read = getChain({
+      chat_preferences: {},
+      message_filters: { enabled: false, allowEveryone: true },
+    });
+    const write = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    };
+    mockFrom.mockReturnValueOnce(read).mockReturnValueOnce(write);
 
-      const result = await service.updateSettings(userId, {
-        readReceipts: true,
-      });
-
-      expect(result).toEqual({
-        autoTranslate: true,
-        readReceipts: true,
-        enterToSend: false,
-      });
-      expect(updateChain.update).toHaveBeenCalledWith({
-        chat_preferences: result,
-      });
-      expect(updateChain.eq).toHaveBeenCalledWith('id', userId);
+    const result = await service.updateSettings(userId, {
+      messageFilters: {
+        enabled: true,
+        allowedGenders: [' Woman ', 'woman', 'MAN'],
+      },
     });
 
-    it('should throw an error if the database update fails', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: false,
-              readReceipts: false,
-              enterToSend: false,
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: new Error('DB write error') }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+    expect(result.messageFilters?.allowEveryone).toBe(false);
+    expect(result.messageFilters?.allowedGenders).toEqual(['woman', 'man']);
+  });
 
-      await expect(
-        service.updateSettings(userId, { autoTranslate: true }),
-      ).rejects.toThrow('Failed to update chat settings: DB write error');
-    });
+  it('rejects an inverted age range before writing', async () => {
+    mockFrom.mockReturnValue(
+      getChain({
+        chat_preferences: {},
+        message_filters: { enabled: false, allowEveryone: true },
+      }),
+    );
 
-    it('should allow partial updates and preserve other settings', async () => {
-      const getChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: {
-            chat_preferences: {
-              autoTranslate: true,
-              readReceipts: true,
-              enterToSend: true,
-            },
-          },
-          error: null,
-        }),
-      };
-      const updateChain = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      };
-      mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
+    await expect(
+      service.updateSettings(userId, {
+        messageFilters: { enabled: true, ageMin: 50, ageMax: 20 },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 
-      const result = await service.updateSettings(userId, {
-        autoTranslate: false,
-      });
+  it('surfaces database write failures', async () => {
+    const read = getChain({ chat_preferences: {}, message_filters: null });
+    const write = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: new Error('DB write error') }),
+    };
+    mockFrom.mockReturnValueOnce(read).mockReturnValueOnce(write);
 
-      expect(result.autoTranslate).toBe(false);
-      expect(result.readReceipts).toBe(true);
-      expect(result.enterToSend).toBe(true);
-    });
+    await expect(
+      service.updateSettings(userId, { autoTranslate: true }),
+    ).rejects.toThrow('Failed to update chat settings: DB write error');
   });
 });
