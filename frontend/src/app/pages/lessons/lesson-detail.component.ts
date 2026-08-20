@@ -110,7 +110,7 @@ import type { LessonProgress } from './lessons.model';
 
               @if (activeIndex() < sections().length - 1) {
                 <button
-                  class="min-h-11 rounded-lg bg-accent px-4 py-2 text-on-accent disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  class="min-h-11 rounded-lg bg-accent px-4 py-2 text-accent-content disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   type="button"
                   [disabled]="isSaving()"
                   (click)="next()"
@@ -119,7 +119,7 @@ import type { LessonProgress } from './lessons.model';
                 </button>
               } @else {
                 <button
-                  class="min-h-11 rounded-lg bg-accent px-4 py-2 text-on-accent disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  class="min-h-11 rounded-lg bg-accent px-4 py-2 text-accent-content disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   type="button"
                   [disabled]="isSaving() || progress()?.completed"
                   (click)="complete()"
