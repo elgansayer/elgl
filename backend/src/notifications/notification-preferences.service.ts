@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
 import {
-  NotificationPreferencesDto,
-  CategoryPreferenceDto,
-} from './dto/notification-preferences.dto';
+  Database,
+  SupabaseService,
+} from '../supabase/supabase.service';
+import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
 import {
   NotificationPreferences,
   CategoryPreference,
@@ -30,6 +30,9 @@ interface DbNotificationPreferences {
   vibration_pattern: string | null;
   updated_at: string;
 }
+
+type DbNotificationPreferencesInsert =
+  Database['public']['Tables']['notification_preferences']['Insert'];
 
 type CategoryKeys = keyof Omit<
   NotificationPreferences,
@@ -107,7 +110,12 @@ export class NotificationPreferencesService {
     const merged = this.mergePreferences(existing, dto);
     this.validateQuietHours(merged);
 
-    const dbPayload = this.mapPreferencesToDb(userId, merged);
+    // The repository's hand-maintained Supabase Database interface intentionally
+    // trails additive migrations. Narrow the payload to its canonical Insert
+    // contract before passing it to the generated client; the runtime object still
+    // carries quiet_hours_timezone for PostgREST after this migration is applied.
+    const dbPayload: DbNotificationPreferencesInsert =
+      this.mapPreferencesToDb(userId, merged);
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -128,7 +136,8 @@ export class NotificationPreferencesService {
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
     const defaults = this.createDefaultPreferences(userId);
     const supabase = this.supabaseService.getClient();
-    const dbPayload = this.mapPreferencesToDb(userId, defaults);
+    const dbPayload: DbNotificationPreferencesInsert =
+      this.mapPreferencesToDb(userId, defaults);
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -170,10 +179,7 @@ export class NotificationPreferencesService {
     return categoryPref[channel] ?? true;
   }
 
-  private isInQuietHours(
-    prefs: NotificationPreferences,
-    at: Date,
-  ): boolean {
+  private isInQuietHours(prefs: NotificationPreferences, at: Date): boolean {
     const start = prefs.quiet_hours_start;
     const end = prefs.quiet_hours_end;
 
@@ -181,9 +187,11 @@ export class NotificationPreferencesService {
       return false;
     }
 
-    const timezone = this.isValidTimeZone(prefs.quiet_hours_timezone)
-      ? prefs.quiet_hours_timezone!
-      : DEFAULT_QUIET_HOURS_TIMEZONE;
+    const configuredTimezone = prefs.quiet_hours_timezone;
+    const timezone =
+      configuredTimezone && this.isValidTimeZone(configuredTimezone)
+        ? configuredTimezone
+        : DEFAULT_QUIET_HOURS_TIMEZONE;
     const currentMinutes = this.localMinutes(at, timezone);
     const startMinutes = this.timeToMinutes(start);
     const endMinutes = this.timeToMinutes(end);
@@ -249,8 +257,7 @@ export class NotificationPreferencesService {
       );
     }
 
-    const timezone =
-      prefs.quiet_hours_timezone ?? DEFAULT_QUIET_HOURS_TIMEZONE;
+    const timezone = prefs.quiet_hours_timezone ?? DEFAULT_QUIET_HOURS_TIMEZONE;
     if (!this.isValidTimeZone(timezone)) {
       throw new BadRequestException('Quiet hours timezone is invalid.');
     }
@@ -296,10 +303,10 @@ export class NotificationPreferencesService {
       'new_follower',
     ];
 
-    const merged = { ...existing } as NotificationPreferences;
+    const merged: NotificationPreferences = { ...existing };
 
     for (const category of categories) {
-      const dtoCategory = dto[category] as CategoryPreferenceDto | undefined;
+      const dtoCategory = dto[category];
       if (dtoCategory) {
         const existingCategory = existing[category];
         merged[category] = {
