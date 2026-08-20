@@ -5,8 +5,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
+import { AuthService } from '../../services/auth.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileVisitsService } from '../../services/profile-visits.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
@@ -40,17 +42,21 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
-describe('UserDetailComponent bio translation', () => {
+describe('UserDetailComponent', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
+  let currentUser: ReturnType<typeof signal<any>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
+  let recordVisit: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     currentLang = signal('en-GB');
+    currentUser = signal({ id: 'owner-1', is_vip: false });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
+    recordVisit = vi.fn().mockResolvedValue({ recorded: true, ignored: false, visit_id: 'visit-1' });
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -66,6 +72,14 @@ describe('UserDetailComponent bio translation', () => {
             unfollowUser: vi.fn(),
             likeProfile: vi.fn(),
           },
+        },
+        {
+          provide: AuthService,
+          useValue: { currentUser },
+        },
+        {
+          provide: ProfileVisitsService,
+          useValue: { recordVisit },
         },
         {
           provide: DiscoveryService,
@@ -92,13 +106,48 @@ describe('UserDetailComponent bio translation', () => {
     fixture.componentRef.setInput('userId', 'user-1');
     fixture.detectChanges();
     await Promise.resolve();
+    await Promise.resolve();
     fixture.detectChanges();
   });
 
-  it('loads the requested profile', () => {
+  it('loads the requested profile and records the successful external profile view', () => {
     expect(component).toBeTruthy();
     expect(getUserProfile).toHaveBeenCalledWith('user-1');
     expect(component.profile()?.id).toBe('user-1');
+    expect(recordVisit).toHaveBeenCalledWith('user-1');
+  });
+
+  it('does not record a self view', async () => {
+    recordVisit.mockClear();
+    currentUser.set({ id: 'user-1', is_vip: false });
+
+    await component.loadProfile('user-1');
+
+    expect(recordVisit).not.toHaveBeenCalled();
+  });
+
+  it('does not let visitor-log failure break profile rendering and permits a later safe retry', async () => {
+    getUserProfile.mockResolvedValue(makeProfile('user-2'));
+    recordVisit.mockRejectedValueOnce(new Error('visit API unavailable'));
+
+    await component.loadProfile('user-2');
+    expect(component.profile()?.id).toBe('user-2');
+    expect(component.errorMessage()).toBe('');
+
+    recordVisit.mockResolvedValueOnce({ recorded: false, ignored: true, reason: 'duplicate' });
+    await component.loadProfile('user-2');
+    expect(recordVisit).toHaveBeenCalledTimes(2);
+  });
+
+  it('coalesces repeated component loads after a successful visitor-log call', async () => {
+    recordVisit.mockClear();
+    getUserProfile.mockResolvedValue(makeProfile('user-3'));
+
+    await component.loadProfile('user-3');
+    await component.loadProfile('user-3');
+
+    expect(recordVisit).toHaveBeenCalledTimes(1);
+    expect(recordVisit).toHaveBeenCalledWith('user-3');
   });
 
   it('translates into the active UI language and can show the original again', async () => {
