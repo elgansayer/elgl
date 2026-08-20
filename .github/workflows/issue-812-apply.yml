@@ -1,0 +1,740 @@
+name: Apply issue 812 implementation
+
+on:
+  push:
+    branches:
+      - issue-812-serious-learner-active-streaks
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, 'feat(discovery): enforce active serious learner policy')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply production changes and regression coverage
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count < 1:
+                  raise SystemExit(f"missing expected source for {label}")
+              return text.replace(old, new, 1)
+
+          def replace_exact_count(text: str, old: str, new: str, expected: int, label: str) -> str:
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"expected {expected} occurrences for {label}, found {count}")
+              return text.replace(old, new)
+
+          # Canonical backend policy shared by discovery and recommendations.
+          policy = Path('backend/src/discovery/serious-learner.policy.ts')
+          policy.write_text("""export const SERIOUS_LEARNER_MIN_STREAK_DAYS = 7;
+          export const SERIOUS_LEARNER_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+          export interface SeriousLearnerActivity {
+            study_streak_days?: number | null;
+            last_active_at?: string | null;
+          }
+
+          export function getSeriousLearnerActiveSince(now: Date = new Date()): string {
+            return new Date(now.getTime() - SERIOUS_LEARNER_ACTIVITY_WINDOW_MS).toISOString();
+          }
+
+          /**
+           * Canonical Serious Learner qualification used for discovery/ranking.
+           *
+           * `is_serious_learner` is a user preference that enables the filter. It is
+           * intentionally not evidence that the candidate currently qualifies.
+           */
+          export function isActiveSeriousLearner(
+            candidate: SeriousLearnerActivity,
+            now: Date = new Date(),
+          ): boolean {
+            if ((candidate.study_streak_days ?? 0) < SERIOUS_LEARNER_MIN_STREAK_DAYS) {
+              return false;
+            }
+
+            if (!candidate.last_active_at) {
+              return false;
+            }
+
+            const lastActiveMs = Date.parse(candidate.last_active_at);
+            if (!Number.isFinite(lastActiveMs)) {
+              return false;
+            }
+
+            return lastActiveMs >= now.getTime() - SERIOUS_LEARNER_ACTIVITY_WINDOW_MS;
+          }
+          """.replace('          ', ''), encoding='utf-8')
+
+          policy_spec = Path('backend/src/discovery/serious-learner.policy.spec.ts')
+          policy_spec.write_text("""import { describe, expect, it } from 'vitest';
+          import {
+            getSeriousLearnerActiveSince,
+            isActiveSeriousLearner,
+            SERIOUS_LEARNER_MIN_STREAK_DAYS,
+          } from './serious-learner.policy';
+
+          describe('Serious Learner policy', () => {
+            const now = new Date('2026-08-20T12:00:00.000Z');
+
+            it('qualifies a fresh streak at the inclusive seven-day boundary', () => {
+              expect(
+                isActiveSeriousLearner(
+                  {
+                    study_streak_days: SERIOUS_LEARNER_MIN_STREAK_DAYS,
+                    last_active_at: '2026-08-20T11:59:00.000Z',
+                  },
+                  now,
+                ),
+              ).toBe(true);
+            });
+
+            it('rejects streaks below seven days', () => {
+              expect(
+                isActiveSeriousLearner(
+                  {
+                    study_streak_days: SERIOUS_LEARNER_MIN_STREAK_DAYS - 1,
+                    last_active_at: now.toISOString(),
+                  },
+                  now,
+                ),
+              ).toBe(false);
+            });
+
+            it('rejects a stale streak even when the stored counter is high', () => {
+              expect(
+                isActiveSeriousLearner(
+                  {
+                    study_streak_days: 365,
+                    last_active_at: '2026-08-19T11:59:59.999Z',
+                  },
+                  now,
+                ),
+              ).toBe(false);
+            });
+
+            it('treats the exact 24-hour activity boundary as active', () => {
+              expect(
+                isActiveSeriousLearner(
+                  {
+                    study_streak_days: 7,
+                    last_active_at: '2026-08-19T12:00:00.000Z',
+                  },
+                  now,
+                ),
+              ).toBe(true);
+            });
+
+            it('rejects missing or malformed activity timestamps', () => {
+              expect(isActiveSeriousLearner({ study_streak_days: 20 }, now)).toBe(false);
+              expect(
+                isActiveSeriousLearner(
+                  { study_streak_days: 20, last_active_at: 'not-a-date' },
+                  now,
+                ),
+              ).toBe(false);
+            });
+
+            it('produces the same 24-hour cutoff used by database filters', () => {
+              expect(getSeriousLearnerActiveSince(now)).toBe('2026-08-19T12:00:00.000Z');
+            });
+          });
+          """.replace('          ', ''), encoding='utf-8')
+
+          # DiscoveryService: apply one active-streak predicate before every query path.
+          path = Path('backend/src/discovery/discovery.service.ts')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              "import { CorrectorScoreService } from '../corrector-score/corrector-score.service';\n",
+              "import { CorrectorScoreService } from '../corrector-score/corrector-score.service';\nimport {\n  getSeriousLearnerActiveSince,\n  isActiveSeriousLearner,\n  SERIOUS_LEARNER_MIN_STREAK_DAYS,\n} from './serious-learner.policy';\n",
+              'discovery policy import',
+          )
+          text = replace_once(
+              text,
+              "    try {\n      // Step 1: Keep the weekly highlight inside the same core visibility boundary",
+              "    try {\n      const seriousLearnerNow = new Date();\n      const seriousLearnerActiveSince = getSeriousLearnerActiveSince(seriousLearnerNow);\n\n      // Step 1: Keep the weekly highlight inside the same core visibility boundary",
+              'partner of week cutoff',
+          )
+          text = replace_once(
+              text,
+              "'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',",
+              "'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days, last_active_at',",
+              'partner of week projection',
+          )
+          text = replace_once(
+              text,
+              ".gte('study_streak_days', 7)\n        .order('correction_ratio'",
+              ".gte('study_streak_days', SERIOUS_LEARNER_MIN_STREAK_DAYS)\n        .gte('last_active_at', seriousLearnerActiveSince)\n        .order('correction_ratio'",
+              'partner of week active query',
+          )
+          text = replace_once(
+              text,
+              "          (candidate.correction_ratio ?? 0) > 0.5 &&\n          (candidate.study_streak_days ?? 0) >= 7,",
+              "          (candidate.correction_ratio ?? 0) > 0.5 &&\n          isActiveSeriousLearner(candidate, seriousLearnerNow),",
+              'partner of week in-memory guard',
+          )
+          text = replace_once(
+              text,
+              "    const blockedIds =\n      await this.safetyService.getBlockedAndBlockerIds(currentUserId);\n\n    let searchLat = query.latitude;",
+              "    const blockedIds =\n      await this.safetyService.getBlockedAndBlockerIds(currentUserId);\n\n    const seriousLearnerOnly =\n      query.serious_learner_only === true ||\n      query.serious_learner_mode === true ||\n      _currentUserProfile?.is_serious_learner === true;\n    if (seriousLearnerOnly) {\n      query.serious_learner_only = true;\n    }\n    const seriousLearnerActiveSince = seriousLearnerOnly\n      ? getSeriousLearnerActiveSince()\n      : null;\n\n    let searchLat = query.latitude;",
+              'search mode normalization',
+          )
+          text = replace_once(
+              text,
+              ".neq('id', currentUserId)\n      .eq('privacy_hide_from_search', false);",
+              ".neq('id', currentUserId)\n      .eq('privacy_hide_from_search', false)\n      .eq('is_deletion_pending', false);",
+              'search deletion boundary',
+          )
+          old_serious = """    if (query.serious_learner_only) {
+              queryBuilder = queryBuilder
+                .gt('study_streak_days', 7)
+                .gte('correction_ratio', 0.8);
+            }
+          """.replace('          ', '')
+          new_serious = """    if (seriousLearnerOnly && seriousLearnerActiveSince) {
+              queryBuilder = queryBuilder
+                .gte('study_streak_days', SERIOUS_LEARNER_MIN_STREAK_DAYS)
+                .gte('last_active_at', seriousLearnerActiveSince);
+            }
+          """.replace('          ', '')
+          text = replace_once(text, old_serious, new_serious, 'search serious predicate')
+          text = replace_once(
+              text,
+              "    // When the user has serious_learner_mode enabled, force serious learner filter\n    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {\n      query.serious_learner_only = true;\n    }\n\n",
+              "",
+              'remove late mode normalization',
+          )
+          text = replace_once(
+              text,
+              "        serious_only: Boolean(query.serious_learner_only),",
+              "        serious_only: seriousLearnerOnly,",
+              'rpc serious flag',
+          )
+          text = replace_once(
+              text,
+              "    const blockedIds =\n      await this.safetyService.getBlockedAndBlockerIds(currentUserId);\n\n    // Apply VIP country/city spoofing",
+              "    const blockedIds =\n      await this.safetyService.getBlockedAndBlockerIds(currentUserId);\n\n    const seriousLearnerOnly =\n      query.serious_learner_only === true ||\n      query.serious_learner_mode === true ||\n      currentUserProfile?.is_serious_learner === true;\n    if (seriousLearnerOnly) {\n      query.serious_learner_only = true;\n    }\n    const seriousLearnerActiveSince = seriousLearnerOnly\n      ? getSeriousLearnerActiveSince()\n      : null;\n\n    // Apply VIP country/city spoofing",
+              'audio mode normalization',
+          )
+          text = replace_once(
+              text,
+              ".neq('id', currentUserId)\n      .eq('privacy_hide_from_search', false);",
+              ".neq('id', currentUserId)\n      .eq('privacy_hide_from_search', false)\n      .eq('is_deletion_pending', false);",
+              'audio deletion boundary',
+          )
+          text = replace_once(text, old_serious, new_serious, 'audio serious predicate')
+          text = replace_once(
+              text,
+              "      filtered = filtered.filter(\n        (u) => u.study_streak_days > 7 && u.correction_ratio >= 0.8,\n      );",
+              "      filtered = filtered.filter((u) => isActiveSeriousLearner(u));",
+              'mock serious predicate',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          # API docs must describe the same canonical predicate.
+          path = Path('backend/src/discovery/dto/search-query.dto.ts')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              "'Restrict to \"serious learners\": users with study_streak_days > 7 AND correction_ratio >= 0.8. Auto-enabled for users with serious_learner_mode profile setting.',",
+              "'Restrict to active serious learners: users with a study streak of at least 7 days and streak activity within the last 24 hours. Correction behaviour is not part of this predicate. Auto-enabled for users with the serious learner mode profile setting.',",
+              'dto serious learner docs',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          # Recommendations expose the same computed qualification rather than the preference flag.
+          path = Path('backend/src/recommendations/recommendations.service.ts')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              "import { MOCK_USERS } from '../mock-data';\n",
+              "import { MOCK_USERS } from '../mock-data';\nimport { isActiveSeriousLearner } from '../discovery/serious-learner.policy';\n",
+              'recommendations policy import',
+          )
+          old_projection = "'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio'"
+          new_projection = "'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at'"
+          projection_count = text.count(old_projection)
+          if projection_count < 4:
+              raise SystemExit(f'expected at least four recommendation projections, found {projection_count}')
+          text = text.replace(old_projection, new_projection)
+          order_old = ".order('is_serious_learner', { ascending: false })"
+          if text.count(order_old) < 2:
+              raise SystemExit('expected serious learner preference ordering in recommendation queries')
+          text = text.replace(order_old, ".order('study_streak_days', { ascending: false })")
+          text = text.replace("isSeriousLearner: m.is_serious_learner ?? null,", "isSeriousLearner: isActiveSeriousLearner(m),")
+          text = text.replace("isSeriousLearner: u.is_serious_learner ?? null,", "isSeriousLearner: isActiveSeriousLearner(u),")
+          text = text.replace("isSeriousLearner: u.is_serious_learner,", "isSeriousLearner: isActiveSeriousLearner(u),")
+          text = replace_once(
+              text,
+              "      is_serious_learner: boolean;\n      avatar_url: string;",
+              "      is_serious_learner: boolean;\n      last_active_at?: string | null;\n      avatar_url: string;",
+              'mock recommendation activity type',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          # Frontend: explicit mutation state, rollback on failure, filter/mode consistency.
+          path = Path('frontend/src/app/components/discovery/discovery.component.ts')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              "  readonly seriousLearnerOnly = signal<boolean>(false);\n  readonly seriousLearnerMode = signal<boolean>(false);",
+              "  readonly seriousLearnerOnly = signal<boolean>(false);\n  readonly seriousLearnerMode = signal<boolean>(false);\n  readonly seriousModeSaving = signal<boolean>(false);\n  readonly seriousModeError = signal<boolean>(false);",
+              'frontend mutation signals',
+          )
+          text = replace_once(
+              text,
+              "    this.seriousLearnerOnly.set(id === 'serious');",
+              "    this.seriousLearnerOnly.set(id === 'serious' || this.seriousLearnerMode());",
+              'frontend filter/mode composition',
+          )
+          old_toggle = """  async toggleSeriousLearnerMode(): Promise<void> {
+            const newMode = !this.seriousLearnerMode();
+            try {
+              await this.userService.updateMyProfile({ is_serious_learner: newMode });
+              this.seriousLearnerMode.set(newMode);
+              if (newMode) {
+                this.seriousLearnerOnly.set(true);
+                this.selectedFilter.set('serious');
+              }
+              await this.searchPartners();
+            } catch (e) {
+              console.error('Failed to update serious learner mode', e);
+            }
+          }
+          """.replace('          ', '')
+          new_toggle = """  async toggleSeriousLearnerMode(): Promise<void> {
+            if (this.seriousModeSaving()) return;
+
+            const newMode = !this.seriousLearnerMode();
+            this.seriousModeSaving.set(true);
+            this.seriousModeError.set(false);
+
+            try {
+              await this.userService.updateMyProfile({ is_serious_learner: newMode });
+              this.seriousLearnerMode.set(newMode);
+
+              if (newMode) {
+                this.seriousLearnerOnly.set(true);
+                this.selectedFilter.set('serious');
+              } else {
+                if (this.selectedFilter() === 'serious') {
+                  this.selectedFilter.set('all');
+                }
+                this.seriousLearnerOnly.set(this.selectedFilter() === 'serious');
+              }
+
+              await this.searchPartners();
+            } catch (e) {
+              console.error('Failed to update serious learner mode', e);
+              this.seriousModeError.set(true);
+            } finally {
+              this.seriousModeSaving.set(false);
+            }
+          }
+          """.replace('          ', '')
+          text = replace_once(text, old_toggle, new_toggle, 'frontend serious mode mutation')
+          text = replace_once(
+              text,
+              "    this.seriousLearnerOnly.set(false);\n    this.seriousLearnerMode.set(false);\n    this.ageRangeMin.set(18);",
+              "    this.seriousLearnerOnly.set(this.seriousLearnerMode());\n    this.selectedFilter.set(this.seriousLearnerMode() ? 'serious' : 'all');\n    this.seriousModeError.set(false);\n    this.ageRangeMin.set(18);",
+              'frontend reset preserves persisted mode',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('frontend/src/app/components/discovery/discovery.component.html')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              "              [checked]=\"seriousLearnerMode()\"\n              (change)=\"toggleSeriousLearnerMode()\"\n              class=\"h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400\"",
+              "              [checked]=\"seriousLearnerMode()\"\n              [disabled]=\"seriousModeSaving()\"\n              [attr.aria-describedby]=\"seriousModeError() ? 'seriousModeError' : 'seriousModeDescription'\"\n              (change)=\"toggleSeriousLearnerMode()\"\n              class=\"h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400 disabled:cursor-wait disabled:opacity-60\"",
+              'frontend checkbox pending state',
+          )
+          text = replace_once(
+              text,
+              "          <span\n            class=\"text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline\"\n            >{{ 'discovery.seriousModeDesc' | t }}</span\n          >",
+              "          <span\n            id=\"seriousModeDescription\"\n            class=\"text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline\"\n            >{{ 'discovery.seriousModeDesc' | t }}</span\n          >\n          @if (seriousModeSaving()) {\n            <span class=\"text-[9px] sm:text-[10px] text-text-secondary\" role=\"status\" aria-live=\"polite\">\n              {{ 'common.saving' | t }}\n            </span>\n          }\n          @if (seriousModeError()) {\n            <span id=\"seriousModeError\" class=\"text-[9px] sm:text-[10px] text-error\" role=\"alert\">\n              {{ 'common.error' | t }}\n            </span>\n          }",
+              'frontend accessible mode status',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          # Focused component regression tests without enabling the legacy skipped discovery suite.
+          component_spec = Path('frontend/src/app/components/discovery/discovery-serious-mode.component.spec.ts')
+          component_spec.write_text("""import { signal } from '@angular/core';
+          import { ComponentFixture, TestBed } from '@angular/core/testing';
+          import { beforeEach, describe, expect, it, vi } from 'vitest';
+          import { provideRouter } from '@angular/router';
+          import { DiscoveryComponent } from './discovery.component';
+          import { DiscoveryService } from '../../services/discovery.service';
+          import { UserService } from '../../services/user.service';
+          import { SafetyService } from '../../services/safety.service';
+          import { AuthService } from '../../services/auth.service';
+          import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+          import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+          import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
+          import { I18nService } from '../../services/i18n.service';
+
+          describe('DiscoveryComponent serious learner mode', () => {
+            let fixture: ComponentFixture<DiscoveryComponent>;
+            let component: DiscoveryComponent;
+            let updateMyProfile: ReturnType<typeof vi.fn>;
+            let findPartners: ReturnType<typeof vi.fn>;
+
+            beforeEach(async () => {
+              updateMyProfile = vi.fn().mockResolvedValue(undefined);
+              findPartners = vi.fn().mockResolvedValue([]);
+
+              await TestBed.configureTestingModule({
+                imports: [DiscoveryComponent],
+                providers: [
+                  provideRouter([]),
+                  { provide: DiscoveryService, useValue: { findPartners } },
+                  {
+                    provide: UserService,
+                    useValue: { updateMyProfile, getMyProfile: vi.fn().mockResolvedValue(null) },
+                  },
+                  { provide: SafetyService, useValue: { getBlockedIdsAsync: vi.fn().mockResolvedValue([]) } },
+                  { provide: AuthService, useValue: { currentUser: signal(null) } },
+                  {
+                    provide: OfflineDiscoveryCacheService,
+                    useValue: {
+                      isOnline: signal(true).asReadonly(),
+                      cachedDataAvailable: signal(false).asReadonly(),
+                    },
+                  },
+                  {
+                    provide: DiscoveryOnboardingService,
+                    useValue: {
+                      hasCompletedTour: vi.fn().mockReturnValue(true),
+                      startTour: vi.fn(),
+                    },
+                  },
+                  {
+                    provide: MatchmakingOnboardingService,
+                    useValue: {
+                      startTour: vi.fn(),
+                      isTourInProgress: vi.fn().mockReturnValue(false),
+                      markComplete: vi.fn(),
+                    },
+                  },
+                  {
+                    provide: I18nService,
+                    useValue: {
+                      translations: signal({}),
+                      translate: vi.fn((key: string) => key),
+                    },
+                  },
+                ],
+              })
+                .overrideComponent(DiscoveryComponent, { set: { template: '' } })
+                .compileComponents();
+
+              fixture = TestBed.createComponent(DiscoveryComponent);
+              component = fixture.componentInstance;
+            });
+
+            it('persists enabling mode and applies the serious filter', async () => {
+              await component.toggleSeriousLearnerMode();
+
+              expect(updateMyProfile).toHaveBeenCalledWith({ is_serious_learner: true });
+              expect(component.seriousLearnerMode()).toBe(true);
+              expect(component.seriousLearnerOnly()).toBe(true);
+              expect(component.selectedFilter()).toBe('serious');
+              expect(component.seriousModeSaving()).toBe(false);
+              expect(component.seriousModeError()).toBe(false);
+              expect(findPartners).toHaveBeenCalledTimes(1);
+            });
+
+            it('removes the serious filter when persisted mode is disabled', async () => {
+              component.seriousLearnerMode.set(true);
+              component.seriousLearnerOnly.set(true);
+              component.selectedFilter.set('serious');
+
+              await component.toggleSeriousLearnerMode();
+
+              expect(updateMyProfile).toHaveBeenCalledWith({ is_serious_learner: false });
+              expect(component.seriousLearnerMode()).toBe(false);
+              expect(component.seriousLearnerOnly()).toBe(false);
+              expect(component.selectedFilter()).toBe('all');
+            });
+
+            it('keeps the previous state and exposes an error when persistence fails', async () => {
+              updateMyProfile.mockRejectedValueOnce(new Error('network unavailable'));
+              const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+              await component.toggleSeriousLearnerMode();
+
+              expect(component.seriousLearnerMode()).toBe(false);
+              expect(component.seriousLearnerOnly()).toBe(false);
+              expect(component.seriousModeSaving()).toBe(false);
+              expect(component.seriousModeError()).toBe(true);
+              expect(findPartners).not.toHaveBeenCalled();
+              consoleError.mockRestore();
+            });
+
+            it('prevents duplicate profile mutations while a toggle is pending', async () => {
+              let resolveUpdate: (() => void) | undefined;
+              updateMyProfile.mockReturnValueOnce(
+                new Promise<void>((resolve) => {
+                  resolveUpdate = resolve;
+                }),
+              );
+
+              const first = component.toggleSeriousLearnerMode();
+              const second = component.toggleSeriousLearnerMode();
+
+              expect(component.seriousModeSaving()).toBe(true);
+              expect(updateMyProfile).toHaveBeenCalledTimes(1);
+
+              resolveUpdate?.();
+              await Promise.all([first, second]);
+              expect(component.seriousModeSaving()).toBe(false);
+            });
+
+            it('keeps persisted mode active when temporary filters are reset', () => {
+              component.seriousLearnerMode.set(true);
+              component.selectedFilter.set('nearby');
+              component.seriousLearnerOnly.set(true);
+
+              component.resetFilters();
+
+              expect(component.seriousLearnerMode()).toBe(true);
+              expect(component.seriousLearnerOnly()).toBe(true);
+              expect(component.selectedFilter()).toBe('serious');
+            });
+
+            it('keeps persistent mode composed with another discovery pill', () => {
+              component.seriousLearnerMode.set(true);
+              findPartners.mockClear();
+
+              component.onFilterSelect('nearby');
+
+              expect(component.selectedFilter()).toBe('nearby');
+              expect(component.seriousLearnerOnly()).toBe(true);
+              expect(component.selectedDistanceKm()).toBe(10);
+              expect(findPartners).toHaveBeenCalledTimes(1);
+            });
+          });
+          """.replace('          ', ''), encoding='utf-8')
+
+          # Spatial search must implement the identical predicate server-side.
+          migration = Path('supabase/migrations/20260820223000_serious_learner_active_streak_policy.sql')
+          migration.write_text("""-- Canonicalise Serious Learner discovery on active study streaks.
+          --
+          -- `users.is_serious_learner` remains a preference that enables the filter for
+          -- the searching user. Candidate qualification is derived from study activity:
+          -- at least a 7-day streak and streak activity within the previous 24 hours.
+          -- This keeps the PostGIS path aligned with ordinary discovery and avoids stale
+          -- counters or correction behaviour determining eligibility.
+
+          CREATE INDEX IF NOT EXISTS idx_users_discovery_serious_active
+            ON public.users (last_active_at DESC)
+            WHERE privacy_hide_from_search = false
+              AND is_deletion_pending = false
+              AND scheduled_for_deletion_at IS NULL
+              AND study_streak_days >= 7;
+
+          CREATE OR REPLACE FUNCTION public.search_nearby_users(
+              search_lat DOUBLE PRECISION,
+              search_lon DOUBLE PRECISION,
+              radius_m DOUBLE PRECISION,
+              exclude_user_id UUID DEFAULT NULL,
+              filter_native_arr VARCHAR(10)[] DEFAULT NULL,
+              filter_target VARCHAR(10) DEFAULT NULL,
+              serious_only BOOLEAN DEFAULT FALSE,
+              filter_level VARCHAR(2) DEFAULT NULL,
+              filter_gender VARCHAR(20) DEFAULT NULL,
+              filter_age_min INTEGER DEFAULT NULL,
+              filter_age_max INTEGER DEFAULT NULL,
+              filter_audio_intro BOOLEAN DEFAULT FALSE
+          )
+          RETURNS TABLE(
+              id UUID,
+              display_name TEXT,
+              native_languages VARCHAR(10)[],
+              target_languages VARCHAR(10)[],
+              bio_text TEXT,
+              avatar_url TEXT,
+              audio_intro_url TEXT,
+              is_vip BOOLEAN,
+              study_streak_days INTEGER,
+              correction_ratio REAL,
+              is_serious_learner BOOLEAN,
+              proficiency_level VARCHAR(2),
+              created_at TIMESTAMPTZ,
+              last_active_at TIMESTAMPTZ,
+              age INTEGER,
+              gender VARCHAR(20),
+              country TEXT,
+              city TEXT,
+              interests VARCHAR(50)[],
+              distance DOUBLE PRECISION
+          )
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          SET search_path = public
+          AS $$
+          BEGIN
+              RETURN QUERY
+              SELECT
+                  u.id,
+                  u.display_name,
+                  u.native_languages,
+                  u.target_languages,
+                  u.bio_text,
+                  u.avatar_url,
+                  u.audio_intro_url,
+                  u.is_vip,
+                  u.study_streak_days,
+                  u.correction_ratio,
+                  u.is_serious_learner,
+                  u.proficiency_level,
+                  u.created_at,
+                  u.last_active_at,
+                  u.age,
+                  u.gender,
+                  u.country,
+                  u.city,
+                  u.interests,
+                  ST_Distance(
+                      u.location,
+                      ST_SetSRID(ST_MakePoint(search_lon, search_lat), 4326)
+                  ) AS distance
+              FROM public.users AS u
+              WHERE
+                  ST_DWithin(
+                      u.location,
+                      ST_SetSRID(ST_MakePoint(search_lon, search_lat), 4326),
+                      radius_m
+                  )
+                  AND (exclude_user_id IS NULL OR u.id <> exclude_user_id)
+                  AND u.privacy_hide_from_search = false
+                  AND u.is_deletion_pending = false
+                  AND u.scheduled_for_deletion_at IS NULL
+                  AND (filter_native_arr IS NULL OR u.native_languages && filter_native_arr)
+                  AND (filter_target IS NULL OR filter_target = ANY(u.target_languages))
+                  AND (
+                      NOT serious_only
+                      OR (
+                          u.study_streak_days >= 7
+                          AND u.last_active_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                      )
+                  )
+                  AND (filter_level IS NULL OR u.proficiency_level = filter_level)
+                  AND (filter_gender IS NULL OR u.gender = filter_gender)
+                  AND (filter_age_min IS NULL OR u.age >= filter_age_min)
+                  AND (filter_age_max IS NULL OR u.age <= filter_age_max)
+                  AND (
+                      NOT filter_audio_intro
+                      OR (u.audio_intro_url IS NOT NULL AND u.audio_intro_url <> '')
+                  )
+              ORDER BY distance ASC
+              LIMIT 100;
+          END;
+          $$;
+
+          COMMENT ON FUNCTION public.search_nearby_users(
+            double precision,
+            double precision,
+            double precision,
+            uuid,
+            character varying[],
+            character varying,
+            boolean,
+            character varying,
+            character varying,
+            integer,
+            integer,
+            boolean
+          ) IS
+            'Discovery spatial RPC. Serious-only means study_streak_days >= 7 with activity in the previous 24 hours; the stored serious-mode preference does not qualify candidates.';
+          """.replace('          ', ''), encoding='utf-8')
+
+          # Keep the existing discovery audit from documenting the retired correction-ratio rule.
+          path = Path('docs/partner_discovery_audit.md')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '- "Serious Learner" toggle (requires `study_streak_days > 7` and `correction_ratio >= 0.8`).',
+              '- "Serious Learner" toggle (requires an active study streak of at least 7 days, with streak activity in the last 24 hours).',
+              'discovery audit serious learner rule',
+          )
+          path.write_text(text, encoding='utf-8')
+
+          docs = Path('docs/serious-learner-discovery.md')
+          docs.write_text("""# Serious Learner discovery policy
+
+          Issue #812 standardises the existing Serious Learner filter instead of adding a second discovery path.
+
+          ## Canonical qualification
+
+          A candidate is an **active Serious Learner** only when both conditions are true:
+
+          1. `study_streak_days >= 7` (inclusive); and
+          2. `last_active_at >= now - 24 hours`.
+
+          `correction_ratio` is deliberately not part of this predicate. Correction/helpfulness remains a ranking signal in features such as Partner of the Week, but a learner does not have to correct other users to qualify as a serious learner.
+
+          `users.is_serious_learner` is a **preference/mode flag for the searching user**. It enables the Serious Learner filter automatically; it is not trusted as candidate qualification. This distinction prevents a stale or self-declared flag from bypassing activity requirements.
+
+          The current streak subsystem updates `last_active_at` when it updates `study_streak_days`, and the streak reset job uses the same activity field. Until a dedicated `last_study_at` field is introduced, the 24-hour window is therefore the canonical freshness boundary and is enforced at query time as well as by the daily reset job.
+
+          ## Where the rule is enforced
+
+          - ordinary `/discovery` partner queries;
+          - PostGIS `search_nearby_users` queries;
+          - audio-introduction discovery;
+          - mock/degraded discovery filtering (fail closed when freshness is unknown);
+          - Serious Learner labels emitted by recommendation DTOs;
+          - Partner of the Week candidate freshness (its separate correction/helpfulness ranking still applies).
+
+          Collection queries remain bounded (`50` in normal discovery and `100` in the spatial RPC). Existing blocked-user, hidden-from-search and deletion-pending boundaries remain in force.
+
+          ## Frontend state and failure behaviour
+
+          The discovery screen already exposes a Serious filter pill and a persistent Serious Learner Mode preference. The persistent mutation now:
+
+          - disables duplicate toggles while the profile write is pending;
+          - exposes a screen-reader status while saving and an alert on failure;
+          - changes local mode/filter state only after persistence succeeds;
+          - removes the Serious filter when the persistent mode is disabled;
+          - preserves the persisted mode when temporary discovery filters are reset;
+          - composes the persisted mode with filters such as Nearby rather than silently bypassing it.
+
+          A failed profile write leaves the prior state intact and can be retried by using the same toggle again. No private profile content, coordinates or tokens are logged.
+
+          ## Rollout
+
+          1. Apply `20260820223000_serious_learner_active_streak_policy.sql` so the spatial RPC has the canonical predicate.
+          2. Deploy the backend so non-spatial, audio-intro and recommendation paths use the shared policy.
+          3. Deploy the frontend mutation-state changes.
+
+          No user data backfill is required. Existing `study_streak_days` and `last_active_at` values are used directly.
+
+          ## Rollback
+
+          Revert the application commits together. If the backend is rolled back to a version that expects the previous spatial `is_serious_learner` predicate, restore the prior `search_nearby_users` function body as part of the rollback to avoid mixed semantics. The additive partial index may remain safely in place.
+          """.replace('          ', ''), encoding='utf-8')
+
+          PY
+
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend frontend supabase docs
+          if git diff --cached --quiet; then
+            echo "No implementation changes produced" >&2
+            exit 1
+          fi
+          git commit -m "feat(discovery): enforce active serious learner policy"
+          git push origin HEAD
