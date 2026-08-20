@@ -123,11 +123,12 @@ describe('CommunitiesComponent', () => {
     await render();
 
     const list: HTMLUListElement = fixture.nativeElement.querySelector('ul');
-    const emptyItem: HTMLLIElement = list.querySelector('li');
+    const emptyItem = list.querySelector<HTMLLIElement>('li');
 
-    expect(emptyItem.textContent).toContain('communities.empty');
+    expect(emptyItem).not.toBeNull();
+    expect(emptyItem?.textContent).toContain('communities.empty');
     expect(list.children).toHaveLength(1);
-    expect(emptyItem.tagName).toBe('LI');
+    expect(emptyItem?.tagName).toBe('LI');
   });
 
   it('uses Relay semantic surfaces, radius and elevation roles', () => {
