@@ -71,13 +71,13 @@ describe('GdprComponent', () => {
       scheduled_for_deletion_at: null,
       latest_archive: {
         requested_at: '2026-08-20T12:00:00.000Z',
-        fulfilled_at: '2026-08-20T12:00:00.000Z',
         download_url: 'https://storage.example.test/signed-archive',
         expires_in_seconds: 900,
       },
     });
 
     await fixture.componentInstance.requestArchive();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const link = fixture.nativeElement.querySelector(
@@ -112,7 +112,6 @@ describe('GdprComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // After deletion, the cancel section should appear
     expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
   });
 
@@ -122,8 +121,9 @@ describe('GdprComponent', () => {
     expect(mockGdprService.deleteAccount).not.toHaveBeenCalled();
   });
 
-  it('should show cancel deletion section when deletion is pending', () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+  it('should show cancel deletion section after a deletion request', async () => {
+    fixture.componentInstance.confirmDelete.set(true);
+    await fixture.componentInstance.deleteAccount();
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -131,7 +131,8 @@ describe('GdprComponent', () => {
   });
 
   it('should call cancelDeletion and hide section on success', async () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+    fixture.componentInstance.confirmDelete.set(true);
+    await fixture.componentInstance.deleteAccount();
     fixture.detectChanges();
 
     fixture.componentInstance.cancelDeletion();
