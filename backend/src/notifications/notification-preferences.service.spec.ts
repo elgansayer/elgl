@@ -160,6 +160,18 @@ describe('NotificationPreferencesService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects impossible 24-hour times even when the service is called directly', async () => {
+    vi.spyOn(service, 'getPreferences').mockResolvedValue(preferences());
+
+    await expect(
+      service.updatePreferences('user-1', {
+        quiet_hours_start: '99:99',
+        quiet_hours_end: '07:00',
+        quiet_hours_timezone: 'UTC',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects an ambiguous all-day start-equals-end schedule', async () => {
     vi.spyOn(service, 'getPreferences').mockResolvedValue(preferences());
 
