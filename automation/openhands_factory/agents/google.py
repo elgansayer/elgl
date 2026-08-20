@@ -200,8 +200,6 @@ class GoogleAgentProvider(CLIProvider):
                 self._full_prompt(request),
                 "--output-format",
                 "text",
-                "--effort",
-                "high",
                 "--mode",
                 "accept-edits",
                 "--sandbox",
@@ -220,6 +218,15 @@ class GoogleAgentProvider(CLIProvider):
                 "--add-dir",
                 str(request.cwd),
             ]
+            # Model names already ending in -high/-medium/-low (every model in
+            # agy's own catalogue does) bake their effort tier into the model
+            # itself; a separately-passed --effort that disagrees is a hard
+            # CLI error ("--model X conflicts with --effort=Y"), not a warning.
+            # Only fall back to an explicit --effort for a model with no tier
+            # suffix of its own.
+            effort_suffixes = ("-high", "-medium", "-low")
+            if not (model and model.endswith(effort_suffixes)):
+                command.extend(("--effort", "high"))
             if model and model != "auto":
                 command.extend(("--model", model))
             return [*command, *self.extra_args]
