@@ -22,6 +22,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
+import { GroupChatController } from './groups/group-chat.controller';
+import { GroupChatService } from './groups/group-chat.service';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    GroupChatController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -46,6 +49,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    GroupChatService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
@@ -59,6 +63,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    GroupChatService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
