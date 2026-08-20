@@ -28,7 +28,7 @@ export class BlocksController {
   @Post()
   async blockUser(
     @CurrentUser() user: User | null,
-    @Body() body: { blocked_id: string }
+    @Body() body: { blocked_id: string },
   ) {
     if (!user) throw new UnauthorizedException();
     return this.blocksService.blockUser(user.id, body.blocked_id);

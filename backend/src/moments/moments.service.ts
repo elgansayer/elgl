@@ -973,8 +973,7 @@ export class MomentsService {
       .single();
 
     const updatedData = result.data as
-      | (MomentCountRow & { user_id?: string })
-      | null;
+      (MomentCountRow & { user_id?: string }) | null;
 
     await supabase
       .from('moments')

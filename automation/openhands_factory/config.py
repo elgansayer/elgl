@@ -206,23 +206,27 @@ class AgentsConfig(BaseModel):
                 model="gemini-3.1-pro-high",
                 credential_paths=[".gemini"],
                 runtime_paths=[".local/bin", ".npm-global"],
+                phase_models={
+                    "planning": "gemini-3.1-pro-high",
+                    "architecture": "gemini-3.1-pro-high",
+                    "security_review": "gemini-3.1-pro-high",
+                    "implementation": "gemini-3.1-pro-high",
+                    "quality_repair": "gemini-3.7-flash-low",
+                    "code_review": "gemini-3.7-flash-low",
+                    "ci_repair": "gemini-3.7-flash-low",
+                    "general_action": "gemini-3.7-flash-low",
+                },
             ),
             "opencode": ProviderConfig(
                 enabled=True,
                 command="opencode",
                 auth_mode="subscription",
-                model="opencode-go/kimi-k3",
+                # opencode-go/deepseek-v4-flash is the fast tier of the
+                # opencode-go catalog (verified via `opencode models`) - used
+                # uniformly rather than split by phase.
+                model="opencode-go/deepseek-v4-flash",
                 credential_paths=[".config/opencode", ".local/share/opencode"],
                 runtime_paths=[".local/bin", ".npm-global", ".opencode"],
-                phase_models={
-                    "planning": "opencode-go/qwen3.8-max",
-                    "architecture": "opencode-go/qwen3.8-max",
-                    "security_review": "opencode-go/qwen3.8-max",
-                    "code_review": "opencode-go/qwen3.8-max",
-                    "quality_repair": "opencode-go/kimi-k2.7-code",
-                    "ci_repair": "opencode-go/kimi-k2.7-code",
-                    "general_action": "opencode-go/kimi-k2.7-code",
-                },
             ),
             "openhands": ProviderConfig(
                 enabled=False,
@@ -241,6 +245,16 @@ class AgentsConfig(BaseModel):
                 # symlink into .local/lib/node_modules; both must be mounted or
                 # the sandboxed process cannot resolve the symlink target.
                 runtime_paths=[".local/bin", ".local/lib"],
+                phase_models={
+                    "planning": "github-copilot/claude-opus-5",
+                    "architecture": "github-copilot/claude-opus-5",
+                    "security_review": "github-copilot/claude-opus-5",
+                    "implementation": "github-copilot/claude-sonnet-5",
+                    "quality_repair": "github-copilot/claude-haiku-4.5",
+                    "code_review": "github-copilot/claude-haiku-4.5",
+                    "ci_repair": "github-copilot/claude-haiku-4.5",
+                    "general_action": "github-copilot/claude-haiku-4.5",
+                },
             ),
         }
     )
