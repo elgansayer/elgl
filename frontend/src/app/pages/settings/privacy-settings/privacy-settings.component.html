@@ -38,13 +38,14 @@
                 Other members will not be shown your current or recent online presence.
               </span>
             </span>
-            <input
-              type="checkbox"
-              class="h-5 w-5 shrink-0 accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            <hlm-checkbox
+              inputId="hide-online-status"
+              class="size-5"
               [checked]="hideOnlineStatus()"
               [disabled]="savingPrivacyControl() !== null"
               aria-describedby="hide-online-description"
-              (change)="setHideOnlineStatus($any($event.target).checked)"
+              [attr.aria-label]="'settings.hideOnlineStatus' | t"
+              (checkedChange)="setHideOnlineStatus($event)"
             />
           </label>
 
@@ -57,13 +58,14 @@
                 Your VIP entitlement still works, but other members will not be shown the VIP badge.
               </span>
             </span>
-            <input
-              type="checkbox"
-              class="h-5 w-5 shrink-0 accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            <hlm-checkbox
+              inputId="hide-vip-status"
+              class="size-5"
               [checked]="hideVipStatus()"
               [disabled]="savingPrivacyControl() !== null"
               aria-describedby="hide-vip-description"
-              (change)="setHideVipStatus($any($event.target).checked)"
+              [attr.aria-label]="'settings.hideVipStatus' | t"
+              (checkedChange)="setHideVipStatus($event)"
             />
           </label>
         }
