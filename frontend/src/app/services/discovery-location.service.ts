@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { I18nService } from './i18n.service';
 
 export interface DiscoveryCoordinates {
@@ -28,14 +28,14 @@ const NEARBY_CACHE_SCOPE = 'nearby-memory-origin';
 
 @Injectable({ providedIn: 'root' })
 export class DiscoveryLocationService {
+  private readonly i18n = inject(I18nService);
+
   readonly coordinates = signal<DiscoveryCoordinates | null>(null);
   readonly status = signal<DiscoveryLocationStatus>('idle');
   readonly errorCode = signal<DiscoveryLocationErrorCode | null>(null);
 
   private pendingRequest: Promise<DiscoveryCoordinates> | null = null;
   private generation = 0;
-
-  constructor(private readonly i18n: I18nService) {}
 
   requestCurrentPosition(): Promise<DiscoveryCoordinates> {
     if (this.pendingRequest) return this.pendingRequest;
