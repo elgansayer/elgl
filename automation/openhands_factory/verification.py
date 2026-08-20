@@ -59,6 +59,19 @@ if [ -d "$cypress_cache" ]; then
   /usr/bin/mount -o remount,bind,ro /mnt/factory-verification/cypress
 fi
 
+# uv resolves each worktree as its own project and needs its dependencies
+# available locally to build/sync that project's virtual environment - the
+# --net namespace below has no route to PyPI, so without a pre-warmed cache
+# every job's factory-format/factory-lint/factory-types/factory-tests step
+# fails outright on "dns error" trying to fetch even already-pinned wheels.
+uv_cache=$service_home/.cache/uv
+has_uv_cache=false
+if [ -d "$uv_cache" ]; then
+  has_uv_cache=true
+  /usr/bin/mkdir -p /mnt/factory-verification/uv-cache
+  /usr/bin/mount --bind "$uv_cache" /mnt/factory-verification/uv-cache
+fi
+
 if [ -d "$state_dir" ]; then
   /usr/bin/mount -t tmpfs -o mode=700,nosuid,nodev tmpfs "$state_dir"
 fi
@@ -89,15 +102,57 @@ if [ "$has_cypress_cache" = true ]; then
   /usr/bin/mount --bind /mnt/factory-verification/cypress /tmp/cypress-cache
   /usr/bin/mount -o remount,bind,ro /tmp/cypress-cache
 fi
+if [ "$has_uv_cache" = true ]; then
+  /usr/bin/mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache
+fi
 
 /usr/sbin/ip link set lo up
 cd "$workdir"
-exec /usr/bin/setpriv \
-  --bounding-set=-all \
-  --inh-caps=-all \
-  --ambient-caps=-all \
-  --no-new-privs \
-  -- "$@"
+# This shell is PID 1 of the new namespace, so any grandchild the command
+# backgrounds and orphans (e.g. a verification step's own leftover dev
+# server, or a test's own subprocess-under-test) reparents to it - but
+# without something actually calling waitpid() on those arrivals they sit
+# as unreaped zombies for the sandbox's whole lifetime instead of dying
+# promptly, unlike on a normal host where init reaps them immediately.
+# Hand off to a minimal Python reaper (in the spirit of tini/dumb-init)
+# instead of exec-ing the target command directly, so PID 1 keeps reaping
+# every child - the tracked one and any stray orphans - for as long as the
+# command runs.
+exec /usr/bin/python3 -c '
+import os
+import sys
+
+pid = os.fork()
+if pid == 0:
+    os.execv(
+        "/usr/bin/setpriv",
+        [
+            "/usr/bin/setpriv",
+            "--bounding-set=-all",
+            "--inh-caps=-all",
+            "--ambient-caps=-all",
+            "--no-new-privs",
+            "--",
+            *sys.argv[1:],
+        ],
+    )
+    os._exit(127)
+
+main_pid = pid
+exit_code = 1
+while True:
+    try:
+        reaped_pid, status = os.waitpid(-1, 0)
+    except ChildProcessError:
+        break
+    if reaped_pid == main_pid:
+        if os.WIFEXITED(status):
+            exit_code = os.WEXITSTATUS(status)
+        elif os.WIFSIGNALED(status):
+            exit_code = 128 + os.WTERMSIG(status)
+        break
+sys.exit(exit_code)
+' "$@"
 """
 
 
@@ -144,6 +199,7 @@ def run_isolated_verification_process(
         ),
         "TERM": "dumb",
         "UV_CACHE_DIR": "/tmp/uv-cache",
+        "UV_OFFLINE": "1",
         "VIRTUAL_ENV": virtual_environment,
     }
     command = (
