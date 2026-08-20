@@ -53,7 +53,8 @@
       .dark { color-scheme: dark; }
       h1 { margin: 0 0 24px; font-size: 28px; }
       .form,
-      .community-card {
+      .community-card,
+      .empty-state {
         border: 1px solid rgb(var(--surface-100));
         background: rgb(var(--surface-200));
         border-radius: 16px;
@@ -102,6 +103,13 @@
       .delete { width: 100%; background: transparent; color: rgb(var(--danger)); }
       .grid { display: grid; gap: 12px; margin-top: 20px; }
       .community-card { min-width: 0; padding: 16px; }
+      .empty-state {
+        margin-top: 20px;
+        padding: 24px 16px;
+        color: rgb(var(--text-secondary));
+        text-align: center;
+      }
+      .empty-preview { grid-column: 1 / -1; width: 100%; max-width: 390px; justify-self: center; }
       .row { display: flex; min-width: 0; flex-direction: column; gap: 12px; }
       .name,
       .description { overflow-wrap: anywhere; }
@@ -119,13 +127,14 @@
       }
       @media (max-width: 900px) {
         .states { grid-template-columns: minmax(0, 390px); }
+        .empty-preview { grid-column: auto; }
       }
     </style>
   </head>
   <body>
     <div class="states">
       <section>
-        <div class="label">Light / 390px mobile</div>
+        <div class="label">Light / 390px mobile / populated</div>
         <main class="state" aria-labelledby="communities-title-mobile">
           <h1 id="communities-title-mobile">Communities</h1>
           <div class="form">
@@ -152,7 +161,7 @@
       </section>
 
       <section>
-        <div class="label">Dark / wide</div>
+        <div class="label">Dark / desktop / populated</div>
         <main class="state dark desktop" aria-labelledby="communities-title-desktop">
           <h1 id="communities-title-desktop">Communities</h1>
           <div class="form">
@@ -182,6 +191,25 @@
               <p class="description">Conversation and meetup planning</p>
             </article>
           </div>
+        </main>
+      </section>
+
+      <section class="empty-preview">
+        <div class="label">Light / 390px mobile / empty</div>
+        <main class="state" aria-labelledby="communities-title-empty">
+          <h1 id="communities-title-empty">Communities</h1>
+          <div class="form">
+            <label>
+              <span class="sr-only">Community name</span>
+              <input placeholder="Community name" readonly />
+            </label>
+            <label>
+              <span class="sr-only">Community description</span>
+              <input placeholder="Description (optional)" readonly />
+            </label>
+            <button class="create">Create</button>
+          </div>
+          <div class="empty-state">No communities yet.</div>
         </main>
       </section>
     </div>
