@@ -230,17 +230,38 @@
             <hlm-checkbox
               inputId="seriousModeCheckbox"
               [checked]="seriousLearnerMode()"
+              [disabled]="seriousModeSaving()"
+              [attr.aria-describedby]="
+                seriousModeError() ? 'seriousModeError' : 'seriousModeDescription'
+              "
               (change)="toggleSeriousLearnerMode()"
-              class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
+              class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400 disabled:cursor-wait disabled:opacity-60"
             />
             <label for="seriousModeCheckbox" class="sr-only">{{
               'discovery.seriousModeToggle' | t
             }}</label>
           </div>
           <span
+            id="seriousModeDescription"
             class="text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline"
             >{{ 'discovery.seriousModeDesc' | t }}</span
           >
+          @if (seriousModeSaving()) {
+            <span
+              class="text-[9px] sm:text-[10px] text-text-secondary"
+              role="status"
+              aria-live="polite"
+              >{{ 'common.saving' | t }}</span
+            >
+          }
+          @if (seriousModeError()) {
+            <span
+              id="seriousModeError"
+              class="text-[9px] sm:text-[10px] text-error"
+              role="alert"
+              >{{ 'common.error' | t }}</span
+            >
+          }
         </div>
 
         <!-- Voice Room Active Toggle -->
