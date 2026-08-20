@@ -60,18 +60,11 @@ CREATE POLICY "Users can read own lesson progress"
   FOR SELECT
   USING (auth.uid() = user_id);
 
+-- Authenticated clients intentionally have no INSERT/UPDATE policy. All mutations
+-- go through the authenticated NestJS API and the service-role-only function below,
+-- preserving monotonic progress semantics even if a client talks to Supabase directly.
 DROP POLICY IF EXISTS "Users can insert own lesson progress" ON public.lesson_progress;
-CREATE POLICY "Users can insert own lesson progress"
-  ON public.lesson_progress
-  FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Users can update own lesson progress" ON public.lesson_progress;
-CREATE POLICY "Users can update own lesson progress"
-  ON public.lesson_progress
-  FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
 
 -- The backend calls this with the service role. GREATEST/COALESCE make retries and
 -- concurrent resume updates monotonic: progress cannot move backwards and a
