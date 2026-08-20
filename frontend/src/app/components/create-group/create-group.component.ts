@@ -23,7 +23,8 @@ export class CreateGroupComponent {
   private readonly router = inject(Router);
   private searchRequestId = 0;
 
-  readonly MAX_MEMBERS = 49;
+  // The creator is also a member, so 18 selected partners gives the 19-person cap.
+  readonly MAX_MEMBERS = 18;
 
   groupName = '';
   searchQuery = '';
