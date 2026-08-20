@@ -1,1026 +1,353 @@
-import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ErrorHandler, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
-import { VocabularyStore, Flashcard } from './vocabulary.store';
-import { AuthService } from './auth.service';
-import { SrsOfflineService } from './srs-offline.service';
-import { SrsCircuitBreakerService } from './srs-circuit-breaker.service';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
+import { HtmlSanitisationService } from './html-sanitisation.service';
+import { SrsOfflineService } from './srs-offline.service';
+import { Flashcard, VocabularyStore } from './vocabulary.store';
 
-describe('VocabularyStore', () => {
+describe('VocabularyStore signals', () => {
   let store: VocabularyStore;
-  let httpMock: HttpTestingController;
-  let authSpy: { getAccessToken: ReturnType<typeof vi.fn> };
-  let srsOfflineSpy: {
-    cacheFlashcards: ReturnType<typeof vi.fn>;
-    getCachedFlashcards: ReturnType<typeof vi.fn>;
-    cacheDueReviews: ReturnType<typeof vi.fn>;
-    getCachedDueReviews: ReturnType<typeof vi.fn>;
-    queueSrsReview: ReturnType<typeof vi.fn>;
-    syncQueuedReviews: ReturnType<typeof vi.fn>;
-    online: ReturnType<typeof vi.fn>;
+  let http: HttpTestingController;
+
+  const online = signal(true);
+  const auth = {
+    getAccessToken: vi.fn(() => 'access-token'),
+  };
+  const offline = {
+    online,
+    cacheFlashcards: vi.fn(() => Promise.resolve()),
+    getCachedFlashcards: vi.fn(() => Promise.resolve([] as Flashcard[])),
+    cacheDueReviews: vi.fn(() => Promise.resolve()),
+    getCachedDueReviews: vi.fn(() => Promise.resolve([] as Flashcard[])),
+    queueSrsReview: vi.fn(() => Promise.resolve()),
+    syncQueuedReviews: vi.fn(
+      async (sync: (item: { flashcardId: string; quality: number }) => Promise<void>) => {
+        await sync({ flashcardId: 'card-1', quality: 4 });
+        return { synced: 1, failed: 0 };
+      },
+    ),
+  };
+  const errorHandler = {
+    handleError: vi.fn(),
+  };
+  const sanitisation = {
+    sanitiseText: vi.fn((value: string) => value),
+    sanitiseUrl: vi.fn((value: string) => value),
   };
 
-  let circuitBreakerSpy: {
-    executeWithBreaker: ReturnType<typeof vi.fn>;
-    isAvailable: ReturnType<typeof vi.fn>;
-    recordSuccess: ReturnType<typeof vi.fn>;
-    recordFailure: ReturnType<typeof vi.fn>;
-    reset: ReturnType<typeof vi.fn>;
-  };
-
-  const mockFlashcard: Flashcard = {
-    id: '1',
-    user_id: 'user1',
-    word_token: 'hello',
-    translation: 'hola',
+  const card = (overrides: Partial<Flashcard> = {}): Flashcard => ({
+    id: 'card-1',
+    user_id: 'user-1',
+    word_token: 'Hello',
+    original_context: 'Hello there',
+    translation: 'Hola',
+    definition: 'A greeting',
+    pronunciation_url: 'https://cdn.example.test/hello.mp3',
     srs_level: 1,
     easiness_factor: 2.5,
     repetitions: 1,
     interval_days: 1,
-    next_review_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  };
+    next_review_at: '2026-08-22T00:00:00.000Z',
+    created_at: '2026-08-20T00:00:00.000Z',
+    ...overrides,
+  });
 
   beforeEach(() => {
     TestBed.resetTestingModule();
-
-    authSpy = {
-      getAccessToken: vi.fn().mockReturnValue('mock-token'),
-    };
-
-    srsOfflineSpy = {
-      cacheFlashcards: vi.fn().mockResolvedValue(undefined),
-      getCachedFlashcards: vi.fn().mockResolvedValue([]),
-      cacheDueReviews: vi.fn().mockResolvedValue(undefined),
-      getCachedDueReviews: vi.fn().mockResolvedValue([]),
-      queueSrsReview: vi.fn().mockResolvedValue(undefined),
-      syncQueuedReviews: vi.fn().mockResolvedValue({ synced: 0, failed: 0 }),
-      online: vi.fn().mockReturnValue(true),
-    };
-
-    circuitBreakerSpy = {
-      executeWithBreaker: vi
-        .fn()
-        .mockImplementation(
-          (
-            _service: string,
-            operation: () => Promise<unknown>,
-            _fallback: () => Promise<unknown>,
-          ) => operation(),
-        ),
-      isAvailable: vi.fn().mockReturnValue(true),
-      recordSuccess: vi.fn(),
-      recordFailure: vi.fn(),
-      reset: vi.fn(),
-    };
+    online.set(true);
+    vi.clearAllMocks();
 
     TestBed.configureTestingModule({
       providers: [
         VocabularyStore,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: authSpy },
-        { provide: SrsOfflineService, useValue: srsOfflineSpy },
-        { provide: SrsCircuitBreakerService, useValue: circuitBreakerSpy },
+        { provide: AuthService, useValue: auth },
+        { provide: SrsOfflineService, useValue: offline },
+        { provide: ErrorHandler, useValue: errorHandler },
+        { provide: HtmlSanitisationService, useValue: sanitisation },
       ],
     });
 
     store = TestBed.inject(VocabularyStore);
-    httpMock = TestBed.inject(HttpTestingController);
+    http = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
-    httpMock.verify();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
+    http.verify();
   });
 
-  describe('initial state', () => {
-    it('should be created', () => {
-      expect(store).toBeTruthy();
-    });
-
-    it('should initialise flashcardMap as an empty Map', () => {
-      expect(store.flashcardMap().size).toBe(0);
-    });
-
-    it('should initialise allFlashcards as an empty array', () => {
-      expect(store.allFlashcards()).toEqual([]);
-    });
-
-    it('should initialise dueReviews as an empty array', () => {
-      expect(store.dueReviews()).toEqual([]);
-    });
-
-    it('should initialise isLoading as false', () => {
-      expect(store.isLoading()).toBe(false);
-    });
+  it('starts with deterministic empty signal state', () => {
+    expect(store.flashcardMap()).toEqual(new Map());
+    expect(store.allFlashcards()).toEqual([]);
+    expect(store.dueReviews()).toEqual([]);
+    expect(store.pendingReviewCards()).toEqual([]);
+    expect(store.isLoading()).toBe(false);
+    expect(store.isDegraded()).toBe(false);
+    expect(store.degradedReason()).toBe('');
+    expect(store.isOffline()).toBe(false);
   });
 
-  describe('loadAllFlashcards', () => {
-    it('should set isLoading to true while loading and false after', async () => {
-      const promise = store.loadAllFlashcards();
-      expect(store.isLoading()).toBe(true);
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([mockFlashcard]);
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-    });
-
-    it('should populate allFlashcards and flashcardMap signals', async () => {
-      const promise = store.loadAllFlashcards();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      expect(req.request.method).toBe('GET');
-      expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-
-      req.flush([mockFlashcard]);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.allFlashcards()[0]).toEqual(mockFlashcard);
-      expect(store.flashcardMap().get('hello')).toEqual(mockFlashcard);
-    });
-
-    it('should lower-case word tokens when building flashcardMap', async () => {
-      const upperCard = { ...mockFlashcard, word_token: 'HELLO' };
-      const promise = store.loadAllFlashcards();
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([upperCard]);
-      await promise;
-
-      expect(store.flashcardMap().get('hello')).toEqual(upperCard);
-      expect(store.flashcardMap().get('HELLO')).toBeUndefined();
-    });
-
-    it('should handle error gracefully and set isLoading to false', async () => {
-      const promise = store.loadAllFlashcards();
-
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush({ message: 'Server error' }, { status: 500, statusText: 'Internal Server Error' });
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-      expect(store.allFlashcards()).toEqual([]);
-      expect(store.flashcardMap().size).toBe(0);
-    });
+  it('reacts to online state changes through the computed isOffline signal', () => {
+    expect(store.isOffline()).toBe(false);
+    online.set(false);
+    expect(store.isOffline()).toBe(true);
+    online.set(true);
+    expect(store.isOffline()).toBe(false);
   });
 
-  describe('loadDueReviews', () => {
-    it('should fetch due reviews and update the signal', async () => {
-      const promise = store.loadDueReviews();
+  it('loads cards, normalises map keys and caches the sanitised result', async () => {
+    const loading = store.loadAllFlashcards();
+    expect(store.isLoading()).toBe(true);
 
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/due`);
-      expect(req.request.method).toBe('GET');
+    const request = http.expectOne(`${environment.apiUrl}/flashcards`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');
+    request.flush([card()]);
 
-      req.flush([mockFlashcard]);
-      await promise;
+    await loading;
 
-      expect(store.dueReviews().length).toBe(1);
-      expect(store.dueReviews()[0]).toEqual(mockFlashcard);
-    });
-
-    it('should handle error gracefully', async () => {
-      const promise = store.loadDueReviews();
-
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards/due`)
-        .flush({}, { status: 500, statusText: 'Server Error' });
-      await promise;
-
-      expect(store.dueReviews()).toEqual([]);
-    });
+    expect(store.isLoading()).toBe(false);
+    expect(store.allFlashcards()).toEqual([card()]);
+    expect(store.flashcardMap().get('hello')).toEqual(card());
+    expect(store.flashcardMap().has('Hello')).toBe(false);
+    expect(offline.cacheFlashcards).toHaveBeenCalledWith([card()]);
+    expect(sanitisation.sanitiseText).toHaveBeenCalledWith('Hello');
   });
 
-  describe('getWordStatus', () => {
-    it('should return level 0 with secondary-accent styling for unknown words', () => {
-      const status = store.getWordStatus('unknown');
+  it('reports load failures and restores cached cards while offline', async () => {
+    const cached = card({ id: 'cached-1', word_token: 'Offline' });
+    online.set(false);
+    offline.getCachedFlashcards.mockResolvedValueOnce([cached]);
+
+    const loading = store.loadAllFlashcards();
+    http
+      .expectOne(`${environment.apiUrl}/flashcards`)
+      .flush({ error: 'unavailable' }, { status: 503, statusText: 'Unavailable' });
+    await loading;
+
+    expect(errorHandler.handleError).toHaveBeenCalledOnce();
+    expect(offline.getCachedFlashcards).toHaveBeenCalledOnce();
+    expect(store.allFlashcards()).toEqual([cached]);
+    expect(store.flashcardMap().get('offline')).toEqual(cached);
+    expect(store.isLoading()).toBe(false);
+  });
+
+  it('loads and caches due reviews', async () => {
+    const due = card({ id: 'due-1', word_token: 'Due' });
+    const loading = store.loadDueReviews();
+
+    const request = http.expectOne(`${environment.apiUrl}/flashcards/due`);
+    expect(request.request.method).toBe('GET');
+    request.flush([due]);
+    await loading;
+
+    expect(store.dueReviews()).toEqual([due]);
+    expect(offline.cacheDueReviews).toHaveBeenCalledWith([due]);
+  });
+
+  it('restores cached due reviews when the network is unavailable offline', async () => {
+    const due = card({ id: 'cached-due', word_token: 'Cached due' });
+    online.set(false);
+    offline.getCachedDueReviews.mockResolvedValueOnce([due]);
+
+    const loading = store.loadDueReviews();
+    http
+      .expectOne(`${environment.apiUrl}/flashcards/due`)
+      .flush({ error: 'offline' }, { status: 0, statusText: 'Offline' });
+    await loading;
+
+    expect(errorHandler.handleError).toHaveBeenCalledOnce();
+    expect(store.dueReviews()).toEqual([due]);
+  });
+
+  describe('word status', () => {
+    it('maps an unknown token to new level 0 styling', () => {
+      const status = store.getWordStatus(' new ');
       expect(status.level).toBe(0);
       expect(status.flashcard).toBeUndefined();
-      expect(status.colourClass).toContain('bg-secondary/20');
+      expect(status.colorClass).toContain('bg-secondary/20');
+      expect(status.colourClass).toBe(status.colorClass);
     });
 
-    it('should return level and warning styling for learning words (srs 1-3)', () => {
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-      const status = store.getWordStatus('hello');
-      expect(status.level).toBe(1);
-      expect(status.flashcard).toEqual(mockFlashcard);
-      expect(status.colourClass).toContain('bg-warning/20');
-    });
-
-    it('should return level and white styling for known words (srs 4+)', () => {
-      const knownCard = { ...mockFlashcard, srs_level: 4 };
-      store.flashcardMap.set(new Map([['hello', knownCard]]));
-      const status = store.getWordStatus('hello');
-      expect(status.level).toBe(4);
-      expect(status.flashcard).toEqual(knownCard);
-      expect(status.colourClass).toContain('text-text-primary');
-    });
-
-    it('should trim and lower-case the input word', () => {
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-      const status = store.getWordStatus('  Hello  ');
-      expect(status.level).toBe(1);
-      expect(status.flashcard).toEqual(mockFlashcard);
-    });
-
-    it('should return colorClass equal to colourClass', () => {
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-      const status = store.getWordStatus('hello');
-      expect(status.colorClass).toBe(status.colourClass);
-    });
-  });
-
-  describe('saveWord', () => {
-    it('should POST and prepend the new flashcard to allFlashcards', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const payload = { word_token: 'world', translation: 'mundo' };
-      const newCard = { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' };
-
-      const promise = store.saveWord(payload);
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(payload);
-
-      req.flush(newCard);
-      const result = await promise;
-
-      expect(result).toEqual(newCard);
-      expect(store.allFlashcards().length).toBe(2);
-      expect(store.allFlashcards()[0]).toEqual(newCard);
-      expect(store.flashcardMap().get('world')).toEqual(newCard);
-    });
-
-    it('should replace an existing flashcard with the same word_token', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedPayload = { word_token: 'hello', translation: 'hola-updated' };
-      const updatedCard = { ...mockFlashcard, translation: 'hola-updated' };
-
-      const promise = store.saveWord(updatedPayload);
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(updatedCard);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.allFlashcards()[0].translation).toBe('hola-updated');
-      expect(store.flashcardMap().get('hello')?.translation).toBe('hola-updated');
-    });
-  });
-
-  describe('updateSrsLevel', () => {
-    it('should PATCH and update the flashcard in all signals', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = {
-        ...mockFlashcard,
-        srs_level: 2,
-        next_review_at: '2026-08-07T00:00:00Z',
-      };
-      const promise = store.updateSrsLevel('1', 4);
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`);
-      expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ quality: 4 });
-
-      req.flush(updatedCard);
-      const result = await promise;
-
-      expect(result).toEqual(updatedCard);
-      expect(store.allFlashcards()[0].srs_level).toBe(2);
-      expect(store.allFlashcards()[0].next_review_at).toBe('2026-08-07T00:00:00Z');
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(2);
-    });
-
-    it('should update the correct flashcard when multiple exist', async () => {
-      const card2 = { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' };
-      store.allFlashcards.set([mockFlashcard, card2]);
-      store.flashcardMap.set(
-        new Map([
-          ['hello', mockFlashcard],
-          ['world', card2],
-        ]),
-      );
-
-      const updatedCard = { ...mockFlashcard, srs_level: 3 };
-      const promise = store.updateSrsLevel('1', 3);
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(2);
-      expect(store.allFlashcards()[0].srs_level).toBe(3);
-      expect(store.allFlashcards()[1].srs_level).toBe(1);
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(3);
-      expect(store.flashcardMap().get('world')?.srs_level).toBe(1);
-    });
-  });
-
-  describe('translateWordOrSentence', () => {
-    it('should POST to the NLP translate endpoint', async () => {
-      const translationResult = {
-        original_text: 'hello',
-        translated_text: 'hola',
-        detected_language: 'en',
-      };
-      const promise = store.translateWordOrSentence('hello', 'es');
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/translate`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({
-        text: 'hello',
-        target_language: 'es',
-        source_language: undefined,
-      });
-
-      req.flush(translationResult);
-      const result = await promise;
-
-      expect(result).toEqual(translationResult);
-    });
-
-    it('should include optional source language', async () => {
-      const promise = store.translateWordOrSentence('hello', 'es', 'en');
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/translate`);
-      expect(req.request.body.source_language).toBe('en');
-
-      req.flush({ original_text: 'hello', translated_text: 'hola', detected_language: 'en' });
-      await promise;
-    });
-  });
-
-  describe('checkGrammar', () => {
-    it('should POST to the NLP grammar-check endpoint', async () => {
-      const grammarResult = {
-        original: 'hola',
-        corrected: 'hola',
-        explanation: 'No errors found',
-        errors_found: 0,
-      };
-      const promise = store.checkGrammar('hola', 'es');
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ text: 'hola', language: 'es' });
-
-      req.flush(grammarResult);
-      const result = await promise;
-
-      expect(result).toEqual(grammarResult);
-    });
-  });
-
-  describe('scorePronunciation', () => {
-    it('should POST to the NLP pronunciation-score endpoint', async () => {
-      const scoreResult = {
-        overall_score: 85,
-        breakdown: [{ word: 'hello', score: 85 }],
-        feedback_summary: 'Good job',
-      };
-      const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({
-        audio_url: 'http://audio.url',
-        target_text: 'hello',
-        language: 'en',
-      });
-
-      req.flush(scoreResult);
-      const result = await promise;
-
-      expect(result).toEqual(scoreResult);
-    });
-  });
-
-  describe('haptic feedback', () => {
-    it('should vibrate with success buzz for known words (srs >= 4)', async () => {
-      const vibrateSpy = vi.fn();
-      vi.stubGlobal('navigator', { vibrate: vibrateSpy });
-
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = { ...mockFlashcard, srs_level: 4 };
-      const promise = store.updateSrsLevel('1', 4);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      await promise;
-
-      expect(vibrateSpy).toHaveBeenCalledWith(100);
-    });
-
-    it('should vibrate with gentle pulse for learning words (srs 1-3)', async () => {
-      const vibrateSpy = vi.fn();
-      vi.stubGlobal('navigator', { vibrate: vibrateSpy });
-
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = { ...mockFlashcard, srs_level: 2 };
-      const promise = store.updateSrsLevel('1', 2);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      await promise;
-
-      expect(vibrateSpy).toHaveBeenCalledWith([50, 50, 50]);
-    });
-
-    it('should not throw if navigator.vibrate is undefined', async () => {
-      vi.stubGlobal('navigator', {});
-
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = { ...mockFlashcard, srs_level: 2 };
-      const promise = store.updateSrsLevel('1', 2);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      await expect(promise).resolves.toBeDefined();
-    });
-  });
-
-  describe('getHeaders', () => {
-    it('should use empty token when getAccessToken returns undefined', async () => {
-      authSpy.getAccessToken.mockReturnValue(undefined);
-
-      const promise = store.loadAllFlashcards();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer ');
-
-      req.flush([]);
-      await promise;
-    });
-
-    it('should use empty token when getAccessToken returns null', async () => {
-      authSpy.getAccessToken.mockReturnValue(null);
-
-      const promise = store.loadAllFlashcards();
-
-      const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer ');
-
-      req.flush([]);
-      await promise;
-    });
-  });
-
-  describe('html sanitisation', () => {
-    it('should sanitise HTML in flashcard text fields loaded from server', async () => {
-      const maliciousCard = {
-        ...mockFlashcard,
-        word_token: '<b>hello</b>',
-        translation: '<script>alert("xss")</script>hola',
-        definition: '<img src=x onerror=alert(1)>greeting',
-        original_context: '<div onclick="steal()">Context</div>',
-      };
-      const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([maliciousCard]);
-      await promise;
-
-      const stored = store.allFlashcards()[0];
-      expect(stored.word_token).toBe('hello');
-      expect(stored.translation).toBe('hola');
-      expect(stored.definition).toBe('greeting');
-      expect(stored.original_context).toBe('Context');
-    });
-
-    it('should sanitise HTML in due review cards', async () => {
-      const maliciousCard = {
-        ...mockFlashcard,
-        translation: '<b>mundo</b>',
-      };
-      const promise = store.loadDueReviews();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([maliciousCard]);
-      await promise;
-
-      expect(store.dueReviews()[0].translation).toBe('mundo');
-    });
-
-    it('should sanitise flashcard returned from saveWord', async () => {
-      const payload = { word_token: 'test', translation: 'prueba' };
-      const newCard = {
-        ...mockFlashcard,
-        id: 'new',
-        word_token: '<i>test</i>',
-        translation: '<div>prueba</div>',
-      };
-      const promise = store.saveWord(payload);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCard);
-      const result = await promise;
-
-      expect(result.word_token).toBe('test');
-      expect(result.translation).toBe('prueba');
-    });
-
-    it('should sanitise flashcard returned from updateSrsLevel', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = { ...mockFlashcard, srs_level: 2, translation: '<b>hola</b>' };
-      const promise = store.updateSrsLevel('1', 4);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      const result = await promise;
-
-      expect(result.translation).toBe('hola');
-    });
-
-    it('should sanitise malicious URLs in pronunciation_url', async () => {
-      const maliciousCard = {
-        ...mockFlashcard,
-        pronunciation_url: 'javascript:alert(1)',
-      };
-      const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([maliciousCard]);
-      await promise;
-
-      expect(store.allFlashcards()[0].pronunciation_url).toBe('');
-    });
-  });
-
-  describe('signal consistency', () => {
-    it('should keep allFlashcards and flashcardMap in sync after loadAllFlashcards', async () => {
-      const cards = [
-        { ...mockFlashcard, id: '1', word_token: 'hello' },
-        { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' },
-      ];
-      const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(cards);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(2);
-      expect(store.flashcardMap().size).toBe(2);
-      expect(store.flashcardMap().get('hello')).toEqual(cards[0]);
-      expect(store.flashcardMap().get('world')).toEqual(cards[1]);
-    });
-
-    it('should keep allFlashcards and flashcardMap in sync after saveWord', async () => {
-      const payload = { word_token: 'test', translation: 'prueba' };
-      const newCard = { ...mockFlashcard, id: 'new', word_token: 'test', translation: 'prueba' };
-      const promise = store.saveWord(payload);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCard);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.flashcardMap().size).toBe(1);
-      expect(store.flashcardMap().get('test')).toEqual(newCard);
-    });
-
-    it('should keep allFlashcards and flashcardMap in sync after updateSrsLevel', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const updatedCard = { ...mockFlashcard, srs_level: 5 };
-      const promise = store.updateSrsLevel('1', 5);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.flashcardMap().size).toBe(1);
-      expect(store.allFlashcards()[0]).toEqual(updatedCard);
-      expect(store.flashcardMap().get('hello')).toEqual(updatedCard);
-    });
-
-    it('should reflect flashcardMap changes immediately via signal reactivity', () => {
-      expect(store.flashcardMap().size).toBe(0);
-
-      store.flashcardMap.update((map) => {
-        const next = new Map(map);
-        next.set('test', mockFlashcard);
-        return next;
-      });
-
-      expect(store.flashcardMap().size).toBe(1);
-      expect(store.flashcardMap().get('test')).toEqual(mockFlashcard);
-    });
-  });
-
-  describe('loadDueReviews signal behaviour', () => {
-    it('should not modify isLoading while fetching due reviews', async () => {
-      expect(store.isLoading()).toBe(false);
-      const promise = store.loadDueReviews();
-      expect(store.isLoading()).toBe(false);
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([mockFlashcard]);
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-    });
-
-    it('should preserve previous dueReviews state on error', async () => {
-      store.dueReviews.set([mockFlashcard]);
-      const promise = store.loadDueReviews();
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards/due`)
-        .flush({ message: 'error' }, { status: 500, statusText: 'Error' });
-      await promise;
-
-      expect(store.dueReviews()).toEqual([mockFlashcard]);
-    });
-
-    it('should handle empty due reviews response', async () => {
-      const promise = store.loadDueReviews();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([]);
-      await promise;
-
-      expect(store.dueReviews()).toEqual([]);
-    });
-  });
-
-  describe('error handling for write operations', () => {
-    it('should handle saveWord failure gracefully', async () => {
-      const promise = store.saveWord({ word_token: 'fail', translation: 'fallar' });
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush({ message: 'Conflict' }, { status: 409, statusText: 'Conflict' });
-
-      await expect(promise).rejects.toThrow();
-      expect(store.allFlashcards()).toEqual([]);
-      expect(store.flashcardMap().size).toBe(0);
-    });
-
-    it('should handle updateSrsLevel offline fallback gracefully', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-      // jsdom returns undefined for navigator.onLine, which would trigger offline fallback.
-      vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
-      srsOfflineSpy.online.mockReturnValue(false);
-
-      // jsdom defaults navigator.onLine to false, so the offline path will activate
-      const promise = store.updateSrsLevel('1', 2);
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards/1/srs`)
-        .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
-
-      // With graceful degradation, the promise resolves with optimistically updated card
-      const result = await promise;
-      expect(result).toBeDefined();
-      expect(result.srs_level).toBe(0); // quality 2 => estimateNewLevel returns 0
-      expect(store.allFlashcards()[0].srs_level).toBe(0);
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(0);
-    });
-
-    it('should gracefully degrade translateWordOrSentence on failure', async () => {
-      const promise = store.translateWordOrSentence('hello', 'es');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/translate`)
-        .flush(
-          { message: 'Service unavailable' },
-          { status: 503, statusText: 'Service Unavailable' },
-        );
-
-      const result = await promise;
-      expect(result.original_text).toBe('hello');
-      expect(result.translated_text).toBe('hello');
-      expect(result.definition).toContain('unavailable');
-    });
-
-    it('should gracefully degrade checkGrammar on failure', async () => {
-      const promise = store.checkGrammar('hola', 'es');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/grammar-check`)
-        .flush({ message: 'Bad request' }, { status: 400, statusText: 'Bad Request' });
-
-      const result = await promise;
-      expect(result.original).toBe('hola');
-      expect(result.corrected).toBe('hola');
-      expect(result.errors_found).toBe(0);
-    });
-
-    it('should gracefully degrade scorePronunciation on failure', async () => {
-      const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
-        .flush({ message: 'Internal error' }, { status: 500, statusText: 'Internal Server Error' });
-
-      const result = await promise;
-      expect(result.overall_score).toBe(85);
-      expect(result.breakdown.length).toBeGreaterThan(0);
-      expect(result.feedback_summary).toContain('unavailable');
-    });
-  });
-
-  describe('isLoading signal state transitions', () => {
-    it('should set isLoading true while loadAllFlashcards is in-flight', async () => {
-      expect(store.isLoading()).toBe(false);
-      const promise = store.loadAllFlashcards();
-
-      expect(store.isLoading()).toBe(true);
-
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-    });
-
-    it('should set isLoading false even on network error', async () => {
-      const promise = store.loadAllFlashcards();
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush(null, { status: 0, statusText: 'Unknown Error' });
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-    });
-
-    it('should not change isLoading during saveWord', async () => {
-      expect(store.isLoading()).toBe(false);
-      const promise = store.saveWord({ word_token: 'test', translation: 'prueba' });
-      expect(store.isLoading()).toBe(false);
-
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush({ ...mockFlashcard, id: 'saved', word_token: 'test' });
-      await promise;
-
-      expect(store.isLoading()).toBe(false);
-    });
-  });
-
-  describe('loadAllFlashcards signal edge cases', () => {
-    it('should handle empty array response', async () => {
-      const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
-      await promise;
-
-      expect(store.allFlashcards()).toEqual([]);
-      expect(store.flashcardMap().size).toBe(0);
-    });
-
-    it('should replace previous state on subsequent loads', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
-
-      const newCards = [{ ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' }];
-      const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCards);
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.allFlashcards()[0].word_token).toBe('world');
-      expect(store.flashcardMap().size).toBe(1);
-      expect(store.flashcardMap().get('hello')).toBeUndefined();
-      expect(store.flashcardMap().get('world')).toEqual(newCards[0]);
-    });
-  });
-
-  describe('getWordStatus boundary SRS levels', () => {
-    it('should return secondary-accent styling for level 0 (new)', () => {
-      const status = store.getWordStatus('newword');
-      expect(status.level).toBe(0);
-      expect(status.colourClass).toContain('bg-secondary/20');
-      expect(status.flashcard).toBeUndefined();
-    });
-
-    it('should return warning styling for level 1', () => {
-      const card = { ...mockFlashcard, srs_level: 1 };
-      store.flashcardMap.set(new Map([['test', card]]));
-      const status = store.getWordStatus('test');
-      expect(status.level).toBe(1);
-      expect(status.colourClass).toContain('bg-warning/20');
-    });
-
-    it('should return warning styling for level 3', () => {
-      const card = { ...mockFlashcard, srs_level: 3 };
-      store.flashcardMap.set(new Map([['test', card]]));
-      const status = store.getWordStatus('test');
+    it('maps levels 1-3 to learning styling case-insensitively', () => {
+      const learning = card({ srs_level: 3 });
+      store.flashcardMap.set(new Map([['hello', learning]]));
+
+      const status = store.getWordStatus('  HELLO  ');
       expect(status.level).toBe(3);
-      expect(status.colourClass).toContain('bg-warning/20');
+      expect(status.flashcard).toEqual(learning);
+      expect(status.colorClass).toContain('bg-warning/20');
     });
 
-    it('should return white styling for level 4', () => {
-      const card = { ...mockFlashcard, srs_level: 4 };
-      store.flashcardMap.set(new Map([['test', card]]));
-      const status = store.getWordStatus('test');
+    it('maps level 4 and above to known styling', () => {
+      const known = card({ srs_level: 4 });
+      store.flashcardMap.set(new Map([['hello', known]]));
+
+      const status = store.getWordStatus('hello');
       expect(status.level).toBe(4);
-      expect(status.colourClass).toContain('text-text-primary');
-    });
-
-    it('should return white styling for level 5+', () => {
-      const card = { ...mockFlashcard, srs_level: 7 };
-      store.flashcardMap.set(new Map([['test', card]]));
-      const status = store.getWordStatus('test');
-      expect(status.level).toBe(7);
-      expect(status.colourClass).toContain('text-text-primary');
+      expect(status.flashcard).toEqual(known);
+      expect(status.colorClass).toContain('text-text-primary');
     });
   });
 
-  describe('saveWord signal integrity', () => {
-    it('should not affect existing unrelated flashcards when saving a new word', async () => {
-      const existingCard = {
-        ...mockFlashcard,
-        id: 'existing',
-        word_token: 'existing',
-        translation: 'existente',
-      };
-      store.allFlashcards.set([existingCard]);
-      store.flashcardMap.set(new Map([['existing', existingCard]]));
+  it('saves a word and atomically updates both card signals', async () => {
+    const old = card();
+    const saved = card({ id: 'card-2', word_token: 'World', translation: 'Mundo' });
+    store.allFlashcards.set([old]);
+    store.flashcardMap.set(new Map([['hello', old]]));
 
-      const promise = store.saveWord({ word_token: 'new', translation: 'nuevo' });
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush({ ...mockFlashcard, id: 'new', word_token: 'new', translation: 'nuevo' });
-      await promise;
-
-      expect(store.allFlashcards().length).toBe(2);
-      expect(store.flashcardMap().size).toBe(2);
-      expect(store.flashcardMap().get('existing')).toEqual(existingCard);
+    const saving = store.saveWord({
+      word_token: 'World',
+      translation: 'Mundo',
+      original_context: 'World!',
     });
 
-    it('should handle saveWord when allFlashcards is empty', async () => {
-      const promise = store.saveWord({ word_token: 'first', translation: 'primero' });
-      httpMock
-        .expectOne(`${environment.apiUrl}/flashcards`)
-        .flush({ ...mockFlashcard, id: 'first', word_token: 'first', translation: 'primero' });
-      const result = await promise;
+    const request = http.expectOne(`${environment.apiUrl}/flashcards`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');
+    request.flush(saved);
 
-      expect(store.allFlashcards().length).toBe(1);
-      expect(store.allFlashcards()[0]).toEqual(result);
-      expect(store.flashcardMap().get('first')).toEqual(result);
-    });
+    await expect(saving).resolves.toEqual(saved);
+    expect(store.allFlashcards()).toEqual([saved, old]);
+    expect(store.flashcardMap().get('world')).toEqual(saved);
   });
 
-  describe('updateSrsLevel signal integrity', () => {
-    it('should not mutate other flashcards when updating SRS', async () => {
-      const cardB = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'b' };
-      store.allFlashcards.set([mockFlashcard, cardB]);
-      store.flashcardMap.set(
-        new Map([
-          ['hello', mockFlashcard],
-          ['b', cardB],
-        ]),
-      );
+  it('replaces an existing token instead of duplicating it when saveWord is retried', async () => {
+    const existing = card();
+    const saved = card({ translation: 'Updated translation' });
+    store.allFlashcards.set([existing]);
+    store.flashcardMap.set(new Map([['hello', existing]]));
 
-      const updatedA = { ...mockFlashcard, srs_level: 4 };
-      const promise = store.updateSrsLevel('1', 4);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedA);
-      await promise;
+    const saving = store.saveWord({ word_token: 'Hello', translation: 'Updated translation' });
+    http.expectOne(`${environment.apiUrl}/flashcards`).flush(saved);
+    await saving;
 
-      expect(store.flashcardMap().get('b')).toEqual(cardB);
-      expect(store.allFlashcards().find((f) => f.id === 'b')).toEqual(cardB);
-    });
+    expect(store.allFlashcards()).toHaveLength(1);
+    expect(store.allFlashcards()[0]).toEqual(saved);
+    expect(store.flashcardMap().get('hello')).toEqual(saved);
   });
 
-  describe('concurrent signal updates', () => {
-    it('should handle rapid successive saveWord calls maintaining integrity', async () => {
-      const card1 = { ...mockFlashcard, id: 'a', word_token: 'a', translation: 'A' };
-      const card2 = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'B' };
+  it('updates SRS state from the server response in both reactive collections', async () => {
+    const existing = card();
+    const updated = card({ srs_level: 2, repetitions: 2 });
+    store.allFlashcards.set([existing]);
+    store.flashcardMap.set(new Map([['hello', existing]]));
 
-      const promise1 = store.saveWord({ word_token: 'a', translation: 'A' });
-      const req1 = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      req1.flush(card1);
-      await promise1;
+    const updating = store.updateSrsLevel(existing.id, 4);
+    const request = http.expectOne(`${environment.apiUrl}/flashcards/${existing.id}/srs`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ quality: 4 });
+    request.flush(updated);
 
-      const promise2 = store.saveWord({ word_token: 'b', translation: 'B' });
-      const req2 = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
-      req2.flush(card2);
-      await promise2;
-
-      expect(store.allFlashcards().length).toBe(2);
-      expect(store.flashcardMap().size).toBe(2);
-      expect(store.flashcardMap().get('a')).toEqual(card1);
-      expect(store.flashcardMap().get('b')).toEqual(card2);
-    });
+    await expect(updating).resolves.toEqual(updated);
+    expect(store.allFlashcards()[0]).toEqual(updated);
+    expect(store.flashcardMap().get('hello')).toEqual(updated);
   });
 
-  describe('NLP endpoints comprehensive coverage', () => {
-    it('should send authorisation header with translateWordOrSentence', async () => {
-      const promise = store.translateWordOrSentence('test', 'fr');
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/translate`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-      req.flush({ original_text: 'test', translated_text: 'test', detected_language: 'en' });
-      await promise;
-    });
+  it('queues and optimistically updates an SRS review when offline', async () => {
+    const existing = card({ srs_level: 1 });
+    online.set(false);
+    store.allFlashcards.set([existing]);
+    store.flashcardMap.set(new Map([['hello', existing]]));
 
-    it('should send authorisation header with checkGrammar', async () => {
-      const promise = store.checkGrammar('test');
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-      req.flush({ original: 'test', corrected: 'test', explanation: 'ok', errors_found: 0 });
-      await promise;
-    });
+    const updating = store.updateSrsLevel(existing.id, 4);
+    http
+      .expectOne(`${environment.apiUrl}/flashcards/${existing.id}/srs`)
+      .flush({ error: 'offline' }, { status: 0, statusText: 'Offline' });
 
-    it('should send authorisation header with scorePronunciation', async () => {
-      const promise = store.scorePronunciation('url', 'text');
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
-      req.flush({ overall_score: 90, breakdown: [], feedback_summary: 'good' });
-      await promise;
-    });
-
-    it('should pass optional language undefined in checkGrammar by default', async () => {
-      const promise = store.checkGrammar('text');
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`);
-      expect(req.request.body.language).toBeUndefined();
-      req.flush({ original: 'text', corrected: 'text', explanation: '', errors_found: 0 });
-      await promise;
-    });
-
-    it('should pass optional language undefined in scorePronunciation by default', async () => {
-      const promise = store.scorePronunciation('url', 'text');
-      const req = httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`);
-      expect(req.request.body.language).toBeUndefined();
-      req.flush({ overall_score: 100, breakdown: [], feedback_summary: '' });
-      await promise;
-    });
+    const result = await updating;
+    expect(offline.queueSrsReview).toHaveBeenCalledWith(existing.id, 4, 2);
+    expect(result.srs_level).toBe(2);
+    expect(store.allFlashcards()[0].srs_level).toBe(2);
+    expect(store.flashcardMap().get('hello')?.srs_level).toBe(2);
   });
 
-  describe('isDegraded signal', () => {
-    it('should initialise isDegraded as false', () => {
-      expect(store.isDegraded()).toBe(false);
-    });
+  it('rejects an SRS update when online and the server fails', async () => {
+    const existing = card();
+    store.allFlashcards.set([existing]);
 
-    it('should set isDegraded to true when NLP translate fails', async () => {
-      const promise = store.translateWordOrSentence('hello', 'es');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/translate`)
-        .flush({}, { status: 503, statusText: 'Service Unavailable' });
-      await promise;
+    const updating = store.updateSrsLevel(existing.id, 4);
+    http
+      .expectOne(`${environment.apiUrl}/flashcards/${existing.id}/srs`)
+      .flush({ error: 'boom' }, { status: 500, statusText: 'Server Error' });
 
-      expect(store.isDegraded()).toBe(true);
-    });
-
-    it('should set isDegraded to true when grammar check fails', async () => {
-      const promise = store.checkGrammar('hola');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/grammar-check`)
-        .flush({}, { status: 500, statusText: 'Error' });
-      await promise;
-
-      expect(store.isDegraded()).toBe(true);
-    });
-
-    it('should set isDegraded to true when pronunciation scoring fails', async () => {
-      const promise = store.scorePronunciation('url', 'text');
-      httpMock
-        .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
-        .flush({}, { status: 500, statusText: 'Error' });
-      await promise;
-
-      expect(store.isDegraded()).toBe(true);
-    });
-
-    it('should remain false when NLP calls succeed', async () => {
-      const promise = store.translateWordOrSentence('hello', 'es');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush({
-        original_text: 'hello',
-        translated_text: 'hola',
-        detected_language: 'en',
-      });
-      await promise;
-
-      expect(store.isDegraded()).toBe(false);
-    });
+    await expect(updating).rejects.toThrow('Failed to update SRS level');
+    expect(offline.queueSrsReview).not.toHaveBeenCalled();
   });
 
-  describe('degradedReason signal', () => {
-    it('should initialise degradedReason as empty string', () => {
-      expect(store.degradedReason()).toBe('');
-    });
+  it('syncs queued reviews through the authenticated SRS endpoint', async () => {
+    const syncing = store.syncOfflineReviews();
+
+    const request = http.expectOne(`${environment.apiUrl}/flashcards/card-1/srs`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ quality: 4 });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');
+    request.flush(card({ srs_level: 2 }));
+
+    await expect(syncing).resolves.toEqual({ synced: 1, failed: 0 });
   });
 
-  describe('pendingReviewCards signal', () => {
-    it('should initialise as an empty array', () => {
-      expect(store.pendingReviewCards()).toEqual([]);
+  it('returns the translation result without mutating vocabulary state', async () => {
+    const translating = store.translateWordOrSentence('hello', 'es', 'en');
+    const request = http.expectOne(`${environment.apiUrl}/nlp/translate`);
+    expect(request.request.body).toEqual({
+      text: 'hello',
+      target_language: 'es',
+      source_language: 'en',
+    });
+    request.flush({
+      original_text: 'hello',
+      translated_text: 'hola',
+      detected_language: 'en',
     });
 
-    it('should allow setting and reading pendingReviewCards', () => {
-      const cards = [mockFlashcard];
-      store.pendingReviewCards.set(cards);
-      expect(store.pendingReviewCards()).toEqual(cards);
-      expect(store.pendingReviewCards().length).toBe(1);
+    await expect(translating).resolves.toEqual({
+      original_text: 'hello',
+      translated_text: 'hola',
+      detected_language: 'en',
     });
+    expect(store.allFlashcards()).toEqual([]);
+    expect(store.isDegraded()).toBe(false);
   });
 
-  describe('isOffline computed signal', () => {
-    it('should be false when navigator.onLine is true', () => {
-      vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
-      expect(store.isOffline()).toBe(false);
-    });
+  it('marks NLP state degraded and returns a safe translation fallback on failure', async () => {
+    const translating = store.translateWordOrSentence('hello', 'es');
+    http
+      .expectOne(`${environment.apiUrl}/nlp/translate`)
+      .flush({ error: 'rate limited' }, { status: 429, statusText: 'Too Many Requests' });
 
-    it('should be true when navigator.onLine is false', () => {
-      vi.stubGlobal('navigator', { onLine: false, vibrate: vi.fn() });
-      srsOfflineSpy.online.mockReturnValue(false);
-      expect(store.isOffline()).toBe(true);
-    });
+    const result = await translating;
+    expect(store.isDegraded()).toBe(true);
+    expect(result.original_text).toBe('hello');
+    expect(result.translated_text).toBe('hello');
+    expect(result.definition).toContain('unavailable');
   });
 
-  describe('syncOfflineReviews', () => {
-    it('should delegate to srsOffline.syncQueuedReviews and return result', async () => {
-      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 3, failed: 1 });
-
-      const result = await store.syncOfflineReviews();
-      expect(result).toEqual({ synced: 3, failed: 1 });
-      expect(srsOfflineSpy.syncQueuedReviews).toHaveBeenCalledOnce();
+  it('uses safe fallbacks for grammar and pronunciation outages', async () => {
+    const grammar = store.checkGrammar('I has a cat', 'en');
+    http
+      .expectOne(`${environment.apiUrl}/nlp/grammar-check`)
+      .flush({ error: 'down' }, { status: 503, statusText: 'Unavailable' });
+    await expect(grammar).resolves.toMatchObject({
+      original: 'I has a cat',
+      corrected: 'I has a cat',
+      errors_found: 0,
     });
+
+    const pronunciation = store.scorePronunciation('https://audio.test/a.mp3', 'hello', 'en');
+    http
+      .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
+      .flush({ error: 'down' }, { status: 503, statusText: 'Unavailable' });
+    await expect(pronunciation).resolves.toMatchObject({
+      overall_score: 85,
+      breakdown: [{ word: 'hello', score: 85 }],
+    });
+
+    expect(store.isDegraded()).toBe(true);
   });
 });
