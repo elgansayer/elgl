@@ -7,7 +7,6 @@ export interface PrivacyStatus {
   scheduled_for_deletion_at: string | null;
   latest_archive: {
     requested_at: string;
-    fulfilled_at: string | null;
     download_url: string | null;
     expires_in_seconds: number | null;
   } | null;
