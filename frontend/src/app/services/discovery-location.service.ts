@@ -138,16 +138,7 @@ export class DiscoveryLocationService {
 
     if (this.usesImperialDistance()) {
       const miles = metres / 1609.344;
-      if (miles < 1) {
-        const feet = Math.max(100, Math.round((metres * 3.28084) / 100) * 100);
-        return `${feet.toLocaleString(this.i18n.currentLang())} ft`;
-      }
       return `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi`;
-    }
-
-    if (metres < 1000) {
-      const roundedMetres = Math.max(100, Math.round(metres / 100) * 100);
-      return `${roundedMetres.toLocaleString(this.i18n.currentLang())} m`;
     }
 
     const kilometres = metres / 1000;
