@@ -183,7 +183,9 @@ class AgentsConfig(BaseModel):
                     "planning": "opus",
                     "architecture": "opus",
                     "security_review": "opus",
-                    "implementation": "sonnet",
+                    # Building gets the strongest model; PR-facing phases
+                    # (review, repair loops) get the fastest.
+                    "implementation": "opus",
                     "quality_repair": "haiku",
                     "code_review": "haiku",
                     "ci_repair": "haiku",
@@ -206,6 +208,16 @@ class AgentsConfig(BaseModel):
                 model="gemini-3.1-pro-high",
                 credential_paths=[".gemini"],
                 runtime_paths=[".local/bin", ".npm-global"],
+                phase_models={
+                    "planning": "gemini-3.1-pro-high",
+                    "architecture": "gemini-3.1-pro-high",
+                    "security_review": "gemini-3.1-pro-high",
+                    "implementation": "gemini-3.1-pro-high",
+                    "quality_repair": "gemini-3.7-flash-low",
+                    "code_review": "gemini-3.7-flash-low",
+                    "ci_repair": "gemini-3.7-flash-low",
+                    "general_action": "gemini-3.7-flash-low",
+                },
             ),
             "opencode": ProviderConfig(
                 enabled=True,
@@ -218,7 +230,8 @@ class AgentsConfig(BaseModel):
                     "planning": "opencode-go/qwen3.8-max",
                     "architecture": "opencode-go/qwen3.8-max",
                     "security_review": "opencode-go/qwen3.8-max",
-                    "code_review": "opencode-go/qwen3.8-max",
+                    "implementation": "opencode-go/qwen3.8-max",
+                    "code_review": "opencode-go/kimi-k2.7-code",
                     "quality_repair": "opencode-go/kimi-k2.7-code",
                     "ci_repair": "opencode-go/kimi-k2.7-code",
                     "general_action": "opencode-go/kimi-k2.7-code",
@@ -241,6 +254,16 @@ class AgentsConfig(BaseModel):
                 # symlink into .local/lib/node_modules; both must be mounted or
                 # the sandboxed process cannot resolve the symlink target.
                 runtime_paths=[".local/bin", ".local/lib"],
+                phase_models={
+                    "planning": "github-copilot/claude-opus-5",
+                    "architecture": "github-copilot/claude-opus-5",
+                    "security_review": "github-copilot/claude-opus-5",
+                    "implementation": "github-copilot/claude-opus-5",
+                    "quality_repair": "github-copilot/claude-haiku-4.5",
+                    "code_review": "github-copilot/claude-haiku-4.5",
+                    "ci_repair": "github-copilot/claude-haiku-4.5",
+                    "general_action": "github-copilot/claude-haiku-4.5",
+                },
             ),
         }
     )

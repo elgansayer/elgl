@@ -503,7 +503,7 @@ def test_production_agent_configuration_loads() -> None:
     ]
     assert (
         factory_config.agents.providers["opencode"].phase_models["code_review"]
-        == "opencode-go/qwen3.8-max"
+        == "opencode-go/kimi-k2.7-code"
     )
     assert (
         factory_config.agents.providers["opencode"].phase_models["general_action"]
