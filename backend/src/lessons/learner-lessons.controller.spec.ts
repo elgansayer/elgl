@@ -22,7 +22,7 @@ describe('LearnerLessonsController', () => {
   it('lists lessons for the authenticated user with an optional language filter', async () => {
     vi.mocked(lessonsService.listLearnerLessons).mockResolvedValue([]);
 
-    await controller.list(request, 'ja');
+    await controller.list(request, { language: 'ja' });
 
     expect(lessonsService.listLearnerLessons).toHaveBeenCalledWith('user-1', 'ja');
   });
