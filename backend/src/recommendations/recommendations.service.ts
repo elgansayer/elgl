@@ -7,6 +7,7 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
+import { isActiveSeriousLearner } from '../discovery/serious-learner.policy';
 
 export interface RecommendedUserDto {
   id: string;
@@ -130,12 +131,12 @@ export class RecommendationsService {
           return supabase
             .from('users')
             .select(
-              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
             )
             .match(GDPR_MATCHMAKING_FILTERS)
             .overlaps('native_languages', [targetCode])
             .overlaps('target_languages', [nativeCode])
-            .order('is_serious_learner', { ascending: false })
+            .order('study_streak_days', { ascending: false })
             .limit(DAILY_LIMIT);
         });
 
@@ -161,7 +162,7 @@ export class RecommendationsService {
             nativeLanguage: m.native_languages?.[0] ?? null,
             targetLanguages: m.target_languages ?? null,
             sharedInterests: 0,
-            isSeriousLearner: m.is_serious_learner ?? null,
+            isSeriousLearner: isActiveSeriousLearner(m),
             studyStreakDays: m.study_streak_days ?? null,
             correctionRatio: m.correction_ratio ?? null,
           }));
@@ -484,7 +485,7 @@ export class RecommendationsService {
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .in('id', candidateIds)
       .match(GDPR_MATCHMAKING_FILTERS);
@@ -493,7 +494,7 @@ export class RecommendationsService {
       throw new Error(usersError.message);
     }
 
-    return (users ?? [])
+    return ((users ?? []) as UserRow[])
       .map((u) => ({
         id: u.id,
         displayName: u.display_name,
@@ -501,7 +502,7 @@ export class RecommendationsService {
         nativeLanguage: u.native_languages?.[0] ?? null,
         targetLanguages: u.target_languages,
         sharedInterests: sharedCount.get(u.id) ?? 0,
-        isSeriousLearner: u.is_serious_learner,
+        isSeriousLearner: isActiveSeriousLearner(u),
         studyStreakDays: u.study_streak_days,
         correctionRatio: u.correction_ratio,
       }))
@@ -546,13 +547,13 @@ export class RecommendationsService {
     const { data: matches, error: matchError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
       .overlaps('native_languages', targetLanguages)
       .overlaps('target_languages', nativeLangs)
-      .order('is_serious_learner', { ascending: false })
+      .order('study_streak_days', { ascending: false })
       .limit(FALLBACK_LIMIT);
 
     if (matchError) {
@@ -570,7 +571,7 @@ export class RecommendationsService {
       nativeLanguage: m.native_languages?.[0] ?? null,
       targetLanguages: m.target_languages ?? null,
       sharedInterests: 0,
-      isSeriousLearner: m.is_serious_learner ?? null,
+      isSeriousLearner: isActiveSeriousLearner(m),
       studyStreakDays: m.study_streak_days ?? null,
       correctionRatio: m.correction_ratio ?? null,
     }));
@@ -584,7 +585,7 @@ export class RecommendationsService {
     const { data: users, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio, last_active_at',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
@@ -606,7 +607,7 @@ export class RecommendationsService {
       nativeLanguage: u.native_languages?.[0] ?? null,
       targetLanguages: u.target_languages ?? null,
       sharedInterests: 0,
-      isSeriousLearner: u.is_serious_learner ?? null,
+      isSeriousLearner: isActiveSeriousLearner(u),
       studyStreakDays: u.study_streak_days ?? null,
       correctionRatio: u.correction_ratio ?? null,
     }));
@@ -624,6 +625,7 @@ export class RecommendationsService {
       study_streak_days: number;
       correction_ratio: number;
       is_serious_learner: boolean;
+      last_active_at?: string | null;
       avatar_url: string;
     }>;
 
@@ -637,7 +639,7 @@ export class RecommendationsService {
         nativeLanguage: u.native_languages[0],
         targetLanguages: u.target_languages,
         sharedInterests: 0,
-        isSeriousLearner: u.is_serious_learner,
+        isSeriousLearner: isActiveSeriousLearner(u),
         studyStreakDays: u.study_streak_days,
         correctionRatio: u.correction_ratio,
         matchTier: 'mock' as const,
