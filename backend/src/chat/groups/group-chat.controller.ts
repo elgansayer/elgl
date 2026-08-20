@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -42,10 +41,17 @@ export class GroupChatController {
   getMembers(
     @CurrentUser() user: User,
     @Param('roomId') roomId: string,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.groupChatService.getMembers(roomId, user.id, limit, offset);
+    const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? Number.parseInt(offset, 10) : undefined;
+    return this.groupChatService.getMembers(
+      roomId,
+      user.id,
+      Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+      Number.isFinite(parsedOffset) ? parsedOffset : undefined,
+    );
   }
 
   // Compatibility endpoint used by the existing Angular ChatService.
