@@ -36,5 +36,9 @@ jobs:
         working-directory: frontend
 
       - name: Run Cypress setup smoke spec
-        run: npx cypress run --browser electron --spec cypress/e2e/cypress-setup.cy.ts
+        run: |
+          python3 -m http.server 4200 --bind 127.0.0.1 >/tmp/cypress-smoke-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          npx cypress run --browser electron --spec cypress/e2e/cypress-setup.cy.ts
         working-directory: frontend
