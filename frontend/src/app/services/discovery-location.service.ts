@@ -24,6 +24,7 @@ export class DiscoveryLocationError extends Error {
 const GEOLOCATION_TIMEOUT_MS = 10_000;
 const GEOLOCATION_MAX_AGE_MS = 60_000;
 const IMPERIAL_REGIONS = new Set(['GB', 'US', 'LR', 'MM']);
+const NEARBY_CACHE_SCOPE = 'nearby-memory-origin';
 
 @Injectable({ providedIn: 'root' })
 export class DiscoveryLocationService {
@@ -103,6 +104,25 @@ export class DiscoveryLocationService {
     };
     void request.then(clearPending, clearPending);
     return request;
+  }
+
+  /**
+   * Add coordinates as non-enumerable request properties. DiscoveryService can
+   * still read them for the HTTP query, but its IndexedDB cache key builder
+   * (Object.entries) cannot persist the precise browser location. The explicit
+   * enumerable scope marker also prevents the result set colliding with a
+   * non-location nearest search.
+   */
+  scopeNearbyFilters<T extends Record<string, unknown>>(
+    filters: T,
+    coordinates: DiscoveryCoordinates,
+  ): T & { latitude: number; longitude: number } {
+    const scoped = { ...filters, location_cache_scope: NEARBY_CACHE_SCOPE };
+    Object.defineProperties(scoped, {
+      latitude: { value: coordinates.latitude, enumerable: false },
+      longitude: { value: coordinates.longitude, enumerable: false },
+    });
+    return scoped as T & { latitude: number; longitude: number };
   }
 
   clear(): void {
