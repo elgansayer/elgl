@@ -12,6 +12,7 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
+import { GroupChatCreateService } from './group-chat-create.service';
 import {
   AddGroupMembersDto,
   CreateGroupChatDto,
@@ -25,11 +26,14 @@ import { GroupChatService } from './group-chat.service';
 @Controller('chat/groups')
 @UseGuards(SupabaseAuthGuard)
 export class GroupChatController {
-  constructor(private readonly groupChatService: GroupChatService) {}
+  constructor(
+    private readonly groupChatService: GroupChatService,
+    private readonly groupChatCreateService: GroupChatCreateService,
+  ) {}
 
   @Post()
   create(@CurrentUser() user: User, @Body() dto: CreateGroupChatDto) {
-    return this.groupChatService.createGroup(user.id, dto);
+    return this.groupChatCreateService.create(user.id, dto);
   }
 
   @Get(':roomId')
@@ -63,7 +67,9 @@ export class GroupChatController {
     @Param('roomId') roomId: string,
     @Body() dto: RenameGroupChatDto,
   ) {
-    return this.groupChatService.updateGroup(roomId, user.id, { name: dto.name });
+    return this.groupChatService.updateGroup(roomId, user.id, {
+      name: dto.name,
+    });
   }
 
   @Patch(':roomId')
