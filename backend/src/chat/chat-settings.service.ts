@@ -9,7 +9,7 @@ import {
 export class ChatSettingsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  private readonly defaultMessageFilters: Required<MessageFilterSettingsDto> = {
+  private readonly defaultMessageFilters: MessageFilterSettingsDto = {
     enabled: false,
     allowEveryone: true,
     allowedGenders: [],
@@ -17,8 +17,6 @@ export class ChatSettingsService {
     sameTargetLanguage: false,
     sameGender: false,
     sameAge: false,
-    ageMin: 0,
-    ageMax: 120,
   };
 
   private readonly defaultSettings: ChatSettingsDto = {
@@ -32,7 +30,7 @@ export class ChatSettingsService {
     current?: MessageFilterSettingsDto | null,
     incoming?: MessageFilterSettingsDto,
   ): MessageFilterSettingsDto {
-    const merged: Required<MessageFilterSettingsDto> = {
+    const merged: MessageFilterSettingsDto = {
       ...this.defaultMessageFilters,
       ...(current ?? {}),
       ...(incoming ?? {}),
@@ -45,12 +43,34 @@ export class ChatSettingsService {
       ].filter(Boolean),
     };
 
-    if (merged.ageMin > merged.ageMax) {
+    if (
+      merged.ageMin !== undefined &&
+      merged.ageMax !== undefined &&
+      merged.ageMin > merged.ageMax
+    ) {
       throw new BadRequestException('Minimum age cannot be greater than maximum age.');
     }
 
-    // "Everyone" is an explicit bypass, matching the Telegram-style UX.
-    if (merged.allowEveryone || !merged.enabled) {
+    const incomingAddsRestriction = Boolean(
+      incoming &&
+        ((incoming.allowedGenders?.length ?? 0) > 0 ||
+          incoming.sameNativeLanguage ||
+          incoming.sameTargetLanguage ||
+          incoming.sameGender ||
+          incoming.sameAge ||
+          incoming.ageMin !== undefined ||
+          incoming.ageMax !== undefined),
+    );
+
+    // Selecting a concrete restriction implicitly leaves "Everyone" unless
+    // the client explicitly sends allowEveryone=true in the same update.
+    if (incomingAddsRestriction && incoming?.allowEveryone === undefined) {
+      merged.allowEveryone = false;
+    }
+
+    // Disabled means no filtering. Keep the explicit Everyone state so a GET
+    // round-trip is unambiguous for web/mobile clients.
+    if (!merged.enabled) {
       merged.allowEveryone = true;
     }
 
