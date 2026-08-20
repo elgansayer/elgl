@@ -16,6 +16,8 @@ describe('MediaController', () => {
           provide: MediaService,
           useValue: {
             generateCoverPresignedUrl: vi.fn(),
+            generateAvatarPresignedUrl: vi.fn(),
+            generateAudioIntroPresignedUrl: vi.fn(),
             confirmCoverUpload: vi.fn(),
           },
         },
@@ -62,6 +64,63 @@ describe('MediaController', () => {
         'user-1',
         dto,
       );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('getAvatarPresignedUrl', () => {
+    it('uses the authenticated user and server-owned avatar folder', async () => {
+      const dto = {
+        filename: 'avatar.webp',
+        contentType: 'image/webp',
+      };
+      const expectedResponse = {
+        uploadUrl: 'https://upload.url/avatar',
+        mediaUrl: 'https://media.url/avatar',
+        objectKey: 'avatars/user-1/avatar.webp',
+      };
+
+      (mediaService.generateAvatarPresignedUrl as Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.getAvatarPresignedUrl(
+        { user: { id: 'user-1' } },
+        dto,
+      );
+
+      expect(mediaService.generateAvatarPresignedUrl).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('getAudioIntroPresignedUrl', () => {
+    it('uses the authenticated user and server-owned audio-intro folder', async () => {
+      const dto = {
+        filename: 'intro.m4a',
+        contentType: 'audio/mp4',
+      };
+      const expectedResponse = {
+        uploadUrl: 'https://upload.url/audio',
+        mediaUrl: 'https://media.url/audio',
+        objectKey: 'audio-intros/user-1/intro.m4a',
+      };
+
+      (mediaService.generateAudioIntroPresignedUrl as Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.getAudioIntroPresignedUrl(
+        { user: { id: 'user-1' } },
+        dto,
+      );
+
+      expect(
+        mediaService.generateAudioIntroPresignedUrl,
+      ).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(expectedResponse);
     });
   });
