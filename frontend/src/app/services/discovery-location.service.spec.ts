@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DiscoveryLocationError, DiscoveryLocationService } from './discovery-location.service';
+import { DiscoveryLocationService } from './discovery-location.service';
 import { I18nService } from './i18n.service';
 
 function createService(language = 'en-GB'): DiscoveryLocationService {
@@ -75,7 +75,7 @@ describe('DiscoveryLocationService', () => {
     });
     const service = createService();
 
-    await expect(service.requestCurrentPosition()).rejects.toMatchObject<DiscoveryLocationError>({
+    await expect(service.requestCurrentPosition()).rejects.toMatchObject({
       code: 'permission_denied',
     });
     expect(service.coordinates()).toBeNull();
@@ -109,6 +109,20 @@ describe('DiscoveryLocationService', () => {
 
     resolvePosition?.(position(35.6762, 139.6503));
     await expect(first).resolves.toMatchObject({ latitude: 35.6762, longitude: 139.6503 });
+  });
+
+  it('keeps precise coordinates out of enumerable cache-key inputs', () => {
+    const service = createService();
+    const scoped = service.scopeNearbyFilters(
+      { radius_metres: 10_000, sort: 'nearest' },
+      { latitude: 54.047, longitude: -2.801, obtainedAt: Date.now() },
+    );
+
+    expect(scoped.latitude).toBe(54.047);
+    expect(scoped.longitude).toBe(-2.801);
+    expect(Object.entries(scoped)).toContainEqual(['location_cache_scope', 'nearby-memory-origin']);
+    expect(Object.keys(scoped)).not.toContain('latitude');
+    expect(Object.keys(scoped)).not.toContain('longitude');
   });
 
   it('formats one privacy-rounded distance using the locale measurement system', () => {
