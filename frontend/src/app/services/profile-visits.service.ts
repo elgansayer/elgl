@@ -3,13 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { ProfileVisit } from '../interfaces/profile-visit.interface';
+import {
+  ProfileVisitorsPage,
+  RecordProfileVisitResponse,
+} from '../interfaces/profile-visit.interface';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileVisitsService {
-  private http = inject(HttpClient);
-  private authService = inject(AuthService);
-  private baseUrl = `${environment.apiUrl}/profile-visits`;
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly baseUrl = `${environment.apiUrl}/profile-visits`;
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -18,17 +21,21 @@ export class ProfileVisitsService {
     };
   }
 
-  async getMyVisitors(): Promise<ProfileVisit[]> {
+  async getMyVisitors(limit = 20, offset = 0): Promise<ProfileVisitorsPage> {
     return firstValueFrom(
-      this.http.get<ProfileVisit[]>(`${this.baseUrl}/my-visitors`, {
+      this.http.get<ProfileVisitorsPage>(`${this.baseUrl}/my-visitors`, {
         headers: this.getHeaders(),
+        params: {
+          limit: String(limit),
+          offset: String(offset),
+        },
       }),
     );
   }
 
-  async recordVisit(viewedId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${viewedId}`, null, {
+  async recordVisit(viewedId: string): Promise<RecordProfileVisitResponse> {
+    return firstValueFrom(
+      this.http.post<RecordProfileVisitResponse>(`${this.baseUrl}/${viewedId}`, null, {
         headers: this.getHeaders(),
       }),
     );
