@@ -1,13 +1,21 @@
 import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryLocationService } from './discovery-location.service';
 import { I18nService } from './i18n.service';
 
 function createService(language = 'en-GB'): DiscoveryLocationService {
-  const i18n = {
-    currentLang: signal(language),
-  } as unknown as I18nService;
-  return new DiscoveryLocationService(i18n);
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [
+      DiscoveryLocationService,
+      {
+        provide: I18nService,
+        useValue: { currentLang: signal(language) },
+      },
+    ],
+  });
+  return TestBed.inject(DiscoveryLocationService);
 }
 
 function position(latitude: number, longitude: number): GeolocationPosition {
@@ -29,6 +37,7 @@ function position(latitude: number, longitude: number): GeolocationPosition {
 
 describe('DiscoveryLocationService', () => {
   afterEach(() => {
+    TestBed.resetTestingModule();
     vi.unstubAllGlobals();
   });
 
