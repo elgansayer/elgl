@@ -130,13 +130,14 @@ export class ProfileVisitsService {
       return { recorded: false, ignored: true, reason: 'blocked' };
     }
 
-    const visitDay = new Date().toISOString().slice(0, 10);
+    // visit_day is assigned by the database in UTC. Keeping the day calculation at
+    // the storage boundary makes retries from every API client converge on the same
+    // unique (visitor_id, viewed_id, visit_day) key.
     const response = await supabase
       .from('profile_visits')
       .insert({
         visitor_id: visitorId,
         viewed_id: viewedId,
-        visit_day: visitDay,
       })
       .select('id, created_at')
       .single();
