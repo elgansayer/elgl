@@ -106,6 +106,27 @@ CREATE POLICY "Room participants can view transcripts"
     )
   );
 
+-- The product historically uses both is_active and is_archived. Make their
+-- archive transition consistent regardless of whether an old or new backend
+-- path ends the room.
+CREATE OR REPLACE FUNCTION public.sync_audio_room_archived_state()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.is_active = TRUE AND NEW.is_active = FALSE THEN
+    NEW.is_archived := TRUE;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sync_audio_room_archived_state ON public.audio_rooms;
+CREATE TRIGGER trg_sync_audio_room_archived_state
+BEFORE UPDATE OF is_active ON public.audio_rooms
+FOR EACH ROW
+EXECUTE FUNCTION public.sync_audio_room_archived_state();
+
 -- Account deletion in this application is a soft-delete. Purge archive-derived
 -- learning data hosted by that account and revoke that user's participation as
 -- soon as is_deleted transitions to true. Room deletion already cascades the
