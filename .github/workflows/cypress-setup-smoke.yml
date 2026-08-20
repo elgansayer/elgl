@@ -19,7 +19,7 @@ jobs:
   cypress-setup:
     name: e2e / cypress-setup
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -36,9 +36,5 @@ jobs:
         working-directory: frontend
 
       - name: Run Cypress setup smoke spec
-        run: >-
-          npx start-server-and-test
-          "npm run start -- --host 127.0.0.1"
-          http://127.0.0.1:4200
-          "npx cypress run --browser electron --spec cypress/e2e/cypress-setup.cy.ts"
+        run: npx cypress run --browser electron --spec cypress/e2e/cypress-setup.cy.ts
         working-directory: frontend
