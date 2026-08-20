@@ -71,18 +71,19 @@ export class MomentsService {
     void _userId;
     const supabase = this.supabaseService.getClient();
 
-    const { data: momentsData, error: momentsError } = await supabase
-      .from('moments')
-      .select('id');
-
-    const { data: correctionsData, error: correctionsError } = await supabase
-      .from('moment_comments')
-      .select('id')
-      .not('correction_payload', 'is', null);
-
-    const { data: translationsData, error: translationsError } = await supabase
-      .from('translations')
-      .select('id');
+    // ⚡ Bolt Optimization: Replace sequential awaits with Promise.all mapped concurrent operations
+    const [
+      { data: momentsData, error: momentsError },
+      { data: correctionsData, error: correctionsError },
+      { data: translationsData, error: translationsError },
+    ] = await Promise.all([
+      supabase.from('moments').select('id'),
+      supabase
+        .from('moment_comments')
+        .select('id')
+        .not('correction_payload', 'is', null),
+      supabase.from('translations').select('id'),
+    ]);
 
     if (momentsError || correctionsError || translationsError) {
       throw new Error(
@@ -972,7 +973,8 @@ export class MomentsService {
       .single();
 
     const updatedData = result.data as
-      (MomentCountRow & { user_id?: string }) | null;
+      | (MomentCountRow & { user_id?: string })
+      | null;
 
     await supabase
       .from('moments')
