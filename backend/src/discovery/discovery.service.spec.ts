@@ -202,6 +202,7 @@ describe('DiscoveryService', () => {
       is_deletion_pending: boolean;
       correction_ratio: number;
       study_streak_days: number;
+      last_active_at: string;
     }> =>
       Array.from({ length: count }, (_, i) => ({
         id: `u${i + 1}`,
@@ -212,6 +213,7 @@ describe('DiscoveryService', () => {
         is_deletion_pending: false,
         correction_ratio: 0.6 + (count - i) * 0.005,
         study_streak_days: 10 + (count - i),
+        last_active_at: new Date().toISOString(),
       }));
 
     it('should store partner IDs in redis when users qualify', async () => {
@@ -406,7 +408,7 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should apply native language, target language, and serious learner filters', async () => {
+    it('should apply native language, target language, and active serious learner filters', async () => {
       const partners = [{ id: 'partner-2', display_name: 'Serious Partner' }];
       stubLimitResponse(partners);
 
@@ -424,8 +426,12 @@ describe('DiscoveryService', () => {
         'target_languages',
         ['EN'],
       );
-      expect(mockQueryBuilder.gt).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
       expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
+      expect(mockQueryBuilder.gte).not.toHaveBeenCalledWith(
         'correction_ratio',
         0.8,
       );
@@ -434,13 +440,13 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should enforce serious_learner_mode from user profile', async () => {
-      // NOTE: serious_learner_mode sets query.serious_learner_only=true at line 234,
-      // which comes AFTER the serious_learner_only filter check at line 223.
-      // The queryBuilder still has the filter applied via query modification
-      // for the RPC path (serious_only flag), but gt/gte on queryBuilder won't be called.
+    it('should enforce serious_learner_mode from user profile before building filters', async () => {
       const partners = [
-        { id: 'p1', study_streak_days: 10, correction_ratio: 0.9 },
+        {
+          id: 'p1',
+          study_streak_days: 10,
+          last_active_at: new Date().toISOString(),
+        },
       ];
       stubLimitResponse(partners);
 
@@ -452,7 +458,11 @@ describe('DiscoveryService', () => {
         },
       );
 
-      // serious_learner_only is set on the query object for downstream use (enrich/RPC)
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith('study_streak_days', 7);
+      expect(mockQueryBuilder.gte).toHaveBeenCalledWith(
+        'last_active_at',
+        expect.any(String),
+      );
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),
       );
