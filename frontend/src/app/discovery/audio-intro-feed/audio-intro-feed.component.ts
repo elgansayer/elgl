@@ -1,64 +1,105 @@
-import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, computed, inject, resource, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
-import { resource } from '@angular/core';
 import { getLanguageFlag } from '../../components/primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-audio-intro-feed',
-  imports: [HlmButton, CommonModule, TranslatePipe],
+  imports: [CommonModule, HlmButton, RouterLink, TranslatePipe],
   template: `
-    @if (isLoading()) {
-      <div class="flex justify-center py-8">
-        <span class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary"></span>
-      </div>
-    }
-    <div class="divide-y divide-surface-dim">
-      @for (user of userList(); track user.id) {
-        <div class="flex items-center gap-3 p-3">
-          <img
-            class="h-10 w-10 rounded-full object-cover"
-            [src]="user.avatar_url || '/assets/default-avatar.png'"
-            alt=""
-            loading="lazy"
-          />
-          <div class="flex-1 min-w-0">
-            <p class="truncate font-medium text-text">{{ user.display_name }}</p>
-            <p class="text-xs text-text-secondary">
-              {{ user.native_languages?.join(', ') }} → {{ user.target_languages?.join(', ') }}
-            </p>
+    <section
+      class="bg-surface-500 px-4 py-6 md:px-6 lg:px-8"
+      aria-labelledby="audio-intro-feed-heading"
+    >
+      <div class="mx-auto max-w-3xl overflow-hidden rounded-card border border-surface-100 bg-surface-400 shadow-card">
+        <header class="border-b border-surface-100 px-4 py-4 sm:px-5">
+          <h1 id="audio-intro-feed-heading" class="text-xl font-bold text-text-primary">
+            {{ 'audioIntro.title' | t }}
+          </h1>
+        </header>
+
+        @if (isLoading()) {
+          <div class="flex items-center justify-center gap-2 py-10" role="status" aria-live="polite">
+            <span
+              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary"
+              aria-hidden="true"
+            ></span>
+            <span class="sr-only">{{ 'common.loading' | t }}</span>
           </div>
-          <button
-            hlmBtn
-            (click)="togglePlay(user.id, user.audio_intro_url)"
-            class="ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary"
-          >
-            @if (playingId() === user.id) {
-              <span class="i-ph-pause-fill text-white text-lg"></span>
-            } @else {
-              <span class="i-ph-play-fill text-white text-lg"></span>
+        } @else {
+          <div class="divide-y divide-surface-100">
+            @for (user of userList(); track user.id) {
+              <article class="flex min-w-0 items-center gap-3 p-3 sm:p-4">
+                <a
+                  [routerLink]="['/profile', user.id]"
+                  class="flex min-w-0 flex-1 items-center gap-3 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <img
+                    class="h-11 w-11 shrink-0 rounded-full object-cover"
+                    [src]="user.avatar_url || '/assets/default-avatar.png'"
+                    alt=""
+                    loading="lazy"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <p
+                      [id]="'audio-intro-user-' + user.id"
+                      class="truncate font-medium text-text-primary"
+                    >
+                      {{ user.display_name }}
+                    </p>
+                    <p class="truncate text-xs text-text-secondary">
+                      {{ user.native_languages?.join(', ') }} → {{ user.target_languages?.join(', ') }}
+                    </p>
+                  </div>
+                </a>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  size="touch"
+                  (click)="togglePlay(user.id, user.audio_intro_url)"
+                  class="ms-auto shrink-0 rounded-full"
+                  [attr.aria-label]="
+                    playingId() === user.id ? ('audioIntro.pause' | t) : ('audioIntro.play' | t)
+                  "
+                  [attr.aria-describedby]="'audio-intro-user-' + user.id"
+                  [attr.aria-pressed]="playingId() === user.id"
+                >
+                  @if (playingId() === user.id) {
+                    <span class="i-ph-pause-fill text-lg" aria-hidden="true"></span>
+                  } @else {
+                    <span class="i-ph-play-fill text-lg" aria-hidden="true"></span>
+                  }
+                </button>
+              </article>
+            } @empty {
+              <div class="flex flex-col items-center px-4 py-12 text-center text-text-secondary">
+                <span class="i-ph-microphone-slash mb-2 text-4xl" aria-hidden="true"></span>
+                <p>{{ 'discovery.audioIntroFeed.noAudioIntros' | t }}</p>
+              </div>
             }
-          </button>
-        </div>
-      } @empty {
-        @if (!isLoading()) {
-          <div class="flex flex-col items-center py-12 text-text-secondary">
-            <span class="i-ph-microphone-slash text-4xl mb-2"></span>
-            <p>{{ 'discovery.audioIntroFeed.noAudioIntros' | t }}</p>
           </div>
         }
-      }
-    </div>
+
+        @if (playbackError()) {
+          <p class="border-t border-surface-100 px-4 py-3 text-sm text-danger" role="alert">
+            {{ 'audioPlayer.error' | t }}
+          </p>
+        }
+      </div>
+    </section>
   `,
 })
 export class AudioIntroFeedComponent {
-  private discoveryService = inject(DiscoveryService);
-  private destroyRef = inject(DestroyRef);
+  private readonly discoveryService = inject(DiscoveryService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly playingId = signal<string | null>(null);
+  readonly playbackError = signal(false);
   private audioPlayer: HTMLAudioElement | null = null;
 
   private readonly usersResource = resource({
@@ -67,22 +108,48 @@ export class AudioIntroFeedComponent {
 
   readonly users = computed<UserProfile[]>(() => this.usersResource.value() ?? []);
   readonly isLoading = computed(() => this.usersResource.isLoading());
-  readonly emptyMessageKey = signal('discovery.audioIntroFeed.noAudioIntros');
-
   readonly userList = this.users;
 
-  togglePlay(userId: string, url: string | undefined, _event?: Event): void {
+  async togglePlay(userId: string, url: string | undefined): Promise<void> {
     if (!url) return;
+
+    this.playbackError.set(false);
+
     if (this.playingId() === userId) {
-      this.audioPlayer?.pause();
-      this.playingId.set(null);
+      this.stopPlayback();
       return;
     }
-    this.audioPlayer?.pause();
-    this.audioPlayer = new Audio(url);
-    this.audioPlayer.addEventListener('ended', () => this.playingId.set(null));
-    this.audioPlayer.play();
-    this.playingId.set(userId);
+
+    this.stopPlayback();
+
+    const player = new Audio(url);
+    this.audioPlayer = player;
+
+    const clearCurrentPlayer = () => {
+      if (this.audioPlayer !== player) return;
+      this.audioPlayer = null;
+      this.playingId.set(null);
+    };
+
+    player.addEventListener('ended', clearCurrentPlayer, { once: true });
+    player.addEventListener(
+      'error',
+      () => {
+        clearCurrentPlayer();
+        this.playbackError.set(true);
+      },
+      { once: true },
+    );
+
+    try {
+      await player.play();
+      if (this.audioPlayer === player) {
+        this.playingId.set(userId);
+      }
+    } catch {
+      clearCurrentPlayer();
+      this.playbackError.set(true);
+    }
   }
 
   getFlag(code: string): string {
@@ -90,9 +157,12 @@ export class AudioIntroFeedComponent {
   }
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.audioPlayer?.pause();
-      this.audioPlayer = null;
-    });
+    this.destroyRef.onDestroy(() => this.stopPlayback());
+  }
+
+  private stopPlayback(): void {
+    this.audioPlayer?.pause();
+    this.audioPlayer = null;
+    this.playingId.set(null);
   }
 }

@@ -1,20 +1,70 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AudioIntroFeedComponent } from './audio-intro-feed.component';
-import { I18nService } from '../../services/i18n.service';
-import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { describe, beforeEach, it, expect, vi } from 'vitest';
+import { provideRouter } from '@angular/router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AudioIntroFeedComponent } from './audio-intro-feed.component';
+import { DiscoveryService } from '../../services/discovery.service';
+import { I18nService } from '../../services/i18n.service';
+import { UserProfile } from '../../services/user.service';
+
+function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
+  return {
+    id: 'u1',
+    display_name: 'Kenji',
+    avatar_url: null,
+    native_languages: ['ja'],
+    target_languages: ['en'],
+    audio_intro_url: 'https://example.com/intro.mp3',
+    is_vip: false,
+    vip_tier: 'none',
+    coins_balance: 0,
+    study_streak_days: 0,
+    correction_ratio: 0,
+    is_serious_learner: false,
+    privacy_hide_age: false,
+    privacy_hide_location: false,
+    privacy_hide_from_search: false,
+    privacy_hide_gender: false,
+    ...overrides,
+  } as UserProfile;
+}
+
+class MockAudio {
+  static instances: MockAudio[] = [];
+
+  readonly src: string;
+  readonly play = vi.fn().mockResolvedValue(undefined);
+  readonly pause = vi.fn();
+  private readonly listeners = new Map<string, Array<() => void>>();
+
+  constructor(src: string) {
+    this.src = src;
+    MockAudio.instances.push(this);
+  }
+
+  addEventListener(event: string, listener: () => void): void {
+    const listeners = this.listeners.get(event) ?? [];
+    listeners.push(listener);
+    this.listeners.set(event, listeners);
+  }
+
+  emit(event: string): void {
+    for (const listener of this.listeners.get(event) ?? []) listener();
+  }
+}
 
 describe('AudioIntroFeedComponent', () => {
   let component: AudioIntroFeedComponent;
   let fixture: ComponentFixture<AudioIntroFeedComponent>;
+  let getAudioIntros: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    MockAudio.instances = [];
+    vi.stubGlobal('Audio', MockAudio);
+
+    getAudioIntros = vi.fn().mockResolvedValue([makeUser()]);
     const i18nServiceMock = {
-      translate: (key: string, params?: Record<string, unknown>) => {
-        if (params) return key + ' ' + JSON.stringify(params);
-        return key;
-      },
+      translate: (key: string) => key,
       translations: signal({}) as unknown as I18nService['translations'],
     };
 
@@ -22,76 +72,104 @@ describe('AudioIntroFeedComponent', () => {
       imports: [AudioIntroFeedComponent],
       providers: [
         provideRouter([]),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
         { provide: I18nService, useValue: i18nServiceMock },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AudioIntroFeedComponent);
     component = fixture.componentInstance;
-  });
-
-  it('should create the component', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should have signal inputs with default values', async () => {
-    await fixture.whenStable();
-    expect(component.users()).toEqual([]);
-    expect(component.isLoading()).toBe(false);
-    expect(component.emptyMessageKey()).toBe('discovery.audioIntroFeed.noAudioIntros');
-  });
-
-  it('should render empty state by default', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('loads and renders partners with audio introductions', () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('discovery.audioIntroFeed.noAudioIntros');
+
+    expect(getAudioIntros).toHaveBeenCalledOnce();
+    expect(component.users()).toHaveLength(1);
+    expect(el.textContent).toContain('Kenji');
+    expect(el.querySelector('a[href="/profile/u1"]')).not.toBeNull();
   });
 
-  it('should not play if audio_intro_url is undefined', () => {
-    component.togglePlay('u1', undefined, new Event('click'));
+  it('renders an empty state when no audio introductions are available', async () => {
+    getAudioIntros.mockResolvedValueOnce([]);
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [AudioIntroFeedComponent],
+      providers: [
+        provideRouter([]),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            translations: signal({}),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const emptyFixture = TestBed.createComponent(AudioIntroFeedComponent);
+    emptyFixture.detectChanges();
+    await emptyFixture.whenStable();
+    emptyFixture.detectChanges();
+
+    expect((emptyFixture.nativeElement as HTMLElement).textContent).toContain(
+      'discovery.audioIntroFeed.noAudioIntros',
+    );
+  });
+
+  it('does not create an audio player when the profile has no audio URL', async () => {
+    await component.togglePlay('u1', undefined);
+
+    expect(MockAudio.instances).toHaveLength(0);
     expect(component.playingId()).toBeNull();
   });
 
-  it('should toggle audio play/pause', () => {
-    const playSpy = vi.fn().mockResolvedValue(undefined);
-    const pauseSpy = vi.fn();
+  it('plays and pauses the selected introduction with accessible pressed state', async () => {
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+    fixture.detectChanges();
 
-    const origAudio = window.Audio;
-    class MockAudio {
-      play = playSpy;
-      pause = pauseSpy;
-      addEventListener = vi.fn();
-      load = vi.fn();
-      currentTime = 0;
-      src = '';
-      onended: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-    }
-    (window as unknown as Record<string, unknown>)['Audio'] = MockAudio;
-
-    expect(component.playingId()).toBeNull();
-
-    component.togglePlay('u1', 'https://example.com/audio.mp3', new Event('click'));
     expect(component.playingId()).toBe('u1');
-    expect(playSpy).toHaveBeenCalled();
+    expect(MockAudio.instances).toHaveLength(1);
+    expect(MockAudio.instances[0]?.play).toHaveBeenCalledOnce();
 
-    component.togglePlay('u1', 'https://example.com/audio.mp3', new Event('click'));
+    const playButton = fixture.nativeElement.querySelector('button[aria-pressed="true"]') as
+      | HTMLButtonElement
+      | null;
+    expect(playButton?.getAttribute('aria-label')).toBe('audioIntro.pause');
+    expect(playButton?.getAttribute('aria-describedby')).toBe('audio-intro-user-u1');
+
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
     expect(component.playingId()).toBeNull();
-    expect(pauseSpy).toHaveBeenCalled();
-
-    (window as unknown as Record<string, unknown>)['Audio'] = origAudio;
+    expect(MockAudio.instances[0]?.pause).toHaveBeenCalledOnce();
   });
 
-  it('should expose userList computed signal', () => {
-    // userList is a computed that mirrors users input
-    expect(component.userList()).toEqual([]);
+  it('clears playback state when the audio ends', async () => {
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+    MockAudio.instances[0]?.emit('ended');
+
+    expect(component.playingId()).toBeNull();
   });
 
-  it('should provide getFlag method returning language flag', () => {
-    const flag = component.getFlag('gb');
-    expect(typeof flag).toBe('string');
-    expect(flag.length).toBeGreaterThan(0);
+  it('surfaces playback failure and does not leave stale playing state', async () => {
+    const failingPlay = vi.fn().mockRejectedValue(new Error('autoplay blocked'));
+
+    class FailingAudio extends MockAudio {
+      override readonly play = failingPlay;
+    }
+    vi.stubGlobal('Audio', FailingAudio);
+
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+    fixture.detectChanges();
+
+    expect(component.playingId()).toBeNull();
+    expect(component.playbackError()).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent).toContain(
+      'audioPlayer.error',
+    );
   });
 });

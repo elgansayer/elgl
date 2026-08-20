@@ -2,6 +2,13 @@ import { Routes } from '@angular/router';
 
 export const socialRoutes: Routes = [
   {
+    path: 'discovery/audio-intros',
+    loadComponent: () =>
+      import('../discovery/audio-intro-feed/audio-intro-feed.component').then(
+        (m) => m.AudioIntroFeedComponent,
+      ),
+  },
+  {
     path: 'discovery',
     loadComponent: () =>
       import('../components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
