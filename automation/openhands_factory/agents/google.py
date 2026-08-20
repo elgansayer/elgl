@@ -173,6 +173,17 @@ class GoogleAgentProvider(CLIProvider):
             detail=failure.message,
         )
 
+    def prompt_for_stdin(self, prompt: str, prompt_path: Path | None) -> str | None:
+        del prompt_path
+        if self.cli_variant == "antigravity":
+            # --sandbox silently breaks stdin as a prompt channel: with it
+            # set, agy ignores whatever text arrives on stdin and responds
+            # as if it received no real instruction (verified directly,
+            # comparing identical invocations with and without --sandbox).
+            # The prompt must go in argv instead; see build_command.
+            return None
+        return prompt
+
     def build_command(
         self,
         request: AgentRequest,
@@ -186,6 +197,7 @@ class GoogleAgentProvider(CLIProvider):
             command = [
                 *self._prefix(),
                 "-p",
+                self._full_prompt(request),
                 "--output-format",
                 "text",
                 "--effort",
