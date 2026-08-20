@@ -78,6 +78,12 @@ export interface LegacyNotificationPreferences {
   updatedAt: string;
 }
 
+export type LegacyCategory = keyof Omit<
+  LegacyNotificationPreferences,
+  'userId' | 'updatedAt' | 'do_not_disturb'
+>;
+export type LegacyChannel = keyof LegacyChannelPreference;
+
 @Injectable({
   providedIn: 'root',
 })
