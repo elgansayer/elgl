@@ -4,7 +4,7 @@ This directory contains the repository-owned Spartan Helm sources used by produc
 
 ## Current surface
 
-As of 2026-08-19, the checked-in surface is:
+As of 2026-08-21, the checked-in surface is:
 
 - `autocomplete/`
 - `button/`
@@ -16,6 +16,7 @@ As of 2026-08-19, the checked-in surface is:
 - `native-select/`
 - `popover/`
 - `radio-group/`
+- `tabs/`
 - `textarea/`
 - `utils/`
 
