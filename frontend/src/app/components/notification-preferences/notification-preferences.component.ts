@@ -168,7 +168,7 @@ export class NotificationPreferencesComponent {
   readonly quietStart = signal('');
   readonly quietEnd = signal('');
 
-  private readonly prefsResource = resource({
+  readonly prefsResource = resource({
     loader: async () => {
       this.loading.set(true);
       this.loadError.set(false);
