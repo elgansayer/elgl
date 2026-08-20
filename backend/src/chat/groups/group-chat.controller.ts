@@ -38,7 +38,7 @@ export class GroupChatController {
   }
 
   @Get(':roomId/members')
-  getMembers(
+  async getMembers(
     @CurrentUser() user: User,
     @Param('roomId') roomId: string,
     @Query('limit') limit?: string,
@@ -46,12 +46,14 @@ export class GroupChatController {
   ) {
     const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
     const parsedOffset = offset ? Number.parseInt(offset, 10) : undefined;
-    return this.groupChatService.getMembers(
+    const result = await this.groupChatService.getMembers(
       roomId,
       user.id,
       Number.isFinite(parsedLimit) ? parsedLimit : undefined,
       Number.isFinite(parsedOffset) ? parsedOffset : undefined,
     );
+    // Keep the existing Angular ChatService contract: this endpoint returns an array.
+    return result.members;
   }
 
   // Compatibility endpoint used by the existing Angular ChatService.
