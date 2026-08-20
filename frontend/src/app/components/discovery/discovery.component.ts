@@ -308,7 +308,15 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   async searchPartners(): Promise<void> {
     const isNearby = this.selectedFilter() === 'nearby';
     const coordinates = isNearby ? this.discoveryLocation.coordinates() : null;
-    if (isNearby && (!coordinates || this.isOffline())) {
+
+    if (isNearby && !coordinates) {
+      if (this.discoveryLocation.status() !== 'locating') {
+        void this.activateNearbySearch();
+      }
+      return;
+    }
+
+    if (isNearby && this.isOffline()) {
       this.partners.set([]);
       this.isLoading.set(false);
       this.searchError.set(this.i18n.translate('discovery.searchError'));
@@ -328,28 +336,28 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
-      const results = await this.discoveryService.findPartners(
-        {
-          latitude: coordinates?.latitude,
-          longitude: coordinates?.longitude,
-          radius_metres: this.selectedDistanceKm() * 1000,
-          native_languages: this.selectedNativeLanguage() || undefined,
-          target_language: this.selectedTargetLanguage() || undefined,
-          serious_learner_only: this.seriousLearnerOnly(),
-          gender: isVip ? genderVal : undefined,
-          age_min: this.ageRangeMin(),
-          age_max: this.ageRangeMax(),
-          serious_learner_mode: this.seriousLearnerMode(),
-          proficiency_level: this.selectedProficiencyLevel() || undefined,
-          available_time_start: this.availableTimeStart() || undefined,
-          available_time_end: this.availableTimeEnd() || undefined,
-          sort: isNearby ? 'nearest' : this.selectedSort(),
-          voice_room_active: this.voiceRoomActive() || undefined,
-          has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
-          interests: this.selectedInterests() || undefined,
-        },
-        signal,
-      );
+      const baseFilters = {
+        radius_metres: this.selectedDistanceKm() * 1000,
+        native_languages: this.selectedNativeLanguage() || undefined,
+        target_language: this.selectedTargetLanguage() || undefined,
+        serious_learner_only: this.seriousLearnerOnly(),
+        gender: isVip ? genderVal : undefined,
+        age_min: this.ageRangeMin(),
+        age_max: this.ageRangeMax(),
+        serious_learner_mode: this.seriousLearnerMode(),
+        proficiency_level: this.selectedProficiencyLevel() || undefined,
+        available_time_start: this.availableTimeStart() || undefined,
+        available_time_end: this.availableTimeEnd() || undefined,
+        sort: isNearby ? 'nearest' : this.selectedSort(),
+        voice_room_active: this.voiceRoomActive() || undefined,
+        has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
+        interests: this.selectedInterests() || undefined,
+      };
+      const filters =
+        isNearby && coordinates
+          ? this.discoveryLocation.scopeNearbyFilters(baseFilters, coordinates)
+          : baseFilters;
+      const results = await this.discoveryService.findPartners(filters, signal);
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
 
@@ -408,6 +416,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.partners.set([]);
     this.searchError.set(null);
     this.isLoading.set(true);
+
+    if (this.isOffline()) {
+      this.searchError.set(this.i18n.translate('discovery.searchError'));
+      this.isLoading.set(false);
+      return;
+    }
+
     try {
       await this.discoveryLocation.requestCurrentPosition();
       if (this.selectedFilter() === 'nearby') {
