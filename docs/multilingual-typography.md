@@ -247,12 +247,11 @@ Rendering still uses the original source text; segmentation is only for the feat
 
 ## Verification gates
 
-Existing checks remain mandatory:
+Existing checks remain mandatory. Run both from the repository root:
 
 ```bash
-cd frontend
-npm run check:multilingual-typography
 npm run check:rtl-logical-contract
+cd frontend && npm run check:multilingual-typography
 ```
 
 `check:multilingual-typography` verifies the global `font-sans` body stack, the Instrument Sans display fallback chain, absence of bespoke feature font-family declarations, and absence of `font-display` across known multilingual/user-content feature areas.
