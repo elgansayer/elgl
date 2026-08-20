@@ -125,11 +125,11 @@ describe('DiscoveryLocationService', () => {
     expect(Object.keys(scoped)).not.toContain('longitude');
   });
 
-  it('formats one privacy-rounded distance using the locale measurement system', () => {
+  it('formats one privacy-rounded distance in miles or kilometres for the locale', () => {
     expect(createService('en-GB').formatDistance(5000)).toBe('3.1 mi');
-    expect(createService('en-US').formatDistance(500)).toBe('1,600 ft');
+    expect(createService('en-US').formatDistance(500)).toBe('0.3 mi');
     expect(createService('fr').formatDistance(5000)).toBe('5.0 km');
-    expect(createService('ja').formatDistance(520)).toBe('500 m');
+    expect(createService('ja').formatDistance(520)).toBe('0.5 km');
   });
 
   it('clears in-memory location state', async () => {
