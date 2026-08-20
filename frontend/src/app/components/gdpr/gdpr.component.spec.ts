@@ -1,12 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { GdprComponent } from './gdpr.component';
-import { GdprService } from '../../services/gdpr.service';
+import { GdprService, PrivacyStatus } from '../../services/gdpr.service';
 import { I18nService } from '../../services/i18n.service';
+
+const EMPTY_STATUS: PrivacyStatus = {
+  is_deletion_pending: false,
+  scheduled_for_deletion_at: null,
+  latest_archive: null,
+};
 
 describe('GdprComponent', () => {
   let fixture: ComponentFixture<GdprComponent>;
   let mockGdprService: {
+    getStatus: ReturnType<typeof vi.fn>;
     requestArchive: ReturnType<typeof vi.fn>;
     deleteAccount: ReturnType<typeof vi.fn>;
     cancelDeletion: ReturnType<typeof vi.fn>;
@@ -17,6 +24,7 @@ describe('GdprComponent', () => {
 
   beforeEach(async () => {
     mockGdprService = {
+      getStatus: vi.fn().mockResolvedValue(EMPTY_STATUS),
       requestArchive: vi.fn().mockResolvedValue(undefined),
       deleteAccount: vi.fn().mockResolvedValue(undefined),
       cancelDeletion: vi.fn().mockResolvedValue(undefined),
@@ -35,6 +43,8 @@ describe('GdprComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(GdprComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
   });
 
@@ -55,6 +65,44 @@ describe('GdprComponent', () => {
     expect(el.textContent).toContain('gdpr.archiveSuccess');
   });
 
+  it('should expose the signed archive download returned by status', async () => {
+    mockGdprService.getStatus.mockResolvedValue({
+      is_deletion_pending: false,
+      scheduled_for_deletion_at: null,
+      latest_archive: {
+        requested_at: '2026-08-20T12:00:00.000Z',
+        download_url: 'https://storage.example.test/signed-archive',
+        expires_in_seconds: 900,
+      },
+    });
+
+    await fixture.componentInstance.requestArchive();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector(
+      'a[href="https://storage.example.test/signed-archive"]',
+    ) as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('should restore pending deletion state from the API', async () => {
+    mockGdprService.getStatus.mockResolvedValue({
+      is_deletion_pending: true,
+      scheduled_for_deletion_at: '2026-09-19T12:00:00.000Z',
+      latest_archive: null,
+    });
+
+    const restoredFixture = TestBed.createComponent(GdprComponent);
+    restoredFixture.detectChanges();
+    await restoredFixture.whenStable();
+    restoredFixture.detectChanges();
+
+    expect(restoredFixture.componentInstance.isPendingDeletion()).toBe(true);
+    expect(restoredFixture.nativeElement.textContent).toContain('gdpr.cancelDeletionSection');
+  });
+
   it('should call deleteAccount when confirmed', async () => {
     fixture.componentInstance.confirmDelete.set(true);
     fixture.detectChanges();
@@ -64,7 +112,6 @@ describe('GdprComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // After deletion, the cancel section should appear
     expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
   });
 
@@ -74,8 +121,9 @@ describe('GdprComponent', () => {
     expect(mockGdprService.deleteAccount).not.toHaveBeenCalled();
   });
 
-  it('should show cancel deletion section when deletion is pending', () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+  it('should show cancel deletion section after a deletion request', async () => {
+    fixture.componentInstance.confirmDelete.set(true);
+    await fixture.componentInstance.deleteAccount();
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -83,7 +131,8 @@ describe('GdprComponent', () => {
   });
 
   it('should call cancelDeletion and hide section on success', async () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+    fixture.componentInstance.confirmDelete.set(true);
+    await fixture.componentInstance.deleteAccount();
     fixture.detectChanges();
 
     fixture.componentInstance.cancelDeletion();

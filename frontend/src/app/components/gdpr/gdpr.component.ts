@@ -1,5 +1,5 @@
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GdprService } from '../../services/gdpr.service';
@@ -7,7 +7,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-gdpr',
-  standalone: true,
   imports: [HlmCheckbox, TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="app-screen bg-surface-50">
@@ -49,10 +48,23 @@ import { I18nService } from '../../services/i18n.service';
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
             </button>
             @if (archiveSuccess()) {
-              <p class="text-xs text-success">{{ 'gdpr.archiveSuccess' | t }}</p>
+              <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
+            }
+            @if (archiveDownloadUrl()) {
+              <a
+                hlmBtn
+                size="touch"
+                class="w-full"
+                [href]="archiveDownloadUrl()"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="'privacy.hub.downloadData' | t"
+              >
+                {{ 'privacy.hub.downloadData' | t }}
+              </a>
             }
             @if (archiveError()) {
-              <p class="text-xs text-danger">{{ archiveError() }}</p>
+              <p class="text-xs text-danger" role="alert">{{ archiveError() }}</p>
             }
           </div>
         </section>
@@ -86,10 +98,10 @@ import { I18nService } from '../../services/i18n.service';
               {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
             </button>
             @if (deleteSuccess()) {
-              <p class="text-xs text-success">{{ 'gdpr.deleteSuccess' | t }}</p>
+              <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
             }
             @if (deleteError()) {
-              <p class="text-xs text-danger">{{ deleteError() }}</p>
+              <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
             }
           </div>
         </section>
@@ -114,10 +126,10 @@ import { I18nService } from '../../services/i18n.service';
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
               @if (cancelSuccess()) {
-                <p class="text-xs text-success">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+                <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
               }
               @if (cancelError()) {
-                <p class="text-xs text-danger">{{ cancelError() }}</p>
+                <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
               }
             </div>
           </section>
@@ -127,22 +139,41 @@ import { I18nService } from '../../services/i18n.service';
   `,
 })
 export class GdprComponent {
-  private gdprService = inject(GdprService);
-  private i18n = inject(I18nService);
+  private readonly gdprService = inject(GdprService);
+  private readonly i18n = inject(I18nService);
 
-  loading = signal(false);
-  archiveSuccess = signal(false);
-  archiveError = signal('');
+  readonly privacyStatusResource = resource({
+    loader: () => this.gdprService.getStatus(),
+  });
 
-  confirmDelete = signal(false);
-  deleting = signal(false);
-  deleteSuccess = signal(false);
-  deleteError = signal('');
+  readonly loading = signal(false);
+  readonly archiveSuccess = signal(false);
+  readonly archiveError = signal('');
+  private readonly archiveDownloadOverride = signal<string | null>(null);
 
-  isPendingDeletion = signal(false);
-  cancelling = signal(false);
-  cancelSuccess = signal(false);
-  cancelError = signal('');
+  readonly confirmDelete = signal(false);
+  readonly deleting = signal(false);
+  readonly deleteSuccess = signal(false);
+  readonly deleteError = signal('');
+
+  private readonly deletionPendingOverride = signal<boolean | null>(null);
+  readonly cancelling = signal(false);
+  readonly cancelSuccess = signal(false);
+  readonly cancelError = signal('');
+
+  readonly isPendingDeletion = computed(
+    () =>
+      this.deletionPendingOverride() ??
+      this.privacyStatusResource.value()?.is_deletion_pending ??
+      false,
+  );
+
+  readonly archiveDownloadUrl = computed(
+    () =>
+      this.archiveDownloadOverride() ??
+      this.privacyStatusResource.value()?.latest_archive?.download_url ??
+      '',
+  );
 
   goBack(): void {
     window.history.back();
@@ -152,9 +183,12 @@ export class GdprComponent {
     this.loading.set(true);
     this.archiveSuccess.set(false);
     this.archiveError.set('');
+    this.archiveDownloadOverride.set(null);
     try {
       await this.gdprService.requestArchive();
       this.archiveSuccess.set(true);
+      const status = await this.gdprService.getStatus();
+      this.archiveDownloadOverride.set(status.latest_archive?.download_url ?? '');
     } catch {
       this.archiveError.set(this.i18n.translate('common.loadError'));
     } finally {
@@ -170,7 +204,7 @@ export class GdprComponent {
     try {
       await this.gdprService.deleteAccount(true);
       this.deleteSuccess.set(true);
-      this.isPendingDeletion.set(true);
+      this.deletionPendingOverride.set(true);
     } catch {
       this.deleteError.set(this.i18n.translate('common.loadError'));
     } finally {
@@ -185,7 +219,7 @@ export class GdprComponent {
     try {
       await this.gdprService.cancelDeletion();
       this.cancelSuccess.set(true);
-      this.isPendingDeletion.set(false);
+      this.deletionPendingOverride.set(false);
     } catch {
       this.cancelError.set(this.i18n.translate('common.loadError'));
     } finally {

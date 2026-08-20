@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   UseGuards,
@@ -18,13 +19,20 @@ import type { Request } from 'express';
 export class PrivacyController {
   constructor(private readonly privacyService: PrivacyService) {}
 
+  @Get('status')
+  @HttpCode(HttpStatus.OK)
+  async getStatus(@Req() req: Request) {
+    const userId = (req as any).user?.id ?? '';
+    return this.privacyService.getStatus(userId);
+  }
+
   @Post('request-archive')
   @HttpCode(HttpStatus.ACCEPTED)
   async requestArchive(@Body() dto: ArchiveRequestDto, @Req() req: Request) {
     const userId = (req as any).user?.id ?? '';
     await this.privacyService.requestArchive(userId, dto);
     return {
-      message: 'Archive requested. You will receive an email when ready.',
+      message: 'Archive created. A private download link is now available.',
     };
   }
 

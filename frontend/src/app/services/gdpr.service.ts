@@ -2,9 +2,23 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 
+export interface PrivacyStatus {
+  is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
+  latest_archive: {
+    requested_at: string;
+    download_url: string | null;
+    expires_in_seconds: number | null;
+  } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GdprService {
   private http = inject(HttpClient);
+
+  async getStatus(): Promise<PrivacyStatus> {
+    return lastValueFrom(this.http.get<PrivacyStatus>('/api/privacy/status'));
+  }
 
   async requestArchive(receiptId?: string, appStore?: string): Promise<void> {
     await lastValueFrom(
@@ -19,8 +33,6 @@ export class GdprService {
   }
 
   async cancelDeletion(): Promise<void> {
-    await lastValueFrom(
-      this.http.post('/api/privacy/cancel-deletion', {}),
-    );
+    await lastValueFrom(this.http.post('/api/privacy/cancel-deletion', {}));
   }
 }

@@ -9,6 +9,18 @@ import {
   scrubEscrowTransactionsForArchive,
 } from '../economy/sanitise-economy.helper';
 
+const ARCHIVE_DOWNLOAD_TTL_SECONDS = 15 * 60;
+
+export interface PrivacyStatus {
+  is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
+  latest_archive: {
+    requested_at: string;
+    download_url: string | null;
+    expires_in_seconds: number | null;
+  } | null;
+}
+
 @Injectable()
 export class PrivacyService {
   private readonly logger = new Logger(PrivacyService.name);
@@ -22,48 +34,122 @@ export class PrivacyService {
   async requestArchive(userId: string, dto: ArchiveRequestDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // 1. Collect personal data for the archive
+    // 1. Collect personal data for the archive.
     const userData = await this.collectUserData(userId);
     const jsonBlob = JSON.stringify(userData, null, 2);
 
-    // 2. Upload to a dedicated Supabase storage bucket
-    const fileName = `archive_${userId}_${Date.now()}.json`;
-    const { error: uploadError } = await supabase.storage
-      .from('gdpr-archives')
-      .upload(fileName, jsonBlob, {
-        contentType: 'application/json',
-        upsert: true,
-      });
+    // 2. Upload to the private GDPR storage bucket. User-scoped object paths
+    // make lifecycle cleanup and incident investigation deterministic without
+    // exposing a public URL.
+    const requestedAt = new Date().toISOString();
+    const fileName = `${userId}/archive_${Date.now()}.json`;
+    const archiveBucket = supabase.storage.from('gdpr-archives');
+    const { error: uploadError } = await archiveBucket.upload(fileName, jsonBlob, {
+      contentType: 'application/json',
+      upsert: false,
+    });
 
     if (uploadError) {
       this.logger.error(
-        `Failed to upload archive for user ${userId}: ${uploadError.message}`,
+        `Failed to upload GDPR archive for user ${userId}: ${uploadError.message}`,
       );
       throw new BadRequestException('Failed to upload archive file');
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from('gdpr-archives')
-      .getPublicUrl(fileName);
-
-    const archiveUrl = publicUrlData.publicUrl;
-
-    // 3. Insert the archive record
+    // 3. The archive_url column is retained for compatibility, but for new
+    // private archives it stores the object path rather than a public URL.
+    // getStatus() turns that path into a short-lived signed URL on demand.
     const { error } = await supabase.from('archive_requests').insert({
       user_id: userId,
-      requested_at: new Date().toISOString(),
-      archive_url: archiveUrl,
+      requested_at: requestedAt,
+      archive_url: fileName,
       receipt_id: dto.receipt_id ?? null,
       app_store: dto.app_store ?? null,
     });
 
     if (error) {
+      // Best-effort rollback so a failed metadata write does not strand an
+      // otherwise undiscoverable archive object.
+      try {
+        await archiveBucket.remove([fileName]);
+      } catch (cleanupError) {
+        this.logger.warn(
+          `Failed to clean up orphaned GDPR archive for user ${userId}`,
+          cleanupError,
+        );
+      }
       this.logger.error(`Failed to insert archive request: ${error.message}`);
       throw new BadRequestException('Failed to create archive request');
     }
 
-    this.logger.log(`Archive created for user ${userId}: ${archiveUrl}`);
-    // In production, send an email with the download link
+    this.logger.log(`GDPR archive created for user ${userId}`);
+  }
+
+  async getStatus(userId: string): Promise<PrivacyStatus> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_deletion_pending, scheduled_for_deletion_at')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      this.logger.error(
+        `Failed to load privacy status for user ${userId}: ${userError?.message ?? 'user not found'}`,
+      );
+      throw new BadRequestException('Failed to load privacy status');
+    }
+
+    const { data: archiveRows, error: archiveError } = await supabase
+      .from('archive_requests')
+      .select('requested_at, archive_url')
+      .eq('user_id', userId)
+      .order('requested_at', { ascending: false })
+      .limit(1);
+
+    if (archiveError) {
+      this.logger.error(
+        `Failed to load archive status for user ${userId}: ${archiveError.message}`,
+      );
+      throw new BadRequestException('Failed to load archive status');
+    }
+
+    const latestArchive = archiveRows?.[0] ?? null;
+    const archivePath = latestArchive?.archive_url ?? '';
+    const isPrivateObjectPath =
+      archivePath.length > 0 &&
+      !archivePath.startsWith('http://') &&
+      !archivePath.startsWith('https://');
+    let downloadUrl: string | null = null;
+    let expiresInSeconds: number | null = null;
+
+    if (isPrivateObjectPath) {
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('gdpr-archives')
+        .createSignedUrl(archivePath, ARCHIVE_DOWNLOAD_TTL_SECONDS);
+
+      if (signedUrlError) {
+        this.logger.warn(
+          `Failed to create signed GDPR archive URL for user ${userId}: ${signedUrlError.message}`,
+        );
+      } else {
+        downloadUrl = signedUrlData.signedUrl;
+        expiresInSeconds = ARCHIVE_DOWNLOAD_TTL_SECONDS;
+      }
+    }
+
+    return {
+      is_deletion_pending: Boolean(user.is_deletion_pending),
+      scheduled_for_deletion_at: user.scheduled_for_deletion_at ?? null,
+      latest_archive: latestArchive
+        ? {
+            requested_at: latestArchive.requested_at,
+            download_url: downloadUrl,
+            expires_in_seconds: expiresInSeconds,
+          }
+        : null,
+    };
   }
 
   async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<void> {
