@@ -26,8 +26,7 @@ describe('PrivacyService privacy status', () => {
       data: [
         {
           requested_at: '2026-08-20T12:00:00.000Z',
-          fulfilled_at: '2026-08-20T12:00:00.000Z',
-          archive_path: 'user-1/archive_123.json',
+          archive_url: 'user-1/archive_123.json',
         },
       ],
       error: null,
@@ -81,7 +80,6 @@ describe('PrivacyService privacy status', () => {
       scheduled_for_deletion_at: '2026-09-19T12:00:00.000Z',
       latest_archive: {
         requested_at: '2026-08-20T12:00:00.000Z',
-        fulfilled_at: '2026-08-20T12:00:00.000Z',
         download_url: 'https://storage.example.test/signed-archive',
         expires_in_seconds: 900,
       },
@@ -99,6 +97,23 @@ describe('PrivacyService privacy status', () => {
 
     expect(status.latest_archive?.download_url).toBeNull();
     expect(status.latest_archive?.expires_in_seconds).toBeNull();
+  });
+
+  it('does not re-expose historical public archive URLs', async () => {
+    archiveLimit.mockResolvedValue({
+      data: [
+        {
+          requested_at: '2026-08-19T12:00:00.000Z',
+          archive_url: 'https://storage.example.test/public/archive.json',
+        },
+      ],
+      error: null,
+    });
+
+    const status = await service.getStatus('user-1');
+
+    expect(status.latest_archive?.download_url).toBeNull();
+    expect(createSignedUrl).not.toHaveBeenCalled();
   });
 
   it('fails closed when the authenticated user status cannot be loaded', async () => {
