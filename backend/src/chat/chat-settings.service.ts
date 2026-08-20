@@ -1,34 +1,89 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ChatSettingsDto } from './dto/chat-settings.dto';
+import {
+  ChatSettingsDto,
+  MessageFilterSettingsDto,
+} from './dto/chat-settings.dto';
 
 @Injectable()
 export class ChatSettingsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  private defaultSettings: ChatSettingsDto = {
+  private readonly defaultMessageFilters: Required<MessageFilterSettingsDto> = {
+    enabled: false,
+    allowEveryone: true,
+    allowedGenders: [],
+    sameNativeLanguage: false,
+    sameTargetLanguage: false,
+    sameGender: false,
+    sameAge: false,
+    ageMin: 0,
+    ageMax: 120,
+  };
+
+  private readonly defaultSettings: ChatSettingsDto = {
     autoTranslate: false,
     readReceipts: false,
     enterToSend: false,
+    messageFilters: { ...this.defaultMessageFilters },
   };
+
+  private mergeMessageFilters(
+    current?: MessageFilterSettingsDto | null,
+    incoming?: MessageFilterSettingsDto,
+  ): MessageFilterSettingsDto {
+    const merged: Required<MessageFilterSettingsDto> = {
+      ...this.defaultMessageFilters,
+      ...(current ?? {}),
+      ...(incoming ?? {}),
+      allowedGenders: [
+        ...new Set(
+          (incoming?.allowedGenders ?? current?.allowedGenders ?? []).map((value) =>
+            value.trim().toLowerCase(),
+          ),
+        ),
+      ].filter(Boolean),
+    };
+
+    if (merged.ageMin > merged.ageMax) {
+      throw new BadRequestException('Minimum age cannot be greater than maximum age.');
+    }
+
+    // "Everyone" is an explicit bypass, matching the Telegram-style UX.
+    if (merged.allowEveryone || !merged.enabled) {
+      merged.allowEveryone = true;
+    }
+
+    return merged;
+  }
 
   async getSettings(userId: string): Promise<ChatSettingsDto> {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('chat_preferences')
+      .select('chat_preferences, message_filters')
       .eq('id', userId)
       .single();
 
-    if (error || !data?.chat_preferences) {
-      return { ...this.defaultSettings };
+    if (error || !data) {
+      return {
+        ...this.defaultSettings,
+        messageFilters: { ...this.defaultMessageFilters },
+      };
     }
 
-    const prefs = data.chat_preferences as Partial<ChatSettingsDto>;
+    const prefs = (data.chat_preferences ?? {}) as Partial<ChatSettingsDto>;
+    const messageFilters = this.mergeMessageFilters(
+      (data.message_filters as MessageFilterSettingsDto | null) ?? null,
+    );
+
     return {
       autoTranslate: prefs.autoTranslate ?? this.defaultSettings.autoTranslate,
       readReceipts: prefs.readReceipts ?? this.defaultSettings.readReceipts,
       enterToSend: prefs.enterToSend ?? this.defaultSettings.enterToSend,
+      showDetailedExplanations: prefs.showDetailedExplanations,
+      defaultTranslationLanguage: prefs.defaultTranslationLanguage,
+      messageFilters,
     };
   }
 
@@ -37,17 +92,36 @@ export class ChatSettingsService {
     settings: ChatSettingsDto,
   ): Promise<ChatSettingsDto> {
     const current = await this.getSettings(userId);
+    const messageFilters = this.mergeMessageFilters(
+      current.messageFilters,
+      settings.messageFilters,
+    );
+
     const merged: ChatSettingsDto = {
       autoTranslate: settings.autoTranslate ?? current.autoTranslate,
       readReceipts: settings.readReceipts ?? current.readReceipts,
       enterToSend: settings.enterToSend ?? current.enterToSend,
+      showDetailedExplanations:
+        settings.showDetailedExplanations ?? current.showDetailedExplanations,
+      defaultTranslationLanguage:
+        settings.defaultTranslationLanguage ?? current.defaultTranslationLanguage,
+      messageFilters,
+    };
+
+    const chatPreferences = {
+      autoTranslate: merged.autoTranslate,
+      readReceipts: merged.readReceipts,
+      enterToSend: merged.enterToSend,
+      showDetailedExplanations: merged.showDetailedExplanations,
+      defaultTranslationLanguage: merged.defaultTranslationLanguage,
     };
 
     const { error } = await this.supabaseService
       .getClient()
       .from('users')
       .update({
-        chat_preferences: merged as unknown as Record<string, unknown>,
+        chat_preferences: chatPreferences as unknown as Record<string, unknown>,
+        message_filters: messageFilters as unknown as Record<string, unknown>,
       })
       .eq('id', userId);
 
