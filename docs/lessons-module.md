@@ -35,7 +35,7 @@ Migration `20260820172500_lessons_learning_progress.sql` adds three lesson publi
 
 The backend uses its authenticated user identity for progress operations. Client-supplied user IDs are never accepted. VIP entitlement lookup fails closed: an entitlement lookup failure can hide VIP lessons but cannot expose them.
 
-`lesson_progress` has a `(user_id, lesson_id)` primary key and RLS policies limiting direct authenticated access to the owner's rows. The learner API uses the service role but still scopes every progress query by the authenticated user ID.
+`lesson_progress` has a `(user_id, lesson_id)` primary key and RLS permits authenticated users to read only their own rows. Direct client inserts and updates are deliberately denied; all progress mutations go through the authenticated backend and the service-role-only atomic function. The learner API also scopes every progress query by the authenticated user ID.
 
 ## Progress, retries, and concurrency
 
