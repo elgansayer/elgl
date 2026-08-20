@@ -93,9 +93,7 @@ export class PrivacySettingsComponent {
       this.hideOnlineStatus.set(controls.hideOnlineStatus);
       this.hideVipStatus.set(controls.hideVipStatus);
     } catch {
-      this.privacyControlsError.set(
-        'Could not load visibility controls. Your existing privacy settings have not changed.',
-      );
+      this.privacyControlsError.set('privacy.loadError');
     } finally {
       this.privacyControlsLoading.set(false);
     }
@@ -122,20 +120,13 @@ export class PrivacySettingsComponent {
     try {
       if (control === 'online') {
         await this.privacyStatusService.setHideOnlineStatus(hidden);
-        this.privacyControlsStatus.set(
-          hidden ? 'Online status is now hidden.' : 'Online status is now visible.',
-        );
       } else {
         await this.privacyStatusService.setHideVipStatus(hidden);
-        this.privacyControlsStatus.set(
-          hidden ? 'VIP status is now hidden.' : 'VIP status is now visible.',
-        );
       }
+      this.privacyControlsStatus.set('privacy.success');
     } catch {
       state.set(previous);
-      this.privacyControlsError.set(
-        'Could not save this privacy setting. The previous setting has been restored.',
-      );
+      this.privacyControlsError.set('privacy.error');
     } finally {
       this.savingPrivacyControl.set(null);
     }
