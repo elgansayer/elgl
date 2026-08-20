@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   imports: [HlmButton],
@@ -81,12 +82,12 @@ export class DeviceTransferComponent {
     try {
       // Call backend to consume the one‑time token and obtain a swap JWT
       const consumeRes = await lastValueFrom(
-        this.http.post<{ swapToken: string }>('/api/transfer/consume', { token }),
+        this.http.post<{ swapToken: string }>(`${environment.apiUrl}/transfer/consume`, { token }),
       );
       // Exchange the swap JWT for a real session
       const swapRes = await lastValueFrom(
         this.http.post<{ access_token: string; refresh_token: string; user_id: string }>(
-          '/api/transfer/swap',
+          `${environment.apiUrl}/transfer/swap`,
           { swapToken: consumeRes.swapToken },
         ),
       );

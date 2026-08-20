@@ -30,16 +30,16 @@ export interface BuddyRequest {
 @Injectable({ providedIn: 'root' })
 export class StudyBuddyService {
   private http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/study-buddies`;
+  private readonly apiUrl = environment.apiUrl;
 
   async requestBuddy(dto: { partnerId: string; message?: string }): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.apiUrl}/request`, dto));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/request`, dto));
   }
 
   async getMatches(): Promise<StudyBuddyMatch[]> {
     try {
       const data = await firstValueFrom(
-        this.http.get<Record<string, unknown>[]>(`${this.apiUrl}/matches`),
+        this.http.get<Record<string, unknown>[]>(`${this.apiUrl}/study-buddies/matches`),
       );
       if (!data) return [];
       const matches: StudyBuddyMatch[] = data
@@ -56,14 +56,14 @@ export class StudyBuddyService {
   }
 
   getIncomingRequests(): Promise<BuddyRequest[]> {
-    return firstValueFrom(this.http.get<BuddyRequest[]>(`${this.apiUrl}/requests`));
+    return firstValueFrom(this.http.get<BuddyRequest[]>(`${this.apiUrl}/study-buddies/requests`));
   }
 
   async acceptRequest(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.apiUrl}/requests/${id}/accept`, {}));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/requests/${id}/accept`, {}));
   }
 
   async declineRequest(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.apiUrl}/requests/${id}/decline`, {}));
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/requests/${id}/decline`, {}));
   }
 }
