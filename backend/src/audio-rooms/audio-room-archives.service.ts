@@ -59,14 +59,6 @@ const MAX_STORED_TRANSCRIPT_CHARS = 100_000;
 const PROCESSING_STALE_MS = 10 * 60 * 1000;
 const QUEUE_BATCH_SIZE = 5;
 
-/**
- * Durable archive/session-summary workflow for audio rooms.
- *
- * The room archive request persists its state and returns before transcription
- * or LLM work starts. A scheduled worker retries pending jobs, and an in-memory
- * guard prevents duplicate work inside a single process. Database status makes
- * the workflow recoverable after process restarts.
- */
 @Injectable()
 export class AudioRoomArchivesService {
   private readonly logger = new Logger(AudioRoomArchivesService.name);
@@ -102,116 +94,74 @@ export class AudioRoomArchivesService {
     );
   }
 
-  /**
-   * Finalise a room quickly and enqueue summary generation. Provider failures
-   * cannot turn a successfully archived room back into an active room.
-   */
   async finalizeRoom(
     hostId: string,
     roomId: string,
     requestedRecordingUrl?: string | null,
   ): Promise<FinalizeAudioRoomArchiveResult> {
-    const supabase = this.client();
-    const { data, error } = await supabase
-      .from('audio_rooms')
-      .select(
-        'id, room_name, title, language_pair, topic_tag, host_id, co_host_id, speakers, invited_user_ids, is_private, is_active, recording_url, created_at',
-      )
-      .eq('id', roomId)
-      .single();
-
-    if (error || !data) {
-      throw new NotFoundException('Audio room not found');
-    }
-
-    const room = data as ArchiveRoomRow;
+    const room = await this.getRoomRow(roomId);
     if (room.host_id !== hostId) {
       throw new ForbiddenException('Only the host can archive this room.');
     }
 
+    const supabase = this.client();
     let recordingUrl = room.recording_url ?? requestedRecordingUrl ?? null;
 
-    // Only stop egress once. Duplicate archive callbacks against an already
-    // inactive room reuse the recording already persisted in the database.
     if (room.is_active) {
       try {
-        const stoppedRecording = await this.transcriptEgress.stopEgress(
-          room.room_name,
-        );
-        recordingUrl = stoppedRecording ?? recordingUrl;
+        recordingUrl =
+          (await this.transcriptEgress.stopEgress(room.room_name)) ??
+          recordingUrl;
       } catch {
-        // Recording finalisation is best effort. Caption fallback can still
-        // produce a useful summary, and the archive itself remains successful.
         this.logger.warn(
-          `Recording finalisation failed for audio room ${room.id}; summary worker will use available fallbacks`,
+          `Recording finalisation failed for audio room ${room.id}`,
         );
       }
 
-      const updatePayload: Record<string, unknown> = { is_active: false };
-      if (recordingUrl) updatePayload['recording_url'] = recordingUrl;
-      const { error: archiveError } = await supabase
+      const payload: Record<string, unknown> = { is_active: false };
+      if (recordingUrl) payload['recording_url'] = recordingUrl;
+      const { error } = await supabase
         .from('audio_rooms')
-        .update(updatePayload)
+        .update(payload)
         .eq('id', room.id);
-      if (archiveError) {
-        throw new Error('Failed to persist archived audio room state');
-      }
+      if (error) throw new Error('Failed to persist archived audio room state');
     }
 
-    await supabase.from('audio_room_participants').upsert(
-      { room_id: room.id, user_id: hostId },
-      { onConflict: 'room_id,user_id' },
-    );
+    await this.upsertParticipation(hostId, room.id);
 
-    const { data: existing } = await supabase
-      .from('audio_room_transcripts')
-      .select(
-        'room_id, recording_url, transcript_text, session_summary, vocabulary_list, summary_status, summary_attempts, summary_last_attempt_at, summary_next_retry_at, updated_at',
-      )
-      .eq('room_id', room.id)
-      .maybeSingle();
-
-    const existingJob = existing as SummaryJobRow | null;
-    if (!existingJob) {
-      const { error: jobError } = await supabase
-        .from('audio_room_transcripts')
-        .insert({
-          room_id: room.id,
-          recording_url: recordingUrl,
-          transcript_text: null,
-          session_summary: null,
-          vocabulary_list: [],
-          summary_status: 'pending',
-          summary_attempts: 0,
-          summary_next_retry_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      if (jobError) {
-        throw new Error('Failed to create archived-room summary job');
-      }
+    const existing = await this.loadJob(room.id);
+    if (!existing) {
+      const now = new Date().toISOString();
+      const { error } = await supabase.from('audio_room_transcripts').insert({
+        room_id: room.id,
+        recording_url: recordingUrl,
+        transcript_text: null,
+        session_summary: null,
+        vocabulary_list: [],
+        summary_status: 'pending',
+        summary_attempts: 0,
+        summary_next_retry_at: now,
+        updated_at: now,
+      });
+      if (error) throw new Error('Failed to create archived-room summary job');
     } else if (
-      existingJob.summary_status !== 'ready' &&
+      existing.summary_status !== 'ready' &&
       recordingUrl &&
-      !existingJob.recording_url
+      !existing.recording_url
     ) {
       await supabase
         .from('audio_room_transcripts')
         .update({
           recording_url: recordingUrl,
-          summary_status:
-            existingJob.summary_status === 'processing'
-              ? 'processing'
-              : 'pending',
+          summary_status: 'pending',
           summary_next_retry_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('room_id', room.id);
     }
 
-    const status = existingJob?.summary_status ?? 'pending';
-    if (status !== 'ready') {
-      void this.processRoom(room.id);
-    }
+    const status = existing?.summary_status ?? 'pending';
+    if (status !== 'ready') void this.processRoom(room.id);
 
     return {
       room_id: room.id,
@@ -220,11 +170,8 @@ export class AudioRoomArchivesService {
     };
   }
 
-  /** Record a successfully authenticated room visit for later archive access. */
   async recordParticipation(userId: string, roomId: string): Promise<void> {
-    const supabase = this.client();
     const room = await this.getRoomRow(roomId);
-
     if (
       room.is_private &&
       room.host_id !== userId &&
@@ -234,14 +181,7 @@ export class AudioRoomArchivesService {
     ) {
       throw new ForbiddenException('You are not invited to this private room.');
     }
-
-    const { error } = await supabase.from('audio_room_participants').upsert(
-      { room_id: roomId, user_id: userId },
-      { onConflict: 'room_id,user_id' },
-    );
-    if (error) {
-      throw new Error('Failed to record audio room participation');
-    }
+    await this.upsertParticipation(userId, roomId);
   }
 
   async listArchives(userId: string): Promise<AudioRoomArchiveListItem[]> {
@@ -272,29 +212,29 @@ export class AudioRoomArchivesService {
     );
     if (roomIds.length === 0) return [];
 
-    const { data: rooms, error: roomsError } = await supabase
-      .from('audio_rooms')
-      .select(
-        'id, title, language_pair, topic_tag, host_id, is_private, recording_url, created_at',
-      )
-      .in('id', roomIds)
-      .eq('is_active', false)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (roomsError) {
-      throw new Error('Failed to load archived audio rooms');
-    }
+    const [{ data: rooms, error }, { data: summaryRows }] = await Promise.all([
+      supabase
+        .from('audio_rooms')
+        .select(
+          'id, title, language_pair, topic_tag, host_id, is_private, recording_url, created_at',
+        )
+        .in('id', roomIds)
+        .eq('is_active', false)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('audio_room_transcripts')
+        .select('room_id, summary_status')
+        .in('room_id', roomIds),
+    ]);
+    if (error) throw new Error('Failed to load archived audio rooms');
 
-    const { data: summaries } = await supabase
-      .from('audio_room_transcripts')
-      .select('room_id, summary_status')
-      .in('room_id', roomIds);
-    const statusByRoom = new Map<string, AudioRoomSummaryStatus>();
-    for (const row of (summaries ?? []) as Array<{
+    const statuses = new Map<string, AudioRoomSummaryStatus>();
+    for (const row of (summaryRows ?? []) as Array<{
       room_id: string;
       summary_status: AudioRoomSummaryStatus;
     }>) {
-      statusByRoom.set(row.room_id, row.summary_status);
+      statuses.set(row.room_id, row.summary_status);
     }
 
     return ((rooms ?? []) as Array<{
@@ -315,7 +255,7 @@ export class AudioRoomArchivesService {
       is_private: Boolean(room.is_private),
       recording_url: room.recording_url ?? null,
       created_at: room.created_at,
-      summary_status: statusByRoom.get(room.id) ?? null,
+      summary_status: statuses.get(room.id) ?? null,
     }));
   }
 
@@ -324,16 +264,8 @@ export class AudioRoomArchivesService {
     roomId: string,
   ): Promise<AudioRoomArchiveSummary> {
     await this.assertCanAccess(userId, roomId);
-    const supabase = this.client();
-    const { data } = await supabase
-      .from('audio_room_transcripts')
-      .select(
-        'room_id, recording_url, transcript_text, session_summary, vocabulary_list, summary_status, summary_attempts, updated_at',
-      )
-      .eq('room_id', roomId)
-      .maybeSingle();
-
-    if (!data) {
+    const job = await this.loadJob(roomId);
+    if (!job) {
       return {
         room_id: roomId,
         recording_url: null,
@@ -346,18 +278,17 @@ export class AudioRoomArchivesService {
       };
     }
 
-    const row = data as SummaryJobRow;
     return {
-      room_id: row.room_id,
-      recording_url: row.recording_url,
-      transcript_text: row.transcript_text,
-      session_summary: row.session_summary,
-      vocabulary: Array.isArray(row.vocabulary_list)
-        ? row.vocabulary_list.slice(0, 10)
+      room_id: job.room_id,
+      recording_url: job.recording_url,
+      transcript_text: job.transcript_text,
+      session_summary: job.session_summary,
+      vocabulary: Array.isArray(job.vocabulary_list)
+        ? job.vocabulary_list.slice(0, 10)
         : [],
-      summary_status: row.summary_status,
-      summary_attempts: row.summary_attempts,
-      updated_at: row.updated_at,
+      summary_status: job.summary_status,
+      summary_attempts: job.summary_attempts,
+      updated_at: job.updated_at,
     };
   }
 
@@ -367,15 +298,15 @@ export class AudioRoomArchivesService {
       throw new ForbiddenException('Only the room host can retry a summary.');
     }
 
-    const supabase = this.client();
-    const { error } = await supabase
+    const now = new Date().toISOString();
+    const { error } = await this.client()
       .from('audio_room_transcripts')
       .update({
         summary_status: 'pending',
         summary_attempts: 0,
-        summary_next_retry_at: new Date().toISOString(),
+        summary_next_retry_at: now,
         summary_error_code: null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       })
       .eq('room_id', roomId);
     if (error) throw new Error('Failed to queue summary retry');
@@ -393,8 +324,7 @@ export class AudioRoomArchivesService {
       return;
     }
 
-    const supabase = this.client();
-    const { data } = await supabase
+    const { data } = await this.client()
       .from('audio_room_participants')
       .select('room_id')
       .eq('room_id', roomId)
@@ -407,12 +337,13 @@ export class AudioRoomArchivesService {
     }
   }
 
-  /** Recover stale jobs and process a bounded batch. */
   @Cron('*/30 * * * * *', { name: 'audio-room-session-summary-worker' })
   async processPendingSummaries(): Promise<void> {
     const supabase = this.client();
     const now = new Date();
-    const staleBefore = new Date(now.getTime() - PROCESSING_STALE_MS).toISOString();
+    const staleBefore = new Date(
+      now.getTime() - PROCESSING_STALE_MS,
+    ).toISOString();
 
     await supabase
       .from('audio_room_transcripts')
@@ -433,11 +364,7 @@ export class AudioRoomArchivesService {
       .in('summary_status', ['pending', 'failed'])
       .order('updated_at', { ascending: true })
       .limit(QUEUE_BATCH_SIZE);
-
-    if (error || !data) {
-      if (error) this.logger.warn('Could not load audio-room summary jobs');
-      return;
-    }
+    if (error || !data) return;
 
     const due = (data as SummaryJobRow[]).filter((job) => {
       if (job.summary_attempts >= this.maxAttempts) return false;
@@ -452,18 +379,8 @@ export class AudioRoomArchivesService {
     this.inFlight.add(roomId);
 
     try {
-      const supabase = this.client();
-      const { data } = await supabase
-        .from('audio_room_transcripts')
-        .select(
-          'room_id, recording_url, transcript_text, session_summary, vocabulary_list, summary_status, summary_attempts, summary_last_attempt_at, summary_next_retry_at, updated_at',
-        )
-        .eq('room_id', roomId)
-        .maybeSingle();
-      if (!data) return;
-
-      const job = data as SummaryJobRow;
-      if (job.summary_status === 'ready') return;
+      const job = await this.loadJob(roomId);
+      if (!job || job.summary_status === 'ready') return;
       if (job.summary_attempts >= this.maxAttempts) return;
       if (
         job.summary_status === 'processing' &&
@@ -475,16 +392,16 @@ export class AudioRoomArchivesService {
       }
 
       const attempt = job.summary_attempts + 1;
-      const attemptTime = new Date().toISOString();
-      const { error: claimError } = await supabase
+      const now = new Date().toISOString();
+      const { error: claimError } = await this.client()
         .from('audio_room_transcripts')
         .update({
           summary_status: 'processing',
           summary_attempts: attempt,
-          summary_last_attempt_at: attemptTime,
+          summary_last_attempt_at: now,
           summary_next_retry_at: null,
           summary_error_code: null,
-          updated_at: attemptTime,
+          updated_at: now,
         })
         .eq('room_id', roomId)
         .neq('summary_status', 'ready');
@@ -503,50 +420,23 @@ export class AudioRoomArchivesService {
           return;
         }
       }
+      if (!transcript) transcript = await this.loadCaptionTranscript(roomId);
 
       if (!transcript) {
-        transcript = await this.loadCaptionTranscript(roomId);
-      }
-
-      if (!transcript) {
-        await supabase
-          .from('audio_room_transcripts')
-          .update({
-            transcript_text: null,
-            session_summary: null,
-            vocabulary_list: [],
-            summary_status: 'ready',
-            summary_ready_at: new Date().toISOString(),
-            summary_error_code: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('room_id', roomId);
+        await this.markReady(roomId, null, null, []);
         return;
       }
 
-      let generated: ChunkSummary;
       try {
-        generated = await this.generateSummary(transcript);
+        const result = await this.generateSummary(transcript);
+        await this.markReady(
+          roomId,
+          transcript.slice(0, MAX_STORED_TRANSCRIPT_CHARS),
+          result.summary,
+          result.vocabulary,
+        );
       } catch {
         await this.markFailed(roomId, attempt, 'summary_generation_failed');
-        return;
-      }
-
-      const { error: readyError } = await supabase
-        .from('audio_room_transcripts')
-        .update({
-          transcript_text: transcript.slice(0, MAX_STORED_TRANSCRIPT_CHARS),
-          session_summary: generated.summary,
-          vocabulary_list: generated.vocabulary,
-          summary_status: 'ready',
-          summary_ready_at: new Date().toISOString(),
-          summary_next_retry_at: null,
-          summary_error_code: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('room_id', roomId);
-      if (readyError) {
-        await this.markFailed(roomId, attempt, 'summary_persist_failed');
       }
     } finally {
       this.inFlight.delete(roomId);
@@ -560,18 +450,17 @@ export class AudioRoomArchivesService {
       chunks.push(bounded.slice(offset, offset + this.llmChunkChars));
     }
 
-    const summaries: ChunkSummary[] = [];
+    const parts: ChunkSummary[] = [];
     for (const chunk of chunks) {
       try {
-        summaries.push(await this.summariseChunk(chunk));
+        parts.push(await this.summariseChunk(chunk));
       } catch {
-        // One provider failure should not discard useful summaries from other
-        // chunks. If every chunk fails we fall back to the local NLP service.
+        this.logger.warn('One audio-room transcript summary chunk failed');
       }
     }
 
-    if (summaries.length === 0) {
-      const fallback = this.nlpService.generateSessionSummary(bounded);
+    if (parts.length === 0) {
+      const fallback = await this.nlpService.generateSessionSummary(bounded);
       return {
         summary: fallback.summary ?? '',
         vocabulary: Array.isArray(fallback.vocabulary)
@@ -582,7 +471,7 @@ export class AudioRoomArchivesService {
 
     const topics = Array.from(
       new Set(
-        summaries.flatMap((part) =>
+        parts.flatMap((part) =>
           part.summary
             .split('\n')
             .map((line) => line.replace(/^[-•*]\s*/, '').trim())
@@ -592,7 +481,7 @@ export class AudioRoomArchivesService {
     ).slice(0, 4);
     const vocabulary = Array.from(
       new Set(
-        summaries
+        parts
           .flatMap((part) => part.vocabulary)
           .map((word) => word.trim())
           .filter(Boolean),
@@ -649,8 +538,7 @@ export class AudioRoomArchivesService {
   }
 
   private async loadCaptionTranscript(roomId: string): Promise<string> {
-    const supabase = this.client();
-    const { data } = await supabase
+    const { data } = await this.client()
       .from('audio_room_captions')
       .select('text_content')
       .eq('room_id', roomId)
@@ -663,13 +551,36 @@ export class AudioRoomArchivesService {
       .trim();
   }
 
+  private async markReady(
+    roomId: string,
+    transcript: string | null,
+    summary: string | null,
+    vocabulary: string[],
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.client()
+      .from('audio_room_transcripts')
+      .update({
+        transcript_text: transcript,
+        session_summary: summary,
+        vocabulary_list: vocabulary,
+        summary_status: 'ready',
+        summary_ready_at: now,
+        summary_next_retry_at: null,
+        summary_error_code: null,
+        updated_at: now,
+      })
+      .eq('room_id', roomId);
+    if (error) throw new Error('summary_persist_failed');
+  }
+
   private async markFailed(
     roomId: string,
     attempt: number,
     errorCode: string,
   ): Promise<void> {
-    const retryDelayMs = Math.min(60 * 60 * 1000, 60_000 * 2 ** (attempt - 1));
     const terminal = attempt >= this.maxAttempts;
+    const retryDelay = Math.min(60 * 60 * 1000, 60_000 * 2 ** (attempt - 1));
     await this.client()
       .from('audio_room_transcripts')
       .update({
@@ -677,13 +588,24 @@ export class AudioRoomArchivesService {
         summary_error_code: errorCode,
         summary_next_retry_at: terminal
           ? null
-          : new Date(Date.now() + retryDelayMs).toISOString(),
+          : new Date(Date.now() + retryDelay).toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('room_id', roomId);
     this.logger.warn(
       `Audio-room summary job ${roomId} failed with ${errorCode} on attempt ${attempt}`,
     );
+  }
+
+  private async loadJob(roomId: string): Promise<SummaryJobRow | null> {
+    const { data } = await this.client()
+      .from('audio_room_transcripts')
+      .select(
+        'room_id, recording_url, transcript_text, session_summary, vocabulary_list, summary_status, summary_attempts, summary_last_attempt_at, summary_next_retry_at, updated_at',
+      )
+      .eq('room_id', roomId)
+      .maybeSingle();
+    return data ? (data as SummaryJobRow) : null;
   }
 
   private async getRoomRow(roomId: string): Promise<ArchiveRoomRow> {
@@ -696,6 +618,14 @@ export class AudioRoomArchivesService {
       .single();
     if (error || !data) throw new NotFoundException('Audio room not found');
     return data as ArchiveRoomRow;
+  }
+
+  private async upsertParticipation(userId: string, roomId: string): Promise<void> {
+    const { error } = await this.client().from('audio_room_participants').upsert(
+      { room_id: roomId, user_id: userId },
+      { onConflict: 'room_id,user_id' },
+    );
+    if (error) throw new Error('Failed to record audio room participation');
   }
 
   private client(): SupabaseClient {
