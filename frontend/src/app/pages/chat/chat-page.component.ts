@@ -38,6 +38,7 @@ interface AiChatMessage {
             <div
               (click)="selectRoom(room)"
               appA11yClickable
+              tabindex="0"
               class="cursor-pointer p-3 rounded-lg hover:bg-surface-300 :bg-surface-200 transition-colors"
               [class.bg-primary/10]="selectedRoom()?.id === room.id"
             >

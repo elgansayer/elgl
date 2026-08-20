@@ -177,6 +177,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   [class.is-flipped]="isFlipped()"
                   (click)="flipCard()"
                   appA11yClickable
+                  tabindex="0"
                   [attr.aria-label]="
                     (isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel')
                       | t: { word: card.word_token }

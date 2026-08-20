@@ -22,7 +22,7 @@ describe('BlocksController', () => {
         {
           provide: SupabaseService,
           useValue: { getClient: vi.fn() },
-        }
+        },
       ],
     }).compile();
 
