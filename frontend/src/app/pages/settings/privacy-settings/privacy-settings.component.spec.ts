@@ -2,6 +2,8 @@ import { Location } from '@angular/common';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { vi } from 'vitest';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
@@ -20,6 +22,11 @@ describe('PrivacySettingsComponent', () => {
   const loadPrivacyStatus = vi.fn();
   const setHideOnlineStatus = vi.fn();
   const setHideVipStatus = vi.fn();
+
+  const privacyToggles = (): HlmCheckbox[] =>
+    fixture.debugElement
+      .queryAll(By.directive(HlmCheckbox))
+      .map((debugElement) => debugElement.componentInstance as HlmCheckbox);
 
   beforeEach(async () => {
     mutedWords.set([]);
@@ -97,12 +104,10 @@ describe('PrivacySettingsComponent', () => {
     expect(component.hideVipStatus()).toBe(false);
     expect(component.privacyControlsLoading()).toBe(false);
 
-    const toggles = Array.from(
-      fixture.nativeElement.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>,
-    );
+    const toggles = privacyToggles();
     expect(toggles).toHaveLength(2);
-    expect(toggles[0]?.checked).toBe(true);
-    expect(toggles[1]?.checked).toBe(false);
+    expect(toggles[0]?.checked()).toBe(true);
+    expect(toggles[1]?.checked()).toBe(false);
   });
 
   it('persists the hide-online setting and announces success', async () => {
@@ -145,14 +150,14 @@ describe('PrivacySettingsComponent', () => {
     expect(retry).toBeDefined();
   });
 
-  it('exposes descriptions for both keyboard-focusable native toggles', () => {
-    const toggles = Array.from(
-      fixture.nativeElement.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>,
-    );
+  it('uses owned Spartan checkboxes with explicit descriptions and stable ids', () => {
+    const toggles = privacyToggles();
 
     expect(toggles).toHaveLength(2);
-    expect(toggles.every((toggle) => Boolean(toggle.getAttribute('aria-describedby')))).toBe(true);
-    expect(toggles.every((toggle) => toggle.tabIndex >= 0)).toBe(true);
+    expect(toggles[0]?.ariaDescribedby()).toBe('hide-online-description');
+    expect(toggles[1]?.ariaDescribedby()).toBe('hide-vip-description');
+    expect(toggles[0]?.inputId()).toBe('hide-online-status');
+    expect(toggles[1]?.inputId()).toBe('hide-vip-status');
   });
 
   it('exposes a screen-reader name for the muted-word input and add action', () => {
