@@ -16,7 +16,7 @@ describe('CreateEventDto', () => {
   });
 
   it('accepts and trims a bounded valid payload', async () => {
-    const instance = plainToInstance(CreateEventDto, validInput());
+    const instance: CreateEventDto = plainToInstance(CreateEventDto, validInput());
     const errors = await validate(instance);
 
     expect(errors).toHaveLength(0);
@@ -26,7 +26,7 @@ describe('CreateEventDto', () => {
   });
 
   it('rejects whitespace-only titles', async () => {
-    const instance = plainToInstance(CreateEventDto, {
+    const instance: CreateEventDto = plainToInstance(CreateEventDto, {
       ...validInput(),
       title: '   ',
     });
@@ -36,7 +36,7 @@ describe('CreateEventDto', () => {
   });
 
   it('rejects oversized descriptions', async () => {
-    const instance = plainToInstance(CreateEventDto, {
+    const instance: CreateEventDto = plainToInstance(CreateEventDto, {
       ...validInput(),
       description: 'x'.repeat(2001),
     });
@@ -46,7 +46,7 @@ describe('CreateEventDto', () => {
   });
 
   it('rejects unsupported venue modes', async () => {
-    const instance = plainToInstance(CreateEventDto, {
+    const instance: CreateEventDto = plainToInstance(CreateEventDto, {
       ...validInput(),
       venue_type: 'javascript',
     });
@@ -56,7 +56,7 @@ describe('CreateEventDto', () => {
   });
 
   it('rejects participant limits outside the public contract', async () => {
-    const tooMany = plainToInstance(CreateEventDto, {
+    const tooMany: CreateEventDto = plainToInstance(CreateEventDto, {
       ...validInput(),
       max_participants: 101,
     });
