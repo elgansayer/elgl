@@ -41,6 +41,7 @@ describe('AppearanceSettingsComponent', () => {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
       setPrimaryAccentColor: vi.fn(),
+      resetPrimaryAccentColor: vi.fn(),
       primaryAccentColor: signal('#4f46e5'),
       loadFromProfile: vi.fn(),
     };
@@ -143,14 +144,30 @@ describe('AppearanceSettingsComponent', () => {
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
 
-  it('should update theme service accent colour when profile loads', async () => {
-    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  it('should load the profile accent through the theme service entitlement boundary', async () => {
+    expect(themeServiceMock.loadFromProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#4f46e5',
+    });
   });
 
-  it('should update theme service accent colour on save', async () => {
+  it('should update theme service accent colour on VIP save', async () => {
     component.primaryAccentColor.set('#e11d48');
     await component.saveSettings();
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({
+      primary_accent_color: '#e11d48',
+    });
     expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
+  });
+
+  it('should not resubmit or apply a stored accent after VIP entitlement is lost', async () => {
+    component.isVip.set(false);
+    component.primaryAccentColor.set('#e11d48');
+
+    await component.saveSettings();
+
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith({});
+    expect(themeServiceMock.setPrimaryAccentColor).not.toHaveBeenCalledWith('#e11d48');
+    expect(themeServiceMock.resetPrimaryAccentColor).toHaveBeenCalledOnce();
   });
 
   it('should set custom colour from color input when VIP', () => {
