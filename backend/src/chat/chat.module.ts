@@ -14,6 +14,8 @@ import { ChatService } from './chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
+import { DirectConversationController } from './direct-conversation.controller';
+import { DirectConversationService } from './direct-conversation.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
@@ -35,6 +37,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    DirectConversationController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -47,6 +50,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmProxyService,
     ChatService,
     ConversationStarterService,
+    DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
     ChatBackupService,
@@ -60,6 +64,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmProxyService,
     ChatService,
     ConversationStarterService,
+    DirectConversationService,
     SystemMessageService,
     ChatSettingsService,
   ],
