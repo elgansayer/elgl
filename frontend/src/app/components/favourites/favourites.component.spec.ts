@@ -209,14 +209,14 @@ describe('FavouritesComponent', () => {
     expect(component.favourites().some((favourite) => favourite.id === 'fav-1')).toBe(false);
   });
 
-  it('should expose list semantics and static type pills', async () => {
+  it('should expose list semantics and keep item type badges non-interactive', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('[role="list"]')).not.toBeNull();
     expect(host.querySelectorAll('[role="listitem"]').length).toBe(3);
-    expect(host.querySelectorAll('app-pill').length).toBe(2);
+    expect(host.querySelectorAll('app-chip').length).toBe(5);
   });
 
   it('should only mark audio as playing after playback starts and stop it on destroy', async () => {
