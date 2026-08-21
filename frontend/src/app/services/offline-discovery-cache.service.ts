@@ -14,6 +14,10 @@ interface CacheEntry<T> {
   cachedAt: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -44,8 +48,8 @@ export class OfflineDiscoveryCacheService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target && (target as any).result)) return;
-        const db = (target as any).result;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains(STORE_PARTNERS)) {
           db.createObjectStore(STORE_PARTNERS, { keyPath: 'id' });
         }
@@ -116,9 +120,20 @@ export class OfflineDiscoveryCacheService {
       const tx = db.transaction(STORE_PARTNERS, 'readonly');
       const req = tx.objectStore(STORE_PARTNERS).get(partnerId);
       req.onsuccess = () => {
-        const entry = req.result as (UserProfile & { _cachedAt?: number }) | undefined;
-        if (entry && entry._cachedAt && Date.now() - entry._cachedAt < CACHE_TTL_MS) {
-          resolve(entry);
+        const raw = req.result;
+        if (!isRecord(raw)) {
+          resolve(null);
+          return;
+        }
+        const cachedAt = raw['_cachedAt'];
+        if (typeof cachedAt === 'number' && Date.now() - cachedAt < CACHE_TTL_MS) {
+          const profile: Record<string, unknown> = {};
+          for (const key of Object.keys(raw)) {
+            if (key !== '_cachedAt') {
+              profile[key] = raw[key];
+            }
+          }
+          resolve(profile as unknown as UserProfile);
         } else {
           resolve(null);
         }
@@ -134,10 +149,25 @@ export class OfflineDiscoveryCacheService {
       const tx = db.transaction(STORE_PARTNERS, 'readonly');
       const req = tx.objectStore(STORE_PARTNERS).getAll();
       req.onsuccess = () => {
-        const entries = (req.result || []) as (UserProfile & { _cachedAt?: number })[];
-        const valid = entries
-          .filter((e) => e._cachedAt && Date.now() - e._cachedAt < CACHE_TTL_MS)
-          .map(({ _cachedAt, ...rest }) => rest as UserProfile);
+        const rawResult = req.result;
+        if (!Array.isArray(rawResult)) {
+          resolve([]);
+          return;
+        }
+        const valid: UserProfile[] = [];
+        for (const raw of rawResult) {
+          if (!isRecord(raw)) continue;
+          const cachedAt = raw['_cachedAt'];
+          if (typeof cachedAt === 'number' && Date.now() - cachedAt < CACHE_TTL_MS) {
+            const profile: Record<string, unknown> = {};
+            for (const key of Object.keys(raw)) {
+              if (key !== '_cachedAt') {
+                profile[key] = raw[key];
+              }
+            }
+            valid.push(profile as unknown as UserProfile);
+          }
+        }
         resolve(valid);
       };
       req.onerror = () => reject(req.error);
@@ -177,12 +207,20 @@ export class OfflineDiscoveryCacheService {
       const tx = db.transaction(STORE_SEARCH, 'readonly');
       const req = tx.objectStore(STORE_SEARCH).get(filtersKey);
       req.onsuccess = () => {
-        const entry = req.result as CacheEntry<UserProfile[]> | undefined;
-        if (entry && Date.now() - entry.cachedAt < CACHE_TTL_MS) {
-          resolve(entry.data);
-        } else {
+        const raw = req.result;
+        if (!isRecord(raw)) {
           resolve(null);
+          return;
         }
+        const cachedAt = raw['cachedAt'];
+        if (typeof cachedAt === 'number' && Date.now() - cachedAt < CACHE_TTL_MS) {
+          const data = raw['data'];
+          if (Array.isArray(data)) {
+            resolve(data as unknown as UserProfile[]);
+            return;
+          }
+        }
+        resolve(null);
       };
       req.onerror = () => reject(req.error);
     });

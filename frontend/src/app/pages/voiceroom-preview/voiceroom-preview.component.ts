@@ -19,33 +19,33 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
   template: `
     @if (roomResource.value(); as room) {
       <div
-        class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
       >
         <div
-          class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700"
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
         >
           <div
-            class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
           >
             <span class="text-3xl">🎙️</span>
           </div>
           <h1 class="text-2xl font-bold mb-2">{{ room.room_name }}</h1>
           <div class="flex justify-center gap-2 mb-6">
-            <span class="px-3 py-1 bg-gray-700 rounded-full text-sm font-medium">{{
+            <span class="px-3 py-1 bg-surface-300 rounded-full text-sm font-medium">{{
               room.language_pair
             }}</span>
             <span
-              class="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm font-medium"
+              class="px-3 py-1 bg-secondary/20 text-secondary rounded-full text-sm font-medium"
               >{{ room.topic_tag }}</span
             >
           </div>
-          <p class="text-gray-400 mb-8">
+          <p class="text-text-secondary mb-8">
             Join this live audio room to practice your speaking skills!
           </p>
           <a
             [routerLink]="['/audio-rooms']"
             [queryParams]="{ join: id() }"
-            class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors"
+            class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
           >
             Join Room
           </a>
@@ -53,21 +53,21 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
       </div>
     } @else if (roomResource.error()) {
       <div
-        class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
       >
         <div
-          class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700"
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
         >
           <div
-            class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
           >
             <span class="text-3xl">🎙️</span>
           </div>
-          <h1 class="text-2xl font-bold mb-2 text-gray-500">Room unavailable</h1>
-          <p class="text-gray-500 mb-8">This room may no longer be active.</p>
+          <h1 class="text-2xl font-bold mb-2 text-muted">Room unavailable</h1>
+          <p class="text-muted mb-8">This room may no longer be active.</p>
           <a
             [routerLink]="['/audio-rooms']"
-            class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors"
+            class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
           >
             Browse Rooms
           </a>
@@ -75,18 +75,18 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
       </div>
     } @else {
       <div
-        class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4"
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
       >
         <div
-          class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700"
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
         >
           <div
-            class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
           >
             <span class="text-3xl">🎙️</span>
           </div>
-          <h1 class="text-2xl font-bold mb-2 text-gray-400">Loading Room...</h1>
-          <p class="text-gray-400 mb-8">&nbsp;</p>
+          <h1 class="text-2xl font-bold mb-2 text-text-secondary">Loading Room...</h1>
+          <p class="text-text-secondary mb-8">&nbsp;</p>
         </div>
       </div>
     }

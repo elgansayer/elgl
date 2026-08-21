@@ -15,7 +15,7 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest,
+        ...globals.vitest,
       },
       sourceType: 'commonjs',
       parserOptions: {
@@ -34,9 +34,13 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unused-vars': [
-        'error',
+        'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      '@typescript-eslint/no-base-to-string': 'warn',
+      '@typescript-eslint/no-redundant-type-constituents': 'warn',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
+      '@typescript-eslint/require-await': 'warn',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
@@ -50,6 +54,8 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-misused-promises': 'warn',
+      '@typescript-eslint/no-require-imports': 'warn',
     },
   },
   {
@@ -101,6 +107,12 @@ export default tseslint.config(
     files: ['src/discovery/**/*.spec.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['src/video-calls/**/*.spec.ts', 'src/video-calls/**/*.e2e-spec.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 );

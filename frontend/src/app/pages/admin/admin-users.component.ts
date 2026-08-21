@@ -1,20 +1,31 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
-import { AdminErrorBoundaryComponent } from '../../components/admin-error-boundary/admin-error-boundary.component';
+
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AdminOfflineBannerComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

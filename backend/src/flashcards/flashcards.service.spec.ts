@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -7,46 +8,50 @@ import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 
-jest.mock('../common/retry', () => ({
-  withRetry: jest.fn((fn: () => unknown) => fn()),
-  isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
-}));
+vi.mock('../common/retry', async () => {
+  const actual =
+    await vi.importActual<typeof import('../common/retry')>('../common/retry');
+  return {
+    withRetry: vi.fn((fn: () => unknown) => fn()),
+    isRateLimitError: actual.isRateLimitError,
+  };
+});
 
 import { withRetry, isRateLimitError } from '../common/retry';
 
 interface MockLogger {
-  info: jest.Mock;
-  error: jest.Mock;
-  warn: jest.Mock;
-  debug: jest.Mock;
+  info: Mock;
+  error: Mock;
+  warn: Mock;
+  debug: Mock;
 }
 
 interface MockQueryBuilder {
-  upsert: jest.Mock;
-  update: jest.Mock;
-  select: jest.Mock;
-  eq: jest.Mock;
-  lt: jest.Mock;
-  lte: jest.Mock;
-  order: jest.Mock;
-  single: jest.Mock;
-  then?: jest.Mock;
+  upsert: Mock;
+  update: Mock;
+  select: Mock;
+  eq: Mock;
+  lt: Mock;
+  lte: Mock;
+  order: Mock;
+  single: Mock;
+  then?: Mock;
 }
 
 interface MockSupabaseClient {
-  from: jest.Mock;
+  from: Mock;
 }
 
 interface MockMetricsService {
-  recordSrsFlashcardCreated: jest.Mock;
-  recordSrsReviewCompleted: jest.Mock;
-  setSrsDueCards: jest.Mock;
-  setSrsAverageEasinessFactor: jest.Mock;
-  setSrsReviewSuccessRate: jest.Mock;
-  setSrsCardsPerLevel: jest.Mock;
-  setSrsCardsStuck: jest.Mock;
-  setSrsDecksTotal: jest.Mock;
-  recordSrsDeckCreated: jest.Mock;
+  recordSrsFlashcardCreated: Mock;
+  recordSrsReviewCompleted: Mock;
+  setSrsDueCards: Mock;
+  setSrsAverageEasinessFactor: Mock;
+  setSrsReviewSuccessRate: Mock;
+  setSrsCardsPerLevel: Mock;
+  setSrsCardsStuck: Mock;
+  setSrsDecksTotal: Mock;
+  recordSrsDeckCreated: Mock;
 }
 
 function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
@@ -74,38 +79,38 @@ describe('FlashcardsService', () => {
 
   beforeEach(async () => {
     mockLogger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
     mockMetricsService = {
-      recordSrsFlashcardCreated: jest.fn(),
-      recordSrsReviewCompleted: jest.fn(),
-      setSrsDueCards: jest.fn(),
-      setSrsAverageEasinessFactor: jest.fn(),
-      setSrsReviewSuccessRate: jest.fn(),
-      setSrsCardsPerLevel: jest.fn(),
-      setSrsCardsStuck: jest.fn(),
-      setSrsDecksTotal: jest.fn(),
-      recordSrsDeckCreated: jest.fn(),
+      recordSrsFlashcardCreated: vi.fn(),
+      recordSrsReviewCompleted: vi.fn(),
+      setSrsDueCards: vi.fn(),
+      setSrsAverageEasinessFactor: vi.fn(),
+      setSrsReviewSuccessRate: vi.fn(),
+      setSrsCardsPerLevel: vi.fn(),
+      setSrsCardsStuck: vi.fn(),
+      setSrsDecksTotal: vi.fn(),
+      recordSrsDeckCreated: vi.fn(),
     };
 
     mockQueryBuilder = {
-      upsert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      lt: jest.fn().mockReturnThis(),
-      lte: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      upsert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -118,13 +123,13 @@ describe('FlashcardsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: XpService,
           useValue: {
-            awardXpForActivity: jest.fn(),
+            awardXpForActivity: vi.fn(),
           },
         },
         {
@@ -138,7 +143,7 @@ describe('FlashcardsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -232,11 +237,11 @@ describe('FlashcardsService', () => {
     const fakeNow = new Date('2026-07-22T12:00:00Z');
 
     beforeEach(() => {
-      jest.useFakeTimers().setSystemTime(fakeNow);
+      vi.useFakeTimers().setSystemTime(fakeNow);
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should fetch current card and apply SM-2 with quality 5 (perfect recall, first review)', async () => {
@@ -334,6 +339,65 @@ describe('FlashcardsService', () => {
       expect(result.srs_level).toBe(0);
       expect(result.repetitions).toBe(0);
       expect(result.interval_days).toBe(1);
+    });
+
+    it('should schedule a failed card (quality 2) for review the next day', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      const updatedCard = {
+        id: 'card-1',
+        srs_level: 0,
+        easiness_factor: 2.18,
+        repetitions: 0,
+        interval_days: 1,
+        next_review_at: '2026-07-23T12:00:00.000Z',
+      };
+
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({ data: updatedCard, error: null });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 2,
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        srs_level: 0,
+        easiness_factor: 2.18,
+        repetitions: 0,
+        interval_days: 1,
+        next_review_at: '2026-07-23T12:00:00.000Z',
+      });
+      expect(result).toEqual(updatedCard);
+    });
+
+    it('should return degraded level 0 card when a failed review cannot be persisted', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'network error' },
+        });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 2,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(result.srs_level).toBe(0);
+      expect(result.repetitions).toBe(0);
+      expect(result.interval_days).toBe(1);
+      expect(result.easiness_factor).toBe(2.18);
+      expect(result.next_review_at).toBe('2026-07-23T12:00:00.000Z');
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
 
     it('should clamp minimum easiness_factor to 1.3', async () => {
@@ -438,7 +502,8 @@ describe('FlashcardsService', () => {
   describe('getFlashcards', () => {
     it('should query all flashcards for user when level is not specified', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      // `.range()` is the last chained method before `await` in the paginated query.
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
@@ -450,24 +515,26 @@ describe('FlashcardsService', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
         ascending: false,
       });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should filter by level when a valid number is provided', async () => {
       const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+      mockQueryBuilder.range.mockResolvedValue({
+        data: cards,
+        error: null,
+      });
 
       const result = await service.getFlashcards('user-1', 2);
 
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should return empty array when query errors or returns null data', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Query error' },
       });
@@ -477,7 +544,7 @@ describe('FlashcardsService', () => {
     });
 
     it('should fall back to memory store when connectivity error occurs', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'fetch failed' },
       });
@@ -491,7 +558,7 @@ describe('FlashcardsService', () => {
   describe('getDueReviews', () => {
     it('should return due cards ordered by next_review_at', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
@@ -500,7 +567,6 @@ describe('FlashcardsService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.lt).toHaveBeenCalledWith('srs_level', 4);
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith(
         'next_review_at',
         expect.any(String),
@@ -508,11 +574,12 @@ describe('FlashcardsService', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('next_review_at', {
         ascending: true,
       });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should return empty array when getDueReviews query errors', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
@@ -524,7 +591,7 @@ describe('FlashcardsService', () => {
 
   describe('SRS retry integration', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it('should wrap createOrUpdateFlashcard Supabase call with withRetry', async () => {

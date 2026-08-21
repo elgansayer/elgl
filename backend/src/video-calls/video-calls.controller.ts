@@ -67,7 +67,8 @@ export class VideoCallsController {
         },
         degraded: {
           type: 'boolean',
-          description: 'Whether the response was served from a degraded fallback',
+          description:
+            'Whether the response was served from a degraded fallback',
           example: false,
         },
         degradationReason: {
@@ -124,7 +125,8 @@ export class VideoCallsController {
         },
         degraded: {
           type: 'boolean',
-          description: 'Whether the response was served from a degraded fallback',
+          description:
+            'Whether the response was served from a degraded fallback',
           example: false,
         },
         degradationReason: {
@@ -160,7 +162,12 @@ export class VideoCallsController {
     const breakerStates = this.degradationService.getAllBreakerStates();
     const breakers: Record<
       string,
-      { isOpen: boolean; failureCount: number; totalFailures: number; totalSuccesses: number }
+      {
+        isOpen: boolean;
+        failureCount: number;
+        totalFailures: number;
+        totalSuccesses: number;
+      }
     > = {};
     for (const [name, state] of breakerStates) {
       breakers[name] = {
@@ -170,10 +177,13 @@ export class VideoCallsController {
         totalSuccesses: state.totalSuccesses,
       };
     }
-    const recentEvents = await this.degradationService.getRecentDegradationEvents(10);
+    const recentEvents =
+      await this.degradationService.getRecentDegradationEvents(10);
 
     return {
-      status: Object.values(breakers).some((b) => b.isOpen) ? 'degraded' : 'healthy',
+      status: Object.values(breakers).some((b) => b.isOpen)
+        ? 'degraded'
+        : 'healthy',
       breakers,
       recentDegradationEvents: recentEvents,
     };

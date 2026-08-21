@@ -1,4 +1,4 @@
-/// <reference types="jest" />
+/// <reference types="vi" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -9,9 +9,9 @@ describe('VideoCallsDegradationService', () => {
 
   beforeEach(async () => {
     mockRedisClient = {
-      lpush: jest.fn().mockResolvedValue(1),
-      ltrim: jest.fn().mockResolvedValue('OK'),
-      lrange: jest.fn().mockResolvedValue([]),
+      lpush: vi.fn().mockResolvedValue(1),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      lrange: vi.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +20,7 @@ describe('VideoCallsDegradationService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -32,7 +32,7 @@ describe('VideoCallsDegradationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -134,8 +134,8 @@ describe('VideoCallsDegradationService', () => {
   // ---------------------------------------------------------------------------
   describe('executeWithBreaker', () => {
     it('should return operation result when successful', async () => {
-      const operation = jest.fn().mockResolvedValue('success');
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockResolvedValue('success');
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,
@@ -155,10 +155,8 @@ describe('VideoCallsDegradationService', () => {
     });
 
     it('should use fallback when operation fails', async () => {
-      const operation = jest
-        .fn()
-        .mockRejectedValue(new Error('LiveKit down'));
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockRejectedValue(new Error('LiveKit down'));
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,
@@ -183,8 +181,8 @@ describe('VideoCallsDegradationService', () => {
         service.recordFailure('livekit');
       }
 
-      const operation = jest.fn().mockResolvedValue('primary');
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockResolvedValue('primary');
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,

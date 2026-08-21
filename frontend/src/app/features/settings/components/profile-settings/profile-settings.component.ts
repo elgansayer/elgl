@@ -1,6 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, FormArray, Validators } from '@angular/forms';
 import { debounceTime } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../../services/translate.pipe';
 import { SettingsService } from '../../../../core/services/settings.service';
 import {
@@ -35,12 +40,13 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   templateUrl: './profile-settings.component.html',
 })
 export class ProfileSettingsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
 
   distanceRadius = signal<number>(50);
 
@@ -106,11 +112,13 @@ export class ProfileSettingsComponent implements OnInit {
       });
     }
 
-    this.profileForm.valueChanges.pipe(debounceTime(500)).subscribe(() => {
-      if (this.profileForm.valid) {
-        this.persist();
-      }
-    });
+    this.profileForm.valueChanges
+      .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.profileForm.valid) {
+          this.save();
+        }
+      });
   }
 
   addTargetLanguage() {
@@ -121,12 +129,12 @@ export class ProfileSettingsComponent implements OnInit {
         jlptLevel: ['None'],
       }),
     );
-    this.persist();
+    this.save();
   }
 
   removeTargetLanguage(index: number) {
     this.targetLanguages.removeAt(index);
-    this.persist();
+    this.save();
   }
 
   onDistanceChange(event: Event) {
@@ -134,11 +142,11 @@ export class ProfileSettingsComponent implements OnInit {
     if (isHTMLInputElement(input)) {
       const value = parseInt(input.value, 10);
       this.distanceRadius.set(value);
-      this.persist();
+      this.save();
     }
   }
 
-  private persist() {
+  save(): void {
     if (this.profileForm.invalid) return;
 
     const formValue = this.profileForm.value;

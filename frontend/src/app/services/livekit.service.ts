@@ -11,15 +11,24 @@ import {
   Track,
 } from 'livekit-client';
 
+/** ICE server descriptor returned by the backend token endpoint. */
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
+
 export interface VideoClassroomTokenResponse {
   token: string;
   roomName: string;
+  iceServers?: IceServer[];
   degraded?: boolean;
   degradationReason?: string;
 }
 
 export interface TokenFetchResult {
   token: string;
+  iceServers?: IceServer[];
   degraded: boolean;
   degradationReason?: string;
 }
@@ -57,7 +66,7 @@ export class LivekitService {
    */
   async getToken(
     roomName: string,
-    participantIdentity: string,
+    _participantIdentity: string,
   ): Promise<TokenFetchResult> {
     const response = await firstValueFrom(
       this.http.post<VideoClassroomTokenResponse>(
@@ -69,6 +78,7 @@ export class LivekitService {
     );
     return {
       token: response.token,
+      iceServers: response.iceServers,
       degraded: response.degraded ?? false,
       degradationReason: response.degradationReason,
     };
@@ -78,8 +88,8 @@ export class LivekitService {
    * Start a new video call room. Returns token and whether degraded.
    */
   async startRoom(
-    userId: string,
-  ): Promise<{ token: string; roomName: string; degraded: boolean; degradationReason?: string }> {
+    _userId: string,
+  ): Promise<{ token: string; roomName: string; iceServers?: IceServer[]; degraded: boolean; degradationReason?: string }> {
     const response = await firstValueFrom(
       this.http.post<VideoClassroomTokenResponse>(
         `${environment.apiUrl}/video-calls/start`,
@@ -89,6 +99,7 @@ export class LivekitService {
     return {
       token: response.token,
       roomName: response.roomName,
+      iceServers: response.iceServers,
       degraded: response.degraded ?? false,
       degradationReason: response.degradationReason,
     };
@@ -136,20 +147,24 @@ export class LivekitService {
     const room = this.createRoom(roomOptions);
     this.room = room;
 
+    const iceServersToUse = tokenResult.iceServers && tokenResult.iceServers.length > 0 
+      ? tokenResult.iceServers 
+      : [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: environment.turnServerUrl,
+            username: environment.turnUsername,
+            credential: environment.turnPassword,
+          },
+        ];
+
     // Connect with retry for transient network failures
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < MAX_ROOM_CONNECT_RETRIES; attempt++) {
       try {
         await room.connect(this.getLiveKitUrl(), tokenResult.token, {
           rtcConfig: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              {
-                urls: environment.turnServerUrl,
-                username: environment.turnUsername,
-                credential: environment.turnPassword,
-              },
-            ],
+            iceServers: iceServersToUse,
           },
         });
         this.livekitConnected.set(true);

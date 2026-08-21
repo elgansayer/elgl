@@ -2,38 +2,122 @@ name: Self-Healing Workflow Monitor
 
 on:
   workflow_run:
+    workflows:
+      - CI
+      - Deploy
+      - Admin portal CI
     types: [completed]
 
 permissions:
+  contents: read
   issues: write
 
 jobs:
   report-failure:
+    # Pull-request failures already belong to the Factory's PR repair state.
+    # Creating a second issue for the same head would duplicate ownership and
+    # ask an issue worktree based on main to repair code that exists only on the
+    # pull-request branch.
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
-    if: |
-      github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.name != 'Self-Healing Workflow Monitor' &&
-      github.event.workflow_run.name != 'AI Auto-Resolver' &&
-      github.event.workflow_run.name != 'AI PR Reviewer & Fixer' &&
-      github.event.workflow_run.name != 'Swarm Auto-Dispatcher'
+    timeout-minutes: 5
     steps:
-      - name: Create Issue for visibility
+      - name: Create or update failure incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          FAILED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          FAILED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          FAILED_EVENT: ${{ github.event.workflow_run.event }}
+          FAILED_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          FAILED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          gh label create "guardian-alert" --color "B60205" --force --repo ${{ github.repository }} || true
+          set -euo pipefail
+
+          INCIDENT_TITLE="Workflow failed: ${FAILED_WORKFLOW} [${FAILED_BRANCH}]"
+          EXISTING_NUMBER=$(
+            gh issue list \
+              --repo "$REPOSITORY" \
+              --state open \
+              --limit 1000 \
+              --json number,title |
+              jq -r --arg title "$INCIDENT_TITLE" \
+                '.[] | select(.title == $title) | .number' |
+              head -n 1
+          )
+
+          FAILURE_DETAILS="The workflow **${FAILED_WORKFLOW}** failed.
+
+          **Run URL:** ${FAILED_RUN_URL}
+          **Event:** ${FAILED_EVENT}
+          **Branch:** ${FAILED_BRANCH}
+          **Head SHA:** ${FAILED_SHA}
+
+          Please investigate the failing job logs and fix the underlying issue."
+
+          if [ -n "$EXISTING_NUMBER" ]; then
+            gh issue comment "$EXISTING_NUMBER" \
+              --repo "$REPOSITORY" \
+              --body "A new failure occurred for this incident.
+
+          ${FAILURE_DETAILS}"
+            echo "Updated existing workflow incident #${EXISTING_NUMBER}."
+            exit 0
+          fi
 
           ISSUE_URL=$(gh issue create \
-            --repo ${{ github.repository }} \
-            --title "Workflow Failed: ${{ github.event.workflow_run.name }}" \
-            --body "The workflow **${{ github.event.workflow_run.name }}** failed.
+            --repo "$REPOSITORY" \
+            --title "$INCIDENT_TITLE" \
+            --body "$FAILURE_DETAILS")
 
-          **Run URL:** ${{ github.event.workflow_run.html_url }}
-          **Event:** ${{ github.event.workflow_run.event }}
-          **Branch:** ${{ github.event.workflow_run.head_branch }}
+          echo "Created workflow incident: ${ISSUE_URL}"
 
-          Please investigate the logs. If this is a PR branch, fix inline in that branch.
-          Do NOT create a follow-up fix PR." \
-            --label "guardian-alert")
+          # Keep the incident visible and high priority without claiming that a
+          # Factory worker has already leased it. The daemon adds factory-active
+          # only when it actually creates the isolated worktree.
+          gh issue edit "$ISSUE_URL" \
+            --repo "$REPOSITORY" \
+            --add-label "priority:high,factory-ready" || true
 
-          echo "Created issue: $ISSUE_URL"
+  resolve-recovery:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Close recovered workflow incident
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RECOVERED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          RECOVERED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RECOVERED_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RECOVERED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          INCIDENT_TITLE="Workflow failed: ${RECOVERED_WORKFLOW} [${RECOVERED_BRANCH}]"
+          EXISTING_NUMBER=$(
+            gh issue list \
+              --repo "$REPOSITORY" \
+              --state open \
+              --limit 1000 \
+              --json number,title |
+              jq -r --arg title "$INCIDENT_TITLE" \
+                '.[] | select(.title == $title) | .number' |
+              head -n 1
+          )
+
+          if [ -z "$EXISTING_NUMBER" ]; then
+            echo "No open workflow incident to resolve."
+            exit 0
+          fi
+
+          gh issue close "$EXISTING_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comment "Workflow recovered successfully.
+
+          **Run URL:** ${RECOVERED_RUN_URL}
+          **Branch:** ${RECOVERED_BRANCH}
+          **Head SHA:** ${RECOVERED_SHA}"
+
+          echo "Closed recovered workflow incident #${EXISTING_NUMBER}."

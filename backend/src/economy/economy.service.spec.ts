@@ -1,23 +1,26 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+import type { Mock } from 'vitest';
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty
@@ -28,12 +31,12 @@ jest.mock('dompurify', () => ({
         .replace(/&quot;/g, '"')
         .replace(/&#x27;/g, "'");
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
-jest.mock('../common/http-retry.helper', () => ({
-  withExponentialBackoff: jest.fn((fn: () => unknown) => fn()),
+vi.mock('../common/http-retry.helper', () => ({
+  withExponentialBackoff: vi.fn((fn: () => unknown) => fn()),
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -55,28 +58,28 @@ describe('EconomyService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let module: TestingModule;
-  let mockRedisClient: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
+  let mockRedisClient: { get: Mock; set: Mock; del: Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-      maybeSingle: jest.fn(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
     };
 
     module = await Test.createTestingModule({
@@ -85,23 +88,23 @@ describe('EconomyService', () => {
         {
           provide: 'PinoLogger:EconomyService',
           useValue: {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn().mockImplementation((id: string) => {
+            getProfile: vi.fn().mockImplementation((id: string) => {
               if (id === 'sender-1')
                 return Promise.resolve({
                   id: 'sender-1',
@@ -119,13 +122,13 @@ describe('EconomyService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            publish: jest.fn().mockResolvedValue(true),
+            publish: vi.fn().mockResolvedValue(true),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockImplementation((key) => {
+            get: vi.fn().mockImplementation((key) => {
               if (key === 'APPLE_SHARED_SECRET') return 'secret';
               if (key === 'STRIPE_SECRET_KEY') return 'sk_test_123';
               return null;
@@ -135,22 +138,22 @@ describe('EconomyService', () => {
         {
           provide: HttpService,
           useValue: {
-            post: jest.fn(),
-            get: jest.fn(),
+            post: vi.fn(),
+            get: vi.fn(),
           },
         },
         {
           provide: MetricsService,
           useValue: {
-            recordCoinPurchase: jest.fn(),
-            recordCoinPurchaseError: jest.fn(),
-            recordCoinFraudAttempt: jest.fn(),
-            setCoinBalanceTotal: jest.fn(),
-            setCoinHighBalanceUsers: jest.fn(),
-            recordDailyCheckInClaim: jest.fn(),
-            recordGiftSent: jest.fn(),
-            recordStickerPurchase: jest.fn(),
-            observeCoinTransactionLatency: jest.fn(),
+            recordCoinPurchase: vi.fn(),
+            recordCoinPurchaseError: vi.fn(),
+            recordCoinFraudAttempt: vi.fn(),
+            setCoinBalanceTotal: vi.fn(),
+            setCoinHighBalanceUsers: vi.fn(),
+            recordDailyCheckInClaim: vi.fn(),
+            recordGiftSent: vi.fn(),
+            recordStickerPurchase: vi.fn(),
+            observeCoinTransactionLatency: vi.fn(),
           },
         },
       ],
@@ -161,7 +164,7 @@ describe('EconomyService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -282,7 +285,7 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      jest.spyOn(service['httpService'], 'post').mockReturnValue(
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
         of({
           data: {
             status: 0,
@@ -327,7 +330,7 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      jest.spyOn(service['httpService'], 'post').mockReturnValue(
+      vi.spyOn(service['httpService'], 'post').mockReturnValue(
         of({
           data: {
             status: 0,
@@ -386,17 +389,18 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      jest
-        .spyOn(service['stripe'].checkout.sessions, 'retrieve')
-        .mockResolvedValue({
-          id: 'sess_123',
-          payment_status: 'paid',
-          amount_total: 1999,
-          metadata: {
-            userId: 'user-1',
-            product_id: 'coins_medium_web',
-          },
-        } as unknown as Stripe.Checkout.Session);
+      vi.spyOn(
+        service['stripe'].checkout.sessions,
+        'retrieve',
+      ).mockResolvedValue({
+        id: 'sess_123',
+        payment_status: 'paid',
+        amount_total: 1999,
+        metadata: {
+          userId: 'user-1',
+          product_id: 'coins_medium_web',
+        },
+      } as unknown as Stripe.Checkout.Session);
 
       const result = await service.purchaseCoins('user-1', {
         receipt_token: 'stripe_sess_123',
@@ -424,17 +428,18 @@ describe('EconomyService', () => {
         error: null,
       });
 
-      jest
-        .spyOn(service['stripe'].checkout.sessions, 'retrieve')
-        .mockResolvedValue({
-          id: 'sess_123',
-          payment_status: 'paid',
-          amount_total: 1999,
-          metadata: {
-            userId: 'other-user',
-            product_id: 'coins_medium_web',
-          },
-        } as unknown as Stripe.Checkout.Session);
+      vi.spyOn(
+        service['stripe'].checkout.sessions,
+        'retrieve',
+      ).mockResolvedValue({
+        id: 'sess_123',
+        payment_status: 'paid',
+        amount_total: 1999,
+        metadata: {
+          userId: 'other-user',
+          product_id: 'coins_medium_web',
+        },
+      } as unknown as Stripe.Checkout.Session);
 
       await expect(
         service.purchaseCoins('user-1', {
@@ -480,16 +485,16 @@ describe('EconomyService', () => {
     });
 
     it('should create a Stripe session and a pending purchase record', async () => {
-      jest
-        .spyOn(service['stripe'].checkout.sessions, 'create')
-        .mockResolvedValue({
+      vi.spyOn(service['stripe'].checkout.sessions, 'create').mockResolvedValue(
+        {
           id: 'sess_checkout_1',
           url: 'https://checkout.stripe.com/test/sess_checkout_1',
-        } as unknown as Stripe.Checkout.Session);
+        } as unknown as Stripe.Checkout.Session,
+      );
 
-      jest
-        .spyOn(service['configService'], 'get')
-        .mockReturnValue('http://localhost:4200');
+      vi.spyOn(service['configService'], 'get').mockReturnValue(
+        'http://localhost:4200',
+      );
 
       mockQueryBuilder.insert.mockResolvedValue({
         error: null,
@@ -515,12 +520,12 @@ describe('EconomyService', () => {
     });
 
     it('should throw if insert of pending purchase record fails', async () => {
-      jest
-        .spyOn(service['stripe'].checkout.sessions, 'create')
-        .mockResolvedValue({
+      vi.spyOn(service['stripe'].checkout.sessions, 'create').mockResolvedValue(
+        {
           id: 'sess_checkout_2',
           url: 'https://checkout.stripe.com/test/sess_checkout_2',
-        } as unknown as Stripe.Checkout.Session);
+        } as unknown as Stripe.Checkout.Session,
+      );
 
       mockQueryBuilder.insert.mockResolvedValue({
         error: { message: 'DB error' },
@@ -808,22 +813,22 @@ describe('EconomyService', () => {
       // Query 1: from('sticker_packs').select('*').order(...)
       // Query 2: from('user_sticker_packs').select('pack_id').eq('user_id', userId)
       // Query 3: from('users').select('coins_balance').eq('id', userId).single()
-      const mockFrom = jest.fn();
+      const mockFrom = vi.fn();
       mockSupabaseClient.from = mockFrom;
 
       const packsBuilder = {
         ...mockQueryBuilder,
-        order: jest.fn().mockResolvedValue({ data: mockPacks, error: null }),
+        order: vi.fn().mockResolvedValue({ data: mockPacks, error: null }),
       };
 
       const ownedBuilder = {
         ...mockQueryBuilder,
-        eq: jest.fn().mockResolvedValue({ data: mockOwned, error: null }),
+        eq: vi.fn().mockResolvedValue({ data: mockOwned, error: null }),
       };
 
       const usersBuilder = {
         ...mockQueryBuilder,
-        single: jest.fn().mockResolvedValue({ data: mockBalance, error: null }),
+        single: vi.fn().mockResolvedValue({ data: mockBalance, error: null }),
       };
 
       mockFrom.mockImplementation((table: string) => {
@@ -851,22 +856,22 @@ describe('EconomyService', () => {
     });
 
     it('should return default packs when DB returns empty', async () => {
-      const mockFrom = jest.fn();
+      const mockFrom = vi.fn();
       mockSupabaseClient.from = mockFrom;
 
       const packsBuilder = {
         ...mockQueryBuilder,
-        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
       const ownedBuilder = {
         ...mockQueryBuilder,
-        eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
       const usersBuilder = {
         ...mockQueryBuilder,
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
       mockFrom.mockImplementation((table: string) => {
@@ -884,129 +889,150 @@ describe('EconomyService', () => {
   });
 
   describe('unlockStickerPack', () => {
-    it('should unlock a sticker pack, deduct coins, and invalidate cache', async () => {
-      const pack = {
-        id: 'stk_pack_1',
-        name: 'Happy Corgi Pack',
-        cost_coins: 50,
-      };
-      mockQueryBuilder.single
-        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 200 },
-          error: null,
-        }); // balance check
+    const freshUnlock = {
+      success: true,
+      newly_unlocked: true,
+      coins_remaining: 150,
+      pack_id: 'stk_pack_1',
+      pack_name: 'Happy Corgi Pack',
+      pack_cost_coins: 50,
+      pack_is_animated: false,
+      pack_sticker_urls: ['assets/stickers/happy.png'],
+      pack_animation_url: null,
+    };
+
+    it('should unlock a sticker pack atomically and return the persisted balance', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [freshUnlock],
+        error: null,
+      });
 
       const result = await service.unlockStickerPack('user-1', {
         pack_id: 'stk_pack_1',
       });
 
-      expect(result.success).toBe(true);
-      expect(result.coins_remaining).toBe(150);
-      expect(result.pack).toEqual(pack);
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-1',
-        pack_id: 'stk_pack_1',
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'unlock_sticker_pack_atomic',
+        {
+          p_user_id: 'user-1',
+          p_pack_id: 'stk_pack_1',
+        },
+      );
+      expect(result).toEqual({
+        success: true,
+        coins_remaining: 150,
+        pack: {
+          id: 'stk_pack_1',
+          name: 'Happy Corgi Pack',
+          cost_coins: 50,
+          is_animated: false,
+          sticker_urls: ['assets/stickers/happy.png'],
+          animation_url: null,
+        },
       });
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'economy:sticker_packs:user-1',
       );
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).toHaveBeenCalledWith('stk_pack_1', 50);
     });
 
-    it('should throw NotFoundException when pack does not exist', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
+    it('should treat an already-owned pack as an idempotent success without recording another purchase', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [{ ...freshUnlock, newly_unlocked: false }],
         error: null,
+      });
+
+      const result = await service.unlockStickerPack('user-1', {
+        pack_id: 'stk_pack_1',
+      });
+
+      expect(result.coins_remaining).toBe(150);
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('should preserve one persisted balance when concurrent duplicate unlocks resolve', async () => {
+      mockSupabaseClient.rpc
+        .mockResolvedValueOnce({ data: [freshUnlock], error: null })
+        .mockResolvedValueOnce({
+          data: [{ ...freshUnlock, newly_unlocked: false }],
+          error: null,
+        });
+
+      const [first, second] = await Promise.all([
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ]);
+
+      expect(first.coins_remaining).toBe(150);
+      expect(second.coins_remaining).toBe(150);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledTimes(2);
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException when the atomic RPC reports a missing pack', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'STICKER_PACK_NOT_FOUND' },
       });
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'nonexistent' }),
       ).rejects.toThrow(NotFoundException);
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when insufficient coins', async () => {
-      const pack = {
-        id: 'stk_pack_4',
-        name: 'Golden Dragons',
-        cost_coins: 500,
-      };
-      mockQueryBuilder.single
-        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 100 },
-          error: null,
-        }); // balance
+    it('should throw BadRequestException when the atomic RPC reports insufficient coins', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'INSUFFICIENT_COINS' },
+      });
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
       ).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe('getTransactionHistory', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
-    it('should return empty array when the table does not exist', async () => {
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.order.mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValueOnce({
+    it('should fail the request when ownership cannot be committed', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
         data: null,
-        error: { message: 'relation "coin_transactions" does not exist' },
+        error: { message: 'duplicate key value violates unique constraint' },
       });
 
-      const result = await service.getTransactionHistory('user-1');
-      expect(result).toEqual([]);
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ).rejects.toThrow('Failed to unlock sticker pack.');
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).not.toHaveBeenCalled();
     });
 
-    it('should return filtered transaction rows', async () => {
-      const txRows = [
-        {
-          id: 'tx-1',
-          user_id: 'user-1',
-          type: 'daily_checkin',
-          amount: 7,
-          description: 'Daily check-in reward',
-          metadata: null,
-          created_at: '2026-08-08T12:00:00.000Z',
-        },
-      ];
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.order.mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValueOnce({
-        data: txRows,
+    it('should reject malformed RPC results instead of assuming a purchase succeeded', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [{ success: true, coins_remaining: 150 }],
         error: null,
       });
 
-      const result = await service.getTransactionHistory('user-1');
-      expect(result).toEqual(txRows);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_transactions');
-    });
-
-    it('should filter out invalid rows', async () => {
-      const mixedRows = [
-        { id: 'tx-1', user_id: 'user-1', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
-        { not_valid: true },
-        { id: 'tx-2', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
-        null,
-      ];
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.order.mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValueOnce({
-        data: mixedRows,
-        error: null,
-      });
-
-      const result = await service.getTransactionHistory('user-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('tx-1');
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ).rejects.toThrow('Failed to unlock sticker pack.');
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
   });
 
   describe('exponential backoff retry (HTTP 429)', () => {
     beforeEach(() => {
-      (withExponentialBackoff as jest.Mock).mockClear();
+      (withExponentialBackoff as Mock).mockClear();
     });
 
     it('should wrap getCatalog Supabase call with withExponentialBackoff', async () => {
@@ -1018,7 +1044,7 @@ describe('EconomyService', () => {
       await service.getCatalog();
 
       expect(withExponentialBackoff).toHaveBeenCalled();
-      const calls = (withExponentialBackoff as jest.Mock).mock.calls;
+      const calls = (withExponentialBackoff as Mock).mock.calls;
       // One of the calls should be for getCatalog
       const getCatalogCall = calls.find(
         (call: [unknown, string, unknown]) => call[1] === 'getCatalog',
@@ -1035,16 +1061,18 @@ describe('EconomyService', () => {
       await service.getBalance('user-1');
 
       expect(withExponentialBackoff).toHaveBeenCalled();
-      const calls = (withExponentialBackoff as jest.Mock).mock.calls;
+      const calls = (withExponentialBackoff as Mock).mock.calls;
       const getBalanceCall = calls.find(
         (call: [unknown, string, unknown]) => call[1] === 'getBalance',
       );
       expect(getBalanceCall).toBeDefined();
     });
 
-    it('should detect HTTP 429 errors via isHttp429Error in http-retry.helper', () => {
+    it('should detect HTTP 429 errors via isHttp429Error in http-retry.helper', async () => {
       // Verify the actual helper detects 429 correctly
-      const actual = jest.requireActual('../common/http-retry.helper');
+      const actual = await vi.importActual<
+        typeof import('../common/http-retry.helper')
+      >('../common/http-retry.helper');
 
       // Simulate the code path: withExponentialBackoff calls operation()
       // and catches errors, then checks isHttp429Error

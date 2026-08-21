@@ -68,7 +68,7 @@ describe('AdminService', () => {
   });
 
   it('falls back to mock data only on network errors (status 0), propagates HTTP errors', async () => {
-    // Network error (status 0) — should fall back to mock data
+    // Network error (status 0) - should fall back to mock data
     const networkPromise = service.listUsers('', 1, 20);
     const netReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
     netReq.error(new ProgressEvent('network error'));
@@ -76,7 +76,7 @@ describe('AdminService', () => {
     const netResult = await networkPromise;
     expect(netResult.users.length).toBeGreaterThan(0);
 
-    // HTTP error (status 403) — should propagate
+    // HTTP error (status 403) - should propagate
     const httpPromise = service.listUsers('', 1, 20);
     const httpReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
     httpReq.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
