@@ -8,6 +8,7 @@ import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
 import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
+import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
 
 describe('ProfileComponent', () => {
   let fixture: ComponentFixture<ProfileComponent>;
@@ -76,6 +77,40 @@ describe('ProfileComponent', () => {
     expect(hrefs).toContain('/profile/me-1/following');
     expect(fixture.nativeElement.textContent).toContain('12');
     expect(fixture.nativeElement.textContent).toContain('4');
+  });
+
+  it('should render native and target languages with the current study streak', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({
+        native_languages: ['en', 'ja'],
+        target_languages: ['fr', 'ko'],
+        study_streak_days: 14,
+      }),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('en,ja');
+    expect(text).toContain('fr,ko');
+    expect(text).toContain('🔥 14d');
+  });
+
+  it('should bind the saved audio intro to the profile audio player', async () => {
+    const audioIntroUrl = 'https://media.example.test/audio/profile-intro.webm';
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ audio_intro_url: audioIntroUrl }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const audioIntro = fixture.debugElement.query(By.directive(AudioIntroRecorderComponent));
+    expect(audioIntro).not.toBeNull();
+    expect((audioIntro.componentInstance as AudioIntroRecorderComponent).existingAudioUrl()).toBe(
+      audioIntroUrl,
+    );
   });
 
   it('should disable the incognito visits toggle for non-VIP users', async () => {
