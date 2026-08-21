@@ -55,11 +55,11 @@ or interpolated into a shell command.
 `pause` and `resume` update the same durable `control.json` consumed by the daemon. Pausing stops new scheduling
 without terminating active jobs. `status` forces an immediate panel refresh.
 
-`restart` creates a mode-0600, service-user-owned request containing only the fixed action, GitHub comment ID,
+`restart` creates a mode-0600, `dev`-owned request containing only the fixed action, GitHub comment ID,
 trusted actor and timestamp. The root watchdog accepts it only when:
 
 - the path is a regular non-symlink file;
-- it is owned by `hellotalk-factory` and is not group- or world-writable;
+- it is owned by `dev` and is not group- or world-writable;
 - the JSON schema contains the literal action `restart`;
 - the request has a numeric comment ID and named actor;
 - the timezone-aware timestamp is no more than ten minutes old and no more than two minutes in the future.
@@ -82,14 +82,14 @@ The first successful sync creates the issue. Later syncs locate it by exact titl
 Render the current panel without contacting GitHub:
 
 ```bash
-sudo -u hellotalk-factory \
+sudo -u dev \
   /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard show
 ```
 
 Force a publish and command poll:
 
 ```bash
-sudo -u hellotalk-factory \
+sudo -u dev \
   /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
 ```
 
@@ -111,7 +111,7 @@ diagnostics while reusing only dependency trees and the worker image whose deplo
 Its first run performs the normal expensive phases to establish trusted cache records.
 
 Startup diagnostics use the exact `HOME` and `PATH` configured on `hellotalk-factory.service`. Do not diagnose
-provider installation with a bare service-user sudo command: sudo's secure path can hide the authenticated CLI
+provider installation with a bare `sudo -u dev` command: sudo's secure path can hide the authenticated CLI
 binaries even while the daemon is using them successfully.
 
 Deployment also installs the bounded persistent-journal policy and vacuums archived entries. It does not prune
@@ -120,7 +120,7 @@ Docker automatically. Inspect or perform the separately bounded host maintenance
 after entering its maintenance window, provided each unit was active before deployment began.
 
 After deployment, confirm that the panel issue exists and that its service, timer and heartbeat rows are green.
-If publication fails, run `dashboard sync --force` as the service user and inspect the health service journal:
+If publication fails, run `dashboard sync --force` as `dev` and inspect the health service journal:
 
 ```bash
 sudo journalctl -u hellotalk-factory-health.service -n 100 --no-pager
