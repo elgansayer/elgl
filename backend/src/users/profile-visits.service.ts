@@ -27,7 +27,7 @@ function readStringArray(value: unknown): string[] {
 }
 
 function readVisitorSummary(value: unknown): ProfileVisitorSummary | undefined {
-  const candidate = Array.isArray(value) ? value[0] : value;
+  const candidate: unknown = Array.isArray(value) ? value[0] : value;
   if (!isRecord(candidate)) return undefined;
 
   const id = readString(candidate['id']);
@@ -146,7 +146,9 @@ export class ProfileVisitsService {
       .range(safeOffset, safeOffset + safeLimit - 1);
 
     if (response.error) {
-      throw new InternalServerErrorException('Failed to fetch profile visitors');
+      throw new InternalServerErrorException(
+        'Failed to fetch profile visitors',
+      );
     }
 
     const rows: unknown = response.data;

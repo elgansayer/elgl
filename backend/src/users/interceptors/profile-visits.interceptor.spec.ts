@@ -46,7 +46,9 @@ describe('ProfileVisitsInterceptor', () => {
   it('does not record unrelated user endpoints', async () => {
     const next = { handle: () => of([]) } as CallHandler;
 
-    await firstValueFrom(interceptor.intercept(createContext('getFollowers'), next));
+    await firstValueFrom(
+      interceptor.intercept(createContext('getFollowers'), next),
+    );
     expect(recordVisit).not.toHaveBeenCalled();
   });
 

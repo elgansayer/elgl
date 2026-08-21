@@ -39,12 +39,7 @@ describe('ProfileVisitsController', () => {
 
   it('rejects invalid pagination before querying visitor history', async () => {
     await expect(
-      controller.getVisitors(
-        'profile-1',
-        { id: 'profile-1' } as any,
-        0,
-        -1,
-      ),
+      controller.getVisitors('profile-1', { id: 'profile-1' } as any, 0, -1),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(profileVisitsService.getVisitors).not.toHaveBeenCalled();
   });

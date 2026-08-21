@@ -24,11 +24,7 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
     XpModule,
     TwoFactorModule,
   ],
-  controllers: [
-    UsersController,
-    DeviceLinkController,
-    ProfileVisitsController,
-  ],
+  controllers: [UsersController, DeviceLinkController, ProfileVisitsController],
   providers: [
     UsersService,
     ProfileVisitsService,

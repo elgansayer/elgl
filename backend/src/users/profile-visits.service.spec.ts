@@ -1,4 +1,7 @@
-import { ForbiddenException, InternalServerErrorException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ProfileVisitsService } from './profile-visits.service';
 
 describe('ProfileVisitsService', () => {
@@ -24,9 +27,11 @@ describe('ProfileVisitsService', () => {
       range: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
     supabaseClient = {
-      from: vi.fn().mockImplementation((table: string) =>
-        table === 'users' ? privacyQuery : visitsQuery,
-      ),
+      from: vi
+        .fn()
+        .mockImplementation((table: string) =>
+          table === 'users' ? privacyQuery : visitsQuery,
+        ),
     };
     service = new ProfileVisitsService({
       getClient: vi.fn().mockReturnValue(supabaseClient),
