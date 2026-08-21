@@ -11,8 +11,33 @@ const failures = [];
 if (matrix.schemaVersion !== 1) failures.push('visual matrix schemaVersion must be 1');
 if (!Array.isArray(matrix.contracts) || matrix.contracts.length === 0) failures.push('visual matrix contracts must be non-empty');
 
+const requiredTabletViewports = [
+  ['viewportTabletMd', 768],
+  ['viewportTabletLgBoundary', 1024],
+];
+for (const [key, width] of requiredTabletViewports) {
+  const viewport = matrix.rendering?.[key];
+  if (!viewport || viewport.width !== width || !Number.isInteger(viewport.height) || viewport.height <= 0) {
+    failures.push(`${key}: visual matrix must define the ${width}px tablet verification viewport with a positive integer height`);
+  }
+}
+
 const manifestById = new Map(manifest.items.map((item) => [item.id, item]));
 const ids = new Set();
+const tabletRepresentatives = new Set([
+  'screen.discovery',
+  'screen.chat',
+  'screen.vocabulary',
+  'screen.moderation',
+]);
+const requiredTabletStates = [
+  'tablet-768-light',
+  'tablet-768-dark',
+  'tablet-768-rtl',
+  'tablet-768-text-200',
+  'tablet-1024-light',
+  'tablet-1024-dark',
+];
 
 for (const contract of matrix.contracts ?? []) {
   if (!contract.designSyncId) {
@@ -43,6 +68,14 @@ for (const contract of matrix.contracts ?? []) {
   for (const state of item.requiredStates) {
     if (!contract.states.includes(state)) {
       failures.push(`${contract.designSyncId}: visual matrix is missing required design-sync state: ${state}`);
+    }
+  }
+
+  if (tabletRepresentatives.has(contract.designSyncId)) {
+    for (const state of requiredTabletStates) {
+      if (!contract.states.includes(state)) {
+        failures.push(`${contract.designSyncId}: tablet responsive gate is missing state: ${state}`);
+      }
     }
   }
 }
