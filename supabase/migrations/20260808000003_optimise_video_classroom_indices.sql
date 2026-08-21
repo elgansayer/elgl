@@ -58,6 +58,28 @@ CREATE INDEX IF NOT EXISTS idx_audio_rooms_party_type_active
   WHERE is_active = true;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- 5a. audio_rooms: level partial index for proficiency-level filtering
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Query pattern: SELECT * FROM audio_rooms WHERE is_active=true
+--   AND level=$1 ORDER BY created_at DESC
+-- Used by: AudioRoomsService.listActiveRooms(partyType?, topic?, level?)
+CREATE INDEX IF NOT EXISTS idx_audio_rooms_level_active
+  ON public.audio_rooms (level, created_at DESC)
+  WHERE is_active = true;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 5b. audio_rooms: composite party_type+level+language_pair for multi-filter queries
+-- ═══════════════════════════════════════════════════════════════════════════
+-- When multiple filters are used simultaneously the planner may choose a
+-- single partial index but still need to filter the other columns
+-- sequentially.  This covering index eliminates the secondary filter step.
+-- Query pattern: SELECT * FROM audio_rooms WHERE is_active=true
+--   AND party_type=$1 AND level=$2 AND language_pair=$3 ORDER BY created_at DESC
+CREATE INDEX IF NOT EXISTS idx_audio_rooms_multi_active
+  ON public.audio_rooms (party_type, level, language_pair, created_at DESC)
+  WHERE is_active = true;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- 6. audio_rooms: enhance existing active index with is_archived exclusion
 -- ═══════════════════════════════════════════════════════════════════════════
 -- The existing audio_rooms_active_idx on (is_active, created_at DESC) does
@@ -119,7 +141,36 @@ CREATE INDEX IF NOT EXISTS idx_audio_room_transcripts_room_created
   ON public.audio_room_transcripts (room_id, created_at DESC);
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 12. audio_rooms: ensure all columns used in the service exist
+-- 12. audio_rooms: hash index on room_name for token generation lookups
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Query: SELECT * FROM audio_rooms WHERE room_name=$1
+-- Used in generateToken() and getRoomByName().  room_name is UNIQUE, but
+-- a hash index is smaller and faster for = comparisons.
+CREATE INDEX IF NOT EXISTS idx_audio_rooms_room_name_hash
+  ON public.audio_rooms USING hash (room_name);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 13. audio_rooms: GIN index on invited_user_ids for private-room lookups
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Query: SELECT * FROM audio_rooms WHERE invited_user_ids @> ARRAY[$1]::UUID[]
+-- Used in getInvitedPrivateRooms() and access-checks in generateToken().
+CREATE INDEX IF NOT EXISTS idx_audio_rooms_invited_user_ids_gin
+  ON public.audio_rooms USING gin (invited_user_ids);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 14. audio_rooms: BRIN index for active-room full-scan avoidance
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Queries: SELECT DISTINCT topic_tag FROM audio_rooms WHERE is_active=true
+--          SELECT DISTINCT level FROM audio_rooms WHERE is_active=true
+-- Used in getDistinctTopics()/getDistinctLevels() for marketplace filter
+-- chips.  A BRIN index on created_at for active rooms lets the planner
+-- skip full sequential scans.
+CREATE INDEX IF NOT EXISTS idx_audio_rooms_active_brin
+  ON public.audio_rooms USING brin (created_at)
+  WHERE is_active = true;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 15. audio_rooms: ensure all columns used in the service exist
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Columns language_pair, topic_tag, party_type, level, is_private,
 -- invited_user_ids, is_archived, biometric_lock, and egress_id are all

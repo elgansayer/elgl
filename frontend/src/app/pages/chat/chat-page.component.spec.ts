@@ -8,7 +8,7 @@ import { ChatPageComponent } from './chat-page.component';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
-import { AiConversationService } from './ai-conversation.service';
+import { AiConversationService, Scenario } from './ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 
@@ -37,7 +37,8 @@ describe('ChatPageComponent', () => {
   };
 
   const aiConversationServiceMock = {
-    generateReply: vi.fn(),
+    getScenarios: vi.fn(),
+    sendMessage: vi.fn(),
   };
 
   const i18nServiceMock = {
@@ -62,6 +63,11 @@ describe('ChatPageComponent', () => {
     is_read: false,
   };
 
+  const scenarios: Scenario[] = [
+    { id: 'ordering-coffee', name: 'Ordering Coffee', icon: '\u2615' },
+    { id: 'job-interview', name: 'Job Interview', icon: '\u{1F4BC}' },
+  ];
+
   beforeEach(async () => {
     chatServiceMock.getRooms.mockReset();
     chatServiceMock.getMessages.mockReset();
@@ -73,15 +79,11 @@ describe('ChatPageComponent', () => {
     chatServiceMock.markMessageStatus.mockResolvedValue(undefined);
     centrifugoServiceMock.subscribe.mockReset();
     centrifugoServiceMock.unsubscribe.mockReset();
-    aiConversationServiceMock.generateReply.mockReset();
+    aiConversationServiceMock.getScenarios.mockReset();
+    aiConversationServiceMock.sendMessage.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [
-        FormsModule,
-        DatePipe,
-        TranslatePipe,
-        ChatPageComponent,
-      ],
+      imports: [FormsModule, DatePipe, TranslatePipe, ChatPageComponent],
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
@@ -121,6 +123,23 @@ describe('ChatPageComponent', () => {
       expect(chatServiceMock.getMessages).toHaveBeenCalledWith('room-1');
       expect(component.selectedRoom()).toEqual(room);
       expect(component.messages()).toEqual(messages);
+    });
+
+    it('should select a room from the keyboard with Space', () => {
+      component.rooms.set([room]);
+      fixture.detectChanges();
+      const selectRoom = vi.spyOn(component, 'selectRoom').mockResolvedValue();
+      const roomAction = fixture.nativeElement.querySelector('div[role="button"]');
+      const event = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      roomAction.dispatchEvent(event);
+
+      expect(selectRoom).toHaveBeenCalledWith(room);
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 
@@ -173,23 +192,64 @@ describe('ChatPageComponent', () => {
   });
 
   describe('AI conversation partner', () => {
-    it('should enable AI mode and add a greeting message on first start', () => {
+    it('should enable AI mode and load scenarios on first start', () => {
       component.aiMessages.set([]);
+      aiConversationServiceMock.getScenarios.mockResolvedValue(scenarios);
 
       component.startAiPartner();
 
       expect(component.aiMode()).toBe(true);
       expect(component.selectedRoom()).toBeNull();
-      expect(component.aiMessages().length).toBe(1);
-      expect(component.aiMessages()[0].role).toBe('ai');
+      expect(component.aiSelectedScenario()).toBeNull();
+      expect(aiConversationServiceMock.getScenarios).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not re-load scenarios if already loaded', () => {
+      component.aiScenarios.set(scenarios);
+      aiConversationServiceMock.getScenarios.mockReset();
+
+      component.startAiPartner();
+
+      expect(aiConversationServiceMock.getScenarios).not.toHaveBeenCalled();
+    });
+
+    it('should select a scenario and clear messages', () => {
+      component.aiMessages.set([
+        { id: 'old-1', role: 'user', text: 'old', created_at: new Date() },
+      ]);
+
+      component.selectAiScenario(scenarios[0]);
+
+      expect(component.aiSelectedScenario()!.id).toBe('ordering-coffee');
+      expect(component.aiMessages().length).toBe(0);
+      expect(component.aiError()).toBe('');
+    });
+
+    it('should select free conversation (null scenario)', () => {
+      component.selectAiScenario(null);
+
+      expect(component.aiSelectedScenario()).toBeNull();
+    });
+
+    it('should close AI partner and reset state', () => {
+      component.aiMode.set(true);
+      component.aiSelectedScenario.set(scenarios[0]);
+      component.aiMessages.set([{ id: 'm1', role: 'user', text: 'hi', created_at: new Date() }]);
+
+      component.closeAiPartner();
+
+      expect(component.aiMode()).toBe(false);
+      expect(component.aiSelectedScenario()).toBeNull();
+      expect(component.aiMessages().length).toBe(0);
     });
 
     it('should send a user message and append the AI reply', async () => {
       component.aiMode.set(true);
       component.aiMessages.set([]);
       component.aiInput.set('Hello AI');
+      component.aiSelectedScenario.set(scenarios[0]);
 
-      aiConversationServiceMock.generateReply.mockResolvedValue('Hello back');
+      aiConversationServiceMock.sendMessage.mockResolvedValue('Hello back');
 
       await component.sendAiMessage();
 
@@ -202,14 +262,21 @@ describe('ChatPageComponent', () => {
       expect(userMsg.text).toBe('Hello AI');
       expect(aiMsg.role).toBe('ai');
       expect(aiMsg.text).toBe('Hello back');
+
+      expect(aiConversationServiceMock.sendMessage).toHaveBeenCalledWith(
+        'Hello AI',
+        'ordering-coffee',
+        [],
+      );
     });
 
     it('should set an error when the AI request fails', async () => {
       component.aiMode.set(true);
       component.aiMessages.set([]);
       component.aiInput.set('Anything');
+      component.aiSelectedScenario.set(null);
 
-      aiConversationServiceMock.generateReply.mockRejectedValue(new Error('network'));
+      aiConversationServiceMock.sendMessage.mockRejectedValue(new Error('network'));
 
       await component.sendAiMessage();
 
@@ -244,14 +311,8 @@ describe('ChatPageComponent', () => {
 
       await component.selectRoom(room);
 
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'delivered',
-      );
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'read',
-      );
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'delivered');
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'read');
       // Own messages should not be marked
       expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
         'msg-own',
@@ -280,10 +341,7 @@ describe('ChatPageComponent', () => {
         is_read: false,
         delivery_status: 'delivered',
       };
-      chatServiceMock.getMessages.mockResolvedValue([
-        alreadyReadMessage,
-        alreadyDeliveredMessage,
-      ]);
+      chatServiceMock.getMessages.mockResolvedValue([alreadyReadMessage, alreadyDeliveredMessage]);
 
       await component.selectRoom(room);
 
@@ -314,9 +372,9 @@ describe('ChatPageComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Check for blue checkmark (text-blue-500)
-      const blueChecks = compiled.querySelectorAll('.text-blue-500');
-      expect(blueChecks.length).toBeGreaterThan(0);
+      // Check for the read-state checkmark (text-primary)
+      const readChecks = compiled.querySelectorAll('.text-primary');
+      expect(readChecks.length).toBeGreaterThan(0);
     });
   });
 

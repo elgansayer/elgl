@@ -1,11 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UnreadCounterService, NavTab } from '../../services/unread-counter.service';
 
 @Component({
   selector: 'app-desktop-sidebar',
-  imports: [RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [RouterLink, RouterLinkActive, TranslatePipe, JoyrideModule],
   templateUrl: './desktop-sidebar.component.html',
 })
 export class DesktopSidebarComponent {

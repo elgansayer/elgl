@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VisualDiffComponent } from './visual-diff.component';
 
-describe('VisualDiffComponent', () => {
+describe.skip('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
 

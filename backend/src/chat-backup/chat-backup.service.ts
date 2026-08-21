@@ -7,6 +7,34 @@ export class ChatBackupService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
+  async createBackup(userId: string): Promise<string> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      this.logger.error(`Backup failed for user ${userId}: ${error.message}`);
+      throw new Error(error.message);
+    }
+
+    if (!data || data.length === 0) {
+      return '';
+    }
+
+    // Stream formatting logic
+    let formattedStream = 'Backup Start\n';
+    for (const msg of data) {
+      const message = msg as typeof msg & { sender?: string; content?: string };
+      formattedStream += `[${msg.created_at}] ${message.sender ?? msg.sender_id}: ${message.content ?? msg.text_content ?? ''}\n`;
+    }
+    formattedStream += 'Backup End\n';
+
+    return formattedStream;
+  }
+
   async exportChannelBackup(
     channelId: string,
   ): Promise<Record<string, unknown>[]> {

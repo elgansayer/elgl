@@ -33,7 +33,7 @@ Allow users to browse, search, and select emojis to insert into chat messages.
 - **Category tabs**: 40px height
 - **Search bar**: 36px height
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-800` (`#1e293b`)
 - **Border**: `border border-slate-700`
@@ -113,7 +113,7 @@ Allow users to browse, search, and select emojis to insert into chat messages.
 ```css
 transition:
   transform 100ms ease,
-  background-color 100ms ease;
+  background-colour 100ms ease;
 ```
 
 ### Category Switch

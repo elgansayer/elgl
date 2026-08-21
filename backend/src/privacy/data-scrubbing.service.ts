@@ -383,4 +383,171 @@ export class DataScrubbingService {
       );
     }
   }
+
+  /* ------------------------------------------------------------------ */
+  /*  LingQ Reading Engine Scrubbing                                    */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Scrub a reading resource for admin audit surfaces.
+   *
+   * Reading resources contain user-authored content that may embed PII
+   * (names, contact details, personal narratives). Under GDPR Article 5(1)(c),
+   * data exposed to admin dashboards should be minimised.
+   *
+   * Policies:
+   * - id / language / difficulty / topic -- passed through (not PII)
+   * - title -- pseudonymised if authored by a user (may contain PII)
+   * - content -- redacted entirely; admin does not need raw content
+   * - sourceUrl -- passed through (public URL, not PII)
+   * - createdBy -- internal UUID; passed through
+   * - createdAt / updatedAt -- timestamps; passed through
+   */
+  scrubReadingResourceForAdmin(record: {
+    id?: string | null;
+    title?: string | null;
+    content?: string | null;
+    language?: string | null;
+    difficulty?: string | null;
+    topic?: string | null;
+    sourceUrl?: string | null;
+    createdBy?: string | null;
+  }): void {
+    if (record.title) {
+      record.title = this.scrubDisplayName(record.title);
+    }
+    if (record.content) {
+      record.content = '[CONTENT-REDACTED]';
+    }
+    this.logger.debug('Scrubbed reading resource for admin');
+  }
+
+  /**
+   * Scrub an array of reading resource records in-place.
+   */
+  scrubReadingResourceRecords(
+    records: Array<{
+      id?: string | null;
+      title?: string | null;
+      content?: string | null;
+      language?: string | null;
+      difficulty?: string | null;
+      topic?: string | null;
+      sourceUrl?: string | null;
+      createdBy?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubReadingResourceForAdmin(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} reading resource records for admin`,
+      );
+    }
+  }
+
+  /**
+   * Scrub a reading progress record for admin audit surfaces.
+   *
+   * Reading progress is behavioural data tied to a user. Under GDPR, this
+   * is personal data when linked to a user identifier. Admin dashboards
+   * should only see pseudonymised progress data.
+   *
+   * Policies:
+   * - userId / wordsRead / articlesCompleted / totalReadingTimeSeconds --
+   *   passed through (aggregate metrics, not PII)
+   * - fluencyPercentage -- passed through (derived metric)
+   * - lastReadAt -- passed through (timestamp)
+   * - The user_id contextual link is documented; caller must ensure the
+   *   associated user profile has been separately scrubbed.
+   */
+  scrubReadingProgressForAdmin(_record: {
+    userId?: string | null;
+    wordsRead?: number | null;
+    articlesCompleted?: number | null;
+    totalReadingTimeSeconds?: number | null;
+    fluencyPercentage?: number | null;
+    lastReadAt?: string | null;
+  }): void {
+    // All fields are aggregate metrics or internal IDs; pass through.
+    // The caller is responsible for scrubbing the linked user profile.
+    this.logger.debug(
+      'Reading progress passed through (aggregate metrics, not PII)',
+    );
+  }
+
+  /**
+   * Scrub an array of reading progress records in-place.
+   */
+  scrubReadingProgressRecords(
+    records: Array<{
+      userId?: string | null;
+      wordsRead?: number | null;
+      articlesCompleted?: number | null;
+      totalReadingTimeSeconds?: number | null;
+      fluencyPercentage?: number | null;
+      lastReadAt?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubReadingProgressForAdmin(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} reading progress records for admin`,
+      );
+    }
+  }
+
+  /**
+   * Scrub a translation cache entry for admin audit surfaces.
+   *
+   * Translation cache entries link a user to specific text and its translation.
+   * When exposed via admin dashboards, the translation text may reveal what
+   * content the user was reading (behavioural data under GDPR). We redact
+   * the text and pass through only metadata.
+   *
+   * Policies:
+   * - userId -- internal UUID; passed through
+   * - sourceText -- redacted (reveals reading behaviour)
+   * - targetLanguage -- passed through
+   * - translatedText -- redacted (reveals comprehension level)
+   * - cachedAt -- passed through (timestamp)
+   */
+  scrubTranslationCacheForAdmin(record: {
+    userId?: string | null;
+    sourceText?: string | null;
+    targetLanguage?: string | null;
+    translatedText?: string | null;
+  }): void {
+    if (record.sourceText) {
+      record.sourceText = '[TEXT-REDACTED]';
+    }
+    if (record.translatedText) {
+      record.translatedText = '[TRANSLATION-REDACTED]';
+    }
+    this.logger.debug('Scrubbed translation cache entry for admin');
+  }
+
+  /**
+   * Scrub an array of translation cache entries in-place.
+   */
+  scrubTranslationCacheRecords(
+    records: Array<{
+      userId?: string | null;
+      sourceText?: string | null;
+      targetLanguage?: string | null;
+      translatedText?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubTranslationCacheForAdmin(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} translation cache records for admin`,
+      );
+    }
+  }
 }
