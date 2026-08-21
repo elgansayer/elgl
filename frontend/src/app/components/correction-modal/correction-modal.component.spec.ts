@@ -102,6 +102,47 @@ describe('CorrectionModalComponent', () => {
     }
   });
 
+  it('should use Relay sheet, surface and elevation tokens for the dialog', () => {
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+    const classes = dialog?.getAttribute('class') ?? '';
+
+    expect(classes).toContain('rounded-sheet');
+    expect(classes).toContain('bg-surface-200');
+    expect(classes).toContain('border-surface-100');
+    expect(classes).toContain('shadow-lift');
+    expect(classes).not.toContain('rounded-3xl');
+    expect(classes).not.toContain('shadow-2xl');
+  });
+
+  it('should use semantic primary treatment instead of decorative neon or feature gradients', () => {
+    const rendered = document.body.innerHTML;
+    const correctedField = document.body.querySelector<HTMLElement>(
+      '#correction-corrected-text',
+    );
+    const explanationField = document.body.querySelector<HTMLElement>('#correction-explanation');
+
+    expect(rendered).not.toContain('text-neon-blue');
+    expect(rendered).not.toContain('border-neon-blue');
+    expect(rendered).not.toContain('bg-gradient-to-r');
+    expect(correctedField?.getAttribute('class')).toContain('rounded-app');
+    expect(correctedField?.getAttribute('class')).toContain('focus:ring-primary');
+    expect(explanationField?.getAttribute('class')).toContain('rounded-app');
+    expect(explanationField?.getAttribute('class')).toContain('focus:ring-primary');
+  });
+
+  it('should keep footer actions usable at the 390px mobile baseline and widen only when needed', () => {
+    const footer = document.body.querySelector('footer');
+    const actions = footer?.querySelectorAll<HTMLButtonElement>('button') ?? [];
+
+    expect(footer?.getAttribute('class')).toContain('flex-col-reverse');
+    expect(footer?.getAttribute('class')).toContain('sm:flex-row');
+    expect(actions.length).toBe(2);
+    for (const action of actions) {
+      expect(action.getAttribute('class')).toContain('w-full');
+      expect(action.getAttribute('class')).toContain('sm:w-auto');
+    }
+  });
+
   it('should emit cancelled on closeModal', () => {
     const spy = vi.spyOn(component.cancelled, 'emit');
 
