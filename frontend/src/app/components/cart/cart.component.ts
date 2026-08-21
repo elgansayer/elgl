@@ -1,6 +1,6 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
@@ -16,47 +16,56 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe, RouterLink],
+  imports: [HlmButton, TranslatePipe],
   template: `
-    <div class="p-4 max-w-2xl mx-auto">
+    <div class="max-w-2xl mx-auto p-4">
       <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
+        <p class="mb-4 text-sm text-primary" aria-live="polite">{{ message() }}</p>
       }
       @if (items().length === 0) {
-        <div class="py-12 flex flex-col items-center justify-center text-center">
-          <span class="text-5xl mb-4">🛒</span>
-          <p class="text-sm opacity-60 mb-4">{{ 'cart.empty' | t }}</p>
-          <a routerLink="/shop" class="text-sm font-medium text-indigo-400 underline">{{ 'cart.goShopping' | t }}</a>
-        </div>
+        <p class="text-sm opacity-60" role="status">{{ 'cart.empty' | t }}</p>
       } @else {
-        <div class="space-y-3">
+        <ul class="space-y-3" role="list">
           @for (item of items(); track item.itemId) {
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl bg-surface p-3 sm:p-4 gap-2">
-              <div class="flex items-center justify-between sm:justify-start sm:gap-2 min-w-0">
-                <span class="font-medium text-sm sm:text-base truncate">{{ item.name }}</span>
-                <span class="ms-2 text-xs opacity-50 flex-shrink-0">x{{ item.quantity }}</span>
+            <li
+              class="flex items-center justify-between rounded-xl bg-surface-200 p-3"
+              role="listitem"
+            >
+              <div>
+                <span class="font-medium">{{ item.name }}</span>
+                <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
               </div>
-              <div class="flex items-center justify-between sm:justify-end gap-2">
-                <span class="text-sm sm:text-base font-semibold whitespace-nowrap">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold"
+                  >{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span
+                >
                 <button
-                  class="rounded-full bg-rose-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 transition-colors flex-shrink-0"
+                  hlmBtn
+                  class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-on-fill hover:bg-danger/90"
                   (click)="removeItem(item.itemId)"
                   [attr.aria-label]="'cart.removeItem' | t"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
               </div>
-            </div>
+            </li>
           }
-        </div>
-        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3 sm:p-4">
-          <span class="font-semibold text-sm sm:text-base">{{ 'cart.total' | t }}</span>
-          <span class="font-bold text-indigo-400 text-sm sm:text-base">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
+        </ul>
+        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface-200 p-3">
+          <span class="font-semibold">{{ 'cart.total' | t }}</span>
+          <span
+            class="font-bold text-vip"
+            [attr.aria-label]="'cart.totalAria' | t: { total: totalCoins() }"
+            >{{ totalCoins() }} {{ 'common.coins' | t }}</span
+          >
         </div>
         <button
-          class="mt-4 w-full rounded-full bg-indigo-600 py-2.5 sm:py-3 font-semibold text-sm sm:text-base hover:bg-indigo-500 transition-colors"
-          (click)="checkout()">
+          hlmBtn
+          class="mt-4 w-full rounded-full bg-primary text-on-fill py-2 font-semibold hover:bg-primary/90"
+          (click)="checkout()"
+          [attr.aria-label]="'cart.checkoutAria' | t"
+        >
           {{ 'cart.checkout' | t }}
         </button>
       }

@@ -12,8 +12,8 @@ import { VirtualGift, CoinPackage, StickerPack } from './economy.store';
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r._onsuccess; },
-    set(f: () => void) { r._onsuccess = f; if (f) f(); },
+    get() { return r['_onsuccess']; },
+    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
   });
   return r;
 }
@@ -30,7 +30,7 @@ describe('OfflineEconomyService', () => {
   function os(storeName: string) {
     const s = getStore(storeName);
     return {
-      put: (v: Record<string, unknown>) => { s.set(String(v.id ?? v.key), v); return syncReq(); },
+      put: (v: Record<string, unknown>) => { s.set(String(v['id'] ?? v['key']), v); return syncReq(); },
       get: (key: string) => syncReq(s.get(key) ?? null),
       getAll: () => syncReq([...s.values()]),
       delete: (key: string) => { s.delete(key); return syncReq(); },

@@ -1,46 +1,59 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { ConfirmService } from '../../services/confirm.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-confirm-dialog',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
-    @if (confirmService.confirmState(); as state) {
-      <div
-        class="fixed inset-0 z-[9998] bg-black/60 flex items-center justify-center p-4"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-message"
-      >
-        <div
-          class="bg-[#121212] rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-neutral-700 space-y-5"
+    <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+      @if (confirmService.confirmState(); as state) {
+        <hlm-dialog-content
+          *hlmDialogPortal
+          [showCloseButton]="false"
+          class="w-full max-w-sm space-y-5 rounded-sheet border border-surface-100 bg-surface-200 p-6 shadow-lift"
+          aria-labelledby="confirm-message"
         >
-          <p
-            id="confirm-message"
-            class="text-white text-sm font-medium leading-relaxed"
-          >
+          <p id="confirm-message" class="text-sm font-medium leading-relaxed text-text-primary">
             {{ state.message }}
           </p>
-          <div class="flex gap-3 justify-end">
+          <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              class="w-full sm:w-auto"
               (click)="confirmService.dismiss(false)"
-              class="px-5 py-2.5 rounded-xl bg-neutral-800 text-neutral-300 text-sm font-bold hover:bg-neutral-700 transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-500"
             >
               {{ 'common.cancel' | t }}
             </button>
             <button
+              hlmBtn
+              type="button"
+              size="touch"
+              class="w-full sm:w-auto"
               (click)="confirmService.dismiss(true)"
-              class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {{ 'common.confirm' | t }}
             </button>
           </div>
-        </div>
-      </div>
-    }
+        </hlm-dialog-content>
+      }
+    </hlm-dialog>
   `,
 })
 export class ConfirmDialogComponent {
-  confirmService = inject(ConfirmService);
+  readonly confirmService = inject(ConfirmService);
+  readonly dialogState = computed<HlmDialogState>(() =>
+    this.confirmService.confirmState() ? 'open' : 'closed',
+  );
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.confirmService.confirmState()) {
+      this.confirmService.dismiss(false);
+    }
+  }
 }

@@ -1,8 +1,8 @@
 import { Component, inject, TransferState, makeStateKey, input, resource } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { RouterModule } from '@angular/router';
+import { Meta, Title } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
 
 interface RoomPreview {
@@ -17,38 +17,79 @@ const ROOM_PREVIEW_KEY_PREFIX = 'voiceroom-preview-';
   selector: 'app-voiceroom-preview',
   imports: [RouterModule],
   template: `
-    @let room = roomResource.value();
-    <div class="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+    @if (roomResource.value(); as room) {
       <div
-        class="max-w-md w-full bg-gray-800 rounded-2xl p-6 shadow-xl text-center border border-gray-700"
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
       >
         <div
-          class="w-20 h-20 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
         >
-          <span class="text-3xl">🎙️</span>
-        </div>
-        <h1 class="text-2xl font-bold mb-2">{{ room?.room_name ?? 'Live Audio Room' }}</h1>
-        <div class="flex justify-center gap-2 mb-6">
-          <span class="px-3 py-1 bg-gray-700 rounded-full text-sm font-medium">{{
-            room?.language_pair ?? '...'
-          }}</span>
-          <span
-            class="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm font-medium"
-            >{{ room?.topic_tag ?? '...' }}</span
+          <div
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
           >
+            <span class="text-3xl">🎙️</span>
+          </div>
+          <h1 class="text-2xl font-bold mb-2">{{ room.room_name }}</h1>
+          <div class="flex justify-center gap-2 mb-6">
+            <span class="px-3 py-1 bg-surface-300 rounded-full text-sm font-medium">{{
+              room.language_pair
+            }}</span>
+            <span
+              class="px-3 py-1 bg-secondary/20 text-secondary rounded-full text-sm font-medium"
+              >{{ room.topic_tag }}</span
+            >
+          </div>
+          <p class="text-text-secondary mb-8">
+            Join this live audio room to practice your speaking skills!
+          </p>
+          <a
+            [routerLink]="['/audio-rooms']"
+            [queryParams]="{ join: id() }"
+            class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
+          >
+            Join Room
+          </a>
         </div>
-        <p class="text-gray-400 mb-8">
-          Join this live audio room to practice your speaking skills!
-        </p>
-        <a
-          [routerLink]="['/audio-rooms']"
-          [queryParams]="{ join: id() }"
-          class="block w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors"
-        >
-          Join Room
-        </a>
       </div>
-    </div>
+    } @else if (roomResource.error()) {
+      <div
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
+      >
+        <div
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
+        >
+          <div
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
+          >
+            <span class="text-3xl">🎙️</span>
+          </div>
+          <h1 class="text-2xl font-bold mb-2 text-muted">Room unavailable</h1>
+          <p class="text-muted mb-8">This room may no longer be active.</p>
+          <a
+            [routerLink]="['/audio-rooms']"
+            class="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-on-fill font-bold rounded-xl transition-colors"
+          >
+            Browse Rooms
+          </a>
+        </div>
+      </div>
+    } @else {
+      <div
+        class="min-h-screen bg-surface-500 text-text-primary flex flex-col items-center justify-center p-4"
+      >
+        <div
+          class="max-w-md w-full bg-surface-200 rounded-2xl p-6 shadow-xl text-center border border-surface-100"
+        >
+          <div
+            class="w-20 h-20 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center"
+          >
+            <span class="text-3xl">🎙️</span>
+          </div>
+          <h1 class="text-2xl font-bold mb-2 text-text-secondary">Loading Room...</h1>
+          <p class="text-text-secondary mb-8">&nbsp;</p>
+        </div>
+      </div>
+    }
   `,
 })
 export class VoiceroomPreviewComponent {
@@ -59,10 +100,9 @@ export class VoiceroomPreviewComponent {
 
   readonly id = input<string>('');
 
-  readonly roomResource = resource({
-    params: () => ({ roomId: this.id() }),
-    loader: async ({ params }) => {
-      const roomId = params.roomId;
+  readonly roomResource = resource<RoomPreview | undefined, string>({
+    params: () => this.id(),
+    loader: async ({ params: roomId }) => {
       if (!roomId) {
         return undefined;
       }
@@ -88,11 +128,11 @@ export class VoiceroomPreviewComponent {
   });
 
   private applyMeta(room: RoomPreview): void {
-    const title = `${room.room_name} - Live Audio Room`;
+    const titleText = `${room.room_name} - Live Audio Room`;
     const description = `Practise ${room.language_pair} in this live audio room about ${room.topic_tag}.`;
 
-    this.title.setTitle(title);
-    this.meta.updateTag({ property: 'og:title', content: title });
+    this.title.setTitle(titleText);
+    this.meta.updateTag({ property: 'og:title', content: titleText });
     this.meta.updateTag({ property: 'og:description', content: description });
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.addTag({ name: 'description', content: description });

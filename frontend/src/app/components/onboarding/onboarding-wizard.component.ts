@@ -1,16 +1,28 @@
-import { Component, computed, inject } from '@angular/core';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { OnboardingService, QuizResultPayload } from '../../services/onboarding.service';
+import { OnboardingService } from '../../services/onboarding.service';
 import { I18nService } from '../../services/i18n.service';
-import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-onboarding-wizard',
-  imports: [CommonModule, TranslatePipe, DiagnosticQuizComponent],
+  imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmInput,
+    CommonModule,
+    TranslatePipe,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
+  ],
   template: `
-    <div class="onboarding-wizard surface text-on-surface ps-4 pe-4 pt-6 pb-6">
+    <div class="onboarding-wizard bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
       <p class="text-sm opacity-80">{{ 'onboarding.subtitle' | t }}</p>
 
@@ -21,7 +33,9 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
             class="flex items-center gap-2 p-2 rounded"
             [class.bg-accent/20]="onboardingService.currentStep() === $index"
           >
-            <span class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm">
+            <span
+              class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-200 text-sm"
+            >
               {{ $index + 1 }}
             </span>
             <span>{{ step.label | t }}</span>
@@ -32,10 +46,13 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
       <!-- step 0: native language -->
       @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
-          <label class="block text-sm mb-1" for="native-lang">{{ 'onboarding.step1.label' | t }}</label>
-          <select
-            id="native-lang"
-            class="w-full bg-surface-variant text-on-surface p-2 rounded"
+          <label class="block text-sm mb-1" for="native-lang">{{
+            'onboarding.step1.label' | t
+          }}</label>
+          <hlm-native-select
+            selectId="native-lang"
+            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
+            selectClass="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
             [value]="onboardingService.nativeLanguage()"
             (change)="onNativeLanguageChange($event)"
           >
@@ -43,7 +60,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
             @for (lang of i18n.availableLanguages; track lang.code) {
               <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
             }
-          </select>
+          </hlm-native-select>
         </div>
       }
 
@@ -54,8 +71,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
           <div class="grid grid-cols-1 gap-2">
             @for (lang of i18n.availableLanguages; track lang.code) {
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+                <hlm-checkbox
                   [checked]="onboardingService.targetLanguages().has(lang.code)"
                   (change)="onboardingService.toggleTargetLanguage(lang.code)"
                 />
@@ -66,23 +82,16 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
         </div>
       }
 
-      <!-- step 2: diagnostic quiz -->
+      <!-- step 2: display name -->
       @if (onboardingService.currentStep() === 2) {
         <div class="mt-4">
-          <app-diagnostic-quiz
-            [targetLanguage]="firstTargetLanguage()"
-            (quizCompleted)="onQuizComplete($event)"
-          />
-        </div>
-      }
-
-      <!-- step 3: display name -->
-      @if (onboardingService.currentStep() === 3) {
-        <div class="mt-4">
-          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step4.label' | t }}</label>
+          <label class="block text-sm mb-1" for="display-name">{{
+            'onboarding.step4.label' | t
+          }}</label>
           <input
+            hlmInput
             id="display-name"
-            class="w-full bg-surface-variant text-on-surface p-2 rounded"
+            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
             [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"
             placeholder="{{ 'onboarding.step4.placeholder' | t }}"
@@ -92,26 +101,19 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
 
       <!-- navigation buttons -->
       <div class="mt-8 flex justify-between">
-        <button
-          type="button"
-          class="app-button-secondary"
+        <app-button-secondary
           [disabled]="onboardingService.currentStep() === 0"
-          (click)="onboardingService.prevStep()"
+          (clicked)="onboardingService.prevStep()"
         >
           {{ 'common.back' | t }}
-        </button>
-        <button
-          type="button"
-          class="app-button-primary"
-          [disabled]="!onboardingService.canGoNext()"
-          (click)="handleNext()"
-        >
+        </app-button-secondary>
+        <app-button-primary [disabled]="!onboardingService.canGoNext()" (clicked)="handleNext()">
           {{
             onboardingService.currentStep() === onboardingService.steps.length - 1
               ? ('common.finish' | t)
               : ('common.next' | t)
           }}
-        </button>
+        </app-button-primary>
       </div>
     </div>
   `,
@@ -121,15 +123,6 @@ export class OnboardingWizardComponent {
   private readonly router = inject(Router);
   readonly onboardingService = inject(OnboardingService);
   readonly i18n = inject(I18nService);
-
-  /** First selected target language code, used for the diagnostic quiz. */
-  readonly firstTargetLanguage = computed(() => {
-    const targets = this.onboardingService.targetLanguages();
-    if (targets.size > 0) {
-      return [...targets][0];
-    }
-    return 'en';
-  });
 
   onNativeLanguageChange(event: Event): void {
     if (!(event.target instanceof HTMLSelectElement)) {
@@ -145,14 +138,10 @@ export class OnboardingWizardComponent {
     this.onboardingService.setDisplayName(event.target.value);
   }
 
-  onQuizComplete(result: QuizResultPayload): void {
-    this.onboardingService.setQuizResult(result);
-  }
-
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/ai-conversation']);
     }
   }
 }

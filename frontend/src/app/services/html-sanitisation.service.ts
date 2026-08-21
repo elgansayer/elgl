@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
-import DOMPurify from 'dompurify';
-import type { DOMPurify as IDOMPurify } from 'dompurify';
+import createDOMPurify from 'dompurify';
+import type { DOMPurify } from 'dompurify';
 
 @Injectable({
   providedIn: 'root',
 })
 export class HtmlSanitisationService {
-  private readonly purify: IDOMPurify;
+  private readonly purify: DOMPurify;
 
   constructor() {
-    this.purify = DOMPurify();
+    this.purify = createDOMPurify();
     // Strict sanitisation: strip ALL HTML tags, only plain text allowed
     this.purify.setConfig({
       ALLOWED_TAGS: [],

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -5,15 +6,22 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { CrashReportService } from './crash-report.service';
 import { EscrowService } from './escrow.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateEscrowHoldDto } from './dto/escrow.dto';
+import { MetricsService } from '../metrics/metrics.service';
+import { CreateEscrowDto } from './dto/escrow.dto';
+
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+vi.mock('./sanitise-escrow.helper', () => ({
+  sanitiseEscrowData: <T>(value: T): T => value,
+}));
 
 describe('EscrowService', () => {
   let service: EscrowService;
-  let mockSupabaseClient: Record<string, jest.Mock>;
-  let mockRedisClient: Record<string, jest.Mock>;
+  let mockSupabaseClient: Record<string, Mock>;
+  let mockRedisClient: Record<string, Mock>;
   let cbService: CircuitBreakerService;
 
   const mockUserId = '12345678-1234-1234-1234-123456789012';
@@ -22,39 +30,49 @@ describe('EscrowService', () => {
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      or: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockReturnThis(),
     };
 
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      lpush: jest.fn().mockResolvedValue(1),
-      lrange: jest.fn().mockResolvedValue([]),
-      ltrim: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      lpush: vi.fn().mockResolvedValue(1),
+      lrange: vi.fn().mockResolvedValue([]),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      scan: vi.fn().mockResolvedValue(['0', []]),
     };
 
     const mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-      getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+      getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
     };
 
     const mockConfigService = {
-      get: jest.fn().mockImplementation((key: string) => {
+      get: vi.fn().mockImplementation((key: string) => {
         if (key === 'FRONTEND_URL') return 'http://localhost:4200';
         return undefined;
       }),
+    };
+
+    const mockMetricsService = {
+      recordEscrowCreated: vi.fn(),
+      recordEscrowReleased: vi.fn(),
+      recordEscrowRefunded: vi.fn(),
+      recordEscrowCancelled: vi.fn(),
+      recordEscrowAutoRefunded: vi.fn(),
+      recordEscrowDegradedOperation: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -63,6 +81,16 @@ describe('EscrowService', () => {
         CircuitBreakerService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: MetricsService, useValue: mockMetricsService },
+        {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: vi.fn().mockResolvedValue(null),
+            listUnresolved: vi.fn().mockResolvedValue([]),
+            acknowledgeReport: vi.fn().mockResolvedValue(true),
+            resolveReport: vi.fn().mockResolvedValue(true),
+          },
+        },
       ],
     }).compile();
 
@@ -78,7 +106,7 @@ describe('EscrowService', () => {
   });
 
   describe('holdCoins', () => {
-    const dto: CreateEscrowHoldDto = {
+    const dto: CreateEscrowDto = {
       payee_id: mockPayeeId,
       amount_coins: 50,
       reason: 'Test escrow',
@@ -568,6 +596,250 @@ describe('EscrowService', () => {
       expect(result.processed).toBe(0);
       expect(result.failed).toBe(0);
     });
+
+    it('should count corrupt JSON items as failures', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['not-valid-json']);
+      const result = await service.processDegradedQueue();
+      expect(result.processed).toBe(0);
+      expect(result.failed).toBe(1);
+    });
+
+    it('should skip items missing payer_id without counting as failures', async () => {
+      mockRedisClient.lrange.mockResolvedValue([
+        JSON.stringify({
+          id: 'degraded_2',
+          payer_id: null,
+          payee_id: mockPayeeId,
+          amount_coins: 30,
+          status: 'pending',
+          reason: 'No payer',
+          metadata: {},
+        }),
+      ]);
+      const result = await service.processDegradedQueue();
+      expect(result.processed).toBe(0);
+      expect(result.failed).toBe(0);
+    });
+  });
+
+  describe('holdCoins edge cases', () => {
+    it('should rollback deduction when escrow insert fails', async () => {
+      const dto = {
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        reason: 'Test escrow',
+      };
+
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: { coins_balance: 100 }, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: 'DB error' } });
+
+      const result = await service.holdCoins(mockUserId, dto);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should handle deduction failure gracefully', async () => {
+      const dto = {
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        reason: 'Test escrow',
+      };
+
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { coins_balance: 100 },
+        error: null,
+      });
+      // The deduction update should fail
+      mockSupabaseClient.update = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Update failed' } }),
+      });
+
+      const result = await service.holdCoins(mockUserId, dto);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('releaseCoins edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should degrade when payee not found on release', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: 'Not found' } });
+
+      const result = await service.releaseCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should degrade when credit to payee fails', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null });
+
+      mockSupabaseClient.update = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Credit failed' } }),
+      });
+
+      const result = await service.releaseCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('refundCoins edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should degrade when payer not found on refund', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.refundCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should degrade when status is already released', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...tx, status: 'released' },
+        error: null,
+      });
+
+      const result = await service.refundCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('cancelEscrow edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should handle null payer balance on cancel of held escrow', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null }) // get tx
+        .mockResolvedValueOnce({ data: null, error: null }) // payer balance is null
+        .mockResolvedValueOnce({
+          data: {
+            ...tx,
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+          },
+          error: null,
+        }); // update to cancelled
+
+      const result = await service.cancelEscrow(mockTransactionId, mockUserId);
+      expect(result.status).toBe('cancelled');
+    });
+
+    it('should throw when escrow not found on cancel', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Not found' },
+      });
+
+      await expect(
+        service.cancelEscrow('non-existent', mockUserId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listTransactions edge cases', () => {
+    it('should filter transactions by status', async () => {
+      const tx = {
+        id: mockTransactionId,
+        payer_id: mockUserId,
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        status: 'released',
+        reason: 'Test',
+        metadata: {},
+        held_at: new Date().toISOString(),
+        released_at: new Date().toISOString(),
+        refunded_at: null,
+        cancelled_at: null,
+        retry_count: 0,
+        last_error: null,
+        next_retry_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const eqMock = vi.fn().mockResolvedValue({ data: [tx], error: null });
+      mockSupabaseClient.range.mockReturnValue({ eq: eqMock });
+
+      const result = await service.listTransactions(
+        mockUserId,
+        'released',
+        20,
+        0,
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].status).toBe('released');
+      expect(eqMock).toHaveBeenCalledWith('status', 'released');
+    });
+
+    it('should handle large offset value', async () => {
+      mockSupabaseClient.range.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const result = await service.listTransactions(
+        mockUserId,
+        undefined,
+        10,
+        100,
+      );
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getCircuitBreakerStatus', () => {
@@ -605,6 +877,279 @@ describe('EscrowService', () => {
       service.resetCircuitBreaker();
       const status = service.getCircuitBreakerStatus();
       expect(status.isOpen).toBe(false);
+    });
+  });
+
+  describe('Redis cache integration', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held' as const,
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    beforeEach(() => {
+      service.resetCircuitBreaker();
+    });
+
+    describe('getTransaction caching', () => {
+      it('should serve from Redis cache on hit', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(tx));
+
+        const result = await service.getTransaction(
+          mockTransactionId,
+          mockUserId,
+        );
+
+        expect(result.id).toBe(mockTransactionId);
+        expect(result.payer_id).toBe(mockUserId);
+        expect(mockSupabaseClient.single).not.toHaveBeenCalled();
+      });
+
+      it('should reject cached escrow when user is not a participant', async () => {
+        const cached = {
+          ...tx,
+          payer_id: 'other-user',
+          payee_id: 'other-payee',
+        };
+        mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cached));
+
+        await expect(
+          service.getTransaction(mockTransactionId, mockUserId),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should fall back to DB when cached escrow is invalid', async () => {
+        mockRedisClient.get.mockResolvedValueOnce('not-json');
+        mockSupabaseClient.single.mockResolvedValueOnce({
+          data: tx,
+          error: null,
+        });
+
+        const result = await service.getTransaction(
+          mockTransactionId,
+          mockUserId,
+        );
+
+        expect(result.id).toBe(mockTransactionId);
+        expect(mockSupabaseClient.single).toHaveBeenCalled();
+      });
+
+      it('should cache escrow detail after a DB miss', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        mockSupabaseClient.single.mockResolvedValueOnce({
+          data: tx,
+          error: null,
+        });
+
+        await service.getTransaction(mockTransactionId, mockUserId);
+
+        expect(mockRedisClient.set).toHaveBeenCalledWith(
+          `escrow:detail:${mockTransactionId}`,
+          JSON.stringify(tx),
+          'EX',
+          expect.any(Number) as number,
+        );
+      });
+    });
+
+    describe('listTransactions caching', () => {
+      it('should return cached list when available', async () => {
+        const cached = [
+          {
+            id: mockTransactionId,
+            payer_id: mockUserId,
+            payee_id: mockPayeeId,
+            amount_coins: 50,
+            status: 'held',
+          },
+        ];
+        mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cached));
+
+        const result = await service.listTransactions(mockUserId);
+
+        expect(result).toEqual(cached);
+        expect(mockSupabaseClient.range).not.toHaveBeenCalled();
+      });
+
+      it('should fall back to DB when list cache is invalid JSON', async () => {
+        mockRedisClient.get.mockResolvedValueOnce('not-valid-json');
+        mockSupabaseClient.range.mockResolvedValueOnce({
+          data: [tx],
+          error: null,
+        });
+
+        const result = await service.listTransactions(mockUserId);
+
+        expect(result).toHaveLength(1);
+        expect(mockSupabaseClient.range).toHaveBeenCalled();
+      });
+
+      it('should cache list result after a DB miss', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        mockSupabaseClient.range.mockResolvedValueOnce({
+          data: [tx],
+          error: null,
+        });
+
+        await service.listTransactions(mockUserId);
+
+        expect(mockRedisClient.set).toHaveBeenCalledWith(
+          expect.stringContaining(`escrow:user_list:${mockUserId}:l`),
+          expect.any(String),
+          'EX',
+          expect.any(Number) as number,
+        );
+      });
+    });
+
+    describe('cache invalidation on mutations', () => {
+      const cachedDetailKey = `escrow:detail:${mockTransactionId}`;
+
+      it('should invalidate detail cache on holdCoins', async () => {
+        mockSupabaseClient.single
+          .mockResolvedValueOnce({ data: { coins_balance: 100 }, error: null })
+          .mockResolvedValueOnce({
+            data: tx,
+            error: null,
+          });
+
+        mockRedisClient.scan.mockResolvedValue(['0', []]);
+
+        await service.holdCoins(mockUserId, {
+          payee_id: mockPayeeId,
+          amount_coins: 50,
+          reason: 'Test',
+        });
+
+        // Wait for background invalidation
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const delArgs = mockRedisClient.del.mock.calls.flat();
+        expect(delArgs).toContain(cachedDetailKey);
+      });
+
+      it('should invalidate detail cache on releaseCoins', async () => {
+        mockSupabaseClient.single
+          .mockResolvedValueOnce({ data: tx, error: null })
+          .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
+          .mockResolvedValueOnce({
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
+            error: null,
+          });
+
+        mockRedisClient.scan.mockResolvedValue(['0', []]);
+
+        await service.releaseCoins(mockTransactionId, mockUserId);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const delArgs = mockRedisClient.del.mock.calls.flat();
+        expect(delArgs).toContain(cachedDetailKey);
+      });
+
+      it('should invalidate detail cache on refundCoins', async () => {
+        mockSupabaseClient.single
+          .mockResolvedValueOnce({ data: tx, error: null })
+          .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
+          .mockResolvedValueOnce({
+            data: {
+              ...tx,
+              status: 'refunded',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
+            error: null,
+          });
+
+        mockRedisClient.scan.mockResolvedValue(['0', []]);
+
+        await service.refundCoins(mockTransactionId, mockUserId);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const delArgs = mockRedisClient.del.mock.calls.flat();
+        expect(delArgs).toContain(cachedDetailKey);
+      });
+
+      it('should invalidate detail cache on cancelEscrow', async () => {
+        mockSupabaseClient.single
+          .mockResolvedValueOnce({ data: tx, error: null })
+          .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
+          .mockResolvedValueOnce({
+            data: {
+              ...tx,
+              status: 'cancelled',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
+            error: null,
+          });
+
+        mockRedisClient.scan.mockResolvedValue(['0', []]);
+
+        await service.cancelEscrow(mockTransactionId, mockUserId);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const delArgs = mockRedisClient.del.mock.calls.flat();
+        expect(delArgs).toContain(cachedDetailKey);
+      });
+
+      it('should scan and delete user list caches on mutation', async () => {
+        mockSupabaseClient.single
+          .mockResolvedValueOnce({ data: tx, error: null })
+          .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
+          .mockResolvedValueOnce({
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
+            error: null,
+          });
+
+        mockRedisClient.scan
+          .mockResolvedValueOnce([
+            '0',
+            [
+              `escrow:user_list:${mockUserId}:l20:o0`,
+              `escrow:user_list:${mockUserId}:l10:o0`,
+            ],
+          ])
+          .mockResolvedValueOnce([
+            '0',
+            [`escrow:user_list:${mockPayeeId}:l20:o0`],
+          ]);
+
+        await service.releaseCoins(mockTransactionId, mockUserId);
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const allDelArgs = mockRedisClient.del.mock.calls.flat();
+        expect(allDelArgs).toContain(cachedDetailKey);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l20:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l10:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockPayeeId}:l20:o0`);
+      });
     });
   });
 });

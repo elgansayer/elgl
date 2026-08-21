@@ -1,21 +1,24 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 
 describe('SafetyCacheInvalidationService', () => {
   let service: SafetyCacheInvalidationService;
-  let mockRedis: Record<string, jest.Mock>;
-  let mockSupabaseService: { getRedisClient: jest.Mock };
+  let mockRedis: Record<string, Mock>;
+  let mockSupabaseService: { getRedisClient: Mock };
+  let mockCloudflareCacheService: { purgeByCacheTags: Mock };
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
 
     mockRedis = {
-      del: jest.fn(),
-      keys: jest.fn(),
-      scan: jest.fn(),
+      del: vi.fn(),
+      keys: vi.fn(),
+      scan: vi.fn(),
     };
 
     // Default: del resolves to number of keys deleted
@@ -24,7 +27,11 @@ describe('SafetyCacheInvalidationService', () => {
     mockRedis.scan.mockResolvedValue(['0', []]);
 
     mockSupabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(mockRedis),
+      getRedisClient: vi.fn().mockReturnValue(mockRedis),
+    };
+
+    mockCloudflareCacheService = {
+      purgeByCacheTags: vi.fn().mockResolvedValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -33,6 +40,10 @@ describe('SafetyCacheInvalidationService', () => {
         {
           provide: SupabaseService,
           useValue: mockSupabaseService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: mockCloudflareCacheService,
         },
       ],
     }).compile();
@@ -43,7 +54,7 @@ describe('SafetyCacheInvalidationService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -107,6 +118,20 @@ describe('SafetyCacheInvalidationService', () => {
         'admin:login-history:user-1',
         'admin:login-history:user-2',
       );
+    });
+
+    it('should purge Cloudflare edge caches after Redis keys are deleted', async () => {
+      // Simulate a successful deletion (some keys found)
+      mockRedis.del.mockResolvedValue(1);
+      mockCloudflareCacheService.purgeByCacheTags.mockClear();
+
+      await service.invalidateTrustAndSafetyCaches();
+
+      // Best-effort purge of discovery:public and discovery:private tags
+      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
+        'discovery:public',
+        'discovery:private',
+      ]);
     });
 
     it('should handle Redis errors gracefully', async () => {
