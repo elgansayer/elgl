@@ -430,7 +430,12 @@ class FactoryDaemon:
                                 for name, item in sorted(health.items())
                             ),
                         )
-                        recovered_circuits = recover_due_quarantines(self.pipeline.jobs)
+                        recovered_circuits = recover_due_quarantines(
+                            self.pipeline.jobs,
+                            recovery_delay=timedelta(
+                                minutes=self.config.quarantine_recovery_minutes
+                            ),
+                        )
                         if recovered_circuits:
                             self.pipeline.request_label_reconciliation()
                         for task_id in recovered_circuits:

@@ -5,7 +5,11 @@ FACTORY_CONFIG=/etc/hellotalk-factory/factory.env
 FACTORY_SERVICE=hellotalk-factory.service
 FACTORY_HEALTH_TIMER=hellotalk-factory-health.timer
 FACTORY_CLI=/opt/hellotalk-factory/venv/bin/hellotalk-factory
-FACTORY_HOME=/var/lib/hellotalk-factory/home
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
+FACTORY_HOME=/home/dev
 FACTORY_SERVICE_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
 EXPECTED_ARCHITECTURE=openhands-agent-canvas-v1
 
@@ -87,5 +91,5 @@ fi
 # very start/recovery path intended to bring it back.
 systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER"
 sleep 2
-runuser -u hellotalk-factory --preserve-environment -- "$FACTORY_CLI" doctor --online
+runuser -u "$FACTORY_USER" --preserve-environment -- "$FACTORY_CLI" doctor --online
 systemctl --no-pager --full status "$FACTORY_SERVICE"
