@@ -32,22 +32,22 @@ export class CreateEventDto {
   @MaxLength(120)
   title!: string;
 
-  @IsOptional()
   @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
   @MaxLength(2000)
-  description?: string;
+  description!: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(EVENT_CATEGORIES)
+  @IsIn([...EVENT_CATEGORIES])
   category?: string;
 
   @IsISO8601({ strict: true })
   date_time!: string;
 
   @IsString()
-  @IsIn(EVENT_VENUE_TYPES)
+  @IsIn([...EVENT_VENUE_TYPES])
   venue_type!: EventVenueType;
 
   @Transform(trimString)
