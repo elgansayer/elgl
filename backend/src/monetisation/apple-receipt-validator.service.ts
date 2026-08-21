@@ -1,10 +1,12 @@
-import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidationResponse } from './dto/monetisation.dto';
+import { withExponentialBackoff } from '../common/http-retry.helper';
 
 interface AppleReceiptResponse {
   environment: 'Sandbox' | 'Production';
@@ -51,21 +53,35 @@ const PRODUCT_TIER_MAP: Record<string, string> = {
 
 @Injectable()
 export class AppleReceiptValidatorService {
-  private readonly logger = new Logger(AppleReceiptValidatorService.name);
   private readonly productionUrl = 'https://buy.itunes.apple.com/verifyReceipt';
   private readonly sandboxUrl =
     'https://sandbox.itunes.apple.com/verifyReceipt';
   private readonly sharedSecret: string;
 
   constructor(
+    @InjectPinoLogger(AppleReceiptValidatorService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
-    this.sharedSecret =
-      this.configService.get<string>('APPLE_SHARED_SECRET') || '';
+    let secret = this.configService.get<string>('APPLE_SHARED_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!secret || secret === 'test-apple-secret') {
+        throw new Error(
+          'APPLE_SHARED_SECRET must be configured securely in production',
+        );
+      }
+    } else {
+      if (!secret) {
+        secret = 'test-apple-secret';
+      }
+    }
+    this.sharedSecret = secret;
   }
 
   async validateReceipt(
@@ -83,7 +99,7 @@ export class AppleReceiptValidatorService {
 
       // If status is 21007, it's a sandbox receipt
       if (result.status === 21007) {
-        this.logger.log('Receipt is from sandbox environment, retrying...');
+        this.logger.info('Receipt is from sandbox environment, retrying...');
         const sandboxResult = await this.verifyWithUrl(
           this.sandboxUrl,
           receiptData,
@@ -104,12 +120,17 @@ export class AppleReceiptValidatorService {
     receiptData: string,
     excludeOldTransactions: boolean,
   ): Promise<AppleReceiptResponse> {
-    const response = await firstValueFrom(
-      this.httpService.post<AppleReceiptResponse>(url, {
-        'receipt-data': receiptData,
-        password: this.sharedSecret,
-        'exclude-old-transactions': excludeOldTransactions,
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.post<AppleReceiptResponse>(url, {
+            'receipt-data': receiptData,
+            password: this.sharedSecret,
+            'exclude-old-transactions': excludeOldTransactions,
+          }),
+        ),
+      'Apple receipt verification',
+      { logger: this.logger },
     );
 
     const result = response.data;

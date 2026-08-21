@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -6,11 +8,22 @@ import { Theme, ThemeService } from '../../../services/theme.service';
 import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
+import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
+import { AppSelectComponent } from '../../../components/primitives/select/select.component';
+import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, FormsModule],
+  imports: [
+    HlmInput,
+    HlmButton,
+    TranslatePipe,
+    FormsModule,
+    FontScaleSliderComponent,
+    AppSelectComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {
@@ -24,21 +37,23 @@ export class AppearanceSettingsComponent {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
   readonly currentTheme = this.themeService.currentTheme;
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
 
-  readonly primaryAccentColor = signal('#4f46e5');
+  readonly primaryAccentColor = signal<string | null>(null);
   readonly isVip = signal(false);
 
+  /** Relay-coherent alternatives to the default Ember accent - see DESIGN.md's token table. */
   readonly availableColors = [
-    '#4f46e5',
-    '#e11d48',
-    '#16a34a',
-    '#d97706',
-    '#9333ea',
-    '#0891b2',
+    '#C65230', // Ember (default primary)
+    '#1A8478', // Tide (secondary)
+    '#996F10', // vip gold
+    '#CC483C', // accent raspberry-ember
+    '#8B6CF0', // neon violet
+    '#2FC6D9', // neon cyan
   ];
 
   private profileResource = resource<UserProfile | null, void>({
@@ -47,7 +62,11 @@ export class AppearanceSettingsComponent {
         const profile = await this.userService.getMyProfile();
         if (profile) {
           this.isVip.set(Boolean(profile.is_vip));
-          this.primaryAccentColor.set(profile.primary_accent_color ?? '#4f46e5');
+          const accent = profile.primary_accent_color ?? null;
+          this.primaryAccentColor.set(accent);
+          if (accent) {
+            this.themeService.setPrimaryAccentColor(accent);
+          }
         }
         return profile;
       } catch {
@@ -63,17 +82,16 @@ export class AppearanceSettingsComponent {
     this.themeService.setTheme(theme);
   }
 
-  onFontScaleChange(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    const percent = Number(target.value);
-    if (Number.isNaN(percent)) return;
-    this.fontScaleService.setScale(percent / 100);
-  }
-
   setAccentColor(color: string): void {
     if (!this.isVip()) return;
     this.primaryAccentColor.set(color);
+  }
+
+  onCustomColorChange(event: Event): void {
+    if (!this.isVip()) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.primaryAccentColor.set(target.value);
   }
 
   async saveSettings(): Promise<void> {
@@ -82,9 +100,13 @@ export class AppearanceSettingsComponent {
     this.isSaving.set(true);
 
     try {
+      const accent = this.primaryAccentColor();
       await this.userService.updateMyProfile({
-        primary_accent_color: this.primaryAccentColor(),
+        primary_accent_color: accent ?? undefined,
       });
+      if (accent) {
+        this.themeService.setPrimaryAccentColor(accent);
+      }
       this.successMessage.set('settings.saved');
     } catch {
       this.errorMessage.set('Failed to save settings');
@@ -97,10 +119,8 @@ export class AppearanceSettingsComponent {
     this.i18nService.setLanguage(lang);
   }
 
-  onLanguageSelect(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) return;
-    this.i18nService.setLanguage(target.value);
+  onLanguageValueChange(value: string): void {
+    this.i18nService.setLanguage(value);
   }
 
   goBack(): void {

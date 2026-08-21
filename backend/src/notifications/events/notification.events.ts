@@ -35,3 +35,28 @@ export class ChatMentionEvent {
     public readonly messagePreview?: string,
   ) {}
 }
+
+export class FollowEvent {
+  constructor(
+    public readonly followerId: string,
+    public readonly followedUserId: string,
+  ) {}
+}
+
+export class LikeEvent {
+  constructor(
+    public readonly actorId: string,
+    public readonly targetUserId: string,
+    public readonly targetType: 'profile' | 'moment',
+    public readonly targetId?: string,
+  ) {}
+}
+
+export class SystemAlertEvent {
+  constructor(
+    public readonly recipientId: string,
+    public readonly message: string,
+    public readonly actorId?: string,
+    public readonly entityId?: string,
+  ) {}
+}

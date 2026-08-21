@@ -1,16 +1,20 @@
 <div class="relative">
   <button
+    hlmBtn
     type="button"
     (click)="toggle()"
     [attr.aria-expanded]="isOpen()"
     aria-haspopup="listbox"
     class="w-full flex items-center justify-between gap-2 bg-surface-200 border border-surface-300 rounded-xl px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-300 cursor-pointer"
+    [attr.aria-label]="'settings.changeLanguage' | t"
   >
     <span class="flex items-center gap-2">
       <span class="text-lg leading-none">{{ currentLanguage().flag }}</span>
       <span>{{ currentLanguage().name }}</span>
     </span>
-    <span class="text-xs text-text-secondary uppercase tracking-wide">{{ 'settings.changeLanguage' | t }}</span>
+    <span class="text-xs text-text-secondary uppercase tracking-wide">{{
+      'settings.changeLanguage' | t
+    }}</span>
     <span class="text-xs text-text-secondary">{{ isOpen() ? '▲' : '▼' }}</span>
   </button>
 
@@ -21,6 +25,7 @@
     >
       <div class="p-3 border-b border-surface-200">
         <input
+          hlmInput
           type="search"
           [value]="searchQuery()"
           (input)="onSearch($event)"
@@ -33,9 +38,11 @@
         @for (lang of filteredLanguages(); track lang.code) {
           <li>
             <button
+              hlmBtn
               type="button"
               (click)="selectLanguage(lang.code)"
               class="w-full flex items-center justify-between gap-2 text-start px-4 py-2.5 text-sm hover:bg-surface-200 transition-colors cursor-pointer"
+              [attr.aria-label]="'common.selected' | t"
             >
               <span class="flex items-center gap-2">
                 <span class="text-base leading-none">{{ lang.flag }}</span>

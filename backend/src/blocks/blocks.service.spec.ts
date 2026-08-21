@@ -1,24 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlocksService } from './blocks.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('BlocksService', () => {
   let service: BlocksService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      match: jest.fn().mockReturnThis(),
-      then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      match: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: any) => resolve(mockQueryBuilder._response)),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    mockMetricsService = {
+      recordTsReportSubmitted: vi.fn(),
+      recordTsBlockCreated: vi.fn(),
+      recordTsBlockRemoved: vi.fn(),
+      setTsPendingReports: vi.fn(),
+      setTsActiveBlocksTotal: vi.fn(),
+      recordTsModerationAction: vi.fn(),
+      recordTsDatingRiskScore: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -27,8 +39,12 @@ describe('BlocksService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -37,7 +53,7 @@ describe('BlocksService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -61,9 +77,9 @@ describe('BlocksService', () => {
 
     it('should return blocked user details when blocks exist', async () => {
       const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockBlocksBuilder.then.mockImplementation((resolve: any) =>
@@ -74,9 +90,9 @@ describe('BlocksService', () => {
       );
 
       const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockUsersBuilder.then.mockImplementation((resolve: any) =>
@@ -132,9 +148,9 @@ describe('BlocksService', () => {
 
     it('should throw error when users query fails', async () => {
       const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockBlocksBuilder.then.mockImplementation((resolve: any) =>
@@ -142,9 +158,9 @@ describe('BlocksService', () => {
       );
 
       const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockUsersBuilder.then.mockImplementation((resolve: any) =>
@@ -164,9 +180,9 @@ describe('BlocksService', () => {
 
     it('should return empty array when users response data is null', async () => {
       const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockBlocksBuilder.then.mockImplementation((resolve: any) =>
@@ -174,9 +190,9 @@ describe('BlocksService', () => {
       );
 
       const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
 
       mockUsersBuilder.then.mockImplementation((resolve: any) =>

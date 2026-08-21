@@ -1,10 +1,15 @@
 {
   "$schema": "./node_modules/@angular/service-worker/config/schema.json",
   "index": "/index.html",
+  "appData": {
+    "name": "HelloTalk",
+    "description": "Language exchange and learning community"
+  },
   "assetGroups": [
     {
       "name": "app",
       "installMode": "prefetch",
+      "updateMode": "prefetch",
       "resources": {
         "files": [
           "/favicon.ico",
@@ -21,20 +26,139 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": ["/assets/**", "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"],
-        "urls": ["https://fonts.googleapis.com/**", "https://fonts.gstatic.com/**"]
+        "files": [
+          "/assets/**",
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ],
+        "urls": [
+          "https://fonts.googleapis.com/**",
+          "https://fonts.gstatic.com/**"
+        ]
+      }
+    },
+    {
+      "name": "media",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "cacheQueryParams": false,
+      "resources": {
+        "urls": [
+          "https://**.cloudflare.com/**",
+          "https://**.r2.cloudflarestorage.com/**"
+        ]
       }
     }
   ],
   "dataGroups": [
     {
       "name": "api-performance",
-      "urls": ["/api/discovery/**", "/api/moments/feed**"],
+      "urls": [
+        "/api/discovery/**",
+        "/api/moments/feed**",
+        "/api/users/profile/**",
+        "/api/languages/**",
+        "/api/escrow/**"
+      ],
       "cacheConfig": {
         "strategy": "performance",
-        "maxSize": 100,
-        "maxAge": "1h"
+        "maxSize": 150,
+        "maxAge": "1h",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "api-economy",
+      "urls": [
+        "/api/economy/catalog",
+        "/api/economy/balance",
+        "/api/economy/packages",
+        "/api/economy/sticker-packs"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 30,
+        "maxAge": "12h",
+        "timeout": "10s"
+      }
+    },
+    {
+      "name": "api-freshness",
+      "urls": [
+        "/api/messages/**",
+        "/api/notifications/**",
+        "/api/moments/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 50,
+        "maxAge": "30s",
+        "timeout": "3s"
+      }
+    },
+    {
+      "name": "admin-api",
+      "urls": [
+        "/api/admin/**",
+        "/api/moderation/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 200,
+        "maxAge": "5m",
+        "timeout": "10s"
+      }
+    },
+    {
+      "name": "translations",
+      "urls": [
+        "/assets/i18n/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 20,
+        "maxAge": "24h",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "api-reading-engine",
+      "urls": [
+        "/api/curated-content/**",
+        "/api/flashcards/suggest**",
+        "/api/word-of-the-day",
+        "/api/lessons/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 80,
+        "maxAge": "12h",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "api-reading-engine-freshness",
+      "urls": [
+        "/api/flashcards/**",
+        "/api/decks/**",
+        "/api/resource-library/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 60,
+        "maxAge": "5m",
+        "timeout": "3s"
       }
     }
-  ]
+  ],
+  "navigationUrls": [
+    "/",
+    "/discovery",
+    "/moments",
+    "/chat/**",
+    "/profile/**",
+    "/settings/**",
+    "/admin/**",
+    "/escrow"
+  ],
+  "navigationRequestStrategy": "performance"
 }

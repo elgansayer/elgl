@@ -7,7 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-font-scale-slider',
   imports: [TranslatePipe],
   template: `
-    <div class="flex items-center gap-2 ms-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">
+    <div class="flex items-center gap-2 ps-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">
       <label for="fontScaleSlider" class="text-text-secondary whitespace-nowrap">
         {{ 'settings.fontScale' | t }}
       </label>

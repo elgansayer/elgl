@@ -1,11 +1,13 @@
 <section class="flex flex-col items-center justify-center px-6 py-10">
   @if (roomInfo.hasValue()) {
     <h1 class="text-2xl font-bold mb-4">{{ 'join.groupTitle' | t }}</h1>
-    <p class="mb-6 text-slate-300">{{ roomInfo.value().title }}</p>
+    <p class="mb-6 text-text-secondary">{{ roomInfo.value().title }}</p>
     <button
+      hlmBtn
       (click)="join(roomInfo.value().roomId)"
       [disabled]="joinPending()"
-      class="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+      class="rounded-full bg-primary px-8 py-3 font-semibold text-on-fill disabled:cursor-not-allowed disabled:opacity-60"
+      [attr.aria-label]="'join.joining' | t"
     >
       @if (joinPending()) {
         {{ 'join.joining' | t }}
@@ -14,13 +16,17 @@
       }
     </button>
     @if (joinFailed()) {
-      <p class="mt-4 text-red-400">{{ 'join.error' | t }}</p>
+      <p class="mt-4 text-danger">{{ 'join.error' | t }}</p>
     }
   } @else if (roomInfo.isLoading()) {
-    <p class="text-slate-400">{{ 'join.loading' | t }}</p>
+    <p class="text-text-muted">{{ 'join.loading' | t }}</p>
   } @else {
-    <p class="text-red-400">{{ 'join.invalidLink' | t }}</p>
-    <a routerLink="/groups" class="mt-4 text-purple-400 underline">
+    <p class="text-danger">{{ 'join.invalidLink' | t }}</p>
+    <a
+      routerLink="/groups"
+      class="mt-4 text-primary underline"
+      [attr.aria-label]="'join.backToGroups' | t"
+    >
       {{ 'join.backToGroups' | t }}
     </a>
   }

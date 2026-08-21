@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alerting rules for the Tutor Profiles architecture (#2092) and any future
+# feature rule files. Rules are evaluated every 15s; add an alertmanager
+# target to the alerting block below to route fired alerts to Slack, PagerDuty
+# or email.
+rule_files:
+  - /etc/prometheus/tutor-profiles.rules.yml
+
+scrape_configs:
+  - job_name: 'hellotalk-nestjs'
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['api:3000']
+        labels:
+          service: 'hellotalk-api'
+    scrape_interval: 10s
+
+  - job_name: 'centrifugo'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['websocket:8001']
+        labels:
+          service: 'centrifugo'
+    scrape_interval: 10s
