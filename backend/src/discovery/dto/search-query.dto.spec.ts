@@ -16,7 +16,10 @@ describe('SearchQueryDto', () => {
 
   describe('latitude', () => {
     it('should accept valid latitude when longitude is also provided', async () => {
-      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
+      const errors = await validateDto({
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
       expect(errors).toHaveLength(0);
     });
 
@@ -46,7 +49,10 @@ describe('SearchQueryDto', () => {
 
   describe('longitude', () => {
     it('should accept valid longitude when latitude is also provided', async () => {
-      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
+      const errors = await validateDto({
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
       expect(errors).toHaveLength(0);
     });
 
