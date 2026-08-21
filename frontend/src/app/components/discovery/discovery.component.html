@@ -45,6 +45,11 @@
           (pillPicked)="onFilterSelect($event)"
         >
         </app-scrollable-pills>
+        @if (isNearbySelected()) {
+          <p class="sr-only" role="status" aria-live="polite">
+            {{ nearbyLocationStatusText() }}
+          </p>
+        }
       </div>
 
       <!-- Language Selection Pills -->
@@ -345,6 +350,18 @@
               }
             </div>
           </section>
+        } @else if (isNearbyError()) {
+          <section aria-live="assertive" class="content-state-enter min-w-0">
+            <app-empty-state
+              icon="📍"
+              [title]="nearbyLocationErrorTitle"
+              [description]="nearbyLocationDescription()"
+              [actionLabel]="'discovery.searchErrorAction' | t"
+              (actionClicked)="retrySearch()"
+              [customClass]="'py-12 sm:py-16 px-4 break-words'"
+            >
+            </app-empty-state>
+          </section>
         } @else if (hasError()) {
           <section aria-live="assertive" class="content-state-enter">
             <app-empty-state
@@ -352,7 +369,7 @@
               [title]="'discovery.searchErrorTitle' | t"
               [description]="'discovery.searchErrorDescription' | t"
               [actionLabel]="'discovery.searchErrorAction' | t"
-              (actionClicked)="searchPartners()"
+              (actionClicked)="retrySearch()"
               [customClass]="'py-16'"
             >
             </app-empty-state>
