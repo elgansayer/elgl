@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, inject, signal, computed } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
@@ -5,7 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-virtual-gift-modal',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
@@ -28,6 +29,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             </p>
           </div>
           <button
+            hlmBtn
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'common.close' | t"
@@ -52,6 +54,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </div>
 
           <button
+            hlmBtn
             (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-vip hover:bg-vip/90 text-on-fill rounded-xl text-xs font-bold shadow"
           >
@@ -82,6 +85,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                     </div>
                   </div>
                   <button
+                    hlmBtn
                     (click)="buyCoins(pkg.id)"
                     class="px-4 py-2 bg-success hover:bg-success/90 text-on-fill font-extrabold rounded-xl text-xs shadow"
                     [attr.aria-label]="
@@ -108,6 +112,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             >
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
+                  hlmBtn
                   type="button"
                   role="radio"
                   (click)="selectGift(gift)"
@@ -140,6 +145,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
+            hlmBtn
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
@@ -148,6 +154,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           @if (!showCoinPackages()) {
             @if (selectedGift(); as gift) {
               <button
+                hlmBtn
                 [disabled]="isSending()"
                 (click)="confirmSend()"
                 class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow transition-all"
@@ -164,6 +171,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               </button>
             } @else {
               <button
+                hlmBtn
                 disabled
                 class="px-6 py-2 bg-primary opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow"
               >
@@ -196,8 +204,8 @@ export class VirtualGiftModalComponent {
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly titleId = 'virtual-gift-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'virtual-gift-subtitle-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'virtual-gift-title-' + crypto.randomUUID();
+  readonly subtitleId = 'virtual-gift-subtitle-' + crypto.randomUUID();
 
   readonly effectiveBalance = computed(
     (): number => this.economyStore.coinsBalance() - this.deductedAmount(),

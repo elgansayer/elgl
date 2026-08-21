@@ -1,17 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@import '@spartan-ng/brain/hlm-tailwind-preset.css';
+
+@config '../tailwind.config.js';
+
+/* Every Spartan Dialog is a mobile bottom sheet, centred on larger screens -
+   matches the retired AppDialogComponent's default. CdkDialog's
+   GlobalPositionStrategy sets align-items/justify-content as an INLINE
+   style at runtime, so only an unlayered !important rule can win here (same
+   trick the Spartan preset itself uses on .cdk-overlay-backdrop, see
+   node_modules/@spartan-ng/brain/hlm-tailwind-preset.css - unlayered beats
+   any layer including Tailwind's own, and !important is required regardless
+   of layer to beat the inline style). Kept unlayered/global rather than
+   scoped, since this is meant to be every dialog's default, not one
+   component's override. */
+.cdk-global-overlay-wrapper {
+  align-items: flex-end !important;
+}
+@media (min-width: 640px) {
+  .cdk-global-overlay-wrapper {
+    align-items: center !important;
+  }
+}
 
 /*
- * "Relay" design system tokens - see docs/design-redesign-audit.md for the
- * full rationale. Light and dark are each independently designed (not one
- * inverted from the other); only the CSS variable names below are shared
- * with tailwind.config.js, which is what lets every existing surface and
- * text utility class in the app pick up the new palette without a template
- * touch.
- */
+* "Relay" design system tokens - see docs/design-redesign-audit.md for the
+* full rationale. Light and dark are each independently designed (not one
+* inverted from the other); only the CSS variable names below are shared
+* with tailwind.config.js, which is what lets every existing surface and
+* text utility class in the app pick up the new palette without a template
+* touch.
+*/
 @layer base {
   :root {
     --app-motion-fast: 140ms;
@@ -20,9 +42,9 @@
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
 
     /* Light theme. RGB triplets MUST be space-separated (not comma-separated)
-       - every consumer in tailwind.config.js is `rgb(var(--x-rgb) / <alpha-value>)`,
-       modern slash-alpha syntax, which is invalid CSS when combined with a
-       legacy comma-separated value (silently drops the whole declaration). */
+- every consumer in tailwind.config.js is `rgb(var(--x-rgb) / <alpha-value>)`,
+modern slash-alpha syntax, which is invalid CSS when combined with a
+legacy comma-separated value (silently drops the whole declaration). */
     --surface-50-rgb: 255 255 255;
     --surface-100-rgb: 228 231 237;
     --surface-200-rgb: 253 253 254;
@@ -228,7 +250,9 @@
   }
 
   .app-empty-state {
-    @apply app-card app-padded pt-10 pb-10 text-center text-sm text-text-secondary;
+    @extend .app-card;
+    @extend .app-padded;
+    @apply pt-10 pb-10 text-center text-sm text-text-secondary;
   }
 
   .app-input {
@@ -240,7 +264,7 @@
   }
 
   .app-button-primary {
-    @apply rounded-pill bg-gradient-to-r from-primary to-primary-light text-white font-bold shadow-sm transition-all duration-base ease-app hover:shadow-lift hover:opacity-90;
+    @apply rounded-pill bg-gradient-to-r from-primary to-primary-light text-on-fill font-bold shadow-sm transition-all duration-base ease-app hover:shadow-lift hover:opacity-90;
   }
 
   .app-button-secondary {
@@ -261,7 +285,8 @@
 
   /* Filter Tabs (Horizontal Scrollable) */
   .app-filter-scroll {
-    @apply flex items-center gap-2 overflow-x-auto no-scrollbar pb-1;
+    @extend .no-scrollbar;
+    @apply flex items-center gap-2 overflow-x-auto pb-1;
   }
 
   /* Hide scrollbar utility */
@@ -299,5 +324,56 @@
       opacity: 1;
       transform: scale(1);
     }
+  }
+}
+
+/* Spartan Helm theme aliases. Each token below points at an existing Relay
+   CSS var instead of a second colour system. These are live var()
+   references, so one block covers both themes: the underlying
+   surface/text/color rgb vars already swap under dark mode.
+   Note on naming: Spartan uses UI-affordance names (primary action, muted,
+   border) while Relay uses a brand-duet model (primary is Ember, secondary
+   is Tide, the partner colour). So --secondary below maps to a muted
+   neutral surface, matching the existing secondary button look, and not to
+   Relay Tide. --accent is a direct name match and kept as-is. */
+:root {
+  color-scheme: light;
+
+  --radius: 0.75rem; /* matches tailwind.config.js borderRadius.app */
+  --background: rgb(var(--surface-500-rgb));
+  --foreground: rgb(var(--text-primary-rgb));
+  --card: rgb(var(--surface-200-rgb));
+  --card-foreground: rgb(var(--text-primary-rgb));
+  --popover: rgb(var(--surface-200-rgb));
+  --popover-foreground: rgb(var(--text-primary-rgb));
+  --primary: rgb(var(--color-primary-rgb));
+  --primary-foreground: rgb(var(--on-fill-rgb));
+  --secondary: rgb(var(--surface-100-rgb));
+  --secondary-foreground: rgb(var(--text-primary-rgb));
+  --muted: rgb(var(--surface-100-rgb));
+  --muted-foreground: rgb(var(--text-secondary-rgb));
+  --accent: rgb(var(--color-accent-rgb));
+  --accent-foreground: rgb(var(--on-fill-rgb));
+  --destructive: rgb(var(--color-danger-rgb));
+  --border: rgb(var(--surface-100-rgb));
+  --input: rgb(var(--surface-100-rgb));
+  --ring: rgb(var(--color-primary-rgb));
+  --sidebar: rgb(var(--surface-200-rgb));
+  --sidebar-foreground: rgb(var(--text-primary-rgb));
+  --sidebar-primary: rgb(var(--color-primary-rgb));
+  --sidebar-primary-foreground: rgb(var(--on-fill-rgb));
+  --sidebar-accent: rgb(var(--surface-100-rgb));
+  --sidebar-accent-foreground: rgb(var(--text-primary-rgb));
+  --sidebar-border: rgb(var(--surface-100-rgb));
+  --sidebar-ring: rgb(var(--color-primary-rgb));
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
 }

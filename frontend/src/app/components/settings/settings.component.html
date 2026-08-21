@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.title' | t }}</h1>
@@ -30,6 +30,7 @@
           class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
         >
           <button
+            hlmBtn
             (click)="goToMySubscription()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
             [attr.aria-label]="'settings.mySubscription' | t"
@@ -165,8 +166,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.autoPlayVoiceNotes' | t
             }}</span>
-            <input
-              type="checkbox"
+            <hlm-checkbox
               [ngModel]="autoPlayVoiceNotes()"
               (ngModelChange)="autoPlayVoiceNotes.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
@@ -179,8 +179,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.enterToSend' | t
             }}</span>
-            <input
-              type="checkbox"
+            <hlm-checkbox
               [ngModel]="chatEnterToSend()"
               (ngModelChange)="chatEnterToSend.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
@@ -189,16 +188,17 @@
 
           <div class="flex items-center justify-between p-4">
             <span class="text-sm font-medium text-text-primary">{{ 'settings.textSize' | t }}</span>
-            <select
+            <hlm-native-select
               [ngModel]="chatTextSize()"
               (ngModelChange)="chatTextSize.set($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [attr.aria-label]="'Select'"
+              selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+              [aria-label]="'Select'"
             >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
               <option value="medium">{{ 'settings.textSizeMedium' | t }}</option>
               <option value="large">{{ 'settings.textSizeLarge' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
         </div>
       </section>
@@ -221,6 +221,7 @@
                 'settings.age' | t
               }}</span>
               <input
+                hlmInput
                 type="number"
                 [ngModel]="filterAgeMin()"
                 (ngModelChange)="filterAgeMin.set($event ? +$event : undefined)"
@@ -232,6 +233,7 @@
               />
               <span class="text-text-secondary text-xs">{{ 'settings.ageRangeTo' | t }}</span>
               <input
+                hlmInput
                 type="number"
                 [ngModel]="filterAgeMax()"
                 (ngModelChange)="filterAgeMax.set($event ? +$event : undefined)"
@@ -251,6 +253,7 @@
               <div class="flex flex-wrap gap-2">
                 @for (gender of genderOptions; track gender) {
                   <button
+                    hlmBtn
                     type="button"
                     (click)="toggleGenderFilter(gender)"
                     [attr.aria-pressed]="filterAllowedGenders().includes(gender)"
@@ -275,6 +278,7 @@
               <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
                 @for (lang of availableLanguages(); track lang.code) {
                   <button
+                    hlmBtn
                     type="button"
                     (click)="toggleLanguageFilter(lang.code)"
                     [attr.aria-pressed]="filterAllowedLanguages().includes(lang.code)"
@@ -306,19 +310,21 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.autoDownloadMedia' | t
             }}</span>
-            <select
+            <hlm-native-select
               [ngModel]="autoDownloadMedia() ? autoDownloadPreference() : 'off'"
               (ngModelChange)="updateAutoDownloadMode($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [attr.aria-label]="'Select'"
+              selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+              [aria-label]="'Select'"
             >
               <option value="off">{{ 'settings.off' | t }}</option>
               <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
               <option value="cellular">{{ 'settings.autoDownloadCellular' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <button
+            hlmBtn
             (click)="clearCache()"
             [disabled]="isClearingCache()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
@@ -333,6 +339,7 @@
           </button>
 
           <button
+            hlmBtn
             (click)="deleteOldMedia()"
             [disabled]="isDeletingOldMedia()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
@@ -377,6 +384,7 @@
           class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
         >
           <button
+            hlmBtn
             (click)="toggleSoundEffects()"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
             [attr.aria-label]="'settings.soundEffects' | t"
@@ -390,6 +398,7 @@
           </button>
 
           <button
+            hlmBtn
             (click)="toggleVibration()"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
             [attr.aria-label]="'settings.vibration' | t"
@@ -419,6 +428,7 @@
               >
                 {{ interest }}
                 <button
+                  hlmBtn
                   type="button"
                   (click)="removeInterest(i)"
                   class="text-text-secondary hover:text-danger ms-1"
@@ -435,6 +445,7 @@
           <div class="flex flex-wrap gap-2 mt-3">
             @for (item of availableInterests(); track item) {
               <button
+                hlmBtn
                 type="button"
                 (click)="toggleInterest(item)"
                 [attr.aria-pressed]="interests().includes(item)"
@@ -508,6 +519,7 @@
           <div class="ps-4 pe-4 pt-4 pb-4 space-y-4">
             <p class="text-sm text-text-secondary">{{ 'settings.downloadDataDesc' | t }}</p>
             <button
+              hlmBtn
               (click)="downloadData()"
               [disabled]="isDownloading()"
               class="w-full bg-surface-200 hover:bg-surface-300 text-text-primary border border-surface-300 py-3 rounded-xl font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50"
@@ -565,6 +577,7 @@
 
       <div class="pt-6">
         <button
+          hlmBtn
           (click)="saveSettings()"
           class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95"
           [attr.aria-label]="'settings.saveBtn' | t"

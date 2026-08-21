@@ -1,3 +1,5 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +18,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 @Component({
   selector: 'app-developer-dashboard',
   imports: [
+    HlmCheckbox,
+    HlmButton,
     FormsModule,
     TranslatePipe,
     UpperCasePipe,

@@ -1,3 +1,7 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -18,7 +22,7 @@ interface SelectOption {
 @Component({
   selector: 'app-language-party-create-modal',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
@@ -38,6 +42,7 @@ interface SelectOption {
         <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
           <h2 class="text-xl font-bold text-text-primary">{{ 'languageParty.modalTitle' | t }}</h2>
           <button
+            hlmBtn
             (click)="closeModal()"
             class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
             [attr.aria-label]="'languageParty.cancelBtn' | t"
@@ -56,6 +61,7 @@ interface SelectOption {
               {{ 'languageParty.roomTitleLabel' | t }}
             </label>
             <input
+              hlmInput
               id="partyTitle"
               type="text"
               [(ngModel)]="title"
@@ -70,17 +76,18 @@ interface SelectOption {
             <label for="langPair" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.languagePairLabel' | t }}
             </label>
-            <select
-              id="langPair"
+            <hlm-native-select
+              selectId="langPair"
               [(ngModel)]="languagePair"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of languagePairOptions(); track option.value) {
                 <option [value]="option.value">
                   {{ option.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Topic Select -->
@@ -88,17 +95,18 @@ interface SelectOption {
             <label for="topicTag" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.topicLabel' | t }}
             </label>
-            <select
-              id="topicTag"
+            <hlm-native-select
+              selectId="topicTag"
               [(ngModel)]="topicTag"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of topicOptions(); track option.value) {
                 <option [value]="option.value">
                   {{ option.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Level Select -->
@@ -106,17 +114,18 @@ interface SelectOption {
             <label for="levelSelect" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.levelLabel' | t }}
             </label>
-            <select
-              id="levelSelect"
+            <hlm-native-select
+              selectId="levelSelect"
               [(ngModel)]="level"
               class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of levelOptions(); track option.value) {
                 <option [value]="option.value">
                   {{ option.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Video Stream Toggle -->
@@ -124,9 +133,8 @@ interface SelectOption {
             for="isVideoStream"
             class="flex items-center gap-3 text-sm font-medium text-text-secondary"
           >
-            <input
-              id="isVideoStream"
-              type="checkbox"
+            <hlm-checkbox
+              inputId="isVideoStream"
               [(ngModel)]="isVideoStream"
               class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
             />
@@ -137,12 +145,14 @@ interface SelectOption {
         <!-- Footer -->
         <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-100/50">
           <button
+            hlmBtn
             (click)="closeModal()"
             class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
           >
             {{ 'languageParty.cancelBtn' | t }}
           </button>
           <button
+            hlmBtn
             (click)="submit()"
             [disabled]="!isValid()"
             class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"

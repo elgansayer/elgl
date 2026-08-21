@@ -1,4 +1,9 @@
-"""Validated OpenHands provider construction."""
+"""Validated inner provider construction for the OpenHands adapter.
+
+This compatibility adapter uses OpenAI subscription OAuth first, then the
+optional OpenCode Go API. The outer AgentRouter independently routes direct
+Claude, Codex, Google, OpenCode, and OpenHands execution.
+"""
 
 from __future__ import annotations
 
@@ -10,8 +15,9 @@ import httpx
 from pydantic import SecretStr
 
 from openhands_factory.config import FactoryConfig
-from openhands_factory.exceptions import ConfigurationError
+from openhands_factory.exceptions import ConfigurationError, FactoryError
 from openhands_factory.models import ProviderName
+from openhands_factory.oauth_health import inspect_openai_oauth
 from openhands_factory.provider_health import ProviderHealthStore
 
 if TYPE_CHECKING:
@@ -39,17 +45,25 @@ class ProviderProfile:
     api_key: SecretStr | None
 
 
+@dataclass(frozen=True)
+class ProviderDecision:
+    provider: ProviderName
+    fallback_reason: str | None = None
+
+
 def openai_credentials_available(
     config: FactoryConfig | None = None, home: Path | None = None
 ) -> bool:
-    credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
-    if not (credentials.is_file() and credentials.stat().st_size > 0):
+    if config is None:
+        credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
+        return credentials.is_file() and credentials.stat().st_size > 0
+
+    if not inspect_openai_oauth(config, home).passed:
         return False
-    if config is not None:
-        store = ProviderHealthStore(config.state_dir / "health.json")
-        for breaker in store.load():
-            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
-                return False
+    store = ProviderHealthStore(config.state_dir / "health.json")
+    for breaker in store.load():
+        if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
+            return False
     return True
 
 
@@ -70,6 +84,8 @@ def _model_identifiers(payload: object) -> set[str]:
 
 
 def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = None) -> set[str]:
+    if config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API credentials are not configured")
     http = client or httpx.Client()
     response = http.get(
         f"{config.opencode_base_url}/models",
@@ -81,6 +97,8 @@ def discover_opencode_models(config: FactoryConfig, client: HttpClient | None = 
 
 
 def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -> ProviderProfile:
+    if config.opencode_model is None or config.opencode_api_key is None:
+        raise ConfigurationError("OpenCode Go API fallback is not configured")
     available = discover_opencode_models(config, client)
     if config.opencode_model not in available:
         raise ConfigurationError(
@@ -97,6 +115,7 @@ def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -
 
 
 def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = None) -> set[str]:
+    """Legacy diagnostic helper retained for backwards-compatible config migration."""
     if config.gemini_api_key is None:
         return set()
     http = client or httpx.Client()
@@ -112,6 +131,7 @@ def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = No
 def validate_gemini(
     config: FactoryConfig, client: HttpClient | None = None
 ) -> ProviderProfile | None:
+    """Legacy API diagnostic; direct Google routing uses the outer adapter."""
     if not config.gemini_enabled:
         return None
     if config.monthly_variable_budget_usd != 0 or not config.gemini_free_tier_only:
@@ -131,6 +151,7 @@ def validate_gemini(
 
 
 def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
+    """Return the OpenHands adapter's inner provider chain."""
     profiles = [
         ProviderProfile(
             ProviderName.OPENAI_SUBSCRIPTION,
@@ -139,89 +160,106 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
             None,
             None,
         ),
-        ProviderProfile(
-            ProviderName.OPENCODE_GO,
-            config.opencode_profile_name,
-            f"openai/{config.opencode_model}",
-            config.opencode_base_url,
-            config.opencode_api_key,
-        ),
     ]
-    if config.gemini_enabled:
+    if config.opencode_model is not None and config.opencode_api_key is not None:
         profiles.append(
             ProviderProfile(
-                ProviderName.GEMINI,
-                config.gemini_profile_name,
-                f"gemini/{config.gemini_model}",
-                None,
-                config.gemini_api_key,
+                ProviderName.OPENCODE_GO,
+                config.opencode_profile_name,
+                f"openai/{config.opencode_model}",
+                config.opencode_base_url,
+                config.opencode_api_key,
             )
         )
     return profiles
 
 
-def select_primary_provider(config: FactoryConfig) -> ProviderName:
-    """Pick the healthiest provider tier for a conversation to use exclusively.
+def select_provider_decision(
+    config: FactoryConfig,
+    *,
+    prefer_different_from: ProviderName | None = None,
+) -> ProviderDecision:
+    """Choose one inner provider for a whole OpenHands conversation.
 
-    No per-call cross-provider fallback is attached in build_llm() (see there for
-    why), so the provider chosen here is the only one the conversation will use for
-    its whole duration. Resilience across tiers instead comes from the daemon's job
-    retry: build_llm() is called fresh per attempt, and each tier's circuit breaker
-    in health.json already tracks whether it is currently healthy enough to try.
+    The compatibility chain is deliberately fixed to OpenAI subscription OAuth
+    then OpenCode Go. Historical provider configuration must never silently
+    re-enter autonomous execution. If both inner providers are unavailable the
+    outer router may fall back to another configured adapter.
     """
-    if openai_credentials_available(config):
-        return ProviderName.OPENAI_SUBSCRIPTION
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
+    oauth = inspect_openai_oauth(config)
+    openai_breaker = breakers.get(ProviderName.OPENAI_SUBSCRIPTION)
+    openai_usable = oauth.passed and (openai_breaker is None or openai_breaker.permits_call())
     opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
-    if opencode_breaker is None or opencode_breaker.permits_call():
-        return ProviderName.OPENCODE_GO
-    if config.gemini_enabled and config.gemini_api_key is not None:
-        return ProviderName.GEMINI
-    return ProviderName.OPENCODE_GO
+    opencode_configured = config.opencode_model is not None and config.opencode_api_key is not None
+    opencode_usable = opencode_configured and (
+        opencode_breaker is None or opencode_breaker.permits_call()
+    )
+
+    # Independent review within this adapter should prefer its other healthy inner
+    # provider while remaining provider-stable once the conversation starts.
+    if prefer_different_from is ProviderName.OPENAI_SUBSCRIPTION and opencode_usable:
+        return ProviderDecision(
+            ProviderName.OPENCODE_GO,
+            "independent-review-provider-diversity",
+        )
+    if prefer_different_from is ProviderName.OPENCODE_GO and openai_usable:
+        return ProviderDecision(
+            ProviderName.OPENAI_SUBSCRIPTION,
+            "independent-review-provider-diversity",
+        )
+
+    if openai_usable:
+        return ProviderDecision(ProviderName.OPENAI_SUBSCRIPTION)
+
+    if not oauth.passed:
+        fallback_reason = f"openai-oauth-{oauth.kind.value}"
+    else:
+        fallback_reason = "openai-provider-circuit-open"
+
+    if opencode_usable:
+        return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
+
+    raise FactoryError(
+        "Both OpenHands inner providers are temporarily unavailable "
+        "(OpenAI subscription OAuth and OpenCode Go API); bounded recovery will retry later."
+    )
 
 
-def build_llm(config: FactoryConfig) -> LLM:
-    """Construct this conversation's sole LLM, with no per-call fallback chain.
+def select_primary_provider(config: FactoryConfig) -> ProviderName:
+    """Compatibility wrapper returning only the conversation-stable provider."""
+    return select_provider_decision(config).provider
 
-    openhands' FallbackStrategy retries the primary model first on every new turn
-    (fallback is per-call, not per-conversation), so a multi-turn conversation that
-    dips to a fallback provider on one turn and back to a strict-validating primary
-    on the next replays that fallback provider's tool-call ID format into the
-    primary - which OpenAI's Responses API rejects outright with "Expected an ID
-    that begins with 'fc'". This is an upstream litellm bug with no released fix
-    yet: https://github.com/BerriAI/litellm/pull/34387 (open since 2026-07-23).
-    Provider selection instead happens once per conversation via
-    select_primary_provider(), which is breaker-aware.
-    """
+
+def build_llm(
+    config: FactoryConfig,
+    provider: ProviderName | None = None,
+    role: str | None = None,
+) -> LLM:
+    """Construct this OpenHands conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
 
-    provider = select_primary_provider(config)
-    if provider is ProviderName.OPENAI_SUBSCRIPTION:
+    from openhands_factory.provider_runtime import provider_model
+
+    selected_provider = provider or select_primary_provider(config)
+    if selected_provider is ProviderName.OPENAI_SUBSCRIPTION:
         return LLM.subscription_login(
             vendor="openai",
-            model=config.openai_model,
+            model=provider_model(config, selected_provider, role=role),
             open_browser=False,
         )
-    if provider is ProviderName.GEMINI:
+    if selected_provider is ProviderName.OPENCODE_GO:
+        if config.opencode_model is None or config.opencode_api_key is None:
+            raise ConfigurationError("OpenCode Go API fallback is not configured")
         return LLM(
-            model=f"gemini/{config.gemini_model}",
-            api_key=config.gemini_api_key,
-            usage_id=config.gemini_profile_name,
+            model=f"openai/{config.opencode_model}",
+            api_key=config.opencode_api_key,
+            base_url=config.opencode_base_url,
+            usage_id=config.opencode_profile_name,
+            reasoning_effort="none",
         )
-    return LLM(
-        model=f"openai/{config.opencode_model}",
-        api_key=config.opencode_api_key,
-        base_url=config.opencode_base_url,
-        usage_id=config.opencode_profile_name,
-        # deepseek-v4-flash's thinking mode hits a well-documented, still-open
-        # litellm bug class: reasoning_content from one turn isn't correctly
-        # forwarded on the next, so the provider (Console Go) rejects the
-        # follow-up turn outright with "reasoning_content ... must be passed
-        # back to the API" - killing the whole conversation.
-        # reasoning_effort="none" disables thinking mode for this tier,
-        # sidestepping the bug rather than chasing a moving target of fixes.
-        # See e.g. https://github.com/BerriAI/litellm/issues/26395 and
-        # https://github.com/BerriAI/litellm/pull/28080 (both DeepSeek V4).
-        reasoning_effort="none",
+    raise ConfigurationError(
+        f"Provider {selected_provider.value!r} is historical-only and is not eligible "
+        "for production OpenHands conversations"
     )
