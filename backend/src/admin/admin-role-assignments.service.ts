@@ -71,7 +71,6 @@ export class AdminRoleAssignmentsService {
     if (query.endTime)
       assignmentQuery = assignmentQuery.lte('granted_at', query.endTime);
 
-    let roleIdsForKey: string[] | null = null;
     if (query.roleKey) {
       const { data: matchingRoles, error: matchingRolesError } = await client
         .from('admin_roles')
@@ -79,7 +78,7 @@ export class AdminRoleAssignmentsService {
         .eq('key', query.roleKey);
       if (matchingRolesError) throw matchingRolesError;
       const matchingRoleRows = (matchingRoles ?? []) as Array<{ id: string }>;
-      roleIdsForKey = matchingRoleRows.map((role) => String(role.id));
+      const roleIdsForKey = matchingRoleRows.map((role) => String(role.id));
       if (roleIdsForKey.length === 0) {
         return { assignments: [], total: 0, page, pageSize };
       }
