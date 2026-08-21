@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TwoFactorService } from './two-factor.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -8,21 +9,21 @@ import {
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 
-jest.mock('speakeasy');
-jest.mock('qrcode');
+vi.mock('speakeasy');
+vi.mock('qrcode');
 
 describe('TwoFactorService', () => {
   let service: TwoFactorService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn(),
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn(),
       }),
     };
 
@@ -49,8 +50,8 @@ describe('TwoFactorService', () => {
       };
       const mockQrCodeUrl = 'mockQrCodeUrl';
 
-      (speakeasy.generateSecret as jest.Mock).mockReturnValue(mockSecret);
-      (qrcode.toDataURL as jest.Mock).mockResolvedValue(mockQrCodeUrl);
+      (speakeasy.generateSecret as Mock).mockReturnValue(mockSecret);
+      (qrcode.toDataURL as Mock).mockResolvedValue(mockQrCodeUrl);
 
       const result = await service.generateSecret(userId);
 
@@ -70,7 +71,7 @@ describe('TwoFactorService', () => {
       const userId = 'test-user';
       const mockSecret = { base32: 'mockBase32' };
 
-      (speakeasy.generateSecret as jest.Mock).mockReturnValue(mockSecret);
+      (speakeasy.generateSecret as Mock).mockReturnValue(mockSecret);
 
       await expect(service.generateSecret(userId)).rejects.toThrow(
         InternalServerErrorException,
@@ -87,7 +88,7 @@ describe('TwoFactorService', () => {
       supabaseService
         .getClient()
         .single.mockResolvedValue({ data: mockData, error: null });
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
+      (speakeasy.totp.verify as Mock).mockReturnValue(true);
 
       const result = await service.verifyToken(userId, token);
 
@@ -119,7 +120,7 @@ describe('TwoFactorService', () => {
       const userId = 'test-user';
       const token = '123456';
 
-      jest.spyOn(service, 'verifyToken').mockResolvedValue(true);
+      vi.spyOn(service, 'verifyToken').mockResolvedValue(true);
 
       await service.disable(userId, token);
 
@@ -134,7 +135,7 @@ describe('TwoFactorService', () => {
       const userId = 'test-user';
       const token = '123456';
 
-      jest.spyOn(service, 'verifyToken').mockResolvedValue(false);
+      vi.spyOn(service, 'verifyToken').mockResolvedValue(false);
 
       await expect(service.disable(userId, token)).rejects.toThrow(
         UnauthorizedException,

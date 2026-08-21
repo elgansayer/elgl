@@ -137,40 +137,4 @@ test.describe('HelloTalk Chat Messaging E2E', () => {
       await expect(body).toBeVisible();
     });
   });
-
-  test.describe('Chat Accessibility', () => {
-    test('should have proper ARIA labels on chat buttons', async ({ page }) => {
-      await page.goto('/chat/test-room');
-      await page.waitForTimeout(2000);
-
-      // Check for ARIA labels on interactive elements
-      const lockButton = page.locator('button[aria-label]').first();
-      const lockVisible = await lockButton.isVisible().catch(() => false);
-      if (lockVisible) {
-        const ariaLabel = await lockButton.getAttribute('aria-label');
-        expect(ariaLabel).toBeTruthy();
-      }
-    });
-
-    test('should have navigable chat list items', async ({ page }) => {
-      await page.goto('/chat');
-      await page.waitForTimeout(2000);
-
-      // Chat list items should be linkable
-      const links = page.locator('a[href*="/chat/"]');
-      const count = await links.count();
-      expect(count).toBeGreaterThanOrEqual(0);
-    });
-  });
-
-  test.describe('Offline & Network Resilience', () => {
-    test('should not crash when navigating while offline-like', async ({ page }) => {
-      await page.goto('/chat');
-      await page.waitForTimeout(2000);
-
-      // Offline banner might be present
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-  });
 });

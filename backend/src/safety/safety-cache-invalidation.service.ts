@@ -1,6 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
+
+/**
+ * Cache-Tag values used by the Discovery module for Cloudflare edge caching.
+ * These are kept as plain string literals (not an import from the discovery
+ * module) to avoid a circular dependency between Safety and Discovery modules.
+ */
+const DISCOVERY_CACHE_TAG_PUBLIC = 'discovery:public';
+const DISCOVERY_CACHE_TAG_PRIVATE = 'discovery:private';
 
 /**
  * Cache key prefixes maintained by the Safety & Trust module.
@@ -28,7 +37,10 @@ const SCAN_BATCH_SIZE = 500;
 export class SafetyCacheInvalidationService {
   private readonly logger = new Logger(SafetyCacheInvalidationService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly cloudflareCacheService: CloudflareCacheService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   private getRedis(): Redis {
     return this.supabaseService.getRedisClient();
@@ -73,6 +85,17 @@ export class SafetyCacheInvalidationService {
           `Invalidated ${totalDeleted} cache key(s) after trust & safety mutation`,
         );
       }
+
+      // Purge Cloudflare edge caches tagged with discovery:public and
+      // discovery:private.  The public shared lists (spotlight, recent native
+      // speakers) and user-specific discovery responses may be stale for up to
+      // the SWR window after a block/unblock/report, so this is a best-effort
+      // early invalidation.  We do NOT await this -- it is fire-and-forget;
+      // the edge cache TTLs are short enough that the stale window is bounded.
+      void this.cloudflareCacheService.purgeByCacheTags([
+        DISCOVERY_CACHE_TAG_PUBLIC,
+        DISCOVERY_CACHE_TAG_PRIVATE,
+      ]);
     } catch (err) {
       this.logger.error('Failed to invalidate trust & safety caches', err);
     }

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { StreakMilestoneService } from '../../services/streak-milestone.service';
@@ -14,25 +15,14 @@ interface ConfettiPiece {
   duration: number;
 }
 
-const CONFETTI_COLOURS = [
-  '#ff0084',
-  '#ff8c00',
-  '#ffe600',
-  '#00e5ff',
-  '#9d00ff',
-  '#00ff94',
-];
+const CONFETTI_COLOURS = ['#ff0084', '#ff8c00', '#ffe600', '#00e5ff', '#9d00ff', '#00ff94'];
 
 @Component({
   selector: 'app-streak-celebration-overlay',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (visible()) {
-      <div
-        class="fixed inset-0 z-[60] overflow-hidden pointer-events-none"
-        aria-hidden="true"
-      >
+      <div class="fixed inset-0 z-[60] overflow-hidden pointer-events-none" aria-hidden="true">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
 
         <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">
@@ -40,11 +30,12 @@ const CONFETTI_COLOURS = [
             <h2 class="text-4xl font-extrabold text-white mb-2">
               {{ 'streak.celebration.title' | t: { days: milestoneDays() } }}
             </h2>
-            <p class="text-lg text-gray-200 mb-6">
+            <p class="text-lg text-white/80 mb-6">
               {{ 'streak.celebration.subtitle' | t: { days: milestoneDays() } }}
             </p>
             <button
-              class="px-8 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold"
+              hlmBtn
+              class="px-8 py-3 rounded-full bg-gradient-to-r from-neon-violet to-neon-pink text-on-fill font-semibold"
               (click)="dismiss()"
             >
               {{ 'common.close' | t }}

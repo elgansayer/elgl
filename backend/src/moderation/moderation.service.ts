@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
@@ -34,29 +34,68 @@ const MAX_PAGE_SIZE = 200;
 // Pre-compiled dating-behaviour detection regex patterns to avoid
 // re-compilation on every analyseUserForDatingBehaviour() call.
 const DATING_FLAGS = [
-  'dating', 'date', 'relationship', 'boyfriend', 'girlfriend', 'love',
-  'marry', 'marriage', 'romance', 'romantic', 'sex', 'hookup', 'flirt',
-  'hot', 'sexy', 'single', 'looking for', 'meetup', 'in a relationship',
-  'partner', 'romantically', 'kiss', 'kissing', 'date me',
-  'looking for a man', 'looking for a woman', 'man for me', 'woman for me',
-  'marry me', 'fwb', 'friends with benefits', 'casual sex', 'affair',
-  'dinner', 'coffee', 'drinks', 'hang out', 'meet up', 'hook up',
-  'one night', 'sexting', 'daddy', 'mommy', 'horny',
+  'dating',
+  'date',
+  'relationship',
+  'boyfriend',
+  'girlfriend',
+  'love',
+  'marry',
+  'marriage',
+  'romance',
+  'romantic',
+  'sex',
+  'hookup',
+  'flirt',
+  'hot',
+  'sexy',
+  'single',
+  'looking for',
+  'meetup',
+  'in a relationship',
+  'partner',
+  'romantically',
+  'kiss',
+  'kissing',
+  'date me',
+  'looking for a man',
+  'looking for a woman',
+  'man for me',
+  'woman for me',
+  'marry me',
+  'fwb',
+  'friends with benefits',
+  'casual sex',
+  'affair',
+  'dinner',
+  'coffee',
+  'drinks',
+  'hang out',
+  'meet up',
+  'hook up',
+  'one night',
+  'sexting',
+  'daddy',
+  'mommy',
+  'horny',
 ];
 
-const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag) => {
-  const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
-});
+const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map(
+  (flag) => {
+    const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
+  },
+);
 
 @Injectable()
 export class ModerationService {
-  private readonly logger = new (require('@nestjs/common')).Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+    @InjectPinoLogger(ModerationService.name)
+    private readonly logger: PinoLogger,
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -143,30 +182,11 @@ export class ModerationService {
             }
           }
         }
+
+        return items;
       }
 
-      // Batch-fetch moment content for all moment reports in a single
-      // round-trip to avoid the N+1 query anti-pattern.
-      const momentItems = items.filter((item) => item.reportedMomentId != null);
-
-      if (momentItems.length === 0) {
-        return [];
-      }
-
-      const momentIds = momentItems.map((item) => item.reportedMomentId as string);
-      const momentMap = await this.batchGetMomentContent(momentIds);
-
-      return momentItems.map((item) => {
-        const moment = momentMap.get(item.reportedMomentId as string);
-        if (moment) {
-          return {
-            ...item,
-            moment_content: moment.content_text,
-            momentAuthorName: moment.authorName,
-          };
-        }
-        return item;
-      });
+      return items.filter((item) => item.reported_user != null);
     } catch (err) {
       this.logger.warn(
         err,
@@ -179,7 +199,10 @@ export class ModerationService {
   private async batchGetMomentContent(
     momentIds: string[],
   ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
-    const result = new Map<string, { content_text: string; authorName: string | null }>();
+    const result = new Map<
+      string,
+      { content_text: string; authorName: string | null }
+    >();
 
     const { data, error } = await this.supabase
       .from('moments')
@@ -231,7 +254,9 @@ export class ModerationService {
     }
   }
 
-  async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async approveItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
     try {
       const { error } = await this.supabase
@@ -240,6 +265,7 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
+        this.metricsService.recordAdminReportResolution('approve', 'failure');
         this.logger.warn(error, `Failed to approve item ${dto.itemId}`);
         return { success: false, error: 'Failed to approve item' };
       }
@@ -249,14 +275,19 @@ export class ModerationService {
         dto.type,
         (Date.now() - startTime) / 1000,
       );
+      this.metricsService.recordAdminReportResolution('approve', 'success');
       return { success: true };
     } catch (err) {
+      this.metricsService.recordAdminReportResolution('approve', 'failure');
+      this.metricsService.recordTsModerationAction('approve', dto.type, 0);
       this.logger.warn(err, 'Failed to approve item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
 
-  async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async rejectItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
     try {
       const { error } = await this.supabase
@@ -268,6 +299,7 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
+        this.metricsService.recordAdminReportResolution('reject', 'failure');
         this.logger.warn(error, `Failed to reject item ${dto.itemId}`);
         return { success: false, error: 'Failed to reject item' };
       }
@@ -277,8 +309,11 @@ export class ModerationService {
         dto.type,
         (Date.now() - startTime) / 1000,
       );
+      this.metricsService.recordAdminReportResolution('reject', 'success');
       return { success: true };
     } catch (err) {
+      this.metricsService.recordAdminReportResolution('reject', 'failure');
+      this.metricsService.recordTsModerationAction('reject', dto.type, 0);
       this.logger.warn(err, 'Failed to reject item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
@@ -358,8 +393,7 @@ export class ModerationService {
       );
 
       this.metricsService.recordTsDatingRiskScore(riskScore);
-      const matchedFlags: string[] = [];
-      return { riskScore, flags: matchedFlags };
+      return { riskScore, flags: uniqueFlags };
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };

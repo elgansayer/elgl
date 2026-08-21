@@ -37,7 +37,7 @@ type AttachmentType = 'camera' | 'gallery' | 'document' | 'doodle' | 'voice' | '
 - **Option button**: `flex flex-col items-center gap-1`
   - Icon circle: `w-14 h-14 rounded-full flex items-center justify-center`
   - Label: `text-xs text-gray-400`
-- **Option colors**:
+- **Option colours**:
   - Camera: `bg-red-500/20 text-red-400` 📷
   - Gallery: `bg-green-500/20 text-green-400` 🖼️
   - Document: `bg-blue-500/20 text-blue-400` 📄

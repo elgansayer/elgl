@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { PronunciationController } from './pronunciation.controller';
 import { PronunciationService } from './pronunciation.service';
@@ -6,7 +7,7 @@ type AnalyseResult = Awaited<ReturnType<PronunciationService['analyse']>>;
 
 describe('PronunciationController', () => {
   let controller: PronunciationController;
-  let service: jest.Mocked<PronunciationService>;
+  let service: Mocked<PronunciationService>;
 
   const mockAudio = {
     buffer: Buffer.from('audio-data'),
@@ -22,8 +23,8 @@ describe('PronunciationController', () => {
         {
           provide: PronunciationService,
           useValue: {
-            analyse: jest.fn(),
-            processVoiceFeedback: jest.fn(),
+            analyse: vi.fn(),
+            processVoiceFeedback: vi.fn(),
           },
         },
       ],
@@ -34,11 +35,11 @@ describe('PronunciationController', () => {
     );
     service = moduleRef.get<PronunciationService>(
       PronunciationService,
-    ) as jest.Mocked<PronunciationService>;
+    ) as Mocked<PronunciationService>;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getFeedback', () => {
