@@ -728,6 +728,7 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
         CodexProvider,
         GoogleAgentProvider,
         OpenCodeProvider,
+        PiProvider,
     )
 
     configured = config.agents.providers
@@ -736,6 +737,7 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
     codex = configured["codex"]
     google = configured["google"]
     opencode = configured["opencode"]
+    pi = configured["pi"]
     providers: dict[str, AgentProvider] = {
         "claude": ClaudeCodeProvider(
             enabled=claude.enabled,
@@ -773,6 +775,15 @@ def agent_provider_checks(config: FactoryConfig) -> list[Check]:
             phase_models=opencode.phase_models,
             credential_paths=opencode.credential_paths,
             runtime_paths=opencode.runtime_paths,
+        ),
+        "pi": PiProvider(
+            enabled=pi.enabled,
+            command=pi.command,
+            wrapper_command=pi.wrapper_command,
+            model=pi.model,
+            phase_models=pi.phase_models,
+            credential_paths=pi.credential_paths,
+            runtime_paths=pi.runtime_paths,
         ),
     }
     from openhands_factory.provider_capacity import (

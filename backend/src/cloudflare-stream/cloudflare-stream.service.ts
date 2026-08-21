@@ -152,7 +152,7 @@ export class CloudflareStreamService {
     await this.request<unknown>(
       `/stream/live_inputs/${encodeURIComponent(inputId)}`,
       { method: 'DELETE' },
-      () => true,
+      (val: unknown): val is unknown => true,
     );
   }
 
@@ -195,7 +195,7 @@ export class CloudflareStreamService {
     const rawHeaders =
       init.headers instanceof Headers
         ? Object.fromEntries(init.headers.entries())
-        : (init.headers as Record<string, string> | undefined) ?? {};
+        : ((init.headers as Record<string, string> | undefined) ?? {});
     const headers: Record<string, string> = {
       ...rawHeaders,
       Authorization: `Bearer ${this.apiToken}`,
@@ -336,7 +336,9 @@ function isCloudflareLiveInputResult(
   );
 }
 
-function isCloudflareVideoResult(value: unknown): value is CloudflareVideoResult {
+function isCloudflareVideoResult(
+  value: unknown,
+): value is CloudflareVideoResult {
   if (!isRecord(value) || typeof value['uid'] !== 'string') {
     return false;
   }
