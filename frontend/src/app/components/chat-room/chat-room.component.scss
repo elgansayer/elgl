@@ -1,1 +1,24 @@
 /* Chat room styles */
+
+.chat-bubble-tail {
+  position: absolute;
+  bottom: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: inherit;
+}
+
+.chat-bubble-tail--sent {
+  inset-inline-end: -0.4rem;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.chat-bubble-tail--received {
+  inset-inline-start: -0.4rem;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+:dir(rtl) .chat-bubble-tail--sent,
+:dir(rtl) .chat-bubble-tail--received {
+  transform: scaleX(-1);
+}

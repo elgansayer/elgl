@@ -1,0 +1,19 @@
+---
+context: true
+priority: high
+scope: project
+---
+
+# Frontend Cursor rules
+
+Cursor inherits the central repository authorities. For frontend work, read `../AGENTS.md`, `AGENTS.md`, `../DESIGN.md`, `../docs/agent-ui-governance.md` (`docs/agent-ui-governance.md` in repository-root notation), `../docs/spartan-relay-architecture.md`, and `../docs/claude-design-two-way-sync.md`.
+
+Relay is the application-facing visual/component authority. Spartan owns supported accessible interaction mechanics through the repository-owned Helm layer. Do not import Brain directly from feature code when Relay/Helm owns the capability, and do not recreate focus, keyboard, overlay, menu, dialog, selection, tabs, forms or combobox state that Spartan already provides.
+
+Claude Design is the two-way design-intent/review workspace. Material visual or shared interaction-contract changes must update deterministic preview/design-sync metadata and follow the design-first, code-first or reconciliation flow.
+
+Preserve semantic tokens, first-class light/dark themes, per-user accent semantics, RTL/logical direction, translated UI strings, keyboard and screen-reader accessibility, 200%/400% zoom/reflow, reduced motion, forced colours and intentional responsive layouts.
+
+Original HelloTalk/product screenshots are reference evidence, not strict visual authority. Do not revive legacy dark/neon/pixel-parity rules or old custom primitive mandates.
+
+Detailed Angular, TypeScript, testing, API-first and verification rules remain authoritative in the AGENTS files. Relevant work must pass `npm run check:spartan-boundaries` and `npm run check:design-sync` from the repository root.

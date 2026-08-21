@@ -1,215 +1,600 @@
-<div class="max-w-5xl mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-4 md:mt-6 border border-slate-100 dark:border-slate-700 flex flex-col h-[82vh]">
-  <!-- Header & Search -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4 mb-4 gap-4">
+<app-card customClass="mx-auto max-w-3xl app-padded h-[78vh] flex flex-col relative">
+  <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
-      <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary text-2xl font-bold">
+      <div
+        class="h-10 w-10 rounded-card bg-primary/10 text-primary flex items-center justify-center"
+      >
         💬
       </div>
       <div>
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <span>Room: {{ roomId }}</span>
-          <span
-            class="text-xs px-2 py-0.5 rounded-full font-extrabold"
-            [ngClass]="centrifugeService.isConnected() ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
-          >
-            {{ centrifugeService.isConnected() ? '● Centrifugo Live' : '○ Connecting...' }}
-          </span>
-        </h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Click any word to translate & save to LingQ SRS deck. Real-time chat with typing indicators.</p>
+        <h1 class="text-base font-black text-text-primary sm:text-lg">
+          {{ roomDetails?.title || roomId }}
+        </h1>
+        <p
+          class="text-xs"
+          [class]="
+            centrifugeService.isConnected() ? 'text-xs text-success' : 'text-xs text-warning'
+          "
+        >
+          {{
+            centrifugeService.isConnected()
+              ? ('chatRoom.liveStatus' | t)
+              : ('chatRoom.connectingStatus' | t)
+          }}
+        </p>
       </div>
     </div>
-
     <div class="flex items-center gap-2">
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="onSearch()"
-        placeholder="🔍 Search messages..."
-        class="px-3.5 py-1.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-sm focus:ring-2 focus:ring-primary w-full sm:w-60"
-      />
-      <button (click)="onSearch()" class="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold">
-        Search
-      </button>
+      @if (isAdmin) {
+        <app-button-secondary
+          (clicked)="showAdminPanel.set(!showAdminPanel())"
+          customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+          [ariaLabel]="'chatRoom.adminBtn' | t"
+        >
+          {{ 'chatRoom.adminBtn' | t }}
+        </app-button-secondary>
+      }
+      <app-button-secondary
+        type="button"
+        (clicked)="toggleLock()"
+        customClass="p-2 text-xs"
+        [ariaLabel]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
+        [attr.title]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
+      >
+        <span class="text-sm leading-none">{{ isLocked() ? '🔒' : '🔓' }}</span>
+      </app-button-secondary>
+      <app-button-secondary
+        type="button"
+        (clicked)="showSearchPanel.update((v) => !v)"
+        customClass="p-2 text-xs"
+        [ariaLabel]="'chatRoom.searchBtn' | t"
+        [attr.title]="'chatRoom.searchBtn' | t"
+      >
+        <span class="text-sm leading-none">🔍</span>
+      </app-button-secondary>
     </div>
   </div>
 
-  <!-- Messages Scroll Area -->
-  <div class="flex-1 overflow-y-auto space-y-4 p-2 md:p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 mb-4">
-    <div *ngIf="isLoading()" class="flex justify-center items-center py-16">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+  @if (pendingUnlock()) {
+    <div class="flex-1 flex flex-col items-center justify-center gap-3 text-center">
+      <span class="text-4xl" aria-hidden="true">🔒</span>
+      <p class="text-base font-bold text-text-primary">{{ 'chatRoom.lockedTitle' | t }}</p>
+      <p class="text-sm text-text-secondary max-w-xs">{{ 'chatRoom.lockedMessage' | t }}</p>
+      <app-button-primary (clicked)="unlockRoom()" customClass="ps-6 pe-6 pt-2.5 pb-2.5 text-sm">
+        {{ 'chatRoom.unlockBtn' | t }}
+      </app-button-primary>
     </div>
-
-    <div *ngIf="!isLoading() && messages().length === 0" class="text-center py-16 text-slate-400">
-      <span class="text-4xl block mb-2">📬</span>
-      <p class="font-medium">No messages in this room yet. Break the ice!</p>
-    </div>
-
-    <!-- Message Bubble -->
-    <div
-      *ngFor="let msg of messages()"
-      class="flex gap-3 items-start"
-      [ngClass]="{'flex-row-reverse': msg.sender_id === authService.currentUser()?.id}"
-    >
-      <img
-        [src]="msg.sender?.avatar_url || 'https://via.placeholder.com/80'"
-        alt="Avatar"
-        class="w-10 h-10 rounded-full object-cover border border-slate-300 dark:border-slate-600 flex-shrink-0"
-      />
-
+  } @else {
+    @if (showSearchPanel()) {
+      <div class="mt-2.5">
+        <app-chat-search
+          [roomId]="roomId"
+          (messageSelect)="onSearchResultSelect($event)"
+        ></app-chat-search>
+      </div>
+    }
+    @if (showAdminPanel()) {
       <div
-        class="max-w-[80%] sm:max-w-[70%] rounded-2xl p-4 shadow-sm relative group transition-all"
-        [ngClass]="msg.sender_id === authService.currentUser()?.id ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-none border border-slate-200 dark:border-slate-700'"
+        class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
       >
-        <div class="flex items-center justify-between gap-4 mb-1 text-xs opacity-75 font-semibold">
-          <span>{{ msg.sender?.display_name || 'Partner' }}</span>
-          <span>{{ msg.created_at | date:'shortTime' }}</span>
+        <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="newGroupName"
+            (valueChange)="newGroupName = $event"
+            [placeholder]="'chatRoom.newGroupPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-primary (clicked)="renameGroup()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
+            {{ 'chatRoom.renameBtn' | t }}
+          </app-button-primary>
         </div>
-
-        <!-- Tokenised Text Message per Rule 3 LingQ Engine -->
-        <div *ngIf="msg.message_type === 'text' && msg.text_content" class="leading-relaxed">
-          <app-tokenised-text
-            [text]="msg.text_content"
-            (wordClicked)="onWordClicked($event)"
-          ></app-tokenised-text>
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="newMemberId"
+            (valueChange)="newMemberId = $event"
+            [placeholder]="'chatRoom.userIdAddPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-primary (clicked)="addMember()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
+            {{ 'chatRoom.addMemberBtn' | t }}
+          </app-button-primary>
         </div>
-
-        <!-- Correction Payload -->
-        <div *ngIf="msg.message_type === 'correction' && msg.correction_payload">
-          <app-visual-diff
-            [original]="msg.correction_payload.original"
-            [corrected]="msg.correction_payload.corrected"
-            [explanation]="msg.correction_payload.explanation"
-          ></app-visual-diff>
-        </div>
-
-        <!-- Doodle Canvas Image -->
-        <div *ngIf="msg.message_type === 'doodle' && msg.media_url" class="mt-1">
-          <img [src]="msg.media_url" alt="Doodle" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white max-h-60 w-auto shadow-sm" />
-          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
-        </div>
-
-        <!-- Voice Note Audio Player -->
-        <div *ngIf="msg.message_type === 'voice' && msg.media_url" class="mt-1">
-          <audio [src]="msg.media_url" controls class="w-full min-w-[240px] rounded-lg"></audio>
-          <p *ngIf="msg.text_content" class="text-xs opacity-80 mt-1.5">{{ msg.text_content }}</p>
-        </div>
-
-        <!-- Action / Bookmark / Save Sentence buttons -->
-        <div class="absolute top-2 end-2 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity">
-          <button
-            *ngIf="msg.message_type === 'text' && msg.text_content"
-            (click)="saveSentenceToLingq(msg)"
-            class="p-1.5 bg-amber-500/90 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow"
-            title="Save entire sentence to LingQ SRS Deck"
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="memberToRemoveId"
+            (valueChange)="memberToRemoveId = $event"
+            [placeholder]="'chatRoom.userIdRemovePlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-secondary
+            (clicked)="removeMember()"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
-            📚 Save Sentence
-          </button>
-          <button
-            (click)="bookmark(msg)"
-            class="p-1.5 bg-black/30 hover:bg-black/50 text-white rounded-lg text-xs font-bold shadow"
-            title="Bookmark to Favourites"
+            {{ 'chatRoom.removeMemberBtn' | t }}
+          </app-button-secondary>
+        </div>
+      </div>
+    }
+
+    @if (partnerLanguage(); as lang) {
+      @if (messages().length <= 1) {
+        <app-cultural-tip class="mt-2.5 block" [language]="lang" />
+      }
+    }
+
+    <div
+      class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"
+    >
+      @if (isLoading()) {
+        <div class="pt-10 text-center text-sm text-text-secondary">
+          {{ 'chatRoom.loadingMessages' | t }}
+        </div>
+      }
+      @if (!isLoading() && messages().length === 0) {
+        <div class="pt-10 text-center text-sm text-text-secondary">
+          {{ 'chatRoom.noMessages' | t }}
+        </div>
+      }
+
+      @for (msg of filteredMessages(); track msg.id) {
+        @if (msg.message_type === 'system' && msg.system_event) {
+          <app-chat-system-bubble
+            [eventType]="msg.system_event?.type ?? ''"
+            [params]="msg.system_event ?? {}"
+          ></app-chat-system-bubble>
+        } @else {
+          <app-long-press-context-menu
+            [messageId]="msg.id"
+            [messageContent]="msg.text_content ?? ''"
+            [messageType]="msg.message_type"
+            [senderId]="msg.sender_id"
+            [roomId]="roomId"
+            [isBlocked]="blockedUserIds().includes(msg.sender_id)"
+            (reply)="startReply(msg.id)"
+            (favourite)="bookmark(msg)"
+            (block)="onBlockToggle($event)"
+            (translate)="toggleTranslation(msg)"
+            (transliterate)="transliterateMessage(msg)"
+            (speak)="speakMessage(msg)"
+            (correct)="startCorrection(msg)"
+            (requestCorrection)="requestCorrection(msg)"
           >
-            ⭐ Save
+            <div
+              [id]="'msg-' + msg.id"
+              [attr.data-message-id]="msg.id"
+              data-testid="chat-message"
+              [class]="
+                'chat-message flex gap-2 ' + (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
+              "
+            >
+              <div
+                [class]="
+                  'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+                  (isOwnMessage(msg)
+                    ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
+                    : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
+                "
+                [class.ring-2]="highlightedMessageId() === msg.id"
+                [class.ring-warning]="highlightedMessageId() === msg.id"
+              >
+                <span
+                  class="chat-bubble-tail"
+                  [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                  [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                  aria-hidden="true"
+                ></span>
+                <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
+                  <span>
+                    {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
+                    {{ msg.created_at | date: 'shortTime' }}
+                  </span>
+                  @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
+                    <span class="inline-flex items-center flex-shrink-0">
+                      @if (
+                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
+                      ) {
+                        <svg
+                          class="w-3.5 h-3.5 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusSent' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'delivered') {
+                        <svg
+                          class="w-3.5 h-3.5 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusDelivered' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'read') {
+                        <svg
+                          class="w-3.5 h-3.5 text-secondary"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusRead' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-secondary"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                    </span>
+                  }
+                </p>
+                @if (msg.reply_to_id) {
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="scrollToMessage(msg.reply_to_id!)"
+                    class="mb-1.5 block w-full rounded-lg border-s-4 border-accent-500 bg-black/10 ps-2 pe-2 pt-1 pb-1 text-start text-xs opacity-90 hover:opacity-100"
+                    [attr.aria-label]="'chat.unknown_user' | t"
+                  >
+                    <span class="block font-semibold">
+                      {{
+                        (parentMessageFor(msg)?.sender?.display_name ??
+                          msg.reply_preview?.display_name) ||
+                          ('chat.unknown_user' | t)
+                      }}
+                    </span>
+                    <span class="block truncate">
+                      {{
+                        (parentMessageFor(msg)?.text_content ?? msg.reply_preview?.text_content) ||
+                          ('chatRoom.replyPreviewFallback' | t)
+                      }}
+                    </span>
+                  </button>
+                }
+                @if (msg.message_type === 'text' && msg.text_content) {
+                  <app-tokenised-text
+                    [text]="msg.text_content ?? ''"
+                    (wordClicked)="onWordClicked($event)"
+                  ></app-tokenised-text>
+                  @if (transliterations()[msg.id]) {
+                    <p class="mt-1 text-[10px] text-text-muted italic">
+                      {{ transliterations()[msg.id] }}
+                    </p>
+                  }
+                  @if (showTranslation()[msg.id] && translations()[msg.id]) {
+                    <p class="mt-1 text-[10px] text-primary italic">
+                      {{ translations()[msg.id] }}
+                    </p>
+                  }
+                  @if (msg.link_preview; as lp) {
+                    <app-link-preview-card
+                      [url]="lp.url"
+                      [title]="lp.title"
+                      [description]="lp.description"
+                      [image]="lp.image"
+                      [siteName]="lp.siteName"
+                    ></app-link-preview-card>
+                  }
+                }
+                @if (msg.message_type === 'correction' && msg.correction_payload) {
+                  <app-visual-diff
+                    [original]="msg.correction_payload?.original ?? ''"
+                    [corrected]="msg.correction_payload?.corrected ?? ''"
+                    [explanation]="msg.correction_payload?.explanation ?? ''"
+                    [showActions]="true"
+                  ></app-visual-diff>
+                }
+                @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
+                  <div>
+                    <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
+                    <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
+                  </div>
+                }
+                @if (msg.message_type === 'doodle' && msg.media_url) {
+                  <img
+                    loading="lazy"
+                    [src]="msg.media_url ?? ''"
+                    alt="doodle"
+                    class="max-h-52 rounded-xl border border-surface-100"
+                  />
+                }
+                @if (msg.message_type === 'sticker' && msg.media_url) {
+                  <img
+                    loading="lazy"
+                    [src]="msg.media_url ?? ''"
+                    alt="sticker"
+                    class="max-h-32 w-auto object-contain drop-shadow-md"
+                  />
+                }
+                @if (msg.message_type === 'voice' && msg.media_url) {
+                  <audio
+                    [attr.id]="'audio-' + msg.id"
+                    [src]="msg.media_url ?? ''"
+                    controls
+                    class="w-full min-w-52"
+                    (ended)="playNextVoiceNote(msg.id)"
+                  ></audio>
+                  <div class="mt-2 flex items-center gap-2">
+                    <button
+                      hlmBtn
+                      (click)="onTranscribeVoice(msg)"
+                      [disabled]="transcribingIds().has(msg.id)"
+                      class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
+                      [attr.aria-label]="
+                        (transcribingIds().has(msg.id)
+                          ? 'chatRoom.transcribingBtn'
+                          : 'chatRoom.transcribeBtn'
+                        ) | t
+                      "
+                    >
+                      {{
+                        (transcribingIds().has(msg.id)
+                          ? 'chatRoom.transcribingBtn'
+                          : 'chatRoom.transcribeBtn'
+                        ) | t
+                      }}
+                    </button>
+                  </div>
+                  @if (transcriptions()[msg.id]; as transcript) {
+                    <div
+                      class="mt-2 rounded-lg bg-secondary/10 border-s-2 border-secondary ps-2 pe-2 pt-2 pb-2"
+                    >
+                      <p class="text-xs text-text-primary font-medium">
+                        {{ 'chatRoom.transcriptLabel' | t }}
+                      </p>
+                      <p class="text-sm text-text-primary mt-0.5">{{ transcript }}</p>
+                    </div>
+                  }
+                }
+                <div class="mt-2 flex items-center gap-1">
+                  @if (msg.message_type === 'text' && msg.text_content) {
+                    <button
+                      hlmBtn
+                      (click)="saveSentenceToLingq(msg)"
+                      class="rounded-lg bg-warning ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-on-fill"
+                      [attr.aria-label]="'chatRoom.saveBtn' | t"
+                    >
+                      {{ 'chatRoom.saveBtn' | t }}
+                    </button>
+                  }
+                  <button
+                    hlmBtn
+                    (click)="bookmark(msg)"
+                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
+                    [attr.aria-label]="'chatRoom.favBtn' | t"
+                  >
+                    {{ 'chatRoom.favBtn' | t }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </app-long-press-context-menu>
+        }
+      }
+
+      <app-typing-indicator
+        class="mt-1 block"
+        [typingUsers]="typingService.typingUsers()"
+      ></app-typing-indicator>
+    </div>
+
+    @if (activeWordToken(); as token) {
+      <div>
+        <app-word-definition-modal
+          [wordToken]="token"
+          [contextSentence]="activeWordContext()"
+          (closed)="activeWordToken.set(null)"
+        ></app-word-definition-modal>
+      </div>
+    }
+
+    @if (showDoodleModal()) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <app-doodle-pad
+          (doodleSaved)="onDoodleSaved($event)"
+          (cancelled)="showDoodleModal.set(false)"
+        ></app-doodle-pad>
+      </div>
+    }
+    @if (showVoiceModal()) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <app-voice-recorder
+          (audioUploaded)="onVoiceUploaded($event)"
+          (cancelled)="showVoiceModal.set(false)"
+        ></app-voice-recorder>
+      </div>
+    }
+
+    @if (showCorrectionForm()) {
+      <div
+        class="mt-2 rounded-card border border-warning/30 bg-warning/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+      >
+        <app-input
+          type="text"
+          [value]="originalText"
+          (valueChange)="originalText = $event"
+          [placeholder]="'chatRoom.originalSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <app-input
+          type="text"
+          [value]="correctedText"
+          (valueChange)="correctedText = $event"
+          [placeholder]="'chatRoom.correctedSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <app-input
+          type="text"
+          [value]="explanationText"
+          (valueChange)="explanationText = $event"
+          [placeholder]="'chatRoom.explanation'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <div class="flex gap-2">
+          <app-button-secondary
+            (clicked)="showCorrectionForm.set(false)"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+            [ariaLabel]="'chatRoom.cancelBtn' | t"
+          >
+            {{ 'chatRoom.cancelBtn' | t }}
+          </app-button-secondary>
+          <button
+            hlmBtn
+            (click)="sendCorrection()"
+            class="rounded-app bg-success ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-on-fill"
+            [attr.aria-label]="'chatRoom.sendCorrection' | t"
+          >
+            {{ 'chatRoom.sendCorrection' | t }}
           </button>
         </div>
       </div>
-    </div>
+    }
 
-    <!-- Typing Indicator -->
-    <div *ngIf="isTyping()" class="flex items-center gap-2 text-xs font-bold text-slate-500 animate-pulse px-3 py-1">
-      <span>💬 Someone is typing...</span>
-    </div>
-  </div>
-
-  <!-- Word Definition LingQ Modal -->
-  <div *ngIf="activeWordToken() as token">
-    <app-word-definition-modal
-      [wordToken]="token"
-      [contextSentence]="activeWordContext()"
-      (closed)="activeWordToken.set(null)"
-    ></app-word-definition-modal>
-  </div>
-
-  <!-- Interactive Action Modals -->
-  <div *ngIf="showDoodleModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <app-doodle-pad
-      (doodleSaved)="onDoodleSaved($event)"
-      (cancelled)="showDoodleModal.set(false)"
-    ></app-doodle-pad>
-  </div>
-
-  <div *ngIf="showVoiceModal()" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-    <app-voice-recorder
-      (audioUploaded)="onVoiceUploaded($event)"
-      (cancelled)="showVoiceModal.set(false)"
-    ></app-voice-recorder>
-  </div>
-
-  <!-- Correction Form Drawer -->
-  <div *ngIf="showCorrectionForm()" class="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-300 dark:border-amber-800 mb-3 space-y-3">
-    <div class="flex items-center justify-between">
-      <span class="text-sm font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
-        <span>✏️ Suggest a Language Correction</span>
-      </span>
-      <button (click)="showCorrectionForm.set(false)" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Original Sentence (With errors)</label>
-        <input type="text" [(ngModel)]="originalText" placeholder="e.g. He go to store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+    <div class="mt-3 border-t border-surface-100 pt-3 relative">
+      @if (replyingTo(); as parent) {
+        <app-reply-preview
+          class="mb-2 block"
+          [parentMessage]="parent"
+          (cancelReply)="cancelReply()"
+        ></app-reply-preview>
+      }
+      <div class="mb-2 flex items-center gap-2">
+        <app-button-secondary
+          (clicked)="showCorrectionForm.set(!showCorrectionForm())"
+          customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.correctBtn' | t"
+        >
+          {{ 'chatRoom.correctBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showDoodleModal.set(true)"
+          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.doodleBtn' | t"
+        >
+          {{ 'chatRoom.doodleBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showVoiceModal.set(true)"
+          customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.voiceBtn' | t"
+        >
+          {{ 'chatRoom.voiceBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showStickerDrawer.set(!showStickerDrawer())"
+          customClass="bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.stickerBtn' | t"
+        >
+          {{ 'chatRoom.stickerBtn' | t }}
+        </app-button-secondary>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Corrected Sentence</label>
-        <input type="text" [(ngModel)]="correctedText" placeholder="e.g. He went to the store yesterday" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
+
+      @if (showStickerDrawer()) {
+        <div
+          class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100"
+        >
+          <app-sticker-picker
+            (selectSticker)="sendSticker($event)"
+            (close)="showStickerDrawer.set(false)"
+          ></app-sticker-picker>
+        </div>
+      }
+
+      <div class="flex items-center gap-2 relative">
+        <hlm-autocomplete-search
+          class="flex-1"
+          [(search)]="textInput"
+          [itemToString]="mentionItemToString"
+          (valueChange)="onMentionSelected($event)"
+          autoHighlight
+        >
+          <hlm-autocomplete-input
+            [showSearch]="false"
+            [placeholder]="'chatRoom.typePlaceholder' | t"
+            [ariaLabel]="'chatRoom.messageInput' | t"
+            testId="chat-message-input"
+            inputClass="app-input w-full pt-3 pb-3"
+            (inputEvent)="onComposerInput($event)"
+            (keyDown)="onComposerKeydown($event)"
+          />
+          @if (mentionSuggestions().length > 0) {
+            <hlm-autocomplete-content *hlmAutocompletePortal>
+              <div hlmAutocompleteList [attr.aria-label]="'chatRoom.mentionListLabel' | t">
+                @for (member of mentionSuggestions(); track member.user_id) {
+                  <hlm-autocomplete-item [value]="member">
+                    <span class="font-semibold">{{ member.user?.display_name }}</span>
+                  </hlm-autocomplete-item>
+                }
+              </div>
+            </hlm-autocomplete-content>
+          }
+        </hlm-autocomplete-search>
+        <app-button-primary
+          (clicked)="sendTextMessage()"
+          data-testid="send-button"
+          customClass="ps-5 pe-5 pt-3 pb-3 text-sm"
+        >
+          {{ 'chatRoom.sendBtn' | t }}
+        </app-button-primary>
       </div>
     </div>
-    <div>
-      <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Explanation (Optional)</label>
-      <input type="text" [(ngModel)]="explanationText" placeholder="e.g. Use past simple 'went' and definite article 'the'" class="w-full px-3 py-1.5 border rounded-xl bg-white dark:bg-slate-800 text-sm" />
-    </div>
-    <div class="flex justify-end gap-2">
-      <button (click)="showCorrectionForm.set(false)" class="px-4 py-1.5 bg-slate-200 dark:bg-slate-700 rounded-xl text-xs font-bold">Cancel</button>
-      <button (click)="sendCorrection()" class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow">Send Correction</button>
-    </div>
-  </div>
+  }
 
-  <!-- Input Area & Tool Trigger Bar -->
-  <div class="bg-white dark:bg-slate-800 pt-2">
-    <div class="flex items-center gap-2 mb-2">
-      <button
-        (click)="showCorrectionForm.set(!showCorrectionForm())"
-        class="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
-      >
-        <span>✏️ Correct</span>
-      </button>
-      <button
-        (click)="showDoodleModal.set(true)"
-        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 text-blue-800 dark:text-blue-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
-      >
-        <span>🎨 Doodle</span>
-      </button>
-      <button
-        (click)="showVoiceModal.set(true)"
-        class="px-3 py-1 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 text-red-800 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
-      >
-        <span>🎙️ Voice Note</span>
-      </button>
-    </div>
+  <app-group-participant-drawer
+    [isOpen]="showParticipantDrawer()"
+    [participants]="groupParticipants()"
+    (closed)="showParticipantDrawer.set(false)"
+  ></app-group-participant-drawer>
+</app-card>
 
-    <div class="flex items-center gap-2">
-      <input
-        type="text"
-        [(ngModel)]="textInput"
-        (keyup.enter)="sendTextMessage()"
-        placeholder="Type a message or share a sentence..."
-        class="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-2xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
-      />
-      <button
-        (click)="sendTextMessage()"
-        class="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-2xl font-bold shadow-md transition-all flex items-center gap-2"
-      >
-        <span>Send</span>
-      </button>
-    </div>
-  </div>
-</div>
+<app-group-participant-drawer
+  [isOpen]="showParticipantDrawer()"
+  [participants]="groupParticipants()"
+  (closed)="showParticipantDrawer.set(false)"
+></app-group-participant-drawer>

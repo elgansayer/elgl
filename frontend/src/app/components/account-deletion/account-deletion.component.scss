@@ -1,0 +1,24 @@
+@reference '../../../tailwind-reference.scss';
+
+:host {
+  display: block;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-primary text-on-fill hover:opacity-90;
+}
+
+.btn-secondary {
+  @apply bg-surface-300 text-text-primary hover:bg-surface-400;
+}
+
+.btn-danger {
+  @apply bg-danger text-on-fill hover:opacity-90;
+}

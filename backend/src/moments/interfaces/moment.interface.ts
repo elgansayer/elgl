@@ -9,6 +9,9 @@ export interface MomentComment {
     explanation?: string;
   };
   created_at: string;
+  upVotes?: number;
+  downVotes?: number;
+  userVote?: string | null;
   author?: {
     id: string;
     display_name?: string;
@@ -21,12 +24,20 @@ export interface MomentRecord {
   user_id: string;
   text_content?: string;
   media_urls?: string[];
-  media_type: 'none' | 'images' | 'audio';
+  media_type: 'none' | 'images' | 'audio' | 'video';
   target_language: string;
-  is_pinned: boolean;
+  post_type?: 'moment' | 'question' | 'language_question';
+  question_text?: string;
+  question_options?: string[];
+  correct_answer?: string;
+  correct_answers_count?: number;
+  total_answers_count?: number;
+  is_pinned: boolean; // Indicates if the moment is pinned
   likes_count: number;
   comments_count: number;
   created_at: string;
+  is_ephemeral?: boolean;
+  expires_at?: string;
   author?: {
     id: string;
     display_name?: string;

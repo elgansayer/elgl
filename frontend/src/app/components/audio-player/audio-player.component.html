@@ -1,0 +1,85 @@
+<div
+  class="app-card app-padded flex items-center gap-3"
+  role="group"
+  [attr.aria-label]="'audioPlayer.groupLabel' | t"
+>
+  <button
+    hlmBtn
+    type="button"
+    (click)="togglePlay()"
+    [disabled]="hasError()"
+    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-primary text-on-fill shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+    [attr.aria-label]="(isPlaying() ? 'audioPlayer.pause' : 'audioPlayer.play') | t"
+  >
+    @if (isPlaying()) {
+      <svg
+        class="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="6" y="5" width="4" height="14" rx="1" />
+        <rect x="14" y="5" width="4" height="14" rx="1" />
+      </svg>
+    } @else {
+      <svg
+        class="h-4 w-4 ms-0.5"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.68-6.86a1 1 0 0 0 0-1.7L9.53 4.3A1 1 0 0 0 8 5.14Z"
+        />
+      </svg>
+    }
+  </button>
+
+  <div class="relative h-10 flex-1">
+    <div class="absolute inset-0 flex items-end gap-0.5" aria-hidden="true">
+      @for (peak of peaks(); track $index) {
+        <span
+          class="min-h-[3px] flex-1 rounded-full transition-colors duration-fast"
+          [class.bg-primary]="$index < activeBarCount()"
+          [class.bg-surface-100]="$index >= activeBarCount()"
+          [class.animate-pulse]="isLoadingWaveform()"
+          [style.height.%]="peak * 100"
+        ></span>
+      }
+    </div>
+    <input
+      type="range"
+      class="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0 disabled:cursor-not-allowed"
+      min="0"
+      [max]="duration() || 0"
+      [value]="currentTime()"
+      [disabled]="hasError() || duration() === 0"
+      (input)="onSeek($event)"
+      [attr.aria-label]="'audioPlayer.seekLabel' | t"
+      [attr.aria-valuetext]="formattedCurrentTime() + ' / ' + formattedDuration()"
+    />
+  </div>
+
+  <span class="shrink-0 font-mono text-xs tabular-nums text-text-secondary">
+    {{ formattedCurrentTime() }} / {{ formattedDuration() }}
+  </span>
+
+  @if (hasError()) {
+    <span class="shrink-0 text-xs text-danger">{{ 'audioPlayer.error' | t }}</span>
+  }
+
+  <audio
+    #audioEl
+    class="hidden"
+    preload="metadata"
+    [src]="src()"
+    (play)="isPlaying.set(true)"
+    (pause)="isPlaying.set(false)"
+    (ended)="onEnded()"
+    (timeupdate)="onTimeUpdate()"
+    (loadedmetadata)="onLoadedMetadata()"
+    (error)="hasError.set(true)"
+  ></audio>
+</div>

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Environment files
+.env
+.env.*
+
+# IDE and editor directories
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Angular
+*.ngsummary.json
+*.ngsummary
+
+# Generated and cache directories
+.angular/
+coverage/

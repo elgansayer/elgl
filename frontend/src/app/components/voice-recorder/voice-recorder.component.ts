@@ -1,19 +1,31 @@
-import { Component, EventEmitter, Output, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { UserService } from '../../services/user.service';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { showToast } from '../../services/toast.service';
+import { Component, output, signal, inject, OnDestroy } from '@angular/core';
+
+import { TranslatePipe } from '../../services/translate.pipe';
+
+import { MediaService } from '../../services/media.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-voice-recorder',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './voice-recorder.component.html',
-  styleUrls: ['./voice-recorder.component.scss']
+  styleUrls: ['./voice-recorder.component.scss'],
 })
-export class VoiceRecorderComponent {
-  private userService = inject(UserService);
+export class VoiceRecorderComponent implements OnDestroy {
+  private mediaService = inject(MediaService);
 
-  @Output() audioUploaded = new EventEmitter<string>();
-  @Output() cancelled = new EventEmitter<void>();
+  audioUploaded = output<string>();
+  cancelled = output<void>();
 
   readonly isRecording = signal<boolean>(false);
   readonly isUploading = signal<boolean>(false);
@@ -22,12 +34,14 @@ export class VoiceRecorderComponent {
 
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private timerInterval: any = null;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
   private recordedBlob: Blob | null = null;
+  private audioStream: MediaStream | null = null;
 
   async startRecording(): Promise<void> {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
 
@@ -40,7 +54,8 @@ export class VoiceRecorderComponent {
       this.mediaRecorder.onstop = () => {
         this.recordedBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.audioPreviewUrl.set(URL.createObjectURL(this.recordedBlob));
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
+        this.audioStream = null;
       };
 
       this.mediaRecorder.start();
@@ -48,11 +63,11 @@ export class VoiceRecorderComponent {
       this.durationSeconds.set(0);
 
       this.timerInterval = setInterval(() => {
-        this.durationSeconds.update(s => s + 1);
+        this.durationSeconds.update((s) => s + 1);
       }, 1000);
     } catch (e) {
       console.error('Microphone access denied or error:', e);
-      alert('Microphone permission required to record voice notes.');
+      showToast('Microphone permission required to record voice notes.');
     }
   }
 
@@ -69,22 +84,11 @@ export class VoiceRecorderComponent {
     this.isUploading.set(true);
 
     try {
-      const filename = `voice_${Date.now()}.webm`;
-      const presigned = await this.userService.getPresignedUploadUrl(filename, 'audio/webm', 'chat-voice');
-
-      if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
-        await fetch(presigned.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'audio/webm' },
-          body: this.recordedBlob
-        });
-      }
-
-      this.audioUploaded.emit(presigned.mediaUrl);
+      const result = await this.mediaService.uploadVoiceNote(this.recordedBlob, 'ogg');
+      this.audioUploaded.emit(result.url);
     } catch (e) {
       console.error('Failed to upload voice note:', e);
-      // Fallback: emit preview URL or mock object
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/webm');
+      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/ogg');
     } finally {
       this.isUploading.set(false);
     }
@@ -102,5 +106,17 @@ export class VoiceRecorderComponent {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    this.audioStream?.getTracks().forEach((track) => track.stop());
+    this.audioStream = null;
+    if (this.audioPreviewUrl()) {
+      URL.revokeObjectURL(this.audioPreviewUrl()!);
+    }
   }
 }

@@ -1,0 +1,25 @@
+---
+description: Patterns and rules for Centrifugo v5 real-time chat, Redis pub/sub fan-out, and LiveKit v2 WebRTC audio/video rooms.
+globs: backend/src/**/*.ts, frontend/src/app/services/*.ts, frontend/src/app/components/audio-room/**/*.ts, frontend/src/app/components/chat-room/**/*.ts
+alwaysApply: false
+---
+
+# Real-Time Engine (Centrifugo, Redis & LiveKit) Rules
+
+When building or debugging real-time communication:
+
+1. **Centrifugo v5 + Redis (`CentrifugeService`)**
+   - Mint connection tokens in NestJS (`POST /chat/token`) with user `sub` JWT claims.
+   - In Angular v22, manage subscription state using signals and handle reconnection exponentially.
+   - Messages must be persisted to `chat_messages` table first, then published via Centrifugo `/api/publish` HTTP endpoint.
+
+2. **Redis Fan-Out (`TimelineWorker`)**
+   - For social feed moments, push new post IDs asynchronously to subscriber feeds:
+     ```typescript
+     await redisClient.rpush(`timeline_queue:${followerId}`, momentId);
+     ```
+
+3. **LiveKit v2 WebRTC Audio/Video Rooms**
+   - Initialize rooms via `RoomServiceClient.createRoom()`.
+   - Mint LiveKit access tokens (`POST /audio-rooms/token`) granting `roomJoin: true` and `canPublish: false` for listeners by default.
+   - Stage management (`Raise Hand` -> `Approve Speaker`): when approved, NestJS issues a refreshed JWT with `canPublish: true`.

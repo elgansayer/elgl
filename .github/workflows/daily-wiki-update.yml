@@ -1,0 +1,65 @@
+name: Daily Documentation Sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: daily-documentation-sync
+  cancel-in-progress: true
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+
+      - name: Generate Wiki snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 build_granular_wiki.py
+          python3 generate_wiki.py
+
+          if [ -d "wiki" ]; then
+            cp -R wiki/. wiki-repo/
+          fi
+          if [ -f "Exhaustive-Minute-Feature-List.md" ]; then
+            cp Exhaustive-Minute-Feature-List.md wiki-repo/
+          fi
+
+      # Generated README/wiki cache changes in the main checkout are deliberately
+      # not pushed. main is protected and all repository changes must go through a
+      # pull request. This workflow publishes only the generated wiki snapshot.
+      - name: Commit and Push Wiki Repository
+        working-directory: wiki-repo
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No wiki changes to publish."
+            exit 0
+          fi
+          git commit -m "docs: daily auto-sync generated wiki snapshot"
+          git push
