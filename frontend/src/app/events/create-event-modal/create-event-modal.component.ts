@@ -242,9 +242,10 @@ const venueLocationValidator: ValidatorFn = (
             maxlength="2000"
             class="w-full"
             [attr.aria-invalid]="showControlError('description') ? 'true' : null"
+            [attr.aria-describedby]="showControlError('description') ? 'descriptionInputError' : null"
           ></textarea>
           @if (showControlError('description')) {
-            <p role="alert" class="mt-1 text-xs text-danger">
+            <p id="descriptionInputError" role="alert" class="mt-1 text-xs text-danger">
               {{ 'common.error_generic' | t }}
             </p>
           }
@@ -298,7 +299,10 @@ export class CreateEventModalComponent {
       category: ['audio_room', Validators.required],
       location: ['', [Validators.required, trimmedRequired, Validators.maxLength(500)]],
       max_participants: [null as number | null, [Validators.min(1), Validators.max(100)]],
-      description: ['', Validators.maxLength(2000)],
+      description: [
+        '',
+        [Validators.required, trimmedRequired, Validators.maxLength(2000)],
+      ],
     },
     { validators: venueLocationValidator },
   );
@@ -360,7 +364,7 @@ export class CreateEventModalComponent {
           category: raw.category || undefined,
           location: raw.location!.trim(),
           max_participants: raw.max_participants ?? undefined,
-          description: raw.description?.trim() || undefined,
+          description: raw.description!.trim(),
         }),
       );
       this.created.emit(createdEvent);
