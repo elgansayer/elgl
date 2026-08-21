@@ -43,7 +43,7 @@ export class RecommendationsController {
   @ApiOperation({
     summary: 'Get privacy-safe Discovery carousel recommendations',
     description:
-      'Returns up to 10 language partners ranked by reciprocal language compatibility, shared interests and bounded activity signals. Cached IDs are always revalidated against current privacy, deletion and block state. Raw activity timestamps are not exposed.',
+      'Returns up to 10 language partners ranked by reciprocal language compatibility, shared interests and bounded activity signals. Cached IDs are always revalidated against current privacy, deletion and block state. Raw activity timestamps and internal ranking scores are not exposed.',
   })
   @ApiResponse({
     status: 200,
@@ -60,7 +60,6 @@ export class RecommendationsController {
           'target_languages',
           'shared_interest_count',
           'recommendation_reasons',
-          'recommendation_score',
         ],
         properties: {
           id: { type: 'string' },
@@ -87,7 +86,6 @@ export class RecommendationsController {
               ],
             },
           },
-          recommendation_score: { type: 'number', minimum: 1 },
         },
       },
     },
