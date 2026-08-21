@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { of } from 'rxjs';
 import { LastActiveInterceptor } from './last-active.interceptor';
@@ -7,11 +8,11 @@ const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('LastActiveInterceptor', () => {
   let interceptor: LastActiveInterceptor;
-  let singleMock: jest.Mock;
-  let updateMock: jest.Mock;
-  let updateEqMock: jest.Mock;
-  let insertMock: jest.Mock;
-  let fromMock: jest.Mock;
+  let singleMock: Mock;
+  let updateMock: Mock;
+  let updateEqMock: Mock;
+  let insertMock: Mock;
+  let fromMock: Mock;
   let handler: CallHandler;
 
   const buildContext = (request: unknown): ExecutionContext =>
@@ -22,36 +23,36 @@ describe('LastActiveInterceptor', () => {
     }) as unknown as ExecutionContext;
 
   beforeEach(() => {
-    singleMock = jest.fn().mockResolvedValue({ data: null, error: null });
-    updateEqMock = jest.fn().mockResolvedValue({ error: null });
-    insertMock = jest.fn().mockResolvedValue({ error: null });
-    updateMock = jest.fn().mockReturnValue({ eq: updateEqMock });
+    singleMock = vi.fn().mockResolvedValue({ data: null, error: null });
+    updateEqMock = vi.fn().mockResolvedValue({ error: null });
+    insertMock = vi.fn().mockResolvedValue({ error: null });
+    updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
 
     const usersTable = {
-      select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({ single: singleMock }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ single: singleMock }),
       }),
       update: updateMock,
     };
     const loginHistoryTable = { insert: insertMock };
 
-    fromMock = jest.fn((table: string) =>
+    fromMock = vi.fn((table: string) =>
       table === 'users' ? usersTable : loginHistoryTable,
     );
 
     const supabaseService = {
-      getClient: jest.fn().mockReturnValue({ from: fromMock }),
+      getClient: vi.fn().mockReturnValue({ from: fromMock }),
     } as unknown as SupabaseService;
 
     interceptor = new LastActiveInterceptor(supabaseService);
-    handler = { handle: jest.fn(() => of('response')) };
+    handler = { handle: vi.fn(() => of('response')) };
 
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('is defined', () => {

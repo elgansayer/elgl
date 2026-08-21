@@ -1,3 +1,4 @@
+vi.mock('lottie-web', () => ({ default: { loadAnimation: vi.fn(), destroy: vi.fn() } }));
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
@@ -15,6 +16,8 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -70,6 +73,17 @@ getAccessToken: vi.fn(() => 'mock-token'),
 
   const unreadCounterMock = {
     totalUnread: vi.fn(() => 0),
+    tabCount: vi.fn(() => 0),
+    set: vi.fn(),
+    increment: vi.fn(),
+    decrement: vi.fn(),
+    resetAll: vi.fn(),
+    setChatUnread: vi.fn(),
+    setNotificationUnread: vi.fn(),
+    incrementChatUnread: vi.fn(),
+    decrementChatUnread: vi.fn(),
+    incrementNotificationUnread: vi.fn(),
+    decrementNotificationUnread: vi.fn(),
   };
 
   const versionCheckServiceMock = {
@@ -84,6 +98,18 @@ getAccessToken: vi.fn(() => 'mock-token'),
   const i18nServiceMock = {
     translate: vi.fn(() => ''),
     currentLocale: vi.fn(() => 'en'),
+  };
+
+  const notificationServiceMock = {
+    getUnreadCount: vi.fn(() => Promise.resolve(0)),
+    markAllAsRead: vi.fn(() => Promise.resolve()),
+    markAsRead: vi.fn(() => Promise.resolve()),
+    getNotifications: vi.fn(() => Promise.resolve([])),
+  };
+
+  const chatServiceMock = {
+    getRooms: vi.fn(() => Promise.resolve([])),
+    getMessages: vi.fn(() => Promise.resolve([])),
   };
 
   beforeEach(async () => {
@@ -110,6 +136,8 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
+        { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: ChatService, useValue: chatServiceMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })

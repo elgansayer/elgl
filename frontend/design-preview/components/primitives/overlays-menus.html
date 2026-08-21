@@ -1,0 +1,523 @@
+<!-- @dsCard group="Primitives" name="Overlays & Menus" subtitle="dialog · context-menu" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Primitives · Overlays &amp; Menus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Mirrors frontend/tailwind.config.js - see buttons.html for the same
+      // note on var-name mapping (this file's own :root block vs. the app's
+      // build-time --surface-50-rgb names).
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              surface: {
+                50: 'rgb(var(--surface-50) / <alpha-value>)',
+                100: 'rgb(var(--surface-100) / <alpha-value>)',
+                200: 'rgb(var(--surface-200) / <alpha-value>)',
+                300: 'rgb(var(--surface-300) / <alpha-value>)',
+                400: 'rgb(var(--surface-400) / <alpha-value>)',
+                500: 'rgb(var(--surface-500) / <alpha-value>)',
+                600: 'rgb(var(--surface-600) / <alpha-value>)',
+                700: 'rgb(var(--surface-700) / <alpha-value>)',
+                800: 'rgb(var(--surface-800) / <alpha-value>)',
+                900: 'rgb(var(--surface-900) / <alpha-value>)',
+              },
+              primary: { DEFAULT: 'rgb(var(--primary) / <alpha-value>)' },
+              secondary: { DEFAULT: 'rgb(var(--secondary) / <alpha-value>)' },
+              danger: { DEFAULT: 'rgb(var(--danger) / <alpha-value>)' },
+              success: { DEFAULT: 'rgb(var(--success) / <alpha-value>)' },
+              warning: { DEFAULT: 'rgb(var(--warning) / <alpha-value>)' },
+              vip: { DEFAULT: 'rgb(var(--vip) / <alpha-value>)' },
+              'on-fill': { DEFAULT: 'rgb(var(--on-fill) / <alpha-value>)' },
+              accent: { DEFAULT: 'rgb(var(--accent) / <alpha-value>)' },
+              neon: {
+                violet: '#8B6CF0',
+                pink: '#E8578F',
+                cyan: '#2FC6D9',
+                blue: '#5B8DEF',
+                orange: '#F0954A',
+              },
+              text: {
+                primary: 'rgb(var(--text-primary) / <alpha-value>)',
+                secondary: 'rgb(var(--text-secondary) / <alpha-value>)',
+                muted: 'rgb(var(--text-muted) / <alpha-value>)',
+              },
+            },
+            fontFamily: {
+              display: ['"Instrument Sans"', 'ui-sans-serif', '-apple-system', 'sans-serif'],
+            },
+            borderRadius: {
+              app: '0.75rem',
+              card: '1rem',
+              sheet: '1.25rem',
+              bubble: '1.125rem',
+              pill: '9999px',
+            },
+            boxShadow: {
+              card: '0 1px 2px rgb(var(--shadow) / 0.04), 0 4px 14px rgb(var(--shadow) / 0.08)',
+              lift: '0 12px 32px rgb(var(--shadow) / 0.16), 0 4px 10px rgb(var(--shadow) / 0.08)',
+            },
+            transitionTimingFunction: { app: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+            transitionDuration: { fast: '140ms', base: '180ms', slow: '260ms' },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: rgb(var(--surface-500));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 28px 96px;
+      }
+      header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 34px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: rgb(var(--text-secondary));
+        font-size: 15px;
+        margin: 0 0 40px;
+        max-width: 640px;
+        line-height: 1.55;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      section {
+        margin-top: 48px;
+      }
+      h2 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      .component-note {
+        font-size: 13px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 18px;
+        line-height: 1.6;
+        max-width: 720px;
+      }
+      .component-note code {
+        font-size: 12px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .demo-block {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 16px;
+        padding: 22px;
+      }
+      .demo-block + .demo-block {
+        margin-top: 14px;
+      }
+      .demo-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 12px;
+      }
+      .backdrop-frame {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(0 0 0 / 0.6);
+        backdrop-filter: blur(4px);
+        border-radius: 12px;
+        padding: 32px 20px;
+      }
+      footer {
+        margin-top: 64px;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        max-width: 720px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div>
+          <h1 class="display">Overlays &amp; Menus</h1>
+        </div>
+        <div class="toggle" id="toggle">
+          <button id="btn-light" class="active">Light</button>
+          <button id="btn-dark">Dark</button>
+        </div>
+      </header>
+      <p class="sub">
+        Two real components under <code>src/app/components/primitives/</code>:
+        <code>dialog</code> and <code>context-menu</code>. Both are shell-only components -
+        backdrop, focus handling, ARIA wiring and dismiss behaviour - that consumers fill via
+        <code>ng-content</code>. Markup and classes below are copied verbatim from each component's
+        template and from <code>report-user-modal</code> / <code>message-context-menu</code>, the
+        components that actually consume them today.
+      </p>
+
+      <!-- dialog (dialog.component.ts) -->
+      <section>
+        <h2>Dialog</h2>
+        <p class="component-note">
+          <code>app-dialog</code> - a shared accessible dialog shell built on
+          <code>@angular/cdk/a11y</code>'s <code>CdkTrapFocus</code> rather than the full CDK
+          Overlay service, per the component's own doc comment, since every existing hand-rolled
+          modal already used the same declarative open-signal-in-template pattern.
+          <code>size</code>: <code>sm</code> / <code>md</code> (default) / <code>lg</code>, mapped
+          to <code>sm:max-w-sm</code> / <code>sm:max-w-md</code> / <code>sm:max-w-lg</code>. Sheets
+          up from the bottom on mobile (<code>rounded-t-sheet</code>) and centres with full
+          <code>rounded-sheet</code> corners at <code>sm</code>+. Backdrop click and Escape both
+          call <code>dismissed.emit()</code>, gated by the <code>dismissible</code> input (default
+          <code>true</code>) - the backdrop itself is deliberately not a keyboard tab stop, since
+          Escape is already the keyboard equivalent of a backdrop click. Locks
+          <code>document.body</code> scroll for as long as any instance is <code>open</code>.
+          Header, body and footer markup are entirely up to the consumer; the one real call site,
+          <code>report-user-modal</code>, is the source for the header/body/actions pattern shown
+          below.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Small (sm) - confirm dialog</p>
+          <div class="backdrop-frame">
+            <div
+              class="w-full mx-auto bg-surface-200 rounded-sheet shadow-lift border border-surface-100 max-h-[90vh] flex flex-col sm:max-w-sm"
+            >
+              <div class="p-5">
+                <h2 id="confirm-title" class="text-lg font-bold text-text-primary mb-2">
+                  Remove language partner?
+                </h2>
+                <p class="text-sm text-text-secondary">
+                  You will stop seeing each other's posts and can no longer message directly.
+                </p>
+              </div>
+              <div class="p-5 pt-0 flex gap-3">
+                <button
+                  type="button"
+                  class="flex-1 py-3 rounded-pill text-sm font-bold bg-surface-100 hover:bg-surface-50 text-text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 py-3 rounded-pill text-sm font-bold bg-danger hover:bg-danger/90 text-on-fill transition-colors shadow-lift"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Medium (md, default) - header / body / actions</p>
+          <div class="backdrop-frame">
+            <div
+              class="w-full mx-auto bg-surface-200 rounded-sheet shadow-lift border border-surface-100 max-h-[90vh] flex flex-col sm:max-w-md"
+            >
+              <div
+                class="flex items-center justify-between p-5 border-b border-surface-100 shrink-0"
+              >
+                <h2 id="report-title" class="text-xl font-bold text-text-primary">
+                  Report this post
+                </h2>
+                <button
+                  type="button"
+                  class="text-text-muted hover:text-text-primary transition-colors p-2 -me-2 rounded-full hover:bg-surface-100"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="p-5 overflow-y-auto overscroll-contain">
+                <p class="text-sm text-text-secondary mb-4">
+                  Choose the reason that best describes the problem.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <label
+                    class="flex items-center p-3 rounded-card border cursor-pointer transition-all bg-danger/10 border-danger/50 text-danger"
+                  >
+                    <span class="font-bold text-sm">Spam</span>
+                  </label>
+                  <label
+                    class="flex items-center p-3 rounded-card border cursor-pointer transition-all bg-surface-100/60 border-surface-100 text-text-secondary"
+                  >
+                    <span class="font-bold text-sm">Harassment</span>
+                  </label>
+                </div>
+              </div>
+              <div class="p-5 border-t border-surface-100 shrink-0 flex gap-3">
+                <button
+                  type="button"
+                  class="flex-1 py-3 rounded-pill text-sm font-bold bg-surface-100 hover:bg-surface-50 text-text-primary transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 py-3 rounded-pill text-sm font-bold bg-danger hover:bg-danger/90 text-on-fill transition-colors shadow-lift"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Large (lg)</p>
+          <div class="backdrop-frame">
+            <div
+              class="w-full mx-auto bg-surface-200 rounded-sheet shadow-lift border border-surface-100 max-h-[90vh] flex flex-col sm:max-w-lg"
+            >
+              <div
+                class="flex items-center justify-between p-5 border-b border-surface-100 shrink-0"
+              >
+                <h2 id="vip-title" class="text-xl font-bold text-text-primary">
+                  VIP membership benefits
+                </h2>
+                <button
+                  type="button"
+                  class="text-text-muted hover:text-text-primary transition-colors p-2 -me-2 rounded-full hover:bg-surface-100"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="p-5 overflow-y-auto overscroll-contain">
+                <p class="text-sm text-text-secondary">
+                  Larger panels give longer-form content, such as a full benefits or plan comparison
+                  list, more breathing room before it needs to scroll.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- context-menu (context-menu.component.ts) -->
+      <section>
+        <h2>Context Menu</h2>
+        <p class="component-note">
+          <code>app-context-menu</code> - a position-anchored menu shell for "long-press / secondary
+          click a message" style menus, per the component's own doc comment written to replace
+          hand-rolled versions across <code>message-context-menu</code>,
+          <code>chat-context-menu</code> and <code>long-press-context-menu</code>. Positioned at an
+          arbitrary <code>x</code>/<code>y</code> (the triggering event's coordinates) rather than
+          centred like <code>app-dialog</code>. Sets <code>role="menu"</code> on the panel and moves
+          focus to the first <code>[role="menuitem"]</code> child on open - a real accessibility
+          improvement the doc comment notes over the hand-rolled menus it replaces, none of which
+          set menu roles or moved focus at all. Full roving-tabindex arrow-key navigation via CDK's
+          <code>ListKeyManager</code> is called out as a documented follow-up, not yet built. Menu
+          items themselves (<code>role="menuitem"</code> buttons) are projected content, shown below
+          verbatim from <code>message-context-menu</code>, the one real consumer.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Open, anchored at an x/y coordinate</p>
+          <div
+            style="
+              position: relative;
+              height: 220px;
+              background: rgb(var(--surface-500));
+              border-radius: 12px;
+              overflow: hidden;
+            "
+          >
+            <div
+              class="absolute bg-surface-200 border border-surface-100 rounded-card shadow-lift py-1 min-w-[160px]"
+              style="top: 24px; left: 40px"
+              role="menu"
+              aria-label="Message actions"
+            >
+              <button
+                role="menuitem"
+                class="w-full text-start px-4 py-2 text-sm text-text-primary hover:bg-surface-100 flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+                Copy
+              </button>
+              <button
+                role="menuitem"
+                class="w-full text-start px-4 py-2 text-sm text-text-primary hover:bg-surface-100 flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                  />
+                </svg>
+                Favourite
+              </button>
+              <button
+                role="menuitem"
+                class="w-full text-start px-4 py-2 text-sm text-danger hover:bg-surface-100 flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+                Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Relay - HelloTalk Design System · Primitives · Overlays &amp; Menus. Covers
+        <code>dialog.component.ts</code> and <code>context-menu.component.ts</code> in full,
+        illustrated with their real consumers' projected content (<code>report-user-modal</code>,
+        <code>message-context-menu</code>) since both primitives render nothing of their own beyond
+        the backdrop and panel shell. Shown inline rather than as a fixed, viewport-covering overlay
+        so both render in normal page flow for design reference. Supersedes the stale remote
+        <code>modal-sheet.html</code> preview built on the abandoned ember/tide/ink palette.
+      </footer>
+    </div>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

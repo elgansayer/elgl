@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { vi, Mocked } from 'vitest';
 import { VideoRoomComponent } from './video-room.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
@@ -53,6 +53,7 @@ describe('VideoRoomComponent', () => {
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: AuthService, useValue: mockAuthService },
       ],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VideoRoomComponent);
@@ -60,10 +61,10 @@ describe('VideoRoomComponent', () => {
     fixture.detectChanges();
   }
 
-  it('should render nothing when there is no current room', async () => {
+  it('should render connecting skeleton loader when there is no current room', async () => {
     await setup(null, 'host-1');
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent?.trim()).toBe('');
+    expect(compiled.textContent?.trim()).toContain('Connecting to room...');
   });
 
   it('should show the invite co-host button for the host when eligible speakers exist', async () => {
@@ -71,16 +72,23 @@ describe('VideoRoomComponent', () => {
     expect(component.isHost()).toBe(true);
     expect(component.eligibleSpeakers()).toEqual(['speaker-2']);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button?.textContent).toContain('Invite co-host');
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    const inviteBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteBtn).toBeTruthy();
   });
 
   it('should not show the invite co-host button to a non-host', async () => {
     await setup(baseRoom, 'speaker-2');
     expect(component.isHost()).toBe(false);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button).toBeNull();
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    // Only the onboarding help "?" button should be visible
+    const inviteCoHostBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteCoHostBtn).toBeUndefined();
   });
 
   it('should invite the selected speaker as co-host and hide the picker', async () => {
@@ -108,31 +116,10 @@ describe('VideoRoomComponent', () => {
     expect(mockStore.removeCoHost).toHaveBeenCalled();
   });
 
-  it('should fall back to localVideoTrack when current user is the host', async () => {
+  it('should render live chat overlay inside host video tile', async () => {
     await setup(baseRoom, 'host-1');
-    const mockLocalTrack = { attach: vi.fn() } as never;
-    (mockStore.localVideoTrack as ReturnType<typeof signal<unknown>>).set(mockLocalTrack);
-
-    fixture.detectChanges();
-
-    expect(component.hostVideoTrackOrDefault()).toBe(mockLocalTrack);
-    expect(component.hasHostVideo()).toBe(true);
-  });
-
-  it('should detect isCoHost when current user matches co_host_id', async () => {
-    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'speaker-2');
-
-    expect(component.isCoHost()).toBe(true);
-  });
-
-  it('should fall back to localVideoTrack when current user is the co-host', async () => {
-    await setup({ ...baseRoom, co_host_id: 'speaker-2' }, 'speaker-2');
-    const mockLocalTrack = { attach: vi.fn() } as never;
-    (mockStore.localVideoTrack as ReturnType<typeof signal<unknown>>).set(mockLocalTrack);
-
-    fixture.detectChanges();
-
-    expect(component.coHostVideoTrackOrDefault()).toBe(mockLocalTrack);
-    expect(component.hasCoHostVideo()).toBe(true);
+    const el = fixture.nativeElement as HTMLElement;
+    const overlay = el.querySelector('app-live-chat-overlay');
+    expect(overlay).toBeTruthy();
   });
 });

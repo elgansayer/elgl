@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
@@ -6,25 +7,23 @@ import { ClientErrorDto } from './dto/client-error.dto';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
-  let mockSupabaseClient: { from: jest.Mock };
-  let mockSupabaseService: { getClient: jest.Mock };
-  let insertBuilder: { insert: jest.Mock };
+  let mockSupabaseClient: { from: Mock };
+  let mockSupabaseService: { getClient: Mock };
+  let insertBuilder: { insert: Mock };
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     insertBuilder = {
-      insert: jest.fn().mockReturnValue(
-        Promise.resolve({ error: null }),
-      ),
+      insert: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(insertBuilder),
+      from: vi.fn().mockReturnValue(insertBuilder),
     };
 
     mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -38,7 +37,7 @@ describe('AnalyticsService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -70,7 +69,9 @@ describe('AnalyticsService', () => {
           url: 'https://example.com/page',
           user_agent: 'Chrome/120',
           metadata: { userId: 'user-1' },
-          stack_frames: [{ fileName: 'app.ts', lineNumber: 10, columnNumber: 5 }],
+          stack_frames: [
+            { fileName: 'app.ts', lineNumber: 10, columnNumber: 5 },
+          ],
           client_timestamp: '2026-08-07T00:00:00.000Z',
         }),
       );
@@ -100,10 +101,10 @@ describe('AnalyticsService', () => {
 
     it('logs a warning when supabase insert returns an error', async () => {
       const errorInsertBuilder = {
-        insert: jest.fn().mockResolvedValue({ error: { message: 'db error' } }),
+        insert: vi.fn().mockResolvedValue({ error: { message: 'db error' } }),
       };
       mockSupabaseClient.from.mockReturnValue(errorInsertBuilder);
-      const warnSpy = jest.spyOn(Logger.prototype, 'warn');
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
       await service.recordClientError(validPayload);
 
@@ -114,15 +115,17 @@ describe('AnalyticsService', () => {
 
     it('logs a warning when insertBuilder throws an exception', async () => {
       const errorInsertBuilder = {
-        insert: jest.fn().mockRejectedValue(new Error('Connection refused')),
+        insert: vi.fn().mockRejectedValue(new Error('Connection refused')),
       };
       mockSupabaseClient.from.mockReturnValue(errorInsertBuilder);
-      const warnSpy = jest.spyOn(Logger.prototype, 'warn');
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
       await service.recordClientError(validPayload);
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Exception while recording client error: Connection refused'),
+        expect.stringContaining(
+          'Exception while recording client error: Connection refused',
+        ),
       );
     });
   });

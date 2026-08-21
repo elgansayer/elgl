@@ -1,149 +1,220 @@
-import { Component, inject, input, output, signal } from '@angular/core';
-
-import { TranslatePipe } from '../../services/translate.pipe';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
+import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyStore } from '../../services/economy.store';
 import { SafetyService, ReportCategory } from '../../services/safety.service';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent],
+  imports: [
+    HlmNativeSelect,
+    FormsModule,
+    TranslatePipe,
+    AppSkeletonLoaderComponent,
+    ...HlmButtonImports,
+    ...HlmDialogImports,
+    ...HlmTextareaImports,
+  ],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+    <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full max-w-md space-y-5 rounded-3xl border border-surface-100 bg-surface-200 p-6 shadow-2xl"
+        aria-labelledby="trust-safety-title"
+        aria-describedby="trust-safety-description"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>{{ 'safety.title' | t }}</span>
+            <h3
+              id="trust-safety-title"
+              class="flex items-center gap-2 text-xl font-black text-text-primary"
+            >
+              {{ 'safety.title' | t }}
             </h3>
-            <p class="text-xs text-text-secondary">
+            <p id="trust-safety-description" class="text-xs text-text-secondary">
               {{ 'safety.subtitle' | t: { name: targetName() } }}
             </p>
           </div>
           <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="icon-touch"
             (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'safety.closeBtn' | t"
           >
-            &#x2715;
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
-        <div class="flex rounded-2xl bg-surface-100 p-1 gap-1">
+        <div
+          class="flex gap-1 rounded-2xl bg-surface-100 p-1"
+          role="tablist"
+          [attr.aria-label]="'safety.tabListLabel' | t"
+        >
           <button
-            (click)="mode = 'report'"
-            [class]="
-              'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
-              (mode === 'report' ? 'bg-surface-200 text-primary shadow-sm' : 'text-text-secondary')
-            "
+            hlmBtn
+            id="trust-safety-tab-report"
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="flex-1 rounded-xl"
+            role="tab"
+            [attr.aria-selected]="mode() === 'report'"
+            [attr.aria-controls]="'trust-safety-panel-report'"
+            [attr.tabindex]="mode() === 'report' ? 0 : -1"
+            [class.bg-surface-200]="mode() === 'report'"
+            [class.text-primary]="mode() === 'report'"
+            (click)="switchTab('report')"
+            (keydown)="onTabKeydown($event, 'report')"
           >
             {{ 'safety.tabReport' | t }}
           </button>
           <button
-            (click)="mode = 'block'"
-            [class]="
-              'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
-              (mode === 'block' ? 'bg-red-600 text-white shadow-sm' : 'text-text-secondary')
-            "
+            hlmBtn
+            id="trust-safety-tab-block"
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="flex-1 rounded-xl"
+            role="tab"
+            [attr.aria-selected]="mode() === 'block'"
+            [attr.aria-controls]="'trust-safety-panel-block'"
+            [attr.tabindex]="mode() === 'block' ? 0 : -1"
+            [class.bg-danger]="mode() === 'block'"
+            [class.text-on-fill]="mode() === 'block'"
+            (click)="switchTab('block')"
+            (keydown)="onTabKeydown($event, 'block')"
           >
             {{ 'safety.tabBlock' | t }}
           </button>
         </div>
 
-        @if (mode === 'report') {
-          <div class="space-y-3 text-xs">
-@if (categoriesLoading()) {
-            <div class="space-y-2">
-              <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
-              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
-            </div>
-          } @else {
+        @if (mode() === 'report') {
+          <div
+            id="trust-safety-panel-report"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-report"
+            class="space-y-3 text-xs"
+          >
+            @if (categoriesLoading()) {
+              <div
+                class="space-y-2"
+                aria-busy="true"
+                [attr.aria-label]="'safety.categoriesLoading' | t"
+              >
+                <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+                <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
+              </div>
+            } @else {
+              <div>
+                <label
+                  for="report-reason-select"
+                  class="mb-1 block ps-1 font-bold text-text-primary"
+                  >{{ 'safety.reasonLabel' | t }}</label
+                >
+                <hlm-native-select
+                  selectId="report-reason-select"
+                  [(ngModel)]="reportReason"
+                  aria-required="true"
+                  class="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium"
+                  selectClass="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium"
+                >
+                  @for (category of reportCategories(); track category.value) {
+                    <option [value]="category.value">{{ category.label }}</option>
+                  }
+                </hlm-native-select>
+              </div>
+            }
             <div>
-              <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
-                >{{ 'safety.reasonLabel' | t }}</label
+              <label
+                for="report-details-textarea"
+                class="mb-1 block ps-1 font-bold text-text-primary"
+                >{{ 'safety.detailsLabel' | t }}</label
               >
-              <select
-                id="report-reason-select"
-                [(ngModel)]="reportReason"
-                class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
-              >
-                @for (cat of reportCategories(); track cat.value) {
-                  <option [value]="cat.value">{{ cat.label }}</option>
-                }
-              </select>
-            </div>
-          }
-          <div>
-            <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
-              >{{ 'safety.detailsLabel' | t }}</label
-            >
               <textarea
+                hlmTextarea
                 id="report-details-textarea"
                 [(ngModel)]="reportDetails"
                 rows="3"
                 [placeholder]="'safety.detailsPlaceholder' | t"
-                class="w-full p-3 border rounded-xl bg-surface-300"
               ></textarea>
+            </div>
+          </div>
+        } @else {
+          <div
+            id="trust-safety-panel-block"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-block"
+          >
+            <div
+              class="space-y-2 rounded-2xl border border-danger/30 bg-danger/10 p-4 text-xs"
+              role="alert"
+            >
+              <span class="block font-bold text-danger">{{
+                'safety.blockWarning' | t: { name: targetName() }
+              }}</span>
+              <ul class="list-inside list-disc space-y-1 text-text-primary">
+                <li>{{ 'safety.blockList1' | t }}</li>
+                <li>{{ 'safety.blockList2' | t }}</li>
+                <li>{{ 'safety.blockList3' | t }}</li>
+              </ul>
             </div>
           </div>
         }
 
-        @if (mode === 'block') {
-          <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs">
-            <span class="font-bold text-red-900 block"
-              >{{ 'safety.blockWarning' | t: { name: targetName() } }}</span
-            >
-            <ul class="list-disc list-inside space-y-1 text-text-primary">
-              <li>{{ 'safety.blockList1' | t }}</li>
-              <li>{{ 'safety.blockList2' | t }}</li>
-              <li>{{ 'safety.blockList3' | t }}</li>
-            </ul>
-          </div>
-        }
-
-        <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
-          <button
-            (click)="closed.emit()"
-            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
-          >
+        <div class="flex justify-end gap-3 border-t border-surface-100 pt-2">
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="closed.emit()">
             {{ 'safety.cancelBtn' | t }}
           </button>
-          @if (mode === 'report') {
+          @if (mode() === 'report') {
             <button
+              hlmBtn
+              type="button"
+              size="touch"
               (click)="submitReport()"
-              class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
+              [attr.aria-label]="'safety.submitReportAria' | t: { name: targetName() }"
             >
               {{ 'safety.submitReportBtn' | t }}
             </button>
-          }
-          @if (mode === 'block') {
+          } @else {
             <button
+              hlmBtn
+              type="button"
+              variant="destructive-solid"
+              size="touch"
               (click)="confirmBlock()"
-              class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold text-xs shadow"
+              [attr.aria-label]="'safety.confirmBlockAria' | t: { name: targetName() }"
             >
               {{ 'safety.confirmBlockBtn' | t }}
             </button>
           }
         </div>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class TrustSafetyModalComponent {
-  targetId = input.required<string>();
-  targetName = input.required<string>();
-  closed = output<void>();
+  readonly targetId = input.required<string>();
+  readonly targetName = input.required<string>();
+  readonly open = input(true);
+  readonly closed = output<void>();
 
   readonly store = inject(EconomyStore);
   private readonly safetyService = inject(SafetyService);
-  mode: 'report' | 'block' = 'report';
+  readonly mode = signal<'report' | 'block'>('report');
+  readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
   reportReason = 'harassment';
   reportDetails = '';
-
-  readonly categoriesLoading = signal<boolean>(false);
+  readonly categoriesLoading = signal(false);
   readonly reportCategories = signal<ReportCategory[]>([
     { value: 'harassment', label: 'Harassment / Bullying' },
     { value: 'spam', label: 'Spam / Commercial Advertising' },
@@ -153,20 +224,41 @@ export class TrustSafetyModalComponent {
   ]);
 
   constructor() {
-    this.loadCategories();
+    void this.loadCategories();
+  }
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.open()) this.closed.emit();
   }
 
   private async loadCategories(): Promise<void> {
     this.categoriesLoading.set(true);
     try {
-      const cats = await this.safetyService.getReportCategories();
-      if (cats.length > 0) {
-        this.reportCategories.set(cats);
-      }
+      const categories = await this.safetyService.getReportCategories();
+      if (categories.length > 0) this.reportCategories.set(categories);
     } catch {
-      // Keep default categories
+      // Default categories remain available when the service is unavailable.
     } finally {
       this.categoriesLoading.set(false);
+    }
+  }
+
+  switchTab(tab: 'report' | 'block'): void {
+    this.mode.set(tab);
+  }
+
+  onTabKeydown(event: KeyboardEvent, currentTab: 'report' | 'block'): void {
+    const tabs: Array<'report' | 'block'> = ['report', 'block'];
+    const currentIndex = tabs.indexOf(currentTab);
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+      nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (nextIndex !== currentIndex) {
+      event.preventDefault();
+      this.mode.set(tabs[nextIndex]);
+      queueMicrotask(() => document.getElementById(`trust-safety-tab-${tabs[nextIndex]}`)?.focus());
     }
   }
 

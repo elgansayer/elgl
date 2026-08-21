@@ -1,0 +1,50 @@
+name: Seed Spartan UI migration backlog
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/seed-spartan-ui-issues.mjs
+      - scripts/verify-spartan-ui-issues.mjs
+      - .github/workflows/seed-spartan-ui-issues.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: seed-spartan-ui-migration-backlog
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Create numbered Spartan UI migration issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Seed and verify complete migration backlog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in $(seq 1 15); do
+            echo "Seeder pass ${attempt}/15"
+            node scripts/seed-spartan-ui-issues.mjs
+            if node scripts/verify-spartan-ui-issues.mjs; then
+              exit 0
+            fi
+            echo "Backlog still has gaps; pausing before the next idempotent pass."
+            sleep 10
+          done
+
+          echo "Spartan UI backlog is still incomplete after 15 passes."
+          exit 1

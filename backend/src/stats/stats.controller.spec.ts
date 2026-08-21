@@ -9,7 +9,7 @@ describe('StatsController', () => {
   let statsService: StatsService;
 
   const mockAuthGuard: CanActivate = {
-    canActivate: jest.fn(() => true),
+    canActivate: vi.fn(() => true),
   };
 
   beforeEach(async () => {
@@ -19,7 +19,7 @@ describe('StatsController', () => {
         {
           provide: StatsService,
           useValue: {
-            getStats: jest.fn(),
+            getStats: vi.fn(),
           },
         },
       ],
@@ -53,10 +53,10 @@ describe('StatsController', () => {
         moments_count: 12,
       };
 
-      jest.spyOn(statsService, 'getStats').mockResolvedValue(mockStats);
+      vi.spyOn(statsService, 'getStats').mockResolvedValue(mockStats);
 
       const req = { user: { sub: 'user-1' } };
-      const result = await controller.getMyStats(req as any);
+      const result = await controller.getMyStats(req);
 
       expect(statsService.getStats).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockStats);

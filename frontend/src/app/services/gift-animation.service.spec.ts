@@ -90,4 +90,70 @@ describe('GiftAnimationService', () => {
     service.playAnimation(mockOverlay);
     expect(service.elapsed()).toBeGreaterThanOrEqual(0);
   });
+
+  it('should set premium animation for 500+ coin tips', () => {
+    const service = TestBed.inject(GiftAnimationService);
+    const premiumOverlay: GiftAnimationOverlay = {
+      ...mockOverlay,
+      giftName: '500 Coins',
+      giftIcon: '💎',
+      animationType: 'premium',
+      coinValue: 500,
+    };
+    service.playAnimation(premiumOverlay);
+
+    expect(service.isVisible()).toBe(true);
+    const anim = service.currentAnimation();
+    expect(anim?.animationType).toBe('premium');
+    expect(anim?.giftIcon).toBe('💎');
+    expect(anim?.coinValue).toBe(500);
+  });
+
+  it('should set confetti animation for 100+ coin tips', () => {
+    const service = TestBed.inject(GiftAnimationService);
+    const confettiOverlay: GiftAnimationOverlay = {
+      ...mockOverlay,
+      giftName: '100 Coins',
+      giftIcon: '🎁',
+      animationType: 'confetti',
+      coinValue: 100,
+    };
+    service.playAnimation(confettiOverlay);
+
+    expect(service.isVisible()).toBe(true);
+    const anim = service.currentAnimation();
+    expect(anim?.animationType).toBe('confetti');
+  });
+
+  it('should set hearts animation for 50+ coin tips', () => {
+    const service = TestBed.inject(GiftAnimationService);
+    const heartsOverlay: GiftAnimationOverlay = {
+      ...mockOverlay,
+      giftName: '50 Coins',
+      giftIcon: '💝',
+      animationType: 'hearts',
+      coinValue: 50,
+    };
+    service.playAnimation(heartsOverlay);
+
+    expect(service.isVisible()).toBe(true);
+    const anim = service.currentAnimation();
+    expect(anim?.animationType).toBe('hearts');
+  });
+
+  it('should set sparkle animation for small tips', () => {
+    const service = TestBed.inject(GiftAnimationService);
+    const sparkleOverlay: GiftAnimationOverlay = {
+      ...mockOverlay,
+      giftName: '10 Coins',
+      giftIcon: '🪙',
+      animationType: 'sparkle',
+      coinValue: 10,
+    };
+    service.playAnimation(sparkleOverlay);
+
+    expect(service.isVisible()).toBe(true);
+    const anim = service.currentAnimation();
+    expect(anim?.animationType).toBe('sparkle');
+  });
 });

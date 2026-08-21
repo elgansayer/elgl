@@ -1,6 +1,7 @@
 <div class="relative inline-block">
   <!-- Trigger Button -->
   <button
+    hlmBtn
     type="button"
     (click)="toggleModal()"
     class="flex items-center gap-2 ps-3 pe-3 py-1.5 rounded-xl bg-surface-100 text-text-primary font-bold text-sm hover:bg-surface-100 transition-all border border-surface-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -41,6 +42,7 @@
             </div>
           </div>
           <button
+            hlmBtn
             type="button"
             (click)="closeModal()"
             class="text-text-muted hover:text-text-secondary p-2 rounded-xl hover:bg-surface-100 transition-colors"
@@ -57,6 +59,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               @for (lang of availableLanguages; track lang.code) {
                 <button
+                  hlmBtn
                   type="button"
                   (click)="selectLanguage(lang.code)"
                   [class]="
@@ -65,7 +68,8 @@
                       ? 'bg-primary/10 border-primary text-primary font-black shadow-sm'
                       : 'bg-surface-300/50 border-surface-100 text-text-primary hover:bg-surface-100')
                   "
-                 [attr.aria-label]=\"lang.name || lang.nativeName\">
+                  [attr.aria-label]="lang.name || lang.nativeName"
+                >
                   <span class="text-2xl shrink-0">{{ lang.flag }}</span>
                   <div class="min-w-0 flex-1">
                     <div class="text-sm font-bold truncate">{{ lang.name }}</div>
@@ -80,10 +84,12 @@
         <!-- Modal Footer -->
         <div class="ps-6 pe-6 py-3 bg-surface-300/80 border-t border-surface-100 flex justify-end">
           <button
+            hlmBtn
             type="button"
             (click)="closeModal()"
             class="ps-5 pe-5 py-2 rounded-xl bg-surface-100 text-text-primary font-bold text-sm hover:bg-surface-200 transition-colors"
-           [attr.aria-label]="'common.close' | t">
+            [attr.aria-label]="'common.close' | t"
+          >
             {{ 'common.close' | t }}
           </button>
         </div>
