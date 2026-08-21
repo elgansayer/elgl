@@ -18,6 +18,7 @@ import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { NotificationService } from './services/notification.service';
 import { ChatService } from './services/chat.service';
+import { SeriousLearnerModeService } from './services/serious-learner-mode.service';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -27,10 +28,10 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
-getAccessToken: vi.fn(() => 'mock-token'),
-  unlockApp: vi.fn(),
-  appLocked: vi.fn(() => false),
-  biometricLockEnabled: vi.fn(() => false),
+    getAccessToken: vi.fn(() => 'mock-token'),
+    unlockApp: vi.fn(),
+    appLocked: vi.fn(() => false),
+    biometricLockEnabled: vi.fn(() => false),
   };
 
   const appLockServiceMock = {
@@ -112,6 +113,12 @@ getAccessToken: vi.fn(() => 'mock-token'),
     getMessages: vi.fn(() => Promise.resolve([])),
   };
 
+  const seriousLearnerModeMock = {
+    enabled: vi.fn(() => false),
+    saving: vi.fn(() => false),
+    setEnabled: vi.fn(() => Promise.resolve(true)),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
@@ -138,6 +145,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: I18nService, useValue: i18nServiceMock },
         { provide: NotificationService, useValue: notificationServiceMock },
         { provide: ChatService, useValue: chatServiceMock },
+        { provide: SeriousLearnerModeService, useValue: seriousLearnerModeMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })
@@ -162,7 +170,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
     expect(component).toBeTruthy();
   });
 
-it('should initialise unread counter', () => {
+  it('should initialise unread counter', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
