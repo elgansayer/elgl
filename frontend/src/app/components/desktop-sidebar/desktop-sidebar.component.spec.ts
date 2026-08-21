@@ -16,8 +16,8 @@ class MockI18nService {
 }
 
 class MockUnreadCounterService {
-  tabCount(): number {
-    return 0;
+  tabCount(tab: string): number {
+    return tab === 'chat' ? 3 : 0;
   }
 }
 
@@ -71,6 +71,35 @@ describe('DesktopSidebarComponent', () => {
       expect(link.classList.toString()).toContain('focus-visible:ring-2');
       expect(link.classList.toString()).toContain('focus-visible:ring-primary');
     }
+  });
+
+  it('should use Relay semantic surface and radius roles', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
+    const unreadBadge: HTMLElement = fixture.nativeElement.querySelector('a[href="/chat"] .ms-auto');
+
+    expect(nav.classList.toString()).toContain('bg-surface-200');
+    expect(nav.classList.toString()).toContain('border-surface-100');
+
+    for (const link of links) {
+      expect(link.classList.toString()).toContain('rounded-app');
+      expect(link.classList.toString()).not.toContain('rounded-xl');
+    }
+
+    expect(unreadBadge).toBeTruthy();
+    expect(unreadBadge.classList.toString()).toContain('bg-danger');
+    expect(unreadBadge.classList.toString()).toContain('text-on-fill');
+    expect(unreadBadge.classList.toString()).toContain('rounded-pill');
+    expect(unreadBadge.classList.toString()).not.toContain('rounded-full');
+  });
+
+  it('should preserve the intentional desktop-only responsive contract', () => {
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+    const classes = nav.classList.toString();
+
+    expect(classes).toContain('hidden');
+    expect(classes).toContain('lg:flex');
+    expect(classes).not.toContain('md:flex');
   });
 
   it('should expose the active primary route with aria-current="page"', async () => {
