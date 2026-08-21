@@ -1,9 +1,73 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { AdminBlocksComponent } from './admin-blocks.component';
 import { AdminBlockedUser, AdminService } from '../../../services/admin.service';
 import { I18nService } from '../../../services/i18n.service';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
+
+describe('AdminBlocksComponent RTL logical CSS compliance', () => {
+  let templateContent: string;
+
+  beforeAll(() => {
+    templateContent = readFileSync(
+      resolve(__dirname, 'admin-blocks.component.html'),
+      'utf-8',
+    );
+  });
+
+  it('should not contain any physical direction CSS utilities', () => {
+    const violations = [
+      /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+      /\bleft-[0-9]/, /\bright-[0-9]/,
+      /\bborder-l\b/, /\bborder-r\b/,
+      /\btext-left\b/, /\btext-right\b/,
+    ];
+    for (const pattern of violations) {
+      expect(templateContent).not.toMatch(pattern);
+    }
+  });
+
+  it('should use logical CSS utilities for inline start/end padding', () => {
+    expect(templateContent).toContain('ps-4');
+    expect(templateContent).toContain('pe-4');
+  });
+
+  it('should use logical gap utilities for inline spacing', () => {
+    expect(templateContent).toContain('gap-3');
+  });
+
+  it('should use i18n translate pipe for all user-facing strings', () => {
+    const keys = [
+      "'admin.blocks.title'",
+      "'admin.blocks.loadError'",
+      "'admin.blocks.loadErrorDesc'",
+      "'admin.blocks.emptyTitle'",
+      "'admin.blocks.emptyDesc'",
+      "'admin.blocks.unblock'",
+      "'common.retry'",
+    ];
+    for (const key of keys) {
+      expect(templateContent).toContain(key);
+    }
+  });
+
+  it('should not hardcode English user-facing strings', () => {
+    // Strip i18n expressions (both template and attribute forms) to check
+    // for hardcoded English remaining in pure HTML text nodes
+    const withoutI18n = templateContent
+      .replace(/\{\{.*?\}\}/gs, '')
+      .replace(/'[^']*'\s*\|\s*t/g, '');
+    expect(withoutI18n).not.toMatch(/Blocked Users/i);
+    expect(withoutI18n).not.toMatch(/\bUnblock\b/);
+    expect(withoutI18n).not.toMatch(/Failed to load/i);
+    expect(withoutI18n).not.toMatch(/No blocked users/i);
+  });
+});
 
 describe('AdminBlocksComponent', () => {
   let component: AdminBlocksComponent;

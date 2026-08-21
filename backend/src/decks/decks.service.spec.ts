@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DecksService } from './decks.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+import { InjectPinoLogger } from 'nestjs-pino';
 
 describe('DecksService', () => {
   let service: DecksService;
@@ -18,19 +20,20 @@ describe('DecksService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      single: vi.fn(),
       then: undefined as any,
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -39,21 +42,30 @@ describe('DecksService', () => {
         {
           provide: MetricsService,
           useValue: {
-            recordSrsFlashcardCreated: jest.fn(),
-            recordSrsReviewCompleted: jest.fn(),
-            setSrsDueCards: jest.fn(),
-            setSrsAverageEasinessFactor: jest.fn(),
-            setSrsReviewSuccessRate: jest.fn(),
-            setSrsCardsPerLevel: jest.fn(),
-            setSrsCardsStuck: jest.fn(),
-            setSrsDecksTotal: jest.fn(),
-            recordSrsDeckCreated: jest.fn(),
+            recordSrsFlashcardCreated: vi.fn(),
+            recordSrsReviewCompleted: vi.fn(),
+            setSrsDueCards: vi.fn(),
+            setSrsAverageEasinessFactor: vi.fn(),
+            setSrsReviewSuccessRate: vi.fn(),
+            setSrsCardsPerLevel: vi.fn(),
+            setSrsCardsStuck: vi.fn(),
+            setSrsDecksTotal: vi.fn(),
+            recordSrsDeckCreated: vi.fn(),
           },
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: `PinoLogger:${DecksService.name}`,
+          useValue: {
+            error: vi.fn(),
+            warn: vi.fn(),
+            info: vi.fn(),
+            debug: vi.fn(),
           },
         },
       ],
@@ -63,7 +75,7 @@ describe('DecksService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

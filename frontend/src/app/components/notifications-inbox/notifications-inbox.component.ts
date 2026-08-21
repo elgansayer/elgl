@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -11,7 +12,7 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [TranslatePipe, ScrollablePillsComponent],
+  imports: [HlmButton, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })
@@ -26,13 +27,11 @@ export class NotificationsInboxComponent {
   readonly unreadCount = signal<number>(0);
 
   readonly notificationsResource = resource({
-    request: () => this.selectedTab(),
-    loader: ({ request: tab }) => this.loadNotifications(tab),
+    params: () => this.selectedTab(),
+    loader: ({ params: tab }) => this.loadNotifications(tab),
   });
 
-  readonly notifications = computed(
-    () => this.notificationsResource.value() ?? [],
-  );
+  readonly notifications = computed(() => this.notificationsResource.value() ?? []);
 
   readonly isLoading = this.notificationsResource.isLoading;
 
@@ -47,9 +46,7 @@ export class NotificationsInboxComponent {
     ];
   });
 
-  private async loadNotifications(
-    tab: NotificationTab,
-  ): Promise<InAppNotification[]> {
+  private async loadNotifications(tab: NotificationTab): Promise<InAppNotification[]> {
     const [list, unread] = await Promise.all([
       this.notificationService.getNotifications(tab),
       this.notificationService.getUnreadCount(),
@@ -121,7 +118,8 @@ export class NotificationsInboxComponent {
     if (
       notif.type === 'like_moment' ||
       notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment'
+      notif.type === 'reply_comment' ||
+      notif.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
     } else if (notif.type === 'mention_chat') {
@@ -140,6 +138,7 @@ export class NotificationsInboxComponent {
         return '❤️';
       case 'comment_moment':
       case 'reply_comment':
+      case 'mention_comment':
         return '💬';
       case 'mention_chat':
         return '📣';
@@ -164,6 +163,8 @@ export class NotificationsInboxComponent {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_comment':
+        return 'notifications.mentionedInComment';
       case 'mention_chat':
         return 'notifications.mentionedInChat';
       case 'follow':

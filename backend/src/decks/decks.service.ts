@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateDeckDto, UpdateDeckDto } from './dto/deck.dto';
 import { Deck } from './interfaces/deck.interface';
@@ -7,6 +8,8 @@ import { MetricsService } from '../metrics/metrics.service';
 @Injectable()
 export class DecksService {
   constructor(
+    @InjectPinoLogger(DecksService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
   ) {}
@@ -27,10 +30,19 @@ export class DecksService {
       .single();
 
     if (response.error || !response.data) {
-      throw new Error(
-        `Failed to create deck: ${response.error?.message ?? 'Unknown error'}`,
+      const msg = response.error?.message ?? 'Unknown error';
+      this.logger.error(
+        { userId, deckName: dto.name, error: msg },
+        'Failed to create deck',
       );
+      throw new Error(`Failed to create deck: ${msg}`);
     }
+
+    this.logger.info(
+      { userId, deckId: response.data.id, deckName: dto.name },
+      'Deck created',
+    );
+    this.metricsService.recordSrsDeckCreated();
     return response.data;
   }
 
@@ -87,10 +99,15 @@ export class DecksService {
       .single();
 
     if (response.error || !response.data) {
-      throw new Error(
-        `Failed to update deck: ${response.error?.message ?? 'Unknown error'}`,
+      const msg = response.error?.message ?? 'Unknown error';
+      this.logger.error(
+        { userId, deckId, error: msg },
+        'Failed to update deck',
       );
+      throw new Error(`Failed to update deck: ${msg}`);
     }
+
+    this.logger.info({ userId, deckId }, 'Deck updated');
     return response.data;
   }
 
@@ -103,8 +120,14 @@ export class DecksService {
       .eq('user_id', userId);
 
     if (response.error) {
+      this.logger.error(
+        { userId, deckId, error: response.error.message },
+        'Failed to delete deck',
+      );
       throw new Error(`Failed to delete deck: ${response.error.message}`);
     }
+
+    this.logger.info({ userId, deckId }, 'Deck deleted');
   }
 
   async addFlashcardToDeck(
@@ -116,7 +139,10 @@ export class DecksService {
 
     // Verify the deck belongs to the user
     const deck = await this.getDeck(userId, deckId);
-    if (!deck) throw new Error('Deck not found');
+    if (!deck) {
+      this.logger.warn({ userId, deckId, flashcardId }, 'Deck not found');
+      throw new Error('Deck not found');
+    }
 
     // Insert junction record
     const response = await supabase
@@ -129,6 +155,10 @@ export class DecksService {
       .single();
 
     if (response.error) {
+      this.logger.error(
+        { userId, deckId, flashcardId, error: response.error.message },
+        'Failed to add flashcard to deck',
+      );
       throw new Error(
         `Failed to add flashcard to deck: ${response.error.message}`,
       );
@@ -136,6 +166,10 @@ export class DecksService {
 
     // Update card count
     await this.recalculateCardCount(supabase, deckId);
+    this.logger.debug(
+      { userId, deckId, flashcardId },
+      'Flashcard added to deck',
+    );
   }
 
   async removeFlashcardFromDeck(
@@ -146,7 +180,10 @@ export class DecksService {
     const supabase = this.supabaseService.getClient();
 
     const deck = await this.getDeck(userId, deckId);
-    if (!deck) throw new Error('Deck not found');
+    if (!deck) {
+      this.logger.warn({ userId, deckId, flashcardId }, 'Deck not found');
+      throw new Error('Deck not found');
+    }
 
     const response = await supabase
       .from('deck_flashcards')
@@ -155,18 +192,30 @@ export class DecksService {
       .eq('flashcard_id', flashcardId);
 
     if (response.error) {
+      this.logger.error(
+        { userId, deckId, flashcardId, error: response.error.message },
+        'Failed to remove flashcard from deck',
+      );
       throw new Error(
         `Failed to remove flashcard from deck: ${response.error.message}`,
       );
     }
 
     await this.recalculateCardCount(supabase, deckId);
+    this.logger.debug(
+      { userId, deckId, flashcardId },
+      'Flashcard removed from deck',
+    );
   }
 
   async getDeckFlashcards(
     userId: string,
     deckId: string,
+    limit = 50,
+    offset = 0,
   ): Promise<{ id: string }[]> {
+    const safeLimit = Math.min(Math.max(1, limit), 200);
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
 
     const deck = await this.getDeck(userId, deckId);
@@ -176,6 +225,7 @@ export class DecksService {
       .from('deck_flashcards')
       .select('flashcard_id')
       .eq('deck_id', deckId)
+      .range(safeOffset, safeOffset + safeLimit - 1)
       .order('added_at', { ascending: false });
 
     if (response.error || !response.data) {

@@ -11,17 +11,17 @@ import { Directive } from '@angular/core';
   host: {
     '[attr.role]': '"button"',
     '[attr.tabindex]': '"0"',
-    '(keydown.enter)': 'onEnter($event)',
-    '(keydown.space)': 'onSpace($event)',
+    '(keydown.enter)': 'onEnter($any($event))',
+    '(keydown.space)': 'onSpace($any($event))',
   },
 })
 export class A11yClickableDirective {
-  onEnter(event: KeyboardEvent): void {
+  onEnter(event: Event): void {
     const target = event.target as HTMLElement;
     target.click();
   }
 
-  onSpace(event: KeyboardEvent): void {
+  onSpace(event: Event): void {
     event.preventDefault();
     const target = event.target as HTMLElement;
     target.click();

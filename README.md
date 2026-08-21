@@ -1,12 +1,13 @@
 # HelloTalk AI Clone
 
-This project is a premium, pixel-perfect clone of HelloTalk, built autonomously by an AI Swarm. It features an advanced social language exchange platform integrating LiveKit audio/video rooms, real-time messaging, LingQ-style interactive reading, and native speaker corrections.
+This project is a premium HelloTalk-inspired social language exchange platform integrating LiveKit audio and video rooms, real-time messaging, LingQ-style interactive reading, and native-speaker corrections. Development automation is supervised by a bounded OpenHands factory.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Wiki & Documentation](#wiki--documentation)
 - [Tech Stack](#tech-stack)
+- [Running with Docker Compose](#running-with-docker-compose)
 - [Advanced AI Factory Tooling](#advanced-ai-factory-tooling)
 
 ## Overview
@@ -18,12 +19,14 @@ HelloTalk AI Clone aims to replicate and extend the best features of modern lang
 Comprehensive documentation has been dynamically generated from the repository's codebase and GitHub issues tracking backlog.
 
 Please refer to the following Wiki pages for exhaustive details:
+
 - **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
 - **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
 - **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
-- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the swarm queue.
+- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the OpenHands Factory queue.
 
 Additional specifications:
+
 - `AGENTS.md`: The Engineering Constitution and system rules.
 - `SPEC.md`: Architectural Blueprint covering the PostGIS and PostgREST structures.
 
@@ -133,26 +136,57 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 - **Visitor Logs ("Who Viewed Me"):** A dashboard showing exactly who has clicked on a profile (blurred for free users, fully visible for VIPs).
 - **Block & Report System:** Essential moderation tools to combat inappropriate behaviour, scammers, and spam. Reports flag the user ID and message/moment context in the Supabase admin dashboard.
 
-
 ## Tech Stack
 
 - **Frontend:** Angular (Standalone Components, Signals, Tailwind CSS)
+  - _Note: For advanced frontend performance, state management (via native Angular Signals), and bundle optimization strategies, please refer to Section 5 of [`ui_architecture.md`](ui_architecture.md)._
 - **Backend:** NestJS, BullMQ
 - **Database:** Supabase (PostgreSQL with PostGIS for spatial queries, pg_trgm for full-text search)
 - **Real-Time Messaging:** Centrifugo + Redis
 - **Live Video/Audio Rooms:** LiveKit SFU
 - **Storage:** Cloudflare R2 (S3-compatible)
 
+## Running with Docker Compose
+
+The repository ships Docker Compose orchestration for the full platform. The base
+`docker-compose.yml` runs a production-style stack, `docker-compose.dev.yml` runs a
+development stack with source mounts and live reload, and `docker-compose.prod.yml`
+runs the production stack behind nginx with the Datadog agent.
+
+The base and development files orchestrate the same core services:
+
+- `api`: NestJS REST API (port 3000)
+- `web`: Angular frontend (port 80 in production, 4200 in development)
+- `cache`: Redis 7 (port 6379)
+- `websocket`: Centrifugo v5 (ports 8000 and 8001)
+- `sfu`: LiveKit v2 media server (ports 7880 and 7881)
+- plus `prometheus` and `grafana` for observability
+
+Start the production-style stack:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+For development with hot reload:
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+The NestJS API applies a global `/api` prefix, so the compose health checks poll
+`http://localhost:3000/api/health`.
+
 ## Advanced AI Factory Tooling
 
-The AI Swarm has been fully equipped with autonomous workflow management.
+The repository contains a supervised OpenHands Factory under `automation/`. A typed, phase-specific router uses
+subscription-authenticated Claude Code, Codex CLI, configurable Google and OpenCode agents, with OpenHands API as
+an optional emergency fallback. Every task uses bounded execution and an isolated rootless Podman worktree. Agent
+providers cannot push to `main` or merge their own pull requests.
 
-**Tools Installed:**
-
-- **Dependabot:** Fully configured (`.github/dependabot.yml`) to automatically submit PRs for outdated frontend/backend packages every week.
-- **Ngrok:** Installed in the backend for webhook testing. The AI can now test LiveKit and Stripe payments locally using `npx ngrok http 3000`.
-- **Two-Way Sync:** A GitHub Action perfectly syncs `TODO.md` with GitHub Issues.
-
-**Pending Setup (Action Required):**
-
-- **GitHub CodeQL:** To prevent the AI from accidentally writing vulnerable code, please go to your GitHub repository -> Settings -> Code Security and enable "CodeQL Analysis". This will automatically scan every commit the AI pushes for vulnerabilities.
+Production deployment, authentication, recovery, costs, security boundaries and operator commands are
+documented in [the factory runbook](docs/factory/README.md). The watchdog maintains a sanitised
+[GitHub status and control issue](https://github.com/elgansayer/elgl/issues?q=is%3Aissue+is%3Aopen+label%3Afactory-status)
+with fixed, allowlisted pause, resume, status and restart comments. See the
+[control-panel security model](docs/factory/CONTROL-PANEL.md).

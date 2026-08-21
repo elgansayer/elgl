@@ -5,6 +5,7 @@ import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
+import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
@@ -15,6 +16,7 @@ import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
+import { LearnerKnowledgeModule } from './learner-knowledge/learner-knowledge.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { DecksModule } from './decks/decks.module';
@@ -22,6 +24,7 @@ import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
+import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -29,6 +32,7 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -40,6 +44,7 @@ import { HelpModule } from './help/help.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { GroupsModule } from './groups/groups.module';
+import { CommunitiesModule } from './communities/communities.module';
 import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
@@ -69,10 +74,12 @@ import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { CloudflareModule } from './cloudflare/cloudflare.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [
@@ -99,6 +106,8 @@ import { MetricsModule } from './metrics/metrics.module';
       ignoreErrors: false,
     }),
     SharedLoggerModule,
+    RetryModule,
+    LivekitModule,
     SupabaseModule,
     LocationModule,
     AuthModule,
@@ -114,6 +123,7 @@ import { MetricsModule } from './metrics/metrics.module';
     AudioRoomsModule,
     MonetisationModule,
     EconomyModule,
+    EscrowModule,
     SafetyModule,
     HobbyTagsModule,
     InterestsModule,
@@ -121,6 +131,7 @@ import { MetricsModule } from './metrics/metrics.module';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    BlocksModule,
     NotificationsModule,
     CallsModule,
     QuizModule,
@@ -141,6 +152,7 @@ import { MetricsModule } from './metrics/metrics.module';
     LanguageChallengesModule,
     PronunciationModule,
     GroupsModule,
+    CommunitiesModule,
     ShoppingModule,
     MilestonesModule,
     StudyBuddiesModule,
@@ -162,6 +174,9 @@ import { MetricsModule } from './metrics/metrics.module';
     AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
+    ReadingEngineModule,
+    CloudflareModule,
+    LearnerKnowledgeModule,
   ],
   controllers: [AppController],
   providers: [
@@ -171,7 +186,6 @@ import { MetricsModule } from './metrics/metrics.module';
 
       useClass: ThrottlerGuard,
     },
-    PronunciationScoringService,
     AnkiiIntegrationService,
   ],
 })

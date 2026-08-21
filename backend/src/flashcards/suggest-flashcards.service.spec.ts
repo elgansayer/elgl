@@ -1,29 +1,48 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 
+interface MockLogger {
+  info: Mock;
+  error: Mock;
+  warn: Mock;
+  debug: Mock;
+}
+
+interface MockQueryBuilder {
+  select: Mock;
+  eq: Mock;
+  then?: Mock;
+}
+
+interface MockSupabaseClient {
+  from: Mock;
+}
+
 describe('SuggestFlashcardsService', () => {
   let service: SuggestFlashcardsService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
-  let mockLogger: any;
+  let mockSupabaseClient: MockSupabaseClient;
+  let mockQueryBuilder: MockQueryBuilder;
+  let mockLogger: MockLogger;
 
   beforeEach(async () => {
     mockLogger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -36,13 +55,13 @@ describe('SuggestFlashcardsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('mock-value'),
+            get: vi.fn().mockReturnValue('mock-value'),
           },
         },
       ],
@@ -52,7 +71,7 @@ describe('SuggestFlashcardsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -109,7 +128,9 @@ describe('SuggestFlashcardsService', () => {
 
     it('should exclude known words when user_id is provided and exclude_known is not false', async () => {
       mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (resolve: any) =>
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null }) => void,
+      ) =>
         resolve({
           data: [{ word_token: 'hello' }, { word_token: 'world' }],
           error: null,
@@ -158,8 +179,9 @@ describe('SuggestFlashcardsService', () => {
 
     it('should handle known words query returning null data gracefully', async () => {
       mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (resolve: any) =>
-        resolve({ data: null, error: null });
+      mockQueryBuilder.then = (
+        resolve: (value: { data: null; error: null }) => void,
+      ) => resolve({ data: null, error: null });
 
       const result = await service.suggestFromMessage({
         message: 'Hello world!',

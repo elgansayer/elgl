@@ -1,44 +1,40 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { Flashcard } from './vocabulary.store';
+import { Injectable, signal } from '@angular/core';
+import type { Flashcard } from './vocabulary.store';
 
-interface QueuedReview {
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
   newLevel: number;
   timestamp: string;
 }
 
-interface OfflinePayload {
-  flashcards: Flashcard[];
-  dueReviews: Flashcard[];
-  queuedReviews: QueuedReview[];
-}
+const DB_NAME = 'hellotalk_srs_offline';
+const DB_VERSION = 1;
+/** Maximum number of queued reviews to load in one batch during sync. */
+const SYNC_BATCH_SIZE = 25;
 
 @Injectable({
   providedIn: 'root',
 })
 export class SrsOfflineService {
-  private readonly dbName = 'hellotalk_srs_offline';
-  private readonly storeName = 'srs_cache';
-
-  /** Number of SRS reviews queued for sync */
-  readonly pendingSyncCount = signal(0);
-  /** Whether a sync operation is currently in progress */
-  readonly isSyncing = signal(false);
-
   private db: IDBDatabase | null = null;
   private initPromise: Promise<void> | null = null;
+
+  readonly pendingSyncCount = signal(0);
+  readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise.then(() => this.refreshCount()).catch(() => undefined);
+      this.initPromise
+        .then(() => this.refreshPendingCount())
+        .catch(() => undefined);
     }
   }
 
   private initDB(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         this.db = request.result;
@@ -46,174 +42,173 @@ export class SrsOfflineService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
         const db = target.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('flashcards')) {
+          db.createObjectStore('flashcards', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('due_reviews')) {
+          db.createObjectStore('due_reviews', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('sync_queue')) {
+          db.createObjectStore('sync_queue', { keyPath: 'id' });
         }
       };
     });
   }
 
-  private async ensureDB(): Promise<void> {
+  private async ensureDB(): Promise<IDBDatabase> {
     if (this.initPromise) await this.initPromise;
-    if (!this.db) throw new Error('SRS offline IndexedDB not initialised');
+    if (!this.db) throw new Error('IndexedDB not initialised');
+    return this.db;
   }
 
-  private isIndexedDBAvailable(): boolean {
+  private isAvailable(): boolean {
     return typeof window !== 'undefined' && !!window.indexedDB;
   }
 
-  private async readPayload(): Promise<OfflinePayload> {
-    if (!this.isIndexedDBAvailable()) return { flashcards: [], dueReviews: [], queuedReviews: [] };
-    await this.ensureDB();
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(this.storeName, 'readonly');
-      const store = tx.objectStore(this.storeName);
-      const req = store.get('cache');
-      req.onsuccess = () => {
-        const raw = req.result;
-        if (raw && typeof raw === 'object' && 'payload' in raw) {
-          resolve(raw.payload as OfflinePayload);
-        } else {
-          resolve({ flashcards: [], dueReviews: [], queuedReviews: [] });
-        }
-      };
-      req.onerror = () => reject(req.error);
-    });
+  /** Cache flashcards locally for offline access (bulk write). */
+  async cacheFlashcards(list: Flashcard[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'flashcards');
+    if (list.length === 0) return;
+    const tx = db.transaction('flashcards', 'readwrite');
+    const store = tx.objectStore('flashcards');
+    // Bulk put using Promise.all instead of sequential awaits.
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
   }
 
-  private async writePayload(payload: OfflinePayload): Promise<void> {
-    if (!this.isIndexedDBAvailable()) return;
-    await this.ensureDB();
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(this.storeName, 'readwrite');
-      const store = tx.objectStore(this.storeName);
-      store.put({ key: 'cache', payload });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
-  private async refreshCount(): Promise<void> {
-    try {
-      const payload = await this.readPayload();
-      this.pendingSyncCount.set(payload.queuedReviews.length);
-    } catch {
-      // Silently handle count refresh failures
-    }
-  }
-
-  /** Cache flashcards locally for offline access. */
-  async cacheFlashcards(flashcards: Flashcard[]): Promise<void> {
-    const current = await this.readPayload();
-    current.flashcards = flashcards;
-    await this.writePayload(current);
-  }
-
-  /** Cache due reviews locally for offline access. */
-  async cacheDueReviews(reviews: Flashcard[]): Promise<void> {
-    const current = await this.readPayload();
-    current.dueReviews = reviews;
-    await this.writePayload(current);
-  }
-
-  /** Retrieve cached flashcards from local storage. */
+  /** Retrieve cached flashcards when offline */
   async getCachedFlashcards(): Promise<Flashcard[]> {
-    const payload = await this.readPayload();
-    return payload.flashcards;
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'flashcards');
   }
 
-  /** Retrieve cached due reviews from local storage. */
+  /** Cache due reviews for offline access (bulk write). */
+  async cacheDueReviews(list: Flashcard[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'due_reviews');
+    if (list.length === 0) return;
+    const tx = db.transaction('due_reviews', 'readwrite');
+    const store = tx.objectStore('due_reviews');
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
+  }
+
+  /** Retrieve cached due reviews when offline */
   async getCachedDueReviews(): Promise<Flashcard[]> {
-    const payload = await this.readPayload();
-    return payload.dueReviews;
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'due_reviews');
   }
 
-  /**
-   * Queue an SRS review grade for later sync when offline.
-   * Updates the cached dueReviews list optimistically.
-   */
+  /** Queue an SRS review operation for later sync when offline */
   async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
-    const current = await this.readPayload();
-    current.queuedReviews.push({
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    const id = `srs_review_${Date.now()}_${crypto.randomUUID()}`;
+    const payload: QueuedReviewPayload & { id: string } = {
+      id,
       flashcardId,
       quality,
       newLevel,
       timestamp: new Date().toISOString(),
-    });
-    // Remove from cached due reviews if present
-    current.dueReviews = current.dueReviews.filter((f) => f.id !== flashcardId);
-    // Update the cached flashcard with the new level
-    current.flashcards = current.flashcards.map((f) =>
-      f.id === flashcardId ? { ...f, srs_level: newLevel } : f,
-    );
-    await this.writePayload(current);
-    this.pendingSyncCount.set(current.queuedReviews.length);
+    };
+    const store = db.transaction('sync_queue', 'readwrite').objectStore('sync_queue');
+    await this.putInStore(store, payload as unknown as Record<string, unknown>);
+    await this.refreshPendingCount();
   }
 
-  /** Get all queued pending reviews. */
-  async getPendingReviews(): Promise<QueuedReview[]> {
-    const payload = await this.readPayload();
-    return payload.queuedReviews;
-  }
-
-  /**
-   * Sync queued reviews using the provided function.
-   * Individual failures do not block the rest.
-   */
+  /** Sync queued offline reviews to the backend in batches to avoid memory pressure. */
   async syncQueuedReviews(
-    syncFn: (queued: QueuedReview) => Promise<void>,
+    syncCallback: (queued: QueuedReviewPayload) => Promise<void>,
   ): Promise<{ synced: number; failed: number }> {
-    this.isSyncing.set(true);
+    if (!this.isAvailable()) return { synced: 0, failed: 0 };
+    const db = await this.ensureDB();
+    const items = await this.getAllFromStore(db, 'sync_queue');
+    if (items.length === 0) return { synced: 0, failed: 0 };
+
     let synced = 0;
     let failed = 0;
-    try {
-      const payload = await this.readPayload();
-      const remaining: QueuedReview[] = [];
-      for (const review of payload.queuedReviews) {
-        try {
-          await syncFn(review);
+
+    // Process in batches to avoid holding all items in memory during sync.
+    for (let batchStart = 0; batchStart < items.length; batchStart += SYNC_BATCH_SIZE) {
+      const batch = items.slice(batchStart, batchStart + SYNC_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          const queued = item as unknown as QueuedReviewPayload & { id: string };
+          await syncCallback(queued);
+          await this.deleteFromStore(db, 'sync_queue', queued.id);
+        }),
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
           synced++;
-        } catch {
-          remaining.push(review);
+        } else {
           failed++;
         }
       }
-      payload.queuedReviews = remaining;
-      await this.writePayload(payload);
-      this.pendingSyncCount.set(remaining.length);
-    } catch (err: unknown) {
-      // overall sync failure - leave queue intact
-    } finally {
-      this.isSyncing.set(false);
     }
+
+    await this.refreshPendingCount();
     return { synced, failed };
   }
 
-  /** Remove a successfully synced review from the queue. */
-  async removePendingReview(flashcardId: string): Promise<void> {
-    const current = await this.readPayload();
-    current.queuedReviews = current.queuedReviews.filter(
-      (r) => r.flashcardId !== flashcardId,
-    );
-    await this.writePayload(current);
-    this.pendingSyncCount.set(current.queuedReviews.length);
+  private async refreshPendingCount(): Promise<void> {
+    try {
+      const db = await this.ensureDB();
+      const items = await this.getAllFromStore(db, 'sync_queue');
+      this.pendingSyncCount.set(items.length);
+    } catch {
+      // silently ignore
+    }
   }
 
-  /** Clear all offline cached data. */
-  async clearCache(): Promise<void> {
-    if (!this.isIndexedDBAvailable()) return;
-    await this.ensureDB();
+  // --- IDB Helpers ---
+
+  private putInStore(store: IDBObjectStore, value: Record<string, unknown>): Promise<void> {
     return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(this.storeName, 'readwrite');
-      const store = tx.objectStore(this.storeName);
-      store.clear();
-      tx.oncomplete = () => {
-        this.pendingSyncCount.set(0);
-        resolve();
-      };
-      tx.onerror = () => reject(tx.error);
+      const req = store.put(value);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private getAllFromStore<T = unknown>(db: IDBDatabase, storeName: string): Promise<T[]> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readonly').objectStore(storeName);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private deleteFromStore(db: IDBDatabase, storeName: string, key: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private clearStore(db: IDBDatabase, storeName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
     });
   }
 }

@@ -1,25 +1,25 @@
 <div class="app-screen">
   <!-- Header -->
-  <section class="app-card app-padded">
+  <app-card customClass="app-padded">
     <h1 class="app-section-title">{{ 'favourites.title' | t }}</h1>
     <p class="app-muted">{{ 'favourites.subtitle' | t }}</p>
-  </section>
+  </app-card>
 
   <!-- Tab navigation -->
   <nav class="mt-3 px-4 overflow-x-auto">
     <div class="flex gap-1.5 pb-2">
       @for (tab of tabs; track tab.id) {
-        <button
-          type="button"
-          class="app-chip whitespace-nowrap transition-colors"
-          [class.app-chip-active]="activeTab() === tab.id"
-          (click)="setTab(tab.id)"
-         [attr.aria-label]=\"tab.labelKey | t\">
+        <app-chip
+          customClass="whitespace-nowrap transition-colors"
+          [selected]="activeTab() === tab.id"
+          (clicked)="setTab(tab.id)"
+          [attr.aria-label]="tab.labelKey | t"
+        >
           {{ tab.icon }} {{ tab.labelKey | t }}
           @if (tab.id === 'all') {
             <span class="ms-1 text-[10px] opacity-60">({{ favourites().length }})</span>
           }
-        </button>
+        </app-chip>
       }
     </div>
   </nav>
@@ -40,11 +40,12 @@
 
   <!-- Favourites list -->
   @for (fav of filteredFavourites(); track fav.id) {
-    <article class="app-card app-padded mx-4 mt-3">
+    <app-card customClass="app-padded mx-4 mt-3">
       <!-- Header row: avatar, name, date, delete -->
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
-          <img loading="lazy"
+          <img
+            loading="lazy"
             [src]="fav.item_payload?.sender?.avatar_url || 'https://via.placeholder.com/80'"
             alt="avatar"
             class="h-8 w-8 rounded-full border border-surface-100 object-cover"
@@ -56,8 +57,9 @@
         <div class="flex items-center gap-2">
           <p class="text-[11px] text-text-muted">{{ fav.created_at | date: 'short' }}</p>
           <button
+            hlmBtn
             type="button"
-            class="p-1 text-text-muted hover:text-red-400 transition-colors"
+            class="p-1 text-text-muted hover:text-danger transition-colors"
             (click)="deleteFavourite(fav)"
             [attr.aria-label]="'favourites.delete' | t"
           >
@@ -69,51 +71,64 @@
       <!-- Item type badge -->
       <div class="mt-2">
         @if (fav.item_type === 'audio' || fav.item_payload?.message_type === 'voice') {
-          <span class="app-chip bg-purple-500/20 text-purple-300 text-[11px]">
+          <app-chip customClass="bg-primary/20 text-primary text-[11px]">
             {{ 'favourites.voiceNote' | t }}
-          </span>
+          </app-chip>
         }
         @if (fav.item_type === 'moment') {
-          <span class="app-chip bg-blue-500/20 text-blue-300 text-[11px]">
+          <app-chip customClass="bg-secondary/20 text-secondary text-[11px]">
             {{ 'favourites.momentCard' | t }}
-          </span>
+          </app-chip>
         }
         @if (fav.item_type === 'correction' || fav.item_payload?.message_type === 'correction') {
-          <span class="app-chip bg-amber-500/20 text-amber-300 text-[11px]">
+          <app-chip customClass="bg-warning/20 text-warning text-[11px]">
             {{ 'favourites.chipCorrections' | t }}
-          </span>
+          </app-chip>
         }
       </div>
 
       <!-- Text message content -->
       @if (fav.item_payload?.message_type === 'text' && fav.item_payload?.text_content) {
-        <p class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary">
+        <p
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
           {{ fav.item_payload.text_content }}
         </p>
       }
 
       <!-- Correction payload -->
-      @if (fav.item_payload?.message_type === 'correction' && fav.item_payload?.correction_payload) {
+      @if (
+        fav.item_payload?.message_type === 'correction' && fav.item_payload?.correction_payload
+      ) {
         <div class="mt-3">
           <app-visual-diff
             [original]="fav.item_payload!.correction_payload!.original"
             [corrected]="fav.item_payload!.correction_payload!.corrected"
             [explanation]="fav.item_payload!.correction_payload!.explanation"
+            [showActions]="true"
           ></app-visual-diff>
         </div>
       }
 
       <!-- Voice / audio content -->
-      @if (fav.item_payload?.media_url &&
-           (fav.item_payload?.message_type === 'voice' || fav.item_type === 'audio')) {
+      @if (
+        fav.item_payload?.media_url &&
+        (fav.item_payload?.message_type === 'voice' || fav.item_type === 'audio')
+      ) {
         <div class="mt-3 flex items-center gap-3">
           <button
+            hlmBtn
             type="button"
             class="flex items-center gap-2 rounded-full bg-surface-300 px-4 py-2 text-sm text-text-primary hover:bg-surface-200 transition-colors"
             (click)="toggleAudio(fav)"
-           [attr.aria-label]="'favourites.audioPause' | t">
+            [attr.aria-label]="'favourites.audioPause' | t"
+          >
             <span>{{ audioPlayingId() === fav.id ? '\u23F8' : '\u25B6' }}</span>
-            <span>{{ audioPlayingId() === fav.id ? ('favourites.audioPause' | t) : ('favourites.audioPlay' | t) }}</span>
+            <span>{{
+              audioPlayingId() === fav.id
+                ? ('favourites.audioPause' | t)
+                : ('favourites.audioPlay' | t)
+            }}</span>
           </button>
           @if (fav.item_payload?.text_content) {
             <span class="text-xs text-text-muted">{{ fav.item_payload.text_content }}</span>
@@ -123,27 +138,38 @@
 
       <!-- Moment content -->
       @if (fav.item_type === 'moment' && fav.item_payload?.text_content) {
-        <p class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary">
+        <p
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
           {{ fav.item_payload.text_content }}
         </p>
       }
 
       <!-- Correction type (when item_type is 'correction' but payload may differ) -->
       @if (fav.item_type === 'correction' && !fav.item_payload?.message_type) {
-        <div class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary">
-          @if (fav.item_payload?.correction_payload?.original && fav.item_payload?.correction_payload?.corrected) {
-            <span class="line-through text-red-400 me-2">{{ fav.item_payload.correction_payload.original }}</span>
-            <span class="text-green-400">{{ fav.item_payload.correction_payload.corrected }}</span>
+        <div
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
+          @if (
+            fav.item_payload?.correction_payload?.original &&
+            fav.item_payload?.correction_payload?.corrected
+          ) {
+            <span class="line-through text-danger me-2">{{
+              fav.item_payload.correction_payload.original
+            }}</span>
+            <span class="text-success">{{ fav.item_payload.correction_payload.corrected }}</span>
           }
         </div>
       }
 
       <!-- Notes -->
       @if (fav.notes) {
-        <p class="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-2 pb-2 text-xs text-amber-400">
+        <p
+          class="mt-3 rounded-2xl border border-warning/30 bg-warning/10 ps-3 pe-3 pt-2 pb-2 text-xs text-warning"
+        >
           &#x1F4DD; {{ fav.notes }}
         </p>
       }
-    </article>
+    </app-card>
   }
 </div>
