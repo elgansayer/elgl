@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { PasswordResetService } from './password-reset.service';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
@@ -6,6 +13,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class PasswordResetController {
+  private readonly logger = new Logger(PasswordResetController.name);
+
   constructor(private readonly resetService: PasswordResetService) {}
 
 <<<<<<< HEAD
@@ -18,7 +27,14 @@ export class PasswordResetController {
   async requestPasswordReset(
     @Body() dto: RequestPasswordResetDto,
   ): Promise<{ message: string }> {
-    await this.resetService.requestPasswordReset(dto);
+    try {
+      await this.resetService.requestPasswordReset(dto);
+    } catch {
+      // Always return the same public response so infrastructure failures cannot
+      // be used to distinguish registered from unregistered email addresses.
+      this.logger.error('Password reset request failed before completion');
+    }
+
     return {
       message: 'If the email address exists, a reset link has been sent.',
     };

@@ -1,6 +1,26 @@
+import type { Mock } from 'vitest';
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest (transitively imported through chat -> link-preview)
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: { createElement: vi.fn(), createDocumentFragment: vi.fn() },
+      },
+    };
+  }),
+}));
+vi.mock('dompurify', () => ({
+  __esModule: true,
+  default: vi.fn(() => ({
+    sanitize: vi.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: vi.fn(),
+  })),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { CentrifugoService } from './centrifugo.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
@@ -17,6 +37,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
 
@@ -27,55 +48,65 @@ describe('ChatController', () => {
         {
           provide: ChatService,
           useValue: {
-            generateConnectionToken: jest.fn(),
-            sendMessage: jest.fn(),
-            getRooms: jest.fn(),
-            getMessages: jest.fn(),
-            addFavourite: jest.fn(),
-            getFavourites: jest.fn(),
-            deleteFavourite: jest.fn(),
-            llmProxy: jest.fn(),
-            generateAiReply: jest.fn(),
-            getSuggestedReplies: jest.fn(),
-            replyToStatusUpdate: jest.fn(),
-            correctMessage: jest.fn(),
-            fixMessage: jest.fn(),
-            updateMessageStatus: jest.fn(),
-            viewMessageMedia: jest.fn(),
-            getGroupMembers: jest.fn(),
-            lockChat: jest.fn(),
-            unlockChat: jest.fn(),
-            getLockedChats: jest.fn(),
-            addLabel: jest.fn(),
-            removeLabel: jest.fn(),
-            getUserLabels: jest.fn(),
-            getRoomsByLabel: jest.fn(),
-            exportChatHistory: jest.fn(),
-            getRoomGreeting: jest.fn(),
+            generateConnectionToken: vi.fn(),
+            sendMessage: vi.fn(),
+            getRooms: vi.fn(),
+            getMessages: vi.fn(),
+            addFavourite: vi.fn(),
+            getFavourites: vi.fn(),
+            deleteFavourite: vi.fn(),
+            llmProxy: vi.fn(),
+            generateAiReply: vi.fn(),
+            getSuggestedReplies: vi.fn(),
+            replyToStatusUpdate: vi.fn(),
+            correctMessage: vi.fn(),
+            fixMessage: vi.fn(),
+            updateMessageStatus: vi.fn(),
+            viewMessageMedia: vi.fn(),
+            getGroupMembers: vi.fn(),
+            lockChat: vi.fn(),
+            unlockChat: vi.fn(),
+            getLockedChats: vi.fn(),
+            addLabel: vi.fn(),
+            removeLabel: vi.fn(),
+            getUserLabels: vi.fn(),
+            getRoomsByLabel: vi.fn(),
+            exportChatHistory: vi.fn(),
+            getRoomGreeting: vi.fn(),
+          },
+        },
+        {
+          provide: CentrifugoService,
+          useValue: {
+            checkConnectionRateLimit: vi.fn().mockResolvedValue(true),
+            generateConnectionToken: vi.fn(),
+            publish: vi.fn(),
+            signJwt: vi.fn(),
           },
         },
         {
           provide: ConversationStarterService,
           useValue: {
-            getSuggestions: jest.fn(),
+            getSuggestions: vi.fn(),
           },
         },
         {
           provide: TranslationService,
           useValue: {
-            detectLanguage: jest.fn(),
-            translate: jest.fn(),
-            translateWithDetection: jest.fn(),
+            detectLanguage: vi.fn(),
+            translate: vi.fn(),
+            translateWithDetection: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    centrifugoService = module.get<CentrifugoService>(CentrifugoService);
     conversationStarterService = module.get<ConversationStarterService>(
       ConversationStarterService,
     );
@@ -83,7 +114,7 @@ describe('ChatController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   function mockUser(): User {
@@ -95,23 +126,62 @@ describe('ChatController', () => {
   });
 
   describe('getConnectionToken', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.getConnectionToken(null);
-      expect(result).toBeNull();
-      expect(chatService.generateConnectionToken).not.toHaveBeenCalled();
+    const mockReq = () => ({ headers: {}, ip: '127.0.0.1' }) as unknown as any;
+
+    const mockRes = () => {
+      const res: Record<string, any> = {};
+      res.status = vi.fn().mockReturnValue(res);
+      res.json = vi.fn().mockReturnValue(res);
+      res.header = vi.fn().mockReturnValue(res);
+      return res as unknown as any;
+    };
+
+    it('should respond with 401 if user is not provided', async () => {
+      const res = mockRes();
+      await controller.getConnectionToken(null, mockReq(), res);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(null);
     });
 
-    it('should return connection token when user is provided', async () => {
-      const _mockToken = 'ws-token';
-      (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
-        _mockToken,
+    it('should return connection token when user is provided and rate limit allows', async () => {
+      (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
+        allowed: true,
+        retryAfterMs: 0,
+      });
+      (chatService.generateConnectionToken as Mock).mockResolvedValue(
+        'ws-token',
       );
 
-      const result = await controller.getConnectionToken(mockUser());
+      const res = mockRes();
+      await controller.getConnectionToken(mockUser(), mockReq(), res);
+      expect(centrifugoService.checkConnectionRateLimit).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(String),
+      );
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
-      expect(result).toEqual({ token: 'ws-token' });
+      expect(res.json).toHaveBeenCalledWith({ token: 'ws-token' });
+    });
+
+    it('should respond with 429 when rate limit is exceeded', async () => {
+      (centrifugoService.checkConnectionRateLimit as Mock).mockResolvedValue({
+        allowed: false,
+        retryAfterMs: 30000,
+      });
+
+      const res = mockRes();
+      await controller.getConnectionToken(mockUser(), mockReq(), res);
+      expect(res.status).toHaveBeenCalledWith(429);
+      expect(res.header).toHaveBeenCalledWith('Retry-After', '30');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 429,
+          message: expect.stringContaining(
+            'Too many WebSocket connection attempts',
+          ),
+        }),
+      );
     });
   });
 
@@ -131,7 +201,7 @@ describe('ChatController', () => {
         text: 'Hello',
       } as unknown as SendMessageDto;
       const savedMessage = { id: 'msg-1' };
-      (chatService.sendMessage as jest.Mock).mockResolvedValue(savedMessage);
+      (chatService.sendMessage as Mock).mockResolvedValue(savedMessage);
 
       const result = await controller.sendMessage(mockUser(), dto);
       expect(chatService.sendMessage).toHaveBeenCalledWith('user-1', dto);
@@ -148,7 +218,7 @@ describe('ChatController', () => {
 
     it('should call chatService.getRooms when user is provided', async () => {
       const rooms = [{ id: 'global-exchange' }];
-      (chatService.getRooms as jest.Mock).mockResolvedValue(rooms);
+      (chatService.getRooms as Mock).mockResolvedValue(rooms);
 
       const result = await controller.getRooms(mockUser());
       expect(chatService.getRooms).toHaveBeenCalledWith('user-1');
@@ -159,7 +229,7 @@ describe('ChatController', () => {
   describe('getMessages', () => {
     it('should call chatService.getMessages without user when omitted', async () => {
       const messages = [{ id: 'msg-1' }];
-      (chatService.getMessages as jest.Mock).mockResolvedValue(messages);
+      (chatService.getMessages as Mock).mockResolvedValue(messages);
 
       const result = await controller.getMessages('room-1', 'search-term');
       expect(chatService.getMessages).toHaveBeenCalledWith(
@@ -170,7 +240,7 @@ describe('ChatController', () => {
     });
 
     it('should pass user id when user is provided', async () => {
-      (chatService.getMessages as jest.Mock).mockResolvedValue([]);
+      (chatService.getMessages as Mock).mockResolvedValue([]);
       const result = await controller.getMessages('room-1', '', mockUser());
       expect(chatService.getMessages).toHaveBeenCalledWith(
         'room-1',
@@ -193,7 +263,7 @@ describe('ChatController', () => {
 
     it('should call chatService.addFavourite when user is provided', async () => {
       const dto = { messageId: 'msg-1' } as unknown as AddFavouriteDto;
-      (chatService.addFavourite as jest.Mock).mockResolvedValue(undefined);
+      (chatService.addFavourite as Mock).mockResolvedValue(undefined);
 
       const result = await controller.addFavourite(mockUser(), dto);
       expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
@@ -210,7 +280,7 @@ describe('ChatController', () => {
 
     it('should call chatService.getFavourites when user is provided', async () => {
       const favourites = [{ id: 'fav-1' }];
-      (chatService.getFavourites as jest.Mock).mockResolvedValue(favourites);
+      (chatService.getFavourites as Mock).mockResolvedValue(favourites);
 
       const result = await controller.getFavourites(mockUser());
       expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
@@ -226,7 +296,7 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.deleteFavourite when user is provided', async () => {
-      (chatService.deleteFavourite as jest.Mock).mockResolvedValue(undefined);
+      (chatService.deleteFavourite as Mock).mockResolvedValue(undefined);
 
       const result = await controller.deleteFavourite(mockUser(), 'fav-1');
       expect(chatService.deleteFavourite).toHaveBeenCalledWith(
@@ -249,7 +319,7 @@ describe('ChatController', () => {
 
     it('should call chatService.llmProxy when user is provided', async () => {
       const dto = { messageText: 'Hello' };
-      (chatService.llmProxy as jest.Mock).mockResolvedValue({
+      (chatService.llmProxy as Mock).mockResolvedValue({
         response: 'Hi there',
       });
 
@@ -274,7 +344,7 @@ describe('ChatController', () => {
 
     it('should call chatService.generateAiReply when user is provided', async () => {
       const dto = { text: 'Hello' };
-      (chatService.generateAiReply as jest.Mock).mockResolvedValue({
+      (chatService.generateAiReply as Mock).mockResolvedValue({
         response: 'Hi',
       });
 
@@ -301,7 +371,7 @@ describe('ChatController', () => {
       const dto = {
         messageText: 'hi',
       } as unknown as SuggestedRepliesRequestDto;
-      (chatService.getSuggestedReplies as jest.Mock).mockResolvedValue([
+      (chatService.getSuggestedReplies as Mock).mockResolvedValue([
         'Hello!',
         'How are you?',
       ]);
@@ -327,9 +397,10 @@ describe('ChatController', () => {
 
     it('should return suggestions array', async () => {
       const dto = { partnerId: 'partner-1' };
-      (
-        conversationStarterService.getSuggestions as jest.Mock
-      ).mockResolvedValue(['What do you do?', 'Where are you from?']);
+      (conversationStarterService.getSuggestions as Mock).mockResolvedValue([
+        'What do you do?',
+        'Where are you from?',
+      ]);
 
       const result = await controller.getConversationStarters(mockUser(), dto);
       expect(conversationStarterService.getSuggestions).toHaveBeenCalledWith(
@@ -353,8 +424,8 @@ describe('ChatController', () => {
     });
 
     it('should translate using detected language', async () => {
-      (translationService.detectLanguage as jest.Mock).mockResolvedValue('en');
-      (translationService.translate as jest.Mock).mockResolvedValue('Hola');
+      (translationService.detectLanguage as Mock).mockResolvedValue('en');
+      (translationService.translate as Mock).mockResolvedValue('Hola');
 
       const result = await controller.translateVoiceroomText(mockUser(), {
         text: 'Hello',
@@ -384,9 +455,7 @@ describe('ChatController', () => {
     });
 
     it('should call translateWithDetection and return full payload', async () => {
-      (
-        translationService.translateWithDetection as jest.Mock
-      ).mockResolvedValue({
+      (translationService.translateWithDetection as Mock).mockResolvedValue({
         translatedText: 'Hola',
         detectedLanguage: 'en',
       });
@@ -423,7 +492,7 @@ describe('ChatController', () => {
         roomId: 'room-1',
         text: 'ok',
       } as unknown as ReplyToStatusUpdateDto;
-      (chatService.replyToStatusUpdate as jest.Mock).mockResolvedValue({
+      (chatService.replyToStatusUpdate as Mock).mockResolvedValue({
         id: 'msg-2',
       });
 
@@ -446,7 +515,7 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.correctMessage when user is provided', async () => {
-      (chatService.correctMessage as jest.Mock).mockResolvedValue({
+      (chatService.correctMessage as Mock).mockResolvedValue({
         id: 'msg-1',
       });
 
@@ -480,7 +549,7 @@ describe('ChatController', () => {
         correctedText: 'fixed',
         explanation: 'notes',
       } as unknown as FixMessageDto;
-      (chatService.fixMessage as jest.Mock).mockResolvedValue({ id: 'msg-1' });
+      (chatService.fixMessage as Mock).mockResolvedValue({ id: 'msg-1' });
 
       const result = await controller.fixMessage(mockUser(), 'msg-1', dto);
       expect(chatService.fixMessage).toHaveBeenCalledWith(
@@ -503,9 +572,13 @@ describe('ChatController', () => {
 
     it('should call chatService.updateMessageStatus when user is provided', async () => {
       const dto = { status: 'read' as const };
-      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(undefined);
+      (chatService.updateMessageStatus as Mock).mockResolvedValue(undefined);
 
-      const result = await controller.updateMessageStatus(mockUser(), 'msg-1', dto);
+      const result = await controller.updateMessageStatus(
+        mockUser(),
+        'msg-1',
+        dto,
+      );
       expect(chatService.updateMessageStatus).toHaveBeenCalledWith(
         'user-1',
         'msg-1',
@@ -523,7 +596,7 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.viewMessageMedia', async () => {
-      (chatService.viewMessageMedia as jest.Mock).mockResolvedValue(undefined);
+      (chatService.viewMessageMedia as Mock).mockResolvedValue(undefined);
 
       const result = await controller.viewMessageMedia(mockUser(), 'msg-1');
       expect(chatService.viewMessageMedia).toHaveBeenCalledWith(
@@ -555,7 +628,7 @@ describe('ChatController', () => {
         user_id: string;
         user?: { display_name?: string; avatar_url?: string | null };
       }>;
-      (chatService.getGroupMembers as jest.Mock).mockResolvedValue(members);
+      (chatService.getGroupMembers as Mock).mockResolvedValue(members);
 
       const result = await controller.getRoomMembers('room-1', mockUser());
       expect(chatService.getGroupMembers).toHaveBeenCalledWith(
@@ -577,7 +650,7 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.lockChat when user is provided', async () => {
-      (chatService.lockChat as jest.Mock).mockResolvedValue(undefined);
+      (chatService.lockChat as Mock).mockResolvedValue(undefined);
 
       const result = await controller.lockChat(mockUser(), 'room-1');
       expect(chatService.lockChat).toHaveBeenCalledWith('user-1', 'room-1');
@@ -593,7 +666,7 @@ describe('ChatController', () => {
     });
 
     it('should call chatService.unlockChat when user is provided', async () => {
-      (chatService.unlockChat as jest.Mock).mockResolvedValue(undefined);
+      (chatService.unlockChat as Mock).mockResolvedValue(undefined);
 
       const result = await controller.unlockChat(mockUser(), 'room-1');
       expect(chatService.unlockChat).toHaveBeenCalledWith('user-1', 'room-1');
@@ -610,7 +683,7 @@ describe('ChatController', () => {
 
     it('should call chatService.getLockedChats when user is provided', async () => {
       const roomIds = ['room-1', 'room-2'];
-      (chatService.getLockedChats as jest.Mock).mockResolvedValue(roomIds);
+      (chatService.getLockedChats as Mock).mockResolvedValue(roomIds);
 
       const result = await controller.getLockedRooms(mockUser());
       expect(chatService.getLockedChats).toHaveBeenCalledWith('user-1');
@@ -631,7 +704,7 @@ describe('ChatController', () => {
 
       it('should call chatService.addLabel', async () => {
         const dto = { room_id: 'room-1', label: 'work' };
-        (chatService.addLabel as jest.Mock).mockResolvedValue(undefined);
+        (chatService.addLabel as Mock).mockResolvedValue(undefined);
 
         const result = await controller.addLabel(mockUser(), dto);
         expect(chatService.addLabel).toHaveBeenCalledWith(
@@ -655,7 +728,7 @@ describe('ChatController', () => {
 
       it('should call chatService.removeLabel', async () => {
         const dto = { room_id: 'room-1', label: 'work' };
-        (chatService.removeLabel as jest.Mock).mockResolvedValue(undefined);
+        (chatService.removeLabel as Mock).mockResolvedValue(undefined);
 
         const result = await controller.removeLabel(mockUser(), dto);
         expect(chatService.removeLabel).toHaveBeenCalledWith(
@@ -676,7 +749,7 @@ describe('ChatController', () => {
 
       it('should call chatService.getUserLabels', async () => {
         const labels = ['work', 'family'];
-        (chatService.getUserLabels as jest.Mock).mockResolvedValue(labels);
+        (chatService.getUserLabels as Mock).mockResolvedValue(labels);
 
         const result = await controller.getUserLabels(mockUser());
         expect(chatService.getUserLabels).toHaveBeenCalledWith('user-1');
@@ -693,7 +766,7 @@ describe('ChatController', () => {
 
       it('should call chatService.getRoomsByLabel', async () => {
         const rooms = [{ id: 'room-1' }];
-        (chatService.getRoomsByLabel as jest.Mock).mockResolvedValue(rooms);
+        (chatService.getRoomsByLabel as Mock).mockResolvedValue(rooms);
 
         const result = await controller.getRoomsByLabel(mockUser(), 'work');
         expect(chatService.getRoomsByLabel).toHaveBeenCalledWith(
@@ -714,7 +787,7 @@ describe('ChatController', () => {
 
     it('should call chatService.exportChatHistory', async () => {
       const messages = [{ id: 'msg-1' }];
-      (chatService.exportChatHistory as jest.Mock).mockResolvedValue(messages);
+      (chatService.exportChatHistory as Mock).mockResolvedValue(messages);
 
       const result = await controller.exportChatHistory(mockUser(), 'room-1');
       expect(chatService.exportChatHistory).toHaveBeenCalledWith(
@@ -737,7 +810,7 @@ describe('ChatController', () => {
         greetingMessage: 'Welcome!',
         awayMessage: 'Please leave a message.',
       };
-      (chatService.getRoomGreeting as jest.Mock).mockResolvedValue(greeting);
+      (chatService.getRoomGreeting as Mock).mockResolvedValue(greeting);
 
       const result = await controller.getRoomGreeting(mockUser(), 'room-1');
       expect(chatService.getRoomGreeting).toHaveBeenCalledWith(

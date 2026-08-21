@@ -7,7 +7,9 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Post('client-error')
-  async logClientError(@Body() dto: ClientErrorDto): Promise<{ status: string }> {
+  async logClientError(
+    @Body() dto: ClientErrorDto,
+  ): Promise<{ status: string }> {
     await this.analyticsService.recordClientError(dto);
     return { status: 'logged' };
   }

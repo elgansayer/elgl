@@ -11,6 +11,8 @@ export interface AppUser extends User {
   vip_tier?: string | null;
   is_serious_learner?: boolean;
   developer_api_key?: string | null;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 @Injectable({

@@ -1,29 +1,39 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, computed, resource } from '@angular/core';
+import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { NotificationService, InAppNotification } from '../../services/notification.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system';
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [CommonModule, TranslatePipe, ScrollablePillsComponent],
+  imports: [HlmButton, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })
-export class NotificationsInboxComponent implements OnInit {
+export class NotificationsInboxComponent {
   private notificationService = inject(NotificationService);
+  private unreadCounter = inject(UnreadCounterService);
   private location = inject(Location);
   private router = inject(Router);
   private readonly i18n = inject(I18nService);
 
-  readonly notifications = signal<InAppNotification[]>([]);
-  readonly isLoading = signal<boolean>(true);
   readonly selectedTab = signal<NotificationTab>('all');
   readonly unreadCount = signal<number>(0);
+
+  readonly notificationsResource = resource({
+    params: () => this.selectedTab(),
+    loader: ({ params: tab }) => this.loadNotifications(tab),
+  });
+
+  readonly notifications = computed(() => this.notificationsResource.value() ?? []);
+
+  readonly isLoading = this.notificationsResource.isLoading;
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -36,52 +46,43 @@ export class NotificationsInboxComponent implements OnInit {
     ];
   });
 
-  async ngOnInit(): Promise<void> {
-    await this.loadNotifications();
+  private async loadNotifications(tab: NotificationTab): Promise<InAppNotification[]> {
+    const [list, unread] = await Promise.all([
+      this.notificationService.getNotifications(tab),
+      this.notificationService.getUnreadCount(),
+    ]);
+    this.unreadCount.set(unread);
+    this.unreadCounter.setNotificationUnread(unread);
+    return list;
   }
 
   goBack(): void {
     this.location.back();
   }
 
-  async setTab(tab: NotificationTab): Promise<void> {
+  setTab(tab: NotificationTab): void {
     this.selectedTab.set(tab);
-    await this.loadNotifications();
-  }
-
-  async loadNotifications(): Promise<void> {
-    this.isLoading.set(true);
-    try {
-      const [list, unread] = await Promise.all([
-        this.notificationService.getNotifications(this.selectedTab()),
-        this.notificationService.getUnreadCount(),
-      ]);
-      this.notifications.set(list);
-      this.unreadCount.set(unread);
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-    } finally {
-      this.isLoading.set(false);
-    }
   }
 
   async markAllAsRead(): Promise<void> {
     await this.notificationService.markAllAsRead();
     this.unreadCount.set(0);
-    this.notifications.update((list) => list.map((item) => ({ ...item, is_read: true })));
+    this.unreadCounter.setNotificationUnread(0);
   }
 
   async onNotificationClick(notif: InAppNotification): Promise<void> {
     if (!notif.is_read) {
       notif.is_read = true;
       this.unreadCount.update((c) => Math.max(0, c - 1));
+      this.unreadCounter.decrementNotificationUnread();
       void this.notificationService.markAsRead(notif.id);
     }
 
     if (
       notif.type === 'like_moment' ||
       notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment'
+      notif.type === 'reply_comment' ||
+      notif.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
     } else if (notif.type === 'mention_chat') {
@@ -100,6 +101,7 @@ export class NotificationsInboxComponent implements OnInit {
         return '❤️';
       case 'comment_moment':
       case 'reply_comment':
+      case 'mention_comment':
         return '💬';
       case 'mention_chat':
         return '📣';
@@ -124,6 +126,8 @@ export class NotificationsInboxComponent implements OnInit {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_comment':
+        return 'notifications.mentionedInComment';
       case 'mention_chat':
         return 'notifications.mentionedInChat';
       case 'follow':

@@ -1,103 +1,143 @@
-<div class="p-4">
-  <h2 class="text-xl font-bold mb-4 text-text-primary">{{ 'moderation.title' | t }}</h2>
+<div class="p-4" role="main" aria-labelledby="moderation-panel-title">
+  <h2 id="moderation-panel-title" class="text-xl font-bold mb-4 text-text-primary">
+    {{ 'moderation.title' | t }}
+  </h2>
 
-  <div class="mb-4 flex gap-2">
+  <div class="mb-4 flex gap-2" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+      role="tab"
+      [attr.aria-selected]="currentFilter() === 'moment'"
       [class.bg-primary]="currentFilter() === 'moment'"
-      [class.text-white]="currentFilter() === 'moment'"
+      [class.text-on-fill]="currentFilter() === 'moment'"
       [class.bg-surface-100]="currentFilter() !== 'moment'"
       [class.text-text-secondary]="currentFilter() !== 'moment'"
       (click)="filterByType('moment')"
+      [attr.aria-label]="'moderation.moment' | t"
     >
       {{ 'moderation.moment' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+      role="tab"
+      [attr.aria-selected]="currentFilter() === 'profile'"
       [class.bg-primary]="currentFilter() === 'profile'"
-      [class.text-white]="currentFilter() === 'profile'"
+      [class.text-on-fill]="currentFilter() === 'profile'"
       [class.bg-surface-100]="currentFilter() !== 'profile'"
       [class.text-text-secondary]="currentFilter() !== 'profile'"
       (click)="filterByType('profile')"
+      [attr.aria-label]="'moderation.profile' | t"
     >
       {{ 'moderation.profile' | t }}
     </button>
   </div>
 
-  @if (loading()) {
-    <div class="space-y-3">
-      <p class="text-sm text-text-secondary mb-2">{{ 'safety.moderation.loadingTitle' | t }}</p>
-      @for (i of [1, 2, 3]; track i) {
-        <app-card customClass="p-3 space-y-2">
-          <div class="flex items-center gap-2">
-            <app-skeleton-loader [height]="'12px'" [width]="'40%'" [variant]="'text'" />
-            <app-skeleton-loader [height]="'12px'" [width]="'25%'" [variant]="'text'" />
-          </div>
-          <app-skeleton-loader [height]="'10px'" [width]="'70%'" [variant]="'text'" />
-          <div class="flex gap-2 pt-1">
-            <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
-            <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
-            <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
-          </div>
-        </app-card>
-      }
-    </div>
-  } @else if (loadError()) {
-    <app-empty-state
-      icon="warning"
-      [title]="'safety.moderation.loadError' | t"
-      [description]="'safety.moderation.loadErrorDesc' | t"
-      [actionLabel]="'common.retry' | t"
-      (actionClicked)="filterByType(currentFilter())"
-    />
-  } @else if (items().length === 0) {
-    <app-empty-state
-      icon="checkmark"
-      [title]="'safety.moderation.emptyTitle' | t"
-      [description]="'safety.moderation.emptyDesc' | t"
-    />
-  } @else {
-    @for (item of items(); track item.id) {
-      <div class="border border-slate-700 rounded-lg p-3 mb-3 bg-surface">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm text-text-primary">{{ 'moderation.reported_user' | t }}: {{ item.reported_user?.name }}</p>
-            <p class="text-xs text-text-secondary">{{ 'moderation.reason' | t }}: {{ item.reason }}</p>
-            <p class="text-xs text-text-secondary">{{ 'moderation.date' | t }}: {{ item.created_at | date: 'short' }}</p>
-          </div>
-          <div class="flex gap-2">
-            <button
-              class="bg-green-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-green-700 transition-colors"
-              (click)="approve(item)"
-            >
-              {{ 'moderation.approve' | t }}
-            </button>
-            <button
-              class="bg-red-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-red-700 transition-colors"
-              (click)="reject(item)"
-            >
-              {{ 'moderation.reject' | t }}
-            </button>
-            <button
-              class="bg-yellow-600 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:bg-yellow-700 transition-colors disabled:opacity-50"
-              (click)="analyseUserProfile(item.reported_user?.id ?? '')"
-              [disabled]="analysing()"
-            >
-              {{ analysing() ? ('common.loading' | t) : ('moderation.analyse' | t) }}
-            </button>
-          </div>
-        </div>
-        @if (analysisResult(); as res) {
-          <div class="mt-2 p-2 bg-slate-800 rounded text-xs">
-            <p class="text-amber-300">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
-            @if (res.flags.length) {
-              <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ res.flags.join(', ') }}</p>
-            } @else {
-              <p class="text-green-300 mt-1">{{ 'moderation.noFlags' | t }}</p>
+  <div aria-live="polite">
+    @if (loading()) {
+      <div class="space-y-3" aria-busy="true">
+        <p class="text-sm text-text-secondary mb-2">{{ 'safety.moderation.loadingTitle' | t }}</p>
+        @for (i of [1, 2, 3]; track i) {
+          <app-card customClass="p-3 space-y-2" aria-hidden="true">
+            <div class="flex items-center gap-2">
+              <app-skeleton-loader [height]="'12px'" [width]="'40%'" [variant]="'text'" />
+              <app-skeleton-loader [height]="'12px'" [width]="'25%'" [variant]="'text'" />
+            </div>
+            <app-skeleton-loader [height]="'10px'" [width]="'70%'" [variant]="'text'" />
+            <div class="flex gap-2 pt-1">
+              <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
+              <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
+              <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
+            </div>
+          </app-card>
+        }
+      </div>
+    } @else if (loadError()) {
+      <app-empty-state
+        icon="warning"
+        [title]="'safety.moderation.loadError' | t"
+        [description]="'safety.moderation.loadErrorDesc' | t"
+        [actionLabel]="'common.retry' | t"
+        (actionClicked)="filterByType(currentFilter())"
+      />
+    } @else if (items().length === 0) {
+      <app-empty-state
+        icon="checkmark"
+        [title]="'safety.moderation.emptyTitle' | t"
+        [description]="'safety.moderation.emptyDesc' | t"
+      />
+    } @else {
+      <div role="tabpanel" [attr.aria-label]="'moderation.itemsListAria' | t">
+        @for (item of items(); track item.id) {
+          <div
+            class="border border-surface-100 rounded-lg p-3 mb-3 bg-surface"
+            [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-text-primary">
+                  <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span
+                  >{{ item.reported_user?.name ?? '' | sanitiseHtml }}
+                </p>
+                <p class="text-xs text-text-secondary">
+                  <span class="sr-only">{{ 'moderation.reason' | t }}: </span
+                  >{{ item.reason | sanitiseHtml }}
+                </p>
+                <p class="text-xs text-text-secondary">
+                  <span class="sr-only">{{ 'moderation.date' | t }}: </span
+                  >{{ item.created_at | date: 'short' }}
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  hlmBtn
+                  class="bg-success px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-success/90 transition-colors"
+                  (click)="approve(item)"
+                  [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }"
+                >
+                  {{ 'moderation.approve' | t }}
+                </button>
+                <button
+                  hlmBtn
+                  class="bg-danger px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-danger/90 transition-colors"
+                  (click)="reject(item)"
+                  [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }"
+                >
+                  {{ 'moderation.reject' | t }}
+                </button>
+                <button
+                  hlmBtn
+                  class="bg-warning px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-warning/90 transition-colors disabled:opacity-50"
+                  (click)="analyseUserProfile(item.reported_user?.id ?? '')"
+                  [disabled]="analysing()"
+                  [attr.aria-label]="
+                    'moderation.analyseAria' | t: { user: item.reported_user?.name ?? '' }
+                  "
+                >
+                  {{ analysing() ? ('common.loading' | t) : ('moderation.analyse' | t) }}
+                </button>
+              </div>
+            </div>
+            @if (analysisResult(); as res) {
+              <div
+                class="mt-2 p-2 bg-surface-100 rounded text-xs"
+                role="region"
+                [attr.aria-label]="'moderation.riskAnalysisAria' | t"
+              >
+                <p class="text-warning">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
+                @if (res.flags.length) {
+                  <p class="text-danger mt-1">
+                    {{ 'moderation.flags' | t }}: {{ res.flags?.join(', ') ?? '' | sanitiseHtml }}
+                  </p>
+                } @else {
+                  <p class="text-success mt-1">{{ 'moderation.noFlags' | t }}</p>
+                }
+              </div>
             }
           </div>
         }
       </div>
     }
-  }
+  </div>
 </div>

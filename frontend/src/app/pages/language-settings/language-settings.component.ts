@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { I18nService } from '../../services/i18n.service';
@@ -6,7 +7,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 @Component({
   selector: 'app-language-settings',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="min-h-screen bg-surface-50">
       <header
@@ -14,6 +15,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       >
         <div class="flex items-center gap-3">
           <button
+            hlmBtn
             (click)="goBack()"
             class="p-2 -ms-2 rounded-full hover:bg-surface-200 transition-colors"
             [attr.aria-label]="'common.back' | t"
@@ -44,6 +46,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           >
             @for (lang of langs; track lang.code) {
               <button
+                hlmBtn
                 type="button"
                 (click)="selectLang(lang.code)"
                 class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors border-b border-surface-200 last:border-b-0"

@@ -15,20 +15,20 @@ export interface WordOfTheDay {
   imports: [TranslatePipe],
   template: `
     <section
-      class="bg-surface rounded-xl p-4 space-y-2"
+      class="bg-surface-300 rounded-xl p-4 space-y-2"
       role="region"
       aria-label="{{ 'home.wordOfDay.title' | t }}"
     >
-      <h2 class="text-sm uppercase tracking-wider text-gray-400 font-medium">
+      <h2 class="text-sm uppercase tracking-wider text-text-muted font-medium">
         {{ 'home.wordOfDay.title' | t }}
       </h2>
       <div class="flex items-center gap-3">
         <span class="text-3xl font-bold text-accent">{{ word() }}</span>
-        <span class="text-lg text-gray-300">{{ translation() }}</span>
-        <span class="text-sm text-gray-400 ms-auto">{{ language() }}</span>
+        <span class="text-lg text-text-secondary">{{ translation() }}</span>
+        <span class="text-sm text-text-muted ms-auto">{{ language() }}</span>
       </div>
       @if (example(); as ex) {
-        <p class="text-sm text-gray-400 italic">{{ ex }}</p>
+        <p class="text-sm text-text-muted italic">{{ ex }}</p>
       }
     </section>
   `,

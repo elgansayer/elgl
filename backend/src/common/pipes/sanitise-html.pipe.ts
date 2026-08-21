@@ -5,6 +5,22 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+/**
+ * Fields that must never pass through HTML sanitisation because they contain
+ * non-user-authored technical data whose angle-bracket content is meaningful
+ * (e.g. stack traces with `<anonymous>`, webhook signatures, etc.).
+ */
+const SANITISATION_EXEMPT_KEYS = new Set([
+  'stack',
+  'componentStack',
+  'rawBody',
+  'signedPayload',
+  // Stack-frame fields that may contain angle brackets (e.g. <anonymous>)
+  'functionName',
+  'fileName',
+  'source',
+]);
+
 @Injectable()
 export class SanitiseHtmlPipe implements PipeTransform {
   transform(value: unknown, _metadata: ArgumentMetadata): unknown {
@@ -23,6 +39,11 @@ export class SanitiseHtmlPipe implements PipeTransform {
     if (typeof value === 'string') {
       // Skip sanitisation for password fields to avoid corrupting legitimate passwords
       if (keyName && keyName.toLowerCase().includes('password')) {
+        return value;
+      }
+      // Exempt non-user-authored technical fields whose angle-bracket
+      // content is meaningful (stack traces, webhook signatures, etc.)
+      if (keyName && SANITISATION_EXEMPT_KEYS.has(keyName)) {
         return value;
       }
       return purify.sanitize(value);

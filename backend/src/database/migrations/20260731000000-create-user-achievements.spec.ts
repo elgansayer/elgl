@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { CreateUserAchievementsSchema20260731000000 } from './20260731000000-create-user-achievements';
 import { QueryRunner } from 'typeorm';
 
 describe('CreateUserAchievementsSchema20260731000000', () => {
   let migration: CreateUserAchievementsSchema20260731000000;
-  let queryRunner: { query: jest.Mock };
+  let queryRunner: { query: Mock };
 
   beforeEach(() => {
     migration = new CreateUserAchievementsSchema20260731000000();
     queryRunner = {
-      query: jest.fn().mockResolvedValue(undefined),
+      query: vi.fn().mockResolvedValue(undefined),
     };
   });
 

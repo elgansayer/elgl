@@ -57,6 +57,13 @@ export class ChatSettingsService {
     }
   }
 
+  resetToDefaults(): void {
+    this.autoTranslate.set(false);
+    this.readReceipts.set(false);
+    this.enterToSend.set(false);
+    this.textSize.set('medium');
+  }
+
   private getLocal(
     key: keyof ChatSettings,
   ): boolean | 'small' | 'medium' | 'large' {
