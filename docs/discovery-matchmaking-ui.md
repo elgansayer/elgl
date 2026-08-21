@@ -28,9 +28,9 @@ The screen uses the existing Spartan controls and shared slider/language-picker 
 
 ## Verification
 
-`frontend/src/app/components/discovery/discovery.component.spec.ts` is an active Vitest contract suite. It verifies that distance, native/target language and Serious Learner criteria reach the canonical search request, that VIP-only gender filtering is not sent for free users, that blocked users are removed, failures expose the retryable error state, reset restores defaults, and superseded requests cannot replace newer results.
+`frontend/src/app/components/discovery/discovery-filter-contract.spec.ts` is the active Vitest contract suite for #959. It verifies that distance, native/target language and Serious Learner criteria reach the canonical search request, that VIP-only gender filtering is not sent for free users, that blocked users are removed, failures expose the retryable error state, reset restores defaults, and superseded requests cannot replace newer results.
 
-`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. Shared primitives retain their own component-level coverage.
+`frontend/src/app/components/discovery/discovery-search-race.spec.ts` separately locks loading-state ownership during overlapping searches. The older broad discovery component suite remains untouched for historical coverage while the focused #959 contract is executable in normal CI. Shared primitives retain their own component-level coverage.
 
 ## Rollout and rollback
 
