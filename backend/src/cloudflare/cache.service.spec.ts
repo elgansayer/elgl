@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CloudflareCacheService } from './cache.service';
@@ -5,22 +6,22 @@ import { CloudflareCacheService } from './cache.service';
 describe('CloudflareCacheService', () => {
   let service: CloudflareCacheService;
   let configService: ConfigService;
-  let fetchMock: jest.Mock;
+  let fetchMock: Mock;
   let loggerMock: {
-    info: jest.Mock;
-    warn: jest.Mock;
-    debug: jest.Mock;
-    error: jest.Mock;
+    info: Mock;
+    warn: Mock;
+    debug: Mock;
+    error: Mock;
   };
 
   beforeEach(async () => {
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     global.fetch = fetchMock;
     loggerMock = {
-      info: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-      error: jest.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      error: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -33,7 +34,7 @@ describe('CloudflareCacheService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               const config: Record<string, string> = {
                 CLOUDFLARE_API_TOKEN: 'test-token',
                 CLOUDFLARE_ZONE_ID: 'test-zone-id',
@@ -50,7 +51,7 @@ describe('CloudflareCacheService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('purgeByCacheTags', () => {
@@ -59,7 +60,7 @@ describe('CloudflareCacheService', () => {
     });
 
     it('should return false when API token is not configured', async () => {
-      (configService.get as jest.Mock).mockImplementation((key: string) => {
+      (configService.get as Mock).mockImplementation((key: string) => {
         const config: Record<string, string> = {
           CLOUDFLARE_API_TOKEN: '',
           CLOUDFLARE_ZONE_ID: 'test-zone-id',
@@ -71,7 +72,7 @@ describe('CloudflareCacheService', () => {
     });
 
     it('should return false when zone ID is not configured', async () => {
-      (configService.get as jest.Mock).mockImplementation((key: string) => {
+      (configService.get as Mock).mockImplementation((key: string) => {
         const config: Record<string, string> = {
           CLOUDFLARE_API_TOKEN: 'test-token',
           CLOUDFLARE_ZONE_ID: '',
@@ -85,7 +86,7 @@ describe('CloudflareCacheService', () => {
     it('should call Cloudflare API purge_cache endpoint with tags', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue({
+        json: vi.fn().mockResolvedValue({
           success: true,
           result: { id: 'purge-123' },
         }),
@@ -113,7 +114,7 @@ describe('CloudflareCacheService', () => {
       fetchMock.mockResolvedValue({
         ok: false,
         status: 400,
-        json: jest.fn().mockResolvedValue({
+        json: vi.fn().mockResolvedValue({
           success: false,
           errors: [{ code: 'INVALID_TAG', message: 'Invalid cache tag' }],
         }),

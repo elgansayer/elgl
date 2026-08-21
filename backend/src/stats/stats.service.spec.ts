@@ -24,7 +24,7 @@ const createQueryChain = () => {
     'not',
   ];
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   });
 
   let resolveData: any = null;
@@ -58,7 +58,7 @@ describe('StatsService', () => {
 
   beforeEach(async () => {
     supabaseMock = {
-      from: jest.fn(() => createQueryChain()),
+      from: vi.fn(() => createQueryChain()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -67,7 +67,7 @@ describe('StatsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(supabaseMock),
+            getClient: vi.fn().mockReturnValue(supabaseMock),
           },
         },
       ],

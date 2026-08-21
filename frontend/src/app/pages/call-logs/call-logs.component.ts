@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -5,7 +6,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 
 @Component({
   selector: 'app-call-logs',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
     <div class="p-4">
       <h1 class="text-2xl font-bold mb-4">
@@ -14,6 +15,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 
       <div class="flex gap-2 mb-4">
         <button
+          hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === undefined"
           [class.bg-surface]="selectedCallType() !== undefined"
@@ -22,6 +24,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
           {{ 'call_logs.all' | t }}
         </button>
         <button
+          hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'incoming'"
           [class.bg-surface]="selectedCallType() !== 'incoming'"
@@ -30,6 +33,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
           {{ 'call_logs.incoming' | t }}
         </button>
         <button
+          hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'outgoing'"
           [class.bg-surface]="selectedCallType() !== 'outgoing'"
@@ -38,6 +42,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
           {{ 'call_logs.outgoing' | t }}
         </button>
         <button
+          hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'missed'"
           [class.bg-surface]="selectedCallType() !== 'missed'"
@@ -52,16 +57,14 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
       } @else {
         <ul class="space-y-2">
           @for (log of logs(); track log.id) {
-            <li
-              class="flex items-center gap-3 p-3 rounded-xl bg-surface"
-            >
+            <li class="flex items-center gap-3 p-3 rounded-xl bg-surface">
               <div class="flex-1 min-w-0">
                 <p class="truncate font-semibold">
                   {{ log.caller_name }} → {{ log.receiver_name }}
                 </p>
                 <p class="text-sm text-surface-400">
-                  {{ ('call_logs.' + log.call_type) | t }}
-                  · {{ log.started_at | date:'short' }}
+                  {{ 'call_logs.' + log.call_type | t }}
+                  · {{ log.started_at | date: 'short' }}
                   @if (log.duration_seconds !== null) {
                     · {{ log.duration_seconds }}s
                   }
@@ -80,8 +83,7 @@ export class CallLogsComponent {
 
   private callLogsResource = resource<CallLogRecord[], { callType?: string }>({
     params: () => ({ callType: this.selectedCallType() }),
-    loader: ({ params }) =>
-      this.callLogsService.getCallLogs({ callType: params.callType }),
+    loader: ({ params }) => this.callLogsService.getCallLogs({ callType: params.callType }),
   });
 
   logs = computed<CallLogRecord[]>(() => this.callLogsResource.value() ?? []);
