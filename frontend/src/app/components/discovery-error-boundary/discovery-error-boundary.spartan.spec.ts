@@ -55,7 +55,7 @@ describe('DiscoveryErrorBoundaryComponent Spartan controls', () => {
 
     const buttons = fixture.debugElement.queryAll(By.directive(HlmButton));
     expect(buttons).toHaveLength(1);
-    expect((buttons[0].nativeElement as HTMLButtonElement).textContent).toContain('Try again');
+    expect((buttons[0].nativeElement as HTMLButtonElement).type).toBe('button');
   });
 
   it('preserves retry and report output contracts through the Spartan controls', () => {
