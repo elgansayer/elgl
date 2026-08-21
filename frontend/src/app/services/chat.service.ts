@@ -100,6 +100,18 @@ export interface ChatMessage {
   is_forwarded?: boolean;
 }
 
+export interface ReadReceiptUser {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  readAt: string;
+}
+
+export interface MessageReceiptStatus {
+  readBy: ReadReceiptUser[];
+  totalMembers: number;
+}
+
 export interface FavouriteRecord {
   id: string;
   user_id: string;
@@ -201,6 +213,12 @@ export class ChatService {
 
   /** Exposed for UI: count of messages queued offline waiting for sync. */
   readonly queuedCount = this.offlineQueue.queueSize;
+
+  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
+    return firstValueFrom(
+      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+    );
+  }
 
   constructor() {
     if (typeof window !== 'undefined') {

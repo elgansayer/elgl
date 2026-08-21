@@ -121,7 +121,7 @@ type AudioRoomNoteRow = {
   id: string;
   room_id: string;
   author_id: string;
-  author_name: string;
+  author_name: string | null;
   content: string;
   vocabulary?: string | null;
   created_at: string;
@@ -703,6 +703,28 @@ export interface Database {
         Update: Partial<UsersRow>;
         Relationships: [];
       };
+      reading_engine_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          user_id: string | null;
+          resource_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
+        Update: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
+        Relationships: [];
+      };
       events: {
         Row: {
           id: string;
@@ -1167,17 +1189,72 @@ export interface Database {
       notification_preferences: {
         Row: {
           user_id: string;
-          new_message: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          call_invite: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_like: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_comment: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          correction: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          gift: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          profile_view: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          study_reminder: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          friend_request: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          audio_room_invite: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          new_follower: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
+          new_message: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          audio_room_invite: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          new_follower: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start: string | null;
           quiet_hours_end: string | null;
           do_not_disturb: boolean;
@@ -1188,21 +1265,71 @@ export interface Database {
         };
         Insert: Partial<{
           user_id: string;
-          new_message?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          call_invite?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_like?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_comment?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          correction?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          gift?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          profile_view?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          study_reminder?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          friend_request?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
+          new_message?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           audio_room_invite?: {
             push: boolean;
             email: boolean;
             in_app: boolean;
           };
-          new_follower?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
+          new_follower?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
           do_not_disturb?: boolean;
@@ -1212,21 +1339,71 @@ export interface Database {
         }>;
         Update: Partial<{
           user_id?: string;
-          new_message?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          call_invite?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_like?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          moment_comment?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          correction?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          gift?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          profile_view?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          study_reminder?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
-          friend_request?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
+          new_message?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           audio_room_invite?: {
             push: boolean;
             email: boolean;
             in_app: boolean;
           };
-          new_follower?: { push: boolean; email: boolean; in_app: boolean; badges: boolean };
+          new_follower?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
           do_not_disturb?: boolean;
@@ -2027,6 +2204,23 @@ export interface Database {
           filter_audio_intro: boolean;
         };
         Returns: unknown[];
+      };
+      unlock_sticker_pack_atomic: {
+        Args: {
+          p_user_id: string;
+          p_pack_id: string;
+        };
+        Returns: {
+          success: boolean;
+          newly_unlocked: boolean;
+          coins_remaining: number;
+          pack_id: string;
+          pack_name: string;
+          pack_cost_coins: number;
+          pack_is_animated: boolean | null;
+          pack_sticker_urls: string[] | null;
+          pack_animation_url: string | null;
+        }[];
       };
       upsert_reading_progress: {
         Args: {

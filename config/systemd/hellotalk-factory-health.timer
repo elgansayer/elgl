@@ -1,12 +1,11 @@
 [Unit]
-Description=Periodically verify the HelloTalk factory
+Description=Continuously verify and recover the HelloTalk factory daemon
 
 [Timer]
-OnBootSec=10min
-OnUnitActiveSec=15min
+OnBootSec=2min
+OnUnitActiveSec=2min
 Persistent=true
-RandomizedDelaySec=60
+AccuracySec=15s
 
 [Install]
 WantedBy=timers.target
-

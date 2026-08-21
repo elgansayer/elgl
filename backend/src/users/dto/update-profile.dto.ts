@@ -298,11 +298,15 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsBoolean()
-  auto_play_voice_notes?: boolean;
-
   @IsOptional()
   @IsBoolean()
   auto_download_media?: boolean;
+
+  @IsOptional()
+  study_streak_days?: number;
+
+  @IsOptional()
+  correction_ratio?: number;
 
   @IsOptional()
   @IsBoolean()

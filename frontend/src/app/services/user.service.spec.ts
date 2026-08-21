@@ -868,7 +868,7 @@ describe('UserService', () => {
 
   describe('blockUser', () => {
     it('should POST to /trust-safety/block', async () => {
-      const trustUrl = `${environment.apiUrl}/trust-safety/block`;
+      const trustUrl = `${environment.apiUrl}/safety/block`;
       const resultPromise = service.blockUser('user-3');
 
       const req = httpMock.expectOne(trustUrl);
@@ -880,7 +880,7 @@ describe('UserService', () => {
     });
 
     it('should silently ignore errors', async () => {
-      const trustUrl = `${environment.apiUrl}/trust-safety/block`;
+      const trustUrl = `${environment.apiUrl}/safety/block`;
       const resultPromise = service.blockUser('user-3');
 
       const req = httpMock.expectOne(trustUrl);
@@ -892,18 +892,19 @@ describe('UserService', () => {
 
   describe('unblockUser', () => {
     it('should DELETE /trust-safety/block/:id', async () => {
-      const trustUrl = `${environment.apiUrl}/trust-safety/block/user-3`;
+      const trustUrl = `${environment.apiUrl}/safety/unblock`;
       const resultPromise = service.unblockUser('user-3');
 
       const req = httpMock.expectOne(trustUrl);
-      expect(req.request.method).toBe('DELETE');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ blocked_id: 'user-3' });
       req.flush(null);
 
       await expect(resultPromise).resolves.toBeFalsy();
     });
 
     it('should silently ignore errors', async () => {
-      const trustUrl = `${environment.apiUrl}/trust-safety/block/user-3`;
+      const trustUrl = `${environment.apiUrl}/safety/unblock`;
       const resultPromise = service.unblockUser('user-3');
 
       const req = httpMock.expectOne(trustUrl);
@@ -915,7 +916,7 @@ describe('UserService', () => {
 
   describe('reportUser', () => {
     it('should POST to /trust-safety/report', async () => {
-      const reportUrl = `${environment.apiUrl}/trust-safety/report`;
+      const reportUrl = `${environment.apiUrl}/safety/report`;
       const resultPromise = service.reportUser('user-4', 'spam', 'Sending spam', 'https://app/post/1');
 
       const req = httpMock.expectOne(reportUrl);
@@ -932,7 +933,7 @@ describe('UserService', () => {
     });
 
     it('should silently ignore errors', async () => {
-      const reportUrl = `${environment.apiUrl}/trust-safety/report`;
+      const reportUrl = `${environment.apiUrl}/safety/report`;
       const resultPromise = service.reportUser('user-4', 'spam');
 
       const req = httpMock.expectOne(reportUrl);

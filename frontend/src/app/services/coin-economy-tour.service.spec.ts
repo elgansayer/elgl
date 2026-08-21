@@ -1,11 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Subscription, of, Observable } from 'rxjs';
+import { of } from 'rxjs';
 import { CoinEconomyTourService } from './coin-economy-tour.service';
 import { JoyrideService } from 'ngx-joyride';
 import { I18nService } from './i18n.service';
-import { JoyrideStepInfo } from 'ngx-joyride';
-import { StepActionType } from 'ngx-joyride';
 
 describe('CoinEconomyTourService', () => {
   let service: CoinEconomyTourService;
@@ -48,8 +46,8 @@ describe('CoinEconomyTourService', () => {
       number: 1,
       name: 'tourCoinsBalance',
       route: '/home',
-      actionType: 'NEXT' as StepActionType,
-    } as JoyrideStepInfo);
+      actionType: 'NEXT',
+    });
     joyrideServiceMock.startTour.mockReturnValue(tourObservable);
 
     const result = service.startTour();

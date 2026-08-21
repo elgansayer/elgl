@@ -40,7 +40,7 @@
                 "output": "/"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": ["src/styles.scss", "src/forced-colors.scss", "src/reduced-motion.scss"],
             "serviceWorker": "ngsw-config.json"
           },
           "configurations": {
