@@ -3,10 +3,7 @@ import { rankDiscoveryRecommendations } from './discovery-recommendations.servic
 const NOW = Date.parse('2026-08-21T10:00:00Z');
 type Candidate = Parameters<typeof rankDiscoveryRecommendations>[1][number];
 
-function candidate(
-  id: string,
-  overrides: Partial<Candidate> = {},
-): Candidate {
+function candidate(id: string, overrides: Partial<Candidate> = {}): Candidate {
   return {
     id,
     display_name: `User ${id}`,
