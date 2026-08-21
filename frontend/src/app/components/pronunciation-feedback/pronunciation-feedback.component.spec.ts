@@ -56,6 +56,7 @@ describe('PronunciationFeedbackComponent', () => {
 
     Object.defineProperty(window, 'MediaRecorder', {
       writable: true,
+      configurable: true,
       value: MockedMediaRecorder,
     });
 

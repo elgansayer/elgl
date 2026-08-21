@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyController } from './safety.controller';
 import { SafetyService } from './safety.service';
@@ -14,21 +15,21 @@ describe('SafetyController', () => {
         {
           provide: SafetyService,
           useValue: {
-            getCategories: jest.fn(),
-            reportUser: jest.fn(),
-            blockUser: jest.fn(),
-            unblockUser: jest.fn(),
-            getBlockedUserIds: jest.fn(),
-            getBlockerUserIds: jest.fn(),
-            getBlockedAndBlockerIds: jest.fn(),
-            getBlockedUserDetails: jest.fn(),
-            isBlocked: jest.fn(),
+            getCategories: vi.fn(),
+            reportUser: vi.fn(),
+            blockUser: vi.fn(),
+            unblockUser: vi.fn(),
+            getBlockedUserIds: vi.fn(),
+            getBlockerUserIds: vi.fn(),
+            getBlockedAndBlockerIds: vi.fn(),
+            getBlockedUserDetails: vi.fn(),
+            isBlocked: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<SafetyController>(SafetyController);
@@ -36,7 +37,7 @@ describe('SafetyController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,7 +49,7 @@ describe('SafetyController', () => {
       const categories = [
         { value: 'spam', label: 'Spam', icon: '*', description: '...' },
       ];
-      (safetyService.getCategories as jest.Mock).mockReturnValue(categories);
+      (safetyService.getCategories as Mock).mockReturnValue(categories);
 
       const result = controller.getReportCategories();
       expect(safetyService.getCategories).toHaveBeenCalled();
@@ -59,7 +60,7 @@ describe('SafetyController', () => {
   describe('reportUser', () => {
     it('should call service reportUser when user is provided', async () => {
       const dto: any = { reported_id: 'bad-1', reason_category: 'spam' };
-      (safetyService.reportUser as jest.Mock).mockResolvedValue(undefined);
+      (safetyService.reportUser as Mock).mockResolvedValue(undefined);
 
       const result = await controller.reportUser(
         { user: { id: 'user-1' } },
@@ -77,7 +78,7 @@ describe('SafetyController', () => {
     it('should call service blockUser when user is provided', async () => {
       const dto: any = { blocked_id: 'bad-2' };
       const response: any = { success: true, blocked_id: 'bad-2' };
-      (safetyService.blockUser as jest.Mock).mockResolvedValue(response);
+      (safetyService.blockUser as Mock).mockResolvedValue(response);
 
       const result = await controller.blockUser(
         { user: { id: 'user-1' } },
@@ -91,7 +92,7 @@ describe('SafetyController', () => {
   describe('unblockUser', () => {
     it('should call service unblockUser', async () => {
       const dto = { blocked_id: 'bad-2' };
-      (safetyService.unblockUser as jest.Mock).mockResolvedValue({
+      (safetyService.unblockUser as Mock).mockResolvedValue({
         success: true,
       });
 
@@ -107,7 +108,7 @@ describe('SafetyController', () => {
   describe('getBlockedIds', () => {
     it('should call service getBlockedUserIds when user is provided', async () => {
       const ids = ['bad-1', 'bad-2'];
-      (safetyService.getBlockedUserIds as jest.Mock).mockResolvedValue(ids);
+      (safetyService.getBlockedUserIds as Mock).mockResolvedValue(ids);
 
       const result = await controller.getBlockedIds({ user: { id: 'user-1' } });
       expect(safetyService.getBlockedUserIds).toHaveBeenCalledWith('user-1');
@@ -118,7 +119,7 @@ describe('SafetyController', () => {
   describe('getBlockedUsers', () => {
     it('should call service getBlockedUserIds', async () => {
       const ids = ['bad-1'];
-      (safetyService.getBlockedUserIds as jest.Mock).mockResolvedValue(ids);
+      (safetyService.getBlockedUserIds as Mock).mockResolvedValue(ids);
 
       const result = await controller.getBlockedUsers({
         user: { id: 'user-1' },
@@ -131,7 +132,7 @@ describe('SafetyController', () => {
   describe('getBlockedUserIds', () => {
     it('should call service getBlockedUserIds with param userId', async () => {
       const ids = ['bad-1'];
-      (safetyService.getBlockedUserIds as jest.Mock).mockResolvedValue(ids);
+      (safetyService.getBlockedUserIds as Mock).mockResolvedValue(ids);
 
       const result = await controller.getBlockedUserIds('user-1');
       expect(safetyService.getBlockedUserIds).toHaveBeenCalledWith('user-1');
@@ -142,7 +143,7 @@ describe('SafetyController', () => {
   describe('getBlockerUserIds', () => {
     it('should call service getBlockerUserIds with param userId', async () => {
       const ids = ['blocker-1'];
-      (safetyService.getBlockerUserIds as jest.Mock).mockResolvedValue(ids);
+      (safetyService.getBlockerUserIds as Mock).mockResolvedValue(ids);
 
       const result = await controller.getBlockerUserIds('user-1');
       expect(safetyService.getBlockerUserIds).toHaveBeenCalledWith('user-1');
@@ -152,7 +153,7 @@ describe('SafetyController', () => {
 
   describe('isBlocked', () => {
     it('should call service isBlocked and return result', async () => {
-      (safetyService.isBlocked as jest.Mock).mockResolvedValue(true);
+      (safetyService.isBlocked as Mock).mockResolvedValue(true);
 
       const result = await controller.isBlocked(
         { user: { id: 'user-1' } },
@@ -166,7 +167,7 @@ describe('SafetyController', () => {
     });
 
     it('should return false when user is not blocked', async () => {
-      (safetyService.isBlocked as jest.Mock).mockResolvedValue(false);
+      (safetyService.isBlocked as Mock).mockResolvedValue(false);
 
       const result = await controller.isBlocked(
         { user: { id: 'user-1' } },
@@ -178,7 +179,7 @@ describe('SafetyController', () => {
 
   describe('blockUserByParam', () => {
     it('should call service blockUser with param', async () => {
-      (safetyService.blockUser as jest.Mock).mockResolvedValue({
+      (safetyService.blockUser as Mock).mockResolvedValue({
         success: true,
         blocked_id: 'blocked-user',
       });
@@ -196,7 +197,7 @@ describe('SafetyController', () => {
 
   describe('unblockUserByParam', () => {
     it('should call service unblockUser with param', async () => {
-      (safetyService.unblockUser as jest.Mock).mockResolvedValue({
+      (safetyService.unblockUser as Mock).mockResolvedValue({
         success: true,
       });
 
@@ -215,9 +216,7 @@ describe('SafetyController', () => {
   describe('getBlockedAndBlockerIds', () => {
     it('should return union of blocked and blocker IDs', async () => {
       const ids = ['blocked-1', 'blocker-1'];
-      (safetyService.getBlockedAndBlockerIds as jest.Mock).mockResolvedValue(
-        ids,
-      );
+      (safetyService.getBlockedAndBlockerIds as Mock).mockResolvedValue(ids);
 
       const result = await controller.getBlockedAndBlockerIds('user-1');
       expect(safetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
@@ -230,9 +229,7 @@ describe('SafetyController', () => {
   describe('getBlockedUserDetails', () => {
     it('should call service getBlockedUserDetails', async () => {
       const details = [{ id: 'b1', display_name: 'Blocked', avatar_url: null }];
-      (safetyService.getBlockedUserDetails as jest.Mock).mockResolvedValue(
-        details,
-      );
+      (safetyService.getBlockedUserDetails as Mock).mockResolvedValue(details);
 
       const result = await controller.getBlockedUserDetails({
         user: { id: 'user-1' },

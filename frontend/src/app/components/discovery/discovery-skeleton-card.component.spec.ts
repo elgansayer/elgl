@@ -4,6 +4,7 @@ import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.compon
 
 describe('DiscoverySkeletonCardComponent', () => {
   let fixture: ComponentFixture<DiscoverySkeletonCardComponent>;
+  let component: DiscoverySkeletonCardComponent;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -11,20 +12,23 @@ describe('DiscoverySkeletonCardComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(DiscoverySkeletonCardComponent);
+    component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
   it('should create', () => {
-    expect(fixture.componentInstance).toBeDefined();
+    expect(component).toBeTruthy();
   });
 
   it('should render skeleton loaders', () => {
-    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    const element = fixture.nativeElement;
+    const skeletons = element.querySelectorAll('app-skeleton-loader');
     expect(skeletons.length).toBeGreaterThanOrEqual(6);
   });
 
   it('should render a circular avatar skeleton', () => {
-    const avatarSkeleton = fixture.nativeElement.querySelector(
+    const element = fixture.nativeElement;
+    const avatarSkeleton = element.querySelector(
       'app-skeleton-loader[variant="circle"][height="56px"]',
     );
     expect(avatarSkeleton).toBeTruthy();
@@ -41,5 +45,13 @@ describe('DiscoverySkeletonCardComponent', () => {
       'app-skeleton-loader[borderRadius="20px"]',
     );
     expect(tagSkeletons.length).toBe(3);
+  });
+
+  it('should compute stagger delay from index', () => {
+    const article = fixture.nativeElement.querySelector('article');
+    // Default index=0: delay=0ms
+    expect(component.index()).toBe(0);
+    expect(component.staggerDelay()).toBe('0ms');
+    expect(article.style.animationDelay).toBe('0ms');
   });
 });

@@ -12,10 +12,14 @@ describe('LiveChatOverlayComponent', () => {
     unsubscribe: ReturnType<typeof vi.fn>;
   };
   let mockI18n: { translate: ReturnType<typeof vi.fn> };
+  let receiveMessage: ((data: unknown) => void) | undefined;
 
   async function setup(roomId: string): Promise<void> {
+    receiveMessage = undefined;
     mockCentrifugo = {
-      subscribe: vi.fn(),
+      subscribe: vi.fn((_channel: string, handler: (data: unknown) => void) => {
+        receiveMessage = handler;
+      }),
       unsubscribe: vi.fn(),
     };
 
@@ -35,9 +39,9 @@ describe('LiveChatOverlayComponent', () => {
     }).compileComponents();
 
     // Angular 22 JIT test environment cannot resolve input() signals via setInput.
-    // We must pass { detectChanges: false } and accept the NG0303 console warning
+    // We must pass { detectChanges: false } as any and accept the NG0303 console warning
     // as benign (matching the video-call component spec pattern).
-    fixture = TestBed.createComponent(LiveChatOverlayComponent, { detectChanges: false });
+    fixture = TestBed.createComponent(LiveChatOverlayComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('roomId', roomId);
     fixture.detectChanges();
@@ -63,6 +67,17 @@ describe('LiveChatOverlayComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Alice');
     expect(el.textContent).toContain('Hello world');
+  });
+
+  it('should generate a secure ID when an incoming message omits one', async () => {
+    await setup('test-room');
+    expect(receiveMessage).toBeTypeOf('function');
+
+    receiveMessage?.({ type: 'text', content: 'Hello securely' });
+
+    expect(component.messages()[0]?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
   });
 
   it('should apply fade-in animation class to messages', async () => {
