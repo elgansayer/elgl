@@ -1,19 +1,20 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, linkedSignal, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserInterestsService } from '../../services/user-interests.service';
 
 @Component({
   selector: 'app-profile-interests',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2 ps-2 pe-2">
       @for (tag of availableTags.value() ?? []; track tag) {
         <button
+          hlmBtn
           type="button"
           (click)="toggle(tag)"
-          [class.bg-blue-500]="selectedTags().includes(tag)"
-          [class.text-white]="selectedTags().includes(tag)"
+          [class.bg-primary]="selectedTags().includes(tag)"
+          [class.text-on-fill]="selectedTags().includes(tag)"
           class="px-3 py-1 rounded-full border-s border-e-0 text-sm transition-colors"
         >
           {{ 'interest.' + tag | t }}

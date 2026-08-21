@@ -32,7 +32,9 @@ export class CorrectorScoreService {
     const scores = (data ?? []).map((r: any) => r.score);
     const total = scores.length;
     const averageScore =
-      total > 0 ? scores.reduce((a, b) => a + b, 0) / total : null;
+      total > 0
+        ? Math.round((scores.reduce((a, b) => a + b, 0) / total) * 10) / 10
+        : null;
     return { averageScore, totalRatings: total };
   }
 }

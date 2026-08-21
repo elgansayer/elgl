@@ -9,7 +9,8 @@ import {
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { Throttle } from '@nestjs/throttler';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TransferService } from './transfer.service';
 
 @Controller('transfer')
@@ -23,6 +24,7 @@ export class TransferController {
    */
   @UseGuards(SupabaseAuthGuard)
   @Post('generate')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async generate(@Req() req: { user?: { id?: string } }) {
     const userId = req.user?.id;
     if (!userId) {
@@ -40,6 +42,7 @@ export class TransferController {
    * swap JWT that the client can later exchange for a real session.
    */
   @Get('consume')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async consume(@Query('token') token?: string) {
     if (!token) {
       throw new BadRequestException('token query parameter is required');
@@ -58,6 +61,7 @@ export class TransferController {
    * that send the token in the JSON body.
    */
   @Post('consume')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async consumePost(@Body('token') token?: string) {
     if (!token) {
       throw new BadRequestException('token is required');
@@ -74,6 +78,7 @@ export class TransferController {
    * Public endpoint: exchange the swapJWT for a real Supabase session.
    */
   @Post('swap')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async swap(@Body('swapToken') swapToken?: string) {
     if (!swapToken) {
       throw new BadRequestException('swapToken is required');

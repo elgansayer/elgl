@@ -1,0 +1,91 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - name: "warmup"
+      duration: 30
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 20
+    - name: "sustained"
+      duration: 120
+      arrivalRate: 20
+    - name: "spike"
+      duration: 30
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN }}"
+  processor: "./helpers/matchmaking-helpers.js"
+  plugins:
+    expect: {}
+  ensure:
+    thresholds:
+      - "http.response_time.p99 < 2000"
+      - "http.response_time.p95 < 1000"
+      - "http.response_time.p50 < 500"
+
+scenarios:
+  # ── Multi‑tier "for‑you" recommendations ────────────────────────────
+
+  - name: "Get recommended partners (for-you)"
+    weight: 40
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
+    flow:
+      - get:
+          url: "/api/recommendations/for-you"
+          expect:
+            - statusCode: 200
+            - contentType: "application/json"
+
+  # ── Daily cached recommendations ─────────────────────────────────────
+
+  - name: "Get daily recommendations"
+    weight: 35
+    beforeRequest:
+      - "beforeRequest"
+    flow:
+      - get:
+          url: "/api/recommendations/daily"
+          expect:
+            - statusCode: 200
+            - contentType: "application/json"
+
+  # ── Concurrent mixed-load scenario (simulates dashboard) ─────────────
+
+  - name: "Dashboard mixed: for-you + daily"
+    weight: 15
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
+    flow:
+      - get:
+          url: "/api/recommendations/for-you"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/recommendations/daily"
+          expect:
+            - statusCode: 200
+
+  # ── Rapid polling (simulates pull-to-refresh) ────────────────────────
+
+  - name: "Rapid poll: for-you"
+    weight: 10
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
+    flow:
+      - loop:
+          - get:
+              url: "/api/recommendations/for-you"
+              expect:
+                - statusCode: 200
+        count: 3

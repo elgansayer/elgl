@@ -1,5 +1,7 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, resource } from '@angular/core';
+import { UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
 import { AuthService } from '../../services/auth.service';
@@ -7,14 +9,30 @@ import { DiscoveryService, SearchFilterParams } from '../../services/discovery.s
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { UserProfile } from '../../services/user.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppInputComponent } from '../primitives/input/input.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [
+    HlmCheckbox,
+    HlmButton,
+    FormsModule,
+    TranslatePipe,
+    UpperCasePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppInputComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
+  ],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss'],
 })
-export class DeveloperDashboardComponent implements OnInit {
+export class DeveloperDashboardComponent {
   readonly store = inject(EconomyStore);
   readonly authService = inject(AuthService);
   readonly discoveryService = inject(DiscoveryService);
@@ -37,9 +55,12 @@ export class DeveloperDashboardComponent implements OnInit {
   readonly simulatedCanPublish = signal<boolean>(false);
   readonly isRecordingActive = signal<boolean>(false);
 
-  async ngOnInit(): Promise<void> {
-    await Promise.all([this.store.loadDeveloperAnalytics(), this.store.loadDiagnosticLogs()]);
-  }
+  // Use resource() for initial data loading instead of ngOnInit()
+  private dashboardData = resource({
+    loader: async () => {
+      await Promise.all([this.store.loadDeveloperAnalytics(), this.store.loadDiagnosticLogs()]);
+    },
+  });
 
   setTab(tab: 'overview' | 'postgis' | 'centrifugo' | 'livekit'): void {
     this.activeTab.set(tab);
