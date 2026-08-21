@@ -4,6 +4,11 @@ set -euo pipefail
 SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY=${FACTORY_SOURCE_REPOSITORY:-"$(cd -- "$SCRIPT_DIRECTORY/.." && pwd)"}
 DEPLOY_REF=main
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
+FACTORY_HOME=/home/dev
 FACTORY_CHECKOUT=/var/lib/hellotalk-factory/repository
 WORKTREE=''
 USE_EXISTING_CREDENTIALS=false
@@ -103,8 +108,8 @@ if [ -z "$factory_github_token" ]; then
 fi
 
 factory_git() {
-  runuser -u hellotalk-factory -- env \
-    HOME=/var/lib/hellotalk-factory/home \
+  runuser -u "$FACTORY_USER" -- env \
+    HOME="$FACTORY_HOME" \
     PATH=/usr/local/bin:/usr/bin:/bin \
     GH_TOKEN="$factory_github_token" \
     "$@"
@@ -193,9 +198,9 @@ worker_image_id() {
   # fails silently. --chdir moves the child into a directory the service
   # user owns before Podman runs, matching the intent of the `cd` already
   # used for the worker image build below.
-  runuser -u hellotalk-factory -- env \
-    --chdir=/var/lib/hellotalk-factory/home \
-    HOME=/var/lib/hellotalk-factory/home \
+  runuser -u "$FACTORY_USER" -- env \
+    --chdir="$FACTORY_HOME" \
+    HOME="$FACTORY_HOME" \
     podman image inspect --format '{{.Id}}' "$WORKER_IMAGE" 2>/dev/null
 }
 
@@ -286,12 +291,12 @@ fi
 
 "$WORKTREE/scripts/repair-factory-host.sh"
 
-factory_uid="$(id -u hellotalk-factory)"
-loginctl enable-linger hellotalk-factory
+factory_uid="$(id -u "$FACTORY_USER")"
+loginctl enable-linger "$FACTORY_USER"
 systemctl start "user@${factory_uid}.service"
 printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > \
   /etc/hellotalk-factory/runtime.env
-chown root:hellotalk-factory /etc/hellotalk-factory/runtime.env
+chown root:"$FACTORY_USER" /etc/hellotalk-factory/runtime.env
 chmod 0640 /etc/hellotalk-factory/runtime.env
 
 if [ ! -d "$FACTORY_CHECKOUT/.git" ]; then
@@ -319,7 +324,7 @@ install -o root -g root -m 0644 \
   "$WORKTREE/config/factory/agents.production.json" \
   /etc/hellotalk-factory/agents.example.json
 if [ ! -f /etc/hellotalk-factory/agents.json ]; then
-  install -o root -g hellotalk-factory -m 0640 \
+  install -o root -g "$FACTORY_USER" -m 0640 \
     "$WORKTREE/config/factory/agents.production.json" \
     /etc/hellotalk-factory/agents.json
 fi
@@ -373,14 +378,14 @@ for index in "${!npm_directories[@]}"; do
     if [ "$FAST_DEPLOY" = true ]; then
       echo "Fast deployment cache miss: refreshing Node dependencies in $directory"
     fi
-    runuser -u hellotalk-factory -- \
+    runuser -u "$FACTORY_USER" -- \
       npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
     record_npm_cache "$directory" "$cache_file"
   fi
 done
 # `$1` is intentionally expanded by the child shell.
 # shellcheck disable=SC2016
-runuser -u hellotalk-factory -- env HOME=/var/lib/hellotalk-factory/home \
+runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   bash -c 'cd "$1" && npm exec -- cypress install' _ "$FACTORY_CHECKOUT/frontend"
 
 # Rebuild the secretless worker image from the same immutable main revision as
@@ -394,20 +399,20 @@ else
   if [ "$FAST_DEPLOY" = true ]; then
     echo 'Fast deployment cache miss: rebuilding Factory worker image'
   fi
-  install -d -o hellotalk-factory -g hellotalk-factory -m 0750 \
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 \
     /opt/hellotalk-factory/build-context
   rsync -a --delete \
     --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv \
     --exclude=__pycache__ \
     "$WORKTREE/automation/" /opt/hellotalk-factory/build-context/
-  chown -R hellotalk-factory:hellotalk-factory \
+  chown -R "$FACTORY_USER:$FACTORY_USER" \
     /opt/hellotalk-factory/build-context
   # Rootless Podman and its helpers may inspect the inherited working directory.
   # The operator's checkout is intentionally not accessible to the service user,
   # so enter the owned build context before starting the child process.
   # `$1` is intentionally expanded by the child shell.
   # shellcheck disable=SC2016
-  runuser -u hellotalk-factory -- env HOME=/var/lib/hellotalk-factory/home \
+  runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
     bash -c 'cd "$1" && exec podman build --cgroup-manager=cgroupfs \
       --tag localhost/hellotalk-factory-worker:current \
       --file "$1/Containerfile" "$1"' _ \
