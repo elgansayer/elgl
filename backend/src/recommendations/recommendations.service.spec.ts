@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   RecommendationsService,
@@ -8,22 +9,26 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 
-jest.mock('../common/retry', () => ({
-  withRetry: jest.fn((fn: () => unknown) => fn()),
-  isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
-}));
+vi.mock('../common/retry', async () => {
+  const actual =
+    await vi.importActual<typeof import('../common/retry')>('../common/retry');
+  return {
+    withRetry: vi.fn((fn: () => unknown) => fn()),
+    isRateLimitError: actual.isRateLimitError,
+  };
+});
 
 type QueryChainMock = {
-  select: jest.Mock;
-  eq: jest.Mock;
-  neq: jest.Mock;
-  in: jest.Mock;
-  contains: jest.Mock;
-  order: jest.Mock;
-  limit: jest.Mock;
-  single: jest.Mock;
-  maybeSingle: jest.Mock;
-  match: jest.Mock;
+  select: Mock;
+  eq: Mock;
+  neq: Mock;
+  in: Mock;
+  contains: Mock;
+  order: Mock;
+  limit: Mock;
+  single: Mock;
+  maybeSingle: Mock;
+  match: Mock;
   _setResolve: (data: unknown, error?: { message: string } | null) => void;
   then: (resolve: (value: unknown) => void) => undefined;
 };
@@ -56,7 +61,7 @@ const makeQueryChain = (): QueryChainMock => {
     'match',
   ];
   methodNames.forEach((m) => {
-    (chain as Record<string, unknown>)[m] = jest.fn().mockReturnValue(chain);
+    (chain as Record<string, unknown>)[m] = vi.fn().mockReturnValue(chain);
   });
 
   (chain as Record<string, unknown>)['then'] = (
@@ -72,64 +77,64 @@ const makeQueryChain = (): QueryChainMock => {
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
   let mockRedis: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
-    pipeline: jest.Mock;
+    get: Mock;
+    set: Mock;
+    del: Mock;
+    pipeline: Mock;
   };
-  let mockPipeline: { set: jest.Mock; exec: jest.Mock };
-  let mockFrom: jest.Mock;
+  let mockPipeline: { set: Mock; exec: Mock };
+  let mockFrom: Mock;
   let mockLogger: {
-    info: jest.Mock;
-    warn: jest.Mock;
-    error: jest.Mock;
-    debug: jest.Mock;
+    info: Mock;
+    warn: Mock;
+    error: Mock;
+    debug: Mock;
   };
   let mockMetricsService: {
-    recordMatchmakingRecommendationsGenerated: jest.Mock;
-    recordMatchmakingRecommendationsPerRequest: jest.Mock;
-    recordMatchmakingFallbackTierUsed: jest.Mock;
-    recordMatchmakingEmptyResults: jest.Mock;
-    recordMatchmakingRequestDuration: jest.Mock;
-    recordMatchmakingDailyCacheMiss: jest.Mock;
-    setMatchmakingTierSuccessRate: jest.Mock;
+    recordMatchmakingRecommendationsGenerated: Mock;
+    recordMatchmakingRecommendationsPerRequest: Mock;
+    recordMatchmakingFallbackTierUsed: Mock;
+    recordMatchmakingEmptyResults: Mock;
+    recordMatchmakingRequestDuration: Mock;
+    recordMatchmakingDailyCacheMiss: Mock;
+    setMatchmakingTierSuccessRate: Mock;
   };
-  let mockCrashReportService: { reportCrash: jest.Mock };
+  let mockCrashReportService: { reportCrash: Mock };
 
   beforeEach(async () => {
     mockPipeline = {
-      set: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue(undefined),
+      set: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue(undefined),
     };
 
     mockRedis = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-      pipeline: jest.fn().mockReturnValue(mockPipeline),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      pipeline: vi.fn().mockReturnValue(mockPipeline),
     };
 
-    mockFrom = jest.fn();
+    mockFrom = vi.fn();
 
     mockMetricsService = {
-      recordMatchmakingRecommendationsGenerated: jest.fn(),
-      recordMatchmakingRecommendationsPerRequest: jest.fn(),
-      recordMatchmakingFallbackTierUsed: jest.fn(),
-      recordMatchmakingEmptyResults: jest.fn(),
-      recordMatchmakingRequestDuration: jest.fn(),
-      recordMatchmakingDailyCacheMiss: jest.fn(),
-      setMatchmakingTierSuccessRate: jest.fn(),
+      recordMatchmakingRecommendationsGenerated: vi.fn(),
+      recordMatchmakingRecommendationsPerRequest: vi.fn(),
+      recordMatchmakingFallbackTierUsed: vi.fn(),
+      recordMatchmakingEmptyResults: vi.fn(),
+      recordMatchmakingRequestDuration: vi.fn(),
+      recordMatchmakingDailyCacheMiss: vi.fn(),
+      setMatchmakingTierSuccessRate: vi.fn(),
     };
 
     mockCrashReportService = {
-      reportCrash: jest.fn().mockResolvedValue({}),
+      reportCrash: vi.fn().mockResolvedValue({}),
     };
 
     mockLogger = {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -142,10 +147,10 @@ describe('RecommendationsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue({
+            getClient: vi.fn().mockReturnValue({
               from: mockFrom,
             }),
-            getRedisClient: jest.fn().mockReturnValue(mockRedis),
+            getRedisClient: vi.fn().mockReturnValue(mockRedis),
           },
         },
         {
@@ -155,10 +160,10 @@ describe('RecommendationsService', () => {
         {
           provide: CircuitBreakerService,
           useValue: {
-            isAvailable: jest.fn().mockReturnValue(true),
-            recordSuccess: jest.fn(),
-            recordFailure: jest.fn(),
-            getState: jest.fn().mockReturnValue({
+            isAvailable: vi.fn().mockReturnValue(true),
+            recordSuccess: vi.fn(),
+            recordFailure: vi.fn(),
+            getState: vi.fn().mockReturnValue({
               isOpen: false,
               failureCount: 0,
               lastFailure: 0,
@@ -166,7 +171,7 @@ describe('RecommendationsService', () => {
               totalFailures: 0,
               totalSuccesses: 0,
             }),
-            executeWithBreaker: jest
+            executeWithBreaker: vi
               .fn()
               .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
                 op(),
@@ -184,7 +189,7 @@ describe('RecommendationsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -1032,7 +1037,11 @@ describe('RecommendationsService', () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
         { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
-        { id: 'user-b', native_languages: ['ja'], target_languages: ['en', 'ko'] },
+        {
+          id: 'user-b',
+          native_languages: ['ja'],
+          target_languages: ['en', 'ko'],
+        },
         { id: 'user-c', native_languages: ['es'], target_languages: ['en'] },
         { id: 'user-d', native_languages: ['en'], target_languages: null },
       ]);

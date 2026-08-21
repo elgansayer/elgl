@@ -23,6 +23,17 @@ export interface LinkPreview {
   siteName: string;
 }
 
+export interface GiftPayload {
+  gift_id: string;
+  gift_name: string;
+  gift_icon: string;
+  coin_value: number;
+  animation_type?: string;
+  animation_url?: string;
+  sender_name?: string;
+  receiver_name?: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -36,7 +47,8 @@ export interface ChatMessage {
     | 'system'
     | 'correction_request'
     | 'status_reply'
-    | 'view_once_media';
+    | 'view_once_media'
+    | 'gift';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -48,6 +60,7 @@ export interface ChatMessage {
     type: string;
     [param: string]: unknown;
   };
+  gift_payload?: GiftPayload;
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
@@ -85,6 +98,18 @@ export interface ChatMessage {
 
   /** Whether this message was forwarded from another conversation */
   is_forwarded?: boolean;
+}
+
+export interface ReadReceiptUser {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  readAt: string;
+}
+
+export interface MessageReceiptStatus {
+  readBy: ReadReceiptUser[];
+  totalMembers: number;
 }
 
 export interface FavouriteRecord {
@@ -186,6 +211,15 @@ export class ChatService {
   // to avoid premature HTTP calls that break test environments.
   private readonly blockedUsers = signal<Set<string>>(new Set<string>());
 
+  /** Exposed for UI: count of messages queued offline waiting for sync. */
+  readonly queuedCount = this.offlineQueue.queueSize;
+
+  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
+    return firstValueFrom(
+      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
+    );
+  }
+
   constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => this.syncOfflineMessages());
@@ -247,26 +281,9 @@ export class ChatService {
       status_text: string;
     };
   }): Promise<ChatMessage> {
-    // Check if the receiver is blocked before sending
     const currentUser = this.authService.currentUser();
-    if (currentUser?.id) {
-      // Get room members to find the receiver
-      const roomMembers = await firstValueFrom(
-        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
-          headers: this.getHeaders(),
-        }),
-      ).catch(() => []);
-      if (roomMembers && roomMembers.length > 0) {
-        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
-        if (receiverId) {
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
-          if (blockedIds.includes(receiverId)) {
-            throw new Error('You cannot send messages to this user.');
-          }
-        }
-      }
-    }
 
+    // Offline: queue the message in IndexedDB and return immediately.
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       const queuedMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -285,6 +302,25 @@ export class ChatService {
       await this.offlineQueue.enqueueMessage(queuedMsg);
       this.hapticFeedback.tap();
       return queuedMsg;
+    }
+
+    // Check if the receiver is blocked before sending
+    if (currentUser?.id) {
+      // Get room members to find the receiver
+      const roomMembers = await firstValueFrom(
+        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
+          headers: this.getHeaders(),
+        }),
+      ).catch(() => []);
+      if (roomMembers && roomMembers.length > 0) {
+        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
+        if (receiverId) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.includes(receiverId)) {
+            throw new Error('You cannot send messages to this user.');
+          }
+        }
+      }
     }
 
     const message = await firstValueFrom(
@@ -797,6 +833,23 @@ export class ChatService {
       }),
     );
     return response.wallpaperUrl;
+  }
+
+  async sendTypingIndicator(roomId: string, isTyping: boolean): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `${this.baseUrl}/typing`,
+          {
+            room_id: roomId,
+            is_typing: isTyping ? 'true' : 'false',
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      // Silently ignore typing indicator errors -- not critical
+    }
   }
 
   async deleteMessage(messageId: string, scope: 'self' | 'everyone' = 'self'): Promise<void> {

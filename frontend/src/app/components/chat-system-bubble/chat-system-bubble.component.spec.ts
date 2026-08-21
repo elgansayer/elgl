@@ -87,9 +87,9 @@ describe('ChatSystemBubbleComponent', () => {
     fixture.detectChanges();
 
     const span = fixture.nativeElement.querySelector('span.rounded-full');
-    expect(span.className).toContain('bg-blue-500/10');
-    expect(span.className).toContain('border-blue-500/30');
-    expect(span.className).toContain('text-blue-400');
+    expect(span.className).toContain('bg-secondary/10');
+    expect(span.className).toContain('border-secondary/30');
+    expect(span.className).toContain('text-secondary');
   });
 
   it('applies custom styling for missedCall event', () => {
@@ -97,9 +97,9 @@ describe('ChatSystemBubbleComponent', () => {
     fixture.detectChanges();
 
     const span = fixture.nativeElement.querySelector('span.rounded-full');
-    expect(span.className).toContain('bg-red-500/10');
-    expect(span.className).toContain('border-red-500/30');
-    expect(span.className).toContain('text-red-400');
+    expect(span.className).toContain('bg-danger/10');
+    expect(span.className).toContain('border-danger/30');
+    expect(span.className).toContain('text-danger');
   });
 
   it('applies default styling for unknown event types', () => {

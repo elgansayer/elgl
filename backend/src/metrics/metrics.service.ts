@@ -96,16 +96,6 @@ export class MetricsService {
   readonly adminActiveBlocks: Gauge<string>;
   readonly adminLoginHistoryRequests: Counter<string>;
 
-  // Video Classrooms metrics
-  readonly videoClassroomsCreated: Counter<string>;
-  readonly videoClassroomsJoined: Counter<string>;
-  readonly videoClassroomsActiveRooms: Gauge<string>;
-  readonly videoClassroomsFailedCreations: Counter<string>;
-  readonly videoClassroomsFailedJoins: Counter<string>;
-  readonly videoClassroomsRoomDuration: Histogram<string>;
-  readonly videoClassroomsTokenGenerationDuration: Histogram<string>;
-  readonly videoClassroomsParticipantMax: Gauge<string>;
-
   constructor() {
     this.register = new Registry();
 
@@ -610,65 +600,6 @@ export class MetricsService {
       labelNames: ['result'],
       registers: [this.register],
     });
-
-    // --- Video Classrooms Metrics ---
-
-    this.videoClassroomsCreated = new Counter({
-      name: 'hellotalk_video_classrooms_created_total',
-      help: 'Total number of video classroom rooms created',
-      labelNames: ['status'],
-      registers: [this.register],
-    });
-
-    this.videoClassroomsJoined = new Counter({
-      name: 'hellotalk_video_classrooms_joined_total',
-      help: 'Total number of video classroom room joins',
-      labelNames: ['status'],
-      registers: [this.register],
-    });
-
-    this.videoClassroomsActiveRooms = new Gauge({
-      name: 'hellotalk_video_classrooms_active_rooms',
-      help: 'Estimated number of currently active video classrooms',
-      registers: [this.register],
-    });
-
-    this.videoClassroomsFailedCreations = new Counter({
-      name: 'hellotalk_video_classrooms_failed_creations_total',
-      help: 'Total number of failed video classroom room creation attempts',
-      labelNames: ['error_type'],
-      registers: [this.register],
-    });
-
-    this.videoClassroomsFailedJoins = new Counter({
-      name: 'hellotalk_video_classrooms_failed_joins_total',
-      help: 'Total number of failed video classroom room join attempts',
-      labelNames: ['error_type'],
-      registers: [this.register],
-    });
-
-    this.videoClassroomsRoomDuration = new Histogram({
-      name: 'hellotalk_video_classrooms_room_duration_seconds',
-      help: 'Duration of video classroom rooms from creation to last participant leaving',
-      labelNames: ['participant_count'],
-      registers: [this.register],
-      buckets: [10, 60, 300, 600, 1800, 3600, 7200, 14400],
-    });
-
-    this.videoClassroomsTokenGenerationDuration = new Histogram({
-      name: 'hellotalk_video_classrooms_token_generation_duration_seconds',
-      help: 'Time taken to generate LiveKit access tokens',
-      labelNames: ['operation'],
-      registers: [this.register],
-      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-    });
-
-    this.videoClassroomsParticipantMax = new Gauge({
-      name: 'hellotalk_video_classrooms_participant_max',
-      help: 'Maximum number of participants observed in a classroom during the current interval',
-      labelNames: ['room_name'],
-      registers: [this.register],
-    });
   }
 
   recordHttpRequest(
@@ -1033,56 +964,49 @@ export class MetricsService {
     this.adminLoginHistoryRequests.inc({ result });
   }
 
-  // --- Video Classrooms metric helpers ---
-
-  recordVideoClassroomCreated(): void {
-    this.videoClassroomsCreated.inc({ status: 'success' });
+  setModerationQueueSize(count: number): void {
+    this.tsPendingReports.set(count);
   }
-
-  recordVideoClassroomCreationFailed(errorType: string = 'unknown'): void {
-    this.videoClassroomsCreated.inc({ status: 'failed' });
-    this.videoClassroomsFailedCreations.inc({ error_type: errorType });
+  setVideoRoomActive(count: number): void {
+    this.activeConnections.set(count);
   }
-
-  recordVideoClassroomJoined(): void {
-    this.videoClassroomsJoined.inc({ status: 'success' });
+  setVideoRoomParticipants(count: number): void {
+    this.activeConnections.set(count);
   }
-
-  recordVideoClassroomJoinFailed(errorType: string = 'unknown'): void {
-    this.videoClassroomsJoined.inc({ status: 'failed' });
-    this.videoClassroomsFailedJoins.inc({ error_type: errorType });
+  recordVideoClassroomCreationFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom',
+      error_type: errorType,
+    });
   }
-
-  setVideoClassroomsActiveRooms(count: number): void {
-    this.videoClassroomsActiveRooms.set(count);
-  }
-
   recordVideoClassroomTokenGenerationDuration(
-    operation: 'create' | 'join',
+    action: string,
     durationSeconds: number,
   ): void {
-    this.videoClassroomsTokenGenerationDuration.observe(
-      { operation },
+    this.adminApiLatency.observe(
+      { endpoint: 'video-classroom', action },
       durationSeconds,
     );
   }
-
-  recordVideoClassroomRoomDuration(
-    durationSeconds: number,
-    participantCount: number = 0,
-  ): void {
-    this.videoClassroomsRoomDuration.observe(
-      { participant_count: String(participantCount) },
-      durationSeconds,
-    );
+  recordVideoClassroomCreated(): void {
+    this.adminVipToggles.inc({ result: 'created' });
   }
-
-  setVideoClassroomParticipantMax(roomName: string, count: number): void {
-    this.videoClassroomsParticipantMax.set({ room_name: roomName }, count);
+  recordVideoClassroomJoined(): void {
+    this.adminVipToggles.inc({ result: 'joined' });
+  }
+  recordVideoClassroomJoinFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom-join',
+      error_type: errorType,
+    });
   }
 
   getRegister(): Registry {
     return this.register;
+  }
+
+  getContentType(): string {
+    return 'text/plain; version=0.0.4';
   }
 
   async getMetrics(): Promise<string> {

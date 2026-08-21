@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -13,7 +14,15 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {
