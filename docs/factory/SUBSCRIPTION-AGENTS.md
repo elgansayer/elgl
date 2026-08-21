@@ -2,19 +2,20 @@
 
 ## Security model
 
-Authenticate once outside job execution. The daemon must never open a browser login flow, copy a human home,
-place credentials in a repository, include tokens in prompts, or publish credentials in GitHub comments.
+Authenticate once outside job execution. The daemon must never open a browser login flow during a task, place
+credentials in a repository, include tokens in prompts, or publish credentials in GitHub comments.
 
-All commands in this guide target the dedicated service account:
+The daemon runs as the operator's own login user (`dev`), reusing that account's normal CLI sessions rather than
+maintaining a separate service-account credential set. All commands in this guide target that user:
 
 ```bash
-FACTORY_HOME=/var/lib/hellotalk-factory/home
+FACTORY_HOME=/home/dev
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
 ```
 
-The service has a non-login shell on many hosts. Use `sudo -u ... env -i` as shown instead of changing its shell.
-The empty starting environment prevents an operator's provider keys and sessions from changing the probe result.
-Install CLIs into the service user's local path or expose a root-owned executable in `/usr/local/bin`.
+Use `sudo -u ... env -i` as shown rather than an interactive shell. The empty starting environment isolates each
+probe from any unrelated variables already present in the current session.
+Install CLIs into dev's local path or expose a root-owned executable in `/usr/local/bin`.
 
 Never store vendor API keys in the subscription CLI environment. `provider_environment()` strips common API key,
 GitHub, and daemon-secret variables so local subscription sessions are not accidentally replaced by PAYG API
@@ -29,11 +30,11 @@ bypass that boundary, so doctor treats such state as a startup failure.
 
 Official setup: [Claude Code setup](https://code.claude.com/docs/en/setup).
 
-Install using Anthropic's current native installer, then authenticate as the service user:
+Install using Anthropic's current native installer, then authenticate as dev:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth login
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth login
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   claude auth status --json
 ```
 
@@ -53,9 +54,9 @@ Install the current CLI and authenticate with the ChatGPT subscription. Device a
 for a headless host:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   codex login --device-auth
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
 ```
 
 The adapter requires `login status` to identify ChatGPT authentication. It uses `codex exec`, workspace-write
@@ -79,20 +80,20 @@ Legacy repository `.env` files may still contain `GEMINI_ENABLED=true`. The Fact
 that retired API route and writes `GEMINI_ENABLED=false`; direct Google routing is controlled only by
 `FACTORY_AGENTS_CONFIG`.
 
-Install Antigravity 1.1.1 or newer as the service user, then complete Google sign-in once:
+Install Antigravity 1.1.1 or newer as dev, then complete Google sign-in once:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash'
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy
 ```
 
 After authentication, exit without starting repository work. These probes list local version and account-visible
 models but do not start a model task:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy --version
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy --version
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
 The production entry uses `command=agy`, `cli_variant=antigravity`, and the account-visible
@@ -101,9 +102,9 @@ slash-command expansion, selects high effort, bounds print mode, enables the CLI
 requests inside the Factory-controlled worktree. The outer Factory process runner still owns the final timeout
 and process-group termination. Recheck `agy models` before enabling Google because account entitlements can differ.
 
-The provider is enabled in the production file after `agy models` succeeded as `hellotalk-factory` and doctor
+The provider is enabled in the production file after `agy models` succeeded as `dev` and doctor
 reported it healthy on the production host. Keep the same gate after every CLI or credential change: require a
-harmless service-user canary before accepting production work. The health gate rejects Antigravity older than
+harmless canary as `dev` before accepting production work. The health gate rejects Antigravity older than
 1.1.1 and uses `agy models` as the non-generation authentication probe.
 
 To retain Gemini CLI for an eligible deployment, configure `command=gemini` and `cli_variant=gemini`. That path
@@ -120,15 +121,15 @@ Install OpenCode using its current supported installation method. OpenCode 1.18.
 directly from the login command. It prompts for the credential without placing it in process arguments:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   opencode auth login --provider opencode-go
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   opencode models opencode-go
 ```
 
 Do not export `OPENCODE_GO_API_KEY` from a repository `.env`, a shell profile, the systemd environment, or a
-command argument for the direct provider. The direct adapter reads the CLI-owned service-user credential and
+command argument for the direct provider. The direct adapter reads the CLI-owned per-user credential and
 deliberately strips API-key variables. If a key was put in a repository file, remove it and rotate any value that
 was also pasted into chat, command history, or logs.
 
@@ -137,7 +138,7 @@ contains every configured default and phase model. Those probes prove credential
 not remaining subscription capacity. A tiny repository-free generation can still report `insufficient balance`.
 That result is `PROVIDER_QUOTA`, not an authentication failure. Wait for capacity or fund the workspace instead
 of repeatedly replacing credentials from the same exhausted workspace. OpenCode documents its credentials under
-the service user's XDG data directory. Let the CLI own that location and its permissions; do not copy or commit
+dev's XDG data directory. Let the CLI own that location and its permissions; do not copy or commit
 the credential file.
 
 The non-interactive adapter uses `opencode run`, a mode `0600` temporary prompt attachment inside the isolated
@@ -165,7 +166,7 @@ if it were an independent fallback.
 The legacy OpenHands authentication command remains available where its subscription transport is configured:
 
 ```bash
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
   /opt/hellotalk-factory/venv/bin/hellotalk-factory auth openai
 ```
 
@@ -180,11 +181,11 @@ not claim an enforceable dollar cap for a provider that does not expose usage co
 ## Credential locations and isolation
 
 Provider directories can change between CLI releases. Use each official CLI's own auth command to discover and
-maintain its files. `credential_paths` and `runtime_paths` in `agents.json` are explicit paths relative to the
-service home. Startup validation rejects absolute paths, parent traversal, duplicates, and overlaps. Update these
+maintain its files. `credential_paths` and `runtime_paths` in `agents.json` are explicit paths relative to the operator
+home directory. Startup validation rejects absolute paths, parent traversal, duplicates, and overlaps. Update these
 lists when a CLI moves its session rather than exposing the whole home.
 
-Direct CLIs execute as the service user and access only their declared subscription paths. Each attempt enters
+Direct CLIs execute as dev and access only their declared subscription paths. Each attempt enters
 private user, mount, PID, and proc namespaces with an otherwise empty synthetic home. The sandbox restores the
 assigned worktree, the canonical repository read-only, provider-owned credential paths read-write, and executable
 paths read-only. It also remounts `/opt/hellotalk-factory` read-only and replaces `/tmp`, `/var/tmp`, and `/dev/shm`
@@ -207,8 +208,8 @@ removed immediately after the probe.
 ## Validation without quota-heavy work
 
 ```bash
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
+sudo -u dev /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
+sudo -u dev /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 ```
 
 Online doctor also verifies a layered GitHub policy on the configured base branch. A baseline ruleset must require
@@ -256,5 +257,5 @@ sudo systemctl restart hellotalk-factory.service
 sudo journalctl -u hellotalk-factory.service -n 100 --no-pager
 ```
 
-If auth fails, leave the job durable, fix the service-user session, wait for or clear the normal cooldown by a
+If auth fails, leave the job durable, fix the dev session, wait for or clear the normal cooldown by a
 successful health check, and resume. Never delete circuit or job state to make a red diagnostic disappear.

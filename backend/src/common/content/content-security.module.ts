@@ -5,15 +5,7 @@ import { RichTextSanitiserService } from './rich-text-sanitiser.service';
 
 @Global()
 @Module({
-  providers: [
-    RichTextSanitiserService,
-    SanitiseRichHtmlPipe,
-    SanitiseHtmlPipe,
-  ],
-  exports: [
-    RichTextSanitiserService,
-    SanitiseRichHtmlPipe,
-    SanitiseHtmlPipe,
-  ],
+  providers: [RichTextSanitiserService, SanitiseRichHtmlPipe, SanitiseHtmlPipe],
+  exports: [RichTextSanitiserService, SanitiseRichHtmlPipe, SanitiseHtmlPipe],
 })
 export class ContentSecurityModule {}

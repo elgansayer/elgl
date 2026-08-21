@@ -14,6 +14,8 @@ import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card
 import { environment } from '../../../environments/environment';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 
+type VoicePlaybackSpeed = 1 | 1.5 | 2;
+
 @Component({
   selector: 'app-chat-message',
   imports: [
@@ -92,20 +94,33 @@ import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
             }
 
             @if (message().message_type === 'voice') {
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <button
                   hlmBtn
+                  type="button"
+                  size="touch"
+                  variant="ghost"
                   [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
                   (click)="playVoice()"
-                  class="p-2 rounded-full hover:bg-black/10"
                 >
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path
                       d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
                     />
                   </svg>
                 </button>
                 <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
+                <button
+                  hlmBtn
+                  type="button"
+                  size="touch"
+                  variant="ghost"
+                  class="min-w-11 px-2 tabular-nums"
+                  [attr.aria-label]="('chatRoom.voiceMessage' | t) + ' ' + playbackSpeed() + '×'"
+                  (click)="cycleVoicePlaybackSpeed()"
+                >
+                  {{ playbackSpeed() }}×
+                </button>
               </div>
               @if (message().media_url) {
                 <div class="mt-2 text-xs opacity-80 italic border-s-2 border-secondary ps-2">
@@ -271,10 +286,12 @@ export class ChatMessageComponent {
   private safetyService = inject(SafetyService);
   private confirmService = inject(ConfirmService);
   private i18n = inject(I18nService);
+  private activeVoiceAudio: HTMLAudioElement | null = null;
 
   isBlocked = signal(false);
   voiceTranscription = signal<string | null>(null);
   voiceTranscribing = signal(false);
+  playbackSpeed = signal<VoicePlaybackSpeed>(1);
 
   textSegments = computed(() => {
     const text = this.message()?.text_content ?? '';
@@ -326,11 +343,37 @@ export class ChatMessageComponent {
     return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
-  playVoice(): void {
-    if (this.message().media_url) {
-      const audio = new Audio(this.message().media_url);
-      audio.play().catch(console.error);
+  cycleVoicePlaybackSpeed(): void {
+    const current = this.playbackSpeed();
+    const next: VoicePlaybackSpeed = current === 1 ? 1.5 : current === 1.5 ? 2 : 1;
+    this.playbackSpeed.set(next);
+    if (this.activeVoiceAudio) {
+      this.activeVoiceAudio.playbackRate = next;
     }
+  }
+
+  playVoice(): void {
+    const mediaUrl = this.message().media_url;
+    if (!mediaUrl) return;
+
+    const audio = new Audio(mediaUrl);
+    audio.playbackRate = this.playbackSpeed();
+    this.activeVoiceAudio = audio;
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.activeVoiceAudio === audio) {
+          this.activeVoiceAudio = null;
+        }
+      },
+      { once: true },
+    );
+    audio.play().catch((error: unknown) => {
+      if (this.activeVoiceAudio === audio) {
+        this.activeVoiceAudio = null;
+      }
+      console.error(error);
+    });
   }
 
   async fetchTranscription(audioUrl: string): Promise<void> {
