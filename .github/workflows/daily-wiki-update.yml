@@ -2,61 +2,64 @@ name: Daily Documentation Sync
 
 on:
   schedule:
-    # Runs at 00:00 UTC every day
     - cron: '0 0 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+
+concurrency:
+  group: daily-documentation-sync
+  cancel-in-progress: true
 
 jobs:
   update-docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       issues: read
-    
+
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.13'
 
       - name: Checkout Wiki Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository }}.wiki
           path: wiki-repo
 
-      - name: Generate Wiki and README
+      - name: Generate Wiki snapshot
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # The Python script will fetch issues using the gh CLI and read the AST
-          # It generates the markdown files directly.
+          set -euo pipefail
           python3 build_granular_wiki.py
           python3 generate_wiki.py
-          
-          # We update README features list automatically (if the script does it)
-          # Alternatively, ensure the script writes to the wiki-repo folder
-          
-          # Move all generated files to the wiki repo
-          cp -r /home/runner/work/hellotalk/hellotalk/wiki/* wiki-repo/ || true
-          cp /home/runner/work/hellotalk/hellotalk/Exhaustive-Minute-Feature-List.md wiki-repo/ || true
 
-      - name: Commit and Push Main Repository
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md wiki/
-          git commit -m "docs: auto-update daily README and wiki cache" || echo "No changes to commit"
-          git push
+          if [ -d "wiki" ]; then
+            cp -R wiki/. wiki-repo/
+          fi
+          if [ -f "Exhaustive-Minute-Feature-List.md" ]; then
+            cp Exhaustive-Minute-Feature-List.md wiki-repo/
+          fi
 
+      # Generated README/wiki cache changes in the main checkout are deliberately
+      # not pushed. main is protected and all repository changes must go through a
+      # pull request. This workflow publishes only the generated wiki snapshot.
       - name: Commit and Push Wiki Repository
+        working-directory: wiki-repo
         run: |
-          cd wiki-repo
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "docs: daily auto-sync of exhaustive feature list and codebase" || echo "No changes to commit"
+          if git diff --cached --quiet; then
+            echo "No wiki changes to publish."
+            exit 0
+          fi
+          git commit -m "docs: daily auto-sync generated wiki snapshot"
           git push

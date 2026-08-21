@@ -41,7 +41,7 @@ Allow users to select and send virtual gifts to other users, using coins as curr
 - **Emoji size**: 40x40px
 - **Coin icon**: 16x16px
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-800`
 - **Border**: `border border-slate-700`

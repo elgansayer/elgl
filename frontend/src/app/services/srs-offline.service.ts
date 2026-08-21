@@ -21,6 +21,7 @@ export class SrsOfflineService {
   private initPromise: Promise<void> | null = null;
 
   readonly pendingSyncCount = signal(0);
+  readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
@@ -115,7 +116,7 @@ export class SrsOfflineService {
   async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
-    const id = `srs_review_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `srs_review_${Date.now()}_${crypto.randomUUID()}`;
     const payload: QueuedReviewPayload & { id: string } = {
       id,
       flashcardId,

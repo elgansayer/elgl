@@ -4,9 +4,7 @@ import { SystemMessageService } from '../services/system-message.service';
 
 @Injectable()
 export class ChatSystemEventListener {
-  constructor(
-    private readonly systemMessageService: SystemMessageService,
-  ) {}
+  constructor(private readonly systemMessageService: SystemMessageService) {}
 
   @OnEvent('profile.updated', { async: true })
   async handleProfileUpdated(payload: { userId: string }): Promise<void> {

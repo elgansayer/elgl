@@ -1,0 +1,448 @@
+<!-- @dsCard group="Primitives" name="Buttons" subtitle="button-primary · button-secondary · gradient-button" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Primitives · Buttons</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Mirrors frontend/tailwind.config.js exactly: same token names, same
+      // structure, only the CSS custom property names differ (this preview
+      // reuses the --surface-50 / --primary / etc. var names already
+      // established in foundations/tokens.html rather than the app's
+      // build-time --surface-50-rgb names, since this file defines its own
+      // :root block rather than importing styles.scss).
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              surface: {
+                50: 'rgb(var(--surface-50) / <alpha-value>)',
+                100: 'rgb(var(--surface-100) / <alpha-value>)',
+                200: 'rgb(var(--surface-200) / <alpha-value>)',
+                300: 'rgb(var(--surface-300) / <alpha-value>)',
+                400: 'rgb(var(--surface-400) / <alpha-value>)',
+                500: 'rgb(var(--surface-500) / <alpha-value>)',
+                600: 'rgb(var(--surface-600) / <alpha-value>)',
+                700: 'rgb(var(--surface-700) / <alpha-value>)',
+                800: 'rgb(var(--surface-800) / <alpha-value>)',
+                900: 'rgb(var(--surface-900) / <alpha-value>)',
+              },
+              primary: { DEFAULT: 'rgb(var(--primary) / <alpha-value>)' },
+              secondary: { DEFAULT: 'rgb(var(--secondary) / <alpha-value>)' },
+              danger: { DEFAULT: 'rgb(var(--danger) / <alpha-value>)' },
+              success: { DEFAULT: 'rgb(var(--success) / <alpha-value>)' },
+              warning: { DEFAULT: 'rgb(var(--warning) / <alpha-value>)' },
+              vip: { DEFAULT: 'rgb(var(--vip) / <alpha-value>)' },
+              'on-fill': { DEFAULT: 'rgb(var(--on-fill) / <alpha-value>)' },
+              accent: { DEFAULT: 'rgb(var(--accent) / <alpha-value>)' },
+              neon: {
+                violet: '#8B6CF0',
+                pink: '#E8578F',
+                cyan: '#2FC6D9',
+                blue: '#5B8DEF',
+                orange: '#F0954A',
+              },
+              text: {
+                primary: 'rgb(var(--text-primary) / <alpha-value>)',
+                secondary: 'rgb(var(--text-secondary) / <alpha-value>)',
+                muted: 'rgb(var(--text-muted) / <alpha-value>)',
+              },
+            },
+            fontFamily: {
+              display: ['"Instrument Sans"', 'ui-sans-serif', '-apple-system', 'sans-serif'],
+            },
+            borderRadius: {
+              app: '0.75rem',
+              card: '1rem',
+              sheet: '1.25rem',
+              bubble: '1.125rem',
+              pill: '9999px',
+            },
+            boxShadow: {
+              card: '0 1px 2px rgb(var(--shadow) / 0.04), 0 4px 14px rgb(var(--shadow) / 0.08)',
+              lift: '0 12px 32px rgb(var(--shadow) / 0.16), 0 4px 10px rgb(var(--shadow) / 0.08)',
+            },
+            transitionTimingFunction: { app: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+            transitionDuration: { fast: '140ms', base: '180ms', slow: '260ms' },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: rgb(var(--surface-500));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 28px 96px;
+      }
+      header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 34px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: rgb(var(--text-secondary));
+        font-size: 15px;
+        margin: 0 0 40px;
+        max-width: 640px;
+        line-height: 1.55;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      section {
+        margin-top: 48px;
+      }
+      h2 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      .component-note {
+        font-size: 13px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 18px;
+        line-height: 1.6;
+        max-width: 720px;
+      }
+      .component-note code {
+        font-size: 12px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .demo-block {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 16px;
+        padding: 22px;
+      }
+      .demo-block + .demo-block {
+        margin-top: 14px;
+      }
+      .demo-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 12px;
+      }
+      .demo-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      footer {
+        margin-top: 64px;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        max-width: 720px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div>
+          <h1 class="display">Buttons</h1>
+        </div>
+        <div class="toggle" id="toggle">
+          <button id="btn-light" class="active">Light</button>
+          <button id="btn-dark">Dark</button>
+        </div>
+      </header>
+      <p class="sub">
+        Three real button primitives, each its own standalone component under
+        <code>src/app/components/primitives/</code>. Markup and classes below are copied verbatim
+        from each component's <code>buttonClasses()</code> computed signal, not hand-approximated.
+      </p>
+
+      <!-- button-primary (button-primary.component.ts) -->
+      <section>
+        <h2>Primary</h2>
+        <p class="component-note">
+          <code>app-button-primary</code> - <code>size</code>: <code>sm</code> /
+          <code>md</code> (default) / <code>lg</code>. Solid <code>bg-primary</code> fill,
+          <code>rounded-app</code>, <code>shadow-card</code> that lifts to
+          <code>shadow-lift</code> on hover. Disabled swaps to flat <code>surface-200</code> with no
+          shadow.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Sizes</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-3 pe-3 pt-1.5 pb-1.5 text-xs bg-primary text-on-fill hover:bg-primary/90 shadow-card hover:shadow-lift cursor-pointer"
+            >
+              Small
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-4 pe-4 pt-2.5 pb-2.5 text-sm bg-primary text-on-fill hover:bg-primary/90 shadow-card hover:shadow-lift cursor-pointer"
+            >
+              Medium
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-6 pe-6 pt-3.5 pb-3.5 text-base bg-primary text-on-fill hover:bg-primary/90 shadow-card hover:shadow-lift cursor-pointer"
+            >
+              Large
+            </button>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Disabled</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              disabled
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-4 pe-4 pt-2.5 pb-2.5 text-sm bg-surface-200 text-text-muted cursor-not-allowed shadow-none"
+            >
+              Medium
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- button-secondary (button-secondary.component.ts) -->
+      <section>
+        <h2>Secondary</h2>
+        <p class="component-note">
+          <code>app-button-secondary</code> - same <code>size</code> options as primary. Flat
+          <code>surface-100</code> fill with a same-tone border, hover moves to
+          <code>surface-50</code> (a real fix noted in the component's own comments: hover and base
+          used to resolve to the same shade). Also accepts <code>ariaLabel</code> and
+          <code>ariaPressed</code> for icon-only or toggle usage - no separate visual style for the
+          pressed state, it is purely the <code>aria-pressed</code> attribute.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Sizes</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-3 pe-3 pt-1.5 pb-1.5 text-xs bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-50 shadow-none cursor-pointer"
+            >
+              Small
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-4 pe-4 pt-2.5 pb-2.5 text-sm bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-50 shadow-none cursor-pointer"
+            >
+              Medium
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-6 pe-6 pt-3.5 pb-3.5 text-base bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-50 shadow-none cursor-pointer"
+            >
+              Large
+            </button>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Disabled</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              disabled
+              class="inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500 ps-4 pe-4 pt-2.5 pb-2.5 text-sm bg-surface-100 text-text-muted border border-surface-100 cursor-not-allowed shadow-none"
+            >
+              Medium
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- gradient-button (gradient-button.component.ts) -->
+      <section>
+        <h2>Gradient (VIP / gift CTA)</h2>
+        <p class="component-note">
+          <code>app-gradient-button</code> - <code>size</code>: <code>sm</code> /
+          <code>md</code> (default) / <code>icon</code> (fixed 40&times;40 square for an icon-only
+          trigger). Deliberately <code>rounded-pill</code>, not <code>rounded-app</code> like the
+          other two - per the component's own source comment, the pill shape itself signals
+          "VIP/gift CTA" independently of the gold-to-accent gradient fill. Focus ring uses
+          <code>ring-vip</code> rather than <code>ring-primary</code>.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Sizes</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-pill transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-vip focus:ring-offset-2 focus:ring-offset-surface-500 px-3 py-1.5 text-xs bg-gradient-to-r from-vip to-accent text-on-fill hover:opacity-90 shadow-lift"
+            >
+              Get VIP
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold rounded-pill transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-vip focus:ring-offset-2 focus:ring-offset-surface-500 px-6 py-2.5 text-sm bg-gradient-to-r from-vip to-accent text-on-fill hover:opacity-90 shadow-lift"
+            >
+              Send a gift
+            </button>
+            <button
+              type="button"
+              aria-label="Send a gift"
+              class="inline-flex items-center justify-center font-bold rounded-pill transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-vip focus:ring-offset-2 focus:ring-offset-surface-500 w-10 h-10 bg-gradient-to-r from-vip to-accent text-on-fill hover:opacity-90 shadow-lift"
+            >
+              🎁
+            </button>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Disabled</p>
+          <div class="demo-row">
+            <button
+              type="button"
+              disabled
+              class="inline-flex items-center justify-center font-bold rounded-pill transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-vip focus:ring-offset-2 focus:ring-offset-surface-500 px-6 py-2.5 text-sm bg-surface-300 text-text-muted cursor-not-allowed opacity-50"
+            >
+              Send a gift
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Relay - HelloTalk Design System · Primitives · Buttons. Covers
+        <code>button-primary.component.ts</code>, <code>button-secondary.component.ts</code> and
+        <code>gradient-button.component.ts</code> in full - every <code>size</code> variant each
+        supports plus its disabled state. Hover/focus states are left as native CSS (<code
+          >:hover</code
+        >
+        / <code>:focus</code>) rather than screenshotted, since the real components rely on the same
+        Tailwind pseudo-class utilities shown in each <code>class</code> attribute here.
+      </footer>
+    </div>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

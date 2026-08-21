@@ -1,9 +1,0 @@
-backend/src/groups/controllers/groups.controller.ts
-backend/src/groups/services/groups.service.ts
-backend/src/groups/guards/group-admin.guard.ts
-backend/src/groups/dto/manage-membership.dto.ts
-backend/src/groups/dto/moderate-resources.dto.ts
-frontend/src/app/groups/components/group-admin-panel.component.ts
-frontend/src/app/groups/services/group-admin.service.ts
-frontend/src/app/groups/pages/group-admin-page.component.ts
-frontend/src/app/groups/pages/group-admin-page.component.html

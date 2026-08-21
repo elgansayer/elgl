@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
@@ -13,10 +14,18 @@ import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { JoyrideModule } from 'ngx-joyride';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    VideoClassroomErrorBoundaryComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+    JoyrideModule,
+  ],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -52,9 +61,7 @@ export class ClassroomsMarketplace implements OnInit {
     return all.filter((r) => r.language_pair === lang);
   });
 
-  readonly videoRooms = computed(() =>
-    this.filteredRooms().filter((r) => r.is_video_stream),
-  );
+  readonly videoRooms = computed(() => this.filteredRooms().filter((r) => r.is_video_stream));
 
   readonly isHosting = computed(() => {
     const userId = this.authService.currentUser()?.id;
@@ -71,14 +78,10 @@ export class ClassroomsMarketplace implements OnInit {
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await withRetry(
-        () =>
-          firstValueFrom(
-            this.http.get<AudioRoomRecord[]>(
-              `${this.baseUrl}/list`,
-              { headers: this.getHeaders() },
-            ),
-          ),
+      const list = await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/list`, { headers: this.getHeaders() }),
+        ),
       );
       const rooms = Array.isArray(list) ? list : [];
       this.rooms.set(rooms);
