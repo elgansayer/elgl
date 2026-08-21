@@ -163,15 +163,15 @@ export class AudioRoomsService implements OnModuleInit {
     const recordingUrl = dto.recording_url;
     const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
 
+    let r2RecordingUrl: string;
     try {
-      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
+      r2RecordingUrl = await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
       this.logger.error('Failed to upload recording to R2', error);
-      throw new Error('Failed to upload recording to R2');
+      throw new Error('Failed to upload recording to R2', { cause: error });
     }
 
-    // Update the room record with the R2 URL
-    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    // Store the URL confirmed by the Cloudflare R2 gateway.
     await supabase
       .from('audio_rooms')
       .update({ recording_url: r2RecordingUrl, is_active: false })
@@ -1178,14 +1178,12 @@ export class AudioRoomsService implements OnModuleInit {
       room.room_name,
     );
 
-    const recordingUrl =
-      egressRecordingUrl ||
-      dto.recording_url ||
-      `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
+    const recordingUrl = egressRecordingUrl || dto.recording_url || null;
 
-    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
-    let transcriptText =
-      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+    // Generate a transcript only when an authoritative recording exists.
+    let transcriptText = recordingUrl
+      ? await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl)
+      : '';
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available

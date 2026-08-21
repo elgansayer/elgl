@@ -178,6 +178,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMax = signal<number>(100);
 
   readonly voiceRoomActive = signal<boolean>(false);
+  readonly hasAudioIntroOnly = signal<boolean>(false);
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -323,6 +324,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           available_time_end: this.availableTimeEnd() || undefined,
           sort: this.selectedSort(),
           voice_room_active: this.voiceRoomActive() || undefined,
+          has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
           interests: this.selectedInterests() || undefined,
         },
         signal,
@@ -473,6 +475,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     native_languages?: string;
     target_language?: string;
     proficiency_level?: string;
+    has_audio_intro?: boolean;
   }): void {
     if (filters.native_languages !== undefined) {
       this.selectedNativeLanguage.set(filters.native_languages);
@@ -482,6 +485,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
     if (filters.proficiency_level !== undefined) {
       this.selectedProficiencyLevel.set(filters.proficiency_level);
+    }
+    if (filters.has_audio_intro !== undefined) {
+      this.hasAudioIntroOnly.set(filters.has_audio_intro);
     }
     void this.searchPartners();
   }
@@ -500,6 +506,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
+    this.hasAudioIntroOnly.set(false);
     this.selectedInterests.set('');
     this.showAllInterests.set(false);
     void this.searchPartners();
