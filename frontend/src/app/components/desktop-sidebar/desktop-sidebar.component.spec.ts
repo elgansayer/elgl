@@ -80,8 +80,8 @@ describe('DesktopSidebarComponent', () => {
     for (const link of links) {
       expect(link.matches('[role]')).toBe(false);
       expect(link.matches('[tabindex]')).toBe(false);
-      expect(link.classList.toString()).toContain('focus-visible:ring-2');
-      expect(link.classList.toString()).toContain('focus-visible:ring-primary');
+      expect(link.classList.toString().includes('focus-visible:ring-2')).toBe(true);
+      expect(link.classList.toString().includes('focus-visible:ring-primary')).toBe(true);
     }
   });
 
@@ -130,7 +130,7 @@ describe('DesktopSidebarComponent', () => {
       const badge: HTMLElement | null = link.querySelector('span.ms-auto');
       const allBadges: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('span.ms-auto');
 
-      expect(badge?.textContent?.trim()).toBe(testCase.expected);
+      expect(badge?.textContent?.trim() === testCase.expected).toBe(true);
       expect(allBadges.length).toBe(1);
     }
   });
@@ -142,7 +142,7 @@ describe('DesktopSidebarComponent', () => {
     const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
     const badge: HTMLElement | null = chatLink.querySelector('span.ms-auto');
 
-    expect(badge?.textContent?.trim()).toBe('99+');
+    expect(badge?.textContent?.trim() === '99+').toBe(true);
     expect(unreadCounter.tabCount('chat')).toBe(100);
   });
 
