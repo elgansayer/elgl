@@ -168,7 +168,7 @@ export class AudioRoomsService implements OnModuleInit {
       r2RecordingUrl = await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
       this.logger.error('Failed to upload recording to R2', error);
-      throw new Error('Failed to upload recording to R2');
+      throw new Error('Failed to upload recording to R2', { cause: error });
     }
 
     // Store the URL confirmed by the Cloudflare R2 gateway.

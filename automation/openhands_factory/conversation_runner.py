@@ -253,7 +253,7 @@ class ConversationRunner:
         lock = FileLock(str(self.config.state_dir / "health.json.lock"))
         with lock:
             breakers = store.load()
-            active = {
+            active: dict[ProviderName, CircuitBreaker] = {
                 breaker.provider: breaker
                 for breaker in breakers
                 if breaker.provider in {ProviderName.OPENAI_SUBSCRIPTION, ProviderName.OPENCODE_GO}
