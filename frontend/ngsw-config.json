@@ -148,21 +148,6 @@
         "maxAge": "5m",
         "timeout": "3s"
       }
-    },
-    {
-      "name": "api-video-classrooms",
-      "urls": [
-        "/api/audio-rooms/list",
-        "/api/audio-rooms/**",
-        "/api/centrifugo/connect**",
-        "/api/livekit/**"
-      ],
-      "cacheConfig": {
-        "strategy": "performance",
-        "maxSize": 50,
-        "maxAge": "10m",
-        "timeout": "5s"
-      }
     }
   ],
   "navigationUrls": [
@@ -173,8 +158,7 @@
     "/profile/**",
     "/settings/**",
     "/admin/**",
-    "/escrow",
-    "/classrooms"
+    "/escrow"
   ],
   "navigationRequestStrategy": "performance"
 }

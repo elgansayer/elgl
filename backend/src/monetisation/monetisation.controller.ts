@@ -54,9 +54,16 @@ export class MonetisationController {
     description:
       'Receives Stripe webhook events for subscription lifecycle management (checkout completed, invoice paid, subscription cancelled, etc.). Verifies the Stripe signature before processing. Called exclusively by Stripe servers.',
   })
-  @ApiHeader({ name: 'stripe-signature', description: 'Stripe webhook signature for verification', required: true })
+  @ApiHeader({
+    name: 'stripe-signature',
+    description: 'Stripe webhook signature for verification',
+    required: true,
+  })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
-  @ApiResponse({ status: 400, description: 'Missing stripe signature or raw body' })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing stripe signature or raw body',
+  })
   async handleStripeWebhook(
     @Headers('stripe-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
@@ -77,7 +84,10 @@ export class MonetisationController {
     description:
       'Receives Apple App Store server notifications (v2) for subscription events, refunds, and renewal status changes. Verifies JWS signatures before processing. Called exclusively by Apple servers.',
   })
-  @ApiResponse({ status: 200, description: 'Apple notification processed successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Apple notification processed successfully',
+  })
   async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
     return await this.monetisationService.handleAppleNotification(dto);
   }
@@ -89,7 +99,10 @@ export class MonetisationController {
     description:
       'Receives Google Play Real-time Developer Notifications (RTDN) via Pub/Sub for subscription events, refunds, and status changes. Verifies Pub/Sub message authenticity before processing. Called exclusively by Google servers.',
   })
-  @ApiResponse({ status: 200, description: 'Google notification processed successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Google notification processed successfully',
+  })
   async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
     return await this.monetisationService.handleGoogleNotification(dto);
   }
@@ -114,8 +127,14 @@ export class MonetisationController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorised - valid JWT required' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Developer-tier VIP required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorised - valid JWT required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
   async generateApiKey(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.generateApiKey(user.id);
@@ -144,7 +163,10 @@ export class MonetisationController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorised' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Developer-tier VIP required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
   async getAnalytics(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.getDeveloperAnalytics(user.id);
@@ -177,7 +199,10 @@ export class MonetisationController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorised' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Developer-tier VIP required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
   async getDiagnosticLogs(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.getDiagnosticLogs(user.id);
@@ -206,7 +231,10 @@ export class MonetisationController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorised' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Developer-tier VIP required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Developer-tier VIP required',
+  })
   async createDiagnosticLog(
     @CurrentUser() user: User | null,
     @Body() dto: CreateDiagnosticLogDto,
@@ -221,7 +249,7 @@ export class MonetisationController {
   @ApiOperation({
     summary: 'Validate an Apple App Store receipt',
     description:
-      'Validates an Apple App Store in-app purchase receipt with Apple\'s verifyReceipt API. Used for purchase verification and subscription restoration on iOS.',
+      "Validates an Apple App Store in-app purchase receipt with Apple's verifyReceipt API. Used for purchase verification and subscription restoration on iOS.",
   })
   @ApiResponse({
     status: 200,
@@ -263,7 +291,10 @@ export class MonetisationController {
     schema: {
       type: 'object',
       properties: {
-        sessionUrl: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_a1b2c3' },
+        sessionUrl: {
+          type: 'string',
+          example: 'https://checkout.stripe.com/c/pay/cs_test_a1b2c3',
+        },
         sessionId: { type: 'string', example: 'cs_test_a1b2c3d4e5f6' },
       },
     },
@@ -288,7 +319,7 @@ export class MonetisationController {
   @ApiOperation({
     summary: 'Restore previous in-app purchases',
     description:
-      'Restores previously purchased VIP subscriptions across platforms (iOS, Android, Stripe). Verifies purchase history with the relevant store and updates the user\'s VIP tier if applicable.',
+      "Restores previously purchased VIP subscriptions across platforms (iOS, Android, Stripe). Verifies purchase history with the relevant store and updates the user's VIP tier if applicable.",
   })
   @ApiResponse({
     status: 200,
@@ -327,7 +358,7 @@ export class MonetisationController {
   @ApiOperation({
     summary: 'Get current user coin balance',
     description:
-      'Returns the authenticated user\'s current virtual coin balance. Part of the monetisation module for consolidated financial data access.',
+      "Returns the authenticated user's current virtual coin balance. Part of the monetisation module for consolidated financial data access.",
   })
   @ApiResponse({
     status: 200,
@@ -353,7 +384,7 @@ export class MonetisationController {
   @ApiOperation({
     summary: 'Get current subscription details',
     description:
-      'Returns the authenticated user\'s current VIP subscription status, including tier, renewal date, and whether cancellation is scheduled.',
+      "Returns the authenticated user's current VIP subscription status, including tier, renewal date, and whether cancellation is scheduled.",
   })
   @ApiResponse({
     status: 200,
@@ -393,7 +424,11 @@ export class MonetisationController {
       properties: {
         success: { type: 'boolean', example: true },
         current_period_end: { type: 'string', example: '2026-09-07T12:00:00Z' },
-        message: { type: 'string', example: 'Subscription will be cancelled at the end of the billing period' },
+        message: {
+          type: 'string',
+          example:
+            'Subscription will be cancelled at the end of the billing period',
+        },
       },
     },
   })
@@ -422,12 +457,18 @@ export class MonetisationController {
       properties: {
         success: { type: 'boolean', example: true },
         cancel_at_period_end: { type: 'boolean', example: false },
-        message: { type: 'string', example: 'Subscription will continue to auto-renew' },
+        message: {
+          type: 'string',
+          example: 'Subscription will continue to auto-renew',
+        },
       },
     },
   })
   @ApiResponse({ status: 404, description: 'No active subscription found' })
-  @ApiResponse({ status: 400, description: 'Subscription is not scheduled for cancellation' })
+  @ApiResponse({
+    status: 400,
+    description: 'Subscription is not scheduled for cancellation',
+  })
   async resumeSubscription(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.resumeSubscription(user.id);
@@ -442,7 +483,7 @@ export class MonetisationController {
   @ApiOperation({
     summary: 'Get billing invoices',
     description:
-      'Returns the authenticated user\'s billing history, including paid invoices and upcoming invoice preview from Stripe.',
+      "Returns the authenticated user's billing history, including paid invoices and upcoming invoice preview from Stripe.",
   })
   @ApiResponse({
     status: 200,
@@ -460,7 +501,10 @@ export class MonetisationController {
               currency: { type: 'string', example: 'usd' },
               status: { type: 'string', example: 'paid' },
               created: { type: 'number', example: 1691234567 },
-              invoice_pdf: { type: 'string', example: 'https://invoice.stripe.com/...' },
+              invoice_pdf: {
+                type: 'string',
+                example: 'https://invoice.stripe.com/...',
+              },
             },
           },
         },
@@ -489,11 +533,17 @@ export class MonetisationController {
     schema: {
       type: 'object',
       properties: {
-        portalUrl: { type: 'string', example: 'https://billing.stripe.com/session/...' },
+        portalUrl: {
+          type: 'string',
+          example: 'https://billing.stripe.com/session/...',
+        },
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'No Stripe customer found for this user' })
+  @ApiResponse({
+    status: 404,
+    description: 'No Stripe customer found for this user',
+  })
   async createBillingPortalSession(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.createBillingPortalSession(user.id);

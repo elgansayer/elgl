@@ -3,12 +3,13 @@ import {
   IsInt,
   IsOptional,
   IsObject,
+  IsNotEmpty,
   Min,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CreateEscrowHoldDto {
+export class CreateEscrowDto {
   @ApiProperty({
     description: 'UUID of the user receiving the payment (payee)',
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
@@ -25,21 +26,45 @@ export class CreateEscrowHoldDto {
   @Min(1)
   amount_coins!: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
       'Description of the service being paid for via the escrow hold',
     maxLength: 500,
     example: 'Payment for 30-minute Spanish lesson',
   })
+  @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(500)
-  reason!: string;
+  reason?: string;
 
   @ApiPropertyOptional({
     description:
       'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
     example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+}
+
+export class CreateEscrowHoldDto {
+  @ApiProperty({ description: 'UUID of the user receiving the payment' })
+  @IsString()
+  payee_id!: string;
+
+  @ApiProperty({ description: 'Amount of coins to hold', minimum: 1 })
+  @IsInt()
+  @Min(1)
+  amount_coins!: number;
+
+  @ApiProperty({ description: 'Reason for placing the hold' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({ description: 'Additional escrow metadata' })
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
