@@ -85,7 +85,6 @@ export class ChatRoomComponent implements OnDestroy {
   constructor() {
     effect(() => {
       const roomId = this.id();
-      // Save draft for the previous room before switching
       if (this.roomId && this.roomId !== roomId) {
         this.saveChatDrafts();
       }
@@ -96,6 +95,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly isCheckingGrammar = signal<boolean>(false);
   readonly isTyping = signal<boolean>(false);
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
@@ -136,7 +136,6 @@ export class ChatRoomComponent implements OnDestroy {
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
 
-  // @mention filtering stays product-specific. Keyboard/listbox ownership lives in Spartan.
   readonly mentionQuery = signal<string | null>(null);
   readonly mentionSuggestions = computed<GroupMember[]>(() => {
     const query = this.mentionQuery();
@@ -450,7 +449,6 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
-    // Spartan owns ArrowUp/ArrowDown/Escape/selection while the autocomplete is open.
     if (event.key === 'Enter' && this.mentionSuggestions().length === 0) {
       event.preventDefault();
       this.sendTextMessage();
@@ -464,11 +462,28 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async sendTextMessage(): Promise<void> {
-    if (!this.textInput.trim()) return;
+    if (!this.textInput.trim() || this.isCheckingGrammar()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
+
+    this.isCheckingGrammar.set(true);
+    try {
+      const grammar = await this.vocabStore.checkGrammar(
+        text,
+        this.partnerLanguage() ?? undefined,
+      );
+      const corrected = grammar.corrected.trim();
+      if (grammar.errors_found > 0 && corrected && corrected !== text) {
+        this.textInput = corrected;
+        this.saveChatDrafts();
+        showToast(grammar.explanation);
+        return;
+      }
+    } finally {
+      this.isCheckingGrammar.set(false);
+    }
 
     try {
       const sent = await this.chatService.sendMessage({
