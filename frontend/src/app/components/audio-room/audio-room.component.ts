@@ -31,6 +31,11 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import {
+  buildAudienceSeatIndexes,
+  buildStageViewModel,
+  normaliseAudienceCount,
+} from './audio-room-view-model';
 
 @Component({
   selector: 'app-audio-room',
@@ -77,10 +82,22 @@ export class AudioRoomComponent implements OnInit {
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
-  readonly audiencePlaceholderAvatars = computed(() => {
-    const count = this.store.audienceCount();
-    return Array.from({ length: Math.min(count, 8) }, (_, i) => i + 1);
-  });
+  readonly stageViewModel = computed(() =>
+    buildStageViewModel(
+      this.store.currentRoom(),
+      this.store.stageInfo(),
+      this.store.stageParticipants(),
+    ),
+  );
+  readonly stageParticipants = computed(() => this.stageViewModel().participants);
+  readonly stageOverflowCount = computed(() => this.stageViewModel().overflowCount);
+  readonly audienceCount = computed(() => normaliseAudienceCount(this.store.audienceCount()));
+  readonly audiencePlaceholderAvatars = computed(() =>
+    buildAudienceSeatIndexes(this.audienceCount()),
+  );
+  readonly audienceOverflowCount = computed(() =>
+    Math.max(0, this.audienceCount() - this.audiencePlaceholderAvatars().length),
+  );
   readonly pollResults = signal<{
     question: string;
     options: string[];
