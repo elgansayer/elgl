@@ -10,10 +10,12 @@
         {{ 'visitors.blurredCount' | t: { count: blurredVisitorsCount() } }}
       </span>
       <button
+        hlmBtn
         type="button"
         class="visitor-toggle-btn"
         (click)="toggleHideBlurred()"
-       [attr.aria-label]="'visitors.showAllBtn' | t">
+        [attr.aria-label]="'visitors.showAllBtn' | t"
+      >
         @if (hideBlurred()) {
           {{ 'visitors.showAllBtn' | t }}
         } @else {
@@ -26,8 +28,19 @@
   @if (profile() && !profile()?.is_vip) {
     <section class="vip-banner">
       <div class="vip-banner-icon" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
         </svg>
       </div>
       <div class="vip-banner-content">
@@ -56,10 +69,7 @@
 
   <div class="visitor-list">
     @for (log of filteredVisitors(); track log.id) {
-      <article
-        class="visitor-card"
-        [class.visitor-card--blurred]="log.is_blurred"
-      >
+      <article class="visitor-card" [class.visitor-card--blurred]="log.is_blurred">
         <div class="visitor-card-inner">
           <div class="visitor-avatar-wrapper">
             <img
@@ -84,8 +94,16 @@
             <p class="visitor-time">{{ log.created_at | date: 'short' }}</p>
             @if (shouldBlur(log)) {
               <span class="visitor-badge visitor-badge--blurred">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
                 {{ 'visitors.vipOnly' | t }}
               </span>

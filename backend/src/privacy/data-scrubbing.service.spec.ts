@@ -237,8 +237,8 @@ describe('DataScrubbingService', () => {
     });
   });
 
-  describe('scrubEscrowRecord (multiple)', () => {
-    it('scrubs each record in the array in-place via scrubEscrowRecord', () => {
+  describe('scrubEscrowTransactionRecords', () => {
+    it('scrubs each escrow record in-place (passes through essential fields)', () => {
       const records = [
         {
           payer_id: 'payer-1',
@@ -254,9 +254,7 @@ describe('DataScrubbingService', () => {
         },
       ];
 
-      for (const record of records) {
-        service.scrubEscrowRecord(record);
-      }
+      records.forEach((r) => service.scrubEscrowRecord(r));
 
       expect(records[0].payer_id).toBe('payer-1');
       expect(records[0].reason).toBe('Lesson payment');
@@ -390,6 +388,192 @@ describe('DataScrubbingService', () => {
       expect(() => service.scrubRecommendationRecords(records)).not.toThrow();
       expect(records[0].displayName).toBeNull();
       expect(records[0].avatarUrl).toBeNull();
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  LingQ Reading Engine Scrubbing Tests                              */
+  /* ------------------------------------------------------------------ */
+
+  describe('scrubReadingResourceForAdmin', () => {
+    it('redacts content and pseudonymises title in-place', () => {
+      const record = {
+        id: 'res-abc-123',
+        title: 'My Personal Diary Entry',
+        content: 'Today I met John at the coffee shop on 5th Avenue.',
+        language: 'en',
+        difficulty: 'B2',
+        topic: 'travel',
+        sourceUrl: 'https://example.com/article',
+        createdBy: 'user-uuid-001',
+      };
+
+      service.scrubReadingResourceForAdmin(record);
+
+      expect(record.id).toBe('res-abc-123');
+      expect(record.title).toBe('M**********************');
+      expect(record.content).toBe('[CONTENT-REDACTED]');
+      expect(record.language).toBe('en');
+      expect(record.difficulty).toBe('B2');
+      expect(record.topic).toBe('travel');
+      expect(record.sourceUrl).toBe('https://example.com/article');
+      expect(record.createdBy).toBe('user-uuid-001');
+    });
+
+    it('handles null fields gracefully', () => {
+      const record = {
+        title: null,
+        content: null,
+        language: 'ja',
+      };
+
+      expect(() => service.scrubReadingResourceForAdmin(record)).not.toThrow();
+      expect(record.title).toBeNull();
+      expect(record.content).toBeNull();
+    });
+
+    it('redacts only content when title is empty', () => {
+      const record = {
+        title: '',
+        content: 'Sensitive text here',
+      };
+
+      service.scrubReadingResourceForAdmin(record);
+
+      expect(record.title).toBe('');
+      expect(record.content).toBe('[CONTENT-REDACTED]');
+    });
+  });
+
+  describe('scrubReadingResourceRecords', () => {
+    it('scrubs each record in the array in-place', () => {
+      const records = [
+        {
+          id: 'res-1',
+          title: 'My Journal',
+          content: 'Secret content',
+          language: 'en',
+          createdBy: 'user-1',
+        },
+        {
+          id: 'res-2',
+          title: 'Notes on Paris trip',
+          content: 'Met Maria at Eiffel Tower',
+          language: 'fr',
+          createdBy: 'user-2',
+        },
+      ];
+
+      service.scrubReadingResourceRecords(records);
+
+      expect(records[0].content).toBe('[CONTENT-REDACTED]');
+      expect(records[0].title).toBe('M*********');
+      expect(records[1].content).toBe('[CONTENT-REDACTED]');
+      expect(records[1].title).toBe('N******************');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubReadingResourceRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubReadingProgressForAdmin', () => {
+    it('passes through all fields (aggregate metrics, not PII)', () => {
+      const record = {
+        userId: 'user-uuid-001',
+        wordsRead: 5000,
+        articlesCompleted: 42,
+        totalReadingTimeSeconds: 36000,
+        fluencyPercentage: 0.85,
+        lastReadAt: '2026-08-07T12:00:00Z',
+      };
+
+      service.scrubReadingProgressForAdmin(record);
+
+      expect(record.userId).toBe('user-uuid-001');
+      expect(record.wordsRead).toBe(5000);
+      expect(record.articlesCompleted).toBe(42);
+      expect(record.totalReadingTimeSeconds).toBe(36000);
+      expect(record.fluencyPercentage).toBe(0.85);
+      expect(record.lastReadAt).toBe('2026-08-07T12:00:00Z');
+    });
+  });
+
+  describe('scrubReadingProgressRecords', () => {
+    it('passes through an array of records', () => {
+      const records = [
+        { userId: 'u1', wordsRead: 100 },
+        { userId: 'u2', wordsRead: 200 },
+      ];
+
+      expect(() => service.scrubReadingProgressRecords(records)).not.toThrow();
+      expect(records[0].userId).toBe('u1');
+      expect(records[1].wordsRead).toBe(200);
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubReadingProgressRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubTranslationCacheForAdmin', () => {
+    it('redacts source text and translated text in-place', () => {
+      const record = {
+        userId: 'user-uuid-001',
+        sourceText: 'Bonjour le monde',
+        targetLanguage: 'en',
+        translatedText: 'Hello world',
+      };
+
+      service.scrubTranslationCacheForAdmin(record);
+
+      expect(record.userId).toBe('user-uuid-001');
+      expect(record.sourceText).toBe('[TEXT-REDACTED]');
+      expect(record.targetLanguage).toBe('en');
+      expect(record.translatedText).toBe('[TRANSLATION-REDACTED]');
+    });
+
+    it('handles null fields gracefully', () => {
+      const record = {
+        userId: 'u1',
+        sourceText: null,
+        targetLanguage: 'es',
+        translatedText: null,
+      };
+
+      expect(() => service.scrubTranslationCacheForAdmin(record)).not.toThrow();
+      expect(record.sourceText).toBeNull();
+      expect(record.translatedText).toBeNull();
+    });
+  });
+
+  describe('scrubTranslationCacheRecords', () => {
+    it('redacts array of entries in-place', () => {
+      const records = [
+        {
+          userId: 'u1',
+          sourceText: 'Hola',
+          targetLanguage: 'en',
+          translatedText: 'Hello',
+        },
+        {
+          userId: 'u2',
+          sourceText: 'Ciao',
+          targetLanguage: 'en',
+          translatedText: 'Hi',
+        },
+      ];
+
+      service.scrubTranslationCacheRecords(records);
+
+      expect(records[0].sourceText).toBe('[TEXT-REDACTED]');
+      expect(records[0].translatedText).toBe('[TRANSLATION-REDACTED]');
+      expect(records[1].sourceText).toBe('[TEXT-REDACTED]');
+      expect(records[1].translatedText).toBe('[TRANSLATION-REDACTED]');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubTranslationCacheRecords([])).not.toThrow();
     });
   });
 });

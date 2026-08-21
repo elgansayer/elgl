@@ -1,8 +1,11 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatService, FavouriteRecord, ChatMessage } from '../../services/chat.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
 
 type FavouritesTab = 'all' | 'messages' | 'corrections' | 'audio' | 'moments';
 
@@ -14,7 +17,14 @@ interface TabDefinition {
 
 @Component({
   selector: 'app-favourites',
-  imports: [CommonModule, VisualDiffComponent, TranslatePipe],
+  imports: [
+    HlmButton,
+    CommonModule,
+    VisualDiffComponent,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
 })

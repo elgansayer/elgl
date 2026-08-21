@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for Video Classrooms (#2230). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Video Classrooms] Zero room creation activity",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_video_classrooms_created_total{status:success}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo video classroom rooms have been created in the last 10 minutes. This could indicate a complete outage of the video classrooms pipeline or zero user engagement.\n\n**Actions:**\n1. Check the Video Classrooms API health endpoint.\n2. Verify the NestJS backend is running and LiveKit connection is healthy.\n3. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 10,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Video Classrooms] High room creation failure rate",
+      "type": "query alert",
+      "query": "avg(last_10m):(avg:hellotalk_video_classrooms_failed_creations_total{*}.as_count() / (avg:hellotalk_video_classrooms_created_total{status:success}.as_count() + avg:hellotalk_video_classrooms_failed_creations_total{*}.as_count())) * 100 > 10",
+      "message": "{{#is_alert}}\nThe video classroom room creation failure rate has exceeded 10% over the last 10 minutes. This indicates problems with the LiveKit integration or infrastructure.\n\n**Current value:** {{value}}%\n**Threshold:** 10%\n\n**Actions:**\n1. Check LiveKit service health and connectivity.\n2. Inspect backend logs for token generation or room creation errors.\n3. Verify LiveKit API credentials are valid.\n{{/is_alert}}\n\n{{#is_warning}}\nRoom creation failure rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        }
+      }
+    },
+    {
+      "name": "[Video Classrooms] High room join failure rate",
+      "type": "query alert",
+      "query": "avg(last_10m):(avg:hellotalk_video_classrooms_failed_joins_total{*}.as_count() / (avg:hellotalk_video_classrooms_joined_total{status:success}.as_count() + avg:hellotalk_video_classrooms_failed_joins_total{*}.as_count())) * 100 > 15",
+      "message": "{{#is_alert}}\nThe video classroom room join failure rate has exceeded 15% over the last 10 minutes. Users may be unable to connect to existing video rooms.\n\n**Current value:** {{value}}%\n**Threshold:** 15%\n\n**Actions:**\n1. Check LiveKit service health and connectivity.\n2. Verify token generation is succeeding for join operations.\n3. Inspect whether rooms are being created with correct identifiers.\n{{/is_alert}}\n\n{{#is_warning}}\nRoom join failure rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 15,
+          "warning": 7
+        }
+      }
+    },
+    {
+      "name": "[Video Classrooms] Token generation latency high",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_video_classrooms_token_generation_duration_seconds.avg{*} > 2",
+      "message": "{{#is_alert}}\nThe average LiveKit token generation duration has exceeded 2 seconds over the last 10 minutes. This adds latency to the user experience when starting or joining video calls.\n\n**Current value:** {{value}}s\n**Threshold:** 2s\n\n**Actions:**\n1. Check LiveKit server latency and JWKS endpoint availability.\n2. Verify JWT signing key rotation is not causing delays.\n3. Inspect backend CPU and memory usage.\n{{/is_alert}}\n\n{{#is_warning}}\nToken generation latency elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 2,
+          "warning": 1
+        }
+      }
+    },
+    {
+      "name": "[Video Classrooms] Low active room count",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_video_classrooms_active_rooms{*} <= 0",
+      "message": "{{#is_alert}}\nNo active video classrooms detected in the last 10 minutes. This may indicate a service disruption or a drop in user engagement.\n\n**Actions:**\n1. Check health of LiveKit webhook ingestion.\n2. Verify room lifecycle events are being processed correctly.\n3. Review recent deployments for regressions.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:warning"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 10,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Video Classrooms] Room duration anomaly",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_video_classrooms_room_duration_seconds.avg{*} > 7200",
+      "message": "{{#is_alert}}\nThe average video classroom room duration has exceeded 2 hours. This may indicate abandoned rooms that are not being cleaned up or an issue with the LiveKit empty timeout configuration.\n\n**Current value:** {{value}}s\n**Threshold:** 7200s (2 hours)\n\n**Actions:**\n1. Check LiveKit room list for rooms without active participants.\n2. Verify the emptyTimeout configuration (currently 30s) is functioning correctly.\n3. Inspect LiveKit webhook events for room_finished notifications.\n{{/is_alert}}\n\n{{#is_warning}}\nAverage room duration elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:video-classrooms", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 7200,
+          "warning": 3600
+        }
+      }
+    }
+  ]
+}

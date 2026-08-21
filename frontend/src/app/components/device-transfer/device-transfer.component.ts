@@ -1,4 +1,6 @@
-import {Component, inject, signal, PLATFORM_ID} from '@angular/core';import { isPlatformServer } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
@@ -6,10 +8,12 @@ import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
+  imports: [HlmButton],
   selector: 'app-device-transfer',
-  standalone: true,
   template: `
-    <div class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface">
+    <div
+      class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface"
+    >
       <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>
 
       @if (status() === 'generating') {
@@ -20,7 +24,8 @@ import { SupabaseService } from '../../services/supabase.service';
           <code>{{ deviceLink() }}</code>
         </div>
         <button
-          class="mt-4 px-6 py-2 bg-accent text-white rounded-full"
+          hlmBtn
+          class="mt-4 px-6 py-2 bg-accent text-on-fill rounded-full"
           (click)="copyLink()"
         >
           Copy Link
@@ -29,9 +34,9 @@ import { SupabaseService } from '../../services/supabase.service';
       } @else if (status() === 'consuming') {
         <p>Transferring session…</p>
       } @else if (status() === 'done') {
-        <p class="text-green-500">Account transferred successfully!</p>
+        <p class="text-success">Account transferred successfully!</p>
       } @else if (status() === 'error') {
-        <p class="text-red-500">{{ errorMessage() }}</p>
+        <p class="text-danger">{{ errorMessage() }}</p>
       }
     </div>
   `,
@@ -76,10 +81,7 @@ export class DeviceTransferComponent {
     try {
       // Call backend to consume the one‑time token and obtain a swap JWT
       const consumeRes = await lastValueFrom(
-        this.http.post<{ swapToken: string }>(
-          '/api/transfer/consume',
-          { token },
-        ),
+        this.http.post<{ swapToken: string }>('/api/transfer/consume', { token }),
       );
       // Exchange the swap JWT for a real session
       const swapRes = await lastValueFrom(
@@ -95,7 +97,9 @@ export class DeviceTransferComponent {
         refresh_token: swapRes.refresh_token,
       });
       // Reload auth state
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         // The AuthService listener will pick it up automatically
         this.status.set('done');

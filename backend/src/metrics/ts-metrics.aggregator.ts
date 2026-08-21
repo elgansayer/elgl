@@ -39,12 +39,17 @@ export class TrustSafetyMetricsAggregator {
         'fake_profile',
         'other',
       ];
-      for (const category of categories) {
+      // ⚡ Bolt Optimization: Replace sequential database queries in a loop with a concurrent Promise.all execution to improve metric aggregation performance
+      const categoryPromises = categories.map(async (category) => {
         const { count: catCount } = await supabase
           .from('reports')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'pending')
           .eq('reason_category', category);
+        return { category, catCount };
+      });
+      const categoryResults = await Promise.all(categoryPromises);
+      for (const { category, catCount } of categoryResults) {
         // Report the per-category pending breakdown as a derived log to aid alert triage
         if (catCount && catCount > 0) {
           this.logger.info(

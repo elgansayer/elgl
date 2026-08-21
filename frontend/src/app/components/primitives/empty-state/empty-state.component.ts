@@ -1,29 +1,26 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { Component, input, output, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-empty-state',
+  imports: [...HlmButtonImports],
   template: `
-    <div [class]="containerClasses()">
+    <div [class]="containerClasses()" class="empty-state-fade-in">
       @if (illustration()) {
         <div class="mb-4" aria-hidden="true">
-          <img [src]="illustration()" alt="" class="w-48 h-auto mx-auto" />
+          <img [src]="illustration()" alt="" class="mx-auto h-auto w-48" loading="lazy" />
         </div>
       } @else {
-        <div class="text-4xl mb-3" aria-hidden="true">{{ icon() }}</div>
+        <div class="empty-state-icon mb-3 text-4xl" aria-hidden="true">{{ icon() }}</div>
       }
       @if (title()) {
-        <h3 class="font-bold text-base text-text-primary mb-1">{{ title() }}</h3>
+        <h3 class="mb-1 text-base font-bold text-text-primary">{{ title() }}</h3>
       }
       @if (description()) {
-        <p class="text-xs text-text-secondary max-w-sm mb-4">{{ description() }}</p>
+        <p class="mb-4 max-w-sm text-xs text-text-secondary">{{ description() }}</p>
       }
       @if (actionLabel()) {
-        <button
-          type="button"
-          (click)="onAction()"
-          class="inline-flex items-center justify-center font-bold text-xs bg-primary text-white ps-4 pe-4 pt-2 pb-2 rounded-xl hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-        >
+        <button hlmBtn type="button" size="touch" (click)="onAction()">
           {{ actionLabel() }}
         </button>
       }
@@ -46,13 +43,11 @@ export class AppEmptyStateComponent {
 
   readonly actionClicked = output<void>();
 
-  readonly ariaLabelAttribute = computed(() => {
-    return this.title() || 'Empty state';
-  });
+  readonly ariaLabelAttribute = computed(() => this.title() || 'Empty state');
 
   readonly containerClasses = computed(() => {
     const base =
-      'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-surface-300 border border-dashed border-surface-100';
+      'flex flex-col items-center justify-center rounded-card border border-dashed border-surface-100 bg-surface-300 p-6 text-center';
     const extra = this.customClass();
     return `${base}${extra ? ' ' + extra : ''}`.trim();
   });
