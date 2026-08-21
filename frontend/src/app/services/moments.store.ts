@@ -5,6 +5,7 @@ import { firstValueFrom, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { SeriousLearnerModeService } from './serious-learner-mode.service';
 
 export interface MomentComment {
   id: string;
@@ -67,6 +68,7 @@ export class MomentsStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private hapticFeedback = inject(HapticFeedbackService);
+  private seriousLearnerMode = inject(SeriousLearnerModeService);
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
@@ -86,6 +88,16 @@ export class MomentsStore {
   ): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
+
+    // Serious Learner mode deliberately removes the social feed from the
+    // focused experience. Keep this guard in the store as well as navigation so
+    // deep-linking to /moments cannot trigger a background feed request.
+    if (this.seriousLearnerMode.enabled()) {
+      this.feed.set([]);
+      this.isLoading.set(false);
+      return;
+    }
+
     this.isLoading.set(true);
 
     let params = new HttpParams().set('filter', targetFilter);
