@@ -17,6 +17,7 @@ describe('DiagnosticQuizComponent', () => {
         { id: 'o1', text: 'I struggle.', points: 1 },
         { id: 'o2', text: 'I can do it slowly.', points: 2 },
         { id: 'o3', text: 'I can do it easily.', points: 3 },
+        { id: 'o4', text: 'I can do it fluently.', points: 4 },
       ],
     },
     {
@@ -26,6 +27,7 @@ describe('DiagnosticQuizComponent', () => {
         { id: 'o1', text: 'Not well.', points: 1 },
         { id: 'o2', text: 'Reasonably well.', points: 2 },
         { id: 'o3', text: 'Very well.', points: 3 },
+        { id: 'o4', text: 'Perfectly.', points: 4 },
       ],
     },
   ];
@@ -71,6 +73,44 @@ describe('DiagnosticQuizComponent', () => {
     expect(component.loading()).toBe(false);
     expect(component.questions().length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('How well can you introduce yourself?');
+  });
+
+  it('should expose each question as one labelled Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group).toBeTruthy();
+    expect(group.getAttribute('aria-labelledby')).toBe('diagnostic-question-0');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+    expect(group.querySelector('[aria-pressed]')).toBeNull();
+  });
+
+  it('should store numeric values emitted by the Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+
+    component.selectOption('q1', 2);
+    fixture.detectChanges();
+
+    expect(component.answers()).toEqual({ q1: 2 });
+    expect(component.canProceed()).toBe(true);
+  });
+
+  it('should ignore malformed non-numeric answer values', () => {
+    component.selectOption('q1', '2');
+    component.selectOption('q1', Number.NaN);
+
+    expect(component.answers()).toEqual({});
   });
 
   it('should show error state when API fails', async () => {
@@ -165,7 +205,7 @@ describe('DiagnosticQuizComponent', () => {
   });
 
   it('should emit quizCompleted on finish', async () => {
-    let emitted: unknown = null;
+    let emitted: { score: number; suggestedLevel: string; maxScore: number } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
     fixture.detectChanges();
@@ -189,7 +229,7 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
 
     expect(emitted).toBeTruthy();
-    expect((emitted as { score: number }).score).toBe(5);
+    expect(emitted!.score).toBe(5);
   });
 
   it('should compute progress percentage', async () => {
@@ -220,15 +260,20 @@ describe('DiagnosticQuizComponent', () => {
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
 
-  it('should reload questions with a different language', async () => {
+  it('should reload questions and reset state', async () => {
     fixture.detectChanges();
     const req1 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req1.flush(mockQuestions);
     await fixture.whenStable();
 
-    component.reloadQuestions('es');
+    component.selectOption('q1', 2);
+    component.next();
     fixture.detectChanges();
-    const req2 = httpTesting.expectOne('/api/quiz/questions?language=es');
+    expect(component.currentIndex()).toBe(1);
+
+    component.reloadQuestions();
+    fixture.detectChanges();
+    const req2 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req2.flush(mockQuestions);
     await fixture.whenStable();
 
@@ -243,13 +288,14 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    let emitted: unknown = null;
+    let emitted: { suggestedLevel: string } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
-    component.selectOption('q1', 3);
+    // Score 8/8 = 100% >= 90% → C2
+    component.selectOption('q1', 4);
     component.next();
     fixture.detectChanges();
-    component.selectOption('q2', 3);
+    component.selectOption('q2', 4);
     fixture.detectChanges();
     component.next();
 
@@ -257,7 +303,7 @@ describe('DiagnosticQuizComponent', () => {
     resultsReq.flush({ received: true });
     await fixture.whenStable();
 
-    expect((emitted as { suggestedLevel: string }).suggestedLevel).toBe('C2');
+    expect(emitted!.suggestedLevel).toBe('C2');
   });
 
   it('should handle submit results API failure gracefully', async () => {
@@ -267,7 +313,7 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    let emitted: unknown = null;
+    let emitted: { suggestedLevel: string } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
     component.selectOption('q1', 3);

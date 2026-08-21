@@ -70,7 +70,7 @@ export class EconomyErrorHandlerService {
     // Fire-and-forget: do not block
     firstValueFrom(
       this.http.post(`${environment.apiUrl}/analytics/client-error`, payload, {
-        headers: { requireAuth: false } as Record<string, string>,
+        headers: this.getHeaders(),
       }),
     ).catch(() => {
       // Cannot log a logging failure

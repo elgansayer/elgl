@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
@@ -12,27 +13,27 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockResolvedValue({ error: null }),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-      range: jest.fn().mockResolvedValue({ data: [], error: null }),
-      maybeSingle: jest.fn(),
-      single: jest.fn(),
-      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      range: vi.fn().mockResolvedValue({ data: [], error: null }),
+      maybeSingle: vi.fn(),
+      single: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
-      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
       auth: {
         admin: {
-          getUserById: jest.fn(),
-          generateLink: jest.fn(),
+          getUserById: vi.fn(),
+          generateLink: vi.fn(),
         },
       },
     };
@@ -43,20 +44,20 @@ describe('UsersService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: XpService,
           useValue: {
-            getTotalXp: jest.fn().mockResolvedValue(0),
-            awardXpForActivity: jest.fn(),
+            getTotalXp: vi.fn().mockResolvedValue(0),
+            awardXpForActivity: vi.fn(),
           },
         },
         {
           provide: DataExportWorker,
           useValue: {
-            exportUserData: jest.fn().mockResolvedValue({
+            exportUserData: vi.fn().mockResolvedValue({
               profile: {},
               moments: [],
               comments: [],
@@ -66,6 +67,10 @@ describe('UsersService', () => {
               exported_at: new Date().toISOString(),
             }),
           },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: vi.fn() },
         },
       ],
     }).compile();
@@ -118,7 +123,7 @@ describe('UsersService', () => {
       const mockUserId = 'user-1';
       const mockDate = '2026-01-01T00:00:00.000Z';
 
-      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
+      vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
 
       mockQueryBuilder.update.mockReturnThis();
       mockQueryBuilder.eq.mockResolvedValue({ error: null });
@@ -131,14 +136,14 @@ describe('UsersService', () => {
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
 
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it('should log a warning if updating last_active_at fails', async () => {
       const mockUserId = 'user-1';
       const mockDate = '2026-02-01T00:00:00.000Z';
 
-      jest.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
+      vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(mockDate);
 
       mockQueryBuilder.update.mockReturnThis();
       mockQueryBuilder.eq.mockResolvedValue({
@@ -153,13 +158,13 @@ describe('UsersService', () => {
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', mockUserId);
 
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
-    jest.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -200,19 +205,64 @@ describe('UsersService', () => {
 
       await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
         new BadRequestException(
-          'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+          'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
         ),
       );
     });
 
-    it('should throw BadRequestException when anyone tries to set more than 3 target languages', async () => {
+    it('should throw BadRequestException when VIP tries to set more than 3 target languages', async () => {
       const dto = { target_languages: ['EN', 'FR', 'ES', 'DE'] };
+
+      // mock getProfile to return VIP but not Pro tier
+      const mockSelectFn = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'user-1', vip_tier: 'consumer', is_vip: true },
+            error: null,
+          }),
+        }),
+      });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'users') {
+          return { select: mockSelectFn };
+        }
+        return mockQueryBuilder;
+      });
 
       await expect(service.updateProfile('user-1', dto, true)).rejects.toThrow(
         new BadRequestException(
-          'A maximum of 3 target languages can be studied simultaneously.',
+          'A maximum of 3 target languages can be studied simultaneously on your current tier.',
         ),
       );
+    });
+
+    it('should allow Pro tier to set up to 5 target languages', async () => {
+      const dto = { target_languages: ['EN', 'FR', 'ES', 'DE', 'JA'] };
+
+      // mock getProfile to return Pro tier
+      const mockSelectFn = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'user-1', vip_tier: 'pro', is_vip: true },
+            error: null,
+          }),
+        }),
+      });
+
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: mockSelectFn,
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
+
+      const result = await service.updateProfile('user-1', dto, true);
+      expect(result).toBeDefined();
     });
 
     it('should throw BadRequestException when non-VIP tries to set mock location', async () => {
@@ -222,6 +272,94 @@ describe('UsersService', () => {
         new BadRequestException(
           'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
         ),
+      );
+    });
+
+    it('should throw BadRequestException when non-VIP tries to set mock country', async () => {
+      const dto = { mock_country: 'France' };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should throw BadRequestException when non-VIP tries to set mock city', async () => {
+      const dto = { mock_city: 'Paris' };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should throw BadRequestException when non-VIP tries to enable location spoofing', async () => {
+      const dto = { enable_location_spoofing: true };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should allow a non-VIP user to disable location spoofing', async () => {
+      const dto = { enable_location_spoofing: false };
+
+      const updateBuilder = {
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
+      const fromBuilder = { update: vi.fn().mockReturnValue(updateBuilder) };
+      mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
+      vi.spyOn(service, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+      } as any);
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(fromBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ enable_location_spoofing: false }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({ enable_location_spoofing: false }),
+      );
+    });
+
+    it('should allow a VIP user to set spoofed location fields', async () => {
+      const dto = {
+        mock_country: 'France',
+        mock_city: 'Paris',
+        mock_location: { latitude: 48.8566, longitude: 2.3522 },
+        enable_location_spoofing: true,
+      };
+
+      const updateBuilder = {
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      };
+      const fromBuilder = { update: vi.fn().mockReturnValue(updateBuilder) };
+      mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
+      vi.spyOn(service, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+      } as any);
+
+      const result = await service.updateProfile('user-1', dto, true);
+
+      expect(fromBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mock_country: 'France',
+          mock_city: 'Paris',
+          mock_location: 'POINT(2.3522 48.8566)',
+          enable_location_spoofing: true,
+        }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({
+          mock_country: 'France',
+          mock_city: 'Paris',
+          enable_location_spoofing: true,
+        }),
       );
     });
 
@@ -239,13 +377,13 @@ describe('UsersService', () => {
       const dto = { primary_accent_color: '#ff0000' };
 
       const updateBuilder = {
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       };
-      const fromBuilder = { update: jest.fn().mockReturnValue(updateBuilder) };
+      const fromBuilder = { update: vi.fn().mockReturnValue(updateBuilder) };
       mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
-      jest
-        .spyOn(service, 'getProfile')
-        .mockResolvedValue({ id: 'user-1' } as any);
+      vi.spyOn(service, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+      } as any);
 
       const result = await service.updateProfile('user-1', dto, true);
 
@@ -378,14 +516,14 @@ describe('UsersService', () => {
   describe('getFollowers', () => {
     it('should return the total count and mark rows followed by the viewer', async () => {
       const countBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
       };
       const dataBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({
           data: [
             {
               follower_id: 'f1',
@@ -396,9 +534,9 @@ describe('UsersService', () => {
         }),
       };
       const followBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ data: [{ following_id: 'f1' }] }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ following_id: 'f1' }] }),
       };
 
       mockSupabaseClient.from
@@ -418,14 +556,14 @@ describe('UsersService', () => {
 
     it('should skip the follow-state lookup when there is no viewer', async () => {
       const countBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ count: 1, error: null }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
       };
       const dataBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({
           data: [{ follower_id: 'f1', follower: { id: 'f1' } }],
           error: null,
         }),
@@ -445,14 +583,14 @@ describe('UsersService', () => {
   describe('getFollowing', () => {
     it('should return the total count and mark rows followed by the viewer', async () => {
       const countBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ count: 1, error: null }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ count: 1, error: null }),
       };
       const dataBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({
           data: [
             {
               following_id: 'g1',
@@ -463,9 +601,9 @@ describe('UsersService', () => {
         }),
       };
       const followBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ data: [] }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [] }),
       };
 
       mockSupabaseClient.from
@@ -484,10 +622,10 @@ describe('UsersService', () => {
   describe('getVisitors', () => {
     it('should return empty list when query succeeds', async () => {
       mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
       await expect(service.getVisitors('user-1')).resolves.toEqual([]);
     });
@@ -517,7 +655,7 @@ describe('UsersService', () => {
 
     it('should resolve when database insert succeeds', async () => {
       mockSupabaseClient.from.mockReturnValueOnce({
-        upsert: jest.fn().mockResolvedValue({ error: null }),
+        upsert: vi.fn().mockResolvedValue({ error: null }),
       });
       await expect(
         service.followUser('follower', 'target'),
