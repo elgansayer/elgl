@@ -25,10 +25,22 @@ export class VideoCallsService {
     private livekitService: LivekitService,
     private readonly metricsService: MetricsService,
   ) {
+    const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
+    const secret = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!apiKey || !secret) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured in production',
+        );
+      }
+    }
+
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      apiKey,
+      secret,
     );
   }
 
