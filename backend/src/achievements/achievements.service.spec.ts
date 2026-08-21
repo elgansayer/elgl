@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { AchievementsService } from './achievements.service';
@@ -13,7 +14,7 @@ function makeBuilder(response: unknown) {
     'returns',
     'upsert',
   ]) {
-    builder[method] = jest.fn().mockReturnValue(builder);
+    builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.then = (
     resolve: (value: unknown) => void,
@@ -26,20 +27,20 @@ describe('AchievementsService', () => {
   let service: AchievementsService;
   let builders: Record<string, any>;
   let mockSupabaseClient: any;
-  let warnSpy: jest.SpyInstance;
-  let errorSpy: jest.SpyInstance;
+  let warnSpy: MockInstance;
+  let errorSpy: MockInstance;
 
   beforeEach(async () => {
-    warnSpy = jest
+    warnSpy = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    errorSpy = jest
+    errorSpy = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 
     builders = {};
     mockSupabaseClient = {
-      from: jest.fn((table: string) => builders[table]),
+      from: vi.fn((table: string) => builders[table]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -48,7 +49,7 @@ describe('AchievementsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -58,7 +59,7 @@ describe('AchievementsService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -71,13 +72,35 @@ describe('AchievementsService', () => {
 
       await service.onModuleInit();
 
-      expect(builders['achievements'].upsert).toHaveBeenCalledTimes(5);
+      expect(builders['achievements'].upsert).toHaveBeenCalledTimes(1);
       expect(builders['achievements'].upsert).toHaveBeenCalledWith(
-        {
-          code: 'first_message',
-          name: 'First Message',
-          description: 'Send your first message in a chat.',
-        },
+        [
+          {
+            code: 'first_message',
+            name: 'First Message',
+            description: 'Send your first message in a chat.',
+          },
+          {
+            code: '100_messages',
+            name: '100 Messages',
+            description: 'Send 100 messages in chats.',
+          },
+          {
+            code: '500_messages',
+            name: '500 Messages',
+            description: 'Send 500 messages in chats.',
+          },
+          {
+            code: '7_day_streak',
+            name: '7-Day Streak',
+            description: 'Keep a 7‑day study streak.',
+          },
+          {
+            code: '30_day_streak',
+            name: '30-Day Streak',
+            description: 'Keep a 30‑day study streak.',
+          },
+        ],
         { onConflict: 'code' },
       );
     });
@@ -90,7 +113,7 @@ describe('AchievementsService', () => {
       await service.onModuleInit();
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to upsert achievement'),
+        expect.stringContaining('Failed to bulk upsert achievements'),
       );
     });
   });
@@ -323,9 +346,12 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
-      const awardSpy = jest
+      const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
 
@@ -344,70 +370,16 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [
+          {
+            achievements: { code: 'first_message' },
+          },
+        ],
+        error: null,
+      });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([
-        {
-          id: '1',
-          user_id: 'user-1',
-          achievement_id: 'a',
-          earned_at: 'now',
-          achievements: {
-            id: 'a',
-            code: 'first_message',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '2',
-          user_id: 'user-1',
-          achievement_id: 'b',
-          earned_at: 'now',
-          achievements: {
-            id: 'b',
-            code: '100_messages',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '3',
-          user_id: 'user-1',
-          achievement_id: 'c',
-          earned_at: 'now',
-          achievements: {
-            id: 'c',
-            code: '500_messages',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '4',
-          user_id: 'user-1',
-          achievement_id: 'd',
-          earned_at: 'now',
-          achievements: {
-            id: 'd',
-            code: '7_day_streak',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '5',
-          user_id: 'user-1',
-          achievement_id: 'e',
-          earned_at: 'now',
-          achievements: {
-            id: 'e',
-            code: '30_day_streak',
-            name: '',
-            description: '',
-          },
-        },
-      ]);
-      const awardSpy = jest
+      const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
 
@@ -422,9 +394,12 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 30 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
-      const awardSpy = jest
+      const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
 
@@ -446,9 +421,12 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
-      const awardSpy = jest
+      const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
 
@@ -466,9 +444,12 @@ describe('AchievementsService', () => {
         data: null,
         error: { message: 'db error' },
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
-      const awardSpy = jest
+      const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
 
@@ -481,7 +462,7 @@ describe('AchievementsService', () => {
 
   describe('handleEvaluationEvent', () => {
     it('delegates to evaluateAchievements with the event payload user id', async () => {
-      const evaluateSpy = jest
+      const evaluateSpy = vi
         .spyOn(service, 'evaluateAchievements')
         .mockResolvedValue(undefined);
 
@@ -493,7 +474,7 @@ describe('AchievementsService', () => {
 
   describe('handleMessageSent', () => {
     it('delegates to evaluateAchievements with the event payload user id', async () => {
-      const evaluateSpy = jest
+      const evaluateSpy = vi
         .spyOn(service, 'evaluateAchievements')
         .mockResolvedValue(undefined);
 

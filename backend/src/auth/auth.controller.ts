@@ -87,7 +87,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/generate')
   async generateTransferLink(
     @Req() req: RequestWithUser,

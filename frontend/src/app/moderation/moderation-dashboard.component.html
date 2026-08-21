@@ -3,10 +3,11 @@
 
   <div class="flex gap-2 mb-4">
     <button
+      hlmBtn
       type="button"
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'profile'"
-      [class.text-white]="type() === 'profile'"
+      [class.text-on-fill]="type() === 'profile'"
       [class.bg-surface-100]="type() !== 'profile'"
       [class.text-text-secondary]="type() !== 'profile'"
       (click)="type.set('profile')"
@@ -14,10 +15,11 @@
       {{ 'moderation.profile' | t }}
     </button>
     <button
+      hlmBtn
       type="button"
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'moment'"
-      [class.text-white]="type() === 'moment'"
+      [class.text-on-fill]="type() === 'moment'"
       [class.bg-surface-100]="type() !== 'moment'"
       [class.text-text-secondary]="type() !== 'moment'"
       (click)="type.set('moment')"
@@ -28,11 +30,12 @@
 
   @if (actionError()) {
     <div
-      class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm"
+      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger text-sm"
       role="alert"
     >
       {{ actionError() }}
       <button
+        hlmBtn
         type="button"
         class="ms-2 underline hover:no-underline"
         (click)="actionError.set(null)"
@@ -69,7 +72,7 @@
     />
   } @else {
     @for (item of items.value(); track item.id) {
-      <div class="border border-slate-700 rounded-lg p-4 mb-2 bg-surface">
+      <div class="border border-surface-100 rounded-lg p-4 mb-2 bg-surface-200">
         <p class="text-sm text-text-secondary">
           {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name | sanitiseHtml }}
         </p>
@@ -92,46 +95,56 @@
         }
 
         @if (analysis()?.userId === item.reported_user?.id) {
-          <div class="mt-3 p-3 rounded bg-amber-50 border border-amber-300">
+          <div
+            class="mt-3 p-3 rounded bg-warning/10 border border-warning/20"
+            role="status"
+            [attr.aria-label]="'moderation.riskScore' | t"
+          >
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-amber-900"
+              <span class="text-sm font-semibold text-warning"
                 >{{ 'moderation.riskScore' | t }}:</span
               >
-              <span class="text-sm font-mono text-amber-900">{{ analysis()?.riskScore }}</span>
+              <span class="text-sm font-mono text-warning">{{ analysis()?.riskScore }}</span>
             </div>
             @if (analysis()?.flags?.length) {
               <div class="mt-1 flex flex-wrap gap-1">
                 @for (flag of analysis()?.flags ?? []; track flag) {
-                  <span class="text-xs bg-rose-100 text-rose-800 rounded px-2 py-0.5">
+                  <span class="text-xs bg-danger/10 text-danger rounded px-2 py-0.5">
                     {{ flag | sanitiseHtml }}
                   </span>
                 }
               </div>
             } @else {
-              <span class="text-xs text-slate-600">{{ 'moderation.noFlags' | t }}</span>
+              <span class="text-xs text-text-secondary">{{ 'moderation.noFlags' | t }}</span>
             }
           </div>
         }
 
         <div class="mt-3 flex gap-2 flex-wrap">
           <button
+            hlmBtn
             type="button"
-            class="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700 transition-colors text-sm font-bold"
+            class="rounded bg-success px-3 py-1 text-on-fill hover:bg-success/90 transition-colors text-sm font-bold"
             (click)="approve(item)"
+            [attr.aria-label]="'moderation.approve' | t"
           >
             {{ 'moderation.approve' | t }}
           </button>
           <button
+            hlmBtn
             type="button"
-            class="rounded bg-rose-600 px-3 py-1 text-white hover:bg-rose-700 transition-colors text-sm font-bold"
+            class="rounded bg-danger px-3 py-1 text-on-fill hover:bg-danger/90 transition-colors text-sm font-bold"
             (click)="reject(item)"
+            [attr.aria-label]="'moderation.reject' | t"
           >
             {{ 'moderation.reject' | t }}
           </button>
           <button
+            hlmBtn
             type="button"
-            class="rounded border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors text-sm font-bold"
+            class="rounded border border-surface-100 px-3 py-1 text-text-secondary hover:bg-surface-100 transition-colors text-sm font-bold"
             (click)="analyse(item)"
+            [attr.aria-label]="'moderation.analyse' | t"
           >
             {{ 'moderation.analyse' | t }}
           </button>

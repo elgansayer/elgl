@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { UserProfile } from './user.service';
 import { I18nService } from './i18n.service';
+import { CrashReportService } from './crash-report.service';
 import type { SearchFilterParams } from './discovery.service';
 
 export interface PartnerScore {
@@ -12,6 +13,14 @@ export interface PartnerScore {
     activityStreak: number;
     seriousLearnerBonus: number;
   };
+}
+
+export interface MatchmakingErrorBoundaryResult<T> {
+  data: T;
+  /** True when the algorithm ran with reduced accuracy due to an internal error. */
+  degraded: boolean;
+  /** Last error encountered (for telemetry / developer inspection). */
+  lastError?: Error;
 }
 
 const WEIGHTS: Readonly<{
@@ -33,65 +42,144 @@ const MAX_STREAK_DAYS = 365;
 })
 export class MatchmakingAlgorithmService {
   private readonly i18n = inject(I18nService);
+  private readonly crashReportService = inject(CrashReportService);
+
+  /** Last error encountered, for external telemetry subscribers. */
+  readonly lastErrorMap = new Map<string, Error>();
 
   /**
    * Computes match scores for a list of candidate partners relative to the
    * current user, then sorts them highest-first. Designed to run entirely
    * offline using cached IndexedDB data when the PWA is disconnected.
+   *
+   * Wrapped in an error boundary: individual partner failures are silently
+   * skipped; total failure returns an unsorted candidate list with degraded
+   * flag set to true.
    */
   scoreAndRank(
     currentUser: UserProfile,
     candidates: UserProfile[],
-  ): PartnerScore[] {
-    const scored = candidates.map((partner) => this.scorePartner(currentUser, partner));
-    scored.sort((a, b) => b.totalScore - a.totalScore);
-    return scored;
+  ): MatchmakingErrorBoundaryResult<PartnerScore[]> {
+    if (!candidates || candidates.length === 0) {
+      return { data: [], degraded: false };
+    }
+
+    const scored: PartnerScore[] = [];
+    let degraded = false;
+
+    for (const partner of candidates) {
+      try {
+        scored.push(this.scorePartner(currentUser, partner));
+      } catch (error) {
+        degraded = true;
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.recordMatchmakingError('scoreAndRank:partner', err);
+      }
+    }
+
+    try {
+      scored.sort((a, b) => b.totalScore - a.totalScore);
+    } catch (error) {
+      degraded = true;
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.recordMatchmakingError('scoreAndRank:sort', err);
+    }
+
+    return { data: scored, degraded };
   }
 
   /**
-   * Applies client-side filters to a list of scored partners. Only filters that
-   * can be evaluated locally (age, gender, serious learner, availability) are
-   * applied here; distance filtering relies on proximity data cached from the
-   * last successful network request.
+   * Applies client-side filters to a list of scored partners with an error
+   * boundary. If any individual filter evaluation throws, that partner is
+   * excluded from results and the boundary is marked as degraded.
    */
   applyOfflineFilters(
     scored: PartnerScore[],
     filters: SearchFilterParams,
-  ): PartnerScore[] {
-    return scored.filter(({ partner }) => {
-      if (filters.serious_learner_only && !partner.is_serious_learner) return false;
-      if (filters.gender && filters.gender !== partner.gender) return false;
-      if (filters.availability_morning && !partner.availability_morning) return false;
-      if (filters.availability_afternoon && !partner.availability_afternoon) return false;
-      if (filters.availability_evening && !partner.availability_evening) return false;
+  ): MatchmakingErrorBoundaryResult<PartnerScore[]> {
+    if (!scored || scored.length === 0) {
+      return { data: [], degraded: false };
+    }
 
-      if (filters.age_min !== undefined || filters.age_max !== undefined) {
-        const age = partner.age;
-        if (age === undefined || age === null) return true;
-        if (filters.age_min !== undefined && age < filters.age_min) return false;
-        if (filters.age_max !== undefined && age > filters.age_max) return false;
+    const filtered: PartnerScore[] = [];
+    let degraded = false;
+
+    for (const item of scored) {
+      try {
+        if (this.passesOfflineFilters(item.partner, filters)) {
+          filtered.push(item);
+        }
+      } catch (error) {
+        degraded = true;
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.recordMatchmakingError('applyOfflineFilters', err);
       }
+    }
 
-      return true;
-    });
+    return { data: filtered, degraded };
   }
 
   /** Builds a human-readable label describing the primary match reason. */
   getMatchReasonLabel(score: PartnerScore): string {
-    const { breakdown } = score;
-    if (breakdown.languageComplementarity >= 30) {
-      return this.i18n.translate('matchmaking.reasonLanguageExchange');
+    try {
+      const { breakdown } = score;
+      if (breakdown.languageComplementarity >= 30) {
+        return this.i18n.translate('matchmaking.reasonLanguageExchange');
+      }
+      if (breakdown.sharedInterests >= 20) {
+        return this.i18n.translate('matchmaking.reasonSharedInterests');
+      }
+      if (breakdown.seriousLearnerBonus >= 8) {
+        return this.i18n.translate('matchmaking.reasonSeriousLearner');
+      }
+      if (breakdown.activityStreak >= 12) {
+        return this.i18n.translate('matchmaking.reasonActiveLearner');
+      }
+      return this.i18n.translate('matchmaking.reasonGeneral');
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.recordMatchmakingError('getMatchReasonLabel', err);
+      return this.i18n.translate('matchmaking.reasonGeneral');
     }
-    if (breakdown.sharedInterests >= 20) {
-      return this.i18n.translate('matchmaking.reasonSharedInterests');
+  }
+
+  // ---- Private helpers ----
+
+  /** Evaluates a single partner against offline filters. */
+  private passesOfflineFilters(
+    partner: UserProfile,
+    filters: SearchFilterParams,
+  ): boolean {
+    if (filters.serious_learner_only && !partner.is_serious_learner) return false;
+    if (filters.gender && filters.gender !== partner.gender) return false;
+    if (filters.availability_morning && !partner.availability_morning) return false;
+    if (filters.availability_afternoon && !partner.availability_afternoon) return false;
+    if (filters.availability_evening && !partner.availability_evening) return false;
+
+    if (filters.age_min !== undefined || filters.age_max !== undefined) {
+      const age = partner.age;
+      if (age === undefined || age === null) return true;
+      if (filters.age_min !== undefined && age < filters.age_min) return false;
+      if (filters.age_max !== undefined && age > filters.age_max) return false;
     }
-    if (breakdown.seriousLearnerBonus >= 8) {
-      return this.i18n.translate('matchmaking.reasonSeriousLearner');
-    }
-    if (breakdown.activityStreak >= 12) {
-      return this.i18n.translate('matchmaking.reasonActiveLearner');
-    }
-    return this.i18n.translate('matchmaking.reasonGeneral');
+
+    return true;
+  }
+
+  /** Records a matchmaking error and sends it to the crash reporter. */
+  private recordMatchmakingError(context: string, error: Error): void {
+    this.lastErrorMap.set(context, error);
+    // Report asynchronously - do not block the caller path
+    this.crashReportService.reportCrash(
+      error,
+      {
+        route: context,
+        component: 'MatchmakingAlgorithmService',
+        adminRole: 'system',
+        action: context,
+        offline: !navigator.onLine,
+      },
+    ).catch(() => { /* fire-and-forget */ });
   }
 
   // ---- Private scoring helpers ----

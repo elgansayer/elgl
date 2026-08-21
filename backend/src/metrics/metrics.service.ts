@@ -964,8 +964,49 @@ export class MetricsService {
     this.adminLoginHistoryRequests.inc({ result });
   }
 
+  setModerationQueueSize(count: number): void {
+    this.tsPendingReports.set(count);
+  }
+  setVideoRoomActive(count: number): void {
+    this.activeConnections.set(count);
+  }
+  setVideoRoomParticipants(count: number): void {
+    this.activeConnections.set(count);
+  }
+  recordVideoClassroomCreationFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom',
+      error_type: errorType,
+    });
+  }
+  recordVideoClassroomTokenGenerationDuration(
+    action: string,
+    durationSeconds: number,
+  ): void {
+    this.adminApiLatency.observe(
+      { endpoint: 'video-classroom', action },
+      durationSeconds,
+    );
+  }
+  recordVideoClassroomCreated(): void {
+    this.adminVipToggles.inc({ result: 'created' });
+  }
+  recordVideoClassroomJoined(): void {
+    this.adminVipToggles.inc({ result: 'joined' });
+  }
+  recordVideoClassroomJoinFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom-join',
+      error_type: errorType,
+    });
+  }
+
   getRegister(): Registry {
     return this.register;
+  }
+
+  getContentType(): string {
+    return 'text/plain; version=0.0.4';
   }
 
   async getMetrics(): Promise<string> {

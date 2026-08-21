@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   DestroyRef,
+  Injector,
   afterNextRender,
   inject,
   input,
@@ -33,24 +34,28 @@ interface CentrifugoMessageData {
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
-      class="absolute bottom-0 start-0 w-full h-72 p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
+      class="absolute bottom-0 start-0 w-full h-48 sm:h-60 md:h-72 p-3 sm:p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
       role="complementary"
       [attr.aria-label]="'liveChat.overlayAria' | t"
     >
       <!-- Scrollable message list with top-fade mask -->
       <div
         #scrollContainer
-        class="overflow-y-auto flex flex-col gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
+        class="overflow-y-auto flex flex-col gap-2 sm:gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
         role="log"
         aria-live="polite"
         [attr.aria-label]="'liveChat.overlayAria' | t"
       >
         @for (msg of messages(); track msg.id) {
           <div
-            class="flex flex-col bg-black/40 rounded-xl p-2.5 max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
+            class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
           >
-            <span class="text-white/70 text-xs font-semibold mb-0.5">{{ msg.senderName }}</span>
-            <span class="text-white text-sm leading-snug break-words">{{ msg.text }}</span>
+            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
+              msg.senderName
+            }}</span>
+            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
+              msg.text
+            }}</span>
           </div>
         }
       </div>
@@ -88,14 +93,16 @@ interface CentrifugoMessageData {
 export class LiveChatOverlayComponent implements OnInit {
   roomId = input<string>('');
 
-  private centrifugo = inject(CentrifugoService);
-  private i18n = inject(I18nService);
-  private destroyRef = inject(DestroyRef);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
+  centrifugo = inject(CentrifugoService);
+  i18n = inject(I18nService);
+  destroyRef = inject(DestroyRef);
+  private injector = inject(Injector);
+
   messages = signal<LiveMessage[]>([]);
-  private channelName = '';
-  private subscription: unknown = null;
+  channelName = '';
+  subscription: unknown = null;
 
   // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
@@ -119,7 +126,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
       if (event.type === 'text') {
         this.addMessage({
-          id: event.id || Math.random().toString(36).substring(2),
+          id: event.id || crypto.randomUUID(),
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
@@ -136,7 +143,7 @@ export class LiveChatOverlayComponent implements OnInit {
     });
   }
 
-  private addMessage(msg: LiveMessage) {
+  addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
       // Cap at 50 messages to maintain 60 FPS rendering performance
@@ -148,15 +155,18 @@ export class LiveChatOverlayComponent implements OnInit {
     this.scrollToBottom();
   }
 
-  private scrollToBottom() {
-    afterNextRender(() => {
-      const el = this.scrollContainer()?.nativeElement;
-      if (el) {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    });
+  scrollToBottom() {
+    afterNextRender(
+      () => {
+        const el = this.scrollContainer()?.nativeElement;
+        if (el) {
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

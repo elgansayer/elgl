@@ -547,30 +547,41 @@ export class GroupsService {
       throw new NotFoundException('Failed to fetch groups');
     }
 
-    const enriched = await Promise.all(
-      groups.map(async (group: DiscoverableGroupRow) => {
-        const { count: memberCount } = await supabase
-          .from('group_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('group_id', group.id);
+    if (!groups || groups.length === 0) {
+      return [];
+    }
 
-        const { data: membership } = await supabase
-          .from('group_members')
-          .select('user_id')
-          .eq('group_id', group.id)
-          .eq('user_id', userId)
-          .maybeSingle();
+    const groupIds = groups.map((g) => g.id);
 
-        const isMember = !!membership;
-        return {
-          ...group,
-          member_count: memberCount ?? 0,
-          is_member: isMember,
-        };
-      }),
+    // Batch request 1: Get user memberships
+    const { data: memberships } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .in('group_id', groupIds)
+      .eq('user_id', userId);
+
+    const userGroupIds = new Set((memberships || []).map((m) => m.group_id));
+
+    // ⚡ Bolt: Performance optimization
+    // Reduced queries from 2N to N+1 by batching the membership lookup.
+    // N groups: 1 query for all memberships, N queries for member counts.
+    const countPromises = groups.map((group) =>
+      supabase
+        .from('group_members')
+        .select('group_id', { count: 'exact', head: true })
+        .eq('group_id', group.id),
     );
 
-    return enriched;
+    const countResults = await Promise.all(countPromises);
+
+    return groups.map((group, index) => {
+      const { count: memberCount } = countResults[index];
+      return {
+        ...group,
+        member_count: memberCount ?? 0,
+        is_member: userGroupIds.has(group.id),
+      };
+    });
   }
 
   async joinGroup(
