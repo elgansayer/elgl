@@ -8,7 +8,7 @@ import { NetworkStatusService } from '../../../services/network-status.service';
   template: `
     @if (!isOnline()) {
       <div
-        class="fixed top-0 inset-x-0 z-[10000] flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2 text-sm font-semibold shadow-lg transition-transform duration-300"
+        class="fixed top-0 inset-x-0 z-[10000] flex items-center justify-center gap-2 bg-danger text-on-fill px-4 py-2 text-sm font-semibold shadow-lift transition-transform duration-base ease-app"
         role="alert"
         aria-live="assertive"
       >

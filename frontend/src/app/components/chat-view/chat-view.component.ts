@@ -1,3 +1,4 @@
+import { HlmInput } from '@spartan-ng/helm/input';
 import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
@@ -9,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-chat-view',
-  imports: [FormsModule, ChatMessageComponent],
+  imports: [HlmInput, FormsModule, ChatMessageComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
@@ -23,6 +24,7 @@ import { FormsModule } from '@angular/forms';
       </div>
       <div class="border-t p-4">
         <input
+          hlmInput
           type="text"
           [ngModel]="newMessageText"
           (ngModelChange)="onMessageTextChange($event)"

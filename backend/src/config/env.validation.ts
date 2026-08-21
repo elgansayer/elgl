@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, validateSync } from 'class-validator';
+import { IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
 
 export class EnvironmentVariables {
   @IsNumber()
@@ -67,23 +67,69 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  LIVEKIT_RTC_STUN_SERVERS?: string;
-
-  @IsString()
-  CLOUDFLARE_R2_ENDPOINT!: string;
-
-  @IsString()
-  CLOUDFLARE_R2_ACCESS_KEY_ID!: string;
-
-  @IsString()
-  CLOUDFLARE_R2_SECRET_ACCESS_KEY!: string;
-
-  @IsString()
-  CLOUDFLARE_R2_BUCKET!: string;
+  LIVEKIT_TURN_USERNAME?: string;
 
   @IsString()
   @IsOptional()
-  CLOUDFLARE_R2_PUBLIC_DOMAIN?: string;
+  LIVEKIT_TURN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_RTC_STUN_SERVERS?: string;
+
+  @IsString()
+  CLOUDFLARE_R2_GATEWAY_URL!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_SIGNING_SECRET!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_SERVICE_TOKEN!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_PUBLIC_URL!: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_R2_SOURCE_HOSTS?: string;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_UPLOAD_TTL_SECONDS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS?: number;
+
+  @IsString()
+  CLOUDFLARE_STREAM_ACCOUNT_ID!: string;
+
+  @IsString()
+  CLOUDFLARE_STREAM_API_TOKEN!: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDFLARE_STREAM_ALLOWED_ORIGINS?: string;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_STREAM_POLL_INTERVAL_MS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS?: number;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS?: number;
 
   @IsString()
   DEEPL_API_KEY!: string;
@@ -94,6 +140,18 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   AZURE_TRANSLATOR_REGION?: string;
+
+  @IsString()
+  @IsOptional()
+  AZURE_SPEECH_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  AZURE_SPEECH_REGION?: string;
+
+  @IsNumber()
+  @IsOptional()
+  AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS?: number;
 
   @IsString()
   STRIPE_SECRET_KEY!: string;

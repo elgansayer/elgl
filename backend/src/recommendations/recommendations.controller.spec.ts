@@ -1,22 +1,32 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecommendationsController } from './recommendations.controller';
 import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
+
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+vi.mock('./sanitise-recommendations.helper', () => ({
+  sanitiseRecommendationsData: <T>(value: T): T => value,
+}));
 
 describe('RecommendationsController', () => {
   let controller: RecommendationsController;
   let mockService: {
-    getRecommendations: jest.Mock;
-    getDailyRecommendations: jest.Mock;
+    getRecommendations: Mock;
+    getDailyRecommendations: Mock;
   };
 
   beforeEach(async () => {
     mockService = {
-      getRecommendations: jest.fn(),
-      getDailyRecommendations: jest.fn(),
+      getRecommendations: vi.fn(),
+      getDailyRecommendations: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -26,10 +36,25 @@ describe('RecommendationsController', () => {
           provide: RecommendationsService,
           useValue: mockService,
         },
+        {
+          provide: MatchmakingCrashReportService,
+          useValue: {
+            reportCrash: vi.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            isAvailable: vi.fn().mockReturnValue(true),
+          },
+        },
+        MatchmakingExceptionFilter,
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(RecommendationsRateLimiterGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<RecommendationsController>(
@@ -38,7 +63,7 @@ describe('RecommendationsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

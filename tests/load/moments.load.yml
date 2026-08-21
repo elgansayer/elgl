@@ -1,0 +1,403 @@
+config:
+  target: "{{ $processEnvironment.API_URL }}"
+  phases:
+    - name: "warmup"
+      duration: 30
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 20
+    - name: "sustained"
+      duration: 120
+      arrivalRate: 20
+    - name: "spike"
+      duration: 30
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN }}"
+  processor: "./helpers/moments-helpers.js"
+  plugins:
+    expect:
+      outputFormat: "pretty"
+  variables:
+    languages:
+      - "en"
+      - "es"
+      - "fr"
+      - "de"
+      - "ja"
+      - "ko"
+      - "zh"
+      - "pt"
+      - "it"
+      - "ru"
+    feed_filters:
+      - "All"
+      - "Classmates"
+      - "Following"
+      - "For%20You"
+    media_content_types:
+      - "image/jpeg"
+      - "image/png"
+      - "image/webp"
+      - "video/mp4"
+      - "video/webm"
+    question_options:
+      - "Greeting"
+      - "Farewell"
+      - "Question"
+      - "Colour"
+
+scenarios:
+  # ---- Feed browsing (read-heavy, mirrors real usage) ----
+
+  - name: "Browse feed (All)"
+    weight: 15
+    flow:
+      - get:
+          url: "/moments/feed?filter=All"
+          expect:
+            - statusCode: 200
+
+  - name: "Browse feed with filter"
+    weight: 15
+    flow:
+      - get:
+          url: "/moments/feed?filter={{ feed_filters }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Browse feed by language"
+    weight: 8
+    flow:
+      - get:
+          url: "/moments/feed?filter=Classmates&lang={{ languages }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get lifetime counts"
+    weight: 3
+    flow:
+      - get:
+          url: "/moments/lifetime-counts"
+          expect:
+            - statusCode: 200
+
+  - name: "Get active stories"
+    weight: 3
+    flow:
+      - get:
+          url: "/moments/stories"
+          expect:
+            - statusCode: 200
+
+  # ---- Moment creation flows ----
+
+  - name: "Create text moment"
+    weight: 12
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Load test moment published at {{ $now }}. Sharing my language learning progress today!"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+
+  - name: "Create moment with media"
+    weight: 6
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Load test moment with images {{ $now }}"
+            media_urls:
+              - "https://example.com/load-test/moment-1.jpg"
+              - "https://example.com/load-test/moment-2.jpg"
+            media_type: "images"
+            target_language: "{{ languages }}"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+
+  - name: "Create story"
+    weight: 4
+    flow:
+      - post:
+          url: "/moments/stories"
+          json:
+            text_content: "Load test story {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            expireInHours: 24
+          expect:
+            - statusCode: 201
+
+  # ---- Media upload URL flows (Cloudflare R2 presigned URLs) ----
+
+  - name: "Request media upload URL"
+    weight: 3
+    flow:
+      - post:
+          url: "/moments/upload-media"
+          json:
+            filename: "load-test-media-{{ $randomNumber(1000, 99999) }}.jpg"
+            contentType: "{{ media_content_types }}"
+          expect:
+            - statusCode: 201
+
+  - name: "Request voice upload URL"
+    weight: 2
+    flow:
+      - post:
+          url: "/moments/upload-voice"
+          json:
+            filename: "load-test-voice-{{ $randomNumber(1000, 99999) }}.m4a"
+            contentType: "audio/mp4"
+          expect:
+            - statusCode: [201, 403]
+
+  # ---- Language question flows ----
+
+  - name: "Create language question"
+    weight: 3
+    flow:
+      - post:
+          url: "/moments/language-questions"
+          json:
+            text_content: "Help me understand this word."
+            target_language: "{{ languages }}"
+            question_text: "What is the meaning of the word 'hello'?"
+            question_options:
+              - "Greeting"
+              - "Farewell"
+              - "Question"
+              - "Colour"
+            correct_answer: "Greeting"
+          capture:
+            - json: "$.id"
+              as: "question_id"
+          expect:
+            - statusCode: 201
+
+  - name: "Answer language question"
+    weight: 3
+    flow:
+      - post:
+          url: "/moments/language-questions"
+          json:
+            text_content: "Test question for the answer flow."
+            target_language: "{{ languages }}"
+            question_text: "Which word is a farewell?"
+            question_options:
+              - "Greeting"
+              - "Farewell"
+              - "Question"
+              - "Colour"
+            correct_answer: "Farewell"
+          capture:
+            - json: "$.id"
+              as: "question_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ question_id }}/answer"
+          json:
+            answer: "{{ question_options }}"
+          expect:
+            - statusCode: 201
+
+  - name: "Get language questions"
+    weight: 4
+    flow:
+      - get:
+          url: "/moments/questions?lang={{ languages }}"
+          expect:
+            - statusCode: 200
+
+  # ---- Engagement flows ----
+
+  - name: "Like moment"
+    weight: 8
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Like load test moment {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/like"
+          expect:
+            - statusCode: 201
+
+  - name: "Get moment likes"
+    weight: 3
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Likes listing load test {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/like"
+          expect:
+            - statusCode: 201
+      - get:
+          url: "/moments/{{ moment_id }}/likes"
+          expect:
+            - statusCode: 200
+
+  - name: "Add comment"
+    weight: 8
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Comment load test moment {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/comments"
+          json:
+            text_content: "Great post! Thanks for sharing your language learning journey."
+          capture:
+            - json: "$.id"
+              as: "comment_id"
+          expect:
+            - statusCode: 201
+
+  - name: "Get comments"
+    weight: 4
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Comments listing load test {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/comments"
+          json:
+            text_content: "First comment for the listing flow."
+          expect:
+            - statusCode: 201
+      - get:
+          url: "/moments/{{ moment_id }}/comments"
+          expect:
+            - statusCode: 200
+
+  - name: "Vote on correction"
+    weight: 3
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "I am go to school every day."
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/comments"
+          json:
+            text_content: "Small correction for you."
+            correction_payload:
+              original: "I am go to school every day."
+              corrected: "I go to school every day."
+              explanation: "Use the simple present for habitual actions."
+          capture:
+            - json: "$.id"
+              as: "comment_id"
+          expect:
+            - statusCode: 201
+      - post:
+          url: "/moments/{{ moment_id }}/comments/{{ comment_id }}/vote"
+          json:
+            vote: "{{ $randomChoice('up', 'down') }}"
+          expect:
+            - statusCode: 201
+
+  # ---- Authoring flows (edit and pin) ----
+
+  - name: "Edit moment text"
+    weight: 2
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Original load test moment text {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - patch:
+          url: "/moments/{{ moment_id }}/edit-text"
+          json:
+            textContent: "Updated load test moment text {{ $now }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Pin moment"
+    weight: 1
+    flow:
+      - post:
+          url: "/moments"
+          json:
+            text_content: "Pin load test moment {{ $now }}"
+            target_language: "{{ languages }}"
+            media_type: "none"
+            post_type: "moment"
+          capture:
+            - json: "$.id"
+              as: "moment_id"
+          expect:
+            - statusCode: 201
+      - patch:
+          url: "/moments/{{ moment_id }}/pin"
+          expect:
+            - statusCode: [200, 403]

@@ -94,4 +94,36 @@ describe('ForcedUpdateModalComponent', () => {
     expect(stopPropagationSpy).toHaveBeenCalled();
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
+
+  it('should lock body scroll on init', () => {
+    expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('should restore body scroll on destroy', () => {
+    fixture.destroy();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('should block Escape key', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(stopPropagationSpy).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block Esc key alias', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Esc' });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should block other keyboard keys', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Tab' });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    component.onKeydown(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
 });

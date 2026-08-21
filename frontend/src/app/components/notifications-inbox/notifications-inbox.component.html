@@ -1,18 +1,20 @@
-<div class="flex flex-col h-full bg-[#121212] text-white">
+<div class="flex flex-col h-full bg-surface-500 text-text-primary">
   <!-- Header -->
-  <div class="flex items-center ps-4 pe-4 py-3 border-b border-white/10">
-    <button aria-label="Go back" class="text-lg me-2" (click)="goBack()">&larr;</button>
+  <div class="flex items-center ps-4 pe-4 py-3 border-b border-surface-100">
+    <button hlmBtn aria-label="Go back" class="text-lg me-2" (click)="goBack()">&larr;</button>
     <h1 class="flex-1 text-lg font-semibold">{{ 'notifications.title' | t }}</h1>
     @if (unreadCount() > 0) {
-      <span class="bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full me-2">
+      <span class="bg-danger text-on-fill text-[10px] font-bold px-2 py-0.5 rounded-full me-2">
         {{ unreadCount() }}
       </span>
     }
     <button
-      class="text-sm text-white/60 hover:text-white cursor-pointer"
+      hlmBtn
+      class="text-sm text-text-muted hover:text-text-primary cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"
-     [attr.aria-label]="'notifications.markAllRead' | t">
+      [attr.aria-label]="'notifications.markAllRead' | t"
+    >
       {{ 'notifications.markAllRead' | t }}
     </button>
   </div>
@@ -27,10 +29,13 @@
   <!-- Content -->
   @if (isLoading()) {
     <div class="flex-1 flex items-center justify-center">
-      <span class="block w-8 h-8 rounded-full border-2 border-white/20 border-t-transparent animate-spin" role="status"></span>
+      <span
+        class="block w-8 h-8 rounded-full border-2 border-surface-100 border-t-transparent animate-spin"
+        role="status"
+      ></span>
     </div>
   } @else if (notifications().length === 0) {
-    <div class="flex-1 flex flex-col items-center justify-center ps-4 pe-4 text-white/50">
+    <div class="flex-1 flex flex-col items-center justify-center ps-4 pe-4 text-text-muted">
       <span class="text-5xl mb-3">🔔</span>
       <p class="text-lg font-medium">{{ 'notifications.emptyTitle' | t }}</p>
       <p class="text-sm text-center mt-1">{{ 'notifications.emptySubtitle' | t }}</p>
@@ -39,25 +44,29 @@
     <div class="flex-1 overflow-y-auto">
       @for (notif of notifications(); track notif.id) {
         <div
-          class="flex items-start ps-4 pe-4 py-3 gap-3 border-b border-white/5 cursor-pointer hover:bg-white/5"
-          [class]="notif.is_read ? '' : 'bg-blue-500/10'"
+          class="flex items-start ps-4 pe-4 py-3 gap-3 border-b border-surface-100 cursor-pointer hover:bg-surface-300"
+          [class]="notif.is_read ? '' : 'bg-primary/10'"
           (click)="onNotificationClick(notif)"
         >
           <!-- Avatar -->
-          <div class="relative shrink-0 size-10 rounded-full overflow-hidden bg-white/10">
+          <div class="relative shrink-0 size-10 rounded-full overflow-hidden bg-surface-100">
             @if (notif.actor?.avatar_url) {
-              <img loading="lazy"
+              <img
                 [src]="notif.actor!.avatar_url"
                 [alt]="notif.actor?.display_name ?? 'user'"
                 class="size-full object-cover"
               />
             } @else {
-              <div class="flex items-center justify-center size-full text-sm font-medium text-white/70">
+              <div
+                class="flex items-center justify-center size-full text-sm font-medium text-text-secondary"
+              >
                 {{ notif.actor?.display_name?.charAt(0) ?? '?' }}
               </div>
             }
             @if (!notif.is_read) {
-              <span class="absolute top-0 start-0 size-2.5 bg-sky-400 rounded-full ring-2 ring-[#121212]"></span>
+              <span
+                class="absolute top-0 start-0 size-2.5 bg-primary rounded-full ring-2 ring-surface-500"
+              ></span>
             }
           </div>
 
@@ -66,11 +75,11 @@
             <span class="block text-sm font-semibold truncate">
               {{ notif.actor?.display_name ?? ('common.unknownUser' | t) }}
             </span>
-            <span class="text-sm text-white/70">
+            <span class="text-sm text-text-secondary">
               {{ getNotificationMessageKey(notif.type) | t }}
             </span>
             @if (notif.message) {
-              <p class="text-xs text-white/50 mt-0.5 truncate">{{ notif.message }}</p>
+              <p class="text-xs text-text-muted mt-0.5 truncate">{{ notif.message }}</p>
             }
           </div>
 
