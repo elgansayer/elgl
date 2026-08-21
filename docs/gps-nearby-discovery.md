@@ -16,7 +16,7 @@ If the existing discovery service returns fallback rows without a database-compu
 
 ## API and bounds
 
-`SearchQueryDto` now treats latitude and longitude as a pair: neither is required for ordinary discovery, but providing either requires both. Latitude remains bounded to -90..90 and longitude to -180..180. `radius_metres` is bounded to 1,000..250,000, matching the product's distance control rather than allowing effectively world-scale proximity requests.
+The authenticated discovery contract already requires latitude and longitude as a pair; that validation landed independently on `main` while #821 was being implemented. Latitude remains bounded to -90..90 and longitude to -180..180. The Nearby UI only sends the existing product distance-control range, 10 to 250 km, starting at 10 km. The backend retains its broader general-discovery radius validator for compatibility with other clients.
 
 The active `search_nearby_users` PostGIS RPC already:
 
@@ -38,7 +38,7 @@ Browser coordinates are transient client state. They are not written to local st
 
 ## Verification
 
-Automated coverage includes browser success/unsupported/permission/unavailable/timeout handling, malformed coordinates, no startup prompt, explicit Nearby acquisition, coordinate/radius/nearest query composition, offline handling, stale-coordinate handling, suppression of non-spatial fallback rows, locale-specific single-unit formatting, coordinate-pair validation, and radius bounds.
+Automated coverage includes browser success/unsupported/permission/unavailable/timeout handling, malformed coordinates, no startup prompt, explicit Nearby acquisition, bounded coordinate/radius/nearest query composition, offline handling, stale-coordinate handling, suppression of non-spatial fallback rows, and locale-specific single-unit formatting. The existing backend suite covers the paired-coordinate contract.
 
 For manual verification:
 
@@ -51,6 +51,6 @@ For manual verification:
 
 ## Rollout and rollback
 
-Deploy backend validation before or with the frontend. Older clients already send latitude and longitude together when they send coordinates, and ordinary non-spatial discovery remains compatible.
+Paired-coordinate backend validation is already present on `main`, so this change needs no backend or schema rollout beyond deploying the application normally. Ordinary non-spatial discovery remains compatible.
 
-Rollback is a normal application revert. There is no migration or persisted GPS data to unwind. If rolling back only the frontend, the tighter backend coordinate-pair and 250 km radius validation can safely remain because they constrain malformed/abusive requests without changing ordinary discovery defaults.
+Rollback is a normal application revert. There is no migration or persisted GPS data to unwind, and no location data cleanup is required.
