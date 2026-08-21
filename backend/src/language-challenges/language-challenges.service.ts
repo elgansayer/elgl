@@ -314,26 +314,16 @@ export class LanguageChallengesService {
     const prizePool = challenge.prize_pool_coins ?? 0;
     const share = Math.floor(prizePool / completerIds.length);
 
-    // ⚡ Bolt Optimization: Replaced sequential awaits in a loop with concurrent execution
-    // to significantly reduce network latency when awarding prizes to multiple users.
-    const results = await Promise.allSettled(
+    // award coins to each completer concurrently
+    // ⚡ Bolt: Optimize monetisation payouts via Promise.allSettled
+    const payoutResults = await Promise.allSettled(
       completerIds.map((cid) => this.monetisationService.addCoins(cid, share)),
     );
-
-    const errors = results
-      .filter(
-        (result): result is PromiseRejectedResult =>
-          result.status === 'rejected',
-      )
-      .map((result) => result.reason as Error);
-
-    if (errors.length > 0) {
-      this.logger.error(
-        `Failed to award coins to some completers: ${errors.map((e) => e.message).join(', ')}`,
-      );
-      // Since awarding coins is a server-side critical operation, throw a 500
-      // instead of a 400 Bad Request if it fails for some users.
-      throw new Error('Failed to award coins to all completers');
+    const failedPayouts = payoutResults.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failedPayouts.length > 0) {
+      throw failedPayouts[0].reason;
     }
 
     // mark challenge as completed, leave remaining prize in pool

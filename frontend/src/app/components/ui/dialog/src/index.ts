@@ -9,6 +9,7 @@ import { HlmDialogPortal } from './lib/hlm-dialog-portal';
 import { HlmDialogTitle } from './lib/hlm-dialog-title';
 import { HlmDialogTrigger } from './lib/hlm-dialog-trigger';
 
+export type { BrnDialogState as HlmDialogState } from '@spartan-ng/brain/dialog';
 export * from './lib/hlm-dialog';
 export * from './lib/hlm-dialog-close';
 export * from './lib/hlm-dialog-content';

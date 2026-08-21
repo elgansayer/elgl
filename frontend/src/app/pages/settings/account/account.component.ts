@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -7,7 +10,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 @Component({
   selector: 'app-account-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   templateUrl: './account.component.html',
   styleUrls: ['./account.component.scss'],
 })
@@ -16,11 +19,14 @@ export class AccountSettingsComponent implements OnInit {
   public settingsService = inject(SettingsService);
   readonly successMessage = signal('');
 
-  passwordForm = this.fb.group({
-    currentPassword: ['', Validators.required],
-    newPassword: ['', [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ['', Validators.required],
-  }, { validators: this.passwordMatchValidator });
+  passwordForm = this.fb.group(
+    {
+      currentPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', Validators.required],
+    },
+    { validators: this.passwordMatchValidator },
+  );
 
   twoFactorForm = this.fb.group({
     twoFactorEnabled: [false],
@@ -29,15 +35,19 @@ export class AccountSettingsComponent implements OnInit {
   ngOnInit() {
     const currentAccountState = this.settingsService.accountSettings();
     if (currentAccountState) {
-      this.twoFactorForm.patchValue({
-        twoFactorEnabled: currentAccountState.twoFactorEnabled,
-      }, { emitEvent: false });
+      this.twoFactorForm.patchValue(
+        {
+          twoFactorEnabled: currentAccountState.twoFactorEnabled,
+        },
+        { emitEvent: false },
+      );
     }
   }
 
   passwordMatchValidator(g: AbstractControl) {
     return g.get('newPassword')?.value === g.get('confirmPassword')?.value
-      ? null : { mismatch: true };
+      ? null
+      : { mismatch: true };
   }
 
   updateTwoFactorSetting() {
@@ -63,7 +73,7 @@ export class AccountSettingsComponent implements OnInit {
     const currentSessions = this.settingsService.accountSettings()?.activeSessions ?? 0;
     if (currentSessions > 0) {
       this.settingsService.updateAccountSettings({
-        activeSessions: currentSessions - 1
+        activeSessions: currentSessions - 1,
       });
     }
   }

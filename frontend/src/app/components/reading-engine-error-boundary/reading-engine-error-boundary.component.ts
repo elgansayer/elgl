@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ReadingEngineCrashReportingService } from '../../services/reading-engine-crash-reporting.service';
@@ -69,7 +70,7 @@ function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames
 @Component({
   selector: 'app-reading-engine-error-boundary',
   standalone: true,
-  imports: [TranslatePipe, AppButtonPrimaryComponent],
+  imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
@@ -101,6 +102,7 @@ function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames
             </app-button-primary>
             @if (showReportButton()) {
               <button
+                hlmBtn
                 type="button"
                 (click)="reportCrash()"
                 class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"

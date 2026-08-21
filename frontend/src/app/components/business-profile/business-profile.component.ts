@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -11,7 +14,7 @@ export interface CatalogItem {
 
 @Component({
   selector: 'app-business-profile',
-  imports: [TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, TranslatePipe],
   template: `
     <section class="mx-auto max-w-2xl px-4 py-6">
       <h1 class="text-2xl font-bold mb-4">{{ 'profile.businessTitle' | t }}</h1>
@@ -22,6 +25,7 @@ export interface CatalogItem {
           'profile.businessName' | t
         }}</label>
         <input
+          hlmInput
           id="businessName"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
           [value]="businessName()"
@@ -33,6 +37,7 @@ export interface CatalogItem {
           'profile.businessHours' | t
         }}</label>
         <input
+          hlmInput
           id="businessHours"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
           [value]="businessHours()"
@@ -44,6 +49,7 @@ export interface CatalogItem {
           'profile.website' | t
         }}</label>
         <input
+          hlmInput
           id="website"
           type="url"
           class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
@@ -61,6 +67,7 @@ export interface CatalogItem {
             'profile.catalogNamePlaceholder' | t
           }}</label>
           <input
+            hlmInput
             id="catalog-name-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.name"
@@ -72,6 +79,7 @@ export interface CatalogItem {
             'profile.catalogDescPlaceholder' | t
           }}</label>
           <textarea
+            hlmTextarea
             id="catalog-desc-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.description"
@@ -84,6 +92,7 @@ export interface CatalogItem {
             'profile.catalogPricePlaceholder' | t
           }}</label>
           <input
+            hlmInput
             id="catalog-price-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.price"
@@ -95,6 +104,7 @@ export interface CatalogItem {
             'profile.catalogImagePlaceholder' | t
           }}</label>
           <input
+            hlmInput
             id="catalog-image-{{ item.id }}"
             class="w-full rounded-lg border border-surface-100 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="item.imageUrl ?? ''"
@@ -103,6 +113,7 @@ export interface CatalogItem {
           />
 
           <button
+            hlmBtn
             type="button"
             class="mt-3 rounded-lg bg-danger px-3 py-1 text-on-fill hover:bg-danger/90"
             (click)="removeItem(item.id)"
@@ -115,6 +126,7 @@ export interface CatalogItem {
       }
 
       <button
+        hlmBtn
         type="button"
         class="mt-2 rounded-lg bg-primary px-4 py-2 font-medium text-on-fill hover:bg-primary-dark"
         (click)="addItem()"
@@ -124,6 +136,7 @@ export interface CatalogItem {
 
       <div class="mt-8 flex items-center gap-3">
         <button
+          hlmBtn
           type="button"
           class="rounded-lg bg-success px-4 py-2 font-medium text-on-fill hover:bg-success/90"
           (click)="save()"

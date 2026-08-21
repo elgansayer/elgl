@@ -31,7 +31,7 @@ import {
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
   CACHE_NO_STORE,
-} from './cache.interceptor';
+} from '../common/cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import {
   EconomyRateLimiterGuard,

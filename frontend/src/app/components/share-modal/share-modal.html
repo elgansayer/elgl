@@ -13,6 +13,7 @@
       <div class="p-4 border-b border-surface-100 flex justify-between items-center">
         <h2 class="text-lg font-bold text-text-primary">{{ 'share.title' | t }}</h2>
         <button
+          hlmBtn
           class="p-2 text-text-secondary hover:bg-surface-300 rounded-full"
           (click)="closed.emit()"
           [attr.aria-label]="'common.close' | t"
@@ -52,6 +53,7 @@
       <div class="px-4 pb-4">
         <div class="grid grid-cols-4 gap-2 mb-4">
           <button
+            hlmBtn
             class="flex flex-col items-center gap-1 group"
             (click)="shareToDirectMessage()"
             [attr.aria-label]="'share.dm' | t"
@@ -67,6 +69,7 @@
           </button>
 
           <button
+            hlmBtn
             class="flex flex-col items-center gap-1 group"
             (click)="shareToFeed()"
             [attr.aria-label]="'share.moments' | t"
@@ -87,6 +90,7 @@
         <!-- Copy Link Box -->
         <div class="flex items-center gap-2 bg-surface-100 p-2 rounded-lg">
           <input
+            hlmInput
             type="text"
             [value]="shareUrl()"
             readonly
@@ -94,6 +98,7 @@
             [attr.aria-label]="'text input'"
           />
           <button
+            hlmBtn
             class="px-4 py-2 rounded-md text-sm font-bold text-on-fill transition-colors"
             [class.bg-primary]="!isCopying()"
             [class.bg-success]="isCopying()"

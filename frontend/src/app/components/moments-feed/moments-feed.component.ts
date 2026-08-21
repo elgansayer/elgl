@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import {
   Component,
@@ -28,6 +31,7 @@ import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrolla
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
+import { LightboxComponent } from '../lightbox/lightbox.component';
 import {
   LanguagePickerComponent,
   getLanguageFlag,
@@ -44,6 +48,9 @@ interface MentionSuggestion {
 @Component({
   selector: 'app-moments-feed',
   imports: [
+    HlmTextarea,
+    HlmInput,
+    HlmButton,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -55,6 +62,7 @@ interface MentionSuggestion {
     ScrollablePillsComponent,
     CorrectionModalComponent,
     LikedByModalComponent,
+    LightboxComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
     AppEmptyStateComponent,

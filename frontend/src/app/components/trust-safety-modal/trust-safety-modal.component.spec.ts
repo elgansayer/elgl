@@ -85,9 +85,12 @@ describe('TrustSafetyModalComponent', () => {
       templateContent = match ? match[1] : content;
     });
 
-    it('should have dialog role with aria-modal on the root container', () => {
-      expect(templateContent).toContain('role="dialog"');
-      expect(templateContent).toContain('aria-modal="true"');
+    it('should delegate dialog role, modality, focus management and Escape handling to Spartan Dialog', () => {
+      expect(templateContent).toContain('<hlm-dialog');
+      expect(templateContent).toContain('<hlm-dialog-content');
+      expect(templateContent).toContain('*hlmDialogPortal');
+      expect(templateContent).toContain('[state]="dialogState()"');
+      expect(templateContent).not.toContain('(keydown)="onKeydown($event)"');
     });
 
     it('should have aria-labelledby and aria-describedby for screen reader context', () => {
@@ -103,11 +106,9 @@ describe('TrustSafetyModalComponent', () => {
     });
 
     it('should have proper tab roles with aria-selected, aria-controls, and tabindex', () => {
-      // Report tab
       expect(templateContent).toContain('id="trust-safety-tab-report"');
       expect(templateContent).toMatch(/role="tab"[^>]*aria-selected/);
       expect(templateContent).toMatch(/aria-controls\]="'trust-safety-panel-report'"/);
-      // Block tab
       expect(templateContent).toContain('id="trust-safety-tab-block"');
       expect(templateContent).toMatch(/aria-controls\]="'trust-safety-panel-block'"/);
     });
@@ -131,9 +132,9 @@ describe('TrustSafetyModalComponent', () => {
       expect(templateContent).toContain("'safety.categoriesLoading'");
     });
 
-    it('should have keyboard event handler for Escape and tab navigation', () => {
-      expect(templateContent).toContain('(keydown)="onKeydown($event)"');
+    it('should retain keyboard navigation for the custom tablist while dialog keyboard behavior is owned by Spartan', () => {
       expect(templateContent).toContain('(keydown)="onTabKeydown($event,');
+      expect(templateContent).not.toContain('(keydown)="onKeydown($event)"');
     });
 
     it('should have descriptive aria-labels on action buttons', () => {

@@ -290,43 +290,56 @@ export class DataRetentionService {
       return;
     }
 
-    for (const user of usersToDelete) {
-      const userId = user.id;
-      try {
-        // Delete user's personal data from all tables
-        await this.wipeUserData(userId);
-        // Anonymise the user row instead of deleting it (to keep referential integrity)
-        const { error: anonymiseError } = await supabase
-          .from('users')
-          .update({
-            display_name: `deleted_user_${userId.substring(0, 8)}`,
-            avatar_url: null,
-            audio_intro_url: null,
-            bio_text: null,
-            status_text: null,
-            greeting_message: null,
-            away_message: null,
-            native_language: null,
-            target_languages: null,
-            is_deletion_pending: false,
-            is_deleted: true,
-            deleted_at: now.toISOString(),
-          })
-          .eq('id', userId);
+    // ⚡ Bolt Optimization: Replaced sequential await loop with bounded concurrent chunks
+    // Process up to 10 users concurrently to significantly improve deletion latency
+    // while preventing unbounded Promise.allSettled calls from exhausting database connections.
+    const chunkSize = 10;
+    for (let i = 0; i < usersToDelete.length; i += chunkSize) {
+      const chunk = usersToDelete.slice(i, i + chunkSize);
 
-        if (anonymiseError) {
-          this.logger.error(
-            `Failed to anonymise user ${userId}: ${anonymiseError.message}`,
-          );
-        } else {
-          this.logger.log(`Finalised deletion for user ${userId}`);
-        }
-      } catch (err) {
-        this.logger.error(
-          `Unexpected error finalising deletion for user ${userId}`,
-          err,
-        );
-      }
+      await Promise.allSettled(
+        chunk.map(async (user) => {
+          const userId = user.id;
+          try {
+            // Delete user's personal data from all tables
+            await this.wipeUserData(userId);
+            // Anonymise the user row instead of deleting it (to keep referential integrity)
+            const { error: anonymiseError } = await supabase
+              .from('users')
+              .update({
+                display_name: `deleted_user_${userId.substring(0, 8)}`,
+                avatar_url: null,
+                audio_intro_url: null,
+                bio_text: null,
+                status_text: null,
+                greeting_message: null,
+                away_message: null,
+                native_language: null,
+                target_languages: null,
+                is_deletion_pending: false,
+                is_deleted: true,
+                deleted_at: now.toISOString(),
+              })
+              .eq('id', userId);
+
+            if (anonymiseError) {
+              this.logger.error(
+                `Failed to anonymise user ${userId}: ${anonymiseError.message}`,
+              );
+              return { success: false as const, error: anonymiseError };
+            } else {
+              this.logger.log(`Finalised deletion for user ${userId}`);
+              return { success: true as const };
+            }
+          } catch (err) {
+            this.logger.error(
+              `Unexpected error finalising deletion for user ${userId}`,
+              err,
+            );
+            return { success: false as const, error: err };
+          }
+        }),
+      );
     }
   }
 
@@ -436,56 +449,11 @@ export class DataRetentionService {
       );
     }
 
-    // --- Video / Audio Classroom data ---
-    // Call logs (both caller and receiver)
-    await supabase.from('call_logs').delete().eq('caller_id', userId);
-    await supabase.from('call_logs').delete().eq('receiver_id', userId);
-
-    // Audio room captions (speech transcripts containing the user's voice)
-    await supabase
-      .from('audio_room_captions')
-      .delete()
-      .eq('speaker_id', userId);
-
-    // Audio room notes (vocabulary notes authored by the user)
-    await supabase.from('audio_room_notes').delete().eq('author_id', userId);
-
-    // Audio room tips (both sent and received)
-    await supabase
-      .from('audio_room_tips')
-      .delete()
-      .eq('sender_user_id', userId);
-    await supabase
-      .from('audio_room_tips')
-      .delete()
-      .eq('receiver_user_id', userId);
-
-    // Anonymise the user's speaker_name in any remaining audio-room captions
-    // (rows where speaker_id was NOT the user but the name was captured).
-    // Use a bulk nullification to avoid leaving PII in remnant caption rows.
-    const { error: captionNameError } = await supabase
-      .from('audio_room_captions')
-      .update({ speaker_name: null })
-      .eq('speaker_id', userId);
-
-    if (captionNameError) {
-      this.logger.error(
-        `Failed to anonymise speaker_name in audio_room_captions for user ${userId}: ${captionNameError.message}`,
-      );
-    }
-
-    // Anonymise the user's author_name in any remaining audio-room notes
-    const { error: noteNameError } = await supabase
-      .from('audio_room_notes')
-      .update({ author_name: null })
-      .eq('author_id', userId);
-
-    if (noteNameError) {
-      this.logger.error(
-        `Failed to anonymise author_name in audio_room_notes for user ${userId}: ${noteNameError.message}`,
-      );
-    }
-
+    // ⚡ Bolt: Removed redundant sequential queries for classroom data at the end
+    // of wipeUserData. These 8 operations (call_logs, audio_room_captions, etc.)
+    // are already included in the Promise.allSettled tasks array above and
+    // executed concurrently. Removing them eliminates significant latency from
+    // the end of the deletion routine.
     this.logger.log(`Wiped personal data for user ${userId}`);
   }
 }

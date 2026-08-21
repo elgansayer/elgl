@@ -112,6 +112,42 @@ def test_terminal_keeps_nested_resource_and_security_limits(
     assert "--network=none" in calls[0]
 
 
+def test_terminal_worker_environment_excludes_controller_secrets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    captured_environment: dict[str, str] = {}
+    secret_names = (
+        "GITHUB_TOKEN",
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_CHAT_ID",
+        "OPENCODE_GO_API_KEY",
+        "GEMINI_API_KEY",
+    )
+    secret_values = tuple(f"controller-secret-{index}" for index in range(len(secret_names)))
+    for name, value in zip(secret_names, secret_values, strict=True):
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+
+    def run(
+        arguments: list[str], timeout: float, environment: dict[str, str]
+    ) -> CompletedProcess[str]:
+        del timeout
+        captured_environment.update(environment)
+        return CompletedProcess(arguments, 0, "ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.secure_tools._run_podman", run)
+    executor = PodmanTerminalExecutor(workspace, workspace, Path("/usr/bin/podman"), "worker")
+
+    result = executor(TerminalAction(command="printf ready"))
+
+    assert not result.is_error
+    assert set(captured_environment) == {"HOME", "PATH"}
+    assert set(secret_names).isdisjoint(captured_environment)
+    assert set(secret_values).isdisjoint(captured_environment.values())
+
+
 def test_terminal_retries_without_nested_cgroup_limits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

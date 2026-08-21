@@ -1,3 +1,5 @@
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import { Component, computed, output, signal, inject, resource, input } from '@angular/core';
 import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,7 +8,7 @@ import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
-  imports: [TranslatePipe],
+  imports: [HlmButton, HlmRadioGroup, HlmRadio, TranslatePipe],
   template: `
     <!-- Loading State -->
     @if (loading()) {
@@ -31,6 +33,7 @@ import { showToast } from '../../services/toast.service';
         </h3>
         <p class="text-text-muted text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
         <button
+          hlmBtn
           type="button"
           (click)="reloadQuestions()"
           class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-fill font-medium transition-colors"
@@ -77,46 +80,40 @@ import { showToast } from '../../services/toast.service';
         <!-- Question Area -->
         <div class="ps-6 pe-6 pb-6 min-h-[220px]">
           @if (currentQuestion(); as q) {
-            <h3 class="text-lg font-medium text-text-primary mb-6 text-start leading-relaxed">
+            <h3
+              [id]="'diagnostic-question-' + currentIndex()"
+              class="text-lg font-medium text-text-primary mb-6 text-start leading-relaxed"
+            >
               {{ q.text }}
             </h3>
 
-            <div class="flex flex-col gap-3">
+            <hlm-radio-group
+              [name]="'diagnostic-answer-' + currentIndex()"
+              [value]="answers()[q.id]"
+              (valueChange)="selectOption(q.id, $event)"
+              [attr.aria-labelledby]="'diagnostic-question-' + currentIndex()"
+              class="flex flex-col gap-3"
+            >
               @for (option of q.options; track option.id; let idx = $index) {
-                @let isSelected = answers()[q.id] === option.points;
-                <button
-                  type="button"
-                  (click)="selectOption(q.id, option.points)"
-                  class="w-full text-start ps-5 pe-5 pt-4 pb-4 rounded-2xl border-2 transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-                  [class.border-primary]="isSelected"
-                  [class.border-primary/20]="!isSelected"
-                  [class.shadow-lg]="isSelected"
-                  [class.shadow-primary/20]="isSelected"
-                  [class.bg-primary/10]="isSelected"
-                  [class.bg-surface-400]="!isSelected"
-                  [attr.aria-pressed]="isSelected"
-                  [attr.aria-label]="
+                <hlm-radio
+                  [value]="option.points"
+                  [aria-label]="
                     'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
                   "
+                  class="group w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10 data-[checked=true]:shadow-lg data-[checked=true]:shadow-primary/20"
                 >
                   <span
-                    class="text-base font-medium block"
-                    [class.text-text-primary]="isSelected"
-                    [class.text-text-secondary]="!isSelected"
+                    class="block text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary"
                   >
                     <span
-                      class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
-                      [class.bg-primary]="isSelected"
-                      [class.text-on-fill]="isSelected"
-                      [class.bg-primary/10]="!isSelected"
-                      [class.text-text-muted]="!isSelected"
+                      class="me-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-text-muted group-data-[checked=true]:bg-primary group-data-[checked=true]:text-on-fill"
                       >{{ idx + 1 }}</span
                     >
                     {{ option.text }}
                   </span>
-                </button>
+                </hlm-radio>
               }
-            </div>
+            </hlm-radio-group>
           }
         </div>
 
@@ -125,6 +122,7 @@ import { showToast } from '../../services/toast.service';
           class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-surface-400/60 border-t border-primary/10"
         >
           <button
+            hlmBtn
             type="button"
             (click)="previous()"
             [disabled]="isFirstQuestion()"
@@ -135,6 +133,7 @@ import { showToast } from '../../services/toast.service';
 
           @if (isLastQuestion()) {
             <button
+              hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed() || isSubmitting()"
@@ -150,6 +149,7 @@ import { showToast } from '../../services/toast.service';
             </button>
           } @else {
             <button
+              hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed()"
@@ -241,7 +241,8 @@ export class DiagnosticQuizComponent {
     this.questionsResource.reload();
   }
 
-  selectOption(questionId: string, points: number): void {
+  selectOption(questionId: string, points: unknown): void {
+    if (typeof points !== 'number' || !Number.isFinite(points)) return;
     this.answers.update((prev) => ({ ...prev, [questionId]: points }));
   }
 

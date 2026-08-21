@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -15,6 +16,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-subscription-plans',
   imports: [
+    HlmButton,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     RestorePurchasesButtonComponent,
@@ -35,6 +37,7 @@ import { environment } from '../../../environments/environment';
         <div class="flex justify-center mb-8 sm:mb-10">
           <div class="bg-surface-200 rounded-full p-1 inline-flex items-center">
             <button
+              hlmBtn
               (click)="billingInterval.set('month')"
               [class]="
                 billingInterval() === 'month'
@@ -46,6 +49,7 @@ import { environment } from '../../../environments/environment';
               {{ 'subscription.plans.monthly' | t }}
             </button>
             <button
+              hlmBtn
               (click)="billingInterval.set('year')"
               [class]="
                 billingInterval() === 'year'

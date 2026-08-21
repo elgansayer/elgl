@@ -63,9 +63,7 @@ def test_repeated_alerts_in_the_same_category_are_suppressed_after_the_first(
     assert len(sent_texts) == 1
 
 
-def test_alert_after_cooldown_reports_the_suppressed_count(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_alert_after_cooldown_reports_the_suppressed_count(tmp_path: Path, monkeypatch) -> None:
     from datetime import UTC, datetime, timedelta
 
     from openhands_factory.state import atomic_write_json, read_json
@@ -98,9 +96,57 @@ def test_alert_after_cooldown_reports_the_suppressed_count(
     assert "2 similar alerts suppressed" in sent_texts[-1]
 
 
-def test_different_categories_are_not_suppressed_by_each_other(
+def test_factory_health_alerts_use_the_check_name_as_the_cooldown_category(
     tmp_path: Path, monkeypatch
 ) -> None:
+    config = factory_config(tmp_path, TELEGRAM_BOT_TOKEN="token", TELEGRAM_CHAT_ID="chat")
+    sent_texts: list[str] = []
+
+    class Response:
+        is_success = True
+
+    def fake_post(_url, json, timeout):
+        sent_texts.append(json["text"])
+        return Response()
+
+    monkeypatch.setattr("openhands_factory.alerts.httpx.post", fake_post)
+    service = AlertService(config)
+
+    quarantine = service.send("OpenHands factory alert: jobs-quarantined: ALERT: issues=1")
+    stalled = service.send("OpenHands factory alert: jobs-stalled: ALERT: issues=2")
+
+    assert quarantine is True
+    assert stalled is True
+    assert len(sent_texts) == 2
+
+
+def test_large_issue_lists_are_compacted_before_delivery(tmp_path: Path, monkeypatch) -> None:
+    config = factory_config(tmp_path, TELEGRAM_BOT_TOKEN="token", TELEGRAM_CHAT_ID="chat")
+    sent_texts: list[str] = []
+
+    class Response:
+        is_success = True
+
+    def fake_post(_url, json, timeout):
+        sent_texts.append(json["text"])
+        return Response()
+
+    monkeypatch.setattr("openhands_factory.alerts.httpx.post", fake_post)
+    identifiers = ",".join(str(identifier) for identifier in range(1, 101))
+
+    sent = AlertService(config).send(
+        f"OpenHands factory alert: jobs-quarantined: ALERT: issues={identifiers}"
+    )
+
+    assert sent is True
+    assert "issues=1,2,3,4,5,6,7,8,..." in sent_texts[0]
+    assert "total=100" in sent_texts[0]
+    assert "+92 more" in sent_texts[0]
+    assert ",9," not in sent_texts[0]
+    assert len(sent_texts[0]) < 4000
+
+
+def test_different_categories_are_not_suppressed_by_each_other(tmp_path: Path, monkeypatch) -> None:
     config = factory_config(tmp_path, TELEGRAM_BOT_TOKEN="token", TELEGRAM_CHAT_ID="chat")
     sent_texts: list[str] = []
 

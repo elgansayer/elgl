@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { StreakMilestoneService } from '../../services/streak-milestone.service';
@@ -18,7 +19,7 @@ const CONFETTI_COLOURS = ['#ff0084', '#ff8c00', '#ffe600', '#00e5ff', '#9d00ff',
 
 @Component({
   selector: 'app-streak-celebration-overlay',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (visible()) {
       <div class="fixed inset-0 z-[60] overflow-hidden pointer-events-none" aria-hidden="true">
@@ -33,6 +34,7 @@ const CONFETTI_COLOURS = ['#ff0084', '#ff8c00', '#ffe600', '#00e5ff', '#9d00ff',
               {{ 'streak.celebration.subtitle' | t: { days: milestoneDays() } }}
             </p>
             <button
+              hlmBtn
               class="px-8 py-3 rounded-full bg-gradient-to-r from-neon-violet to-neon-pink text-on-fill font-semibold"
               (click)="dismiss()"
             >

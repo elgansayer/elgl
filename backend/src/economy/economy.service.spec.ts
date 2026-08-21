@@ -73,6 +73,7 @@ describe('EconomyService', () => {
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
     mockRedisClient = {
@@ -888,62 +889,144 @@ describe('EconomyService', () => {
   });
 
   describe('unlockStickerPack', () => {
-    it('should unlock a sticker pack, deduct coins, and invalidate cache', async () => {
-      const pack = {
-        id: 'stk_pack_1',
-        name: 'Happy Corgi Pack',
-        cost_coins: 50,
-      };
-      mockQueryBuilder.single
-        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 200 },
-          error: null,
-        }); // balance check
+    const freshUnlock = {
+      success: true,
+      newly_unlocked: true,
+      coins_remaining: 150,
+      pack_id: 'stk_pack_1',
+      pack_name: 'Happy Corgi Pack',
+      pack_cost_coins: 50,
+      pack_is_animated: false,
+      pack_sticker_urls: ['assets/stickers/happy.png'],
+      pack_animation_url: null,
+    };
+
+    it('should unlock a sticker pack atomically and return the persisted balance', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [freshUnlock],
+        error: null,
+      });
 
       const result = await service.unlockStickerPack('user-1', {
         pack_id: 'stk_pack_1',
       });
 
-      expect(result.success).toBe(true);
-      expect(result.coins_remaining).toBe(150);
-      expect(result.pack).toEqual(pack);
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'user-1',
-        pack_id: 'stk_pack_1',
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'unlock_sticker_pack_atomic',
+        {
+          p_user_id: 'user-1',
+          p_pack_id: 'stk_pack_1',
+        },
+      );
+      expect(result).toEqual({
+        success: true,
+        coins_remaining: 150,
+        pack: {
+          id: 'stk_pack_1',
+          name: 'Happy Corgi Pack',
+          cost_coins: 50,
+          is_animated: false,
+          sticker_urls: ['assets/stickers/happy.png'],
+          animation_url: null,
+        },
       });
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
       expect(mockRedisClient.del).toHaveBeenCalledWith(
         'economy:sticker_packs:user-1',
       );
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).toHaveBeenCalledWith('stk_pack_1', 50);
     });
 
-    it('should throw NotFoundException when pack does not exist', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
+    it('should treat an already-owned pack as an idempotent success without recording another purchase', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [{ ...freshUnlock, newly_unlocked: false }],
         error: null,
+      });
+
+      const result = await service.unlockStickerPack('user-1', {
+        pack_id: 'stk_pack_1',
+      });
+
+      expect(result.coins_remaining).toBe(150);
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+
+    it('should preserve one persisted balance when concurrent duplicate unlocks resolve', async () => {
+      mockSupabaseClient.rpc
+        .mockResolvedValueOnce({ data: [freshUnlock], error: null })
+        .mockResolvedValueOnce({
+          data: [{ ...freshUnlock, newly_unlocked: false }],
+          error: null,
+        });
+
+      const [first, second] = await Promise.all([
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ]);
+
+      expect(first.coins_remaining).toBe(150);
+      expect(second.coins_remaining).toBe(150);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledTimes(2);
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException when the atomic RPC reports a missing pack', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'STICKER_PACK_NOT_FOUND' },
       });
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'nonexistent' }),
       ).rejects.toThrow(NotFoundException);
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when insufficient coins', async () => {
-      const pack = {
-        id: 'stk_pack_4',
-        name: 'Golden Dragons',
-        cost_coins: 500,
-      };
-      mockQueryBuilder.single
-        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
-        .mockResolvedValueOnce({
-          data: { id: 'user-1', coins_balance: 100 },
-          error: null,
-        }); // balance
+    it('should throw BadRequestException when the atomic RPC reports insufficient coins', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'INSUFFICIENT_COINS' },
+      });
 
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
       ).rejects.toThrow(BadRequestException);
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
+    });
+
+    it('should fail the request when ownership cannot be committed', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'duplicate key value violates unique constraint' },
+      });
+
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ).rejects.toThrow('Failed to unlock sticker pack.');
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
+      expect(
+        module.get<MetricsService>(MetricsService).recordStickerPurchase,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should reject malformed RPC results instead of assuming a purchase succeeded', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [{ success: true, coins_remaining: 150 }],
+        error: null,
+      });
+
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' }),
+      ).rejects.toThrow('Failed to unlock sticker pack.');
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
   });
 

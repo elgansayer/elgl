@@ -1,3 +1,7 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, output, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -25,7 +29,7 @@ interface FriendProfile {
 
 @Component({
   selector: 'app-private-party-create-modal',
-  imports: [FormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   templateUrl: './private-party-create-modal.component.html',
 })
 export class PrivatePartyCreateModalComponent implements OnInit {
@@ -82,19 +86,18 @@ export class PrivatePartyCreateModalComponent implements OnInit {
   friends = signal<FriendProfile[]>([]);
   isLoadingFriends = signal<boolean>(false);
 
-  readonly isValid = computed(() =>
-    this.title().trim().length > 0
-    && this.languagePair().length > 0
-    && this.topicTag().length > 0
-    && this.selectedFriendIds().length > 0,
+  readonly isValid = computed(
+    () =>
+      this.title().trim().length > 0 &&
+      this.languagePair().length > 0 &&
+      this.topicTag().length > 0 &&
+      this.selectedFriendIds().length > 0,
   );
 
   readonly filteredFriends = computed(() => {
     const query = this.friendSearchQuery().toLowerCase().trim();
     if (!query) return this.friends();
-    return this.friends().filter(
-      (f) => (f.display_name ?? '').toLowerCase().includes(query),
-    );
+    return this.friends().filter((f) => (f.display_name ?? '').toLowerCase().includes(query));
   });
 
   ngOnInit(): void {
@@ -121,9 +124,7 @@ export class PrivatePartyCreateModalComponent implements OnInit {
 
   toggleFriend(friendId: string): void {
     this.selectedFriendIds.update((ids) =>
-      ids.includes(friendId)
-        ? ids.filter((id) => id !== friendId)
-        : [...ids, friendId],
+      ids.includes(friendId) ? ids.filter((id) => id !== friendId) : [...ids, friendId],
     );
   }
 

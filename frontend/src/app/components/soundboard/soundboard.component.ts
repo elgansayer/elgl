@@ -1,14 +1,14 @@
 import {
-    Component,
-    inject,
-    input,
-    signal,
-    effect,
-    computed,
-    untracked,
-    DestroyRef,
+  Component,
+  inject,
+  input,
+  signal,
+  effect,
+  computed,
+  untracked,
+  DestroyRef,
 } from '@angular/core';
-
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
@@ -24,21 +24,19 @@ export interface SoundItem {
 
 @Component({
   selector: 'app-soundboard',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (sounds().length > 0) {
       <div class="space-y-3">
-        <h4 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-          {{ 'soundboard.title' | t }}
-        </h4>
+        <h4 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">{{ 'soundboard.title' | t }}</h4>
         <div class="flex flex-wrap gap-2">
           @for (sound of sounds(); track sound.id) {
             <button
+              hlmBtn
               type="button"
-              class="flex items-center gap-2 rounded-full border border-text-secondary/30
-                     bg-surface-100 px-4 py-2 text-sm text-text-primary
-                     transition-colors duration-150 hover:bg-surface-200
-                     disabled:cursor-not-allowed disabled:opacity-50"
+              variant="outline"
+              size="sm"
+              class="rounded-full"
               [disabled]="!canPlay()"
               (click)="playSound(sound)"
               [attr.aria-label]="'soundboard.playLabel' | t: { name: sound.name }"
@@ -51,13 +49,7 @@ export interface SoundItem {
       </div>
     }
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
+  styles: [`:host { display: block; }`],
 })
 export class SoundboardComponent {
   private readonly destroyRef = inject(DestroyRef);
@@ -68,15 +60,11 @@ export class SoundboardComponent {
 
   readonly roomId = input<string>('');
   readonly hostUserId = input<string>('');
-
   readonly canPlay = computed(() => {
     const currentUser = this.authService.currentUser();
-    const hostId = this.hostUserId();
-    return !!(currentUser && currentUser.id === hostId);
+    return !!(currentUser && currentUser.id === this.hostUserId());
   });
-
   readonly sounds = signal<SoundItem[]>([]);
-
   private playbackAudio: HTMLAudioElement | null = null;
 
   constructor() {
@@ -89,8 +77,7 @@ export class SoundboardComponent {
     effect(() => {
       const room = this.roomId();
       if (!room) return;
-      const channel = `room_${room}`;
-      this.centrifugoService.subscribe(channel, (data: unknown) => {
+      this.centrifugoService.subscribe(`room_${room}`, (data: unknown) => {
         if (
           data &&
           typeof data === 'object' &&
@@ -101,6 +88,8 @@ export class SoundboardComponent {
         }
       });
     });
+
+    this.destroyRef.onDestroy(() => this.playbackAudio?.pause());
   }
 
   private async loadSounds(): Promise<void> {
@@ -115,28 +104,23 @@ export class SoundboardComponent {
   async playSound(sound: SoundItem): Promise<void> {
     if (!this.canPlay()) return;
     this.hapticFeedback.tap();
-    const roomIdValue = this.roomId();
-    if (!roomIdValue) return;
+    const roomId = this.roomId();
+    if (!roomId) return;
     try {
-      await this.soundboardService.playSound(roomIdValue, sound.id);
+      await this.soundboardService.playSound(roomId, sound.id);
     } catch {
-      // Silently fail
+      // Soundboard failure is non-blocking room UI behavior.
     }
   }
 
   private playRemoteSound(url: string): void {
-    if (this.playbackAudio) {
-      this.playbackAudio.pause();
-      this.playbackAudio = null;
-    }
+    this.playbackAudio?.pause();
     const audio = new Audio(url);
     audio.volume = 0.6;
-    audio.play().catch(() => { /* ignore autoplay restrictions */ });
+    void audio.play().catch(() => undefined);
     this.playbackAudio = audio;
     audio.addEventListener('ended', () => {
-      if (this.playbackAudio === audio) {
-        this.playbackAudio = null;
-      }
+      if (this.playbackAudio === audio) this.playbackAudio = null;
     });
   }
 }

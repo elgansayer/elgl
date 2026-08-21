@@ -4,6 +4,7 @@
 
   <div class="flex flex-wrap items-center mb-4 gap-2">
     <input
+      hlmInput
       type="search"
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
@@ -13,6 +14,7 @@
     />
     <div class="flex items-center gap-2 flex-wrap">
       <button
+        hlmBtn
         type="button"
         (click)="changePage(-1)"
         [disabled]="page() <= 1"
@@ -25,6 +27,7 @@
         {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
       </span>
       <button
+        hlmBtn
         type="button"
         (click)="changePage(1)"
         [disabled]="page() >= pageTotal()"
@@ -184,6 +187,7 @@
               <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1">
                   <button
+                    hlmBtn
                     type="button"
                     (click)="openHistory(user)"
                     class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 whitespace-nowrap"
@@ -192,6 +196,7 @@
                     {{ 'admin.users.loginHistory' | t }}
                   </button>
                   <button
+                    hlmBtn
                     type="button"
                     (click)="toggleVip(user)"
                     [disabled]="isVipUpdating() === user.id || !isOnline()"
@@ -204,6 +209,7 @@
                     }}
                   </button>
                   <button
+                    hlmBtn
                     type="button"
                     (click)="warnUser(user)"
                     [disabled]="isWarning() !== null || !isOnline()"
@@ -213,6 +219,7 @@
                     {{ 'admin.users.warn' | t }}
                   </button>
                   <button
+                    hlmBtn
                     type="button"
                     (click)="banUser(user)"
                     [disabled]="isBanning() !== null || !isOnline()"
@@ -276,6 +283,7 @@
         }
         <div class="mt-4 text-end">
           <button
+            hlmBtn
             type="button"
             (click)="closeHistory()"
             class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100"

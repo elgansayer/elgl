@@ -346,8 +346,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      builders['user_achievements'] = makeBuilder({ data: [], error: null });
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -367,17 +370,15 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
-
       builders['user_achievements'] = makeBuilder({
         data: [
-          { achievements: { code: 'first_message' } },
-          { achievements: { code: '100_messages' } },
-          { achievements: { code: '500_messages' } },
-          { achievements: { code: '7_day_streak' } },
-          { achievements: { code: '30_day_streak' } },
+          {
+            achievements: { code: 'first_message' },
+          },
         ],
         error: null,
       });
+
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -393,8 +394,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 30 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      builders['user_achievements'] = makeBuilder({ data: [], error: null });
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -417,8 +421,11 @@ describe('AchievementsService', () => {
         data: { study_streak_days: 0 },
         error: null,
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      builders['user_achievements'] = makeBuilder({ data: [], error: null });
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -437,8 +444,11 @@ describe('AchievementsService', () => {
         data: null,
         error: { message: 'db error' },
       });
+      builders['user_achievements'] = makeBuilder({
+        data: [],
+        error: null,
+      });
 
-      builders['user_achievements'] = makeBuilder({ data: [], error: null });
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);

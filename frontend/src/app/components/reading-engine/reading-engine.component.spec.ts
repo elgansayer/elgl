@@ -7,7 +7,6 @@ import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { OfflineReadingService } from '../../services/offline-reading.service';
-import { SocialLearningService } from '../../services/social-learning.service';
 
 class I18nStub {
   translate(key: string): string {
@@ -17,12 +16,6 @@ class I18nStub {
 
 class NetworkStatusStub {
   isOnline = signal(true);
-}
-
-class SocialLearningStub {
-  async generateQuestions() { return []; }
-  async generateVocabularyChallenges() { return []; }
-  async generateConversationStarters() { return []; }
 }
 
 class OfflineReadingStub {
@@ -61,7 +54,6 @@ describe.skip('ReadingEngineComponent', () => {
         { provide: I18nService, useClass: I18nStub },
         { provide: NetworkStatusService, useClass: NetworkStatusStub },
         { provide: OfflineReadingService, useClass: OfflineReadingStub },
-        { provide: SocialLearningService, useClass: SocialLearningStub },
       ],
     })
       .overrideComponent(ReadingEngineComponent, {

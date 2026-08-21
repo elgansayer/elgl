@@ -19,12 +19,14 @@ HelloTalk AI Clone aims to replicate and extend the best features of modern lang
 Comprehensive documentation has been dynamically generated from the repository's codebase and GitHub issues tracking backlog.
 
 Please refer to the following Wiki pages for exhaustive details:
+
 - **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
 - **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
 - **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
-- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the swarm queue.
+- **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the OpenHands Factory queue.
 
 Additional specifications:
+
 - `AGENTS.md`: The Engineering Constitution and system rules.
 - `SPEC.md`: Architectural Blueprint covering the PostGIS and PostgREST structures.
 
@@ -134,11 +136,10 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 - **Visitor Logs ("Who Viewed Me"):** A dashboard showing exactly who has clicked on a profile (blurred for free users, fully visible for VIPs).
 - **Block & Report System:** Essential moderation tools to combat inappropriate behaviour, scammers, and spam. Reports flag the user ID and message/moment context in the Supabase admin dashboard.
 
-
 ## Tech Stack
 
 - **Frontend:** Angular (Standalone Components, Signals, Tailwind CSS)
-  - *Note: For advanced frontend performance, state management (via SignalStore), and bundle optimization strategies, please refer to Section 5 of [`ui_architecture.md`](ui_architecture.md).*
+  - _Note: For advanced frontend performance, state management (via native Angular Signals), and bundle optimization strategies, please refer to Section 5 of [`ui_architecture.md`](ui_architecture.md)._
 - **Backend:** NestJS, BullMQ
 - **Database:** Supabase (PostgreSQL with PostGIS for spatial queries, pg_trgm for full-text search)
 - **Real-Time Messaging:** Centrifugo + Redis
@@ -179,10 +180,13 @@ The NestJS API applies a global `/api` prefix, so the compose health checks poll
 
 ## Advanced AI Factory Tooling
 
-The repository contains a supervised OpenHands factory under `automation/`. It uses ChatGPT Plus subscription
-authentication, OpenCode Go, then Gemini Flash free tier as an ordered provider chain. Every task uses a
-bounded conversation and an isolated rootless Podman worktree. The coding process cannot push to `main` or
-merge its own pull request.
+The repository contains a supervised OpenHands Factory under `automation/`. A typed, phase-specific router uses
+subscription-authenticated Claude Code, Codex CLI, configurable Google and OpenCode agents, with OpenHands API as
+an optional emergency fallback. Every task uses bounded execution and an isolated rootless Podman worktree. Agent
+providers cannot push to `main` or merge their own pull requests.
 
 Production deployment, authentication, recovery, costs, security boundaries and operator commands are
-documented in [the factory runbook](docs/factory/README.md).
+documented in [the factory runbook](docs/factory/README.md). The watchdog maintains a sanitised
+[GitHub status and control issue](https://github.com/elgansayer/elgl/issues?q=is%3Aissue+is%3Aopen+label%3Afactory-status)
+with fixed, allowlisted pause, resume, status and restart comments. See the
+[control-panel security model](docs/factory/CONTROL-PANEL.md).

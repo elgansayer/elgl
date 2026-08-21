@@ -72,6 +72,22 @@ export default tseslint.config(
   {
     files: ['**/*.html'],
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
-    rules: {},
+    rules: {
+      '@angular-eslint/template/label-has-associated-control': [
+        'error',
+        {
+          controlComponents: ['hlm-checkbox', 'hlm-radio', 'hlm-native-select'],
+        },
+      ],
+      // appA11yClickable's host bindings add the keydown.enter/keydown.space
+      // handlers this rule looks for, but they live on the directive's own
+      // metadata, invisible to the template AST this rule inspects.
+      '@angular-eslint/template/click-events-have-key-events': [
+        'error',
+        {
+          ignoreWithDirectives: ['appA11yClickable'],
+        },
+      ],
+    },
   },
 );

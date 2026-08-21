@@ -39,7 +39,7 @@ export class AppPillComponent {
   readonly customClass = input<string>('');
 
   readonly pillClasses = computed(() => {
-    const base = 'inline-flex items-center justify-center font-extrabold rounded-full';
+    const base = 'inline-flex items-center justify-center font-extrabold rounded-pill';
 
     const sizeClass = this.size() === 'sm' ? 'ps-2 pe-2 py-0.5 text-xs' : 'ps-3 pe-3 py-1 text-sm';
 

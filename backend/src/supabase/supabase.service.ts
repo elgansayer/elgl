@@ -2205,6 +2205,23 @@ export interface Database {
         };
         Returns: unknown[];
       };
+      unlock_sticker_pack_atomic: {
+        Args: {
+          p_user_id: string;
+          p_pack_id: string;
+        };
+        Returns: {
+          success: boolean;
+          newly_unlocked: boolean;
+          coins_remaining: number;
+          pack_id: string;
+          pack_name: string;
+          pack_cost_coins: number;
+          pack_is_animated: boolean | null;
+          pack_sticker_urls: string[] | null;
+          pack_animation_url: string | null;
+        }[];
+      };
       upsert_reading_progress: {
         Args: {
           p_user_id: string;

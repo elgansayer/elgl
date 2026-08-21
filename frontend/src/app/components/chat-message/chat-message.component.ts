@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
@@ -11,15 +12,20 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
+import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
+
+type VoicePlaybackSpeed = 1 | 1.5 | 2;
 
 @Component({
   selector: 'app-chat-message',
   imports: [
+    HlmButton,
     CommonModule,
     LongPressContextMenuComponent,
     TranslatePipe,
     CulturalTipComponent,
     LinkPreviewCardComponent,
+    VisualDiffComponent,
   ],
   template: `
     @if (!isBlocked()) {
@@ -30,6 +36,8 @@ import { environment } from '../../../environments/environment';
         [messageId]="message().id"
         [messageContent]="message().text_content ?? ''"
         [messageType]="message().message_type"
+        [correctionOriginal]="message().correction_payload?.original ?? null"
+        [correctionCorrected]="message().correction_payload?.corrected ?? null"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
         [isBlocked]="isBlocked()"
@@ -83,42 +91,36 @@ import { environment } from '../../../environments/environment';
                   [siteName]="lp.siteName"
                 ></app-link-preview-card>
               }
-              <button
-                (click)="simplifyText()"
-                class="text-xs text-secondary ms-2 mt-1"
-                [disabled]="simplifying()"
-              >
-                @if (simplifying()) {
-                  {{ 'chatRoom.simplifying' | t }}
-                } @else {
-                  {{ 'chatRoom.simplifyBtn' | t }}
-                }
-              </button>
-            }
-            @if (simplifiedText(); as simplified) {
-              <div class="mt-1 ps-4 border-s-2 border-success text-xs text-success">
-                <p>{{ 'chatRoom.simplifiedTitle' | t }}</p>
-                <p>{{ simplified }}</p>
-                <button (click)="simplifiedText.set(null)" class="text-danger text-xs ms-1">
-                  {{ 'common.close' | t }}
-                </button>
-              </div>
             }
 
             @if (message().message_type === 'voice') {
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <button
+                  hlmBtn
+                  type="button"
+                  size="touch"
+                  variant="ghost"
                   [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
                   (click)="playVoice()"
-                  class="p-2 rounded-full hover:bg-black/10"
                 >
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path
                       d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
                     />
                   </svg>
                 </button>
                 <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
+                <button
+                  hlmBtn
+                  type="button"
+                  size="touch"
+                  variant="ghost"
+                  class="min-w-11 px-2 tabular-nums"
+                  [attr.aria-label]="('chatRoom.voiceMessage' | t) + ' ' + playbackSpeed() + '×'"
+                  (click)="cycleVoicePlaybackSpeed()"
+                >
+                  {{ playbackSpeed() }}×
+                </button>
               </div>
               @if (message().media_url) {
                 <div class="mt-2 text-xs opacity-80 italic border-s-2 border-secondary ps-2">
@@ -133,15 +135,12 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'correction' && message().correction_payload) {
               <div class="space-y-1">
-                <p class="text-sm line-through opacity-75">
-                  {{ message().correction_payload!.original }}
-                </p>
-                <p class="text-sm font-medium">{{ message().correction_payload!.corrected }}</p>
-                @if (message().correction_payload!.explanation) {
-                  <p class="text-xs opacity-75 mt-1">
-                    {{ message().correction_payload!.explanation }}
-                  </p>
-                }
+                <app-visual-diff
+                  [original]="message().correction_payload!.original"
+                  [corrected]="message().correction_payload!.corrected"
+                  [explanation]="message().correction_payload!.explanation"
+                  [showActions]="true"
+                ></app-visual-diff>
               </div>
             }
 
@@ -287,12 +286,12 @@ export class ChatMessageComponent {
   private safetyService = inject(SafetyService);
   private confirmService = inject(ConfirmService);
   private i18n = inject(I18nService);
+  private activeVoiceAudio: HTMLAudioElement | null = null;
 
   isBlocked = signal(false);
-  simplifiedText = signal<string | null>(null);
-  simplifying = signal(false);
   voiceTranscription = signal<string | null>(null);
   voiceTranscribing = signal(false);
+  playbackSpeed = signal<VoicePlaybackSpeed>(1);
 
   textSegments = computed(() => {
     const text = this.message()?.text_content ?? '';
@@ -344,11 +343,37 @@ export class ChatMessageComponent {
     return this.message().sender_id === this.authService.currentUser()?.id;
   }
 
-  playVoice(): void {
-    if (this.message().media_url) {
-      const audio = new Audio(this.message().media_url);
-      audio.play().catch(console.error);
+  cycleVoicePlaybackSpeed(): void {
+    const current = this.playbackSpeed();
+    const next: VoicePlaybackSpeed = current === 1 ? 1.5 : current === 1.5 ? 2 : 1;
+    this.playbackSpeed.set(next);
+    if (this.activeVoiceAudio) {
+      this.activeVoiceAudio.playbackRate = next;
     }
+  }
+
+  playVoice(): void {
+    const mediaUrl = this.message().media_url;
+    if (!mediaUrl) return;
+
+    const audio = new Audio(mediaUrl);
+    audio.playbackRate = this.playbackSpeed();
+    this.activeVoiceAudio = audio;
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (this.activeVoiceAudio === audio) {
+          this.activeVoiceAudio = null;
+        }
+      },
+      { once: true },
+    );
+    audio.play().catch((error: unknown) => {
+      if (this.activeVoiceAudio === audio) {
+        this.activeVoiceAudio = null;
+      }
+      console.error(error);
+    });
   }
 
   async fetchTranscription(audioUrl: string): Promise<void> {
@@ -369,30 +394,6 @@ export class ChatMessageComponent {
       this.voiceTranscription.set(null);
     } finally {
       this.voiceTranscribing.set(false);
-    }
-  }
-
-  async simplifyText(): Promise<void> {
-    if (this.simplifying() || this.message().message_type !== 'text') return;
-    const text = this.message().text_content ?? '';
-    if (!text) return;
-    this.simplifying.set(true);
-    this.simplifiedText.set(null);
-    try {
-      const res = await fetch(`${environment.apiUrl}/nlp/simplify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) {
-        throw new Error('Simplify request failed');
-      }
-      const data = await res.json();
-      this.simplifiedText.set(data.simplified);
-    } catch (err) {
-      console.error('Simplify error:', err);
-    } finally {
-      this.simplifying.set(false);
     }
   }
 

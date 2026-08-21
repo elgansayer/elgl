@@ -1,9 +1,10 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-approve-speaker-modal',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
@@ -24,6 +25,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             {{ 'audioRoom.approveSpeakerModalTitle' | t }}
           </h2>
           <button
+            hlmBtn
             class="text-text-secondary hover:text-text-primary transition-colors"
             [attr.aria-label]="'common.close' | t"
             (click)="dismiss.emit()"
@@ -57,6 +59,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 </div>
               </div>
               <button
+                hlmBtn
                 (click)="approve.emit(userId)"
                 class="rounded-xl bg-success ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-on-fill hover:bg-success/80 transition-colors shrink-0"
               >

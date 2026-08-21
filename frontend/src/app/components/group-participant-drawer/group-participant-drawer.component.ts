@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -13,7 +14,7 @@ export interface GroupParticipant {
 
 @Component({
   selector: 'app-group-participant-drawer',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
     @if (isOpen()) {
       <!-- Backdrop -->
@@ -36,6 +37,7 @@ export interface GroupParticipant {
             {{ 'group.participants' | t }} ({{ participants().length }})
           </h2>
           <button
+            hlmBtn
             (click)="close()"
             class="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-200 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
             [attr.aria-label]="'common.close' | t"

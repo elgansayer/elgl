@@ -1,33 +1,32 @@
-import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-coins-cancel',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, RouterLink, ...HlmButtonImports],
   template: `
-    <div class="min-h-screen bg-surface-500 flex items-center justify-center px-4">
-      <div class="text-center max-w-md w-full" role="region" aria-live="polite">
-        <div class="text-5xl sm:text-6xl mb-6" aria-hidden="true">😕</div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
+    <main
+      class="flex min-h-screen items-center justify-center bg-surface-500 px-4 py-6 sm:px-6 sm:py-10 lg:px-8"
+      aria-labelledby="coins-cancel-title"
+      aria-describedby="coins-cancel-message"
+    >
+      <div
+        class="w-full max-w-md rounded-card border border-surface-100 bg-surface-200 px-5 py-8 text-center shadow-card sm:px-8 sm:py-10 lg:px-10 lg:py-12"
+      >
+        <div class="mb-6 text-5xl sm:text-6xl" aria-hidden="true">😕</div>
+        <h1 id="coins-cancel-title" class="mb-4 text-2xl font-bold text-text-primary sm:text-3xl">
           {{ 'coinsCancel.title' | t }}
         </h1>
-        <p class="text-text-secondary mb-8 text-sm sm:text-base">{{ 'coinsCancel.message' | t }}</p>
-        <button
-          type="button"
-          (click)="goBack()"
-          class="bg-primary hover:bg-primary/90 text-on-fill font-bold py-3 px-8 rounded-2xl transition-all duration-200 text-sm sm:text-base"
-        >
+        <p id="coins-cancel-message" class="mb-8 text-sm text-text-secondary sm:text-base">
+          {{ 'coinsCancel.message' | t }}
+        </p>
+        <a class="w-full sm:w-auto" hlmBtn size="touch" routerLink="/dashboard">
           {{ 'coinsCancel.backBtn' | t }}
-        </button>
+        </a>
       </div>
-    </div>
+    </main>
   `,
 })
-export class CoinsCancelComponent {
-  private router = inject(Router);
-
-  goBack(): void {
-    this.router.navigate(['/dashboard']);
-  }
-}
+export class CoinsCancelComponent {}

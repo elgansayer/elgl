@@ -133,15 +133,91 @@ describe('NlpService', () => {
       );
     });
 
-    it('should throw BadRequestException when free tier usage reaches 10 limit (verifying dual currency format)', async () => {
+    it('should return a semantic rate-limit response when free tier usage reaches 10', async () => {
       mockRedisClient.get.mockResolvedValue('10');
 
-      await expect(service.checkRateLimit('free-user', false)).rejects.toThrow(
-        new BadRequestException(
-          'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent) for unlimited AI translations, grammar checks, and pronunciation scoring!',
+      await expect(
+        service.checkRateLimit('free-user', false),
+      ).rejects.toMatchObject({
+        status: 429,
+        response: {
+          statusCode: 429,
+          message: expect.stringContaining('8 UKP / $10 USD'),
+        },
+      });
+      expect(mockRedisClient.incr).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('simplify', () => {
+    it('uses the configured LLM to simplify text without sending it to DeepL', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: 'We kept going even though it rained.',
+      });
+
+      const result = await service.simplify('user-1', true, {
+        text: 'Although precipitation commenced, we continued our endeavour.',
+      });
+
+      expect(result).toEqual({
+        original:
+          'Although precipitation commenced, we continued our endeavour.',
+        simplified: 'We kept going even though it rained.',
+      });
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Message as JSON: "Although precipitation commenced, we continued our endeavour."',
         ),
       );
-      expect(mockRedisClient.incr).not.toHaveBeenCalled();
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledWith(
+        expect.stringContaining('untrusted text'),
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an empty response', { response: '   ' }],
+      [
+        'an unchanged response',
+        {
+          response:
+            'We will utilise sufficient time to commence the demonstration.',
+        },
+      ],
+      ['a provider failure', new Error('provider unavailable')],
+    ])(
+      'uses a bounded local fallback after %s',
+      async (_description, outcome) => {
+        if (outcome instanceof Error) {
+          mockLlmProxyService.proxyMessage.mockRejectedValueOnce(outcome);
+        } else {
+          mockLlmProxyService.proxyMessage.mockResolvedValueOnce(outcome);
+        }
+
+        const result = await service.simplify('user-1', true, {
+          text: 'We will utilise sufficient time to commence the demonstration.',
+        });
+
+        expect(result.simplified).toBe(
+          'We will use enough time to start the demonstration.',
+        );
+      },
+    );
+
+    it('reports an unavailable service when no honest local simplification is possible', async () => {
+      mockLlmProxyService.proxyMessage.mockRejectedValueOnce(
+        new Error('provider unavailable'),
+      );
+
+      await expect(
+        service.simplify('user-1', true, { text: 'Already simple.' }),
+      ).rejects.toMatchObject({
+        status: 503,
+        response: {
+          statusCode: 503,
+          message: 'Message simplification is temporarily unavailable',
+        },
+      });
     });
   });
 

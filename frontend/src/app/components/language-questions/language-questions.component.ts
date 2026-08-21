@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
@@ -23,7 +24,7 @@ export interface LanguageQuestion {
 
 @Component({
   selector: 'app-language-questions',
-  imports: [TranslatePipe, UpperCasePipe],
+  imports: [HlmButton, TranslatePipe, UpperCasePipe],
   template: `
     <section class="space-y-4" role="region" aria-label="{{ 'moments.questions' | t }}">
       <h2 class="text-lg font-bold text-text-primary">{{ 'moments.questions' | t }}</h2>
@@ -41,6 +42,7 @@ export interface LanguageQuestion {
           <div class="grid grid-cols-1 gap-2">
             @for (opt of q.question_options; track opt) {
               <button
+                hlmBtn
                 type="button"
                 class="text-start px-3 py-2 rounded border border-surface-hover bg-surface-alt text-text-primary hover:bg-surface-hover transition"
                 (click)="submitAnswer(q.id, opt)"
