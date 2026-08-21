@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.27.0"]
+requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -8,19 +8,19 @@ version = "0.1.0"
 description = "Supervised autonomous development factory for HelloTalk"
 requires-python = ">=3.12"
 dependencies = [
-  "filelock==3.20.1",
+  "filelock==3.32.3",
   "httpx==0.28.1",
-  "openhands-sdk==1.41.0",
-  "openhands-tools==1.41.0",
-  "pydantic==2.12.5",
+  "openhands-sdk==1.42.1",
+  "openhands-tools==1.42.1",
+  "pydantic==2.13.4",
 ]
 
 [project.optional-dependencies]
 development = [
-  "mypy==1.17.1",
+  "mypy==2.3.1",
   "pytest==9.1.1",
-  "pytest-cov==6.2.1",
-  "ruff==0.12.8",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.3",
 ]
 
 [project.scripts]

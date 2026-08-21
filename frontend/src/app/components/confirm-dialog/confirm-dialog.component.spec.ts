@@ -147,7 +147,7 @@ describe('ConfirmDialogComponent', () => {
     expect(dialogContent.nativeElement.classList.contains('w-full')).toBe(true);
     expect(dialogContent.nativeElement.classList.contains('max-w-sm')).toBe(true);
     expect(actionRow.nativeElement.classList.contains('gap-3')).toBe(true);
-    expect(actionRow.nativeElement.classList.contains('justify-end')).toBe(true);
+    expect(actionRow.nativeElement.classList.contains('sm:justify-end')).toBe(true);
     expect(renderedHtml).not.toMatch(/\b(?:ml|mr|pl|pr|left|right)-/);
   });
 });
