@@ -24,6 +24,12 @@ import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
+import {
+  BrowserCoordinates,
+  BrowserGeolocationService,
+  BrowserLocationError,
+} from '../../services/browser-geolocation.service';
+import { formatApproximateDistance } from '../../services/distance-format.util';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -44,6 +50,12 @@ import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
 const SEARCH_DEBOUNCE_MS = 300;
+/** Refresh an in-memory GPS fix after five minutes so Nearby does not drift indefinitely. */
+const NEARBY_COORDINATE_TTL_MS = 5 * 60 * 1000;
+/** Keep the client contract aligned with the bounded API radius. */
+const MAX_NEARBY_RADIUS_KM = 250;
+
+type NearbyLocationState = 'idle' | 'requesting' | 'ready' | 'location_error' | 'search_error';
 
 @Component({
   selector: 'app-discovery',
@@ -81,6 +93,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
+  private readonly browserGeolocation = inject(BrowserGeolocationService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -138,12 +151,45 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly visibleInterestTags = computed(() =>
     this.showAllInterests() ? this.commonInterestTags : this.commonInterestTags.slice(0, 6),
   );
+
+  readonly selectedFilter = signal<string>('all');
+  readonly isNearbySelected = computed(() => this.selectedFilter() === 'nearby');
+  readonly nearbyLocationState = signal<NearbyLocationState>('idle');
+  readonly isNearbyError = computed(
+    () =>
+      this.isNearbySelected() &&
+      (this.nearbyLocationState() === 'location_error' ||
+        this.nearbyLocationState() === 'search_error'),
+  );
+  readonly nearbyLocationErrorTitle = 'Nearby needs your location';
+  readonly nearbyLocationDescription = computed(
+    () =>
+      this.searchError() ??
+      'Nearby search needs a current location. Your exact coordinates are not shown to other users.',
+  );
+  readonly nearbyLocationStatusText = computed(() => {
+    switch (this.nearbyLocationState()) {
+      case 'requesting':
+        return 'Requesting your current location for Nearby search.';
+      case 'ready':
+        return 'Nearby search is using your current location and approximate distances.';
+      case 'location_error':
+      case 'search_error':
+        return this.nearbyLocationDescription();
+      default:
+        return '';
+    }
+  });
+  private readonly nearbyCoordinates = signal<BrowserCoordinates | null>(null);
+  private nearbyLocationRequestGeneration = 0;
+
   readonly errorBoundaryContext = computed(() => ({
     component: 'discovery',
     targetLanguage: this.selectedTargetLanguage(),
     partnerCount: this.partners().length,
     sortMode: this.selectedSort(),
     radiusKm: this.selectedDistanceKm(),
+    nearbyLocationState: this.nearbyLocationState(),
   }));
 
   /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
@@ -172,7 +218,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       { id: 'paid', label: this.i18n.translate('discovery.filterPaidPractice') },
     ];
   });
-  readonly selectedFilter = signal<string>('all');
   readonly showBanner = signal<boolean>(true);
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
@@ -191,7 +236,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   });
 
   setSort(sort: string): void {
-    this.selectedSort.set(sort);
+    this.selectedSort.set(this.isNearbySelected() ? 'nearest' : sort);
     void this.searchPartners();
   }
 
@@ -217,16 +262,25 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   onDistanceChanged(km: number): void {
     if (this.selectedDistanceKm() === km) return;
-    this.selectedDistanceKm.set(km);
+    this.selectedDistanceKm.set(Math.min(km, MAX_NEARBY_RADIUS_KM));
     this.scheduleSearch();
   }
 
-  onFilterSelect(id: string) {
+  onFilterSelect(id: string): void {
     this.selectedFilter.set(id);
     this.seriousLearnerOnly.set(id === 'serious');
     if (id === 'nearby') {
-      this.selectedDistanceKm.set(10); // 10km for nearby
-    } else if (id === 'city') {
+      this.selectedDistanceKm.set(10);
+      this.selectedSort.set('nearest');
+      void this.activateNearbySearch();
+      return;
+    }
+
+    // Invalidate a browser-location request that may still be waiting for user permission.
+    this.nearbyLocationRequestGeneration += 1;
+    this.nearbyLocationState.set('idle');
+    this.searchError.set(null);
+    if (id === 'city') {
       this.selectedDistanceKm.set(25); // 25km for city-level
     } else {
       this.selectedDistanceKm.set(50);
@@ -234,12 +288,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
-  setLanguage(code: string) {
+  setLanguage(code: string): void {
     this.selectedTargetLanguage.set(code);
     void this.searchPartners();
   }
 
-  setGender(gender: string) {
+  setGender(gender: string): void {
     this.selectedGender.set(gender);
     void this.searchPartners();
   }
@@ -292,10 +346,31 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       console.warn('Could not load blocked user IDs', e);
     }
 
+    // Deliberately does not request geolocation. Location permission is requested
+    // only after an explicit Nearby interaction.
     await this.searchPartners();
   }
 
   async searchPartners(): Promise<void> {
+    let coordinates: BrowserCoordinates | null = null;
+    if (this.isNearbySelected()) {
+      if (this.isOffline()) {
+        this.setNearbyFailure(
+          'search_error',
+          'Nearby search needs an internet connection and cannot use cached or mock partners.',
+        );
+        return;
+      }
+
+      coordinates = this.nearbyCoordinates();
+      if (!coordinates || !this.isNearbyCoordinateFresh(coordinates)) {
+        if (this.nearbyLocationState() !== 'requesting') {
+          await this.activateNearbySearch(true);
+        }
+        return;
+      }
+    }
+
     // Cancel any in-flight request to prevent stale responses and reduce server load
     if (this.searchAbortController) {
       this.searchAbortController.abort();
@@ -311,7 +386,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       const isVip = this.authService.currentUser()?.is_vip ?? false;
       const results = await this.discoveryService.findPartners(
         {
-          radius_metres: this.selectedDistanceKm() * 1000,
+          latitude: coordinates?.latitude,
+          longitude: coordinates?.longitude,
+          radius_metres:
+            Math.min(this.selectedDistanceKm(), MAX_NEARBY_RADIUS_KM) * 1000,
           native_languages: this.selectedNativeLanguage() || undefined,
           target_language: this.selectedTargetLanguage() || undefined,
           serious_learner_only: this.seriousLearnerOnly(),
@@ -322,7 +400,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           proficiency_level: this.selectedProficiencyLevel() || undefined,
           available_time_start: this.availableTimeStart() || undefined,
           available_time_end: this.availableTimeEnd() || undefined,
-          sort: this.selectedSort(),
+          sort: this.isNearbySelected() ? 'nearest' : this.selectedSort(),
           voice_room_active: this.voiceRoomActive() || undefined,
           has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
           interests: this.selectedInterests() || undefined,
@@ -331,6 +409,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       );
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
+
+      // Nearby must never silently consume the generic cached/mock/non-spatial
+      // fallback path. Legitimate PostGIS results always carry a finite distance.
+      if (
+        this.isNearbySelected() &&
+        results.some(
+          (partner) =>
+            typeof partner.distance_metres !== 'number' ||
+            !Number.isFinite(partner.distance_metres) ||
+            partner.distance_metres < 0,
+        )
+      ) {
+        throw new Error('Nearby search returned unscoped partner results');
+      }
 
       // Filter out blocked users
       const blocked = this.blockedUserIds();
@@ -346,15 +438,28 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
             level: 1,
           }),
         ),
-        formattedDistance: this.formatDistanceHelper(partner.distance_metres),
+        formattedDistance: formatApproximateDistance(
+          partner.distance_metres,
+          this.i18n.currentLang(),
+        ),
       }));
 
       this.partners.set(mapped);
+      if (this.isNearbySelected()) {
+        this.nearbyLocationState.set('ready');
+      }
     } catch (e) {
       // Do not report failures from an intentionally superseded request.
       if (!signal.aborted) {
         console.error('Partner search failed:', e);
-        this.searchError.set(this.i18n.translate('discovery.searchError'));
+        if (this.isNearbySelected()) {
+          this.setNearbyFailure(
+            'search_error',
+            'Nearby search is unavailable right now. Your location was not replaced with unrelated cached results.',
+          );
+        } else {
+          this.searchError.set(this.i18n.translate('discovery.searchError'));
+        }
       }
     } finally {
       // An older aborted request must not clear the loading state owned by its replacement.
@@ -365,12 +470,88 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async activateNearbySearch(forceRefresh = false): Promise<void> {
+    if (!this.isNearbySelected()) return;
+
+    if (this.isOffline()) {
+      this.setNearbyFailure(
+        'search_error',
+        'Nearby search needs an internet connection and cannot use cached or mock partners.',
+      );
+      return;
+    }
+
+    const existing = this.nearbyCoordinates();
+    if (!forceRefresh && existing && this.isNearbyCoordinateFresh(existing)) {
+      this.nearbyLocationState.set('ready');
+      this.searchError.set(null);
+      await this.searchPartners();
+      return;
+    }
+
+    const generation = ++this.nearbyLocationRequestGeneration;
+    this.isLoading.set(true);
+    this.searchError.set(null);
+    this.nearbyLocationState.set('requesting');
+
+    try {
+      const coordinates = await this.browserGeolocation.getCurrentPosition();
+      if (generation !== this.nearbyLocationRequestGeneration || !this.isNearbySelected()) return;
+
+      this.nearbyCoordinates.set(coordinates);
+      this.nearbyLocationState.set('ready');
+      await this.searchPartners();
+    } catch (error) {
+      if (generation !== this.nearbyLocationRequestGeneration || !this.isNearbySelected()) return;
+
+      this.partners.set([]);
+      this.setNearbyFailure('location_error', this.locationFailureMessage(error));
+    }
+  }
+
+  private isNearbyCoordinateFresh(coordinates: BrowserCoordinates): boolean {
+    return Date.now() - coordinates.capturedAt <= NEARBY_COORDINATE_TTL_MS;
+  }
+
+  private locationFailureMessage(error: unknown): string {
+    if (!(error instanceof BrowserLocationError)) {
+      return 'Your current location could not be determined. Try Nearby again.';
+    }
+
+    switch (error.code) {
+      case 'permission_denied':
+        return 'Location permission was denied. Allow location access in your browser settings, then try Nearby again.';
+      case 'timeout':
+        return 'Location lookup timed out. Check your device location settings and try again.';
+      case 'position_unavailable':
+        return 'Your current location is unavailable. Check location services and try again.';
+      case 'unsupported':
+        return 'This browser does not provide location services, so Nearby search cannot run.';
+      case 'invalid_position':
+        return 'Your browser returned an invalid location. No coordinates were sent to discovery.';
+    }
+  }
+
+  private setNearbyFailure(
+    state: Extract<NearbyLocationState, 'location_error' | 'search_error'>,
+    message: string,
+  ): void {
+    this.nearbyLocationState.set(state);
+    this.searchError.set(message);
+    this.partners.set([]);
+    this.isLoading.set(false);
+  }
+
   /** Debounced search via RxJS Subject - no manual timer, auto-cleans up. */
   private scheduleSearch(): void {
     this.searchTrigger$.next();
   }
 
   retrySearch(): void {
+    if (this.isNearbySelected() && this.nearbyLocationState() === 'location_error') {
+      void this.activateNearbySearch(true);
+      return;
+    }
     void this.searchPartners();
   }
 
@@ -392,16 +573,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to update serious learner mode', e);
     }
-  }
-
-  private formatDistanceHelper(metres: number | undefined): string {
-    if (metres == null) return '';
-    const km = metres / 1000;
-    const miles = metres / 1609.344;
-    if (km < 1) {
-      return `${metres.toFixed(0)} m (${miles.toFixed(2)} mi)`;
-    }
-    return `${km.toFixed(1)} km · ${miles.toFixed(1)} mi`;
   }
 
   toggleAudioIntro(partnerId: string, audioIntroUrl: string | undefined, event: Event): void {
@@ -466,6 +637,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.searchAbortController.abort();
       this.searchAbortController = null;
     }
+    this.nearbyLocationRequestGeneration += 1;
+    this.nearbyCoordinates.set(null);
     // Debounce subscription auto-unsubscribed via takeUntilDestroyed
     this.searchTrigger$.complete();
     this.stopAudioIntro();
@@ -493,6 +666,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   resetFilters(): void {
+    this.nearbyLocationRequestGeneration += 1;
+    this.nearbyCoordinates.set(null);
+    this.nearbyLocationState.set('idle');
+    this.searchError.set(null);
+    this.selectedFilter.set('all');
     this.selectedDistanceKm.set(50);
     this.selectedNativeLanguage.set('');
     this.selectedTargetLanguage.set('');
