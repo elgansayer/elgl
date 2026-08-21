@@ -87,7 +87,10 @@ describe('SendMessageDto', () => {
 
     expect(hasError(missing, 'correction_payload')).toBe(true);
     expect(hasError(invalid, 'correction_payload')).toBe(true);
-    expect(invalid.find((error) => error.property === 'correction_payload')?.children?.length).toBeGreaterThan(0);
+    expect(
+      invalid.find((error) => error.property === 'correction_payload')?.children
+        ?.length,
+    ).toBeGreaterThan(0);
   });
 
   it('requires a correction-request payload for correction requests', async () => {
