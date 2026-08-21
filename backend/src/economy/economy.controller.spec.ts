@@ -1,24 +1,27 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+import type { Mock } from 'vitest';
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty.replace(/<[^>]*>/g, '');
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -43,21 +46,21 @@ describe('EconomyController', () => {
         {
           provide: EconomyService,
           useValue: {
-            getCatalog: jest.fn(),
-            getPackages: jest.fn(),
-            getBalance: jest.fn(),
-            claimDailyCheckIn: jest.fn(),
-            createCheckoutSession: jest.fn(),
-            purchaseCoins: jest.fn(),
-            sendGift: jest.fn(),
-            getStickerPacks: jest.fn(),
-            unlockStickerPack: jest.fn(),
+            getCatalog: vi.fn(),
+            getPackages: vi.fn(),
+            getBalance: vi.fn(),
+            claimDailyCheckIn: vi.fn(),
+            createCheckoutSession: vi.fn(),
+            purchaseCoins: vi.fn(),
+            sendGift: vi.fn(),
+            getStickerPacks: vi.fn(),
+            unlockStickerPack: vi.fn(),
           },
         },
         {
           provide: CoinEconomyHealthService,
           useValue: {
-            getHealthSnapshot: jest.fn().mockResolvedValue({
+            getHealthSnapshot: vi.fn().mockResolvedValue({
               overall: 'healthy',
               timestamp: new Date().toISOString(),
               dependencies: {},
@@ -65,28 +68,28 @@ describe('EconomyController', () => {
               degradedFeatures: [],
               uptimeSeconds: 3600,
             }),
-            getDegradedFeatures: jest.fn().mockReturnValue([]),
-            markFeatureDegraded: jest.fn(),
-            clearFeatureDegradation: jest.fn(),
-            isFeatureDegraded: jest.fn().mockReturnValue(false),
+            getDegradedFeatures: vi.fn().mockReturnValue([]),
+            markFeatureDegraded: vi.fn(),
+            clearFeatureDegradation: vi.fn(),
+            isFeatureDegraded: vi.fn().mockReturnValue(false),
           },
         },
         {
           provide: EconomyExceptionFilter,
-          useValue: { catch: jest.fn() },
+          useValue: { catch: vi.fn() },
         },
         {
           provide: 'PinoLogger:EconomyExceptionFilter',
-          useValue: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+          useValue: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(ThrottlerGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(EconomyRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<EconomyController>(EconomyController);
@@ -94,7 +97,7 @@ describe('EconomyController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -104,7 +107,7 @@ describe('EconomyController', () => {
   describe('getCatalog', () => {
     it('should return catalog from service', async () => {
       const catalog: any[] = [{ id: 'gift-1' }];
-      (economyService.getCatalog as jest.Mock).mockResolvedValue(catalog);
+      (economyService.getCatalog as Mock).mockResolvedValue(catalog);
 
       const result = await controller.getCatalog();
       expect(economyService.getCatalog).toHaveBeenCalled();
@@ -115,7 +118,7 @@ describe('EconomyController', () => {
   describe('getPackages', () => {
     it('should return coin packages from service', () => {
       const packages = [{ id: 'coins_small', coins: 100 }];
-      (economyService.getPackages as jest.Mock).mockReturnValue(packages);
+      (economyService.getPackages as Mock).mockReturnValue(packages);
 
       const result = controller.getPackages();
       expect(economyService.getPackages).toHaveBeenCalled();
@@ -132,7 +135,7 @@ describe('EconomyController', () => {
 
     it('should call service getBalance when user is provided', async () => {
       const balance = { coins_balance: 150 };
-      (economyService.getBalance as jest.Mock).mockResolvedValue(balance);
+      (economyService.getBalance as Mock).mockResolvedValue(balance);
 
       const result = await controller.getBalance({ id: 'user-1' } as any);
       expect(economyService.getBalance).toHaveBeenCalledWith('user-1');
@@ -140,7 +143,7 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully to default 50 coins when service throws', async () => {
-      (economyService.getBalance as jest.Mock).mockRejectedValue(
+      (economyService.getBalance as Mock).mockRejectedValue(
         new Error('DB down'),
       );
 
@@ -158,9 +161,7 @@ describe('EconomyController', () => {
 
     it('should call service claimDailyCheckIn when user is provided', async () => {
       const response = { claimed: true, coins_rewarded: 7, new_balance: 107 };
-      (economyService.claimDailyCheckIn as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (economyService.claimDailyCheckIn as Mock).mockResolvedValue(response);
 
       const result = await controller.claimDailyCheckIn({
         id: 'user-1',
@@ -170,7 +171,7 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully when service throws', async () => {
-      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(
+      (economyService.claimDailyCheckIn as Mock).mockRejectedValue(
         new Error('DB down'),
       );
 
@@ -199,7 +200,7 @@ describe('EconomyController', () => {
         sessionUrl: 'https://checkout.stripe.com/test',
         sessionId: 'sess_123',
       };
-      (economyService.createCheckoutSession as jest.Mock).mockResolvedValue(
+      (economyService.createCheckoutSession as Mock).mockResolvedValue(
         response,
       );
 
@@ -225,7 +226,7 @@ describe('EconomyController', () => {
     it('should call service purchaseCoins when user is provided', async () => {
       const dto: any = { amount: 100, package_id: 'pkg-1' };
       const response: any = { coins_balance: 200, package_id: 'pkg-1' };
-      (economyService.purchaseCoins as jest.Mock).mockResolvedValue(response);
+      (economyService.purchaseCoins as Mock).mockResolvedValue(response);
 
       const result = await controller.purchaseCoins(
         { id: 'user-1' } as any,
@@ -246,7 +247,7 @@ describe('EconomyController', () => {
     it('should call service sendGift when user is provided', async () => {
       const dto: any = { gift_id: 'gift-1', receiver_id: 'user-2' };
       const response: any = { success: true, coins_remaining: 50 };
-      (economyService.sendGift as jest.Mock).mockResolvedValue(response);
+      (economyService.sendGift as Mock).mockResolvedValue(response);
 
       const result = await controller.sendGift({ id: 'user-1' } as any, dto);
       expect(economyService.sendGift).toHaveBeenCalledWith('user-1', dto);
@@ -257,7 +258,7 @@ describe('EconomyController', () => {
   describe('getStickerPacks', () => {
     it('should return sticker packs from service', async () => {
       const response = { packs: [], owned_pack_ids: [], user_coins: 100 };
-      (economyService.getStickerPacks as jest.Mock).mockResolvedValue(response);
+      (economyService.getStickerPacks as Mock).mockResolvedValue(response);
 
       const result = await controller.getStickerPacks({ id: 'user-1' } as any);
       expect(economyService.getStickerPacks).toHaveBeenCalledWith('user-1');
@@ -273,9 +274,7 @@ describe('EconomyController', () => {
         coins_remaining: 150,
         pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
       };
-      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (economyService.unlockStickerPack as Mock).mockResolvedValue(response);
 
       const result = await controller.unlockStickerPack(
         { id: 'user-1' } as any,
@@ -390,9 +389,7 @@ describe('EconomyController', () => {
       const healthService = (
         controller as unknown as { healthService: CoinEconomyHealthService }
       ).healthService;
-      (healthService.getHealthSnapshot as jest.Mock).mockResolvedValue(
-        mockSnapshot,
-      );
+      (healthService.getHealthSnapshot as Mock).mockResolvedValue(mockSnapshot);
 
       const result = await controller.getHealth();
       expect(result).toEqual(mockSnapshot);

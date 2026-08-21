@@ -44,14 +44,35 @@ export class AccountDeletionCron {
 
       this.logger.log(`Found ${usersToDelete.length} accounts to delete.`);
 
-      for (const user of usersToDelete) {
-        try {
-          await this.usersService.permanentDeleteAccount(String(user.id));
-          this.logger.log(`Successfully deleted user ${user.id}`);
-        } catch (error) {
-          this.logger.error(
-            `Failed to delete user ${user.id}: ${(error as Error).message}`,
-          );
+      // ⚡ Bolt Optimization: Use chunked concurrency to process deletions efficiently without overwhelming the connection pool
+      const chunkSize = 5;
+      for (let i = 0; i < usersToDelete.length; i += chunkSize) {
+        const chunk = usersToDelete.slice(i, i + chunkSize);
+
+        const deletionPromises = chunk.map((user) =>
+          this.usersService
+            .permanentDeleteAccount(String(user.id))
+            .then(() => {
+              this.logger.log(`Successfully deleted user ${user.id}`);
+              return { id: user.id, success: true as const, error: undefined };
+            })
+            .catch((error) => {
+              return {
+                id: user.id,
+                success: false as const,
+                error: (error as Error).message,
+              };
+            }),
+        );
+
+        const results = await Promise.all(deletionPromises);
+
+        for (const result of results) {
+          if (!result.success && result.error) {
+            this.logger.error(
+              `Failed to delete user ${result.id}: ${result.error}`,
+            );
+          }
         }
       }
     } catch (error) {

@@ -5,7 +5,7 @@ export type FontScale = number;
 
 const DEFAULT_SCALE = 1.0;
 const MIN_SCALE = 0.8;
-const MAX_SCALE = 1.2;
+const MAX_SCALE = 1.5;
 const STEP = 0.05;
 const STORAGE_KEY = 'app_font_scale';
 
@@ -25,8 +25,6 @@ export class FontScaleService {
   private document = inject(DOCUMENT);
 
   constructor() {
-    this.applyScale(this.scaleFactor());
-
     effect(() => {
       const scale = this.scaleFactor();
       this.applyScale(scale);
@@ -35,11 +33,11 @@ export class FontScaleService {
   }
 
   setScale(next: number): void {
+    if (!Number.isFinite(next)) return;
+
     const stepCount = Math.round((next - MIN_SCALE) / STEP);
     const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + stepCount * STEP));
     this.scaleFactor.set(clamped);
-    this.applyScale(clamped);
-    this.saveToStorage(clamped);
   }
 
   reset(): void {
@@ -47,19 +45,28 @@ export class FontScaleService {
   }
 
   private loadInitialScale(): FontScale {
-    if (typeof localStorage === 'undefined') return DEFAULT_SCALE;
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw !== null ? Number.parseFloat(raw) : Number.NaN;
-    if (isScale(parsed)) return parsed;
-    if (!Number.isNaN(parsed) && parsed >= 80 && parsed <= 120) {
-      return parsed / 100;
+    try {
+      if (typeof localStorage === 'undefined') return DEFAULT_SCALE;
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw !== null ? Number.parseFloat(raw) : Number.NaN;
+      if (isScale(parsed)) return parsed;
+      if (!Number.isNaN(parsed) && parsed >= MIN_SCALE * 100 && parsed <= MAX_SCALE * 100) {
+        return parsed / 100;
+      }
+      return DEFAULT_SCALE;
+    } catch {
+      return DEFAULT_SCALE;
     }
-    return DEFAULT_SCALE;
   }
 
   private saveToStorage(scale: FontScale): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, String(Math.round(scale * 100)));
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, String(Math.round(scale * 100)));
+      }
+    } catch {
+      // Font scaling must keep working in memory when storage is blocked or full.
     }
   }
 

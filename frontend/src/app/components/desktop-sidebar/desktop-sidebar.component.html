@@ -1,4 +1,8 @@
-<nav class="hidden lg:flex flex-col w-64 h-full bg-surface-200 border-e border-surface-100 py-4" role="navigation" [attr.aria-label]="'nav.mainNav' | t">
+<nav
+  class="hidden lg:flex flex-col w-64 h-full bg-surface-200 border-e border-surface-100 py-4"
+  role="navigation"
+  [attr.aria-label]="'nav.mainNav' | t"
+>
   <div class="px-6 pb-4">
     <span class="text-lg font-black text-primary tracking-tight">{{ 'app.title' | t }}</span>
   </div>
@@ -9,16 +13,16 @@
         <a
           [routerLink]="item.path"
           routerLinkActive="bg-surface-100 text-primary"
+          ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: item.exact }"
           class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
           [attr.aria-label]="item.key | t"
-          [attr.aria-current]="false"
         >
           <span class="text-xl leading-none" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.key | t }}</span>
           @if (unreadCounter.tabCount(item.tab) > 0) {
             <span
-              class="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+              class="ms-auto bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
               {{ unreadCounter.tabCount(item.tab) > 99 ? '99+' : unreadCounter.tabCount(item.tab) }}
             </span>
@@ -26,6 +30,63 @@
         </a>
       </li>
     }
+  </ul>
+
+  <!-- Coin Economy Section -->
+  <div class="px-3 mt-4">
+    <span class="px-4 text-[10px] font-bold text-text-muted uppercase tracking-wider">{{
+      'coinEco.sectionTitle' | t
+    }}</span>
+  </div>
+  <ul class="flex flex-col gap-1 px-3">
+    <li>
+      <a
+        routerLink="/shop"
+        routerLinkActive="bg-surface-100 text-primary"
+        ariaCurrentWhenActive="page"
+        class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.shop' | t"
+        joyrideStep="tourShopNav"
+        [title]="'tour.stepShopNav.title' | t"
+        [text]="'tour.stepShopNav.text' | t"
+        stepPosition="end"
+      >
+        <span class="text-xl leading-none" aria-hidden="true">🛍️</span>
+        <span>{{ 'nav.shop' | t }}</span>
+      </a>
+    </li>
+    <li>
+      <a
+        routerLink="/sticker-store"
+        routerLinkActive="bg-surface-100 text-primary"
+        ariaCurrentWhenActive="page"
+        class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.stickerStore' | t"
+        joyrideStep="tourStickerNav"
+        [title]="'tour.stepStickerNav.title' | t"
+        [text]="'tour.stepStickerNav.text' | t"
+        stepPosition="end"
+      >
+        <span class="text-xl leading-none" aria-hidden="true">🏷️</span>
+        <span>{{ 'nav.stickerStore' | t }}</span>
+      </a>
+    </li>
+    <li>
+      <a
+        routerLink="/vip"
+        routerLinkActive="bg-surface-100 text-primary"
+        ariaCurrentWhenActive="page"
+        class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.vip' | t"
+        joyrideStep="tourVipNav"
+        [title]="'tour.stepVipNav.title' | t"
+        [text]="'tour.stepVipNav.text' | t"
+        stepPosition="end"
+      >
+        <span class="text-xl leading-none" aria-hidden="true">👑</span>
+        <span>{{ 'nav.vip' | t }}</span>
+      </a>
+    </li>
   </ul>
 
   <div class="mt-auto px-6 pt-4">
