@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ErrorHandler } from '@angular/core';
 import { VocabularyDashboardComponent } from './vocabulary-dashboard.component';
 import { I18nService } from '../../services/i18n.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import { vi } from 'vitest';
 
 describe('VocabularyDashboardComponent', () => {
@@ -29,10 +30,15 @@ describe('VocabularyDashboardComponent', () => {
               }
               return text;
             },
-             
           } as any,
         },
         { provide: ErrorHandler, useValue: mockErrorHandler },
+        {
+          provide: VocabularyStore,
+          useValue: {
+            updateSrsLevel: vi.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -56,32 +62,32 @@ describe('VocabularyDashboardComponent', () => {
     expect(component.isFlipped()).toBe(true);
   });
 
-  it('should advance to next card after grading good', () => {
+  it('should advance to next card after grading good', async () => {
     const start = component.currentIndex();
-    component.grade('good');
+    await component.grade('good');
     expect(component.currentIndex()).toBe(start + 1);
   });
 
-  it('should track grades per review grade', () => {
+  it('should track grades per review grade', async () => {
     const startGrades = component.grades();
-    component.grade('again');
+    await component.grade('again');
     const afterGrades = component.grades();
     expect(afterGrades.again).toBe(startGrades.again + 1);
   });
 
-  it('should mark completion when past last card', () => {
+  it('should mark completion when past last card', async () => {
     const total = component.cardCount();
     // Grade all cards
     for (let i = 0; i < total; i++) {
-      component.grade('known');
+      await component.grade('known');
     }
     expect(component.isComplete()).toBe(true);
   });
 
-  it('should reset state on restart', () => {
+  it('should reset state on restart', async () => {
     component.flipCard();
-    component.grade('again');
-    component.grade('good');
+    await component.grade('again');
+    await component.grade('good');
     expect(component.currentIndex()).toBe(2);
 
     component.restart();
@@ -99,9 +105,9 @@ describe('VocabularyDashboardComponent', () => {
     expect(ctx.cardCount).toBeGreaterThan(0);
   });
 
-  it('should handle errors during grading gracefully', () => {
+  it('should handle errors during grading gracefully', async () => {
     // Simulate component.inject issues by disabling the error boundary
-    component.grade('good');
+    await component.grade('good');
     // Should not throw and should advance
     expect(component.currentIndex()).toBe(1);
   });

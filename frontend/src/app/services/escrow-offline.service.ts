@@ -94,8 +94,8 @@ export class EscrowOfflineService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target && (target as any).result)) return;
-        const db = (target as any).result;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains(ESCROW_STORE)) {
           db.createObjectStore(ESCROW_STORE, { keyPath: 'id' });
         }

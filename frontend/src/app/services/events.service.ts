@@ -114,4 +114,21 @@ export class EventsService {
     if (status) params['status'] = status;
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
   }
+
+  getRsvp(eventId: string) {
+    return this.http.get<{ id?: string; event_id: string; user_id: string; status: string } | null>(
+      `${environment.apiUrl}/events/${eventId}/rsvp`,
+    );
+  }
+
+  rsvp(eventId: string, status: 'attending' | 'interested') {
+    return this.http.post<{ id: string; event_id: string; user_id: string; status: string }>(
+      `${environment.apiUrl}/events/${eventId}/rsvp`,
+      { status },
+    );
+  }
+
+  removeRsvp(eventId: string) {
+    return this.http.delete<void>(`${environment.apiUrl}/events/${eventId}/rsvp`);
+  }
 }

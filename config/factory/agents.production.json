@@ -1,0 +1,130 @@
+{
+  "routing_enabled": true,
+  "providers": {
+    "claude": {
+      "enabled": true,
+      "command": "claude",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "fable",
+      "max_turns": 100,
+      "credential_paths": [".claude", ".claude.json"],
+      "runtime_paths": [".local/bin", ".local/share/claude", ".npm-global"],
+      "phase_models": {
+        "planning": "opus",
+        "architecture": "opus",
+        "security_review": "opus",
+        "implementation": "sonnet",
+        "quality_repair": "haiku",
+        "code_review": "haiku",
+        "ci_repair": "haiku",
+        "general_action": "fable"
+      }
+    },
+    "codex": {
+      "enabled": true,
+      "command": "codex",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "gpt-5.6-sol",
+      "max_turns": 100,
+      "credential_paths": [".codex"],
+      "runtime_paths": [".local/bin", ".npm-global"]
+    },
+    "google": {
+      "enabled": true,
+      "command": "agy",
+      "cli_variant": "antigravity",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "gemini-3.1-pro-high",
+      "credential_paths": [".gemini"],
+      "runtime_paths": [".local/bin", ".npm-global"],
+      "phase_models": {
+        "planning": "gemini-3.1-pro-high",
+        "architecture": "gemini-3.1-pro-high",
+        "security_review": "gemini-3.1-pro-high",
+        "implementation": "gemini-3.1-pro-high",
+        "quality_repair": "gemini-3.7-flash-low",
+        "code_review": "gemini-3.7-flash-low",
+        "ci_repair": "gemini-3.7-flash-low",
+        "general_action": "gemini-3.7-flash-low"
+      }
+    },
+    "opencode": {
+      "enabled": true,
+      "command": "opencode",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "opencode-go/deepseek-v4-flash",
+      "credential_paths": [".config/opencode", ".local/share/opencode"],
+      "runtime_paths": [".local/bin", ".npm-global", ".opencode"]
+    },
+    "openhands": {
+      "enabled": false,
+      "auth_mode": "api",
+      "transport": "openhands-sdk",
+      "emergency_only": true,
+      "max_concurrency": 1,
+      "model": "gpt-5.6-sol"
+    },
+    "pi": {
+      "enabled": true,
+      "command": "pi",
+      "auth_mode": "subscription",
+      "transport": "cli",
+      "max_concurrency": 2,
+      "model": "github-copilot/claude-sonnet-5",
+      "credential_paths": [".pi"],
+      "runtime_paths": [".local/bin", ".local/lib"],
+      "phase_models": {
+        "planning": "github-copilot/claude-opus-5",
+        "architecture": "github-copilot/claude-opus-5",
+        "security_review": "github-copilot/claude-opus-5",
+        "implementation": "github-copilot/claude-sonnet-5",
+        "quality_repair": "github-copilot/claude-haiku-4.5",
+        "code_review": "github-copilot/claude-haiku-4.5",
+        "ci_repair": "github-copilot/claude-haiku-4.5",
+        "general_action": "github-copilot/claude-haiku-4.5"
+      }
+    }
+  },
+  "routing": {
+    "planning": ["claude", "codex", "google", "opencode", "pi"],
+    "architecture": ["claude", "codex", "google", "opencode", "pi"],
+    "implementation": ["claude", "codex", "google", "opencode", "pi"],
+    "security_review": ["claude", "codex", "google", "opencode", "pi"],
+    "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
+    "code_review": ["codex", "claude", "google", "opencode", "pi"],
+    "ci_repair": ["codex", "claude", "google", "opencode", "pi"],
+    "general_action": ["opencode", "google", "codex", "claude", "pi"],
+    "skip_busy_providers": true,
+    "same_provider_retries": 1
+  },
+  "timeouts": {
+    "planning": 1200,
+    "architecture": 1800,
+    "implementation": 3600,
+    "security_review": 1800,
+    "quality_repair": 3600,
+    "code_review": 1800,
+    "ci_repair": 3600,
+    "general_action": 1800
+  },
+  "circuit_breaker": {
+    "failure_threshold": 2,
+    "default_cooldown_seconds": 300,
+    "rate_limit_cooldown_seconds": 300,
+    "quota_cooldown_seconds": 3600,
+    "auth_cooldown_seconds": 900,
+    "unavailable_cooldown_seconds": 300,
+    "transport_cooldown_seconds": 300,
+    "timeout_cooldown_seconds": 300,
+    "crash_cooldown_seconds": 300,
+    "invalid_output_cooldown_seconds": 60
+  }
+}

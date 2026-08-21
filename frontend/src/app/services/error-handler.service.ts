@@ -123,7 +123,7 @@ export class GlobalErrorHandler implements ErrorHandler {
     let metadata: Record<string, unknown> | undefined;
 
     if (typeof err === 'object' && err !== null) {
-      const obj = err as Record<string, unknown>;
+      const obj: Record<string, unknown> = Object(err);
       const objStr = obj['toString'];
       message = String(
         obj['message'] ?? (typeof objStr === 'function' ? objStr() : 'Unknown error object'),

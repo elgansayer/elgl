@@ -1,5 +1,17 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
-import { Component, DestroyRef, inject, signal, computed, resource, effect, afterNextRender } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  inject,
+  signal,
+  computed,
+  resource,
+  effect,
+  afterNextRender,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -7,8 +19,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { MomentsStore, MomentRecord, MomentComment } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
+import { SafetyService } from '../../services/safety.service';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
@@ -16,14 +30,14 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
+import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
+import { LightboxComponent } from '../lightbox/lightbox.component';
 import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
-import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { LightboxComponent } from '../lightbox/lightbox.component';
 
 interface MentionSuggestion {
   id: string;
@@ -34,6 +48,9 @@ interface MentionSuggestion {
 @Component({
   selector: 'app-moments-feed',
   imports: [
+    HlmTextarea,
+    HlmInput,
+    HlmButton,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -44,11 +61,11 @@ interface MentionSuggestion {
     VoiceRecorderComponent,
     ScrollablePillsComponent,
     CorrectionModalComponent,
+    LikedByModalComponent,
+    LightboxComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
-    LikedByModalComponent,
     AppEmptyStateComponent,
-    LightboxComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -64,13 +81,42 @@ export class MomentsFeedComponent {
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
+  private readonly safetyService = inject(SafetyService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+  private readonly translationCacheService = inject(TranslationCacheService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
   readonly visibleCount = signal(15);
+
+  // Mute word filter
+  readonly mutedWords = this.safetyService.mutedWords;
+  readonly showMutePanel = signal<boolean>(false);
+  readonly newMuteWord = signal('');
+
+  readonly feedToDisplay = computed(() => {
+    const raw = this.momentsStore.feed();
+    return this.safetyService.filterMomentsByMutedWords(raw);
+  });
+
+  readonly isFilteringByMutedWords = computed(() => {
+    return (
+      this.mutedWords().length > 0 && this.feedToDisplay().length < this.momentsStore.feed().length
+    );
+  });
+
+  addMutedWord(): void {
+    const word = this.newMuteWord().trim();
+    if (!word) return;
+    this.safetyService.addMutedWord(word);
+    this.newMuteWord.set('');
+  }
+
+  removeMutedWord(word: string): void {
+    this.safetyService.removeMutedWord(word);
+  }
 
   constructor() {
     afterNextRender(() => {
@@ -171,7 +217,12 @@ export class MomentsFeedComponent {
 
   async setFilter(filter: string): Promise<void> {
     this.visibleCount.set(this.pageSize);
-    if (filter === 'All' || filter === 'Classmates' || filter === 'Following' || filter === 'For You') {
+    if (
+      filter === 'All' ||
+      filter === 'Classmates' ||
+      filter === 'Following' ||
+      filter === 'For You'
+    ) {
       await this.momentsStore.loadFeed(filter);
     } else {
       await this.momentsStore.loadFeed('All');
@@ -184,13 +235,13 @@ export class MomentsFeedComponent {
       showToast(this.i18n.translate('moments.maxMediaAlert'));
       return;
     }
-    this.newMediaUrls.update(urls => [...urls, this.tempImageUrlInput.trim()]);
+    this.newMediaUrls.update((urls) => [...urls, this.tempImageUrlInput.trim()]);
     this.newMediaType.set('images');
     this.tempImageUrlInput = '';
   }
 
   removeMedia(index: number): void {
-    this.newMediaUrls.update(urls => {
+    this.newMediaUrls.update((urls) => {
       const copy = [...urls];
       copy.splice(index, 1);
       return copy;
@@ -276,15 +327,27 @@ export class MomentsFeedComponent {
       return;
     }
 
+    // Check persistent translation cache (issue #1037)
+    const persistentCached = this.translationCacheService.get(moment.text_content, 'en');
+    if (persistentCached) {
+      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: persistentCached }));
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
+      return;
+    }
+
     // Fetch from API and cache the result
     moment.isTranslating = true;
     try {
       const res = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
+      this.translationCacheService.set(moment.text_content, 'en', res.translated_text);
       this.translationCache.update((prev) => ({ ...prev, [cacheKey]: res.translated_text }));
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     } catch (e) {
       console.error('Inline translation error:', e);
-      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: this.i18n.translate('moments.transError') }));
+      this.translationCache.update((prev) => ({
+        ...prev,
+        [cacheKey]: this.i18n.translate('moments.transError'),
+      }));
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     }
   }
@@ -516,6 +579,19 @@ export class MomentsFeedComponent {
     showToast(this.i18n.translate('moments.correctionSentAlert'));
   }
 
+  async voteOnCorrection(
+    momentId: string,
+    comment: MomentComment,
+    vote: 'up' | 'down',
+  ): Promise<void> {
+    try {
+      await this.momentsStore.voteOnCorrection(momentId, comment.id, vote);
+    } catch (error) {
+      console.error('Failed to vote on correction:', error);
+      showToast(this.i18n.translate('moments.voteErrorAlert'));
+    }
+  }
+
   async copyMomentText(moment: MomentRecord): Promise<void> {
     if (!moment.text_content) return;
     try {
@@ -549,9 +625,9 @@ export class MomentsFeedComponent {
     const docHeight = document.documentElement.scrollHeight;
     const winHeight = window.innerHeight;
     if (docHeight - scrollTop - winHeight < 200) {
-      const total = this.momentsStore.feed().length;
+      const total = this.feedToDisplay().length;
       if (this.visibleCount() < total) {
-        this.visibleCount.update(c => c + this.pageSize);
+        this.visibleCount.update((c) => c + this.pageSize);
       }
     }
   };

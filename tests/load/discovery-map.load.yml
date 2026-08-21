@@ -1,5 +1,5 @@
 config:
-  target: "{{ $processEnvironment.API_URL || 'http://localhost:3000' }}"
+  target: "http://localhost:3000"
   phases:
     - name: "warmup"
       duration: 30
@@ -17,32 +17,41 @@ config:
   defaults:
     headers:
       Content-Type: "application/json"
-      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN }}"
   processor: "./helpers/discovery-helpers.js"
+  plugins:
+    expect: {}
+  ensure:
+    thresholds:
+      - "http.response_time.p99 < 2000"
+      - "http.response_time.p95 < 1000"
+      - "http.response_time.p50 < 500"
   variables:
     native_languages:
-      - "English"
-      - "Spanish"
-      - "French"
-      - "German"
-      - "Japanese"
-      - "Korean"
-      - "Chinese"
-      - "Portuguese"
-      - "Arabic"
-      - "Russian"
+      - "en"
+      - "es"
+      - "fr"
+      - "de"
+      - "ja"
+      - "ko"
+      - "zh"
+      - "pt"
+      - "ar"
+      - "ru"
     target_languages:
-      - "Spanish"
-      - "French"
-      - "English"
-      - "Japanese"
-      - "Korean"
-      - "Italian"
+      - "es"
+      - "fr"
+      - "en"
+      - "ja"
+      - "ko"
+      - "it"
     proficiency_levels:
-      - "beginner"
-      - "intermediate"
-      - "advanced"
-      - "native"
+      - "A1"
+      - "A2"
+      - "B1"
+      - "B2"
+      - "C1"
+      - "C2"
     sort_options:
       - "best_match"
       - "newest"
@@ -63,16 +72,18 @@ config:
     genders:
       - "male"
       - "female"
-      - "non_binary"
+      - "other"
 
 scenarios:
   # ── Core Discovery Endpoints ──────────────────────────────────────────
 
   - name: "Partner search (basic)"
     weight: 15
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
             native_languages: "{{ native_languages }}"
             target_language: "{{ target_languages }}"
@@ -81,23 +92,27 @@ scenarios:
 
   - name: "Partner search with location"
     weight: 12
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - function: "generateRandomLatitude"
       - function: "generateRandomLongitude"
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
-            latitude: 51.5074
-            longitude: -0.1278
+            latitude: "{{ latitude }}"
+            longitude: "{{ longitude }}"
             radius_metres: 50000
           expect:
             - statusCode: 200
 
   - name: "Partner search with all filters"
     weight: 8
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
             native_languages: "{{ native_languages }}"
             target_language: "{{ target_languages }}"
@@ -114,9 +129,11 @@ scenarios:
 
   - name: "Partner search (serious learners only)"
     weight: 6
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
             serious_learner_only: true
             sort: best_match
@@ -125,9 +142,11 @@ scenarios:
 
   - name: "Partner search with gender filter (VIP)"
     weight: 5
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
             gender: "{{ genders }}"
             sort: newest
@@ -136,9 +155,11 @@ scenarios:
 
   - name: "Partner search with availability filters"
     weight: 4
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
+          url: "/api/discovery/partners"
           qs:
             availability_morning: true
             availability_evening: true
@@ -150,9 +171,11 @@ scenarios:
 
   - name: "Language pair search"
     weight: 10
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/language-pair"
+          url: "/api/discovery/language-pair"
           qs:
             native_language: "{{ native_languages }}"
             target_language: "{{ target_languages }}"
@@ -164,12 +187,14 @@ scenarios:
 
   - name: "Language pair search with advanced filters"
     weight: 6
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/language-pair"
+          url: "/api/discovery/language-pair"
           qs:
-            native_language: English
-            target_language: Spanish
+            native_language: "{{ native_languages }}"
+            target_language: "{{ target_languages }}"
             level: "{{ proficiency_levels }}"
             sort: best_match
             page: 0
@@ -182,12 +207,14 @@ scenarios:
 
   - name: "Language pair search (voice room active)"
     weight: 4
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/language-pair"
+          url: "/api/discovery/language-pair"
           qs:
-            native_language: Japanese
-            target_language: English
+            native_language: ja
+            target_language: en
             voice_room_active: true
             sort: online_now
           expect:
@@ -197,25 +224,31 @@ scenarios:
 
   - name: "Get Partner of the Week"
     weight: 8
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partner-of-week"
+          url: "/api/discovery/partner-of-week"
           expect:
             - statusCode: 200
 
   - name: "Get recent native speakers"
     weight: 6
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/recent-native-speakers"
+          url: "/api/discovery/recent-native-speakers"
           expect:
             - statusCode: 200
 
   - name: "Get spotlight users"
     weight: 6
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/spotlight"
+          url: "/api/discovery/spotlight"
           expect:
             - statusCode: 200
 
@@ -223,12 +256,40 @@ scenarios:
 
   - name: "Audio intros search"
     weight: 5
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/audio-intros"
+          url: "/api/discovery/audio-intros"
           qs:
             native_languages: "{{ native_languages }}"
             target_language: "{{ target_languages }}"
+          expect:
+            - statusCode: 200
+
+  # ── Degradation-aware Discovery Endpoints ─────────────────────────────
+
+  - name: "Get degradation status"
+    weight: 3
+    beforeRequest:
+      - "beforeRequest"
+    flow:
+      - get:
+          url: "/api/discovery/degradation-status"
+          expect:
+            - statusCode: 200
+
+  - name: "Partner search with degradation marker"
+    weight: 4
+    beforeRequest:
+      - "beforeRequest"
+    flow:
+      - get:
+          url: "/api/discovery/partners-with-degradation"
+          qs:
+            native_languages: "{{ native_languages }}"
+            target_language: "{{ target_languages }}"
+            sort: best_match
           expect:
             - statusCode: 200
 
@@ -236,9 +297,11 @@ scenarios:
 
   - name: "Location search by country"
     weight: 3
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/search-by-location"
+          url: "/api/discovery/search-by-location"
           qs:
             country: "{{ countries }}"
           expect:
@@ -246,9 +309,11 @@ scenarios:
 
   - name: "Location search by country and city"
     weight: 2
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/search-by-location"
+          url: "/api/discovery/search-by-location"
           qs:
             country: United Kingdom
             city: London

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -26,7 +27,7 @@ interface InterestTopic {
 
 @Component({
   selector: 'app-groups-discovery',
-  imports: [CommonModule, RouterLink, TranslatePipe, SanitiseHtmlPipe],
+  imports: [HlmButton, CommonModule, RouterLink, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="flex flex-col h-full">
       <!-- Topic filter pills -->
@@ -37,10 +38,11 @@ interface InterestTopic {
           [attr.aria-label]="'groups_discovery_filter_topics' | t"
         >
           <button
+            hlmBtn
             (click)="selectedInterest.set(null)"
             class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
             [class.bg-accent-500]="selectedInterest() === null"
-            [class.text-white]="selectedInterest() === null"
+            [class.text-on-fill]="selectedInterest() === null"
             [class.bg-surface-300]="selectedInterest() !== null"
             [class.text-text-secondary]="selectedInterest() !== null"
             [class.border]="selectedInterest() !== null"
@@ -52,10 +54,11 @@ interface InterestTopic {
           </button>
           @for (topic of interestPills(); track topic.id) {
             <button
+              hlmBtn
               (click)="selectedInterest.set(topic.id)"
               class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
               [class.bg-accent-500]="selectedInterest() === topic.id"
-              [class.text-white]="selectedInterest() === topic.id"
+              [class.text-on-fill]="selectedInterest() === topic.id"
               [class.bg-surface-300]="selectedInterest() !== topic.id"
               [class.text-text-secondary]="selectedInterest() !== topic.id"
               [class.border]="selectedInterest() !== topic.id"
@@ -73,7 +76,7 @@ interface InterestTopic {
       <!-- Error banner -->
       @if (error()) {
         <div
-          class="bg-red-500/10 text-red-400 px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
+          class="bg-danger/10 text-danger px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
           role="alert"
         >
           {{ error() }}
@@ -89,11 +92,14 @@ interface InterestTopic {
 
       <!-- Empty state -->
       @if (!loading() && filteredGroups().length === 0) {
-        <div class="flex-1 flex flex-col items-center justify-center text-text-secondary py-12 px-4">
+        <div
+          class="flex-1 flex flex-col items-center justify-center text-text-secondary py-12 px-4"
+        >
           <span class="text-4xl mb-3">👥</span>
           <p class="text-sm">{{ 'groups_discovery_empty' | t }}</p>
           @if (selectedInterest()) {
             <button
+              hlmBtn
               (click)="selectedInterest.set(null)"
               class="mt-3 text-accent-400 text-sm font-semibold"
             >
@@ -103,7 +109,7 @@ interface InterestTopic {
           @if (!isEmbedded()) {
             <a
               [routerLink]="['/groups/create']"
-              class="mt-3 bg-accent-500 hover:bg-accent-400 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
+              class="mt-3 bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
             >
               {{ 'groups_discovery_create' | t }}
             </a>
@@ -131,11 +137,14 @@ interface InterestTopic {
                 <div class="shrink-0">
                   @if (!group.is_member && group.member_count < group.max_members) {
                     <button
+                      hlmBtn
                       (click)="joinGroup(group.id)"
-                      class="bg-accent-500 hover:bg-accent-400 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                      class="bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                       [disabled]="joiningId() === group.id"
                     >
-                      {{ joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t) }}
+                      {{
+                        joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t)
+                      }}
                     </button>
                   } @else if (group.is_member) {
                     <span
@@ -159,7 +168,7 @@ interface InterestTopic {
       @if (isEmbedded()) {
         <a
           [routerLink]="['/groups/create']"
-          class="fixed bottom-20 end-4 bg-accent-500 hover:bg-accent-400 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg shadow-accent-500/30 transition-colors z-10"
+          class="fixed bottom-20 end-4 bg-accent-500 hover:bg-accent-400 text-on-fill w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg shadow-accent-500/30 transition-colors z-10"
           [attr.aria-label]="'groups_discovery_create' | t"
         >
           <span aria-hidden="true">+</span>
@@ -171,7 +180,7 @@ interface InterestTopic {
     `
       :host {
         display: block;
-        background-color: var(--color-surface-500, #121212);
+        background-color: rgb(var(--surface-500-rgb));
         min-height: 100%;
       }
       .hide-scrollbar::-webkit-scrollbar {
@@ -202,7 +211,7 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         return await firstValueFrom(
-          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`)
+          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`),
         );
       } catch {
         return [];
@@ -221,7 +230,7 @@ export class GroupsDiscoveryComponent {
       this.error.set('');
       try {
         return await firstValueFrom(
-          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`)
+          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`),
         );
       } catch {
         this.error.set('Failed to load groups');
@@ -245,9 +254,7 @@ export class GroupsDiscoveryComponent {
   async joinGroup(groupId: string): Promise<void> {
     this.joiningId.set(groupId);
     try {
-      await firstValueFrom(
-        this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {})
-      );
+      await firstValueFrom(this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {}));
       this.groupsResource.reload();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to join';

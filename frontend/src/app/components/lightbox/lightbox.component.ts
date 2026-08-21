@@ -1,28 +1,34 @@
-import { Component, input, output, linkedSignal } from '@angular/core';
+import { Component, computed, input, linkedSignal, output } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-lightbox',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   host: {
     '(window:keydown)': 'handleKeyDown($event)',
   },
   templateUrl: './lightbox.component.html',
 })
 export class LightboxComponent {
-  images = input.required<string[]>();
-  initialIndex = input<number>(0);
-  closed = output<void>();
+  readonly images = input.required<string[]>();
+  readonly initialIndex = input<number>(0);
+  readonly closed = output<void>();
 
-  currentIndex = linkedSignal(() => this.initialIndex());
+  readonly currentIndex = linkedSignal(() => this.initialIndex());
+  readonly dialogState = computed<HlmDialogState>(() => 'open');
 
   private touchStartX = 0;
   private touchEndX = 0;
 
   handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') this.closed.emit();
     if (event.key === 'ArrowRight') this.next();
     if (event.key === 'ArrowLeft') this.prev();
+  }
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed') this.closed.emit();
   }
 
   next(event?: Event): void {
