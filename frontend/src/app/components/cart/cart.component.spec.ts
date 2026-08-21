@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { CartComponent } from './cart.component';
@@ -35,6 +36,7 @@ describe('CartComponent', () => {
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: AuthService, useClass: MockAuthService },
+        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
       ],

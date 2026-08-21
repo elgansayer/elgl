@@ -1,11 +1,24 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AppCardComponent } from '../../components/primitives/card/card.component';
+import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppCardComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+  ],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {
@@ -13,6 +26,7 @@ export class UserManagementComponent implements OnInit {
 
   users = signal<AdminUserSummary[]>([]);
   isLoading = signal<boolean>(true);
+  loadError = signal(false);
 
   ngOnInit(): void {
     this.loadUsers();
@@ -24,6 +38,7 @@ export class UserManagementComponent implements OnInit {
       const data = await this.adminService.listUsers('', 1, 50);
       this.users.set(data.users);
     } catch (err) {
+      this.loadError.set(true);
       console.error('Failed to load users', err);
     } finally {
       this.isLoading.set(false);

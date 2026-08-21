@@ -87,23 +87,31 @@ missing_grouped = group_by_module(missing_keys)
 hardcoded_grouped = group_by_module(hardcoded)
 
 
-def write_task(filename, impact, desc, tech):
-    filepath = f".tasks/{filename}"
-    content = f"""* Priority: {impact}
-* Description: {desc}
-* Technical Implementation: {tech}
-"""
-    # Append if exists so we merge hardcoded and missing keys for the same module/component
-    mode = 'a' if os.path.exists(filepath) else 'w'
-    with open(filepath, mode) as f:
-        f.write("\n" + content)
+import subprocess
 
-os.makedirs(".tasks", exist_ok=True)
+def get_existing_issues():
+    try:
+        # Fetch open issues that contain "i18n-fix-module"
+        result = subprocess.run(
+            ["gh", "issue", "list", "--state", "open", "--search", "in:title i18n-fix-module", "--json", "title"],
+            capture_output=True, text=True, check=True
+        )
+        issues = json.loads(result.stdout)
+        return {issue["title"] for issue in issues}
+    except Exception as e:
+        print(f"Failed to fetch existing issues: {e}")
+        return set()
 
-# Delete existing dynamically generated ones to avoid duplication if we re-run
-for f in os.listdir(".tasks"):
-    if f.startswith("i18n-fix-module-"):
-        os.remove(os.path.join(".tasks", f))
+existing_issues = get_existing_issues()
+tasks_to_create = {}
+
+def add_to_task(module, impact, desc, tech):
+    title = f"Task: i18n-fix-module-{module}"
+    content = f"* Priority: {impact}\n* Description: {desc}\n* Technical Implementation: {tech}"
+    if title in tasks_to_create:
+        tasks_to_create[title] += f"\n\n{content}"
+    else:
+        tasks_to_create[title] = content
 
 for module, items in missing_grouped.items():
     desc = f"Missing keys used in UI but not found in en.json for module '{module}':\n"
@@ -113,7 +121,7 @@ for module, items in missing_grouped.items():
         desc += f"  - ... and {len(items) - 10} more."
 
     tech = f"Add the missing keys to `frontend/src/assets/i18n/en.json` ensuring they match the `{module}.component.element` structure."
-    write_task(f"i18n-fix-module-{module}.md", "High Impact", desc, tech)
+    add_to_task(module, "High Impact", desc, tech)
 
 for module, items in hardcoded_grouped.items():
     desc = f"Hardcoded English strings found in templates for module '{module}':\n"
@@ -123,7 +131,19 @@ for module, items in hardcoded_grouped.items():
         desc += f"  - ... and {len(items) - 10} more."
 
     tech = f"Replace hardcoded strings with translation keys (e.g. `{{{{ '{module}.keyName' | t }}}}`) and add the corresponding entries to `frontend/src/assets/i18n/en.json`."
-    write_task(f"i18n-fix-module-{module}.md", "Medium Impact", desc, tech)
+    add_to_task(module, "Medium Impact", desc, tech)
 
+for title, body in tasks_to_create.items():
+    if title in existing_issues:
+        print(f"Issue '{title}' already exists. Skipping.")
+        continue
+    print(f"Creating issue: {title}")
+    try:
+        subprocess.run(
+            ["gh", "issue", "create", "--title", title, "--body", body, "--label", "factory-active"],
+            check=True
+        )
+    except Exception as e:
+        print(f"Failed to create issue '{title}': {e}")
 
-print("Generated comprehensive module tasks.")
+print("Generated comprehensive module tasks as GitHub Issues.")

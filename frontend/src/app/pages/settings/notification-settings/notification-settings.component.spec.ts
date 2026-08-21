@@ -1,9 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Pipe, PipeTransform } from '@angular/core';
 import { NotificationSettingsComponent } from './notification-settings.component';
 import { NotificationPreferencesService } from '../../../services/notification-preferences.service';
 import { I18nService } from '../../../services/i18n.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
+
+@Pipe({ name: 't', standalone: true })
+class MockTranslatePipe implements PipeTransform {
+  transform(key: string, _params?: Record<string, unknown>): string {
+    return key;
+  }
+}
 
 describe('NotificationSettingsComponent', () => {
   let component: NotificationSettingsComponent;
@@ -48,7 +56,12 @@ describe('NotificationSettingsComponent', () => {
         },
         { provide: I18nService, useValue: mockI18nService },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(NotificationSettingsComponent, {
+        remove: { imports: [] },
+        add: { imports: [MockTranslatePipe] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(NotificationSettingsComponent);
     component = fixture.componentInstance;

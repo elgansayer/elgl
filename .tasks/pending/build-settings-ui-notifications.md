@@ -1,3 +1,0 @@
-* Priority: Medium Impact
-* Description: Implement the Notifications Settings UI.
-* Technical Implementation: Refactor existing notification settings into `NotificationSettingsComponent`. Group toggles by category (Communication, Social, Recommendations, Updates) matching the data model. Use a reactive form group for the toggles and subscribe to `valueChanges` (with a debounce) to trigger signal updates and backend saves, mitigating rapid-firing requests.

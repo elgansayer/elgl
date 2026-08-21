@@ -1,177 +1,95 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">←</span>
+    <button hlmBtn (click)="goBack()" class="app-button-icon" aria-label="Back">
+      <span class="text-xl" aria-hidden="true">←</span>
     </button>
-    <h1 class="app-header-title">{{ 'privacy.title' | t }}</h1>
+    <h1 class="app-header-title">{{ 'privacy.hub.title' | t }}</h1>
     <div class="w-10"></div>
   </header>
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
-    @if (isLoading()) {
-      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
-    } @else {
-      @if (errorMessage()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-          {{ errorMessage() }}
-        </div>
-      }
-      @if (successMessage()) {
-        <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
-          {{ successMessage() }}
-        </div>
-      }
+    <p class="text-xs text-text-secondary">{{ 'privacy.hub.subtitle' | t }}</p>
 
-      <!-- Profile Visibility Section -->
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'privacy.profileVisibility' | t }}
-        </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
-          <div class="p-4">
-            <p class="text-xs text-text-secondary mb-3">{{ 'privacy.profileVisibilityDesc' | t }}</p>
-            <div class="flex gap-2" role="radiogroup">
-              @for (option of visibilityOptions; track option.value) {
-                <button
-                  type="button"
-                  class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-                  [class.bg-primary]="profileVisibility() === option.value"
-                  [class.text-white]="profileVisibility() === option.value"
-                  [class.border-primary]="profileVisibility() === option.value"
-                  [class.text-text-primary]="profileVisibility() !== option.value"
-                  [class.border-surface-300]="profileVisibility() !== option.value"
-                  (click)="profileVisibility.set(option.value)"
-                >
-                  {{ option.key | t }}
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Profile Hiding Toggles -->
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'privacy.hideSection' | t }}
-        </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
-          @for (item of [
-            {key: 'privacy.hideAge', signal: privacyHideAge},
-            {key: 'privacy.hideGender', signal: privacyHideGender},
-            {key: 'privacy.hideLocation', signal: privacyHideLocation},
-            {key: 'privacy.hideExactLocation', signal: privacyHideExactLocation},
-            {key: 'privacy.hideSearch', signal: privacyHideSearch},
-            {key: 'privacy.hideOnlineStatus', signal: privacyHideOnlineStatus},
-            {key: 'privacy.hideVipStatus', signal: privacyHideVipStatus}
-          ]; track item.key) {
-            <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
-              <span class="text-sm font-medium text-text-primary">{{ item.key | t }}</span>
-              <input
-                type="checkbox"
-                [ngModel]="item.signal()"
-                (ngModelChange)="item.signal.set($event)"
-                class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
-              />
-            </label>
-          }
-        </div>
-      </section>
-
-      <!-- Granular Visibility Settings -->
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'privacy.granularVisibility' | t }}
-        </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
-          @for (item of [
-            {label: 'privacy.lastSeen', signal: privacyLastSeen},
-            {label: 'privacy.profilePhoto', signal: privacyProfilePhoto},
-            {label: 'privacy.aboutInfo', signal: privacyAboutInfo},
-            {label: 'privacy.status', signal: privacyStatus}
-          ]; track item.label) {
-            <div class="flex items-center justify-between p-4">
-              <span class="text-sm font-medium text-text-primary">{{ item.label | t }}</span>
-              <select
-                [ngModel]="item.signal()"
-                (ngModelChange)="item.signal.set($event)"
-                class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="everyone">{{ 'privacy.everyone' | t }}</option>
-                <option value="vips_only">{{ 'privacy.vips_only' | t }}</option>
-                <option value="nobody">{{ 'privacy.nobody' | t }}</option>
-              </select>
-            </div>
-          }
-
-          <label class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-200 transition-colors">
-            <span class="text-sm font-medium text-text-primary">{{ 'privacy.incognitoVisits' | t }}</span>
-            <input
-              type="checkbox"
-              [ngModel]="incognitoVisits()"
-              (ngModelChange)="incognitoVisits.set($event)"
-              class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
-            />
-          </label>
-        </div>
-      </section>
-
-      <!-- Save Button -->
-      <div class="pt-2">
-        <button
-          (click)="saveSettings()"
-          [disabled]="isSaving()"
-          class="w-full py-3 rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-50 transition-opacity"
+    <!-- Hub Navigation Cards -->
+    <div
+      class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+    >
+      @for (item of hubNavItems; track item.titleKey) {
+        <a
+          [routerLink]="item.route"
+          class="flex items-center gap-4 p-4 hover:bg-surface-200 transition-colors"
+          [attr.aria-label]="item.titleKey | t"
         >
-          @if (isSaving()) {
-            {{ 'common.saving' | t }}
-          } @else {
-            {{ 'common.save' | t }}
+          <span class="text-xl" aria-hidden="true">{{ item.icon }}</span>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-medium text-text-primary block">{{ item.titleKey | t }}</span>
+            <span class="text-xs text-text-secondary block mt-0.5">{{
+              item.descriptionKey | t
+            }}</span>
+          </div>
+          @if (item.route === '/blocks' && blockedCount() > 0) {
+            <span
+              class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-danger/20 text-danger text-xs font-medium"
+            >
+              {{ blockedCount() }}
+            </span>
           }
-        </button>
-      </div>
+          <span class="text-text-secondary text-sm" aria-hidden="true">→</span>
+        </a>
+      }
+    </div>
 
-      <!-- Data & Account Section -->
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'privacy.dataAndAccount' | t }}
-        </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+    <!-- Muted Words Quick Management -->
+    <section class="space-y-4">
+      <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+        {{ 'privacy.hub.mutedWordsQuick' | t }}
+      </h2>
+      <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+        <div class="flex items-center gap-3 p-4 border-b border-surface-200">
+          <input
+            hlmInput
+            type="text"
+            [ngModel]="mutedWordInput()"
+            (ngModelChange)="mutedWordInput.set($event)"
+            (keyup.enter)="addMutedWord()"
+            [placeholder]="'privacy.hub.addMutedWordPlaceholder' | t"
+            class="flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+            [attr.aria-label]="'privacy.hub.addMutedWordPlaceholder' | t"
+          />
           <button
-            (click)="downloadMyData()"
-            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
+            hlmBtn
+            (click)="addMutedWord()"
+            class="px-4 py-2 rounded-lg bg-primary text-on-fill text-sm font-medium hover:bg-primary/90 transition-colors"
+            [attr.aria-label]="'privacy.hub.addMutedWord' | t"
           >
-            <span>{{ 'privacy.downloadData' | t }}</span>
-            <span class="text-text-secondary" aria-hidden="true">→</span>
+            {{ 'privacy.hub.addMutedWord' | t }}
           </button>
-
-          <button
-            (click)="requestArchive()"
-            [disabled]="isArchiving()"
-            class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
-          >
-            <span>{{ 'privacy.requestArchive' | t }}</span>
-            @if (isArchiving()) {
-              <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
-            } @else {
-              <span class="text-text-secondary" aria-hidden="true">→</span>
-            }
-          </button>
-          @if (archiveSuccess()) {
-            <div class="p-4 text-sm text-emerald-400">
-              {{ 'privacy.archiveSuccess' | t }}
-            </div>
-          }
-
-          <a
-            routerLink="/gdpr"
-            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
-          >
-            <span class="text-sm font-medium text-text-primary">{{ 'privacy.gdprTools' | t }}</span>
-            <span class="text-text-secondary" aria-hidden="true">→</span>
-          </a>
         </div>
-      </section>
-    }
+
+        <div class="divide-y divide-surface-200 max-h-60 overflow-y-auto">
+          @if (mutedWords().length === 0) {
+            <div class="p-4 text-center text-xs text-text-secondary">
+              {{ 'privacy.hub.noMutedWords' | t }}
+            </div>
+          } @else {
+            @for (word of mutedWords(); track word) {
+              <div
+                class="flex items-center justify-between p-3 hover:bg-surface-200 transition-colors"
+              >
+                <span class="text-sm text-text-primary">{{ word }}</span>
+                <button
+                  hlmBtn
+                  (click)="removeMutedWord(word)"
+                  class="text-danger hover:text-danger/80 text-sm font-medium transition-colors"
+                  [attr.aria-label]="'privacy.hub.removeMutedWordAria' | t: { word: word }"
+                >
+                  {{ 'privacy.hub.removeMutedWord' | t }}
+                </button>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </section>
   </main>
 </div>

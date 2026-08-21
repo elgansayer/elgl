@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, resource, ResourceRef, Signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { withRetry } from './http-retry';
 
 export interface ModerationItem {
   id: string;
@@ -54,6 +55,15 @@ export class ModerationService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/moderation`;
 
+  getItemsResource(
+    type: Signal<'moment' | 'profile'>,
+  ): ResourceRef<ModerationItem[] | undefined> {
+    return resource({
+      params: () => ({ type: type() }),
+      loader: ({ params }) => this.getItems(params.type),
+    });
+  }
+
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('auth_token') ?? '';
     return new HttpHeaders({
@@ -66,26 +76,34 @@ export class ModerationService {
     if (status) {
       params['status'] = status;
     }
-    return firstValueFrom(
-      this.http
-        .get<ModerationItem[]>(`${this.baseUrl}/items`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(catchError(() => of(FALLBACK_ITEMS))),
-    ).then((items) => items.map((item) => ({ ...item, type })));
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
+            headers: this.getHeaders(),
+            params,
+          }),
+        ).then((items) => items.map((item) => ({ ...item, type }))),
+      );
+    } catch {
+      return FALLBACK_ITEMS;
+    }
   }
 
   async approveItem(itemId: string, type: string): Promise<ModerationActionResponse> {
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(
-          `${this.baseUrl}/approve`,
-          { itemId, type },
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/approve`,
+            { itemId, type },
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async rejectItem(itemId: string, type: string, reason?: string): Promise<ModerationActionResponse> {
@@ -93,15 +111,19 @@ export class ModerationService {
     if (reason) {
       body['reason'] = reason;
     }
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(
-          `${this.baseUrl}/reject`,
-          body,
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/reject`,
+            body,
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async reportUser(
@@ -113,24 +135,32 @@ export class ModerationService {
     if (description) {
       body['description'] = description;
     }
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(
-          `${this.baseUrl}/report`,
-          body,
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/report`,
+            body,
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async getUserRiskAnalysis(userId: string): Promise<UserAnalysisResult> {
-    return firstValueFrom(
-      this.http
-        .get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
-          headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of(FALLBACK_ANALYSIS))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
+            headers: this.getHeaders(),
+          }),
+        ),
+      );
+    } catch {
+      return FALLBACK_ANALYSIS;
+    }
   }
 }

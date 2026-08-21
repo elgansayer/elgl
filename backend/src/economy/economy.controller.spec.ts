@@ -1,32 +1,38 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+import type { Mock } from 'vitest';
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty.replace(/<[^>]*>/g, '');
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
 import { EconomyExceptionFilter } from './economy-exception.filter';
+import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('EconomyController', () => {
@@ -40,31 +46,50 @@ describe('EconomyController', () => {
         {
           provide: EconomyService,
           useValue: {
-            getCatalog: jest.fn(),
-            getPackages: jest.fn(),
-            getBalance: jest.fn(),
-            claimDailyCheckIn: jest.fn(),
-            createCheckoutSession: jest.fn(),
-            purchaseCoins: jest.fn(),
-            sendGift: jest.fn(),
-            getStickerPacks: jest.fn(),
-            unlockStickerPack: jest.fn(),
+            getCatalog: vi.fn(),
+            getPackages: vi.fn(),
+            getBalance: vi.fn(),
+            claimDailyCheckIn: vi.fn(),
+            createCheckoutSession: vi.fn(),
+            purchaseCoins: vi.fn(),
+            sendGift: vi.fn(),
+            getStickerPacks: vi.fn(),
+            unlockStickerPack: vi.fn(),
+          },
+        },
+        {
+          provide: CoinEconomyHealthService,
+          useValue: {
+            getHealthSnapshot: vi.fn().mockResolvedValue({
+              overall: 'healthy',
+              timestamp: new Date().toISOString(),
+              dependencies: {},
+              circuitBreakers: {},
+              degradedFeatures: [],
+              uptimeSeconds: 3600,
+            }),
+            getDegradedFeatures: vi.fn().mockReturnValue([]),
+            markFeatureDegraded: vi.fn(),
+            clearFeatureDegradation: vi.fn(),
+            isFeatureDegraded: vi.fn().mockReturnValue(false),
           },
         },
         {
           provide: EconomyExceptionFilter,
-          useValue: { catch: jest.fn() },
+          useValue: { catch: vi.fn() },
         },
         {
           provide: 'PinoLogger:EconomyExceptionFilter',
-          useValue: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+          useValue: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(ThrottlerGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(EconomyRateLimiterGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<EconomyController>(EconomyController);
@@ -72,7 +97,7 @@ describe('EconomyController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -82,7 +107,7 @@ describe('EconomyController', () => {
   describe('getCatalog', () => {
     it('should return catalog from service', async () => {
       const catalog: any[] = [{ id: 'gift-1' }];
-      (economyService.getCatalog as jest.Mock).mockResolvedValue(catalog);
+      (economyService.getCatalog as Mock).mockResolvedValue(catalog);
 
       const result = await controller.getCatalog();
       expect(economyService.getCatalog).toHaveBeenCalled();
@@ -93,7 +118,7 @@ describe('EconomyController', () => {
   describe('getPackages', () => {
     it('should return coin packages from service', () => {
       const packages = [{ id: 'coins_small', coins: 100 }];
-      (economyService.getPackages as jest.Mock).mockReturnValue(packages);
+      (economyService.getPackages as Mock).mockReturnValue(packages);
 
       const result = controller.getPackages();
       expect(economyService.getPackages).toHaveBeenCalled();
@@ -110,11 +135,20 @@ describe('EconomyController', () => {
 
     it('should call service getBalance when user is provided', async () => {
       const balance = { coins_balance: 150 };
-      (economyService.getBalance as jest.Mock).mockResolvedValue(balance);
+      (economyService.getBalance as Mock).mockResolvedValue(balance);
 
       const result = await controller.getBalance({ id: 'user-1' } as any);
       expect(economyService.getBalance).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(balance);
+    });
+
+    it('should degrade gracefully to default 50 coins when service throws', async () => {
+      (economyService.getBalance as Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
+
+      const result = await controller.getBalance({ id: 'user-1' } as any);
+      expect(result).toEqual({ coins_balance: 50 });
     });
   });
 
@@ -127,15 +161,28 @@ describe('EconomyController', () => {
 
     it('should call service claimDailyCheckIn when user is provided', async () => {
       const response = { claimed: true, coins_rewarded: 7, new_balance: 107 };
-      (economyService.claimDailyCheckIn as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (economyService.claimDailyCheckIn as Mock).mockResolvedValue(response);
 
       const result = await controller.claimDailyCheckIn({
         id: 'user-1',
       } as any);
       expect(economyService.claimDailyCheckIn).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(response);
+    });
+
+    it('should degrade gracefully when service throws', async () => {
+      (economyService.claimDailyCheckIn as Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
+
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(result).toEqual({
+        claimed: false,
+        coins_rewarded: 0,
+        new_balance: 50,
+      });
     });
   });
 
@@ -153,7 +200,7 @@ describe('EconomyController', () => {
         sessionUrl: 'https://checkout.stripe.com/test',
         sessionId: 'sess_123',
       };
-      (economyService.createCheckoutSession as jest.Mock).mockResolvedValue(
+      (economyService.createCheckoutSession as Mock).mockResolvedValue(
         response,
       );
 
@@ -179,7 +226,7 @@ describe('EconomyController', () => {
     it('should call service purchaseCoins when user is provided', async () => {
       const dto: any = { amount: 100, package_id: 'pkg-1' };
       const response: any = { coins_balance: 200, package_id: 'pkg-1' };
-      (economyService.purchaseCoins as jest.Mock).mockResolvedValue(response);
+      (economyService.purchaseCoins as Mock).mockResolvedValue(response);
 
       const result = await controller.purchaseCoins(
         { id: 'user-1' } as any,
@@ -200,7 +247,7 @@ describe('EconomyController', () => {
     it('should call service sendGift when user is provided', async () => {
       const dto: any = { gift_id: 'gift-1', receiver_id: 'user-2' };
       const response: any = { success: true, coins_remaining: 50 };
-      (economyService.sendGift as jest.Mock).mockResolvedValue(response);
+      (economyService.sendGift as Mock).mockResolvedValue(response);
 
       const result = await controller.sendGift({ id: 'user-1' } as any, dto);
       expect(economyService.sendGift).toHaveBeenCalledWith('user-1', dto);
@@ -211,7 +258,7 @@ describe('EconomyController', () => {
   describe('getStickerPacks', () => {
     it('should return sticker packs from service', async () => {
       const response = { packs: [], owned_pack_ids: [], user_coins: 100 };
-      (economyService.getStickerPacks as jest.Mock).mockResolvedValue(response);
+      (economyService.getStickerPacks as Mock).mockResolvedValue(response);
 
       const result = await controller.getStickerPacks({ id: 'user-1' } as any);
       expect(economyService.getStickerPacks).toHaveBeenCalledWith('user-1');
@@ -227,9 +274,7 @@ describe('EconomyController', () => {
         coins_remaining: 150,
         pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
       };
-      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (economyService.unlockStickerPack as Mock).mockResolvedValue(response);
 
       const result = await controller.unlockStickerPack(
         { id: 'user-1' } as any,
@@ -244,51 +289,111 @@ describe('EconomyController', () => {
   });
 
   describe('rate limiting decorators', () => {
-    it('should apply Throttle decorators to economy endpoints', () => {
-      const controllerPrototype = Object.getPrototypeOf(controller);
-      const LIMIT = 'THROTTLER:LIMIT';
-      const TTL = 'THROTTLER:TTL';
+    const proto = EconomyController.prototype;
+    const THROTTLER_LIMIT = 'THROTTLER:LIMIT';
+    const THROTTLER_TTL = 'THROTTLER:TTL';
 
-      const catalogLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.getCatalog,
-      );
-      expect(catalogLimit).toBe(30);
-      const catalogTtl = Reflect.getMetadata(
-        TTL + 'default',
-        controllerPrototype.getCatalog,
-      );
-      expect(catalogTtl).toBe(60000);
+    it('should apply Throttle decorator to getCatalog', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.getCatalog),
+      ).toBe(30);
+      expect(
+        Reflect.getMetadata(THROTTLER_TTL + 'default', proto.getCatalog),
+      ).toBe(60000);
+    });
 
-      const balanceLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.getBalance,
-      );
-      expect(balanceLimit).toBe(30);
+    it('should apply Throttle decorator to getBalance', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.getBalance),
+      ).toBe(30);
+    });
 
-      const dailyCheckInLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.claimDailyCheckIn,
-      );
-      expect(dailyCheckInLimit).toBe(3);
+    it('should apply Throttle decorator to claimDailyCheckIn', () => {
+      expect(
+        Reflect.getMetadata(
+          THROTTLER_LIMIT + 'default',
+          proto.claimDailyCheckIn,
+        ),
+      ).toBe(3);
+    });
 
-      const purchaseCoinsLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.purchaseCoins,
-      );
-      expect(purchaseCoinsLimit).toBe(5);
+    it('should apply Throttle decorator to purchaseCoins', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.purchaseCoins),
+      ).toBe(5);
+    });
 
-      const sendGiftLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.sendGift,
-      );
-      expect(sendGiftLimit).toBe(10);
+    it('should apply Throttle decorator to sendGift', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.sendGift),
+      ).toBe(10);
+    });
 
-      const unlockStickerLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.unlockStickerPack,
+    it('should apply EconomyRateLimit decorator to getBalance', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.getBalance,
       );
-      expect(unlockStickerLimit).toBe(5);
+      expect(metadata).toEqual({ maxRequests: 20, windowSeconds: 60 });
+    });
+
+    it('should apply EconomyRateLimit decorator to createCheckoutSession', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.createCheckoutSession,
+      );
+      expect(metadata).toEqual({ maxRequests: 5, windowSeconds: 60 });
+    });
+
+    it('should apply EconomyRateLimit decorator to sendGift', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.sendGift,
+      );
+      expect(metadata).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    });
+  });
+
+  describe('getHealth', () => {
+    it('should return health snapshot from health service', async () => {
+      const mockSnapshot = {
+        overall: 'healthy' as const,
+        timestamp: '2026-08-07T12:00:00.000Z',
+        dependencies: {
+          redis: {
+            status: 'healthy' as const,
+            latencyMs: 1,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          supabase: {
+            status: 'healthy' as const,
+            latencyMs: 2,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          stripe: {
+            status: 'healthy' as const,
+            latencyMs: 50,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          centrifugo: {
+            status: 'healthy' as const,
+            latencyMs: 3,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+        },
+        circuitBreakers: {},
+        degradedFeatures: [] as string[],
+        uptimeSeconds: 3600,
+      };
+
+      const healthService = (
+        controller as unknown as { healthService: CoinEconomyHealthService }
+      ).healthService;
+      (healthService.getHealthSnapshot as Mock).mockResolvedValue(mockSnapshot);
+
+      const result = await controller.getHealth();
+      expect(result).toEqual(mockSnapshot);
+      expect(healthService.getHealthSnapshot).toHaveBeenCalled();
     });
   });
 });

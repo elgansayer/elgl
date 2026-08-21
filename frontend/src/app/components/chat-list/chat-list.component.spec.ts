@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
+import { GroupsService } from '../../services/groups.service';
 import * as toast from '../../services/toast.service';
 import { provideRouter } from '@angular/router';
 
@@ -11,23 +12,40 @@ describe('ChatListComponent', () => {
   let mockChatService: {
     getRooms: ReturnType<typeof vi.fn>;
     getRecentChats: ReturnType<typeof vi.fn>;
+    getLabels: ReturnType<typeof vi.fn>;
     getLockedRoomIds: ReturnType<typeof vi.fn>;
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
+    getMessages: ReturnType<typeof vi.fn>;
+  };
+  let mockGroupsService: {
+    getDiscoverableGroups: ReturnType<typeof vi.fn>;
+    joinGroup: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     mockChatService = {
       getRooms: vi.fn().mockResolvedValue([]),
       getRecentChats: vi.fn().mockResolvedValue([]),
+      getLabels: vi.fn().mockResolvedValue([]),
       getLockedRoomIds: vi.fn().mockResolvedValue([]),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
+      getMessages: vi.fn().mockResolvedValue([]),
+    };
+
+    mockGroupsService = {
+      getDiscoverableGroups: vi.fn().mockResolvedValue([]),
+      joinGroup: vi.fn().mockResolvedValue({ success: true }),
     };
 
     await TestBed.configureTestingModule({
       imports: [ChatListComponent],
-      providers: [{ provide: ChatService, useValue: mockChatService }, provideRouter([])],
+      providers: [
+        { provide: ChatService, useValue: mockChatService },
+        { provide: GroupsService, useValue: mockGroupsService },
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChatListComponent);
@@ -37,6 +55,48 @@ describe('ChatListComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should default to chats tab', () => {
+    expect(component.activeTab()).toBe('chats');
+  });
+
+  it('should switch to groups tab and load groups', async () => {
+    const mockGroups = [
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+    ];
+    mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
+
+    component.switchTab('groups');
+    await fixture.whenStable();
+
+    expect(component.activeTab()).toBe('groups');
+    expect(mockGroupsService.getDiscoverableGroups).toHaveBeenCalled();
+  });
+
+  it('should not reload groups on switchTab if already loaded', async () => {
+    const mockGroups = [
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+    ];
+    component.groups.set(mockGroups);
+
+    component.switchTab('groups');
+    await fixture.whenStable();
+
+    expect(component.activeTab()).toBe('groups');
+    expect(mockGroupsService.getDiscoverableGroups).not.toHaveBeenCalled();
+  });
+
+  it('should handle join group', async () => {
+    const mockGroups = [
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+    ];
+    mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
+
+    await component.handleJoinGroup('g1');
+
+    expect(mockGroupsService.joinGroup).toHaveBeenCalledWith('g1');
+    expect(mockGroupsService.getDiscoverableGroups).toHaveBeenCalled();
   });
 
   it('notImplemented should show toast', () => {
