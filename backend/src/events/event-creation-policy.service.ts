@@ -10,12 +10,6 @@ import { CreateEventDto } from './dto/create-event.dto';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-interface AudioRoomCreationCheck {
-  id: string;
-  host_id: string;
-  is_active: boolean;
-}
-
 @Injectable()
 export class EventCreationPolicyService {
   private readonly logger = new Logger(EventCreationPolicyService.name);
@@ -44,7 +38,9 @@ export class EventCreationPolicyService {
   private assertFutureDate(dateTime: string): void {
     const timestamp = Date.parse(dateTime);
     if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
-      throw new BadRequestException('Event date and time must be in the future');
+      throw new BadRequestException(
+        'Event date and time must be in the future',
+      );
     }
   }
 
@@ -78,11 +74,13 @@ export class EventCreationPolicyService {
     roomId: string,
   ): Promise<void> {
     if (!UUID_PATTERN.test(roomId)) {
-      throw new BadRequestException('Audio Room location must be a valid room ID');
+      throw new BadRequestException(
+        'Audio Room location must be a valid room ID',
+      );
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const { data: room, error } = await supabase
       .from('audio_rooms')
       .select('id, host_id, is_active')
       .eq('id', roomId)
@@ -93,7 +91,6 @@ export class EventCreationPolicyService {
       throw new BadRequestException('Audio Room could not be validated');
     }
 
-    const room = data as AudioRoomCreationCheck | null;
     if (!room || !room.is_active) {
       throw new BadRequestException('Audio Room is unavailable');
     }
