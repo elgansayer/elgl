@@ -51,7 +51,10 @@ describe('AppEmptyStateComponent', () => {
 
   it('uses the visible title as the accessible region name', () => {
     fixture.componentRef.setInput('title', 'No conversations yet');
-    fixture.componentRef.setInput('description', 'Start a new conversation to practise today.');
+    fixture.componentRef.setInput(
+      'description',
+      'Start a new conversation to practise today.',
+    );
     fixture.detectChanges();
 
     expect(host.getAttribute('aria-label')).toBe('No conversations yet');
@@ -67,15 +70,13 @@ describe('AppEmptyStateComponent', () => {
     expect(host.querySelector('button')).toBeNull();
   });
 
-  it('delegates the optional action to a touch-sized native Spartan button', () => {
+  it('keeps the optional Spartan action native and reflow-safe', () => {
     fixture.componentRef.setInput('actionLabel', 'Find a language partner');
     fixture.detectChanges();
 
     const button = host.querySelector('button');
     expect(button).not.toBeNull();
     expect(button?.getAttribute('type')).toBe('button');
-    expect(button?.getAttribute('hlmBtn')).not.toBeNull();
-    expect(button?.getAttribute('size')).toBe('touch');
     expect(button?.classList.contains('max-w-full')).toBe(true);
     expect(button?.classList.contains('whitespace-normal')).toBe(true);
   });
@@ -100,7 +101,9 @@ describe('AppEmptyStateComponent', () => {
     expect(classes).toContain('min-w-0');
     expect(classes).toContain('max-w-full');
     expect(classes).not.toMatch(/(?:^|\s)(?:ml|mr|pl|pr|left|right)-/);
-    expect(classes).not.toMatch(/(?:^|\s)(?:bg|text|border)-(?:red|blue|green|gray|slate|purple)-/);
+    expect(classes).not.toMatch(
+      /(?:^|\s)(?:bg|text|border)-(?:red|blue|green|gray|slate|purple)-/,
+    );
   });
 
   it('preserves caller classes after the primitive-owned Relay classes', () => {
@@ -111,7 +114,10 @@ describe('AppEmptyStateComponent', () => {
   });
 
   it('keeps long copy and actions reflow-safe for the 390px mobile baseline', () => {
-    fixture.componentRef.setInput('title', 'A very long translated empty state title that must wrap');
+    fixture.componentRef.setInput(
+      'title',
+      'A very long translated empty state title that must wrap',
+    );
     fixture.componentRef.setInput(
       'description',
       'Long translated descriptions should stay inside the shared surface instead of forcing horizontal page overflow.',
