@@ -1,8 +1,0 @@
-frontend/src/app/components/forgot-password/forgot-password.component.ts
-frontend/src/app/components/forgot-password/forgot-password.component.html
-frontend/src/app/services/forgot-password.service.ts
-backend/src/auth/forgot-password/forgot-password.module.ts
-backend/src/auth/forgot-password/forgot-password.controller.ts
-backend/src/auth/forgot-password/forgot-password.service.ts
-backend/src/mail/mail.service.ts
-backend/src/mail/mail.template.html

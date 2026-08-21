@@ -135,8 +135,6 @@ describe('AccountSettingsComponent', () => {
     });
     component.changePassword();
 
-    await vi.runAllTimersAsync();
-
     expect(settingsServiceMock.updateAccountSettings).toHaveBeenCalledWith({});
     expect(component.passwordForm.get('currentPassword')?.value).toBe(null);
   });
@@ -148,8 +146,6 @@ describe('AccountSettingsComponent', () => {
       confirmPassword: 'newpass123',
     });
     component.changePassword();
-
-    await vi.runAllTimersAsync();
 
     expect(component.successMessage()).toBe('settings.account.password.success');
   });

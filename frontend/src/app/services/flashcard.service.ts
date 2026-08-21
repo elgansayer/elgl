@@ -51,9 +51,7 @@ export class FlashcardService {
 
   async getHealth(): Promise<SrsHealthStatus> {
     try {
-      const result = await firstValueFrom(
-        this.http.get<SrsHealthStatus>(`${this.baseUrl}/health`),
-      );
+      const result = await firstValueFrom(this.http.get<SrsHealthStatus>(`${this.baseUrl}/health`));
       this.degraded = result.mode === 'degraded';
       return result;
     } catch {
@@ -83,7 +81,7 @@ export class FlashcardService {
     } catch {
       // Offline: create a locally generated flashcard
       const degradedCard: Flashcard = {
-        id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: `offline-${Date.now()}-${crypto.randomUUID()}`,
         user_id: '',
         word_token: dto.word_token,
         original_context: dto.original_context,

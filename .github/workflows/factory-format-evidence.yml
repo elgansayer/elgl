@@ -1,0 +1,42 @@
+name: Factory format evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'automation/**/*.py'
+      - '.github/workflows/factory-format-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: '0.12.5'
+          enable-cache: true
+          cache-dependency-glob: automation/uv.lock
+      - run: uv sync --frozen --extra development
+        working-directory: automation
+      - run: |
+          mkdir -p test-results
+          cp openhands_factory/daemon.py test-results/daemon.before.py
+          uv run --frozen ruff format openhands_factory/daemon.py
+          diff -u test-results/daemon.before.py openhands_factory/daemon.py > test-results/daemon-format.patch || true
+        working-directory: automation
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: factory-format-patch-${{ github.sha }}
+          path: |
+            automation/test-results/daemon-format.patch
+            automation/openhands_factory/daemon.py
+          if-no-files-found: error
+          retention-days: 1

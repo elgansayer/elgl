@@ -8,14 +8,14 @@ describe('DecksController', () => {
   let service: DecksService;
 
   const mockDecksService = {
-    createDeck: jest.fn(),
-    getDecks: jest.fn(),
-    getDeck: jest.fn(),
-    updateDeck: jest.fn(),
-    deleteDeck: jest.fn(),
-    addFlashcardToDeck: jest.fn(),
-    removeFlashcardFromDeck: jest.fn(),
-    getDeckFlashcards: jest.fn(),
+    createDeck: vi.fn(),
+    getDecks: vi.fn(),
+    getDeck: vi.fn(),
+    updateDeck: vi.fn(),
+    deleteDeck: vi.fn(),
+    addFlashcardToDeck: vi.fn(),
+    removeFlashcardFromDeck: vi.fn(),
+    getDeckFlashcards: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -24,7 +24,7 @@ describe('DecksController', () => {
       providers: [{ provide: DecksService, useValue: mockDecksService }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<DecksController>(DecksController);
@@ -32,7 +32,7 @@ describe('DecksController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

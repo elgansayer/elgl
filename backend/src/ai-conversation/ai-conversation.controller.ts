@@ -51,6 +51,7 @@ export class AiConversationController {
     }
 
     const reply = await this.aiConversationService.generateReply(
+      user.id,
       dto.message,
       dto.scenarioId,
       dto.conversationHistory,

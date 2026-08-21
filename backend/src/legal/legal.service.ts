@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface LegalSection {
@@ -17,11 +17,11 @@ export interface LegalDocument {
 export class LegalService {
   private readonly logger = new Logger(LegalService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(@Optional() private readonly configService?: ConfigService) {}
 
   getTermsOfService(): LegalDocument {
     const effectiveDate =
-      this.configService.get<string>('TOS_EFFECTIVE_DATE') ?? '2026-07-01';
+      this.configService?.get<string>('TOS_EFFECTIVE_DATE') ?? '2026-07-01';
 
     return {
       title: 'Terms of Service',
@@ -81,7 +81,7 @@ export class LegalService {
 
   getPrivacyPolicy(): LegalDocument {
     const effectiveDate =
-      this.configService.get<string>('PRIVACY_EFFECTIVE_DATE') ?? '2026-07-01';
+      this.configService?.get<string>('PRIVACY_EFFECTIVE_DATE') ?? '2026-07-01';
 
     return {
       title: 'Privacy Policy',

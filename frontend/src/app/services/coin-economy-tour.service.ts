@@ -49,7 +49,7 @@ export class CoinEconomyTourService {
         },
       })
       .subscribe({
-        next: (stepInfo) => {
+        next: (_stepInfo) => {
           // Step change event - can be used for analytics tracking
         },
         error: () => {

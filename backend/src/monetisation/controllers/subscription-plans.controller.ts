@@ -1,9 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SubscriptionPlansService } from '../services/subscription-plans.service';
 import type { SubscriptionPlan } from '../services/subscription-plans.service';
 
@@ -30,7 +26,10 @@ export class SubscriptionPlansController {
         properties: {
           id: { type: 'string', example: 'consumer_8_ukp_10_usd' },
           name: { type: 'string', example: 'Consumer VIP' },
-          description: { type: 'string', example: 'Unlock premium features for serious learners' },
+          description: {
+            type: 'string',
+            example: 'Unlock premium features for serious learners',
+          },
           price_ukp: { type: 'number', example: 8 },
           price_usd: { type: 'number', example: 10 },
           currency: { type: 'string', example: 'USD' },
@@ -49,7 +48,8 @@ export class SubscriptionPlansController {
   @Get('popular')
   @ApiOperation({
     summary: 'Get the most popular subscription plan',
-    description: 'Returns the plan marked as most popular (Consumer VIP). Public endpoint.',
+    description:
+      'Returns the plan marked as most popular (Consumer VIP). Public endpoint.',
   })
   @ApiResponse({
     status: 200,
@@ -62,7 +62,8 @@ export class SubscriptionPlansController {
   @Get('free')
   @ApiOperation({
     summary: 'Get the free subscription plan',
-    description: 'Returns the Free tier plan details with its features and limitations. Public endpoint.',
+    description:
+      'Returns the Free tier plan details with its features and limitations. Public endpoint.',
   })
   @ApiResponse({
     status: 200,
@@ -75,7 +76,8 @@ export class SubscriptionPlansController {
   @Get('paid')
   @ApiOperation({
     summary: 'Get all paid subscription plans',
-    description: 'Returns all paid subscription plans (Consumer VIP, Pro, Developer) excluding Free tier. Public endpoint.',
+    description:
+      'Returns all paid subscription plans (Consumer VIP, Pro, Developer) excluding Free tier. Public endpoint.',
   })
   @ApiResponse({
     status: 200,
@@ -124,7 +126,10 @@ export class SubscriptionPlansController {
     description: 'List of highlighted benefit strings',
     schema: {
       type: 'array',
-      items: { type: 'string', example: 'Unlimited AI translations & corrections' },
+      items: {
+        type: 'string',
+        example: 'Unlimited AI translations & corrections',
+      },
     },
   })
   @ApiResponse({ status: 404, description: 'Plan not found' })
