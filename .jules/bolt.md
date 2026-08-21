@@ -129,3 +129,8 @@
 
 **Learning:** In the backend `moments.service.ts`, `getLifetimeCounts` sequentially queried three independent counts (`moments`, `moment_comments`, and `translations`). In an isolated benchmark simulating network delay, fetching these sequentially took ~160ms, whereas fetching them concurrently via `Promise.all` reduced the execution time to ~50ms.
 **Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
+
+## 2026-08-21 - [Optimize full achievements lookup via Promise.all]
+
+**Learning:** In the backend `achievements.service.ts`, `getFullAchievements` executed three independent queries sequentially: `getUserAchievements`, `getUserMessageCount`, and `getStudyStreakDays`. In an isolated benchmark simulating network delay, fetching these sequentially takes more time, whereas fetching them concurrently reduces the execution time.
+**Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
