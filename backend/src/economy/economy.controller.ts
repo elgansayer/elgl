@@ -31,7 +31,7 @@ import {
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
   CACHE_NO_STORE,
-} from './cache.interceptor';
+} from '../common/cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import {
   EconomyRateLimiterGuard,
@@ -363,6 +363,65 @@ export class EconomyController {
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
+  }
+
+  /**
+   * Transaction history: strictly private, never cached.
+   * Returns the last 50 coin transactions for the authenticated user.
+   */
+  @Get('transactions')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get coin transaction history',
+    description:
+      'Returns the last 50 coin transactions (daily check-ins, purchases, gifts sent/received, sticker unlocks) ' +
+      'for the authenticated user, ordered most-recent first. This is strictly private data and is never cached.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of coin transactions.',
+    schema: {
+      type: 'object',
+      properties: {
+        transactions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'abc-123' },
+              type: { type: 'string', example: 'daily_checkin' },
+              amount: { type: 'number', example: 7 },
+              description: {
+                type: 'string',
+                nullable: true,
+                example: 'Daily check-in reward',
+              },
+              created_at: {
+                type: 'string',
+                example: '2026-08-08T12:00:00.000Z',
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async getTransactions(@CurrentUser() user: User | null) {
+    if (!user) return { transactions: [] };
+    try {
+      const transactions = await this.economyService.getTransactionHistory(
+        user.id,
+      );
+      return { transactions };
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Transaction history lookup failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}, returning empty list`,
+      );
+      return { transactions: [] };
+    }
   }
 
   /**

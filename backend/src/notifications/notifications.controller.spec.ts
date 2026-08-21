@@ -14,16 +14,16 @@ describe('NotificationsController', () => {
         {
           provide: NotificationsService,
           useValue: {
-            getNotifications: jest.fn().mockResolvedValue([{ id: 'notif-1' }]),
-            getUnreadCount: jest.fn().mockResolvedValue({ unreadCount: 3 }),
-            markAsRead: jest.fn().mockResolvedValue(undefined),
-            markAllAsRead: jest.fn().mockResolvedValue(undefined),
+            getNotifications: vi.fn().mockResolvedValue([{ id: 'notif-1' }]),
+            getUnreadCount: vi.fn().mockResolvedValue({ unreadCount: 3 }),
+            markAsRead: vi.fn().mockResolvedValue(undefined),
+            markAllAsRead: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<NotificationsController>(NotificationsController);

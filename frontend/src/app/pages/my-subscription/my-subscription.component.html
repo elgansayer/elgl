@@ -1,6 +1,7 @@
 <div class="app-screen app-padded pb-10">
   <header class="flex items-center gap-3 pt-2">
     <button
+      hlmBtn
       type="button"
       (click)="goBack()"
       [attr.aria-label]="'common.back' | t"
@@ -19,9 +20,9 @@
   }
 
   @if (error()) {
-    <app-card variant="outlined" customClass="border-red-500/40 bg-red-500/10">
+    <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
       <div class="flex flex-col items-start gap-3">
-        <p class="text-sm text-red-400">{{ 'subscription.loadError' | t }}</p>
+        <p class="text-sm text-danger">{{ 'subscription.loadError' | t }}</p>
         <app-button-secondary size="sm" (clicked)="reload()">
           {{ 'subscription.retry' | t }}
         </app-button-secondary>
@@ -30,14 +31,17 @@
   }
 
   @if (actionError()) {
-    <div class="rounded-app border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400" role="alert">
+    <div
+      class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
+      role="alert"
+    >
       {{ actionError() }}
     </div>
   }
 
   @if (actionSuccess()) {
     <div
-      class="rounded-app border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-400"
+      class="rounded-app border border-success/40 bg-success/10 p-3 text-sm text-success"
       role="status"
     >
       {{ actionSuccess() }}
@@ -48,16 +52,22 @@
     <app-card variant="elevated">
       <div class="space-y-4">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.status' | t }}</span>
+          <span class="text-sm font-semibold text-text-secondary">{{
+            'subscription.status' | t
+          }}</span>
           <app-pill
-            [label]="currentDetails.isVip ? ('subscription.active' | t) : ('subscription.inactive' | t)"
+            [label]="
+              currentDetails.isVip ? ('subscription.active' | t) : ('subscription.inactive' | t)
+            "
             [colour]="currentDetails.isVip ? 'success' : 'neutral'"
             size="sm"
           />
         </div>
 
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.plan' | t }}</span>
+          <span class="text-sm font-semibold text-text-secondary">{{
+            'subscription.plan' | t
+          }}</span>
           <span class="text-sm font-bold text-text-primary">
             {{ currentDetails.vipTier ?? ('subscription.free' | t) }}
           </span>
@@ -65,7 +75,9 @@
 
         @if (currentDetails.email) {
           <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.email' | t }}</span>
+            <span class="text-sm font-semibold text-text-secondary">{{
+              'subscription.email' | t
+            }}</span>
             <span class="text-sm text-text-primary">{{ currentDetails.email }}</span>
           </div>
         }
@@ -76,13 +88,15 @@
 
         @if (nextPaymentLabel(); as amount) {
           <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.nextPayment' | t }}</span>
+            <span class="text-sm font-semibold text-text-secondary">{{
+              'subscription.nextPayment' | t
+            }}</span>
             <span class="text-sm text-text-primary">{{ amount }}</span>
           </div>
         }
 
         @if (cancelBannerMessage(); as banner) {
-          <div class="rounded-app border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-400">
+          <div class="rounded-app border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
             {{ banner }}
           </div>
         }
@@ -108,7 +122,7 @@
             } @else {
               <app-button-secondary
                 [disabled]="cancelling()"
-                customClass="text-red-400 border-red-500/40 hover:bg-red-500/10"
+                customClass="text-danger border-danger/40 hover:bg-danger/10"
                 (clicked)="onCancel()"
               >
                 @if (cancelling()) {
@@ -178,7 +192,7 @@
                 {{ plan.price_ukp }} UKP / \${{ plan.price_usd }} USD
               </div>
               @if (plan.interval === 'year') {
-                <span class="text-xs text-emerald-400">{{ 'subscription.perYear' | t }}</span>
+                <span class="text-xs text-success">{{ 'subscription.perYear' | t }}</span>
               } @else {
                 <span class="app-muted">{{ 'subscription.perMonth' | t }}</span>
               }

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { VideoCallsCacheInvalidationService } from './video-calls-cache-invalidation.service';
@@ -5,17 +6,17 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('VideoCallsCacheInvalidationService', () => {
   let service: VideoCallsCacheInvalidationService;
-  let mockRedis: Record<string, jest.Mock>;
-  let mockSupabaseService: { getRedisClient: jest.Mock };
+  let mockRedis: Record<string, Mock>;
+  let mockSupabaseService: { getRedisClient: Mock };
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
 
     mockRedis = {
-      del: jest.fn(),
-      scan: jest.fn(),
-      keys: jest.fn(),
+      del: vi.fn(),
+      scan: vi.fn(),
+      keys: vi.fn(),
     };
 
     mockRedis.del.mockResolvedValue(0);
@@ -23,7 +24,7 @@ describe('VideoCallsCacheInvalidationService', () => {
     mockRedis.keys.mockResolvedValue([]);
 
     mockSupabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(mockRedis),
+      getRedisClient: vi.fn().mockReturnValue(mockRedis),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -42,7 +43,7 @@ describe('VideoCallsCacheInvalidationService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

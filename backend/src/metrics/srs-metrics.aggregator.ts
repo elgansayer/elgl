@@ -38,23 +38,34 @@ export class SrsMetricsAggregator {
       this.metricsService.setSrsDueCards(dueCount ?? 0);
 
       // Cards per SRS level
-      for (let level = 0; level <= 4; level++) {
+      // ⚡ Bolt Optimization: Replace sequential database queries in a loop with a concurrent Promise.all execution to improve metric aggregation performance
+      const levelPromises = Array.from({ length: 5 }, async (_, level) => {
         const { count } = await supabase
           .from('flashcards')
           .select('id', { count: 'exact', head: true })
           .eq('srs_level', level);
+        return { level, count };
+      });
+      const levelResults = await Promise.all(levelPromises);
+      for (const { level, count } of levelResults) {
         this.metricsService.setSrsCardsPerLevel(level, count ?? 0);
       }
 
-      // Average easiness factor
-      const { data: efData } = await supabase
+      // Average easiness factor - uses a capped sample (max 500 rows) to avoid
+      // loading every flashcard row into application memory on every tick.
+      // A production deployment should use a Postgres RPC or materialised view
+      // for exact computation without unbounded data transfer.
+      const sampleSize = 500;
+      const { data: efSample } = await supabase
         .from('flashcards')
         .select('easiness_factor')
-        .not('easiness_factor', 'is', null);
-      if (efData && efData.length > 0) {
+        .not('easiness_factor', 'is', null)
+        .limit(sampleSize);
+
+      if (efSample && efSample.length > 0) {
         const avgEf =
-          efData.reduce((sum, row) => sum + (row.easiness_factor ?? 2.5), 0) /
-          efData.length;
+          efSample.reduce((sum, row) => sum + (row.easiness_factor ?? 2.5), 0) /
+          efSample.length;
         this.metricsService.setSrsAverageEasinessFactor(
           Math.round(avgEf * 100) / 100,
         );

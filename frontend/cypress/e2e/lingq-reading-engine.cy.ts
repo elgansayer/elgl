@@ -10,10 +10,10 @@
  */
 
 // ─────────────────────────────────────────
-// Reading Engine — Article Listing & Filters
+// Reading Engine - Article Listing & Filters
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Article Listing & Filters', () => {
+describe('LingQ Reading Engine - Article Listing & Filters', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -182,10 +182,10 @@ describe('LingQ Reading Engine — Article Listing & Filters', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Article Detail & Navigation
+// Reading Engine - Article Detail & Navigation
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Article Detail View', () => {
+describe('LingQ Reading Engine - Article Detail View', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -265,10 +265,10 @@ describe('LingQ Reading Engine — Article Detail View', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Tab Navigation
+// Reading Engine - Tab Navigation
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Tab Navigation', () => {
+describe('LingQ Reading Engine - Tab Navigation', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -353,10 +353,10 @@ describe('LingQ Reading Engine — Tab Navigation', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Reading Progress API
+// Reading Engine - Reading Progress API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Reading Progress API', () => {
+describe('LingQ Reading Engine - Reading Progress API', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -465,10 +465,10 @@ describe('LingQ Reading Engine — Reading Progress API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Tokenisation API
+// Reading Engine - Tokenisation API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Tokenisation API', () => {
+describe('LingQ Reading Engine - Tokenisation API', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources/art-1', {
       body: {
@@ -581,10 +581,10 @@ describe('LingQ Reading Engine — Tokenisation API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Resource CRUD API
+// Reading Engine - Resource CRUD API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Resource CRUD API', () => {
+describe('LingQ Reading Engine - Resource CRUD API', () => {
   beforeEach(() => {
     cy.intercept('POST', '**/api/reading/resources', (req) => {
       req.reply({
@@ -728,10 +728,10 @@ describe('LingQ Reading Engine — Resource CRUD API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Edge Cases & Empty States
+// Reading Engine - Edge Cases & Empty States
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Edge Cases', () => {
+describe('LingQ Reading Engine - Edge Cases', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
     cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
@@ -806,10 +806,10 @@ describe('LingQ Reading Engine — Edge Cases', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Accessibility
+// Reading Engine - Accessibility
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Accessibility', () => {
+describe('LingQ Reading Engine - Accessibility', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -883,10 +883,10 @@ describe('LingQ Reading Engine — Accessibility', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Filter Interaction Tests
+// Reading Engine - Filter Interaction Tests
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Combined Filter Interactions', () => {
+describe('LingQ Reading Engine - Combined Filter Interactions', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [

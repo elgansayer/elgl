@@ -15,7 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import {
   CacheControlInterceptor,

@@ -118,11 +118,22 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         rsvpsByEventId.set(rsvp.event_id, users);
       }
 
-      for (const event of typedEvents) {
-        const userIds = rsvpsByEventId.get(event.id);
-        if (!userIds || userIds.length === 0) continue;
+      // ⚡ Bolt: Replaced sequential `for...of` loop with concurrent `Promise.allSettled`.
+      // Executing `sendRemindersBatch` concurrently mitigates N+1 database/network latency overheads.
+      const reminderResults = await Promise.allSettled(
+        typedEvents.map((event) => {
+          const userIds = rsvpsByEventId.get(event.id);
+          if (!userIds) return Promise.resolve();
+          return this.sendRemindersBatch(event.id, event.title, userIds);
+        }),
+      );
 
-        await this.sendRemindersBatch(event.id, event.title, userIds);
+      const failedReminders = reminderResults.filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
+      );
+      if (failedReminders.length > 0) {
+        throw failedReminders[0].reason;
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
@@ -431,6 +442,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       const { data: events, error } = await supabase
         .from('events')
         .select('id, title, host_id, language_pair, category')
+        .eq('is_cancelled', false)
         .not('language_pair', 'is', null)
         .gte('date_time', new Date(now - tolerance).toISOString())
         .lte('date_time', new Date(now + tolerance).toISOString());
@@ -472,33 +484,42 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         (event) => !existingRoomNames.has(`language_party-${event.id}`),
       );
 
-      for (const event of eventsToCreateRoomsFor) {
-        const roomName = `language_party-${event.id}`;
+      await Promise.allSettled(
+        eventsToCreateRoomsFor.map(async (event) => {
+          try {
+            const roomName = `language_party-${event.id}`;
 
-        // Create the LiveKit audio room via the dedicated service
-        const room = await this.audioRoomsService.createRoom(
-          event.host_id,
-          {
-            title: event.title,
-            target_language:
-              event.language_pair.split('-')[1] ?? event.language_pair,
-            language_pair: event.language_pair,
-            topic_tag: event.category ?? event.language_pair,
-            is_video_stream: false,
-          },
-          roomName,
-        );
+            // Create the LiveKit audio room via the dedicated service
+            const room = await this.audioRoomsService.createRoom(
+              event.host_id,
+              {
+                title: event.title,
+                target_language:
+                  event.language_pair.split('-')[1] ?? event.language_pair,
+                language_pair: event.language_pair,
+                topic_tag: event.category ?? event.language_pair,
+                is_video_stream: false,
+              },
+              roomName,
+            );
 
-        // Mark the room as a Language Party
-        await supabase
-          .from('audio_rooms')
-          .update({ party_type: 'language_party' })
-          .eq('id', room.id);
+            // Mark the room as a Language Party and link it to the event
+            await supabase
+              .from('audio_rooms')
+              .update({ party_type: 'language_party', event_id: event.id })
+              .eq('id', room.id);
 
-        this.logger.log(
-          `Audio room created for event ${event.id} (${event.title})`,
-        );
-      }
+            this.logger.log(
+              `Audio room created for event ${event.id} (${event.title})`,
+            );
+          } catch (err) {
+            this.logger.error(
+              `Failed to create audio room for event ${event.id}`,
+              err,
+            );
+          }
+        }),
+      );
     } catch (err) {
       this.logger.error('Unexpected error in checkStartEvents', err);
     }

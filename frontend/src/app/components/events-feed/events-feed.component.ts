@@ -1,75 +1,115 @@
-import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
-import { EventsService, Event } from '../../services/events.service';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
+import { CommonModule, DatePipe } from '@angular/common';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { AppSelectComponent } from '../primitives/select/select.component';
+import { EventsService, Event } from '../../services/events.service';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
+
+const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-events-feed',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe, DatePipe],
+  imports: [
+    HlmButton,
+    HlmRadio,
+    HlmRadioGroup,
+    CommonModule,
+    TranslatePipe,
+    DatePipe,
+    AppSelectComponent,
+  ],
   template: `
     <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
-      <button
-        class="px-3 py-1 rounded-full text-sm"
-        [class.bg-primary]="status() === 'upcoming'"
-        [class.text-white]="status() === 'upcoming'"
-        (click)="onStatusChange('upcoming')"
-      >{{ 'events.filter_upcoming' | t }}</button>
-      <button
-        class="px-3 py-1 rounded-full text-sm"
-        [class.bg-primary]="status() === 'past'"
-        [class.text-white]="status() === 'past'"
-        (click)="onStatusChange('past')"
-      >{{ 'events.filter_past' | t }}</button>
-
-      <select
-        [value]="languagePair() ?? ''"
-        (change)="onLanguageChange($any($event.target).value)"
-        class="bg-surface border border-border rounded px-2 py-1 text-sm"
+      <hlm-radio-group
+        name="events-status"
+        [value]="status()"
+        (valueChange)="onStatusChange($event)"
+        [attr.aria-label]="'events.title' | t"
+        class="flex flex-row gap-2"
       >
-        <option value="">{{ 'events.all_languages' | t }}</option>
-        <option value="en-es">English ↔ Spanish</option>
-        <option value="en-ja">English ↔ Japanese</option>
-        <option value="en-ko">English ↔ Korean</option>
-        <option value="en-zh">English ↔ Chinese</option>
-        <option value="en-fr">English ↔ French</option>
-        <option value="en-de">English ↔ German</option>
-        <option value="en-ar">English ↔ Arabic</option>
-        <option value="en-pt">English ↔ Portuguese</option>
-        <option value="en-ru">English ↔ Russian</option>
-        <option value="en-it">English ↔ Italian</option>
-      </select>
+        <hlm-radio
+          value="upcoming"
+          class="min-h-11 cursor-pointer rounded-pill border border-surface-100 bg-surface-300 ps-4 pe-4 pt-2 pb-2 text-sm font-medium text-text-primary transition-colors data-[checked=true]:border-primary data-[checked=true]:bg-primary data-[checked=true]:text-on-fill"
+        >
+          {{ 'events.filter_upcoming' | t }}
+        </hlm-radio>
+        <hlm-radio
+          value="past"
+          class="min-h-11 cursor-pointer rounded-pill border border-surface-100 bg-surface-300 ps-4 pe-4 pt-2 pb-2 text-sm font-medium text-text-primary transition-colors data-[checked=true]:border-primary data-[checked=true]:bg-primary data-[checked=true]:text-on-fill"
+        >
+          {{ 'events.filter_past' | t }}
+        </hlm-radio>
+      </hlm-radio-group>
+
+      <div class="min-w-48 grow sm:grow-0">
+        <app-select
+          selectId="events-language-pair"
+          ariaLabel="events.languagePair"
+          [value]="languagePair() ?? ''"
+          (valueChange)="onLanguageChange($event)"
+        >
+          <option value="">{{ 'events.all_languages' | t }}</option>
+          @for (option of languagePairOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </app-select>
+      </div>
     </div>
 
     <!-- Event list -->
     @if (isLoading() && events().length === 0) {
-      <p>{{ 'loading' | t }}</p>
+      <p role="status">{{ 'loading' | t }}</p>
+    } @else if (error() && events().length === 0) {
+      <div role="alert" class="flex flex-col items-start gap-3">
+        <p class="text-danger">{{ 'common.error_generic' | t }}</p>
+        <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
+          {{ 'common.retry' | t }}
+        </button>
+      </div>
     } @else {
       <div class="space-y-3">
         @for (event of events(); track event.id) {
-          <div class="p-4 bg-surface rounded-lg shadow">
+          <div class="p-4 bg-surface-300 rounded-lg shadow">
             <h2 class="font-semibold text-lg">{{ event.title }}</h2>
             <p class="text-sm text-text-secondary">
-              {{ event.date_time | date:'medium' }}
+              {{ event.date_time | date: 'medium' }}
             </p>
             @if (event.location) {
               <p class="text-xs">{{ event.location }}</p>
             }
             @if (event.host_name) {
               <p class="text-xs">
-                {{ 'events.hosted_by' | t : { name: event.host_name } }}
+                {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
           </div>
         }
       </div>
+
+      @if (error()) {
+        <div role="alert" class="mt-4 flex flex-col items-start gap-3">
+          <p class="text-danger">{{ 'common.error_generic' | t }}</p>
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="retry()">
+            {{ 'common.retry' | t }}
+          </button>
+        </div>
+      }
+
       @if (hasMore()) {
         <button
-          class="mt-4 w-full py-2 bg-surface border border-border rounded text-sm font-medium disabled:opacity-50"
+          hlmBtn
+          type="button"
+          variant="secondary"
+          size="touch"
+          class="mt-4 w-full"
           [disabled]="isLoading()"
+          [attr.aria-busy]="isLoading() ? 'true' : null"
           (click)="loadMore()"
         >
           @if (isLoading()) {
@@ -83,63 +123,116 @@ import { firstValueFrom } from 'rxjs';
   `,
 })
 export class EventsFeedComponent implements OnInit {
-  private eventsService = inject(EventsService);
+  private readonly eventsService = inject(EventsService);
+  private readonly i18nService = inject(I18nService);
+  private readonly languagePairCodes = ['es', 'ja', 'ko', 'zh', 'fr', 'de', 'ar', 'pt', 'ru', 'it'];
+  private requestSequence = 0;
+  private latestRequestId = 0;
 
   readonly events = signal<Event[]>([]);
   readonly isLoading = signal(false);
+  readonly error = signal(false);
   readonly hasMore = signal(true);
   readonly status = signal<'upcoming' | 'past'>('upcoming');
   readonly languagePair = signal<string | undefined>(undefined);
-  private page = signal(1);
+  private readonly page = signal(1);
+
+  readonly languagePairOptions = computed(() => {
+    const locale = this.i18nService.currentLang();
+    let displayNames: Intl.DisplayNames | undefined;
+    try {
+      displayNames = new Intl.DisplayNames([locale], { type: 'language' });
+    } catch {
+      displayNames = undefined;
+    }
+
+    const english = this.languageDisplayName('en', displayNames);
+    return this.languagePairCodes.map((code) => ({
+      value: `en-${code}`,
+      label: `${english} ↔ ${this.languageDisplayName(code, displayNames)}`,
+    }));
+  });
 
   ngOnInit(): void {
-    this.loadEvents(true);
+    void this.loadEvents(true);
+  }
+
+  private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {
+    const translated = displayNames?.of(code);
+    if (translated) return translated;
+
+    const knownLanguage = this.i18nService.availableLanguages.find(
+      (language) => language.code === code || language.code.startsWith(`${code}-`),
+    );
+    return knownLanguage?.nativeName ?? code.toUpperCase();
   }
 
   private async loadEvents(reset = false): Promise<void> {
+    const requestedPage = reset ? 1 : this.page() + 1;
+    const requestId = ++this.requestSequence;
+    this.latestRequestId = requestId;
     this.isLoading.set(true);
+    this.error.set(false);
+
     if (reset) {
       this.page.set(1);
       this.events.set([]);
       this.hasMore.set(true);
     }
+
     try {
       const data = await firstValueFrom(
         this.eventsService.listEvents({
           status: this.status(),
           language_pair: this.languagePair() || undefined,
-          page: this.page(),
-          limit: 20,
+          page: requestedPage,
+          limit: PAGE_SIZE,
         }),
       );
+
+      if (requestId !== this.latestRequestId) return;
+
+      this.page.set(requestedPage);
       if (reset) {
         this.events.set(data);
       } else {
-        this.events.update((prev) => [...prev, ...data]);
+        this.events.update((previous) => [...previous, ...data]);
       }
-      if (data.length < 20) {
-        this.hasMore.set(false);
-      }
+      this.hasMore.set(data.length === PAGE_SIZE);
     } catch {
-      // keep current state on error
+      if (requestId === this.latestRequestId) {
+        this.error.set(true);
+      }
     } finally {
-      this.isLoading.set(false);
+      if (requestId === this.latestRequestId) {
+        this.isLoading.set(false);
+      }
     }
   }
 
-  onStatusChange(value: 'upcoming' | 'past'): void {
+  onStatusChange(value: unknown): void {
+    if (value !== 'upcoming' && value !== 'past') return;
+    if (value === this.status()) return;
+
     this.status.set(value);
-    this.loadEvents(true);
+    void this.loadEvents(true);
   }
 
   onLanguageChange(value: string): void {
-    this.languagePair.set(value ? value : undefined);
-    this.loadEvents(true);
+    const nextLanguagePair = value || undefined;
+    if (nextLanguagePair === this.languagePair()) return;
+
+    this.languagePair.set(nextLanguagePair);
+    void this.loadEvents(true);
+  }
+
+  retry(): void {
+    if (this.isLoading()) return;
+    void this.loadEvents(this.events().length === 0);
   }
 
   loadMore(): void {
     if (this.isLoading() || !this.hasMore()) return;
-    this.page.update((p) => p + 1);
-    this.loadEvents();
+    void this.loadEvents();
   }
 }
