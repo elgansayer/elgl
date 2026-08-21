@@ -48,7 +48,10 @@ describe('R2Service', () => {
   });
 
   it('creates a bounded HMAC-signed Cloudflare Worker upload URL', async () => {
-    const result = await service.generateUploadUrl('voice note.webm', 'audio/webm');
+    const result = await service.generateUploadUrl(
+      'voice note.webm',
+      'audio/webm',
+    );
     const url = new URL(result.uploadUrl);
     const key = decodeURIComponent(url.pathname.split('/').slice(3).join('/'));
     const expires = url.searchParams.get('expires');
@@ -71,9 +74,7 @@ describe('R2Service', () => {
       .digest('base64url');
 
     expect(url.origin).toBe('https://gateway.example.workers.dev');
-    expect(key).toMatch(
-      /^voice_notes\/[0-9a-f-]{36}_voice_note\.webm$/,
-    );
+    expect(key).toMatch(/^voice_notes\/[0-9a-f-]{36}_voice_note\.webm$/);
     expect(url.searchParams.get('contentType')).toBe('audio/webm');
     expect(maximumBytes).toBe('1024');
     expect(url.searchParams.get('signature')).toBe(expectedSignature);
