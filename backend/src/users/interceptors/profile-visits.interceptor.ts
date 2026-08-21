@@ -22,7 +22,8 @@ export class ProfileVisitsInterceptor implements NestInterceptor {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const visitorId = request.user?.id;
-    const viewedId = request.params['id'];
+    const rawViewedId = request.params['id'];
+    const viewedId = typeof rawViewedId === 'string' ? rawViewedId : undefined;
 
     if (!visitorId || !viewedId || visitorId === viewedId) {
       return next.handle();
