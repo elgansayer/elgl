@@ -1,10 +1,6 @@
-<div
-  class="min-h-screen bg-gradient-to-b from-surface-50 to-surface-100 dark:from-gray-900 dark:to-gray-800"
->
+<div class="min-h-screen bg-gradient-to-b from-surface-50 to-surface-100">
   <!-- Hero Section -->
-  <section
-    class="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white"
-  >
+  <section class="relative overflow-hidden bg-gradient-to-br from-vip to-accent text-on-fill">
     <div
       class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"
     ></div>
@@ -13,7 +9,7 @@
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
           {{ 'vip.heroTitle' | t }}
         </h1>
-        <p class="text-xl sm:text-2xl text-purple-200 max-w-3xl mx-auto mb-8">
+        <p class="text-xl sm:text-2xl text-on-fill/80 max-w-3xl mx-auto mb-8">
           {{ 'vip.heroSubtitle' | t }}
         </p>
         <div class="flex flex-wrap justify-center gap-4">
@@ -26,7 +22,7 @@
           </app-gradient-button>
           <app-button-primary
             size="md"
-            customClass="bg-white text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg"
+            customClass="bg-on-fill text-vip hover:bg-on-fill/90 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >
             {{ 'vip.startFree' | t }}
@@ -40,7 +36,7 @@
   @if (loading()) {
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div class="flex justify-center items-center min-h-[400px]">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-vip"></div>
       </div>
     </section>
   }
@@ -48,11 +44,13 @@
   <!-- Error State -->
   @if (error()) {
     <div class="max-w-md mx-auto px-4 py-8">
-      <div class="bg-red-900/50 border border-red-700 rounded-lg p-4 text-center">
-        <p class="text-red-200">{{ error() }}</p>
+      <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 text-center">
+        <p class="text-danger">{{ error() }}</p>
         <button
+          hlmBtn
           (click)="loadPlans()"
-          class="mt-3 px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded transition-colors"
+          class="mt-3 px-4 py-2 bg-danger hover:bg-danger/90 text-on-fill rounded transition-colors"
+          [attr.aria-label]="'vip.tryAgain' | t"
         >
           {{ 'vip.tryAgain' | t }}
         </button>
@@ -66,28 +64,26 @@
       <!-- Free Plan -->
       @if (freePlan(); as plan) {
         <div class="mb-16">
-          <h2 class="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
+          <h2 class="text-3xl font-bold text-center mb-8 text-text-primary">
             {{ 'vip.freeUpgrade' | t }}
           </h2>
           <div class="max-w-lg mx-auto">
-            <div
-              class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8"
-            >
+            <div class="bg-surface-200 rounded-2xl shadow-lg border border-surface-100 p-8">
               <div class="flex items-center justify-between mb-6">
                 <div>
-                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
-                  <p class="text-gray-600 dark:text-gray-400 mt-1">{{ plan.description }}</p>
+                  <h3 class="text-2xl font-bold text-text-primary">{{ plan.name }}</h3>
+                  <p class="text-text-secondary mt-1">{{ plan.description }}</p>
                 </div>
                 <span class="text-4xl">{{ getPlanIcon(plan.id) }}</span>
               </div>
-              <div class="text-4xl font-bold text-gray-900 dark:text-white mb-6">
+              <div class="text-4xl font-bold text-text-primary mb-6">
                 {{ getPriceDisplay(plan) }}
               </div>
               <ul class="space-y-3 mb-8">
                 @for (feature of plan.features; track feature) {
                   <li class="flex items-start gap-3">
                     <svg
-                      class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0"
+                      class="w-5 h-5 text-success mt-0.5 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -99,7 +95,7 @@
                         d="M5 13l4 4L19 7"
                       ></path>
                     </svg>
-                    <span class="text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                    <span class="text-text-secondary">{{ feature }}</span>
                   </li>
                 }
               </ul>
@@ -113,28 +109,26 @@
 
       <!-- Premium Plans -->
       <div class="mb-12 text-center">
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 class="text-3xl font-bold text-text-primary mb-4">
           {{ 'vip.premiumPlans' | t }}
         </h2>
-        <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        <p class="text-lg text-text-secondary max-w-2xl mx-auto">
           {{ 'vip.premiumSubtitle' | t }}
         </p>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         @for (plan of paidPlans(); track plan.id) {
           <div
-            class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-            [class.border-purple-500]="plan.is_popular"
-            [class.border-gray-200]="!plan.is_popular"
-            [class.dark:border-purple-600]="plan.is_popular"
-            [class.dark:border-gray-700]="!plan.is_popular"
+            class="relative bg-surface-200 rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+            [class.border-vip]="plan.is_popular"
+            [class.border-surface-100]="!plan.is_popular"
           >
             <!-- Popular Badge -->
             @if (plan.is_popular) {
               <div class="absolute -top-4 inset-x-0 flex justify-center">
                 <span
-                  class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg"
+                  class="bg-gradient-to-r from-vip to-accent text-on-fill px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg"
                 >
                   {{ 'vip.mostPopular' | t }}
                 </span>
@@ -145,7 +139,7 @@
             @if (plan.badge_text && !plan.is_popular) {
               <div class="absolute -top-4 inset-x-0 flex justify-center">
                 <span
-                  class="bg-gray-800 dark:bg-gray-600 text-white px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg"
+                  class="bg-secondary text-on-fill px-6 py-1.5 rounded-full text-sm font-semibold shadow-lg"
                 >
                   {{ plan.badge_text }}
                 </span>
@@ -156,8 +150,8 @@
               <!-- Header -->
               <div class="flex items-center justify-between mb-4">
                 <div>
-                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plan.name }}</h3>
-                  <p class="text-gray-600 dark:text-gray-400 mt-1 text-sm">
+                  <h3 class="text-2xl font-bold text-text-primary">{{ plan.name }}</h3>
+                  <p class="text-text-secondary mt-1 text-sm">
                     {{ plan.description }}
                   </p>
                 </div>
@@ -166,27 +160,25 @@
 
               <!-- Price -->
               <div class="mb-6">
-                <span class="text-4xl font-bold text-gray-900 dark:text-white">
+                <span class="text-4xl font-bold text-text-primary">
                   {{ getPriceDisplay(plan) }}
                 </span>
                 @if (plan.price_usd > 0) {
-                  <span class="text-gray-500 dark:text-gray-400 ms-2">{{ 'vip.billedMonthly' | t }}</span>
+                  <span class="text-text-muted ms-2">{{ 'vip.billedMonthly' | t }}</span>
                 }
               </div>
 
               <!-- Highlighted Benefits -->
               @if (plan.highlighted_benefits && plan.highlighted_benefits.length > 0) {
-                <div class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                  <h4
-                    class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-3 uppercase tracking-wide"
-                  >
+                <div class="mb-6 p-4 bg-vip/10 rounded-xl">
+                  <h4 class="text-sm font-semibold text-vip mb-3 uppercase tracking-wide">
                     {{ 'vip.keyBenefits' | t }}
                   </h4>
                   <ul class="space-y-2">
                     @for (benefit of plan.highlighted_benefits; track benefit) {
                       <li class="flex items-start gap-2">
                         <svg
-                          class="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0"
+                          class="w-5 h-5 text-vip mt-0.5 flex-shrink-0"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -196,9 +188,7 @@
                             clip-rule="evenodd"
                           ></path>
                         </svg>
-                        <span class="text-purple-800 dark:text-purple-200 font-medium">{{
-                          benefit
-                        }}</span>
+                        <span class="text-vip font-medium">{{ benefit }}</span>
                       </li>
                     }
                   </ul>
@@ -207,16 +197,14 @@
 
               <!-- Full Features List -->
               <div class="mb-8">
-                <h4
-                  class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide"
-                >
+                <h4 class="text-sm font-semibold text-text-muted mb-3 uppercase tracking-wide">
                   {{ 'vip.allFeatures' | t }}
                 </h4>
                 <ul class="space-y-3">
                   @for (feature of plan.features; track feature) {
                     <li class="flex items-start gap-3">
                       <svg
-                        class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0"
+                        class="w-5 h-5 text-success mt-0.5 flex-shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -228,7 +216,7 @@
                           d="M5 13l4 4L19 7"
                         ></path>
                       </svg>
-                      <span class="text-gray-700 dark:text-gray-300">{{ feature }}</span>
+                      <span class="text-text-secondary">{{ feature }}</span>
                     </li>
                   }
                 </ul>
@@ -249,7 +237,7 @@
                   customClass="w-full text-base py-3"
                   (clicked)="onSubscribe(plan.id)"
                 >
-                  {{ 'vip.choosePlan' | t : {name: plan.name} }}
+                  {{ 'vip.choosePlan' | t: { name: plan.name } }}
                 </app-button-primary>
               }
             </div>
@@ -259,23 +247,23 @@
     </section>
 
     <!-- Feature Comparison Section -->
-    <section class="bg-gray-50 dark:bg-gray-900/50 py-16">
+    <section class="bg-surface-500 py-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
+        <h2 class="text-3xl font-bold text-center mb-12 text-text-primary">
           {{ 'vip.compareAllFeatures' | t }}
         </h2>
         <div class="overflow-x-auto">
-          <table class="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+          <table class="w-full bg-surface-200 rounded-2xl shadow-lg">
             <thead>
-              <tr class="border-b border-gray-200 dark:border-gray-700">
-                <th class="text-start p-4 font-semibold text-gray-900 dark:text-white">{{ 'vip.featureTableHeader' | t }}</th>
+              <tr class="border-b border-surface-100">
+                <th class="text-start p-4 font-semibold text-text-primary">
+                  {{ 'vip.featureTableHeader' | t }}
+                </th>
                 @for (plan of plans(); track plan.id) {
                   <th class="p-4 text-center font-semibold">
-                    <span class="text-gray-900 dark:text-white">{{ plan.name }}</span>
+                    <span class="text-text-primary">{{ plan.name }}</span>
                     @if (plan.is_popular) {
-                      <span class="block text-xs text-purple-600 dark:text-purple-400 mt-1"
-                        >{{ 'vip.popular' | t }}</span
-                      >
+                      <span class="block text-xs text-vip mt-1">{{ 'vip.popular' | t }}</span>
                     }
                   </th>
                 }
@@ -283,13 +271,13 @@
             </thead>
             <tbody>
               @for (feature of allFeatures(); track feature) {
-                <tr class="border-b border-gray-100 dark:border-gray-700/50">
-                  <td class="p-4 text-gray-700 dark:text-gray-300">{{ feature }}</td>
+                <tr class="border-b border-surface-100/50">
+                  <td class="p-4 text-text-secondary">{{ feature }}</td>
                   @for (plan of plans(); track plan.id) {
                     <td class="p-4 text-center">
                       @if (planFeaturesMap().get(plan.id)?.has(feature)) {
                         <svg
-                          class="w-5 h-5 text-green-500 mx-auto"
+                          class="w-5 h-5 text-success mx-auto"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -302,7 +290,7 @@
                           ></path>
                         </svg>
                       } @else {
-                        <span class="text-gray-300 dark:text-gray-600">-</span>
+                        <span class="text-text-muted">-</span>
                       }
                     </td>
                   }
@@ -316,39 +304,39 @@
 
     <!-- FAQ Section -->
     <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
+      <h2 class="text-3xl font-bold text-center mb-12 text-text-primary">
         {{ 'vip.faqTitle' | t }}
       </h2>
       <div class="space-y-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div class="bg-surface-200 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-text-primary mb-2">
             {{ 'vip.faqSwitchQ' | t }}
           </h3>
-          <p class="text-gray-600 dark:text-gray-400">
+          <p class="text-text-secondary">
             {{ 'vip.faqSwitchA' | t }}
           </p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div class="bg-surface-200 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-text-primary mb-2">
             {{ 'vip.faqTrialQ' | t }}
           </h3>
-          <p class="text-gray-600 dark:text-gray-400">
+          <p class="text-text-secondary">
             {{ 'vip.faqTrialA' | t }}
           </p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div class="bg-surface-200 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-text-primary mb-2">
             {{ 'vip.faqPaymentQ' | t }}
           </h3>
-          <p class="text-gray-600 dark:text-gray-400">
+          <p class="text-text-secondary">
             {{ 'vip.faqPaymentA' | t }}
           </p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div class="bg-surface-200 rounded-xl p-6 shadow-sm">
+          <h3 class="text-lg font-semibold text-text-primary mb-2">
             {{ 'vip.faqCancelQ' | t }}
           </h3>
-          <p class="text-gray-600 dark:text-gray-400">
+          <p class="text-text-secondary">
             {{ 'vip.faqCancelA' | t }}
           </p>
         </div>
@@ -356,25 +344,25 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white py-16">
+    <section class="bg-gradient-to-r from-vip to-accent text-on-fill py-16">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 class="text-3xl sm:text-4xl font-bold mb-4">
           {{ 'vip.ctaTitle' | t }}
         </h2>
-        <p class="text-xl text-purple-200 mb-8 max-w-2xl mx-auto">
+        <p class="text-xl text-on-fill/80 mb-8 max-w-2xl mx-auto">
           {{ 'vip.ctaSubtitle' | t }}
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <app-gradient-button
             size="md"
-            customClass="text-lg px-8 py-4 bg-white text-purple-700 hover:bg-purple-50"
+            customClass="text-lg px-8 py-4 bg-on-fill text-vip hover:bg-on-fill/90"
             (clicked)="scrollToPlans()"
           >
             {{ 'vip.viewPlans' | t }}
           </app-gradient-button>
           <app-button-primary
             size="md"
-            customClass="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-4 text-lg"
+            customClass="bg-transparent border-2 border-on-fill text-on-fill hover:bg-on-fill/10 px-8 py-4 text-lg"
             [routerLink]="['/discovery']"
           >
             {{ 'vip.continueFree' | t }}

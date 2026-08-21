@@ -362,4 +362,698 @@ describe('UserService', () => {
       ).toBeNull();
     });
   });
+
+  describe('followUser', () => {
+    it('should POST to /users/:id/follow', async () => {
+      const resultPromise = service.followUser('user-1');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-1/follow`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.has('Authorization')).toBe(true);
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const resultPromise = service.followUser('user-1');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-1/follow`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('unfollowUser', () => {
+    it('should DELETE /users/:id/follow', async () => {
+      const resultPromise = service.unfollowUser('user-1');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-1/follow`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const resultPromise = service.unfollowUser('user-1');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-1/follow`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('likeProfile', () => {
+    it('should POST to /users/:id/like', async () => {
+      const resultPromise = service.likeProfile('user-2');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-2/like`);
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const resultPromise = service.likeProfile('user-2');
+
+      const req = httpMock.expectOne(`${baseUrl}/user-2/like`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('setDefaultTranslationLanguage', () => {
+    it('should delegate to updateMyProfile with the language', async () => {
+      const resultPromise = service.setDefaultTranslationLanguage('fr');
+
+      const req = httpMock.expectOne(`${baseUrl}/me`);
+      expect(req.request.body).toEqual({ default_translation_language: 'fr' });
+      req.flush(createProfile({ default_translation_language: 'fr' }));
+
+      const result = await resultPromise;
+      expect(result?.default_translation_language).toBe('fr');
+    });
+  });
+
+  describe('updateNativeLanguages', () => {
+    it('should delegate to updateMyProfile with native languages', async () => {
+      const resultPromise = service.updateNativeLanguages(['de', 'en']);
+
+      const req = httpMock.expectOne(`${baseUrl}/me`);
+      expect(req.request.body).toEqual({ native_languages: ['de', 'en'] });
+      req.flush(createProfile({ native_languages: ['de', 'en'] }));
+
+      const result = await resultPromise;
+      expect(result?.native_languages).toEqual(['de', 'en']);
+    });
+  });
+
+  describe('updateTargetLanguages', () => {
+    it('should delegate to updateMyProfile with target languages', async () => {
+      const resultPromise = service.updateTargetLanguages(['ja']);
+
+      const req = httpMock.expectOne(`${baseUrl}/me`);
+      expect(req.request.body).toEqual({ target_languages: ['ja'] });
+      req.flush(createProfile({ target_languages: ['ja'] }));
+
+      const result = await resultPromise;
+      expect(result?.target_languages).toEqual(['ja']);
+    });
+  });
+
+  describe('getMyVisitors', () => {
+    it('should GET /profile-visits/my-visitors', async () => {
+      const visitsUrl = `${environment.apiUrl}/profile-visits`;
+      const visitors = [
+        {
+          id: 'v-1',
+          created_at: '2024-01-01T00:00:00Z',
+          is_blurred: false,
+          visitor: {
+            id: 'u-1',
+            native_languages: ['en'],
+            target_languages: ['fr'],
+          },
+        },
+      ];
+      const resultPromise = service.getMyVisitors();
+
+      const req = httpMock.expectOne(`${visitsUrl}/my-visitors`);
+      expect(req.request.method).toBe('GET');
+      req.flush(visitors);
+
+      await expect(resultPromise).resolves.toEqual(visitors);
+    });
+  });
+
+  describe('getPresignedUploadUrl', () => {
+    it('should POST to /media/presigned-url', async () => {
+      const mediaUrl = `${environment.apiUrl}/media`;
+      const responseData = {
+        uploadUrl: 'https://r2.example.com/upload',
+        mediaUrl: 'https://r2.example.com/file.jpg',
+        objectKey: 'uploads/file.jpg',
+      };
+      const resultPromise = service.getPresignedUploadUrl('file.jpg', 'image/jpeg', 'uploads');
+
+      const req = httpMock.expectOne(`${mediaUrl}/presigned-url`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ filename: 'file.jpg', contentType: 'image/jpeg', folder: 'uploads' });
+      req.flush(responseData);
+
+      await expect(resultPromise).resolves.toEqual(responseData);
+    });
+  });
+
+  describe('getPresignedCoverPhotoUrl', () => {
+    it('should POST to /users/me/cover-photo/presigned-url', async () => {
+      const responseData = {
+        uploadUrl: 'https://r2.example.com/upload',
+        mediaUrl: 'https://r2.example.com/cover.jpg',
+        objectKey: 'covers/cover.jpg',
+      };
+      const resultPromise = service.getPresignedCoverPhotoUrl('cover.jpg', 'image/jpeg');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/cover-photo/presigned-url`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ filename: 'cover.jpg', contentType: 'image/jpeg' });
+      req.flush(responseData);
+
+      await expect(resultPromise).resolves.toEqual(responseData);
+    });
+  });
+
+  describe('getPresignedAvatarUrl', () => {
+    it('should POST to /users/me/avatar/presigned-url', async () => {
+      const responseData = {
+        uploadUrl: 'https://r2.example.com/upload',
+        mediaUrl: 'https://r2.example.com/avatar.jpg',
+        objectKey: 'avatars/avatar.jpg',
+      };
+      const resultPromise = service.getPresignedAvatarUrl('avatar.jpg', 'image/jpeg');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/avatar/presigned-url`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ filename: 'avatar.jpg', contentType: 'image/jpeg' });
+      req.flush(responseData);
+
+      await expect(resultPromise).resolves.toEqual(responseData);
+    });
+  });
+
+  describe('updateCoverPhotoUrl', () => {
+    it('should PATCH /users/me/cover-photo with the URL', async () => {
+      const updatedProfile = createProfile({ cover_photo_url: 'https://r2.example.com/cover.jpg' });
+      const resultPromise = service.updateCoverPhotoUrl('https://r2.example.com/cover.jpg');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/cover-photo`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ cover_photo_url: 'https://r2.example.com/cover.jpg' });
+      req.flush(updatedProfile);
+
+      await expect(resultPromise).resolves.toEqual(updatedProfile);
+    });
+  });
+
+  describe('rateCorrector', () => {
+    it('should POST to /corrector-score/rate', async () => {
+      const correctorUrl = `${environment.apiUrl}/corrector-score/rate`;
+      const resultPromise = service.rateCorrector('user-1', 5);
+
+      const req = httpMock.expectOne(correctorUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ rated_user_id: 'user-1', score: 5 });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const correctorUrl = `${environment.apiUrl}/corrector-score/rate`;
+      const resultPromise = service.rateCorrector('user-1', 3);
+
+      const req = httpMock.expectOne(correctorUrl);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('getLinkedAccounts', () => {
+    it('should GET /users/me/linked-accounts', async () => {
+      const accounts = [{ id: 'acc-1', provider: 'google', provider_id: 'g-123', created_at: '2024-01-01T00:00:00Z' }];
+      const resultPromise = service.getLinkedAccounts();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts`);
+      expect(req.request.method).toBe('GET');
+      req.flush(accounts);
+
+      await expect(resultPromise).resolves.toEqual(accounts);
+    });
+
+    it('should return an empty array on error', async () => {
+      const resultPromise = service.getLinkedAccounts();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual([]);
+    });
+  });
+
+  describe('getMyPrivacySettings', () => {
+    it('should GET /users/me/privacy-settings', async () => {
+      const settings = {
+        privacy_hide_age: true,
+        privacy_hide_location: false,
+        privacy_hide_from_search: false,
+        privacy_hide_gender: false,
+        privacy_hide_exact_location: false,
+        privacy_hide_online_status: false,
+        privacy_hide_vip_status: false,
+      };
+      const resultPromise = service.getMyPrivacySettings();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/privacy-settings`);
+      expect(req.request.method).toBe('GET');
+      req.flush(settings);
+
+      await expect(resultPromise).resolves.toEqual(settings);
+    });
+
+    it('should fall back to mock data on error', async () => {
+      const resultPromise = service.getMyPrivacySettings();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/privacy-settings`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      const result = await resultPromise;
+      expect(result).toBeTruthy();
+      expect(typeof result.privacy_hide_age).toBe('boolean');
+    });
+  });
+
+  describe('linkAccount', () => {
+    it('should POST to /users/me/linked-accounts/link', async () => {
+      const resultPromise = service.linkAccount('google');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts/link`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ provider: 'google' });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const resultPromise = service.linkAccount('google');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts/link`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('unlinkAccount', () => {
+    it('should POST to /users/me/linked-accounts/unlink', async () => {
+      const resultPromise = service.unlinkAccount('google');
+
+      const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts/unlink`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ provider: 'google' });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('getAvailableHobbies', () => {
+    it('should GET /users/hobbies', async () => {
+      const hobbies = ['reading', 'gaming'];
+      const resultPromise = service.getAvailableHobbies();
+
+      const req = httpMock.expectOne(`${baseUrl}/hobbies`);
+      expect(req.request.method).toBe('GET');
+      req.flush(hobbies);
+
+      await expect(resultPromise).resolves.toEqual(hobbies);
+    });
+
+    it('should fall back to built-in list on error', async () => {
+      const resultPromise = service.getAvailableHobbies();
+
+      const req = httpMock.expectOne(`${baseUrl}/hobbies`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      const result = await resultPromise;
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('reading');
+    });
+  });
+
+  describe('getAvailableInterests', () => {
+    it('should GET /users/interests', async () => {
+      const interests = ['technology', 'art'];
+      const resultPromise = service.getAvailableInterests();
+
+      const req = httpMock.expectOne(`${baseUrl}/interests`);
+      expect(req.request.method).toBe('GET');
+      req.flush(interests);
+
+      await expect(resultPromise).resolves.toEqual(interests);
+    });
+
+    it('should fall back to built-in list on error', async () => {
+      const resultPromise = service.getAvailableInterests();
+
+      const req = httpMock.expectOne(`${baseUrl}/interests`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      const result = await resultPromise;
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toContain('technology');
+    });
+  });
+
+  describe('getMyBadges', () => {
+    it('should GET /users/me/badges', async () => {
+      const badges = [{ id: 'b-1', badge_type: 'streak', awarded_at: '2024-01-01T00:00:00Z', label: 'Streak' }];
+      const resultPromise = service.getMyBadges();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/badges`);
+      expect(req.request.method).toBe('GET');
+      req.flush(badges);
+
+      await expect(resultPromise).resolves.toEqual(badges);
+    });
+
+    it('should return an empty array on error', async () => {
+      const resultPromise = service.getMyBadges();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/badges`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual([]);
+    });
+  });
+
+  describe('assessProficiency', () => {
+    it('should POST to /users/me/assess-proficiency and return the level', async () => {
+      const resultPromise = service.assessProficiency(85);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/assess-proficiency`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ score: 85 });
+      req.flush({ level: 'B2' });
+
+      await expect(resultPromise).resolves.toBe('B2');
+    });
+
+    it('should fall back to A1 on error', async () => {
+      const resultPromise = service.assessProficiency(10);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/assess-proficiency`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBe('A1');
+    });
+  });
+
+  describe('getOverviewStats', () => {
+    it('should GET /users/stats/me', async () => {
+      const stats = { translations_count: 10, corrections_count: 5, moments_count: 3 };
+      const resultPromise = service.getOverviewStats();
+
+      const req = httpMock.expectOne(`${baseUrl}/stats/me`);
+      expect(req.request.method).toBe('GET');
+      req.flush(stats);
+
+      await expect(resultPromise).resolves.toEqual(stats);
+    });
+
+    it('should return zeroed stats on error', async () => {
+      const resultPromise = service.getOverviewStats();
+
+      const req = httpMock.expectOne(`${baseUrl}/stats/me`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual({
+        translations_count: 0,
+        corrections_count: 0,
+        moments_count: 0,
+      });
+    });
+  });
+
+  describe('getMyXpTotal', () => {
+    it('should GET /users/me/xp and return totalXp', async () => {
+      const resultPromise = service.getMyXpTotal();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/xp`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ totalXp: 1500 });
+
+      await expect(resultPromise).resolves.toBe(1500);
+    });
+
+    it('should return 0 on error', async () => {
+      const resultPromise = service.getMyXpTotal();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/xp`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBe(0);
+    });
+  });
+
+  describe('updatePrivacySettings', () => {
+    it('should PATCH /users/me/privacy with the settings', async () => {
+      const settings = { privacy_last_seen: 'contacts', incognito_visits: true };
+      const updatedProfile = createProfile();
+      const resultPromise = service.updatePrivacySettings(settings);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/privacy`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(settings);
+      req.flush(updatedProfile);
+
+      await expect(resultPromise).resolves.toEqual(updatedProfile);
+    });
+
+    it('should fall back to mock profile on error', async () => {
+      const resultPromise = service.updatePrivacySettings({ incognito_visits: true });
+
+      const req = httpMock.expectOne(`${baseUrl}/me/privacy`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      const result = await resultPromise;
+      expect(result).toBeTruthy();
+      expect(result.id).toBeDefined();
+    });
+  });
+
+  describe('getBusinessProfile', () => {
+    it('should GET /users/me/business', async () => {
+      const business = { business_name: 'Acme Corp', website_url: 'https://acme.com' };
+      const resultPromise = service.getBusinessProfile();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/business`);
+      expect(req.request.method).toBe('GET');
+      req.flush(business);
+
+      await expect(resultPromise).resolves.toEqual(business);
+    });
+  });
+
+  describe('updateBusinessProfile', () => {
+    it('should PATCH /users/me/business with the business data', async () => {
+      const business = { business_name: 'Acme Corp', website_url: 'https://acme.com' };
+      const updatedProfile = createProfile();
+      const resultPromise = service.updateBusinessProfile(business);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/business`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(business);
+      req.flush(updatedProfile);
+
+      await expect(resultPromise).resolves.toEqual(updatedProfile);
+    });
+  });
+
+  describe('blockUser', () => {
+    it('should POST to /trust-safety/block', async () => {
+      const trustUrl = `${environment.apiUrl}/safety/block`;
+      const resultPromise = service.blockUser('user-3');
+
+      const req = httpMock.expectOne(trustUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ blocked_id: 'user-3' });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const trustUrl = `${environment.apiUrl}/safety/block`;
+      const resultPromise = service.blockUser('user-3');
+
+      const req = httpMock.expectOne(trustUrl);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('unblockUser', () => {
+    it('should DELETE /trust-safety/block/:id', async () => {
+      const trustUrl = `${environment.apiUrl}/safety/unblock`;
+      const resultPromise = service.unblockUser('user-3');
+
+      const req = httpMock.expectOne(trustUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ blocked_id: 'user-3' });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const trustUrl = `${environment.apiUrl}/safety/unblock`;
+      const resultPromise = service.unblockUser('user-3');
+
+      const req = httpMock.expectOne(trustUrl);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('reportUser', () => {
+    it('should POST to /trust-safety/report', async () => {
+      const reportUrl = `${environment.apiUrl}/safety/report`;
+      const resultPromise = service.reportUser('user-4', 'spam', 'Sending spam', 'https://app/post/1');
+
+      const req = httpMock.expectOne(reportUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        reported_id: 'user-4',
+        reason_category: 'spam',
+        description: 'Sending spam',
+        context_url: 'https://app/post/1',
+      });
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const reportUrl = `${environment.apiUrl}/safety/report`;
+      const resultPromise = service.reportUser('user-4', 'spam');
+
+      const req = httpMock.expectOne(reportUrl);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('deleteMyAccount', () => {
+    it('should DELETE /users/me', async () => {
+      const response = { message: 'Account scheduled for deletion', scheduled_for_deletion_at: '2024-02-01T00:00:00Z' };
+      const resultPromise = service.deleteMyAccount();
+
+      const req = httpMock.expectOne(`${baseUrl}/me`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(response);
+
+      await expect(resultPromise).resolves.toEqual(response);
+    });
+
+    it('should return empty strings on error', async () => {
+      const resultPromise = service.deleteMyAccount();
+
+      const req = httpMock.expectOne(`${baseUrl}/me`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual({ message: '', scheduled_for_deletion_at: '' });
+    });
+  });
+
+  describe('restoreMyAccount', () => {
+    it('should POST to /users/me/restore', async () => {
+      const resultPromise = service.restoreMyAccount();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/restore`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ message: 'Account restored' });
+
+      await expect(resultPromise).resolves.toEqual({ message: 'Account restored' });
+    });
+
+    it('should return empty message on error', async () => {
+      const resultPromise = service.restoreMyAccount();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/restore`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual({ message: '' });
+    });
+  });
+
+  describe('getMessageFilters', () => {
+    it('should GET /users/me/message-filters', async () => {
+      const filters = { age_min: 18, age_max: 35, allowed_genders: ['female'] };
+      const resultPromise = service.getMessageFilters();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/message-filters`);
+      expect(req.request.method).toBe('GET');
+      req.flush(filters);
+
+      await expect(resultPromise).resolves.toEqual(filters);
+    });
+
+    it('should return empty object on error', async () => {
+      const resultPromise = service.getMessageFilters();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/message-filters`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toEqual({});
+    });
+  });
+
+  describe('setMessageFilters', () => {
+    it('should PUT to /users/me/message-filters', async () => {
+      const filters = { age_min: 18, age_max: 40 };
+      const resultPromise = service.setMessageFilters(filters);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/message-filters`);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(filters);
+      req.flush(null);
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+
+    it('should silently ignore errors', async () => {
+      const resultPromise = service.setMessageFilters({ age_min: 18 });
+
+      const req = httpMock.expectOne(`${baseUrl}/me/message-filters`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      await expect(resultPromise).resolves.toBeFalsy();
+    });
+  });
+
+  describe('setDoNotDisturbSchedule', () => {
+    it('should PATCH /users/me/dnd with the settings', async () => {
+      const settings = { do_not_disturb: true, quiet_hours_start: '22:00', quiet_hours_end: '08:00' };
+      const updatedProfile = createProfile();
+      const resultPromise = service.setDoNotDisturbSchedule(settings);
+
+      const req = httpMock.expectOne(`${baseUrl}/me/dnd`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(settings);
+      req.flush(updatedProfile);
+
+      await expect(resultPromise).resolves.toEqual(updatedProfile);
+    });
+
+    it('should fall back to mock profile on error', async () => {
+      const resultPromise = service.setDoNotDisturbSchedule({ do_not_disturb: false });
+
+      const req = httpMock.expectOne(`${baseUrl}/me/dnd`);
+      req.flush('error', { status: 500, statusText: 'Error' });
+
+      const result = await resultPromise;
+      expect(result).toBeTruthy();
+      expect(result.id).toBeDefined();
+    });
+  });
 });

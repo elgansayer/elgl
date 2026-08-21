@@ -3,10 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
   Query,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -31,14 +35,17 @@ import {
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
+import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
+import type { Request, Response } from 'express';
 
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
   ) {}
@@ -47,15 +54,43 @@ export class ChatController {
   // signed Centrifugo connection token, the most auth-sensitive operation this
   // backend issues (actual login/signup is delegated entirely to Supabase Auth,
   // which is not part of this codebase and has its own rate limiting).
+  // Additionally enforces Redis-backed sliding-window WebSocket connection
+  // rate limiting (CENTRIFUGO_CONNECTION_RATE_LIMIT per window).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
   async getConnectionToken(
     @CurrentUser() user: User | null,
+    @Req() request: Request,
+    @Res() response: Response,
   ): Promise<{ token: string } | null> {
-    if (!user) return null;
+    if (!user) {
+      response.status(HttpStatus.UNAUTHORIZED).json(null);
+      return null;
+    }
+
+    const rateLimit = await this.centrifugoService.checkConnectionRateLimit(
+      user.id,
+      request?.ip,
+    );
+    const allowed =
+      typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
+    if (!allowed) {
+      const exception = new HttpException(
+        'Too many WebSocket connection attempts. Please wait before reconnecting.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+      response.header('Retry-After', '30').status(429).json({
+        statusCode: 429,
+        message: exception.message,
+      });
+      return null;
+    }
+
     const token =
       (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
-    return { token };
+    const result = { token };
+    response.json(result);
+    return result;
   }
 
   @Post('messages')

@@ -1,78 +1,24 @@
-You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
+# GitHub Copilot repository instructions
 
-## TypeScript Best Practices
+Copilot starts from the repository's central engineering and UI guidance. Before frontend work, read `AGENTS.md`, `frontend/AGENTS.md`, `DESIGN.md`, `docs/agent-ui-governance.md`, `docs/spartan-relay-architecture.md`, and `docs/claude-design-two-way-sync.md`.
 
-- Use strict type checking
-- Prefer type inference when the type is obvious
-- Avoid the `any` type; use `unknown` when type is uncertain
+Relay is the application-facing visual/component authority. Spartan owns supported accessible interaction mechanics through the repository-owned Helm layer. Do not introduce direct Brain imports in feature code when Relay/Helm owns the capability, and do not recreate focus, keyboard, overlay, menu, dialog, selection, tabs, forms or combobox state already provided by Spartan.
 
-## Angular Best Practices
+Claude Design is the two-way design-intent/review workspace. Material visual or shared interaction-contract changes must update deterministic preview/design-sync metadata and follow the documented design-first, code-first or reconciliation flow.
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
-- Use signals for state management
-- Implement lazy loading for feature routes
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
-- Use `NgOptimizedImage` for all static images.
-  - `NgOptimizedImage` does not work for inline base64 images.
+Preserve semantic tokens, first-class light/dark themes, per-user accent semantics, RTL/logical direction, i18n, keyboard and screen-reader accessibility, high zoom/reflow, reduced motion, forced colours and deliberate responsive layouts. Original product screenshots are reference evidence, not strict styling authority.
 
-## Accessibility Requirements
+Detailed Angular, TypeScript, API, security, testing, and verification guidance lives in `AGENTS.md` and
+`frontend/AGENTS.md`. Treat it as strong, editable defaults while continuing to obey mechanically enforced checks
+and safety requirements. Do not preserve stale copied audit findings here. Before recurring workflows, use the
+current repository skills under `.agents/skills/`, `.claude/skills/`, or other explicitly maintained skill
+locations as appropriate.
 
-- It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, colour contrast, and ARIA attributes.
+Relevant frontend work must pass the normal verification gates plus:
 
-### Components
+```bash
+npm run check:spartan-boundaries
+npm run check:design-sync
+```
 
-- Keep components small and focused on a single responsibility
-- Use `input()` and `output()` functions instead of decorators
-- Use `computed()` for derived state
-- Prefer inline templates for small components
-- Prefer Signal Forms (`@angular/forms/signals`) for new forms. They are stable in Angular v22+ and provide signal-based state, type-safe field access, and schema-based validation
-- When not using Signal Forms, prefer Reactive forms instead of Template-driven ones
-- Do NOT use `ngClass`, use `class` bindings instead
-- Do NOT use `ngStyle`, use `style` bindings instead
-- When using external templates/styles, use paths relative to the component TS file.
-
-## State Management
-
-- Use signals for local component state
-- Use `computed()` for derived state
-- Keep state transformations pure and predictable
-- Do NOT use `mutate` on signals, use `update` or `set` instead
-
-## Templates
-
-- Keep templates simple and avoid complex logic
-- Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
-- Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available.
-
-## Services
-
-- Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
-- Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
-- Use the `inject()` function instead of constructor injection
-
-## Engineering Constitution & Project Mandates
-
-In addition to the Angular and TypeScript best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
-
-- **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
-- **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.
-- **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
-- **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
-- **Verification:** Always run `npm run lint` and verify no compiler errors exist before marking tasks complete in `TODO.md`.
-
-## Known Issues (see AGENTS.md Section 8 for full detail)
-
-`TODO.md` marks every phase as complete, but an audit (2026-07-22) found real gaps. Do not trust checked-off items blindly:
-
-- **Critical security:** the Stripe webhook, `/monetisation/upgrade`, and `/economy/purchase-coins` endpoints all grant VIP status / coins without verifying any real payment (no webhook signature check, no receipt validation). Do not build on top of these without fixing them first; see the `payment-webhook-security` skill.
-- **Mocked AI:** `backend/src/nlp/nlp.service.ts` translation/grammar/pronunciation endpoints are hardcoded stand-ins, not real Azure/DeepL/speech-API calls.
-- Already fixed during the audit: 22 components had a banned explicit `standalone: true`, and one frontend spec had lint errors plus a failing test.
-
-## Skills System
-
-Before starting recurring, well-defined workflows (new API module, new component, new migration, new realtime channel, LiveKit flow, i18n keys, or the pre-completion verification gate), check `.github/skills/<name>/SKILL.md` for the established convention rather than re-deriving it.
+After Spartan package/configuration/owned Helm changes, run the Spartan health checks documented in `docs/spartan-upgrade-runbook.md`.

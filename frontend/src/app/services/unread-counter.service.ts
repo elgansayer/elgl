@@ -1,58 +1,120 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
 
+/** Identifies a navigation tab for per-tab badge counts. */
+export type NavTab = 'chat' | 'moments' | 'discovery' | 'audioRooms' | 'profile';
+
 @Injectable({
   providedIn: 'root',
 })
 export class UnreadCounterService {
-  // Signals for specific unread categories
   readonly chatUnread = signal<number>(0);
+  readonly momentsUnread = signal<number>(0);
+  readonly discoveryUnread = signal<number>(0);
+  readonly audioRoomsUnread = signal<number>(0);
   readonly notificationUnread = signal<number>(0);
 
-  // Computed total for the app badge
-  readonly totalUnread = computed(() => this.chatUnread() + this.notificationUnread());
+  /** Per-tab lookup so the template can bind to a single `tabCount(tab)` call. */
+  readonly tabCount = (tab: NavTab): number => {
+    switch (tab) {
+      case 'chat':
+        return this.chatUnread();
+      case 'moments':
+        return this.momentsUnread();
+      case 'discovery':
+        return this.discoveryUnread();
+      case 'audioRooms':
+        return this.audioRoomsUnread();
+      case 'profile':
+        return this.notificationUnread();
+    }
+  };
+
+  readonly totalUnread = computed(
+    () =>
+      this.chatUnread() +
+      this.momentsUnread() +
+      this.discoveryUnread() +
+      this.audioRoomsUnread() +
+      this.notificationUnread(),
+  );
 
   constructor() {
-    // Automatically update the PWA app badge whenever the total changes
     effect(() => {
       this.updateAppBadge(this.totalUnread());
     });
   }
 
+  // Generic helpers
+
+  set(tab: NavTab, count: number): void {
+    this.signalFor(tab).set(Math.max(0, count));
+  }
+
+  increment(tab: NavTab): void {
+    this.signalFor(tab).update((c) => c + 1);
+  }
+
+  decrement(tab: NavTab): void {
+    this.signalFor(tab).update((c) => Math.max(0, c - 1));
+  }
+
+  resetAll(): void {
+    this.chatUnread.set(0);
+    this.momentsUnread.set(0);
+    this.discoveryUnread.set(0);
+    this.audioRoomsUnread.set(0);
+    this.notificationUnread.set(0);
+  }
+
+  // Legacy methods kept for backward compat
+
   setChatUnread(count: number): void {
-    this.chatUnread.set(Math.max(0, count));
+    this.set('chat', count);
   }
 
   setNotificationUnread(count: number): void {
-    this.notificationUnread.set(Math.max(0, count));
+    this.set('profile', count);
   }
 
   incrementChatUnread(): void {
-    this.chatUnread.update((c) => c + 1);
+    this.increment('chat');
   }
 
   decrementChatUnread(): void {
-    this.chatUnread.update((c) => Math.max(0, c - 1));
+    this.decrement('chat');
   }
 
   incrementNotificationUnread(): void {
-    this.notificationUnread.update((c) => c + 1);
+    this.increment('profile');
   }
 
   decrementNotificationUnread(): void {
-    this.notificationUnread.update((c) => Math.max(0, c - 1));
+    this.decrement('profile');
+  }
+
+  // Private helpers
+
+  private signalFor(tab: NavTab): ReturnType<typeof signal<number>> {
+    const map: Record<NavTab, ReturnType<typeof signal<number>>> = {
+      chat: this.chatUnread,
+      moments: this.momentsUnread,
+      discovery: this.discoveryUnread,
+      audioRooms: this.audioRoomsUnread,
+      profile: this.notificationUnread,
+    };
+    return map[tab];
   }
 
   private updateAppBadge(count: number): void {
-    if (typeof navigator !== 'undefined') {
-      if (count > 0 && this.hasSetAppBadge(navigator)) {
-        navigator.setAppBadge(count).catch((error: unknown) => {
-          console.error('Failed to set app badge:', error);
-        });
-      } else if (count === 0 && this.hasClearAppBadge(navigator)) {
-        navigator.clearAppBadge().catch((error: unknown) => {
-          console.error('Failed to clear app badge:', error);
-        });
-      }
+    if (typeof navigator === 'undefined') return;
+    if (count > 0 && this.hasSetAppBadge(navigator)) {
+      navigator.setAppBadge(count).catch(() => {
+        // Badge API not available in all browsers - silently ignore
+      });
+    } else if (count === 0 && this.hasClearAppBadge(navigator)) {
+      navigator.clearAppBadge().catch(() => {
+        // Badge API not available in all browsers - silently ignore
+      });
     }
   }
 

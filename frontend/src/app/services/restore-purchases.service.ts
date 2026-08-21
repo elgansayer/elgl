@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { showToast } from './toast.service';
+import { I18nService } from './i18n.service';
 import { environment } from '../../environments/environment';
 
 export interface RestoreResult {
@@ -23,6 +24,7 @@ export class RestorePurchasesService {
   readonly lastRestoreResult = signal<RestoreResult | null>(null);
 
   private http = inject(HttpClient);
+  private i18n = inject(I18nService);
 
   async restorePurchases(platform: 'ios' | 'android' | 'stripe' = 'stripe', receiptData?: string): Promise<RestoreResult> {
     this.isRestoring.set(true);
@@ -41,10 +43,10 @@ export class RestorePurchasesService {
         success,
         restoredPlans: success ? [response.status] : [],
         message: success
-          ? 'Successfully restored your purchase(s).'
+          ? this.i18n.translate('restorePurchases.success')
           : response.status === 'no_valid_subscription'
-            ? 'No previous purchases found to restore.'
-            : 'Failed to restore purchases. Please try again later.',
+            ? this.i18n.translate('restorePurchases.noSubscriptionFound')
+            : this.i18n.translate('restorePurchases.failed'),
       };
 
       this.lastRestoreResult.set(result);
@@ -60,7 +62,7 @@ export class RestorePurchasesService {
       const result: RestoreResult = {
         success: false,
         restoredPlans: [],
-        message: 'Failed to restore purchases. Please try again later.',
+        message: this.i18n.translate('restorePurchases.failed'),
       };
       this.lastRestoreResult.set(result);
       showToast(result.message, 'error', 5000);

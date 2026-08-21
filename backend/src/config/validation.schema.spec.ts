@@ -1,127 +1,151 @@
 import { validationSchema } from './validation.schema';
 
 describe('validationSchema', () => {
-  it('applies default values when no environment variables are provided', () => {
-    const { error, value } = validationSchema.validate({});
+  it('applies safe development defaults', () => {
+    const { error, value } = validationSchema.validate({
+      TRANSFER_SECRET: 'test-transfer-secret',
+    });
+
     expect(error).toBeUndefined();
     expect(value.PORT).toBe(3000);
     expect(value.NODE_ENV).toBe('development');
+    expect(value.FRONTEND_URL).toBe('http://localhost:4200');
     expect(value.SUPABASE_URL).toBe('https://example.supabase.co');
-    expect(value.SUPABASE_ANON_KEY).toBe('test-anon-key');
-    expect(value.SUPABASE_SERVICE_ROLE_KEY).toBe('test-service-role-key');
-    expect(value.DATABASE_URL).toBe('postgres://user:pass@localhost:5432/db');
     expect(value.REDIS_URL).toBe('redis://localhost:6379');
     expect(value.CENTRIFUGO_URL).toBe('http://localhost:8000');
-    expect(value.CENTRIFUGO_API_KEY).toBe('test-centrifugo-api-key');
-    expect(value.CENTRIFUGO_SECRET).toBe('test-centrifugo-secret');
-    expect(value.LIVEKIT_URL).toBe('http://localhost:7880');
-    expect(value.LIVEKIT_API_KEY).toBe('test-livekit-api-key');
-    expect(value.LIVEKIT_SECRET).toBe('test-livekit-secret');
-    expect(value.CLOUDFLARE_R2_ENDPOINT).toBe(
-      'https://example.r2.cloudflarestorage.com',
+    expect(value.LIVEKIT_URL).toBe('ws://localhost:7880');
+
+    expect(value.CLOUDFLARE_R2_GATEWAY_URL).toBe('http://localhost:8787');
+    expect(value.CLOUDFLARE_R2_SIGNING_SECRET).toBe(
+      'test-r2-signing-secret-with-at-least-32-characters',
     );
-    expect(value.CLOUDFLARE_R2_ACCESS_KEY_ID).toBe('test-r2-access-key-id');
-    expect(value.CLOUDFLARE_R2_SECRET_ACCESS_KEY).toBe(
-      'test-r2-secret-access-key',
+    expect(value.CLOUDFLARE_R2_SERVICE_TOKEN).toBe(
+      'test-r2-service-token-with-at-least-32-characters',
     );
-    expect(value.CLOUDFLARE_R2_BUCKET).toBe('test-bucket');
-    expect(value.CLOUDFLARE_R2_PUBLIC_DOMAIN).toBe('https://example.com');
-    expect(value.DEEPL_API_KEY).toBe('test-deepl-key');
-    expect(value.AZURE_TRANSLATOR_KEY).toBe('test-azure-key');
-    expect(value.STRIPE_SECRET_KEY).toBe('sk_test_123');
-    expect(value.STRIPE_WEBHOOK_SECRET).toBe('whsec_test');
-    expect(value.STRIPE_MONTHLY_PRICE_ID).toBe('price_monthly_test');
-    expect(value.STRIPE_YEARLY_PRICE_ID).toBe('price_yearly_test');
-    expect(value.APPLE_SHARED_SECRET).toBe('test-apple-secret');
-    expect(value.APPLE_ROOT_CA_CERT_1).toBe('test-apple-ca-cert-1');
-    expect(value.GOOGLE_PUBSUB_AUDIENCE).toBe(
-      'https://pubsub.googleapis.com/test',
+    expect(value.CLOUDFLARE_R2_PUBLIC_URL).toBe('https://cdn.example.com');
+    expect(value.CLOUDFLARE_R2_SOURCE_HOSTS).toBe('recordings.example.com');
+    expect(value.CLOUDFLARE_R2_UPLOAD_TTL_SECONDS).toBe(3600);
+    expect(value.CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES).toBe(26214400);
+    expect(value.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES).toBe(104857600);
+    expect(value.CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS).toBe(30000);
+
+    expect(value.CLOUDFLARE_STREAM_ACCOUNT_ID).toBe(
+      'test-cloudflare-account-id',
     );
-    expect(value.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL).toBe('test@example.com');
-    expect(value.LLM_API_KEY).toBe('test-llm-key');
-    expect(value.LLM_PROVIDER).toBe('openai');
+    expect(value.CLOUDFLARE_STREAM_API_TOKEN).toBe(
+      'test-cloudflare-stream-api-token',
+    );
+    expect(value.CLOUDFLARE_STREAM_ALLOWED_ORIGINS).toBe(
+      'http://localhost:4200',
+    );
+    expect(value.CLOUDFLARE_STREAM_POLL_INTERVAL_MS).toBe(5000);
+    expect(value.CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS).toBe(120000);
+    expect(value.CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS).toBe(1);
+    expect(value.AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS).toBe(600000);
+    expect(value.TRANSFER_SECRET).toBe('test-transfer-secret');
   });
 
-  it('preserves explicitly provided values', () => {
+  it('preserves explicitly provided gateway, stream and provider limits', () => {
     const env = {
-      PORT: '8080',
-      NODE_ENV: 'production',
-      SUPABASE_URL: 'https://supabase.example.com',
-      SUPABASE_ANON_KEY: 'anon-key',
-      SUPABASE_SERVICE_ROLE_KEY: 'service-key',
-      DATABASE_URL: 'postgres://custom-host:5432/db',
-      REDIS_URL: 'redis://custom-redis:6379',
-      CENTRIFUGO_URL: 'http://centrifugo.example.com',
-      CENTRIFUGO_API_KEY: 'cent-api-key',
-      CENTRIFUGO_SECRET: 'cent-secret',
-      LIVEKIT_URL: 'http://livekit.example.com',
-      LIVEKIT_API_KEY: 'livekit-api-key',
-      LIVEKIT_SECRET: 'livekit-secret',
-      CLOUDFLARE_R2_ENDPOINT: 'https://r2.example.com',
-      CLOUDFLARE_R2_ACCESS_KEY_ID: 'r2-access',
-      CLOUDFLARE_R2_SECRET_ACCESS_KEY: 'r2-secret',
-      CLOUDFLARE_R2_BUCKET: 'my-bucket',
-      CLOUDFLARE_R2_PUBLIC_DOMAIN: 'https://cdn.example.com',
-      DEEPL_API_KEY: 'deepl-key',
-      AZURE_TRANSLATOR_KEY: 'azure-key',
-      AZURE_TRANSLATOR_REGION: 'westeurope',
-      STRIPE_SECRET_KEY: 'sk_live_custom',
-      STRIPE_WEBHOOK_SECRET: 'whsec_custom',
-      STRIPE_MONTHLY_PRICE_ID: 'price_monthly_custom',
-      STRIPE_YEARLY_PRICE_ID: 'price_yearly_custom',
-      FRONTEND_URL: 'https://frontend.example.com',
-      APPLE_BUNDLE_ID: 'com.example.app',
-      APPLE_SHARED_SECRET: 'apple-shared-secret',
-      APPLE_ROOT_CA_CERT_1: 'apple-ca-1',
-      APPLE_ROOT_CA_CERT_2: 'apple-ca-2',
-      APPLE_VERIFICATION_URL: 'https://buy.itunes.apple.com/verifyReceipt',
-      GOOGLE_PLAY_PACKAGE_NAME: 'com.example.play',
-      GOOGLE_PLAY_ACCESS_TOKEN: 'play-token',
-      GOOGLE_PUBSUB_AUDIENCE: 'https://pubsub.googleapis.com/custom',
-      GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: 'custom@example.com',
-      LLM_PROVIDER: 'anthropic',
-      LLM_API_KEY: 'anthropic-key',
-      LLM_BASE_URL: 'https://api.anthropic.com',
-      LLM_MODEL: 'claude-3-opus-20240229',
-      ANTHROPIC_VERSION: '2023-06-01',
+      TRANSFER_SECRET: 'my-transfer-secret',
+      CLOUDFLARE_R2_GATEWAY_URL: 'https://r2-gateway.example.com',
+      CLOUDFLARE_R2_SIGNING_SECRET:
+        'custom-signing-secret-with-at-least-32-characters',
+      CLOUDFLARE_R2_SERVICE_TOKEN:
+        'custom-service-token-with-at-least-32-characters',
+      CLOUDFLARE_R2_PUBLIC_URL: 'https://media.example.com',
+      CLOUDFLARE_R2_SOURCE_HOSTS:
+        'recordings.example.com,*.livekit.example.com',
+      CLOUDFLARE_R2_UPLOAD_TTL_SECONDS: '900',
+      CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: '1024',
+      CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES: '2048',
+      CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS: '5000',
+      CLOUDFLARE_STREAM_ACCOUNT_ID: 'account-123',
+      CLOUDFLARE_STREAM_API_TOKEN:
+        'custom-stream-token-with-at-least-20-characters',
+      CLOUDFLARE_STREAM_ALLOWED_ORIGINS:
+        'https://app.example.com,https://admin.example.com',
+      CLOUDFLARE_STREAM_POLL_INTERVAL_MS: '250',
+      CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS: '30000',
+      CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS: '7',
+      AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS: '120000',
     };
 
     const { error, value } = validationSchema.validate(env);
+
     expect(error).toBeUndefined();
-    expect(value.PORT).toBe(8080);
-    expect(value.NODE_ENV).toBe('production');
-    expect(value.SUPABASE_URL).toBe('https://supabase.example.com');
-    expect(value.AZURE_TRANSLATOR_REGION).toBe('westeurope');
-    expect(value.LLM_PROVIDER).toBe('anthropic');
-    expect(value.LLM_BASE_URL).toBe('https://api.anthropic.com');
+    expect(value.CLOUDFLARE_R2_GATEWAY_URL).toBe(
+      'https://r2-gateway.example.com',
+    );
+    expect(value.CLOUDFLARE_R2_SOURCE_HOSTS).toBe(
+      'recordings.example.com,*.livekit.example.com',
+    );
+    expect(value.CLOUDFLARE_R2_UPLOAD_TTL_SECONDS).toBe(900);
+    expect(value.CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES).toBe(1024);
+    expect(value.CLOUDFLARE_R2_MAX_MULTIPART_PART_BYTES).toBe(2048);
+    expect(value.CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS).toBe(5000);
+    expect(value.CLOUDFLARE_STREAM_ACCOUNT_ID).toBe('account-123');
+    expect(value.CLOUDFLARE_STREAM_ALLOWED_ORIGINS).toBe(
+      'https://app.example.com,https://admin.example.com',
+    );
+    expect(value.CLOUDFLARE_STREAM_POLL_INTERVAL_MS).toBe(250);
+    expect(value.CLOUDFLARE_STREAM_RECORDING_TIMEOUT_MS).toBe(30000);
+    expect(value.CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS).toBe(7);
+    expect(value.AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS).toBe(120000);
   });
 
-  it('rejects an invalid NODE_ENV value', () => {
-    const result = validationSchema.validate({ NODE_ENV: 'staging' });
-    expect(result.error).toBeDefined();
+  it('rejects weak secrets and invalid limits', () => {
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_R2_SIGNING_SECRET: 'short',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_STREAM_API_TOKEN: 'short',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_R2_UPLOAD_TTL_SECONDS: '30',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_R2_MAX_SINGLE_UPLOAD_BYTES: '0',
+      }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({
+        TRANSFER_SECRET: 'test-transfer-secret',
+        CLOUDFLARE_STREAM_DELETE_RECORDING_AFTER_DAYS: '31',
+      }).error,
+    ).toBeDefined();
   });
 
-  it('rejects a non-numeric PORT value', () => {
-    const result = validationSchema.validate({ PORT: 'not-a-number' });
-    expect(result.error).toBeDefined();
-  });
-
-  it('rejects a non-URI SUPABASE_URL value', () => {
-    const result = validationSchema.validate({ SUPABASE_URL: 'not-a-url' });
-    expect(result.error).toBeDefined();
-  });
-
-  it('allows unknown keys because of unknown(true)', () => {
-    const result = validationSchema.validate({ UNEXPECTED_KEY: 'anything' });
-    expect(result.error).toBeUndefined();
-  });
-
-  it('accepts optional fields that are present', () => {
+  it('continues to validate core environment and numeric coercion', () => {
     const result = validationSchema.validate({
-      APPLE_ROOT_CA_CERT_2: '',
-      GOOGLE_PLAY_PACKAGE_NAME: 'com.example.play',
-      GOOGLE_PLAY_ACCESS_TOKEN: 'token',
+      TRANSFER_SECRET: 'test-transfer-secret',
+      NODE_ENV: 'production',
+      PORT: '8080',
+      MAIL_PORT: '465',
+      LIVEKIT_TURN_TLS_PORT: '6000',
+      UNEXPECTED_KEY: 'allowed-by-forward-compatible-schema',
     });
+
     expect(result.error).toBeUndefined();
+    expect(result.value.PORT).toBe(8080);
+    expect(result.value.MAIL_PORT).toBe(465);
+    expect(result.value.LIVEKIT_TURN_TLS_PORT).toBe(6000);
+    expect(
+      validationSchema.validate({ NODE_ENV: 'staging' }).error,
+    ).toBeDefined();
+    expect(
+      validationSchema.validate({ LIVEKIT_URL: 'ftp://example.com' }).error,
+    ).toBeDefined();
   });
 });

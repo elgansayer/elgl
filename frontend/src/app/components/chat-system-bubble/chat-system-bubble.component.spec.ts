@@ -54,4 +54,61 @@ describe('ChatSystemBubbleComponent', () => {
     const status = fixture.nativeElement.querySelector('[role="status"]');
     expect(status).toBeTruthy();
   });
+
+  it('renders a custom icon for the profileUpdated event', () => {
+    fixture.componentRef.setInput('eventType', 'profileUpdated');
+    fixture.detectChanges();
+
+    const icon = fixture.nativeElement.querySelector('[aria-hidden="true"]');
+    expect(icon).toBeTruthy();
+    expect(icon.textContent).toContain('\ud83d\udc64');
+  });
+
+  it('renders a custom icon for the missedCall event', () => {
+    fixture.componentRef.setInput('eventType', 'missedCall');
+    fixture.detectChanges();
+
+    const icon = fixture.nativeElement.querySelector('[aria-hidden="true"]');
+    expect(icon).toBeTruthy();
+    expect(icon.textContent).toContain('\ud83d\udcde');
+  });
+
+  it('uses default config for unknown event types', () => {
+    fixture.componentRef.setInput('eventType', 'unknownEventType');
+    fixture.detectChanges();
+
+    const icon = fixture.nativeElement.querySelector('[aria-hidden="true"]');
+    expect(icon).toBeTruthy();
+    expect(icon.textContent).toContain('\ud83d\udd14');
+  });
+
+  it('applies custom styling for profileUpdated event', () => {
+    fixture.componentRef.setInput('eventType', 'profileUpdated');
+    fixture.detectChanges();
+
+    const span = fixture.nativeElement.querySelector('span.rounded-full');
+    expect(span.className).toContain('bg-secondary/10');
+    expect(span.className).toContain('border-secondary/30');
+    expect(span.className).toContain('text-secondary');
+  });
+
+  it('applies custom styling for missedCall event', () => {
+    fixture.componentRef.setInput('eventType', 'missedCall');
+    fixture.detectChanges();
+
+    const span = fixture.nativeElement.querySelector('span.rounded-full');
+    expect(span.className).toContain('bg-danger/10');
+    expect(span.className).toContain('border-danger/30');
+    expect(span.className).toContain('text-danger');
+  });
+
+  it('applies default styling for unknown event types', () => {
+    fixture.componentRef.setInput('eventType', 'unknownEventType');
+    fixture.detectChanges();
+
+    const span = fixture.nativeElement.querySelector('span.rounded-full');
+    expect(span.className).toContain('bg-surface-200');
+    expect(span.className).toContain('border-surface-100');
+    expect(span.className).toContain('text-text-secondary');
+  });
 });

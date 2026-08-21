@@ -18,6 +18,7 @@ import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { EconomyStore } from './economy.store';
+import { AudioRoomDegradationService } from './audio-room-degradation.service';
 
 export interface AudioRoomRecord {
   id: string;
@@ -40,6 +41,17 @@ export interface AudioRoomRecord {
     display_name?: string;
     avatar_url?: string | null;
   };
+  is_private?: boolean;
+  invited_user_ids?: string[];
+  party_type?: string;
+}
+
+export interface PrivatePartyCreatePayload {
+  title: string;
+  languagePair: string;
+  topicTag: string;
+  isVideoStream: boolean;
+  invitedUserIds: string[];
 }
 
 export interface StageParticipant {
@@ -96,6 +108,7 @@ export class AudioRoomsStore {
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private economyStore = inject(EconomyStore);
+  private degradationService = inject(AudioRoomDegradationService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -117,9 +130,22 @@ export class AudioRoomsStore {
   readonly stageInfo = signal<StageInfo | null>(null);
   readonly stageParticipants = signal<StageParticipant[]>([]);
   readonly audienceCount = signal<number>(0);
+  readonly privateRooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoadingPrivate = signal<boolean>(false);
+
+  // Degradation-aware state - reactive bindings to degradation service
+  readonly isLiveKitDegraded = this.degradationService.isLiveKitDegraded;
+  readonly isCentrifugoDegraded = this.degradationService.isCentrifugoDegraded;
+  readonly isSupabaseDegraded = this.degradationService.isSupabaseDegraded;
+  readonly isFullyOperational = this.degradationService.isFullyOperational;
+  readonly degradationSummary = this.degradationService.degradationSummary;
+
+  readonly isOperatingInDegradedMode = computed(() => {
+    return !this.degradationService.isFullyOperational() && this.isConnectedToLiveKit();
+  });
 
   // Split-screen co-host video state
-  private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
+  readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   private readonly remoteVideoTracksByIdentity = signal<Map<string, RemoteVideoTrack>>(new Map());
 
   readonly hostVideoTrack = computed<RemoteVideoTrack | null>(() => {
@@ -143,17 +169,47 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
+  private onTrackSubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
+  private onTrackUnsubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
    * This avoids production `as` type assertions.
    */
+  private isHostTipPayload(data: unknown): data is {
+    tip_id?: string;
+    amount_coins?: number;
+    sender_user_id?: string;
+    sender_name?: string;
+    receiver_user_id?: string;
+  } {
+    return typeof data === 'object' && data !== null && !Array.isArray(data);
+  }
+
   private isRoomEvent(data: unknown): data is {
     type?: string;
     user_id?: string;
     target_user_id?: string;
     caption?: CaptionRecord;
     message?: RoomChatMessage;
+    animation_url?: string;
+    sender_name?: string;
+    receiver_name?: string;
+    coin_value?: number;
+    icon?: string;
+    gift_name?: string;
+    animation_type?: string;
+    tip?: unknown;
+    gift_id?: string;
+    previous_co_host_id?: string | null;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -227,10 +283,47 @@ export class AudioRoomsStore {
     return created;
   }
 
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<AudioRoomRecord> {
+    const created = await firstValueFrom(
+      this.http.post<AudioRoomRecord>(
+        `${this.baseUrl}/private`,
+        {
+          title: payload.title,
+          target_language: payload.languagePair,
+          language_pair: payload.languagePair,
+          topic_tag: payload.topicTag,
+          is_video_stream: payload.isVideoStream,
+          invited_user_ids: payload.invitedUserIds,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.privateRooms.update((list) => [created, ...list]);
+    this.activeRooms.update((list) => [created, ...list]);
+    return created;
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    this.isLoadingPrivate.set(true);
+    try {
+      const list = await firstValueFrom(
+        this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/private`, { headers: this.getHeaders() }),
+      );
+      this.privateRooms.set(list);
+    } catch (e) {
+      console.error('Failed to load private rooms:', e);
+    } finally {
+      this.isLoadingPrivate.set(false);
+    }
+  }
+
   async joinRoom(room: AudioRoomRecord): Promise<void> {
     this.currentRoom.set(room);
     this.captions.set([]);
     this.roomMessages.set([]);
+
+    // Start monitoring service health for degradation indicators
+    this.degradationService.startMonitoring();
 
     // Load stage info for full speaker/listener details
     void this.fetchStage(room.id);
@@ -253,9 +346,11 @@ export class AudioRoomsStore {
       if (typeof window !== 'undefined' && !tokenRes.livekit_url.includes('mock')) {
         try {
           this.livekitRoom = new Room();
+          this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
+          this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
           this.livekitRoom
-            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this));
+            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
 
@@ -268,8 +363,12 @@ export class AudioRoomsStore {
             await this.publishLocalCamera();
           }
         } catch (lkError) {
-          console.warn('LiveKit SFU connection error (using mock audio stage):', lkError);
+          console.warn('LiveKit SFU connection error (voice-only fallback active):', lkError);
+          // Degraded mode: connected but without real-time audio
+          // Show a non-blocking toast so the user knows audio/video features are limited
           this.isConnectedToLiveKit.set(true);
+          void this.degradationService.refreshHealth();
+          showToast(this.i18n.translate('audioRoom.degradedAudioToast'));
         }
       } else {
         // Mock connection simulation
@@ -327,6 +426,44 @@ export class AudioRoomsStore {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
           }
           showToast(this.i18n.translate('audioRoom.speakerDemotedToast'));
+        }
+      } else if (p.type === 'co_host_changed' && p.target_user_id) {
+        // Single atomic event: previous co-host (if any) is removed and new co-host is invited.
+        // Eliminates the race condition where separate co_host_removed / co_host_invited
+        // Centrifugo events could arrive out of order.
+        const currentUserId = this.authService.currentUser()?.id;
+        const previousCoHostId =
+          typeof p.previous_co_host_id === 'string' ? p.previous_co_host_id : null;
+
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          let speakers = r.speakers;
+          if (previousCoHostId) {
+            speakers = speakers.filter((id) => id !== previousCoHostId);
+          }
+          if (!speakers.includes(p.target_user_id!)) {
+            speakers = [...speakers, p.target_user_id!];
+          }
+          const updatedHands = r.raised_hands.filter((id) => id !== p.target_user_id);
+          return {
+            ...r,
+            co_host_id: p.target_user_id,
+            raised_hands: updatedHands,
+            speakers,
+          };
+        });
+
+        // If I was the previous co-host, unpublish camera
+        if (previousCoHostId && previousCoHostId === currentUserId) {
+          this.isSpeaker.set(false);
+          this.unpublishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
+        }
+        // If I am the new co-host, publish camera
+        if (p.target_user_id === currentUserId) {
+          this.isSpeaker.set(true);
+          void this.publishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostPromotedToast'));
         }
       } else if (p.type === 'co_host_invited' && p.target_user_id) {
         this.currentRoom.update((r) => {
@@ -413,6 +550,23 @@ export class AudioRoomsStore {
         }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
+      } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
+        const tip = p.tip;
+        // Don't replay animation for the sender -- it already fired locally in tipHost()
+        if (tip.sender_user_id === this.authService.currentUser()?.id) {
+          return;
+        }
+        const amount = tip.amount_coins ?? 0;
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: `tip_${tip.tip_id ?? 'unknown'}`,
+          giftName: `${amount} Coins`,
+          giftIcon: this.tipIconForAmount(amount),
+          animationType: this.tipAnimationForAmount(amount),
+          animationUrl: undefined,
+          senderName: tip.sender_name ?? 'Someone',
+          receiverName: 'Host',
+          coinValue: amount,
+        });
       } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
         this.economyStore.triggerPublicGiftAnimation({
           giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
@@ -426,6 +580,14 @@ export class AudioRoomsStore {
         });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+      } else if (p.type === 'hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id: string) => id !== p.target_user_id),
+          };
+        });
       } else if (p.type === 'room_ended') {
         showToast(this.i18n.translate('audioRoom.roomEndedToast'));
         this.leaveRoom();
@@ -537,6 +699,29 @@ export class AudioRoomsStore {
       this.currentRoom.set(updated);
     } catch (e) {
       console.error('Demote speaker error:', e);
+    }
+  }
+
+  async dismissRaisedHand(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    this.currentRoom.update((r) => {
+      if (!r) return r;
+      return { ...r, raised_hands: r.raised_hands.filter((id: string) => id !== targetUserId) };
+    });
+    try {
+      await firstValueFrom(
+        this.http.post<void>(
+          `${this.baseUrl}/dismiss-raised-hand`,
+          { room_id: room.id, target_user_id: targetUserId },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.currentRoom.update((r) => {
+        if (!r) return r;
+        return { ...r, raised_hands: [...r.raised_hands, targetUserId] };
+      });
     }
   }
 
@@ -676,6 +861,66 @@ export class AudioRoomsStore {
     }
   }
 
+  async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          receiver_new_balance: number;
+        }>(
+          `${this.baseUrl}/${roomId}/tip`,
+          { room_id: roomId, amount_coins: amountCoins },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+
+      const user = this.authService.currentUser();
+      const senderName = user?.display_name ?? 'Someone';
+      const animationType = this.tipAnimationForAmount(amountCoins);
+
+      // Fire full-screen SVG animation immediately for the sender
+      this.economyStore.triggerPublicGiftAnimation({
+        giftId: `tip_${res.tip_id}`,
+        giftName: `${amountCoins} Coins`,
+        giftIcon: this.tipIconForAmount(amountCoins),
+        animationType,
+        animationUrl: undefined,
+        senderName,
+        receiverName: 'Host',
+        coinValue: amountCoins,
+      });
+
+      showToast(
+        this.i18n.translate('audioRoom.tipSentToast', {
+          amount: amountCoins,
+        }),
+      );
+      return true;
+    } catch (e: unknown) {
+      console.error('Tip host error:', e);
+      const message = e instanceof Error ? e.message : String(e);
+      showToast(message || this.i18n.translate('audioRoom.tipError'));
+      return false;
+    }
+  }
+
+  private tipAnimationForAmount(amount: number): string {
+    if (amount >= 500) return 'premium';
+    if (amount >= 100) return 'confetti';
+    if (amount >= 50) return 'hearts';
+    return 'sparkle';
+  }
+
+  private tipIconForAmount(amount: number): string {
+    if (amount >= 500) return '💎';
+    if (amount >= 100) return '🎁';
+    if (amount >= 50) return '💝';
+    return '🪙';
+  }
+
   async sendRoomChatMessage(text: string): Promise<void> {
     const room = this.currentRoom();
     if (!room || !text.trim()) return;
@@ -738,7 +983,18 @@ export class AudioRoomsStore {
   }
 
   leaveRoom(): void {
+    // Stop health monitoring when leaving the audio room context
+    this.degradationService.stopMonitoring();
+
     if (this.livekitRoom) {
+      if (this.onTrackSubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+        this.onTrackSubscribedBound = null;
+      }
+      if (this.onTrackUnsubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+        this.onTrackUnsubscribedBound = null;
+      }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }
@@ -752,7 +1008,7 @@ export class AudioRoomsStore {
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
     this.audienceCount.set(0);
-    this.localVideoTrack.set(null);
+    this.unpublishLocalCamera();
     this.remoteVideoTracksByIdentity.set(new Map());
   }
 }

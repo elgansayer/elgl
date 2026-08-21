@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
@@ -13,49 +14,57 @@ describe('AudioRoomsController', () => {
       controllers: [AudioRoomsController],
       providers: [
         {
+          provide: 'PinoLogger:AudioRoomsController',
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+          },
+        },
+        {
           provide: AudioRoomsService,
           useValue: {
-            createRoom: jest.fn(),
-            generateToken: jest.fn(),
-            listActiveRooms: jest.fn(),
-            getDistinctTopics: jest.fn(),
-            getDistinctLevels: jest.fn(),
-            getInvitedPrivateRooms: jest.fn(),
-            getRoom: jest.fn(),
-            getStage: jest.fn(),
-            reorderSpeakers: jest.fn(),
-            clearStage: jest.fn(),
-            createLanguageParty: jest.fn(),
-            createPrivateRoom: jest.fn(),
-            raiseHand: jest.fn(),
-            approveSpeaker: jest.fn(),
-            muteSpeaker: jest.fn(),
-            unmuteSpeaker: jest.fn(),
-            demoteSpeaker: jest.fn(),
-            kickSpeaker: jest.fn(),
-            inviteCoHost: jest.fn(),
-            removeCoHost: jest.fn(),
-            sendCaption: jest.fn(),
-            archiveRoom: jest.fn(),
-            addNote: jest.fn(),
-            getNotes: jest.fn(),
-            deleteNote: jest.fn(),
-            getTranscript: jest.fn(),
-            getCallLogs: jest.fn(),
-            createPoll: jest.fn(),
-            submitVote: jest.fn(),
-            getPollResults: jest.fn(),
-            getSoundboardSounds: jest.fn(),
-            playSound: jest.fn(),
-            sendReaction: jest.fn(),
-            getExclusiveEmojis: jest.fn(),
-            tipHost: jest.fn(),
+            createRoom: vi.fn(),
+            generateToken: vi.fn(),
+            listActiveRooms: vi.fn(),
+            listActiveRoomsByLanguage: vi.fn(),
+            getDistinctTopics: vi.fn(),
+            getDistinctLevels: vi.fn(),
+            getInvitedPrivateRooms: vi.fn(),
+            getRoom: vi.fn(),
+            getStage: vi.fn(),
+            reorderSpeakers: vi.fn(),
+            clearStage: vi.fn(),
+            createLanguageParty: vi.fn(),
+            createPrivateRoom: vi.fn(),
+            raiseHand: vi.fn(),
+            approveSpeaker: vi.fn(),
+            muteSpeaker: vi.fn(),
+            demoteSpeaker: vi.fn(),
+            inviteCoHost: vi.fn(),
+            removeCoHost: vi.fn(),
+            sendCaption: vi.fn(),
+            archiveRoom: vi.fn(),
+            addNote: vi.fn(),
+            getNotes: vi.fn(),
+            deleteNote: vi.fn(),
+            getTranscript: vi.fn(),
+            getCallLogs: vi.fn(),
+            createPoll: vi.fn(),
+            submitVote: vi.fn(),
+            getPollResults: vi.fn(),
+            getSoundboardSounds: vi.fn(),
+            playSound: vi.fn(),
+            sendReaction: vi.fn(),
+            getExclusiveEmojis: vi.fn(),
+            tipHost: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<AudioRoomsController>(AudioRoomsController);
@@ -63,7 +72,7 @@ describe('AudioRoomsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -80,7 +89,7 @@ describe('AudioRoomsController', () => {
     it('should call service createRoom when user is provided', async () => {
       const dto: any = { title: 'Test Room', target_language: 'EN' };
       const room: any = { id: 'room-1', title: 'Test Room' };
-      (audioRoomsService.createRoom as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.createRoom as Mock).mockResolvedValue(room);
 
       const result = await controller.createRoom({ id: 'user-1' }, dto);
       expect(audioRoomsService.createRoom).toHaveBeenCalledWith('user-1', dto);
@@ -98,7 +107,7 @@ describe('AudioRoomsController', () => {
     it('should call service generateToken when user is provided', async () => {
       const dto: any = { room_name: 'room-1' };
       const tokenResponse: any = { token: 'jwt-token' };
-      (audioRoomsService.generateToken as jest.Mock).mockResolvedValue(
+      (audioRoomsService.generateToken as Mock).mockResolvedValue(
         tokenResponse,
       );
 
@@ -114,7 +123,7 @@ describe('AudioRoomsController', () => {
   describe('listActiveRooms', () => {
     it('should return active rooms from service', async () => {
       const rooms: any[] = [{ id: 'room-1' }];
-      (audioRoomsService.listActiveRooms as jest.Mock).mockResolvedValue(rooms);
+      (audioRoomsService.listActiveRooms as Mock).mockResolvedValue(rooms);
 
       const result = await controller.listActiveRooms();
       expect(audioRoomsService.listActiveRooms).toHaveBeenCalled();
@@ -125,7 +134,7 @@ describe('AudioRoomsController', () => {
   describe('getRoom', () => {
     it('should return specific room by ID', async () => {
       const room: any = { id: 'room-1' };
-      (audioRoomsService.getRoom as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.getRoom as Mock).mockResolvedValue(room);
 
       const result = await controller.getRoom('room-1');
       expect(audioRoomsService.getRoom).toHaveBeenCalledWith('room-1');
@@ -143,7 +152,7 @@ describe('AudioRoomsController', () => {
     it('should call service raiseHand when user is provided', async () => {
       const dto: any = { room_id: 'room-1' };
       const room: any = { id: 'room-1' };
-      (audioRoomsService.raiseHand as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.raiseHand as Mock).mockResolvedValue(room);
 
       const result = await controller.raiseHand({ id: 'user-1' }, dto);
       expect(audioRoomsService.raiseHand).toHaveBeenCalledWith('user-1', dto);
@@ -161,7 +170,7 @@ describe('AudioRoomsController', () => {
     it('should call service approveSpeaker when user is provided', async () => {
       const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
       const room: any = { id: 'room-1' };
-      (audioRoomsService.approveSpeaker as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.approveSpeaker as Mock).mockResolvedValue(room);
 
       const result = await controller.approveSpeaker({ id: 'user-1' }, dto);
       expect(audioRoomsService.approveSpeaker).toHaveBeenCalledWith(
@@ -182,67 +191,13 @@ describe('AudioRoomsController', () => {
     it('should call service demoteSpeaker when user is provided', async () => {
       const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
       const room: any = { id: 'room-1' };
-      (audioRoomsService.demoteSpeaker as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.demoteSpeaker as Mock).mockResolvedValue(room);
 
       const result = await controller.demoteSpeaker({ id: 'user-1' }, dto);
       expect(audioRoomsService.demoteSpeaker).toHaveBeenCalledWith(
         'user-1',
         dto,
       );
-      expect(result).toEqual(room);
-    });
-  });
-
-  describe('muteSpeaker', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.muteSpeaker(null, {} as any);
-      expect(result).toBeNull();
-      expect(audioRoomsService.muteSpeaker).not.toHaveBeenCalled();
-    });
-
-    it('should call service muteSpeaker when user is provided', async () => {
-      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
-      const room: any = { id: 'room-1' };
-      (audioRoomsService.muteSpeaker as jest.Mock).mockResolvedValue(room);
-
-      const result = await controller.muteSpeaker({ id: 'user-1' }, dto);
-      expect(audioRoomsService.muteSpeaker).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual(room);
-    });
-  });
-
-  describe('unmuteSpeaker', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.unmuteSpeaker(null, {} as any);
-      expect(result).toBeNull();
-      expect(audioRoomsService.unmuteSpeaker).not.toHaveBeenCalled();
-    });
-
-    it('should call service unmuteSpeaker when user is provided', async () => {
-      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
-      const room: any = { id: 'room-1' };
-      (audioRoomsService.unmuteSpeaker as jest.Mock).mockResolvedValue(room);
-
-      const result = await controller.unmuteSpeaker({ id: 'user-1' }, dto);
-      expect(audioRoomsService.unmuteSpeaker).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual(room);
-    });
-  });
-
-  describe('kickSpeaker', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.kickSpeaker(null, {} as any);
-      expect(result).toBeNull();
-      expect(audioRoomsService.kickSpeaker).not.toHaveBeenCalled();
-    });
-
-    it('should call service kickSpeaker when user is provided', async () => {
-      const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
-      const room: any = { id: 'room-1' };
-      (audioRoomsService.kickSpeaker as jest.Mock).mockResolvedValue(room);
-
-      const result = await controller.kickSpeaker({ id: 'user-1' }, dto);
-      expect(audioRoomsService.kickSpeaker).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(room);
     });
   });
@@ -257,7 +212,7 @@ describe('AudioRoomsController', () => {
     it('should call service inviteCoHost when user is provided', async () => {
       const dto: any = { room_id: 'room-1', target_user_id: 'user-2' };
       const room: any = { id: 'room-1', co_host_id: 'user-2' };
-      (audioRoomsService.inviteCoHost as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.inviteCoHost as Mock).mockResolvedValue(room);
 
       const result = await controller.inviteCoHost({ id: 'user-1' }, dto);
       expect(audioRoomsService.inviteCoHost).toHaveBeenCalledWith(
@@ -278,7 +233,7 @@ describe('AudioRoomsController', () => {
     it('should call service removeCoHost when user is provided', async () => {
       const dto: any = { room_id: 'room-1' };
       const room: any = { id: 'room-1', co_host_id: null };
-      (audioRoomsService.removeCoHost as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.removeCoHost as Mock).mockResolvedValue(room);
 
       const result = await controller.removeCoHost({ id: 'user-1' }, dto);
       expect(audioRoomsService.removeCoHost).toHaveBeenCalledWith(
@@ -299,7 +254,7 @@ describe('AudioRoomsController', () => {
     it('should call service sendCaption when user is provided', async () => {
       const dto: any = { room_id: 'room-1', text_content: 'Caption text' };
       const caption: any = { id: 'cap-1', text_content: 'Caption text' };
-      (audioRoomsService.sendCaption as jest.Mock).mockResolvedValue(caption);
+      (audioRoomsService.sendCaption as Mock).mockResolvedValue(caption);
 
       const result = await controller.sendCaption({ id: 'user-1' }, dto);
       expect(audioRoomsService.sendCaption).toHaveBeenCalledWith('user-1', dto);
@@ -331,7 +286,7 @@ describe('AudioRoomsController', () => {
           created_at: '2026-08-01T10:00:00Z',
         },
       ];
-      (audioRoomsService.getCallLogs as jest.Mock).mockResolvedValue(logs);
+      (audioRoomsService.getCallLogs as Mock).mockResolvedValue(logs);
 
       const result = await controller.getCallLogs({ id: 'user-1' }, query);
       expect(audioRoomsService.getCallLogs).toHaveBeenCalledWith(
@@ -352,7 +307,7 @@ describe('AudioRoomsController', () => {
     it('should call service archiveRoom when user is provided', async () => {
       const dto: any = { room_id: 'room-1' };
       const room: any = { id: 'room-1', is_active: false };
-      (audioRoomsService.archiveRoom as jest.Mock).mockResolvedValue(room);
+      (audioRoomsService.archiveRoom as Mock).mockResolvedValue(room);
 
       const result = await controller.archiveRoom({ id: 'user-1' }, dto);
       expect(audioRoomsService.archiveRoom).toHaveBeenCalledWith('user-1', dto);
@@ -375,7 +330,7 @@ describe('AudioRoomsController', () => {
         receiver_id: 'host-1',
         receiver_new_balance: 60,
       };
-      (audioRoomsService.tipHost as jest.Mock).mockResolvedValue(resultPayload);
+      (audioRoomsService.tipHost as Mock).mockResolvedValue(resultPayload);
 
       const result = await controller.tipHost({ id: 'user-1' }, 'room-1', dto);
 

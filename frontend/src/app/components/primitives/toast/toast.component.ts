@@ -10,12 +10,12 @@ import { toastsSignal } from '../../../services/toast.service';
     >
       @for (toast of toastsSignal(); track toast.id) {
         <div
-          class="px-4 py-2 rounded-full shadow-lg font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"
+          class="px-4 py-2 rounded-card shadow-lift font-bold text-sm pointer-events-auto transition-all duration-base ease-app animate-slide-down border border-surface-100"
           [class.bg-surface-200]="toast.type === 'info'"
           [class.text-text-primary]="toast.type === 'info'"
-          [class.bg-red-500]="toast.type === 'error'"
-          [class.text-white]="toast.type === 'error' || toast.type === 'success'"
-          [class.bg-green-500]="toast.type === 'success'"
+          [class.bg-danger]="toast.type === 'error'"
+          [class.text-on-fill]="toast.type === 'error' || toast.type === 'success'"
+          [class.bg-success]="toast.type === 'success'"
         >
           {{ toast.message }}
         </div>
@@ -35,7 +35,12 @@ import { toastsSignal } from '../../../services/toast.service';
         }
       }
       .animate-slide-down {
-        animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: slide-down var(--app-motion-base) var(--app-ease-standard) forwards;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-slide-down {
+          animation: none;
+        }
       }
     `,
   ],
