@@ -96,9 +96,7 @@ describe('MomentsController feed filters', () => {
 
     const result = await controller.getFeed(user, 'Following');
 
-    expect(result).toEqual([
-      { id: 'followed-moment', user_id: 'author-2' },
-    ]);
+    expect(result).toEqual([{ id: 'followed-moment', user_id: 'author-2' }]);
   });
 
   it('does not expose generated mock Moments through production feed filters', async () => {
