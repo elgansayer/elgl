@@ -10,7 +10,6 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
-import { RecommendedUserResponseDto } from './dto/recommendations-response.dto';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 
 interface AuthenticatedRequest {

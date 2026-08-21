@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransferController } from './transfer.controller';
 import { TransferService } from './transfer.service';
@@ -7,16 +8,16 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 describe('TransferController', () => {
   let controller: TransferController;
   let transferService: {
-    generateTransferToken: jest.Mock;
-    consumeTransferToken: jest.Mock;
-    swapTokenForSession: jest.Mock;
+    generateTransferToken: Mock;
+    consumeTransferToken: Mock;
+    swapTokenForSession: Mock;
   };
 
   beforeEach(async () => {
     transferService = {
-      generateTransferToken: jest.fn(),
-      consumeTransferToken: jest.fn(),
-      swapTokenForSession: jest.fn(),
+      generateTransferToken: vi.fn(),
+      consumeTransferToken: vi.fn(),
+      swapTokenForSession: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -36,7 +37,7 @@ describe('TransferController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

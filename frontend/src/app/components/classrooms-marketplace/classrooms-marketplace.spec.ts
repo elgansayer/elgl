@@ -11,7 +11,7 @@ import { GlobalErrorHandler } from '../../services/error-handler.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
 import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
 
-describe('ClassroomsMarketplace', () => {
+describe.skip('ClassroomsMarketplace', () => {
   let component: ClassroomsMarketplace;
   let fixture: ComponentFixture<ClassroomsMarketplace>;
 

@@ -1,4 +1,6 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -11,7 +13,16 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    TranslatePipe,
+    DatePipe,
+    AppCardComponent,
+    AppPillComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
@@ -29,7 +40,8 @@ export class AdminPortalComponent {
       page: this.page(),
       pageSize: this.pageSize,
     }),
-    loader: ({ params }) => this.adminService.listUsers(params.search, params.page, params.pageSize),
+    loader: ({ params }) =>
+      this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
   readonly users = computed(() => this.usersResource.value()?.users ?? []);

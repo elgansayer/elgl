@@ -5,7 +5,7 @@
 This directory contains detailed specifications for all chat UI components used in the HelloTalk application. Each specification includes:
 
 - Component purpose and usage
-- Visual design (dimensions, colors, typography, spacing)
+- Visual design (dimensions, colours, typography, spacing)
 - States (default, hover, active, disabled, error, loading)
 - Accessibility requirements
 - Responsive behavior
@@ -31,7 +31,7 @@ This directory contains detailed specifications for all chat UI components used 
 
 ## Design Tokens (Shared Across All Components)
 
-### Color Palette
+### Colour Palette
 
 ```css
 /* Backgrounds */
@@ -115,7 +115,7 @@ This directory contains detailed specifications for all chat UI components used 
 - All interactive elements must have `aria-label` or `aria-labelledby`
 - Focus indicators must use `ring-2 ring-purple-400` with `outline-none`
 - Touch targets must be at least 44x44px
-- Color contrast ratios must meet WCAG AA standards (4.5:1 for text, 3:1 for large text)
+- Colour contrast ratios must meet WCAG AA standards (4.5:1 for text, 3:1 for large text)
 - All icons must have `aria-hidden="true"` with text alternatives
 - Keyboard navigation must follow logical tab order
 - Screen reader announcements for dynamic content changes

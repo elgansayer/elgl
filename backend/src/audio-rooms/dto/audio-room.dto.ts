@@ -191,6 +191,16 @@ export class InviteCoHostDto {
   target_user_id!: string;
 }
 
+export class DismissRaisedHandDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  target_user_id!: string;
+}
+
 export class RemoveCoHostDto {
   @ApiProperty({
     description: 'ID of the audio room',

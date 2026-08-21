@@ -25,7 +25,7 @@ const createQueryChain = () => {
     'or',
   ];
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   });
 
   // Promisify the chain so that `await` works after the final `.lt` / `.in` call.
@@ -59,10 +59,10 @@ describe('StreakService', () => {
   let supabaseMock: any;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 
     supabaseMock = {
-      from: jest.fn(() => createQueryChain()),
+      from: vi.fn(() => createQueryChain()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -71,7 +71,7 @@ describe('StreakService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(supabaseMock),
+            getClient: vi.fn().mockReturnValue(supabaseMock),
           },
         },
       ],
@@ -81,7 +81,7 @@ describe('StreakService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

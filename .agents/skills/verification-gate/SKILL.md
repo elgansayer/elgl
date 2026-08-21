@@ -39,7 +39,7 @@ Or via the root `package.json` shortcuts:
 ```bash
 npm run lint     # constitution check + backend eslint
 npm run build    # frontend ng build + backend nest build
-npm run test     # frontend vitest + backend jest
+npm run test     # frontend vitest + backend vitest
 npm run check:control-flow
 ```
 
@@ -47,7 +47,7 @@ npm run check:control-flow
 
 - Zero TypeScript compiler errors in both `frontend/` and `backend/`.
 - Zero ESLint errors (warnings should still be reviewed, but the hard gate is errors) in both projects.
-- 100% of existing Jest (`backend/`) and Vitest (`frontend/`) test suites passing - do not mark work done with a known-broken test; fix or explicitly and visibly flag it first.
+- 100% of existing Vitest (`backend/` and `frontend/`) test suites passing - do not mark work done with a known-broken test; fix or explicitly and visibly flag it first.
 - `verify-constitution.mjs` reports `SUCCESS: Zero constitution violations detected.`
 - Frontend `check:control-flow` / `check:rtl-logical` / `check:template-bindings` all report "passed" (no legacy `*ngIf`/physical direction classes/`ngClass`/`ngStyle`).
 
