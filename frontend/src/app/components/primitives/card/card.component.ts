@@ -26,8 +26,8 @@ export class AppCardComponent {
   readonly hostClasses = computed(() => {
     // Was previously fetched via I18nService.translate('card.base_classes') -
     // a CSS class string smuggled into the translation dictionary, and out
-    // of sync with the equivalent .app-card SCSS utility class (rounded-sheet
-    // vs this component's rounded-2xl). Both now converge on rounded-card.
+    // of sync with the equivalent .app-card SCSS utility class. Shared cards
+    // now converge on Relay's radius, surface and elevation roles.
     const base = 'block rounded-card bg-surface-200 transition-all';
 
     let paddingClass = '';
@@ -49,17 +49,17 @@ export class AppCardComponent {
     let variantClass = '';
     switch (this.variant()) {
       case 'default':
-        variantClass = 'border border-surface-100 shadow-sm';
+        variantClass = 'border border-surface-100 shadow-card';
         break;
       case 'elevated':
-        variantClass = 'border border-surface-100 shadow-lg';
+        variantClass = 'border border-surface-100 shadow-lift';
         break;
       case 'outlined':
         variantClass = 'border-2 border-surface-100 shadow-none';
         break;
       case 'interactive':
         variantClass =
-          'border border-surface-100 shadow-sm cursor-pointer hover:shadow-md hover:border-surface-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+          'border border-surface-100 shadow-card cursor-pointer hover:shadow-lift hover:border-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2';
         break;
     }
 

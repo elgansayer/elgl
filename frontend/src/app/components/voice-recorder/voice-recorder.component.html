@@ -4,6 +4,7 @@
       <span>{{ 'voiceRecorder.title' | t }}</span>
     </h3>
     <button
+      hlmBtn
       aria-label="Cancel recording"
       (click)="cancel()"
       class="text-text-muted hover:text-text-secondary font-bold"
@@ -48,6 +49,7 @@
   <div class="flex justify-center gap-3 pt-2">
     @if (!isRecording() && !audioPreviewUrl()) {
       <button
+        hlmBtn
         (click)="startRecording()"
         class="px-6 py-3 rounded-app bg-danger hover:bg-danger/80 text-on-fill font-bold text-sm shadow-md transition-all flex items-center gap-2"
         [attr.aria-label]="'voiceRecorder.startBtn' | t"
@@ -58,6 +60,7 @@
 
     @if (isRecording()) {
       <button
+        hlmBtn
         (click)="stopRecording()"
         class="px-6 py-3 rounded-app bg-danger hover:bg-danger/80 text-on-fill font-bold text-sm shadow-md transition-all flex items-center gap-2"
         [attr.aria-label]="'voiceRecorder.stopBtn' | t"
@@ -77,6 +80,7 @@
 
     @if (isUploading()) {
       <button
+        hlmBtn
         disabled
         class="px-6 py-3 bg-surface-100 text-text-secondary rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
         [attr.aria-label]="'voiceRecorder.uploadingBtn' | t"

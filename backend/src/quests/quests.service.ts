@@ -124,22 +124,20 @@ export class QuestsService {
 
     const supabase = this.supabaseService.getClient();
 
-    // ⚡ Bolt Optimization: Replaced sequential N+1 database queries and inserts with a single bulk fetch and bulk insert.
-    // Expected impact: Reduces database roundtrips from O(n) to O(1) when initializing default quests.
+    // ⚡ Bolt Optimization: Replace sequential query checks and single row inserts in ensureDefaults
+    // with a single bulk fetch using .select followed by calculating differences in memory,
+    // culminating in a single bulk .insert().
     const { data: existingQuests } = await supabase
       .from('user_quests')
       .select('quest_type, quest_key')
       .eq('user_id', userId);
 
-    const existingKeys = new Set(
-      (existingQuests || []).map(
-        (q: { quest_type: string; quest_key: string }) =>
-          `${q.quest_type}:${q.quest_key}`,
-      ),
+    const existingSet = new Set(
+      (existingQuests || []).map((q) => `${q.quest_type}:${q.quest_key}`),
     );
 
-    const questsToInsert = defaultQuests
-      .filter((q) => !existingKeys.has(`${q.quest_type}:${q.quest_key}`))
+    const missingQuests = defaultQuests
+      .filter((q) => !existingSet.has(`${q.quest_type}:${q.quest_key}`))
       .map((q) => ({
         user_id: userId,
         quest_type: q.quest_type,
@@ -151,8 +149,8 @@ export class QuestsService {
         updated_at: new Date().toISOString(),
       }));
 
-    if (questsToInsert.length > 0) {
-      await supabase.from('user_quests').insert(questsToInsert);
+    if (missingQuests.length > 0) {
+      await supabase.from('user_quests').insert(missingQuests);
     }
   }
 
@@ -171,8 +169,7 @@ export class QuestsService {
 
     if (!data || data.length === 0) return;
 
-    // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with concurrent execution via Promise.allSettled.
-    // Expected impact: Significant reduction in database latency when a single user action increments progress across multiple quests simultaneously.
+    // ⚡ Bolt Optimization: Replace sequential await loop with Promise.allSettled mapped concurrent operations
     const updatePromises = data.map(async (quest) => {
       const newProgress = (quest.progress ?? 0) + amount;
       const completed = newProgress >= quest.target;
@@ -185,7 +182,6 @@ export class QuestsService {
         completed,
         updated_at: new Date().toISOString(),
       };
-
       if (completed) {
         await this.usersService.awardCoins(userId, quest.reward_coins);
       }
@@ -196,14 +192,11 @@ export class QuestsService {
     });
 
     const results = await Promise.allSettled(updatePromises);
-
-    // Log any errors that occurred during the concurrent execution
-    const rejected = results.filter((r) => r.status === 'rejected');
-    if (rejected.length > 0) {
-      rejected.forEach((r) => {
-        console.error('Failed to increment quest progress:', r.reason);
-      });
-      throw new Error(`Failed to update ${rejected.length} quest(s)`);
+    const failures = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failures.length > 0) {
+      throw failures[0].reason;
     }
   }
 }

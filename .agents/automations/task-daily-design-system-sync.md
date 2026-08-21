@@ -1,11 +1,14 @@
-# Daily Component Design System Sync
+# Daily Relay + Spartan Design System Sync
 
 ## Objective
-Enforce the clone-first design policy and eliminate ad-hoc, generic web dashboard styling.
+Prevent UI drift by enforcing the current Relay + Spartan architecture and reconciling material visual contracts with Claude Design.
 
 ## Instructions
-1. Do a visual audit of the application against the original HelloTalk screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-2. Look for UI elements that use standard HTML form controls or Bootstrap-like styles instead of custom Angular primitives.
-3. Refactor these elements into `app-pill`, `app-chip`, or `app-button-secondary`.
-4. Ensure all backgrounds adhere strictly to the `#121212` dark mode mandate.
-5. Verify that pricing is enforced in all monetisation views.
+1. Read `DESIGN.md`, `docs/spartan-relay-architecture.md`, and `docs/claude-design-two-way-sync.md` before changing UI.
+2. Audit changed and high-traffic surfaces for ad hoc product styling, duplicated interaction state machines, direct feature-level Spartan Brain usage, and obsolete primitive families.
+3. Prefer approved Relay primitives and existing Spartan Helm components. Use Spartan Brain for accessible interaction mechanics through the documented ownership boundary instead of recreating focus, keyboard, overlay, combobox, menu, or dialog behaviour.
+4. Preserve first-class light and dark themes, semantic Relay token roles, per-user primary accents, RTL logical properties, multilingual typography, reduced motion, forced colours, and high-zoom/reflow requirements. Never impose a dark-only or `#121212` global mandate.
+5. Treat original HelloTalk screenshots as product-reference material only. They do not override the current Relay token system, accessibility requirements, or Spartan component ownership.
+6. Run `npm run check:design-sync`, `npm run check:spartan-boundaries`, the frontend verification gates, and relevant tests for changed code.
+7. For material visual-contract changes, reconcile the affected stable IDs in `design-sync.manifest.json`, repository previews, and the existing `HelloTalk Design System` Claude Design project according to the two-way sync contract.
+8. Do not create a parallel design system, duplicate primitive family, or separate Claude Design project.

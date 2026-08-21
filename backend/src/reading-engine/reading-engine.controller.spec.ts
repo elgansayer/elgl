@@ -38,7 +38,7 @@ vi.mock('dompurify', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineController } from './reading-engine.controller';
 import { ReadingEngineService } from './reading-engine.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
 import {

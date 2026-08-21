@@ -1,4 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { TranslatePipe } from '../services/translate.pipe';
 import { UserService } from '../services/user.service';
 
@@ -7,29 +8,28 @@ import { UserService } from '../services/user.service';
   template: `
     <fieldset class="flex flex-col gap-2">
       <legend class="font-medium">{{ 'settings.locationPrivacy' | t }}</legend>
-      <div class="flex items-center gap-4">
-        <label class="cursor-pointer">
-          <input
-            type="radio"
-            name="locationPrivacy"
-            [checked]="locationPrivacy() === 'exact'"
-            (change)="setLocationPrivacy('exact')"
-          />
-          {{ 'settings.locationPrivacy.exact' | t }}
+      <hlm-radio-group
+        class="flex items-center gap-4"
+        name="locationPrivacy"
+        [value]="locationPrivacy()"
+        (valueChange)="setLocationPrivacy($any($event))"
+      >
+        <label class="flex cursor-pointer items-center gap-2">
+          <hlm-radio value="exact" inputId="location-privacy-exact">
+            <hlm-radio-indicator indicator />
+          </hlm-radio>
+          <span>{{ 'settings.locationPrivacy.exact' | t }}</span>
         </label>
-        <label class="cursor-pointer">
-          <input
-            type="radio"
-            name="locationPrivacy"
-            [checked]="locationPrivacy() === 'region'"
-            (change)="setLocationPrivacy('region')"
-          />
-          {{ 'settings.locationPrivacy.region' | t }}
+        <label class="flex cursor-pointer items-center gap-2">
+          <hlm-radio value="region" inputId="location-privacy-region">
+            <hlm-radio-indicator indicator />
+          </hlm-radio>
+          <span>{{ 'settings.locationPrivacy.region' | t }}</span>
         </label>
-      </div>
+      </hlm-radio-group>
     </fieldset>
   `,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmRadioGroupImports],
 })
 export class LocationPrivacyToggleComponent {
   public readonly locationPrivacy = signal<'exact' | 'region'>('exact');
