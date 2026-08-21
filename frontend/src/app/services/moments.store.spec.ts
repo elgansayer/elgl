@@ -2,15 +2,18 @@ import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { MomentsStore, MomentRecord } from './moments.store';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { SeriousLearnerModeService } from './serious-learner-mode.service';
 import { environment } from '../../environments/environment';
 
 describe('MomentsStore', () => {
   let store: MomentsStore;
   let httpMock: HttpTestingController;
   let hapticFeedback: { success: ReturnType<typeof vi.fn>; tap: ReturnType<typeof vi.fn> };
+  let seriousLearnerEnabled: ReturnType<typeof signal<boolean>>;
 
   const mockMoment: MomentRecord = {
     id: 'moment1',
@@ -33,6 +36,7 @@ describe('MomentsStore', () => {
       success: vi.fn(),
       tap: vi.fn(),
     };
+    seriousLearnerEnabled = signal(false);
 
     TestBed.configureTestingModule({
       providers: [
@@ -41,6 +45,10 @@ describe('MomentsStore', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authSpy },
         { provide: HapticFeedbackService, useValue: hapticFeedback },
+        {
+          provide: SeriousLearnerModeService,
+          useValue: { enabled: seriousLearnerEnabled },
+        },
       ],
     });
 
@@ -54,6 +62,17 @@ describe('MomentsStore', () => {
 
   it('should be created', () => {
     expect(store).toBeTruthy();
+  });
+
+  it('does not fetch the social feed while Serious Learner mode is enabled', async () => {
+    seriousLearnerEnabled.set(true);
+    store.feed.set([mockMoment]);
+
+    await store.loadFeed('All');
+
+    httpMock.expectNone(`${environment.apiUrl}/moments/feed`);
+    expect(store.feed()).toEqual([]);
+    expect(store.isLoading()).toBe(false);
   });
 
   it('should trigger haptic feedback and update the feed when a moment is liked', async () => {
