@@ -65,9 +65,7 @@ export class OfflineReadingService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
-        const db = target.result;
+        const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_ARTICLES)) {
           db.createObjectStore(STORE_ARTICLES, { keyPath: 'id' });
         }
@@ -93,10 +91,6 @@ export class OfflineReadingService {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     const store = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
-
-    // Keep only the most recent MAX_CACHED_ARTICLES
-    const existing = await this.getAllFromStore(db, STORE_ARTICLES);
-    const existingIds = new Set(existing.map((a: unknown) => (a as CachedArticle).id));
 
     for (const article of articles) {
       const cached: CachedArticle = { ...article, cachedAt: Date.now() };

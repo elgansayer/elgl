@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
-  let mockAnalyticsService: { recordClientError: jest.Mock };
+  let mockAnalyticsService: { recordClientError: Mock };
 
   beforeEach(async () => {
     mockAnalyticsService = {
-      recordClientError: jest.fn().mockResolvedValue(undefined),
+      recordClientError: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({

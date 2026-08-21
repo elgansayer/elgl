@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -14,7 +15,7 @@ describe('ChatLlmProxyService', () => {
         {
           provide: ChatLlmService,
           useValue: {
-            proxyChatMessages: jest.fn(),
+            proxyChatMessages: vi.fn(),
           },
         },
       ],
@@ -25,7 +26,7 @@ describe('ChatLlmProxyService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,7 +49,7 @@ describe('ChatLlmProxyService', () => {
     });
 
     it('should build messages with a system prompt and the user message when history is omitted', async () => {
-      (chatLlmService.proxyChatMessages as jest.Mock).mockResolvedValue({
+      (chatLlmService.proxyChatMessages as Mock).mockResolvedValue({
         response: 'Hello there!',
       });
 
@@ -66,7 +67,7 @@ describe('ChatLlmProxyService', () => {
     });
 
     it('should include prior history before the new user message', async () => {
-      (chatLlmService.proxyChatMessages as jest.Mock).mockResolvedValue({
+      (chatLlmService.proxyChatMessages as Mock).mockResolvedValue({
         response: 'Sure, happy to help.',
       });
 
@@ -117,7 +118,7 @@ describe('ChatLlmProxyService', () => {
     });
 
     it('should prepend a system prompt to the conversation', async () => {
-      (chatLlmService.proxyChatMessages as jest.Mock).mockResolvedValue({
+      (chatLlmService.proxyChatMessages as Mock).mockResolvedValue({
         response: 'Got it.',
       });
 

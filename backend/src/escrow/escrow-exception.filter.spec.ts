@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   BadRequestException,
   HttpException,
@@ -11,7 +12,7 @@ describe('EscrowExceptionFilter', () => {
   let filter: EscrowExceptionFilter;
   let crashReportService: CrashReportService;
 
-  let mockResponse: { status: jest.Mock; json: jest.Mock };
+  let mockResponse: { status: Mock; json: Mock };
   let mockRequest: {
     method: string;
     path: string;
@@ -20,18 +21,18 @@ describe('EscrowExceptionFilter', () => {
     params: Record<string, unknown>;
     user?: { id: string } | undefined;
   };
-  let mockHost: { switchToHttp: jest.Mock };
+  let mockHost: { switchToHttp: Mock };
 
   beforeEach(() => {
     crashReportService = {
-      reportCrash: jest.fn().mockResolvedValue(null),
+      reportCrash: vi.fn().mockResolvedValue(null),
     } as unknown as CrashReportService;
 
     filter = new EscrowExceptionFilter(crashReportService);
 
     mockResponse = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
 
     mockRequest = {

@@ -25,7 +25,6 @@ export class OnboardingService {
   readonly steps: { label: string }[] = [
     { label: 'onboarding.step1' },
     { label: 'onboarding.step2' },
-    { label: 'onboarding.step3' },
     { label: 'onboarding.step4' },
   ];
 
@@ -55,10 +54,6 @@ export class OnboardingService {
     }
     if (step === 1) {
       return this.targetLanguages().size > 0;
-    }
-    if (step === 2) {
-      // Quiz step is always allowed to proceed - user can skip
-      return true;
     }
     // final step - a non-empty display name is required
     return this.displayName().trim().length > 0;

@@ -12,7 +12,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 
 // Deterministic stand-in for the real mock-data module, which assigns
 // languages via Math.random() and made fallback-feed assertions flaky.
-jest.mock('../mock-data', () => {
+vi.mock('../mock-data', () => {
   const langs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
   return {
     MOCK_USERS: Array.from({ length: 150 }, (_, i) => {
@@ -50,24 +50,24 @@ describe('MomentsService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      returns: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     mockRedisClient = {
-      lrange: jest.fn().mockResolvedValue([]),
+      lrange: vi.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,14 +77,14 @@ describe('MomentsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn().mockResolvedValue({
+            getProfile: vi.fn().mockResolvedValue({
               id: 'user-1',
               display_name: 'Serious Learner',
               avatar_url: 'avatar.png',
@@ -94,36 +94,36 @@ describe('MomentsService', () => {
         {
           provide: TimelineWorker,
           useValue: {
-            fanOutMoment: jest.fn().mockResolvedValue(undefined),
+            fanOutMoment: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
           provide: SafetyService,
           useValue: {
-            isBlocked: jest.fn().mockResolvedValue(false),
-            reportUser: jest.fn().mockResolvedValue(undefined),
-            blockUser: jest.fn().mockResolvedValue(undefined),
-            unblockUser: jest.fn().mockResolvedValue(undefined),
-            getCategories: jest.fn().mockReturnValue(['harassment']),
-            getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
+            isBlocked: vi.fn().mockResolvedValue(false),
+            reportUser: vi.fn().mockResolvedValue(undefined),
+            blockUser: vi.fn().mockResolvedValue(undefined),
+            unblockUser: vi.fn().mockResolvedValue(undefined),
+            getCategories: vi.fn().mockReturnValue(['harassment']),
+            getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
           },
         },
         {
           provide: XpService,
           useValue: {
-            awardXpForActivity: jest.fn(),
+            awardXpForActivity: vi.fn(),
           },
         },
         {
           provide: QuestsService,
           useValue: {
-            incrementProgress: jest.fn(),
+            incrementProgress: vi.fn(),
           },
         },
         {
           provide: R2Service,
           useValue: {
-            generateUploadUrl: jest.fn(),
+            generateUploadUrl: vi.fn(),
           },
         },
       ],
@@ -140,7 +140,7 @@ describe('MomentsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -229,38 +229,36 @@ describe('MomentsService', () => {
       // Setup profile and like hydration mocks when queried
       // In getFeed: first query is `moments` (handled by our check). Then author profiles `in('id', authorIds)`. Then `moment_likes`.
       // Let's make `mockSupabaseClient.from` return different builder behavior depending on table name
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockReturnThis(),
-              order: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [
-                  { id: 'u-1', display_name: 'User 1' },
-                  { id: 'u-2', display_name: 'User 2' },
-                ],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ moment_id: 'm-1' }],
-              }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { id: 'u-1', display_name: 'User 1' },
+                { id: 'u-2', display_name: 'User 2' },
+              ],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ moment_id: 'm-1' }],
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'Following');
 
@@ -278,42 +276,38 @@ describe('MomentsService', () => {
       mockRedisClient.lrange.mockResolvedValue([]);
       const moments = [{ id: 'm-3', user_id: 'u-3' }];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'user_follows') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest
-                .fn()
-                .mockResolvedValue({ data: [{ following_id: 'u-3' }] }),
-            };
-          }
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-3', display_name: 'User 3' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'user_follows') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [{ following_id: 'u-3' }] }),
+          };
+        }
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-3', display_name: 'User 3' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'Following');
       expect(result.filter((m) => m.id === 'm-3')).toHaveLength(1);
@@ -321,36 +315,34 @@ describe('MomentsService', () => {
 
     it('should return classmates feed filtered by target language', async () => {
       const moments = [{ id: 'm-4', user_id: 'u-4' }];
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users' || table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockReturnThis(),
-              then: (resolve: any) => resolve({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users' || table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            then: (resolve: any) => resolve({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'Classmates', 'fr');
       expect(result).toHaveLength(1);
     });
 
     it("should only show moments targeted at the viewer's native language (or untargeted) for the All filter", async () => {
-      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
         id: 'user-1',
         display_name: 'Serious Learner',
         avatar_url: 'avatar.png',
@@ -363,37 +355,35 @@ describe('MomentsService', () => {
         { id: 'm-none', user_id: 'u-3', target_language: null },
       ];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [
-                  { id: 'u-1', display_name: 'User 1' },
-                  { id: 'u-2', display_name: 'User 2' },
-                  { id: 'u-3', display_name: 'User 3' },
-                ],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { id: 'u-1', display_name: 'User 1' },
+                { id: 'u-2', display_name: 'User 2' },
+                { id: 'u-3', display_name: 'User 3' },
+              ],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'All');
 
@@ -401,7 +391,7 @@ describe('MomentsService', () => {
     });
 
     it('should match target_language to native_languages case-insensitively', async () => {
-      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
         id: 'user-1',
         display_name: 'Serious Learner',
         avatar_url: 'avatar.png',
@@ -410,33 +400,31 @@ describe('MomentsService', () => {
 
       const moments = [{ id: 'm-ja', user_id: 'u-1', target_language: 'JA' }];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'User 1' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'User 1' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'All');
 
@@ -445,30 +433,28 @@ describe('MomentsService', () => {
     });
 
     it('should return generated mock moments when DB returns no moments', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'All');
       // The service generates fallback mock moments when the DB returns nothing.
@@ -479,56 +465,52 @@ describe('MomentsService', () => {
 
   describe('likeMoment', () => {
     it('should delete existing like and decrement likes_count when already liked', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { id: 'like-1', moment_id: 'm-1' },
-              }),
-              delete: jest.fn().mockReturnThis(),
-            };
-          }
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: { likes_count: 5 } }),
-              update: jest.fn().mockReturnThis(),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'like-1', moment_id: 'm-1' },
+            }),
+            delete: vi.fn().mockReturnThis(),
+          };
+        }
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { likes_count: 5 } }),
+            update: vi.fn().mockReturnThis(),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.likeMoment('user-1', 'm-1');
       expect(result).toEqual({ likes_count: 4, is_liked: false });
     });
 
     it('should insert new like and increment likes_count when not liked yet', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: null }),
-              insert: jest.fn().mockResolvedValue({}),
-            };
-          }
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: { likes_count: 2 } }),
-              update: jest.fn().mockReturnThis(),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: null }),
+            insert: vi.fn().mockResolvedValue({}),
+          };
+        }
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { likes_count: 2 } }),
+            update: vi.fn().mockReturnThis(),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.likeMoment('user-1', 'm-1');
       expect(result).toEqual({ likes_count: 3, is_liked: true });
@@ -545,30 +527,26 @@ describe('MomentsService', () => {
         ...dto,
       };
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
-            return {
-              insert: jest.fn().mockReturnThis(),
-              select: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: commentRow, error: null }),
-            };
-          }
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: { comments_count: 3 } }),
-              update: jest.fn().mockReturnThis(),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: commentRow, error: null }),
+          };
+        }
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { comments_count: 3 } }),
+            update: vi.fn().mockReturnThis(),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.addComment('user-1', 'm-1', dto);
       expect(result.id).toBe('c-1');
@@ -577,26 +555,24 @@ describe('MomentsService', () => {
 
     it('should return comments list with populated authors', async () => {
       const comments = [{ id: 'c-1', user_id: 'u-1', text_content: 'Hi' }];
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockResolvedValue({ data: comments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'Commenter' }],
-              }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: comments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'Commenter' }],
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getComments('m-1');
       expect(result).toHaveLength(1);
@@ -614,11 +590,11 @@ describe('MomentsService', () => {
     });
 
     it('should throw ForbiddenException if moment not found or not owned by user', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => {
         return {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
             data: { user_id: 'other-user', is_pinned: false },
           }),
         };
@@ -631,43 +607,41 @@ describe('MomentsService', () => {
 
     it('should toggle is_pinned successfully for author who is VIP', async () => {
       let callCount = 0;
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            callCount++;
-            if (callCount === 1) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({
-                  data: { user_id: 'user-1', is_pinned: false },
-                }),
-              };
-            } else {
-              return {
-                update: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                select: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({
-                  data: { id: 'm-1', user_id: 'user-1', is_pinned: true },
-                  error: null,
-                }),
-              };
-            }
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { user_id: 'user-1', is_pinned: false },
+              }),
+            };
+          } else {
+            return {
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              select: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { id: 'm-1', user_id: 'user-1', is_pinned: true },
+                error: null,
+              }),
+            };
           }
-          return mockQueryBuilder;
-        });
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.pinMoment('user-1', true, 'm-1');
       expect(result.is_pinned).toBe(true);
     });
 
     it('should throw ForbiddenException when the moment does not exist', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null }),
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null }),
       }));
 
       await expect(
@@ -677,30 +651,28 @@ describe('MomentsService', () => {
 
     it('should throw when toggling the pin fails to persist', async () => {
       let callCount = 0;
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table !== 'moments') return mockQueryBuilder;
-          callCount++;
-          if (callCount === 1) {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { user_id: 'user-1', is_pinned: false },
-              }),
-            };
-          }
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table !== 'moments') return mockQueryBuilder;
+        callCount++;
+        if (callCount === 1) {
           return {
-            update: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: { message: 'persist failed' },
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { user_id: 'user-1', is_pinned: false },
             }),
           };
-        });
+        }
+        return {
+          update: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'persist failed' },
+          }),
+        };
+      });
 
       await expect(service.pinMoment('user-1', true, 'm-1')).rejects.toThrow(
         'Failed to toggle pin: persist failed',
@@ -710,30 +682,28 @@ describe('MomentsService', () => {
 
   describe('getLifetimeCounts', () => {
     it('should aggregate moments, corrections and translations counts', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest
-                .fn()
-                .mockResolvedValue({ data: [{ id: '1' }, { id: '2' }] }),
-            };
-          }
-          if (table === 'moment_comments') {
-            return {
-              select: jest.fn().mockReturnValue({
-                not: jest.fn().mockResolvedValue({ data: [{ id: 'c-1' }] }),
-              }),
-            };
-          }
-          if (table === 'translations') {
-            return {
-              select: jest.fn().mockResolvedValue({ data: [{ id: 't-1' }] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi
+              .fn()
+              .mockResolvedValue({ data: [{ id: '1' }, { id: '2' }] }),
+          };
+        }
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              not: vi.fn().mockResolvedValue({ data: [{ id: 'c-1' }] }),
+            }),
+          };
+        }
+        if (table === 'translations') {
+          return {
+            select: vi.fn().mockResolvedValue({ data: [{ id: 't-1' }] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getLifetimeCounts('user-1');
 
@@ -741,28 +711,26 @@ describe('MomentsService', () => {
     });
 
     it('should throw when any of the count queries error', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest
-                .fn()
-                .mockResolvedValue({ data: null, error: { message: 'boom' } }),
-            };
-          }
-          if (table === 'moment_comments') {
-            return {
-              select: jest.fn().mockReturnValue({
-                not: jest.fn().mockResolvedValue({ data: [] }),
-              }),
-            };
-          }
-          if (table === 'translations') {
-            return { select: jest.fn().mockResolvedValue({ data: [] }) };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi
+              .fn()
+              .mockResolvedValue({ data: null, error: { message: 'boom' } }),
+          };
+        }
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              not: vi.fn().mockResolvedValue({ data: [] }),
+            }),
+          };
+        }
+        if (table === 'translations') {
+          return { select: vi.fn().mockResolvedValue({ data: [] }) };
+        }
+        return mockQueryBuilder;
+      });
 
       await expect(service.getLifetimeCounts('user-1')).rejects.toThrow(
         /Failed to fetch counts/,
@@ -857,49 +825,47 @@ describe('MomentsService', () => {
 
   describe('getFeed additional targeted visibility and safety cases', () => {
     it('should exclude moments from blocked or blocking users', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['u-blocked']);
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'u-blocked',
+      ]);
 
       const moments = [
         { id: 'm-1', user_id: 'u-1', target_language: null },
         { id: 'm-2', user_id: 'u-blocked', target_language: null },
       ];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'User 1' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'User 1' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'All');
       expect(result.map((m) => m.id)).toEqual(['m-1']);
     });
 
     it('should not apply targeted visibility filtering to the Classmates feed', async () => {
-      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
         id: 'user-1',
         display_name: 'Serious Learner',
         avatar_url: 'avatar.png',
@@ -908,34 +874,32 @@ describe('MomentsService', () => {
 
       const moments = [{ id: 'm-de', user_id: 'u-2', target_language: 'de' }];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: moments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-2', display_name: 'User 2' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: moments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-2', display_name: 'User 2' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       // Native language is 'fr' but the Classmates room is 'de': the post must
       // still be shown because targeted visibility is scoped to All/Following only.
@@ -944,19 +908,17 @@ describe('MomentsService', () => {
     });
 
     it('should filter generated mock moments by targetLang for the Classmates fallback', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'Classmates', 'fr');
       expect(result.length).toBeGreaterThan(0);
@@ -964,25 +926,23 @@ describe('MomentsService', () => {
     });
 
     it('should filter generated mock moments by native language for the All/Following fallback', async () => {
-      jest.spyOn(usersService, 'getProfile').mockResolvedValue({
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
         id: 'user-1',
         display_name: 'Serious Learner',
         avatar_url: 'avatar.png',
         native_languages: ['ja'],
       } as any);
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getFeed('user-1', 'All');
       result.forEach((m) =>
@@ -996,37 +956,35 @@ describe('MomentsService', () => {
   describe('getQuestions', () => {
     const buildQuery = (data: any) => {
       const query: any = { data, error: null };
-      query.select = jest.fn().mockReturnValue(query);
-      query.in = jest.fn().mockReturnValue(query);
-      query.eq = jest.fn().mockReturnValue(query);
-      query.order = jest.fn().mockReturnValue(query);
-      query.limit = jest.fn().mockReturnValue(query);
+      query.select = vi.fn().mockReturnValue(query);
+      query.in = vi.fn().mockReturnValue(query);
+      query.eq = vi.fn().mockReturnValue(query);
+      query.order = vi.fn().mockReturnValue(query);
+      query.limit = vi.fn().mockReturnValue(query);
       return query;
     };
 
     it('should return questions filtered by target language with hydrated authors', async () => {
       const questions = [{ id: 'q-1', user_id: 'u-1' }];
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') return buildQuery(questions);
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'User 1' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') return buildQuery(questions);
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'User 1' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getQuestions('user-1', 'ja');
       expect(result).toHaveLength(1);
@@ -1034,34 +992,32 @@ describe('MomentsService', () => {
     });
 
     it('should exclude questions from blocked users', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['u-blocked']);
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'u-blocked',
+      ]);
       const questions = [
         { id: 'q-1', user_id: 'u-1' },
         { id: 'q-2', user_id: 'u-blocked' },
       ];
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') return buildQuery(questions);
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'User 1' }],
-              }),
-            };
-          }
-          if (table === 'moment_likes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({ data: [] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') return buildQuery(questions);
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'User 1' }],
+            }),
+          };
+        }
+        if (table === 'moment_likes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getQuestions('user-1');
       expect(result.map((m) => m.id)).toEqual(['q-1']);
@@ -1070,7 +1026,7 @@ describe('MomentsService', () => {
     it('should throw when the questions query errors', async () => {
       const query = buildQuery(null);
       query.error = { message: 'query failed' };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(query);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(query);
 
       await expect(service.getQuestions('user-1')).rejects.toThrow(
         'Failed to fetch questions: query failed',
@@ -1078,12 +1034,10 @@ describe('MomentsService', () => {
     });
 
     it('should return generated mock questions when there is no data', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') return buildQuery([]);
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') return buildQuery([]);
+        return mockQueryBuilder;
+      });
 
       const result = await service.getQuestions('user-1');
       expect(result.length).toBeGreaterThan(0);
@@ -1093,10 +1047,10 @@ describe('MomentsService', () => {
 
   describe('answerLanguageQuestion', () => {
     it('should throw when the moment cannot be found', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       }));
 
       await expect(
@@ -1105,10 +1059,10 @@ describe('MomentsService', () => {
     });
 
     it('should throw BadRequestException for a moment that is not a language question', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValue({ data: { post_type: 'moment' }, error: null }),
       }));
@@ -1121,75 +1075,71 @@ describe('MomentsService', () => {
     });
 
     it('should record the answer and report whether it was correct', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              update: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  user_id: 'author-1',
-                  post_type: 'language_question',
-                  correct_answer: 'A',
-                  question_options: ['A', 'B'],
-                  question_text: 'Q?',
-                },
-                error: null,
-              }),
-            };
-          }
-          if (table === 'moment_question_answers') {
-            return {
-              insert: jest.fn().mockResolvedValue({ error: null }),
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              returns: jest.fn().mockResolvedValue({
-                data: [{ is_correct: true }, { is_correct: false }],
-                error: null,
-              }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+                question_options: ['A', 'B'],
+                question_text: 'Q?',
+              },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'moment_question_answers') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            returns: vi.fn().mockResolvedValue({
+              data: [{ is_correct: true }, { is_correct: false }],
+              error: null,
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.answerLanguageQuestion('user-1', 'm-1', 'A');
       expect(result).toEqual({ correct: true, correctAnswer: 'A' });
     });
 
     it('should report an incorrect answer', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              update: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  user_id: 'author-1',
-                  post_type: 'language_question',
-                  correct_answer: 'A',
-                },
-                error: null,
-              }),
-            };
-          }
-          if (table === 'moment_question_answers') {
-            return {
-              insert: jest.fn().mockResolvedValue({ error: null }),
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              returns: jest
-                .fn()
-                .mockResolvedValue({ data: [{ is_correct: false }] }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                user_id: 'author-1',
+                post_type: 'language_question',
+                correct_answer: 'A',
+              },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'moment_question_answers') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            returns: vi
+              .fn()
+              .mockResolvedValue({ data: [{ is_correct: false }] }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.answerLanguageQuestion('user-1', 'm-1', 'B');
       expect(result).toEqual({ correct: false, correctAnswer: 'A' });
@@ -1198,13 +1148,13 @@ describe('MomentsService', () => {
 
   describe('likeMoment blocking', () => {
     it('should throw when the moment author has blocked the current user', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['user-1']);
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'user-1',
+      ]);
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValue({ data: { user_id: 'author-1' }, error: null }),
       }));
@@ -1217,11 +1167,11 @@ describe('MomentsService', () => {
 
   describe('getMomentLikes', () => {
     it('should return the users who liked a moment', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        returns: jest.fn().mockResolvedValue({
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        returns: vi.fn().mockResolvedValue({
           data: [
             {
               users: {
@@ -1248,14 +1198,14 @@ describe('MomentsService', () => {
     });
 
     it('should exclude blocked users from the likes list', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['u-2']);
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        returns: jest.fn().mockResolvedValue({
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'u-2',
+      ]);
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        returns: vi.fn().mockResolvedValue({
           data: [
             { users: { id: 'u-1', display_name: 'User 1' } },
             { users: { id: 'u-2', display_name: 'User 2' } },
@@ -1268,11 +1218,11 @@ describe('MomentsService', () => {
     });
 
     it('should throw when fetching likes fails', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        returns: jest.fn().mockResolvedValue({
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        returns: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'boom' },
         }),
@@ -1286,13 +1236,13 @@ describe('MomentsService', () => {
 
   describe('addComment safety, notifications and mentions', () => {
     it('should throw when the moment author has blocked the commenter', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['commenter-1']);
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'commenter-1',
+      ]);
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValue({ data: { user_id: 'author-1' }, error: null }),
       }));
@@ -1303,29 +1253,27 @@ describe('MomentsService', () => {
     });
 
     it('should throw when the comment insert fails', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: { user_id: 'author-1' } }),
-            };
-          }
-          if (table === 'moment_comments') {
-            return {
-              insert: jest.fn().mockReturnThis(),
-              select: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: null, error: { message: 'nope' } }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: { user_id: 'author-1' } }),
+          };
+        }
+        if (table === 'moment_comments') {
+          return {
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: null, error: { message: 'nope' } }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       await expect(
         service.addComment('commenter-1', 'm-1', { text_content: 'Hi' }),
@@ -1333,7 +1281,7 @@ describe('MomentsService', () => {
     });
 
     it('should notify the moment author and any @mentioned users', async () => {
-      const emitSpy = jest.spyOn(eventEmitter, 'emit');
+      const emitSpy = vi.spyOn(eventEmitter, 'emit');
       const commentRow = {
         id: 'c-1',
         moment_id: 'm-1',
@@ -1342,10 +1290,10 @@ describe('MomentsService', () => {
       };
 
       const sharedMomentsTable = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        single: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValueOnce({ data: { user_id: 'author-1' } })
           .mockResolvedValueOnce({
@@ -1353,31 +1301,29 @@ describe('MomentsService', () => {
           }),
       };
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
-            return {
-              insert: jest.fn().mockReturnThis(),
-              select: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: commentRow, error: null }),
-            };
-          }
-          if (table === 'moments') {
-            return sharedMomentsTable;
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'bob-id', display_name: 'bob' }],
-              }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: commentRow, error: null }),
+          };
+        }
+        if (table === 'moments') {
+          return sharedMomentsTable;
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'bob-id', display_name: 'bob' }],
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       await service.addComment('commenter-1', 'm-1', {
         text_content: 'Nice work @bob',
@@ -1397,31 +1343,29 @@ describe('MomentsService', () => {
     });
 
     it('should award quest progress when the comment contains a correction payload', async () => {
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
-            return {
-              insert: jest.fn().mockReturnThis(),
-              select: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { id: 'c-1', moment_id: 'm-1', user_id: 'commenter-1' },
-                error: null,
-              }),
-            };
-          }
-          if (table === 'moments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              update: jest.fn().mockReturnThis(),
-              single: jest
-                .fn()
-                .mockResolvedValue({ data: { user_id: 'author-1' } }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            insert: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'c-1', moment_id: 'm-1', user_id: 'commenter-1' },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'moments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            single: vi
+              .fn()
+              .mockResolvedValue({ data: { user_id: 'author-1' } }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       await service.addComment('commenter-1', 'm-1', {
         correction_payload: { original: 'foo', corrected: 'bar' },
@@ -1437,46 +1381,44 @@ describe('MomentsService', () => {
 
   describe('getComments votes and blocking', () => {
     it('should exclude comments from blocked users and populate vote tallies', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['u-blocked']);
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'u-blocked',
+      ]);
 
       const comments = [
         { id: 'c-1', user_id: 'u-1', text_content: 'Hi' },
         { id: 'c-2', user_id: 'u-blocked', text_content: 'Bad' },
       ];
 
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              order: jest.fn().mockResolvedValue({ data: comments }),
-            };
-          }
-          if (table === 'users') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [{ id: 'u-1', display_name: 'Commenter' }],
-              }),
-            };
-          }
-          if (table === 'moment_comment_votes') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              in: jest.fn().mockResolvedValue({
-                data: [
-                  { comment_id: 'c-1', user_id: 'user-1', vote: 'up' },
-                  { comment_id: 'c-1', user_id: 'u-2', vote: 'down' },
-                ],
-              }),
-            };
-          }
-          return mockQueryBuilder;
-        });
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: comments }),
+          };
+        }
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', display_name: 'Commenter' }],
+            }),
+          };
+        }
+        if (table === 'moment_comment_votes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { comment_id: 'c-1', user_id: 'user-1', vote: 'up' },
+                { comment_id: 'c-1', user_id: 'u-2', vote: 'down' },
+              ],
+            }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.getComments('m-1', 'user-1');
       expect(result).toHaveLength(1);
@@ -1486,10 +1428,10 @@ describe('MomentsService', () => {
     });
 
     it('should return an empty array when there are no comments', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: [] }),
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [] }),
       }));
 
       const result = await service.getComments('m-1');
@@ -1499,9 +1441,10 @@ describe('MomentsService', () => {
 
   describe('getVoiceUploadUrl and getMediaUploadUrl', () => {
     it('should throw ForbiddenException with the dual-currency message for non-VIP users', async () => {
-      jest
-        .spyOn(usersService, 'getProfile')
-        .mockResolvedValue({ id: 'user-1', is_vip: false } as any);
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+        is_vip: false,
+      } as any);
 
       await expect(
         service.getVoiceUploadUrl('user-1', 'note.mp3', 'audio/mpeg'),
@@ -1513,10 +1456,11 @@ describe('MomentsService', () => {
     });
 
     it('should return an upload URL for VIP users', async () => {
-      jest
-        .spyOn(usersService, 'getProfile')
-        .mockResolvedValue({ id: 'user-1', is_vip: true } as any);
-      jest.spyOn(r2Service, 'generateUploadUrl').mockResolvedValue({
+      vi.spyOn(usersService, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+        is_vip: true,
+      } as any);
+      vi.spyOn(r2Service, 'generateUploadUrl').mockResolvedValue({
         uploadUrl: 'upload-url',
         publicUrl: 'public-url',
       });
@@ -1533,7 +1477,7 @@ describe('MomentsService', () => {
     });
 
     it('should return a media upload URL without a VIP check', async () => {
-      jest.spyOn(r2Service, 'generateUploadUrl').mockResolvedValue({
+      vi.spyOn(r2Service, 'generateUploadUrl').mockResolvedValue({
         uploadUrl: 'upload-url',
         publicUrl: 'public-url',
       });
@@ -1545,10 +1489,10 @@ describe('MomentsService', () => {
 
   describe('editMomentText', () => {
     it('should throw when the moment cannot be found', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       }));
 
       await expect(
@@ -1557,13 +1501,13 @@ describe('MomentsService', () => {
     });
 
     it('should throw when the editor is blocked by the moment author', async () => {
-      jest
-        .spyOn(safetyService, 'getBlockedAndBlockerIds')
-        .mockResolvedValue(['user-1']);
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+      vi.spyOn(safetyService, 'getBlockedAndBlockerIds').mockResolvedValue([
+        'user-1',
+      ]);
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'author-1', text_content: 'old' },
           error: null,
         }),
@@ -1576,10 +1520,10 @@ describe('MomentsService', () => {
 
     it('should update the text and return the hydrated moment', async () => {
       const sharedMomentsTable = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        single: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValueOnce({
             data: { user_id: 'user-1', text_content: 'old' },
@@ -1600,7 +1544,7 @@ describe('MomentsService', () => {
             error: null,
           }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(sharedMomentsTable);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(sharedMomentsTable);
 
       const result = await service.editMomentText('user-1', 'm-1', {
         textContent: 'New text',
@@ -1613,21 +1557,21 @@ describe('MomentsService', () => {
 
     it('should throw when the update fails', async () => {
       let callCount = 0;
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
               data: { user_id: 'user-1', text_content: 'old' },
               error: null,
             }),
           };
         }
         return {
-          update: jest.fn().mockReturnThis(),
-          eq: jest
+          update: vi.fn().mockReturnThis(),
+          eq: vi
             .fn()
             .mockResolvedValue({ error: { message: 'update failed' } }),
         };
@@ -1640,10 +1584,10 @@ describe('MomentsService', () => {
 
     it('should throw when the updated moment cannot be retrieved', async () => {
       const sharedMomentsTable = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        single: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValueOnce({
             data: { user_id: 'user-1', text_content: 'old' },
@@ -1651,7 +1595,7 @@ describe('MomentsService', () => {
           })
           .mockResolvedValueOnce({ data: null, error: { message: 'gone' } }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(sharedMomentsTable);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(sharedMomentsTable);
 
       await expect(
         service.editMomentText('user-1', 'm-1', { textContent: 'New text' }),
@@ -1661,10 +1605,10 @@ describe('MomentsService', () => {
 
   describe('voteOnCorrection', () => {
     it('should throw when the comment cannot be found', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       }));
 
       await expect(
@@ -1674,44 +1618,42 @@ describe('MomentsService', () => {
 
     it('should insert a new vote when the user has not voted yet', async () => {
       let voteCalls = 0;
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'c-1', user_id: 'author-1' },
+            }),
+          };
+        }
+        if (table === 'moment_comment_votes') {
+          voteCalls++;
+          if (voteCalls === 1) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { id: 'c-1', user_id: 'author-1' },
-              }),
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: null }),
             };
           }
-          if (table === 'moment_comment_votes') {
-            voteCalls++;
-            if (voteCalls === 1) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({ data: null }),
-              };
-            }
-            if (voteCalls === 2) {
-              return { insert: jest.fn().mockResolvedValue({ error: null }) };
-            }
-            if (voteCalls === 3) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockResolvedValue({ data: [{ vote: 'up' }] }),
-              };
-            }
+          if (voteCalls === 2) {
+            return { insert: vi.fn().mockResolvedValue({ error: null }) };
+          }
+          if (voteCalls === 3) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: { vote: 'up' } }),
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ data: [{ vote: 'up' }] }),
             };
           }
-          return mockQueryBuilder;
-        });
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { vote: 'up' } }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.voteOnCorrection('user-1', 'c-1', 'up');
       expect(result).toEqual({
@@ -1725,49 +1667,47 @@ describe('MomentsService', () => {
 
     it('should remove the vote when the same vote is cast again (toggle off)', async () => {
       let voteCalls = 0;
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'c-1', user_id: 'author-1' },
+            }),
+          };
+        }
+        if (table === 'moment_comment_votes') {
+          voteCalls++;
+          if (voteCalls === 1) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { id: 'c-1', user_id: 'author-1' },
-              }),
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi
+                .fn()
+                .mockResolvedValue({ data: { id: 'vote-1', vote: 'up' } }),
             };
           }
-          if (table === 'moment_comment_votes') {
-            voteCalls++;
-            if (voteCalls === 1) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                single: jest
-                  .fn()
-                  .mockResolvedValue({ data: { id: 'vote-1', vote: 'up' } }),
-              };
-            }
-            if (voteCalls === 2) {
-              return {
-                delete: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-              };
-            }
-            if (voteCalls === 3) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockResolvedValue({ data: [] }),
-              };
-            }
+          if (voteCalls === 2) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: null }),
+              delete: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
             };
           }
-          return mockQueryBuilder;
-        });
+          if (voteCalls === 3) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ data: [] }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: null }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.voteOnCorrection('user-1', 'c-1', 'up');
       expect(result).toEqual({
@@ -1781,49 +1721,47 @@ describe('MomentsService', () => {
 
     it('should switch the vote when the opposite vote is cast', async () => {
       let voteCalls = 0;
-      mockSupabaseClient.from = jest
-        .fn()
-        .mockImplementation((table: string) => {
-          if (table === 'moment_comments') {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
+        if (table === 'moment_comments') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: { id: 'c-1', user_id: 'author-1' },
+            }),
+          };
+        }
+        if (table === 'moment_comment_votes') {
+          voteCalls++;
+          if (voteCalls === 1) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { id: 'c-1', user_id: 'author-1' },
-              }),
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi
+                .fn()
+                .mockResolvedValue({ data: { id: 'vote-1', vote: 'down' } }),
             };
           }
-          if (table === 'moment_comment_votes') {
-            voteCalls++;
-            if (voteCalls === 1) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                single: jest
-                  .fn()
-                  .mockResolvedValue({ data: { id: 'vote-1', vote: 'down' } }),
-              };
-            }
-            if (voteCalls === 2) {
-              return {
-                update: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-              };
-            }
-            if (voteCalls === 3) {
-              return {
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockResolvedValue({ data: [{ vote: 'up' }] }),
-              };
-            }
+          if (voteCalls === 2) {
             return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: { vote: 'up' } }),
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
             };
           }
-          return mockQueryBuilder;
-        });
+          if (voteCalls === 3) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockResolvedValue({ data: [{ vote: 'up' }] }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { vote: 'up' } }),
+          };
+        }
+        return mockQueryBuilder;
+      });
 
       const result = await service.voteOnCorrection('user-1', 'c-1', 'up');
       expect(result).toEqual({
