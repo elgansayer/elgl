@@ -18,7 +18,7 @@ const MEDIA_MESSAGE_TYPES = [
   'view_once_media',
 ] as const;
 
-class CorrectionPayloadDto {
+export class CorrectionPayloadDto {
   @IsString()
   @Matches(/\S/, { message: 'correction_payload.original must not be blank' })
   @MaxLength(10000)
@@ -35,7 +35,7 @@ class CorrectionPayloadDto {
   explanation?: string;
 }
 
-class CorrectionRequestPayloadDto {
+export class CorrectionRequestPayloadDto {
   @IsString()
   @Matches(/\S/, {
     message: 'correction_request_payload.original_text must not be blank',
@@ -50,14 +50,16 @@ class CorrectionRequestPayloadDto {
   target_language?: string;
 }
 
-class StatusReplyPayloadDto {
+export class StatusReplyPayloadDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(128)
   status_update_id!: string;
 
   @IsString()
-  @Matches(/\S/, { message: 'status_reply_payload.status_text must not be blank' })
+  @Matches(/\S/, {
+    message: 'status_reply_payload.status_text must not be blank',
+  })
   @MaxLength(1000)
   status_text!: string;
 }
