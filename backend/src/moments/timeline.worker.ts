@@ -77,7 +77,7 @@ export class TimelineWorker {
           .range(offset, end);
 
         if (!error) {
-          return (data ?? []) as UserFollowRow[];
+          return data ?? [];
         }
       } catch {
         // Retry once below. Provider details are deliberately not logged.

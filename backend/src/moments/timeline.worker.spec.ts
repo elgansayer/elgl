@@ -202,8 +202,12 @@ describe('TimelineWorker', () => {
       expect(mockQueryBuilder.range).toHaveBeenCalledTimes(2);
       expect(mockRedisClient.multi).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('moment-secret');
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('author-secret');
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'moment-secret',
+      );
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'author-secret',
+      );
       expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('credentials');
       errorSpy.mockRestore();
     });
@@ -221,8 +225,12 @@ describe('TimelineWorker', () => {
 
       expect(mockTransaction.exec).toHaveBeenCalledTimes(2);
       expect(errorSpy).toHaveBeenCalledWith('Timeline fan-out failed (Error).');
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('private-host');
-      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain('moment-secret');
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'private-host',
+      );
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        'moment-secret',
+      );
       errorSpy.mockRestore();
     });
   });
