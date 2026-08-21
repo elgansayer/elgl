@@ -34,4 +34,9 @@ export class PrivacySettingsDto {
   @IsOptional()
   @IsBoolean()
   incognito_visits?: boolean;
+
+  // Hide paid-tier status from other members while preserving entitlement internally.
+  @IsOptional()
+  @IsBoolean()
+  privacy_hide_vip_status?: boolean;
 }

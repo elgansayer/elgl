@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
@@ -8,6 +9,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import { PrivacyStatusService } from '../../../services/privacy-status.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -16,15 +18,18 @@ interface HubNavItem {
   readonly route: string;
 }
 
+type PrivacyControl = 'online' | 'vip';
+
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
+  imports: [HlmCheckbox, HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
   templateUrl: './privacy-settings.component.html',
 })
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
   private blockedUsersService = inject(BlockedUsersService);
+  private privacyStatusService = inject(PrivacyStatusService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -32,6 +37,13 @@ export class PrivacySettingsComponent {
   readonly mutedWordInput = signal('');
   readonly blockedCount = signal(0);
   readonly successMessage = signal('');
+
+  readonly privacyControlsLoading = signal(true);
+  readonly privacyControlsError = signal('');
+  readonly privacyControlsStatus = signal('');
+  readonly savingPrivacyControl = signal<PrivacyControl | null>(null);
+  readonly hideOnlineStatus = signal(false);
+  readonly hideVipStatus = signal(false);
 
   readonly mutedWords = this.safetyService.mutedWords;
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
@@ -65,12 +77,60 @@ export class PrivacySettingsComponent {
 
   constructor() {
     this.loadCounts();
+    void this.loadPrivacyControls();
   }
 
   private loadCounts(): void {
     this.blockedUsersService.loadBlockedUsers().then(() => {
       this.blockedCount.set(this.blockedUsers().length);
     });
+  }
+
+  async loadPrivacyControls(): Promise<void> {
+    this.privacyControlsLoading.set(true);
+    this.privacyControlsError.set('');
+    try {
+      const controls = await this.privacyStatusService.load();
+      this.hideOnlineStatus.set(controls.hideOnlineStatus);
+      this.hideVipStatus.set(controls.hideVipStatus);
+    } catch {
+      this.privacyControlsError.set('privacy.loadError');
+    } finally {
+      this.privacyControlsLoading.set(false);
+    }
+  }
+
+  async setHideOnlineStatus(hidden: boolean): Promise<void> {
+    await this.persistPrivacyControl('online', hidden);
+  }
+
+  async setHideVipStatus(hidden: boolean): Promise<void> {
+    await this.persistPrivacyControl('vip', hidden);
+  }
+
+  private async persistPrivacyControl(control: PrivacyControl, hidden: boolean): Promise<void> {
+    if (this.savingPrivacyControl()) return;
+
+    const state = control === 'online' ? this.hideOnlineStatus : this.hideVipStatus;
+    const previous = state();
+    state.set(hidden);
+    this.savingPrivacyControl.set(control);
+    this.privacyControlsError.set('');
+    this.privacyControlsStatus.set('');
+
+    try {
+      if (control === 'online') {
+        await this.privacyStatusService.setHideOnlineStatus(hidden);
+      } else {
+        await this.privacyStatusService.setHideVipStatus(hidden);
+      }
+      this.privacyControlsStatus.set('privacy.success');
+    } catch {
+      state.set(previous);
+      this.privacyControlsError.set('privacy.error');
+    } finally {
+      this.savingPrivacyControl.set(null);
+    }
   }
 
   addMutedWord(): void {
