@@ -5,7 +5,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { EventsService, Event } from '../../services/events.service';
+import { EventsService, Event, EventCategory } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -182,7 +182,7 @@ export class CreateEventModalComponent {
     title: ['', Validators.required],
     date_time: ['', Validators.required],
     language_pair: [''],
-    category: ['audio_room'],
+    category: this.fb.control<EventCategory>('audio_room', { nonNullable: true }),
     location: [''],
     max_participants: [null as number | null],
     description: [''],
