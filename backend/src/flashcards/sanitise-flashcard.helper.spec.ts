@@ -1,42 +1,47 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict mock: strip ALL HTML tags (mirrors the empty ALLOWED_TAGS config)
-const mockStrictSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  return dirty
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
-};
+const { mockStrictSanitize, mockSetConfig } = vi.hoisted(() => {
+  const mockStrictSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    return dirty
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
 
-const mockSetConfig = jest.fn();
+  const mockSetConfig = vi.fn();
+  return { mockStrictSanitize, mockSetConfig };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockStrictSanitize,
       setConfig: mockSetConfig,
     })),
@@ -48,7 +53,9 @@ import { sanitiseFlashcardData } from './sanitise-flashcard.helper';
 describe('sanitiseFlashcardData', () => {
   it('should strip HTML tags from strings', () => {
     expect(sanitiseFlashcardData('<b>bold</b>')).toBe('bold');
-    expect(sanitiseFlashcardData('<script>alert("xss")</script>')).toBe('alert("xss")');
+    expect(sanitiseFlashcardData('<script>alert("xss")</script>')).toBe(
+      'alert("xss")',
+    );
   });
 
   it('should strip javascript: protocol links', () => {
@@ -64,9 +71,7 @@ describe('sanitiseFlashcardData', () => {
   });
 
   it('should strip img tags with onerror', () => {
-    expect(
-      sanitiseFlashcardData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseFlashcardData('<img src=x onerror="alert(1)">')).toBe('');
   });
 
   it('should sanitise nested objects deeply', () => {
@@ -82,11 +87,10 @@ describe('sanitiseFlashcardData', () => {
   });
 
   it('should sanitise arrays of objects', () => {
-    const input = [
-      { word_token: '<b>a</b>' },
-      { word_token: '<i>b</i>' },
-    ];
-    const result = sanitiseFlashcardData(input) as Array<Record<string, unknown>>;
+    const input = [{ word_token: '<b>a</b>' }, { word_token: '<i>b</i>' }];
+    const result = sanitiseFlashcardData(input) as Array<
+      Record<string, unknown>
+    >;
     expect(result[0].word_token).toBe('a');
     expect(result[1].word_token).toBe('b');
   });

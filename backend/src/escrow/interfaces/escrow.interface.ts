@@ -12,7 +12,13 @@ export interface EscrowTransaction {
   refunded_at: string | null;
 }
 
-export type EscrowStatus = 'held' | 'released' | 'refunded' | 'disputed';
+export type EscrowStatus =
+  | 'held'
+  | 'released'
+  | 'refunded'
+  | 'disputed'
+  | 'release_pending'
+  | 'refund_pending';
 
 export interface CreateEscrowResult {
   id: string;
@@ -33,4 +39,11 @@ export interface RefundEscrowResult {
   status: EscrowStatus;
   amount_coins: number;
   payer_balance: number;
+}
+
+export interface ReconcileEscrowResult {
+  id: string;
+  status: EscrowStatus;
+  amount_coins: number;
+  reconciliation: 'completed' | 'already_consistent';
 }

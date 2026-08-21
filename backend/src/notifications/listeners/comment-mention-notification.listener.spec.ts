@@ -16,13 +16,13 @@ describe('CommentMentionNotificationListener', () => {
         {
           provide: NotificationsService,
           useValue: {
-            createNotification: jest.fn().mockResolvedValue(undefined),
+            createNotification: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
           provide: NotificationPreferencesService,
           useValue: {
-            shouldSendNotification: jest.fn().mockResolvedValue(true),
+            shouldSendNotification: vi.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -42,14 +42,15 @@ describe('CommentMentionNotificationListener', () => {
     expect(listener).toBeDefined();
   });
 
-  it('should create a notification when comment mentions a user', async () => {
+  it('should create a notification when comment mentions a user via mentionedUserIds', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
-      'mentioned-user-1',
+      'moment-author-1',
       'Hey @mentioned_user check this out',
       undefined,
       undefined,
+      ['mentioned-user-1'],
     );
 
     await listener.handleCommentMention(payload);
@@ -66,11 +67,26 @@ describe('CommentMentionNotificationListener', () => {
     );
   });
 
-  it('should skip notification when preferences disable push', async () => {
-    jest
-      .spyOn(notificationPreferencesService, 'shouldSendNotification')
-      .mockResolvedValue(false);
+  it('should create notifications for multiple mentioned users', async () => {
+    const payload = new MomentCommentEvent(
+      'moment-1',
+      'commenter-1',
+      'moment-author-1',
+      'Hey @alice and @bob check this out',
+      undefined,
+      undefined,
+      ['mentioned-user-1', 'mentioned-user-2'],
+    );
 
+    await listener.handleCommentMention(payload);
+
+    expect(
+      notificationPreferencesService.shouldSendNotification,
+    ).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+  });
+
+  it('should fall back to momentAuthorId for backward compatibility', async () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
@@ -80,19 +96,47 @@ describe('CommentMentionNotificationListener', () => {
 
     await listener.handleCommentMention(payload);
 
-    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(
+      notificationPreferencesService.shouldSendNotification,
+    ).toHaveBeenCalledWith('mentioned-user-1', 'moment_comment', 'push');
+    expect(notificationsService.createNotification).toHaveBeenCalled();
   });
 
-  it('should still send notification if preference check fails', async () => {
-    jest
-      .spyOn(notificationPreferencesService, 'shouldSendNotification')
-      .mockRejectedValue(new Error('DB error'));
+  it('should skip notification when preferences disable push', async () => {
+    vi.spyOn(
+      notificationPreferencesService,
+      'shouldSendNotification',
+    ).mockResolvedValue(false);
 
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
-      'mentioned-user-1',
+      'moment-author-1',
       'Hey @user',
+      undefined,
+      undefined,
+      ['mentioned-user-1'],
+    );
+
+    await listener.handleCommentMention(payload);
+
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+  });
+
+  it('should still send notification if preference check fails', async () => {
+    vi.spyOn(
+      notificationPreferencesService,
+      'shouldSendNotification',
+    ).mockRejectedValue(new Error('DB error'));
+
+    const payload = new MomentCommentEvent(
+      'moment-1',
+      'commenter-1',
+      'moment-author-1',
+      'Hey @user',
+      undefined,
+      undefined,
+      ['mentioned-user-1'],
     );
 
     await listener.handleCommentMention(payload);
@@ -104,8 +148,11 @@ describe('CommentMentionNotificationListener', () => {
     const payload = new MomentCommentEvent(
       'moment-1',
       'commenter-1',
-      'commenter-1',
+      'moment-author-1',
       'Hey @me check this',
+      undefined,
+      undefined,
+      ['commenter-1'],
     );
 
     await listener.handleCommentMention(payload);

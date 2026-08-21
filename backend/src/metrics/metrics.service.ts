@@ -26,7 +26,7 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
-// Trust & Safety metrics
+  // Trust & Safety metrics
   readonly tsReportsSubmitted: Counter<string>;
   readonly tsBlocksCreated: Counter<string>;
   readonly tsBlocksRemoved: Counter<string>;
@@ -48,6 +48,19 @@ export class MetricsService {
   readonly readingEngineSessionDuration: Histogram<string>;
   readonly readingEngineUserWordsLookedUp: Counter<string>;
   readonly readingEngineDailyActiveReaders: Gauge<string>;
+
+  // Escrow Payment metrics
+  readonly escrowTransactionsCreated: Counter<string>;
+  readonly escrowTransactionsReleased: Counter<string>;
+  readonly escrowTransactionsRefunded: Counter<string>;
+  readonly escrowTransactionsCancelled: Counter<string>;
+  readonly escrowTotalHeld: Gauge<string>;
+  readonly escrowTotalCoinsHeld: Gauge<string>;
+  readonly escrowAmountPerTransaction: Histogram<string>;
+  readonly escrowStaleHeldCount: Gauge<string>;
+  readonly escrowAutoRefundCount: Counter<string>;
+  readonly escrowDegradedQueueSize: Gauge<string>;
+
   // Virtual Coin Economy metrics
   readonly coinPurchaseTotal: Counter<string>;
   readonly coinPurchaseValue: Counter<string>;
@@ -61,6 +74,27 @@ export class MetricsService {
   readonly coinPurchaseErrorsTotal: Counter<string>;
   readonly coinFraudAttemptsTotal: Counter<string>;
   readonly coinTransactionLatency: Histogram<string>;
+
+  // Matchmaking (Recommendations) metrics
+  readonly matchmakingRecommendationsGenerated: Counter<string>;
+  readonly matchmakingRecommendationsPerRequest: Histogram<string>;
+  readonly matchmakingFallbackTierUsed: Counter<string>;
+  readonly matchmakingEmptyResultsTotal: Counter<string>;
+  readonly matchmakingRequestDuration: Histogram<string>;
+  readonly matchmakingDailyCacheMisses: Counter<string>;
+  readonly matchmakingTierSuccessRate: Gauge<string>;
+
+  // Admin Moderation Dashboard metrics
+  readonly adminBanActions: Counter<string>;
+  readonly adminWarnActions: Counter<string>;
+  readonly adminVipToggles: Counter<string>;
+  readonly adminBlockRemovals: Counter<string>;
+  readonly adminReportResolutions: Counter<string>;
+  readonly adminApiErrors: Counter<string>;
+  readonly adminApiLatency: Histogram<string>;
+  readonly adminPendingReports: Gauge<string>;
+  readonly adminActiveBlocks: Gauge<string>;
+  readonly adminLoginHistoryRequests: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -158,7 +192,7 @@ export class MetricsService {
       registers: [this.register],
     });
 
-// --- Trust & Safety Metrics ---
+    // --- Trust & Safety Metrics ---
 
     this.tsReportsSubmitted = new Counter({
       name: 'hellotalk_ts_reports_submitted_total',
@@ -293,6 +327,72 @@ export class MetricsService {
       help: 'Number of unique users who started a reading session in the last 24h',
       registers: [this.register],
     });
+
+    // --- Escrow Payment Metrics ---
+
+    this.escrowTransactionsCreated = new Counter({
+      name: 'hellotalk_escrow_transactions_created_total',
+      help: 'Total number of escrow transactions created',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsReleased = new Counter({
+      name: 'hellotalk_escrow_transactions_released_total',
+      help: 'Total number of escrow transactions released to payee',
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsRefunded = new Counter({
+      name: 'hellotalk_escrow_transactions_refunded_total',
+      help: 'Total number of escrow transactions refunded to payer',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.escrowTransactionsCancelled = new Counter({
+      name: 'hellotalk_escrow_transactions_cancelled_total',
+      help: 'Total number of escrow transactions cancelled',
+      registers: [this.register],
+    });
+
+    this.escrowTotalHeld = new Gauge({
+      name: 'hellotalk_escrow_total_held',
+      help: 'Number of escrow transactions currently in held status',
+      registers: [this.register],
+    });
+
+    this.escrowTotalCoinsHeld = new Gauge({
+      name: 'hellotalk_escrow_total_coins_held',
+      help: 'Total amount of coins held in escrow',
+      registers: [this.register],
+    });
+
+    this.escrowAmountPerTransaction = new Histogram({
+      name: 'hellotalk_escrow_amount_per_transaction',
+      help: 'Distribution of coin amounts per escrow transaction',
+      registers: [this.register],
+      buckets: [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000],
+    });
+
+    this.escrowStaleHeldCount = new Gauge({
+      name: 'hellotalk_escrow_stale_held_count',
+      help: 'Number of escrows held for more than 30 days (stale)',
+      registers: [this.register],
+    });
+
+    this.escrowAutoRefundCount = new Counter({
+      name: 'hellotalk_escrow_auto_refund_total',
+      help: 'Total number of escrows auto-refunded by the expiry cleanup job',
+      registers: [this.register],
+    });
+
+    this.escrowDegradedQueueSize = new Gauge({
+      name: 'hellotalk_escrow_degraded_queue_size',
+      help: 'Number of escrow operations queued in the degraded (fallback) queue',
+      registers: [this.register],
+    });
+
     // --- Virtual Coin Economy Metrics ---
 
     this.coinPurchaseTotal = new Counter({
@@ -377,6 +477,129 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
     });
+
+    // --- Matchmaking (Recommendations) Metrics ---
+
+    this.matchmakingRecommendationsGenerated = new Counter({
+      name: 'hellotalk_matchmaking_recommendations_generated_total',
+      help: 'Total number of recommendation results served to users',
+      labelNames: ['tier', 'endpoint'],
+      registers: [this.register],
+    });
+
+    this.matchmakingRecommendationsPerRequest = new Histogram({
+      name: 'hellotalk_matchmaking_recommendations_per_request',
+      help: 'Number of recommendations returned per request',
+      labelNames: ['tier'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 15, 20, 50],
+    });
+
+    this.matchmakingFallbackTierUsed = new Counter({
+      name: 'hellotalk_matchmaking_fallback_tier_used_total',
+      help: 'Number of times a fallback tier was used (tier > 1)',
+      labelNames: ['from_tier', 'to_tier'],
+      registers: [this.register],
+    });
+
+    this.matchmakingEmptyResultsTotal = new Counter({
+      name: 'hellotalk_matchmaking_empty_results_total',
+      help: 'Number of requests that returned zero recommendations',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.matchmakingRequestDuration = new Histogram({
+      name: 'hellotalk_matchmaking_request_duration_seconds',
+      help: 'End-to-end duration of matchmaking recommendation requests',
+      labelNames: ['endpoint', 'outcome'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    });
+
+    this.matchmakingDailyCacheMisses = new Counter({
+      name: 'hellotalk_matchmaking_daily_cache_misses_total',
+      help: 'Number of times Redis cache was unavailable or empty for daily recommendations',
+      labelNames: ['reason'],
+      registers: [this.register],
+    });
+
+    this.matchmakingTierSuccessRate = new Gauge({
+      name: 'hellotalk_matchmaking_tier_success_rate',
+      help: 'Rolling success rate of tier-1 (interest-based) matchmaking, 0-1',
+      registers: [this.register],
+    });
+
+    // --- Admin Moderation Dashboard Metrics ---
+
+    this.adminBanActions = new Counter({
+      name: 'hellotalk_admin_ban_actions_total',
+      help: 'Total number of admin ban actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminWarnActions = new Counter({
+      name: 'hellotalk_admin_warn_actions_total',
+      help: 'Total number of admin warning actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminVipToggles = new Counter({
+      name: 'hellotalk_admin_vip_toggles_total',
+      help: 'Total number of VIP status toggles by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminBlockRemovals = new Counter({
+      name: 'hellotalk_admin_block_removals_total',
+      help: 'Total number of block removals by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminReportResolutions = new Counter({
+      name: 'hellotalk_admin_report_resolutions_total',
+      help: 'Total number of report resolutions (approve/reject)',
+      labelNames: ['action', 'result'],
+      registers: [this.register],
+    });
+
+    this.adminApiErrors = new Counter({
+      name: 'hellotalk_admin_api_errors_total',
+      help: 'Total number of admin API errors',
+      labelNames: ['endpoint', 'error_type'],
+      registers: [this.register],
+    });
+
+    this.adminApiLatency = new Histogram({
+      name: 'hellotalk_admin_api_latency_seconds',
+      help: 'Latency of admin API operations',
+      labelNames: ['endpoint', 'action'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
+
+    this.adminPendingReports = new Gauge({
+      name: 'hellotalk_admin_pending_reports',
+      help: 'Number of reports pending admin review',
+      registers: [this.register],
+    });
+
+    this.adminActiveBlocks = new Gauge({
+      name: 'hellotalk_admin_active_blocks',
+      help: 'Total number of active block relationships across the platform',
+      registers: [this.register],
+    });
+
+    this.adminLoginHistoryRequests = new Counter({
+      name: 'hellotalk_admin_login_history_requests_total',
+      help: 'Total number of admin login history lookup requests',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -447,7 +670,7 @@ export class MetricsService {
     this.srsDecksCreated.inc();
   }
 
-// --- Trust & Safety metric helpers ---
+  // --- Trust & Safety metric helpers ---
 
   recordTsReportSubmitted(reasonCategory: string = 'unknown'): void {
     this.tsReportsSubmitted.inc({ reason_category: reasonCategory });
@@ -489,19 +712,31 @@ export class MetricsService {
     this.readingEngineSessions.inc({ language });
   }
 
-  recordReadingEngineWordsParsed(count: number, language: string = 'unknown'): void {
+  recordReadingEngineWordsParsed(
+    count: number,
+    language: string = 'unknown',
+  ): void {
     this.readingEngineWordsParsed.inc({ language }, count);
   }
 
-  recordReadingEngineTokenisationDuration(language: string, durationSeconds: number): void {
-    this.readingEngineTokenisationDuration.observe({ language }, durationSeconds);
+  recordReadingEngineTokenisationDuration(
+    language: string,
+    durationSeconds: number,
+  ): void {
+    this.readingEngineTokenisationDuration.observe(
+      { language },
+      durationSeconds,
+    );
   }
 
   recordReadingEngineAiRequest(endpoint: string, status: string): void {
     this.readingEngineAiRequests.inc({ endpoint, status });
   }
 
-  recordReadingEngineAiRequestDuration(endpoint: string, durationSeconds: number): void {
+  recordReadingEngineAiRequestDuration(
+    endpoint: string,
+    durationSeconds: number,
+  ): void {
     this.readingEngineAiRequestDuration.observe({ endpoint }, durationSeconds);
   }
 
@@ -519,7 +754,10 @@ export class MetricsService {
     });
   }
 
-  recordReadingEngineSessionDuration(language: string, durationSeconds: number): void {
+  recordReadingEngineSessionDuration(
+    language: string,
+    durationSeconds: number,
+  ): void {
     this.readingEngineSessionDuration.observe({ language }, durationSeconds);
   }
 
@@ -574,7 +812,11 @@ export class MetricsService {
     this.coinDailyClaimTotal.inc({ claimed: String(claimed) });
   }
 
-  recordGiftSent(giftId: string, animationType: string, coinValue: number): void {
+  recordGiftSent(
+    giftId: string,
+    animationType: string,
+    coinValue: number,
+  ): void {
     this.coinGiftTotal.inc({ gift_id: giftId, animation_type: animationType });
     this.coinGiftValue.inc({ gift_id: giftId }, coinValue);
   }
@@ -584,12 +826,187 @@ export class MetricsService {
     this.coinStickerRevenueTotal.inc({ pack_id: packId }, coinCost);
   }
 
-  observeCoinTransactionLatency(operation: string, durationSeconds: number): void {
+  observeCoinTransactionLatency(
+    operation: string,
+    durationSeconds: number,
+  ): void {
     this.coinTransactionLatency.observe({ operation }, durationSeconds);
+  }
+
+  // --- Matchmaking (Recommendations) metric helpers ---
+
+  recordMatchmakingRecommendationsGenerated(
+    tier: string,
+    endpoint: string,
+    count: number = 0,
+  ): void {
+    this.matchmakingRecommendationsGenerated.inc({ tier, endpoint }, count);
+  }
+
+  recordMatchmakingRecommendationsPerRequest(
+    tier: string,
+    count: number,
+  ): void {
+    this.matchmakingRecommendationsPerRequest.observe({ tier }, count);
+  }
+
+  recordMatchmakingFallbackTierUsed(fromTier: string, toTier: string): void {
+    this.matchmakingFallbackTierUsed.inc({
+      from_tier: fromTier,
+      to_tier: toTier,
+    });
+  }
+
+  recordMatchmakingEmptyResults(endpoint: string): void {
+    this.matchmakingEmptyResultsTotal.inc({ endpoint });
+  }
+
+  recordMatchmakingRequestDuration(
+    endpoint: string,
+    outcome: 'success' | 'empty' | 'error',
+    durationSeconds: number,
+  ): void {
+    this.matchmakingRequestDuration.observe(
+      { endpoint, outcome },
+      durationSeconds,
+    );
+  }
+
+  recordMatchmakingDailyCacheMiss(reason: string): void {
+    this.matchmakingDailyCacheMisses.inc({ reason });
+  }
+
+  setMatchmakingTierSuccessRate(rate: number): void {
+    this.matchmakingTierSuccessRate.set(rate);
+  }
+
+  // --- Escrow Payment metric helpers ---
+
+  recordEscrowCreated(amountCoins: number): void {
+    this.escrowTransactionsCreated.inc({ status: 'held' });
+    this.escrowAmountPerTransaction.observe(amountCoins);
+  }
+
+  recordEscrowReleased(amountCoins: number): void {
+    this.escrowTransactionsReleased.inc();
+  }
+
+  recordEscrowRefunded(amountCoins: number, reason: string = 'manual'): void {
+    this.escrowTransactionsRefunded.inc({ reason });
+  }
+
+  recordEscrowCancelled(amountCoins: number): void {
+    this.escrowTransactionsCancelled.inc();
+  }
+
+  recordEscrowAutoRefunded(amountCoins: number): void {
+    this.escrowAutoRefundCount.inc();
+  }
+
+  recordEscrowDegradedOperation(): void {
+    this.escrowDegradedQueueSize.inc();
+  }
+
+  setEscrowDegradedQueueSize(count: number): void {
+    this.escrowDegradedQueueSize.set(count);
+  }
+
+  setEscrowStaleHeldCount(count: number): void {
+    this.escrowStaleHeldCount.set(count);
+  }
+
+  // --- Admin Moderation Dashboard metric helpers ---
+
+  recordAdminBanAction(result: 'success' | 'failure'): void {
+    this.adminBanActions.inc({ result });
+  }
+
+  recordAdminWarnAction(result: 'success' | 'failure'): void {
+    this.adminWarnActions.inc({ result });
+  }
+
+  recordAdminVipToggle(result: 'success' | 'failure'): void {
+    this.adminVipToggles.inc({ result });
+  }
+
+  recordAdminBlockRemoval(result: 'success' | 'failure'): void {
+    this.adminBlockRemovals.inc({ result });
+  }
+
+  recordAdminReportResolution(
+    action: 'approve' | 'reject',
+    result: 'success' | 'failure',
+  ): void {
+    this.adminReportResolutions.inc({ action, result });
+  }
+
+  recordAdminApiError(endpoint: string, errorType: string): void {
+    this.adminApiErrors.inc({ endpoint, error_type: errorType });
+  }
+
+  observeAdminApiLatency(
+    endpoint: string,
+    action: string,
+    durationSeconds: number,
+  ): void {
+    this.adminApiLatency.observe({ endpoint, action }, durationSeconds);
+  }
+
+  setAdminPendingReports(count: number): void {
+    this.adminPendingReports.set(count);
+  }
+
+  setAdminActiveBlocks(count: number): void {
+    this.adminActiveBlocks.set(count);
+  }
+
+  recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
+    this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  setModerationQueueSize(count: number): void {
+    this.tsPendingReports.set(count);
+  }
+  setVideoRoomActive(count: number): void {
+    this.activeConnections.set(count);
+  }
+  setVideoRoomParticipants(count: number): void {
+    this.activeConnections.set(count);
+  }
+  recordVideoClassroomCreationFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom',
+      error_type: errorType,
+    });
+  }
+  recordVideoClassroomTokenGenerationDuration(
+    action: string,
+    durationSeconds: number,
+  ): void {
+    this.adminApiLatency.observe(
+      { endpoint: 'video-classroom', action },
+      durationSeconds,
+    );
+  }
+  recordVideoClassroomCreated(): void {
+    this.adminVipToggles.inc({ result: 'created' });
+  }
+  recordVideoClassroomJoined(): void {
+    this.adminVipToggles.inc({ result: 'joined' });
+  }
+  recordVideoClassroomJoinFailed(errorType: string): void {
+    this.adminApiErrors.inc({
+      endpoint: 'video-classroom-join',
+      error_type: errorType,
+    });
   }
 
   getRegister(): Registry {
     return this.register;
+  }
+
+  getContentType(): string {
+    return 'text/plain; version=0.0.4';
   }
 
   async getMetrics(): Promise<string> {

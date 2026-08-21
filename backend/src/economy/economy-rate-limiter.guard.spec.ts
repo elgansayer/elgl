@@ -1,21 +1,24 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+import type { Mock, Mocked } from 'vitest';
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: { createElement: vi.fn(), createDocumentFragment: vi.fn() },
+        Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+      },
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty.replace(/<[^>]*>/g, '');
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -33,10 +36,10 @@ import { ExecutionContext } from '@nestjs/common';
 
 describe('EconomyRateLimiterGuard', () => {
   let guard: EconomyRateLimiterGuard;
-  let redisMock: { incr: jest.Mock; expire: jest.Mock };
-  let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient'>>;
-  let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
-  let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let redisMock: { incr: Mock; expire: Mock };
+  let supabaseService: Mocked<Pick<SupabaseService, 'getRedisClient'>>;
+  let reflector: Mocked<Pick<Reflector, 'get'>>;
+  let logger: Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -50,8 +53,8 @@ describe('EconomyRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
-        getNext: jest.fn(),
+        getResponse: vi.fn(),
+        getNext: vi.fn(),
       }),
       getType: () => 'http',
     } as unknown as ExecutionContext;
@@ -59,21 +62,21 @@ describe('EconomyRateLimiterGuard', () => {
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
     };
 
     supabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
 
     reflector = {
-      get: jest.fn().mockReturnValue(undefined),
+      get: vi.fn().mockReturnValue(undefined),
     };
 
     logger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     guard = new EconomyRateLimiterGuard(
@@ -89,10 +92,13 @@ describe('EconomyRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('should allow the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = () => {};
       class TestController {}
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -105,13 +111,12 @@ describe('EconomyRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async () => {};
 
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === ECONOMY_RATE_LIMIT_KEY) return options;
         return undefined;
       });
@@ -120,7 +125,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request when count is within limit', async () => {
       redisMock.incr.mockResolvedValue(3);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -128,7 +137,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request and set expire on first request', async () => {
       redisMock.incr.mockResolvedValue(1);
 
-      const context = createMockExecutionContext('user-2', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-2',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).toHaveBeenCalledWith(
@@ -140,7 +153,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should not set expire on subsequent requests', async () => {
       redisMock.incr.mockResolvedValue(4);
 
-      const context = createMockExecutionContext('user-3', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-3',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).not.toHaveBeenCalled();
@@ -149,7 +166,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should block request when limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(6);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
@@ -160,7 +181,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should log warning when rate limit is exceeded', async () => {
       redisMock.incr.mockResolvedValue(10);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch {
@@ -179,7 +204,11 @@ describe('EconomyRateLimiterGuard', () => {
     });
 
     it('should allow request if user is not authenticated', async () => {
-      const context = createMockExecutionContext(undefined, handler, TestController);
+      const context = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -188,7 +217,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request and log error if Redis is unavailable', async () => {
       redisMock.incr.mockRejectedValue(new Error('Redis connection error'));
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(logger.error).toHaveBeenCalledWith(
@@ -209,18 +242,13 @@ describe('EconomyRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,
         'testMethod',
       );
-      EconomyRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      EconomyRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         ECONOMY_RATE_LIMIT_KEY,
@@ -237,18 +265,13 @@ describe('EconomyRateLimiterGuard', () => {
 
       // Setting metadata should overwrite any previous value
       class DecoratorTest2 {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc2 = Object.getOwnPropertyDescriptor(
         DecoratorTest2.prototype,
         'testMethod',
       );
-      EconomyRateLimit(opts)(
-        DecoratorTest2.prototype,
-        'testMethod',
-        desc2!,
-      );
+      EconomyRateLimit(opts)(DecoratorTest2.prototype, 'testMethod', desc2!);
 
       const metadata = Reflect.getMetadata(
         ECONOMY_RATE_LIMIT_KEY,

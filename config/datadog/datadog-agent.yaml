@@ -53,10 +53,45 @@ prometheus_scrape:
       - hellotalk_reading_engine_session_duration_seconds: histogram
       - hellotalk_reading_engine_words_looked_up_total: counter
       - hellotalk_reading_engine_daily_active_readers: gauge
+      # Escrow Payment metrics (Datadog custom metrics, #2381)
+      - hellotalk_escrow_transactions_created_total: counter
+      - hellotalk_escrow_transactions_released_total: counter
+      - hellotalk_escrow_transactions_refunded_total: counter
+      - hellotalk_escrow_transactions_cancelled_total: counter
+      - hellotalk_escrow_total_held: gauge
+      - hellotalk_escrow_total_coins_held: gauge
+      - hellotalk_escrow_amount_per_transaction: histogram
+      - hellotalk_escrow_stale_held_count: gauge
+      - hellotalk_escrow_auto_refund_total: counter
+      - hellotalk_escrow_degraded_queue_size: gauge
+      # Discovery Map metrics (Datadog custom metrics)
+      - hellotalk_discovery_search_requests_total: counter
+      - hellotalk_discovery_search_duration_seconds: histogram
+      - hellotalk_discovery_search_result_count: histogram
+      - hellotalk_discovery_fallback_to_mock_total: counter
+      - hellotalk_discovery_postgis_queries_total: counter
+      - hellotalk_discovery_postgis_query_duration_seconds: histogram
+      - hellotalk_discovery_daily_recs_duration_seconds: histogram
+      - hellotalk_discovery_daily_recs_users_processed: gauge
+      - hellotalk_discovery_partner_of_week_calc_duration_seconds: histogram
+      - hellotalk_discovery_audio_intro_requests_total: counter
+      - hellotalk_discovery_recent_native_speaker_requests_total: counter
+      - hellotalk_discovery_spotlight_requests_total: counter
+      - hellotalk_discovery_language_pair_requests_total: counter
+      - hellotalk_discovery_location_search_requests_total: counter
+      - hellotalk_discovery_error_rate: gauge
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
       - hellotalk_active_connections: gauge
+      # Matchmaking / Recommendations metrics (Datadog custom metrics, #2280)
+      - hellotalk_matchmaking_recommendations_generated_total: counter
+      - hellotalk_matchmaking_recommendations_per_request: histogram
+      - hellotalk_matchmaking_fallback_tier_used_total: counter
+      - hellotalk_matchmaking_empty_results_total: counter
+      - hellotalk_matchmaking_request_duration_seconds: histogram
+      - hellotalk_matchmaking_daily_cache_misses_total: counter
+      - hellotalk_matchmaking_tier_success_rate: gauge
       # Coin economy metrics (Datadog custom metrics)
       - hellotalk_coin_purchases_total: counter
       - hellotalk_coin_purchase_value_total: counter
@@ -70,6 +105,32 @@ prometheus_scrape:
       - hellotalk_coin_purchase_errors_total: counter
       - hellotalk_coin_fraud_attempts_total: counter
       - hellotalk_coin_transaction_latency_seconds: histogram
+      # Video Classrooms metrics (Datadog custom metrics, #2230)
+      - hellotalk_video_classrooms_created_total: counter
+      - hellotalk_video_classrooms_joined_total: counter
+      - hellotalk_video_classrooms_active_rooms: gauge
+      - hellotalk_video_classrooms_failed_creations_total: counter
+      - hellotalk_video_classrooms_failed_joins_total: counter
+      - hellotalk_video_classrooms_room_duration_seconds: histogram
+      - hellotalk_video_classrooms_token_generation_duration_seconds: histogram
+      - hellotalk_video_classrooms_participant_max: gauge
+      # Tutor Profiles metrics (Datadog custom metrics, #2092)
+      - hellotalk_tutor_profiles_created_total: counter
+      - hellotalk_tutor_profiles_updated_total: counter
+      - hellotalk_tutor_profiles_verification_failures_total: counter
+      - hellotalk_tutor_profiles_incomplete_total: gauge
+      - hellotalk_tutor_profiles_total: gauge
+      - hellotalk_tutor_profiles_search_requests_total: counter
+      - hellotalk_tutor_profiles_search_duration_seconds: histogram
+      - hellotalk_tutor_profiles_search_empty_results_total: counter
+      - hellotalk_tutor_profiles_sessions_booked_total: counter
+      - hellotalk_tutor_profiles_sessions_completed_total: counter
+      - hellotalk_tutor_profiles_sessions_cancelled_total: counter
+      - hellotalk_tutor_profiles_sessions_refunded_total: counter
+      - hellotalk_tutor_profiles_pending_sessions: gauge
+      - hellotalk_tutor_profiles_availability_stale: gauge
+      - hellotalk_tutor_profiles_api_errors_total: counter
+      - hellotalk_tutor_profiles_booking_duration_seconds: histogram
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

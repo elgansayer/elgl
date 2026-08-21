@@ -1,63 +1,97 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { JoyrideDirective } from 'ngx-joyride';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
+import { Location } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { EscrowService } from '../../services/escrow.service';
-import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 import { NetworkStatusService } from '../../services/network-status.service';
+import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+import { EscrowService } from '../../services/escrow.service';
+import { showToast } from '../../services/toast.service';
+
+type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
+
+interface StatusFilterOption {
+  value: StatusFilter;
+  label: string;
+}
+
+type StatusFilter = 'all' | EscrowStatus;
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [JoyrideDirective, TranslatePipe],
+  imports: [HlmButton, FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
-  host: {
-    '[class]': "'block min-h-screen'",
-  },
 })
 export class EscrowPaymentsComponent {
-  private readonly escrowService = inject(EscrowService);
-  private readonly escrowOnboarding = inject(EscrowOnboardingService);
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private i18n = inject(I18nService);
   private readonly network = inject(NetworkStatusService);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly onboardingService = inject(EscrowOnboardingService);
+  private readonly escrowService = inject(EscrowService);
 
-  readonly isOnline = this.network.isOnline;
-  readonly loading = this.escrowService.loading;
-  readonly escrows = this.escrowService.escrows;
-  readonly pendingOperationCount = this.escrowService.pendingOperationCount;
-  readonly onboardingTourInProgress = this.escrowOnboarding.isTourInProgress;
+  protected readonly isOnline = this.network.isOnline;
+  protected readonly pendingOperationCount = this.escrowService.pendingOperationCount;
 
-  readonly selectedStatus = signal<string | undefined>(undefined);
+  readonly selectedStatus = signal<StatusFilter>('all');
   readonly actionInProgress = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
 
-  readonly statusFilters = [
-    { label: 'escrow.filterAll', value: undefined },
-    { label: 'escrow.filterPending', value: 'pending' },
-    { label: 'escrow.filterReleased', value: 'released' },
-    { label: 'escrow.filterRefunded', value: 'refunded' },
-    { label: 'escrow.filterDisputed', value: 'disputed' },
-    { label: 'escrow.filterCancelled', value: 'cancelled' },
-  ] as const;
+  readonly statusFilters: StatusFilterOption[] = [
+    { value: 'all', label: 'escrow.status.all' },
+    { value: 'pending', label: 'escrow.status.pending' },
+    { value: 'released', label: 'escrow.status.released' },
+    { value: 'refunded', label: 'escrow.status.refunded' },
+    { value: 'disputed', label: 'escrow.status.disputed' },
+    { value: 'cancelled', label: 'escrow.status.cancelled' },
+  ];
+
+  private readonly escrowsResource = resource({
+    loader: async () => {
+      this.actionInProgress.set(true);
+      this.error.set(null);
+      try {
+        return await this.escrowService.listEscrows();
+      } catch {
+        this.error.set(this.i18n.translate('escrow.loadError'));
+        return [];
+      } finally {
+        this.actionInProgress.set(false);
+      }
+    },
+  });
+
+  readonly escrows = computed(() => this.escrowsResource.value() ?? []);
+  readonly loading = computed(() => this.escrowsResource.isLoading());
+
+  readonly sanitisedStatusFilters = computed(() =>
+    this.statusFilters.map((f) => ({
+      ...f,
+      label: this.i18n.translate(f.label),
+    })),
+  );
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.loadEscrows();
-    }
-  }
-
-  async loadEscrows(): Promise<void> {
-    await this.escrowService.listUserEscrows(this.selectedStatus());
-  }
-
-  async setStatusFilter(status: string | undefined): Promise<void> {
-    this.selectedStatus.set(status);
-    await this.loadEscrows();
+    afterNextRender(() => {
+      this.maybeStartTour();
+    });
   }
 
   async handleRelease(escrowId: string): Promise<void> {
     this.actionInProgress.set(true);
+    this.error.set(null);
     try {
       await this.escrowService.releaseEscrow(escrowId);
-      await this.loadEscrows();
+      this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.releaseError'));
     } finally {
       this.actionInProgress.set(false);
     }
@@ -65,9 +99,13 @@ export class EscrowPaymentsComponent {
 
   async handleRefund(escrowId: string): Promise<void> {
     this.actionInProgress.set(true);
+    this.error.set(null);
     try {
       await this.escrowService.refundEscrow(escrowId);
-      await this.loadEscrows();
+      this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.refundError'));
     } finally {
       this.actionInProgress.set(false);
     }
@@ -75,12 +113,13 @@ export class EscrowPaymentsComponent {
 
   async handleDispute(escrowId: string): Promise<void> {
     this.actionInProgress.set(true);
+    this.error.set(null);
     try {
-      await this.escrowService.disputeEscrow(
-        escrowId,
-        'Service not as described',
-      );
-      await this.loadEscrows();
+      await this.escrowService.disputeEscrow(escrowId, '');
+      this.successMessage.set(this.i18n.translate('escrow.disputeSuccess'));
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.disputeError'));
     } finally {
       this.actionInProgress.set(false);
     }
@@ -89,29 +128,58 @@ export class EscrowPaymentsComponent {
   async handleSync(): Promise<void> {
     this.actionInProgress.set(true);
     try {
-      await this.escrowService.syncOfflineOperations();
-      await this.loadEscrows();
+      const result = await this.escrowService.syncOfflineOperations();
+      this.successMessage.set(
+        this.i18n.translate('escrow.syncSuccess', {
+          sent: String(result.sent),
+          failed: String(result.failed),
+        }),
+      );
+      this.escrowsResource.reload();
+    } catch {
+      this.error.set(this.i18n.translate('escrow.syncError'));
     } finally {
       this.actionInProgress.set(false);
     }
   }
 
   startOnboardingTour(): void {
-    this.escrowOnboarding.startTour();
+    this.onboardingService.startTour();
   }
 
-  statusBadgeClass(status: string): string {
-    const classes: Record<string, string> = {
-      pending: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-      released: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-      refunded: 'bg-slate-500/20 text-slate-400 border border-slate-500/30',
-      disputed: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',
-      cancelled: 'bg-slate-600/20 text-slate-500 border border-slate-500/30',
-    };
-    return classes[status] ?? classes.pending;
+  setStatusFilter(filter: StatusFilter): void {
+    this.selectedStatus.set(filter);
+  }
+
+  statusBadgeClass(status: EscrowStatus): string {
+    switch (status) {
+      case 'pending':
+        return 'bg-warning/20 text-warning';
+      case 'released':
+        return 'bg-success/20 text-success';
+      case 'disputed':
+        return 'bg-danger/20 text-danger';
+      case 'refunded':
+        return 'bg-surface-300 text-text-secondary';
+      case 'cancelled':
+        return 'bg-surface-100 text-text-muted';
+      default:
+        return 'bg-surface-200 text-text-secondary';
+    }
   }
 
   goBack(): void {
-    this.router.navigate(['/settings']);
+    this.location.back();
+  }
+
+  private maybeStartTour(): void {
+    if (this.onboardingService.isCompleted()) {
+      return;
+    }
+    if (this.onboardingService.isTourInProgress()) {
+      return;
+    }
+    showToast(this.i18n.translate('escrow.onboardingHint'));
+    this.onboardingService.startTour();
   }
 }

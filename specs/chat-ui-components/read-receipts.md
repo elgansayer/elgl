@@ -36,7 +36,7 @@ Indicate the delivery and read status of sent messages.
 - **Read**: Blue double checkmark ✓✓ (14x14px, `text-blue-400`)
 - **Failed**: Red exclamation ! (14x14px, `text-red-400`)
 
-### Color Scheme
+### Colour Scheme
 
 - **Sent**: `text-slate-500`
 - **Delivered**: `text-slate-400`
@@ -102,13 +102,13 @@ Indicate the delivery and read status of sent messages.
 ```css
 @keyframes readReceipt {
   0% {
-    color: #94a3b8;
+    colour: #94a3b8;
   } /* slate-400 */
   100% {
-    color: #60a5fa;
+    colour: #60a5fa;
   } /* blue-400 */
 }
-/* Duration: 300ms, smooth color transition */
+/* Duration: 300ms, smooth colour transition */
 ```
 
 ## Accessibility

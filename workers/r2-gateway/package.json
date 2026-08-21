@@ -1,0 +1,12 @@
+{
+  "name": "@elgl/cloudflare-r2-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
