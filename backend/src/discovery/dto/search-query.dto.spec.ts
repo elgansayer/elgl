@@ -15,8 +15,8 @@ describe('SearchQueryDto', () => {
   };
 
   describe('latitude', () => {
-    it('should accept valid latitude', async () => {
-      const errors = await validateDto({ latitude: 51.5074 });
+    it('should accept valid latitude with longitude', async () => {
+      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
       expect(errors).toHaveLength(0);
     });
 
@@ -26,21 +26,21 @@ describe('SearchQueryDto', () => {
     });
 
     it('should reject latitude below -90', async () => {
-      const errors = await validateDto({ latitude: -91 });
+      const errors = await validateDto({ latitude: -91, longitude: 0 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('latitude');
     });
 
     it('should reject latitude above 90', async () => {
-      const errors = await validateDto({ latitude: 91 });
+      const errors = await validateDto({ latitude: 91, longitude: 0 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('latitude');
     });
   });
 
   describe('longitude', () => {
-    it('should accept valid longitude', async () => {
-      const errors = await validateDto({ longitude: -0.1278 });
+    it('should accept valid longitude with latitude', async () => {
+      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
       expect(errors).toHaveLength(0);
     });
 
@@ -50,13 +50,13 @@ describe('SearchQueryDto', () => {
     });
 
     it('should reject longitude below -180', async () => {
-      const errors = await validateDto({ longitude: -181 });
+      const errors = await validateDto({ latitude: 0, longitude: -181 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('longitude');
     });
 
     it('should reject longitude above 180', async () => {
-      const errors = await validateDto({ longitude: 181 });
+      const errors = await validateDto({ latitude: 0, longitude: 181 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('longitude');
     });
@@ -84,8 +84,8 @@ describe('SearchQueryDto', () => {
       expect(errors[0].property).toBe('radius_metres');
     });
 
-    it('should reject radius above 20000000', async () => {
-      const errors = await validateDto({ radius_metres: 20000001 });
+    it('should reject radius above 250000', async () => {
+      const errors = await validateDto({ radius_metres: 250001 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('radius_metres');
     });
