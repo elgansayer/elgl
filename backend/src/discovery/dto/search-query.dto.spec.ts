@@ -14,51 +14,46 @@ describe('SearchQueryDto', () => {
     return instance;
   };
 
-  describe('latitude', () => {
-    it('should accept valid latitude', async () => {
-      const errors = await validateDto({ latitude: 51.5074 });
+  describe('coordinates', () => {
+    it('should accept a valid latitude/longitude pair', async () => {
+      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
       expect(errors).toHaveLength(0);
     });
 
-    it('should parse string latitude to number', () => {
-      const dto = buildDto({ latitude: '51.5074' });
+    it('should parse string coordinates to numbers', () => {
+      const dto = buildDto({ latitude: '51.5074', longitude: '-0.1278' });
       expect(dto.latitude).toBe(51.5074);
-    });
-
-    it('should reject latitude below -90', async () => {
-      const errors = await validateDto({ latitude: -91 });
-      expect(errors).toHaveLength(1);
-      expect(errors[0].property).toBe('latitude');
-    });
-
-    it('should reject latitude above 90', async () => {
-      const errors = await validateDto({ latitude: 91 });
-      expect(errors).toHaveLength(1);
-      expect(errors[0].property).toBe('latitude');
-    });
-  });
-
-  describe('longitude', () => {
-    it('should accept valid longitude', async () => {
-      const errors = await validateDto({ longitude: -0.1278 });
-      expect(errors).toHaveLength(0);
-    });
-
-    it('should parse string longitude to number', () => {
-      const dto = buildDto({ longitude: '-0.1278' });
       expect(dto.longitude).toBe(-0.1278);
     });
 
+    it('should reject latitude without longitude', async () => {
+      const errors = await validateDto({ latitude: 51.5074 });
+      expect(errors.some((error) => error.property === 'longitude')).toBe(true);
+    });
+
+    it('should reject longitude without latitude', async () => {
+      const errors = await validateDto({ longitude: -0.1278 });
+      expect(errors.some((error) => error.property === 'latitude')).toBe(true);
+    });
+
+    it('should reject latitude below -90', async () => {
+      const errors = await validateDto({ latitude: -91, longitude: 0 });
+      expect(errors.some((error) => error.property === 'latitude')).toBe(true);
+    });
+
+    it('should reject latitude above 90', async () => {
+      const errors = await validateDto({ latitude: 91, longitude: 0 });
+      expect(errors.some((error) => error.property === 'latitude')).toBe(true);
+    });
+
     it('should reject longitude below -180', async () => {
-      const errors = await validateDto({ longitude: -181 });
-      expect(errors).toHaveLength(1);
-      expect(errors[0].property).toBe('longitude');
+      const errors = await validateDto({ latitude: 0, longitude: -181 });
+      expect(errors.some((error) => error.property === 'longitude')).toBe(true);
     });
 
     it('should reject longitude above 180', async () => {
-      const errors = await validateDto({ longitude: 181 });
-      expect(errors).toHaveLength(1);
-      expect(errors[0].property).toBe('longitude');
+      const errors = await validateDto({ latitude: 0, longitude: 181 });
+      expect(errors.some((error) => error.property === 'longitude')).toBe(true);
     });
   });
 
@@ -84,8 +79,8 @@ describe('SearchQueryDto', () => {
       expect(errors[0].property).toBe('radius_metres');
     });
 
-    it('should reject radius above 20000000', async () => {
-      const errors = await validateDto({ radius_metres: 20000001 });
+    it('should reject radius above 250000', async () => {
+      const errors = await validateDto({ radius_metres: 250001 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('radius_metres');
     });
@@ -265,9 +260,15 @@ describe('SearchQueryDto', () => {
   });
 
   describe('sort', () => {
-    it('should accept sort string', async () => {
+    it('should accept an allowed sort mode', async () => {
       const errors = await validateDto({ sort: 'nearest' });
       expect(errors).toHaveLength(0);
+    });
+
+    it('should reject unsupported sort modes', async () => {
+      const errors = await validateDto({ sort: 'distance-ish' });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('sort');
     });
   });
 
