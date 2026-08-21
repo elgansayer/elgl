@@ -24,7 +24,6 @@ export interface DiscoveryRecommendationDto {
   target_languages: string[];
   shared_interest_count: number;
   recommendation_reasons: RecommendationReason[];
-  recommendation_score: number;
 }
 
 interface CurrentUserSignals {
@@ -147,7 +146,6 @@ export function rankDiscoveryRecommendations(
       reasons.push('study_streak');
     }
 
-    // A recommendation needs at least one meaningful, explainable signal.
     if (score === 0) continue;
 
     ranked.push({
@@ -168,7 +166,7 @@ export function rankDiscoveryRecommendations(
         left.candidate.id.localeCompare(right.candidate.id),
     )
     .slice(0, Math.max(1, Math.min(CAROUSEL_LIMIT, limit)))
-    .map(({ candidate, sharedInterestCount, score, reasons }) => ({
+    .map(({ candidate, sharedInterestCount, reasons }) => ({
       id: candidate.id,
       display_name: candidate.display_name!.trim(),
       avatar_url: candidate.avatar_url ?? null,
@@ -176,7 +174,6 @@ export function rankDiscoveryRecommendations(
       target_languages: normaliseLanguages(candidate.target_languages),
       shared_interest_count: sharedInterestCount,
       recommendation_reasons: reasons,
-      recommendation_score: score,
     }));
 }
 
@@ -308,7 +305,9 @@ export class DiscoveryRecommendationsService {
       await this.safetyService.getBlockedAndBlockerIds(userId),
     );
     const boundedIds = Array.from(candidateIds)
-      .filter((candidateId) => candidateId !== userId && !blockedIds.has(candidateId))
+      .filter(
+        (candidateId) => candidateId !== userId && !blockedIds.has(candidateId),
+      )
       .slice(0, CANDIDATE_LIMIT);
 
     if (boundedIds.length === 0) return [];
