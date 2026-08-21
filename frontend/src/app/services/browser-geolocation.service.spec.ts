@@ -6,9 +6,7 @@ import {
 } from './browser-geolocation.service';
 
 function fakeGeolocation(
-  implementation: Parameters<Geolocation['getCurrentPosition']>[0] extends never
-    ? never
-    : Geolocation['getCurrentPosition'],
+  implementation: Geolocation['getCurrentPosition'],
 ): Pick<Geolocation, 'getCurrentPosition'> {
   return { getCurrentPosition: implementation };
 }
