@@ -73,8 +73,7 @@ export class MomentLikesService {
       throw new NotFoundException('Moment not found.');
     }
 
-    const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(viewerId);
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(viewerId);
     if (blockedIds.includes(momentData.user_id)) {
       throw new ForbiddenException('This Moment is not available.');
     }
