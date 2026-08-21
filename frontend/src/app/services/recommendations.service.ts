@@ -18,7 +18,6 @@ export interface DiscoveryRecommendation {
   target_languages: string[];
   shared_interest_count: number;
   recommendation_reasons: RecommendationReason[];
-  recommendation_score: number;
 }
 
 @Injectable({ providedIn: 'root' })
