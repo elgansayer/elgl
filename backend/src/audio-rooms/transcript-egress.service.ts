@@ -1,33 +1,43 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import {
-  EgressClient,
-  EncodedFileOutput,
-  EncodedFileType,
-  S3Upload,
-} from 'livekit-server-sdk';
+import { EgressClient, StreamOutput, StreamProtocol } from 'livekit-server-sdk';
+import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
+
+const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 10 * 60 * 1000;
+const PROVIDER_REQUEST_TIMEOUT_MS = 30_000;
+
+interface ActiveRecording {
+  egressId: string;
+  liveInputId: string;
+}
 
 /**
  * Manages LiveKit Egress operations for audio room recordings.
- * Uses an in‑memory map to track running egresses (room_name → egress_id).
+ *
+ * LiveKit publishes a RoomComposite RTMPS stream to a short-lived Cloudflare
+ * Stream live input. Cloudflare records it automatically and exposes an M4A
+ * download used by the transcription provider. The application never uses an
+ * AWS SDK, AWS service, S3 upload object or R2 access key for room recordings.
+ *
+ * The in-memory map is a temporary compatibility boundary. #7448 will move
+ * active recording state and recovery into the durable job platform.
  */
 @Injectable()
 export class TranscriptEgressService {
   private readonly egressClient: EgressClient;
-
-  /** room_name → egress_id  (in‑memory; restarts lose unfinished egresses) */
-  private readonly egressMap = new Map<string, string>();
+  private readonly activeRecordings = new Map<string, ActiveRecording>();
+  private readonly transcriptionTimeoutMs: number;
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly cloudflareStream: CloudflareStreamService,
     @InjectPinoLogger(TranscriptEgressService.name)
     private readonly logger: PinoLogger,
   ) {
     const livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
-
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
     if (!apiKey || !secretKey) {
@@ -35,249 +45,365 @@ export class TranscriptEgressService {
     }
 
     this.egressClient = new EgressClient(livekitUrl, apiKey, secretKey);
+    this.transcriptionTimeoutMs = this.readPositiveInteger(
+      'AZURE_SPEECH_TRANSCRIPTION_TIMEOUT_MS',
+      DEFAULT_TRANSCRIPTION_TIMEOUT_MS,
+    );
   }
 
   /**
-   * Starts a RoomCompositeEgress for the given livekit room.
-   * The resulting video file is uploaded to an S3‑compatible bucket (R2 by default).
-   * Returns the LiveKit egress ID.
+   * Starts a room-composite RTMPS egress into Cloudflare Stream.
+   * Returns the LiveKit egress ID, or an empty string when recording could not
+   * be started. Failure is truthful and never fabricates a recording URL.
    */
   async startEgress(roomName: string): Promise<string> {
-    // Build S3 upload target using R2 configuration from env
-    const r2Endpoint =
-      this.configService.get<string>('CLOUDFLARE_R2_ENDPOINT') || '';
-    const r2AccessKey =
-      this.configService.get<string>('CLOUDFLARE_R2_ACCESS_KEY_ID') || '';
-    const r2Secret =
-      this.configService.get<string>('CLOUDFLARE_R2_SECRET_ACCESS_KEY') || '';
-    const r2Bucket =
-      this.configService.get<string>('CLOUDFLARE_R2_BUCKET') || 'recordings';
+    if (this.activeRecordings.has(roomName)) {
+      this.logger.warn({ roomName }, 'Room recording is already active');
+      return this.activeRecordings.get(roomName)?.egressId ?? '';
+    }
 
-    const s3Upload = new S3Upload({
-      bucket: r2Bucket,
-      region: 'auto',
-      endpoint: r2Endpoint,
-      accessKey: r2AccessKey,
-      secret: r2Secret,
-      forcePathStyle: true,
-    });
-
-    const fileOutput = new EncodedFileOutput({
-      fileType: EncodedFileType.MP4,
-      filepath: `audio-rooms/${roomName}/${Date.now()}.mp4`,
-      output: { case: 's3', value: s3Upload },
-    });
-
+    let liveInputId: string | null = null;
     try {
+      const liveInput = await this.cloudflareStream.createLiveInput(roomName);
+      liveInputId = liveInput.inputId;
+      const streamOutput = new StreamOutput({
+        protocol: StreamProtocol.RTMP,
+        urls: [liveInput.rtmpsUrl],
+      });
       const result = await this.egressClient.startRoomCompositeEgress(
         roomName,
-        fileOutput,
-        { audioOnly: false },
+        { stream: streamOutput },
       );
       const egressId = result.egressId;
-      this.egressMap.set(roomName, egressId);
+      if (!egressId) {
+        throw new Error('LiveKit did not return an egress ID');
+      }
+
+      this.activeRecordings.set(roomName, {
+        egressId,
+        liveInputId: liveInput.inputId,
+      });
       this.logger.info(
-        `Egress started for room "${roomName}" – id: ${egressId}`,
+        { roomName, egressId, liveInputId: liveInput.inputId },
+        'Cloudflare Stream room recording started',
       );
       return egressId;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`startEgress failed for room "${roomName}": ${msg}`);
-      return ''; // non‑fatal – continue without egress
+    } catch (error: unknown) {
+      if (liveInputId) {
+        await this.cloudflareStream
+          .deleteLiveInput(liveInputId)
+          .catch(() => undefined);
+      }
+      this.logger.warn(
+        { roomName, error: safeErrorMessage(error) },
+        'Room recording could not be started',
+      );
+      return '';
     }
   }
 
   /**
-   * Stops the running egress for the given room and returns the resulting recording URL.
-   * The URL is obtained from the stopped egress’s output list.
+   * Stops LiveKit egress, waits for Cloudflare Stream to finish the automatic
+   * recording, and returns an M4A download URL suitable for transcription.
    */
   async stopEgress(roomName: string): Promise<string | null> {
-    const egressId = this.egressMap.get(roomName);
-    if (!egressId) {
-      this.logger.warn(`No running egress found for room "${roomName}"`);
+    const active = this.activeRecordings.get(roomName);
+    if (!active) {
+      this.logger.warn({ roomName }, 'No active room recording was found');
       return null;
     }
 
+    this.activeRecordings.delete(roomName);
     try {
-      const result = await this.egressClient.stopEgress(egressId);
-      this.egressMap.delete(roomName);
-
-      if (result.fileResults?.[0]?.filename) {
-        return result.fileResults[0].filename;
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`stopEgress failed for room "${roomName}": ${msg}`);
+      await this.egressClient.stopEgress(active.egressId);
+      const recording = await this.cloudflareStream.waitForRecording(
+        active.liveInputId,
+      );
+      this.logger.info(
+        {
+          roomName,
+          egressId: active.egressId,
+          liveInputId: active.liveInputId,
+          streamVideoId: recording.videoId,
+        },
+        'Cloudflare Stream room recording completed',
+      );
+      return recording.audioDownloadUrl;
+    } catch (error: unknown) {
+      this.logger.warn(
+        {
+          roomName,
+          egressId: active.egressId,
+          liveInputId: active.liveInputId,
+          error: safeErrorMessage(error),
+        },
+        'Room recording could not be finalised',
+      );
+      return null;
+    } finally {
+      await this.cloudflareStream
+        .deleteLiveInput(active.liveInputId)
+        .catch((error: unknown) => {
+          this.logger.warn(
+            {
+              roomName,
+              liveInputId: active.liveInputId,
+              error: safeErrorMessage(error),
+            },
+            'Cloudflare Stream live input cleanup failed',
+          );
+        });
     }
-
-    // cleaned up even if API call failed
-    this.egressMap.delete(roomName);
-    return null;
   }
 
   /**
-   * Transcribes the audio recording located at the given URL.
-   * In production this should call Azure Speech Services or similar.
-   * Returns a mock transcript for development purposes.
+   * Transcribes an authoritative recording URL using Azure Speech batch
+   * transcription. A missing provider or failed job returns an empty result;
+   * it never returns a simulated transcript or claims that transcription was
+   * successful.
    */
   async generateTranscriptFromAudioUrl(audioUrl: string): Promise<string> {
-    this.logger.info(`Generating transcript for audio URL: ${audioUrl}`);
-
     const azureKey = this.configService.get<string>('AZURE_SPEECH_KEY');
     const region =
       this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastus';
 
     if (!azureKey) {
       this.logger.warn(
-        'Azure Speech API key not configured. Returning mock transcript.',
+        'Azure Speech is not configured; transcription is unavailable',
       );
-      return (
-        'This is a simulated transcript for the audio recording.\n' +
-        'Speaker 1: Welcome to the room.\n' +
-        'Speaker 2: Thank you.'
-      );
-    }
-
-    try {
-      // Create a batch transcription job
-      const url = `https://${region}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions`;
-
-      const createResponse = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': azureKey,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          contentUrls: [audioUrl],
-          locale: 'en-US',
-          displayName: `Audio Room Transcription ${Date.now()}`,
-          properties: {
-            wordLevelTimestampsEnabled: false,
-            displayFormWordLevelTimestampsEnabled: false,
-          },
-        }),
-      });
-
-      if (!createResponse.ok) {
-        const errorBody = await createResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (create job): ${createResponse.status} ${errorBody}`,
-        );
-        return '';
-      }
-
-      const jobData = (await createResponse.json()) as { self: string };
-      const jobUrl = jobData.self;
-
-      // Poll for job completion
-      let status = 'Running';
-      let statusResponse: Response;
-      let statusData: { status: string; links?: { files?: string } };
-
-      while (status === 'Running' || status === 'NotStarted') {
-        // Wait 5 seconds before checking status again
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        statusResponse = await fetch(jobUrl, {
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            Accept: 'application/json',
-          },
-        });
-
-        if (!statusResponse.ok) {
-          const errorBody = await statusResponse.text();
-          this.logger.warn(
-            `Azure Speech API error (poll job): ${statusResponse.status} ${errorBody}`,
-          );
-          return '';
-        }
-
-        statusData = (await statusResponse.json()) as {
-          status: string;
-          links?: { files?: string };
-        };
-        status = statusData.status;
-      }
-
-      if (status !== 'Succeeded') {
-        this.logger.warn(
-          `Azure Speech API transcription job failed with status: ${status}`,
-        );
-        return '';
-      }
-
-      // Fetch the files associated with the job
-      if (!statusData!.links?.files) {
-        this.logger.warn(
-          'Azure Speech API transcription job succeeded but no files link returned',
-        );
-        return '';
-      }
-
-      const filesResponse = await fetch(statusData!.links.files, {
-        headers: {
-          'Ocp-Apim-Subscription-Key': azureKey,
-          Accept: 'application/json',
-        },
-      });
-
-      if (!filesResponse.ok) {
-        const errorBody = await filesResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (fetch files list): ${filesResponse.status} ${errorBody}`,
-        );
-        return '';
-      }
-
-      const filesData = (await filesResponse.json()) as {
-        values: Array<{ kind: string; links: { contentUrl: string } }>;
-      };
-
-      const transcriptionFile = filesData.values.find(
-        (f) => f.kind === 'Transcription',
-      );
-      if (!transcriptionFile) {
-        this.logger.warn(
-          'Azure Speech API transcription job succeeded but no transcription file found in results',
-        );
-        return '';
-      }
-
-      // Download the actual transcript
-      const transcriptResponse = await fetch(
-        transcriptionFile.links.contentUrl,
-      );
-      if (!transcriptResponse.ok) {
-        const errorBody = await transcriptResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (download transcript): ${transcriptResponse.status} ${errorBody}`,
-        );
-        return '';
-      }
-
-      const transcriptData = (await transcriptResponse.json()) as {
-        combinedRecognizedPhrases?: Array<{ display: string }>;
-      };
-
-      const finalTranscript =
-        transcriptData.combinedRecognizedPhrases?.[0]?.display ?? '';
-
-      // Delete the job (cleanup)
-      await fetch(jobUrl, {
-        method: 'DELETE',
-        headers: {
-          'Ocp-Apim-Subscription-Key': azureKey,
-        },
-      });
-
-      return finalTranscript;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Error generating transcript: ${msg}`);
       return '';
     }
+
+    let jobUrl: string | null = null;
+    try {
+      const createResponse = await fetch(
+        `https://${region}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            contentUrls: [audioUrl],
+            locale: 'en-US',
+            displayName: `Audio Room Transcription ${Date.now()}`,
+            properties: {
+              wordLevelTimestampsEnabled: false,
+              displayFormWordLevelTimestampsEnabled: false,
+            },
+          }),
+          signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+        },
+      );
+
+      if (!createResponse.ok) {
+        this.logger.warn(
+          { status: createResponse.status },
+          'Azure Speech transcription job creation failed',
+        );
+        return '';
+      }
+
+      const jobData: unknown = await createResponse.json();
+      if (!isAzureJobReference(jobData)) {
+        this.logger.warn('Azure Speech returned an invalid job reference');
+        return '';
+      }
+      jobUrl = jobData.self;
+
+      const completed = await this.waitForAzureJob(jobUrl, azureKey);
+      if (!completed?.links?.files) {
+        return '';
+      }
+
+      const filesResponse = await fetch(completed.links.files, {
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      if (!filesResponse.ok) {
+        this.logger.warn(
+          { status: filesResponse.status },
+          'Azure Speech result-file listing failed',
+        );
+        return '';
+      }
+
+      const filesData: unknown = await filesResponse.json();
+      if (!isAzureFilesResponse(filesData)) {
+        this.logger.warn('Azure Speech returned an invalid result-file list');
+        return '';
+      }
+      const transcriptionFile = filesData.values.find(
+        (file) => file.kind === 'Transcription',
+      );
+      if (!transcriptionFile) {
+        this.logger.warn('Azure Speech returned no transcription result file');
+        return '';
+      }
+
+      const transcriptResponse = await fetch(
+        transcriptionFile.links.contentUrl,
+        { signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
+      );
+      if (!transcriptResponse.ok) {
+        this.logger.warn(
+          { status: transcriptResponse.status },
+          'Azure Speech transcript download failed',
+        );
+        return '';
+      }
+
+      const transcriptData: unknown = await transcriptResponse.json();
+      if (!isAzureTranscript(transcriptData)) {
+        this.logger.warn('Azure Speech returned an invalid transcript payload');
+        return '';
+      }
+      return transcriptData.combinedRecognizedPhrases
+        .map((phrase) => phrase.display)
+        .filter(Boolean)
+        .join('\n');
+    } catch (error: unknown) {
+      this.logger.error(
+        { error: safeErrorMessage(error) },
+        'Audio-room transcription failed',
+      );
+      return '';
+    } finally {
+      if (jobUrl) {
+        await fetch(jobUrl, {
+          method: 'DELETE',
+          headers: { 'Ocp-Apim-Subscription-Key': azureKey },
+          signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+        }).catch(() => undefined);
+      }
+    }
   }
+
+  private async waitForAzureJob(
+    jobUrl: string,
+    azureKey: string,
+  ): Promise<AzureJobStatus | null> {
+    const deadline = Date.now() + this.transcriptionTimeoutMs;
+    let pollDelayMs = 5000;
+
+    while (Date.now() < deadline) {
+      await delay(pollDelayMs);
+      pollDelayMs = Math.min(Math.floor(pollDelayMs * 1.5), 30000);
+
+      const response = await fetch(jobUrl, {
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        this.logger.warn(
+          { status: response.status },
+          'Azure Speech transcription polling failed',
+        );
+        return null;
+      }
+
+      const payload: unknown = await response.json();
+      if (!isAzureJobStatus(payload)) {
+        this.logger.warn('Azure Speech returned an invalid job status');
+        return null;
+      }
+      if (payload.status === 'Succeeded') {
+        return payload;
+      }
+      if (payload.status !== 'Running' && payload.status !== 'NotStarted') {
+        this.logger.warn(
+          { status: payload.status },
+          'Azure Speech transcription did not succeed',
+        );
+        return null;
+      }
+    }
+
+    this.logger.warn('Azure Speech transcription timed out');
+    return null;
+  }
+
+  private readPositiveInteger(key: string, fallback: number): number {
+    const value = this.configService.get<string | number>(key);
+    if (value === undefined || value === null || value === '') {
+      return fallback;
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      throw new Error(`${key} must be a positive integer`);
+    }
+    return parsed;
+  }
+}
+
+interface AzureJobStatus {
+  status: string;
+  links?: { files?: string };
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function safeErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAzureJobReference(value: unknown): value is { self: string } {
+  return isRecord(value) && typeof value['self'] === 'string';
+}
+
+function isAzureJobStatus(value: unknown): value is AzureJobStatus {
+  if (!isRecord(value) || typeof value['status'] !== 'string') {
+    return false;
+  }
+  if (
+    value['links'] !== undefined &&
+    (!isRecord(value['links']) ||
+      (value['links']['files'] !== undefined &&
+        typeof value['links']['files'] !== 'string'))
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function isAzureFilesResponse(value: unknown): value is {
+  values: Array<{ kind: string; links: { contentUrl: string } }>;
+} {
+  return (
+    isRecord(value) &&
+    Array.isArray(value['values']) &&
+    value['values'].every(
+      (file) =>
+        isRecord(file) &&
+        typeof file['kind'] === 'string' &&
+        isRecord(file['links']) &&
+        typeof file['links']['contentUrl'] === 'string',
+    )
+  );
+}
+
+function isAzureTranscript(
+  value: unknown,
+): value is { combinedRecognizedPhrases: Array<{ display: string }> } {
+  return (
+    isRecord(value) &&
+    Array.isArray(value['combinedRecognizedPhrases']) &&
+    value['combinedRecognizedPhrases'].every(
+      (phrase) => isRecord(phrase) && typeof phrase['display'] === 'string',
+    )
+  );
 }

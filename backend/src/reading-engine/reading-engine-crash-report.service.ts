@@ -32,7 +32,9 @@ export class ReadingEngineCrashReportService {
    * Reports a reading-engine crash with structured context for later analysis.
    * Stores in `reading_engine_crash_reports` table and logs at error level.
    */
-  async reportCrash(payload: ReadingEngineCrashPayload): Promise<ReadingEngineCrashRecord | null> {
+  async reportCrash(
+    payload: ReadingEngineCrashPayload,
+  ): Promise<ReadingEngineCrashRecord | null> {
     this.logger.error(
       {
         operation: payload.operation,
@@ -79,12 +81,12 @@ export class ReadingEngineCrashReportService {
       return {
         id: data.id,
         operation: data.operation,
-        user_id: data.user_id,
-        resource_id: data.resource_id,
+        user_id: data.user_id ?? undefined,
+        resource_id: data.resource_id ?? undefined,
         error_type: data.error_type,
         error_message: data.error_message,
-        stack_trace: data.stack_trace,
-        context: data.context,
+        stack_trace: data.stack_trace ?? undefined,
+        context: data.context ?? undefined,
         created_at: data.created_at,
         acknowledged: data.acknowledged ?? false,
         resolved_at: data.resolved_at ?? null,

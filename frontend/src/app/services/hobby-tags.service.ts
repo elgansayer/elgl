@@ -44,7 +44,14 @@ export class HobbyTagsService {
       name: 'Photography',
       category: 'Arts',
       icon: '📸',
-      target_vocabulary: [],
+      target_vocabulary: [
+        { word: 'camera', translation: 'cámara', language: 'es' },
+        { word: 'lens', translation: 'lente', language: 'es' },
+        { word: 'camera', translation: 'appareil photo', language: 'fr' },
+        { word: 'lens', translation: 'objectif', language: 'fr' },
+        { word: 'camera', translation: 'カメラ', language: 'ja' },
+        { word: 'lens', translation: 'レンズ', language: 'ja' },
+      ],
       created_at: new Date().toISOString(),
     },
     {
@@ -52,7 +59,12 @@ export class HobbyTagsService {
       name: 'Gaming',
       category: 'Entertainment',
       icon: '🎮',
-      target_vocabulary: [],
+      target_vocabulary: [
+        { word: 'console', translation: 'consola', language: 'es' },
+        { word: 'controller', translation: 'control', language: 'es' },
+        { word: 'console', translation: 'console', language: 'fr' },
+        { word: 'controller', translation: 'manette', language: 'fr' },
+      ],
       created_at: new Date().toISOString(),
     },
     {
@@ -60,15 +72,25 @@ export class HobbyTagsService {
       name: 'Cooking',
       category: 'Lifestyle',
       icon: '🍳',
-      target_vocabulary: [],
+      target_vocabulary: [
+        { word: 'recipe', translation: 'receta', language: 'es' },
+        { word: 'ingredient', translation: 'ingrediente', language: 'es' },
+        { word: 'recipe', translation: 'recette', language: 'fr' },
+        { word: 'ingredient', translation: 'ingrédient', language: 'fr' },
+      ],
       created_at: new Date().toISOString(),
     },
     {
       id: '4',
-      name: 'Traveling',
+      name: 'Travelling',
       category: 'Lifestyle',
       icon: '✈️',
-      target_vocabulary: [],
+      target_vocabulary: [
+        { word: 'itinerary', translation: 'itinerario', language: 'es' },
+        { word: 'destination', translation: 'destino', language: 'es' },
+        { word: 'itinerary', translation: 'itinéraire', language: 'fr' },
+        { word: 'destination', translation: 'destination', language: 'fr' },
+      ],
       created_at: new Date().toISOString(),
     },
   ];
@@ -185,10 +207,34 @@ export class HobbyTagsService {
   getVocabulary(language: string): Promise<VocabularyItem[]> {
     return firstValueFrom(
       this.http
-        .get<VocabularyItem[]>(`${this.apiUrl}/vocabulary`, {
+        .get<Array<VocabularyItem>>(`${this.apiUrl}/vocabulary`, {
           params: { language },
         })
-        .pipe(catchError(() => of([]))),
+        .pipe(
+          catchError(() => {
+            const result: VocabularyItem[] = [];
+            for (const ut of this.mockUserTags) {
+              if (!ut.hobby_tag) continue;
+              const tag = ut.hobby_tag;
+              const hobby_tag_info = { icon: tag.icon, name: tag.name };
+              const context_sentence = `Learn this word from your ${tag.name} hobby vocabulary.`;
+              for (const vocab of tag.target_vocabulary) {
+                if (!language || vocab.language === language) {
+                  result.push({
+                    id: `vocab-${tag.id}-${vocab.word}`,
+                    word: vocab.word,
+                    translation: vocab.translation,
+                    hobbyTagName: tag.name,
+                    difficulty: 'beginner',
+                    context_sentence,
+                    hobby_tag: hobby_tag_info,
+                  });
+                }
+              }
+            }
+            return of(result);
+          }),
+        ),
     );
   }
 }

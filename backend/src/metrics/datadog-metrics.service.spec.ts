@@ -5,18 +5,20 @@ import { DatadogMetricsService } from './datadog-metrics.service';
 // Mock hot-shots to avoid real StatsD connections in tests.
 // hot-shots is a CJS module with module.exports = StatsD constructor.
 // With esModuleInterop, the default import gives us the constructor directly.
-jest.mock('hot-shots', () => {
+vi.mock('hot-shots', () => {
   const mockInstance = {
-    increment: jest.fn(),
-    gauge: jest.fn(),
-    timing: jest.fn(),
-    histogram: jest.fn(),
-    distribution: jest.fn(),
-    event: jest.fn(),
-    close: jest.fn(),
-    socket: { on: jest.fn() },
+    increment: vi.fn(),
+    gauge: vi.fn(),
+    timing: vi.fn(),
+    histogram: vi.fn(),
+    distribution: vi.fn(),
+    event: vi.fn(),
+    close: vi.fn(),
+    socket: { on: vi.fn() },
   };
-  const ctor = jest.fn().mockImplementation(() => mockInstance);
+  const ctor = vi.fn().mockImplementation(function () {
+    return mockInstance;
+  });
   return { __esModule: true, default: ctor };
 });
 
