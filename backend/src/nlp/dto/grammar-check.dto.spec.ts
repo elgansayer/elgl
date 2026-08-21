@@ -28,7 +28,7 @@ describe('GrammarCheckDto', () => {
     expect(errors.some((error) => error.property === 'text')).toBe(true);
   });
 
-  it.each(['english', 'en_US', 'en--GB', '<script>']) (
+  it.each(['english', 'en_US', 'en--GB', '<script>'])(
     'rejects invalid language hint %s',
     async (language) => {
       const dto = plainToInstance(GrammarCheckDto, {
