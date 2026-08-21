@@ -23,7 +23,8 @@ export class CreateGroupComponent {
   private readonly router = inject(Router);
   private searchRequestId = 0;
 
-  readonly MAX_MEMBERS = 49;
+  // Group chats are capped at 19 total participants, including the creator.
+  readonly MAX_MEMBERS = 18;
 
   groupName = '';
   searchQuery = '';
@@ -112,9 +113,9 @@ export class CreateGroupComponent {
 
     try {
       const memberIds = this.selectedMembers().map((m) => m.id);
-      await this.chatService.createGroup(this.groupName.trim(), memberIds);
+      const room = await this.chatService.createGroup(this.groupName.trim(), memberIds);
       this.success.set(true);
-      await this.router.navigate(['/']);
+      await this.router.navigate(['/chat', room.id]);
     } catch (err: unknown) {
       const message =
         err instanceof Error

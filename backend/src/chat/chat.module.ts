@@ -11,6 +11,7 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { SecureChatService } from './secure-chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -22,6 +23,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
+import { GroupChatController } from './group-chat.controller';
+import { GroupChatService } from './group-chat.service';
 
 @Module({
   imports: [
@@ -35,6 +38,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    GroupChatController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -45,7 +49,8 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
-    ChatService,
+    { provide: ChatService, useClass: SecureChatService },
+    GroupChatService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
@@ -59,6 +64,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    GroupChatService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
