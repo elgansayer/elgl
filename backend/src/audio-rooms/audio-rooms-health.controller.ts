@@ -1,6 +1,15 @@
-import { Controller, Get, HttpCode, HttpStatus, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AudioRoomsHealthService, DegradationState } from './audio-rooms-health.service';
+import {
+  AudioRoomsHealthService,
+  DegradationState,
+} from './audio-rooms-health.service';
 import {
   CacheControlInterceptor,
   CACHE_NO_STORE,

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -8,7 +9,6 @@ import {
   viewChild,
   ErrorHandler,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SuggestFlashcardsService, SuggestResult } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
@@ -18,11 +18,21 @@ import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from '../srs-error-boundary/srs-error-boundary.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppTextareaComponent } from '../primitives/textarea/textarea.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-suggest-flashcards',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    SrsErrorBoundaryComponent,
+    AppCardComponent,
+    AppTextareaComponent,
+    AppButtonPrimaryComponent,
+  ],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -30,21 +40,20 @@ import {
       (retry)="handleRetry()"
     >
       <div class="mx-auto max-w-2xl space-y-4 pb-20 pt-4">
-        <section class="app-card app-padded space-y-4">
+        <app-card customClass="app-padded space-y-4">
           <h2 class="app-section-title">{{ 'suggest_flashcards.title' | t }}</h2>
-          <textarea
-            [(ngModel)]="messageInput"
+          <app-textarea
+            [value]="messageInput()"
+            (valueChange)="messageInput.set($event)"
             [placeholder]="'suggest_flashcards.placeholder' | t"
-            rows="3"
-            class="app-textarea"
-          ></textarea>
-          <button
-            (click)="manualSuggest()"
-            class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
+          />
+          <app-button-primary
+            (clicked)="manualSuggest()"
             [disabled]="!messageInput()"
+            customClass="text-xs font-bold"
           >
             {{ 'suggest_flashcards.suggest_button' | t }}
-          </button>
+          </app-button-primary>
           @if (loading()) {
             <p class="app-muted">{{ 'suggest_flashcards.loading' | t }}</p>
           }
@@ -54,6 +63,7 @@ import {
                 <li class="flex items-center justify-between py-2.5">
                   <span class="text-sm font-medium text-text-primary">{{ word }}</span>
                   <button
+                    hlmBtn
                     (click)="addWordToDeck(word)"
                     [disabled]="addingWords().has(word) || addedWords().has(word)"
                     class="rounded-lg border border-neon-primary px-3 py-1 text-xs font-semibold text-neon-primary transition-colors hover:bg-neon-primary/10 disabled:border-surface-500 disabled:text-surface-400"
@@ -74,9 +84,9 @@ import {
             <p class="text-sm text-text-muted">{{ 'suggest_flashcards.noWordsFound' | t }}</p>
           }
           @if (error()) {
-            <p class="mt-2 text-xs font-bold text-rose-400">{{ error() }}</p>
+            <p class="mt-2 text-xs font-bold text-danger">{{ error() }}</p>
           }
-        </section>
+        </app-card>
       </div>
     </app-srs-error-boundary>
   `,

@@ -1,13 +1,17 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { LinkedAccountsService, LinkedAccount } from './linked-accounts.service';
+import {
+  LinkedAccountsService,
+  LinkedAccount,
+} from './linked-accounts.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkedAccountsService', () => {
   let service: LinkedAccountsService;
   let supabaseService: Partial<SupabaseService>;
 
-  const mockSupabaseChain = (methods: Record<string, jest.Mock>) => {
-    const chain: Record<string, jest.Mock> = {};
+  const mockSupabaseChain = (methods: Record<string, Mock>) => {
+    const chain: Record<string, Mock> = {};
     Object.entries(methods).forEach(([name, fn]) => {
       chain[name] = fn.mockReturnThis ? fn : fn;
     });
@@ -16,7 +20,7 @@ describe('LinkedAccountsService', () => {
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -31,11 +35,11 @@ describe('LinkedAccountsService', () => {
 
   describe('getLinkedAccounts', () => {
     it('should return mock fallback for seeded users when no DB data', async () => {
-      const select = jest.fn().mockReturnThis();
-      const eq = jest.fn().mockReturnThis();
-      const order = jest.fn().mockResolvedValue({ data: [], error: null });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ select, eq, order }),
+      const select = vi.fn().mockReturnThis();
+      const eq = vi.fn().mockReturnThis();
+      const order = vi.fn().mockResolvedValue({ data: [], error: null });
+      (supabaseService.getClient as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('fake-5');
@@ -45,11 +49,11 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should return empty array when no accounts exist', async () => {
-      const select = jest.fn().mockReturnThis();
-      const eq = jest.fn().mockReturnThis();
-      const order = jest.fn().mockResolvedValue({ data: [], error: null });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ select, eq, order }),
+      const select = vi.fn().mockReturnThis();
+      const eq = vi.fn().mockReturnThis();
+      const order = vi.fn().mockResolvedValue({ data: [], error: null });
+      (supabaseService.getClient as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('user-1');
@@ -57,9 +61,9 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should return mapped accounts', async () => {
-      const select = jest.fn().mockReturnThis();
-      const eq = jest.fn().mockReturnThis();
-      const order = jest.fn().mockResolvedValue({
+      const select = vi.fn().mockReturnThis();
+      const eq = vi.fn().mockReturnThis();
+      const order = vi.fn().mockResolvedValue({
         data: [
           {
             provider: 'google',
@@ -70,8 +74,8 @@ describe('LinkedAccountsService', () => {
         ],
         error: null,
       });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ select, eq, order }),
+      (supabaseService.getClient as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('user-1');
@@ -86,11 +90,13 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should return empty array on supabase error', async () => {
-      const select = jest.fn().mockReturnThis();
-      const eq = jest.fn().mockReturnThis();
-      const order = jest.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ select, eq, order }),
+      const select = vi.fn().mockReturnThis();
+      const eq = vi.fn().mockReturnThis();
+      const order = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: { message: 'DB error' } });
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('user-1');
@@ -100,9 +106,9 @@ describe('LinkedAccountsService', () => {
 
   describe('linkAccount', () => {
     it('should upsert an account', async () => {
-      const upsert = jest.fn().mockResolvedValue({ error: null });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ upsert }),
+      const upsert = vi.fn().mockResolvedValue({ error: null });
+      (supabaseService.getClient as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
       });
 
       await expect(
@@ -111,23 +117,25 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const upsert = jest.fn().mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ upsert }),
+      const upsert = vi
+        .fn()
+        .mockResolvedValue({ error: { message: 'DB error' } });
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
       });
 
-      await expect(
-        service.linkAccount('user-1', 'google'),
-      ).rejects.toThrow('Could not link account');
+      await expect(service.linkAccount('user-1', 'google')).rejects.toThrow(
+        'Could not link account',
+      );
     });
   });
 
   describe('unlinkAccount', () => {
     it('should delete an account', async () => {
-      const deleteFn = jest.fn().mockReturnThis();
-      const match = jest.fn().mockResolvedValue({ error: null });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ delete: deleteFn, match }),
+      const deleteFn = vi.fn().mockReturnThis();
+      const match = vi.fn().mockResolvedValue({ error: null });
+      (supabaseService.getClient as Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 
       await expect(
@@ -136,15 +144,17 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const deleteFn = jest.fn().mockReturnThis();
-      const match = jest.fn().mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ delete: deleteFn, match }),
+      const deleteFn = vi.fn().mockReturnThis();
+      const match = vi
+        .fn()
+        .mockResolvedValue({ error: { message: 'DB error' } });
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 
-      await expect(
-        service.unlinkAccount('user-1', 'google'),
-      ).rejects.toThrow('Could not unlink account');
+      await expect(service.unlinkAccount('user-1', 'google')).rejects.toThrow(
+        'Could not unlink account',
+      );
     });
   });
 });

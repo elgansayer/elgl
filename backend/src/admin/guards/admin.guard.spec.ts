@@ -3,13 +3,12 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { AdminAuthorizationService } from '../admin-authorization.service';
 import { AdminGuard } from './admin.guard';
-import { SupabaseService } from '../../supabase/supabase.service';
 
 describe('AdminGuard', () => {
   let guard: AdminGuard;
-  let mockQueryBuilder: any;
-  let mockSupabaseClient: any;
+  let authorization: { getEffectiveCapabilities: ReturnType<typeof vi.fn> };
 
   const buildContext = (user?: { id: string }): ExecutionContext =>
     ({
@@ -19,18 +18,10 @@ describe('AdminGuard', () => {
     }) as unknown as ExecutionContext;
 
   beforeEach(() => {
-    mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    };
-    mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
-    };
-
-    guard = new AdminGuard({
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-    } as unknown as SupabaseService);
+    authorization = { getEffectiveCapabilities: vi.fn() };
+    guard = new AdminGuard(
+      authorization as unknown as AdminAuthorizationService,
+    );
   });
 
   it('throws UnauthorizedException when no user is on the request', async () => {
@@ -39,33 +30,26 @@ describe('AdminGuard', () => {
     );
   });
 
-  it('throws ForbiddenException when the user is not an admin', async () => {
-    mockQueryBuilder.single.mockResolvedValue({
-      data: { is_admin: false },
-      error: null,
-    });
+  it('throws ForbiddenException when the user has no active admin capabilities', async () => {
+    authorization.getEffectiveCapabilities.mockResolvedValue([]);
 
     await expect(
       guard.canActivate(buildContext({ id: 'user-1' })),
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it('throws ForbiddenException when the lookup errors', async () => {
-    mockQueryBuilder.single.mockResolvedValue({
-      data: null,
-      error: { message: 'not found' },
-    });
+  it('fails closed when capability resolution errors', async () => {
+    authorization.getEffectiveCapabilities.mockRejectedValue(
+      new Error('RBAC lookup failed'),
+    );
 
     await expect(
       guard.canActivate(buildContext({ id: 'user-1' })),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toThrow('RBAC lookup failed');
   });
 
-  it('allows the request when the user is an admin', async () => {
-    mockQueryBuilder.single.mockResolvedValue({
-      data: { is_admin: true },
-      error: null,
-    });
+  it('allows the request when the user has an active admin capability', async () => {
+    authorization.getEffectiveCapabilities.mockResolvedValue(['users.read']);
 
     await expect(
       guard.canActivate(buildContext({ id: 'admin-1' })),

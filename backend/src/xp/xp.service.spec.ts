@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { XpService } from './xp.service';
@@ -6,7 +7,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 function makeBuilder(response: unknown) {
   const builder: any = {};
   for (const method of ['insert', 'select', 'eq', 'order', 'range']) {
-    builder[method] = jest.fn().mockReturnValue(builder);
+    builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.then = (
     resolve: (value: unknown) => void,
@@ -19,23 +20,23 @@ describe('XpService', () => {
   let service: XpService;
   let mockSupabaseClient: any;
   let mockSupabaseService: {
-    incrementXp: jest.Mock;
-    getUserXp: jest.Mock;
-    getClient: jest.Mock;
+    incrementXp: Mock;
+    getUserXp: Mock;
+    getClient: Mock;
   };
   let xpEventsBuilder: any;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     xpEventsBuilder = makeBuilder({ error: null });
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(xpEventsBuilder),
+      from: vi.fn().mockReturnValue(xpEventsBuilder),
     };
     mockSupabaseService = {
-      incrementXp: jest.fn().mockResolvedValue(undefined),
-      getUserXp: jest.fn().mockResolvedValue(0),
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+      incrementXp: vi.fn().mockResolvedValue(undefined),
+      getUserXp: vi.fn().mockResolvedValue(0),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,7 +50,7 @@ describe('XpService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -84,7 +85,7 @@ describe('XpService', () => {
     it('logs a warning when the xp_events insert fails', async () => {
       xpEventsBuilder = makeBuilder({ error: { message: 'insert failed' } });
       mockSupabaseClient.from.mockReturnValue(xpEventsBuilder);
-      const warnSpy = jest.spyOn(Logger.prototype, 'warn');
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
       await service.awardXpForActivity('user-1', 'create_moment');
 
@@ -223,7 +224,7 @@ describe('XpService', () => {
     it('logs a warning when the xp_events insert fails', async () => {
       xpEventsBuilder = makeBuilder({ error: { message: 'insert failed' } });
       mockSupabaseClient.from.mockReturnValue(xpEventsBuilder);
-      const warnSpy = jest.spyOn(Logger.prototype, 'warn');
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
       await service.awardXp('user-1', 'bonus', 15);
 

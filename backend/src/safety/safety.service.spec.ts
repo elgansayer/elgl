@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -11,42 +12,42 @@ describe('SafetyService', () => {
   let mockQueryBuilder: any;
   let mockMetricsService: any;
   let mockCacheInvalidationService: {
-    invalidateTrustAndSafetyCaches: jest.Mock;
-    invalidateUserPairCaches: jest.Mock;
-    invalidateUserCaches: jest.Mock;
+    invalidateTrustAndSafetyCaches: Mock;
+    invalidateUserPairCaches: Mock;
+    invalidateUserCaches: Mock;
   };
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      delete: jest.fn().mockReturnThis(),
-      then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: any) => resolve(mockQueryBuilder._response)),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     mockMetricsService = {
-      recordTsReportSubmitted: jest.fn(),
-      recordTsBlockCreated: jest.fn(),
-      recordTsBlockRemoved: jest.fn(),
-      setTsPendingReports: jest.fn(),
-      setTsActiveBlocksTotal: jest.fn(),
-      recordTsModerationAction: jest.fn(),
-      recordTsDatingRiskScore: jest.fn(),
+      recordTsReportSubmitted: vi.fn(),
+      recordTsBlockCreated: vi.fn(),
+      recordTsBlockRemoved: vi.fn(),
+      setTsPendingReports: vi.fn(),
+      setTsActiveBlocksTotal: vi.fn(),
+      recordTsModerationAction: vi.fn(),
+      recordTsDatingRiskScore: vi.fn(),
     };
 
     mockCacheInvalidationService = {
-      invalidateTrustAndSafetyCaches: jest.fn().mockResolvedValue(undefined),
-      invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
-      invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
+      invalidateTrustAndSafetyCaches: vi.fn().mockResolvedValue(undefined),
+      invalidateUserPairCaches: vi.fn().mockResolvedValue(undefined),
+      invalidateUserCaches: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,7 +56,7 @@ describe('SafetyService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
@@ -73,7 +74,7 @@ describe('SafetyService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -102,7 +103,7 @@ describe('SafetyService', () => {
       });
       mockQueryBuilder._response = { error: null, data: { id: 'report-id' } };
 
-      const logSpy = jest
+      const logSpy = vi
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
 
@@ -217,7 +218,7 @@ describe('SafetyService', () => {
       // insert succeeds
       mockQueryBuilder._response = { error: null };
 
-      const logSpy = jest
+      const logSpy = vi
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
 
@@ -303,7 +304,7 @@ describe('SafetyService', () => {
     it('should unblock a user', async () => {
       mockQueryBuilder._response = { error: null };
 
-      const logSpy = jest
+      const logSpy = vi
         .spyOn((service as any).logger, 'log')
         .mockImplementation(() => {});
 
@@ -384,7 +385,7 @@ describe('SafetyService', () => {
   describe('getBlockedUserIds', () => {
     it('should return list of blocked user IDs for a user', async () => {
       // Build chain: from('blocks').select('blocked_id').eq('blocker_id', userId)
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({
           data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
           error: null,
@@ -404,7 +405,7 @@ describe('SafetyService', () => {
     });
 
     it('should return empty array when query returns no data', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({ data: null, error: null }),
       );
       mockQueryBuilder._response = { data: null, error: null };
@@ -414,7 +415,7 @@ describe('SafetyService', () => {
     });
 
     it('should return empty array when query results in error', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({ data: null, error: { message: 'error' } }),
       );
       mockQueryBuilder._response = { data: null, error: { message: 'error' } };
@@ -426,7 +427,7 @@ describe('SafetyService', () => {
 
   describe('getBlockerUserIds', () => {
     it('should return list of blocker user IDs for a user', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({
           data: [{ blocker_id: 'blocker-1' }, { blocker_id: 'blocker-2' }],
           error: null,
@@ -446,7 +447,7 @@ describe('SafetyService', () => {
     });
 
     it('should return empty array when query returns no data', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({ data: null, error: null }),
       );
       mockQueryBuilder._response = { data: null, error: null };
@@ -456,7 +457,7 @@ describe('SafetyService', () => {
     });
 
     it('should return empty array when query results in error', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({ data: null, error: { message: 'error' } }),
       );
       mockQueryBuilder._response = { data: null, error: { message: 'error' } };
@@ -469,7 +470,7 @@ describe('SafetyService', () => {
   describe('getBlockedAndBlockerIds', () => {
     it('should return union of blocked and blocker IDs', async () => {
       // First call: getBlockedUserIds
-      mockQueryBuilder.then = jest
+      mockQueryBuilder.then = vi
         .fn()
         .mockImplementationOnce((resolve: any) =>
           resolve({
@@ -494,7 +495,7 @@ describe('SafetyService', () => {
     });
 
     it('should deduplicate overlapping IDs', async () => {
-      mockQueryBuilder.then = jest
+      mockQueryBuilder.then = vi
         .fn()
         .mockImplementationOnce((resolve: any) =>
           resolve({
@@ -520,7 +521,7 @@ describe('SafetyService', () => {
 
   describe('getBlockedUserDetails', () => {
     it('should return empty array when no blocked users', async () => {
-      mockQueryBuilder.then = jest.fn((resolve: any) =>
+      mockQueryBuilder.then = vi.fn((resolve: any) =>
         resolve({ data: [], error: null }),
       );
       mockQueryBuilder._response = { data: [], error: null };
@@ -531,9 +532,9 @@ describe('SafetyService', () => {
 
     it('should return blocked user details', async () => {
       const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
       mockBlocksBuilder.then.mockImplementation((resolve: any) =>
         resolve({
@@ -543,9 +544,9 @@ describe('SafetyService', () => {
       );
 
       const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
       mockUsersBuilder.then.mockImplementation((resolve: any) =>
         resolve({
@@ -596,9 +597,9 @@ describe('SafetyService', () => {
 
     it('should return empty array when user details query fails', async () => {
       const mockBlocksBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
       mockBlocksBuilder.then.mockImplementation((resolve: any) =>
         resolve({
@@ -608,9 +609,9 @@ describe('SafetyService', () => {
       );
 
       const mockUsersBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn(),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn(),
       };
       mockUsersBuilder.then.mockImplementation((resolve: any) =>
         resolve({ data: null, error: { message: 'error' } }),

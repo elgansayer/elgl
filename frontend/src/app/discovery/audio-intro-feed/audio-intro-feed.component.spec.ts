@@ -34,13 +34,16 @@ describe('AudioIntroFeedComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have signal inputs with default values', () => {
+  it('should have signal inputs with default values', async () => {
+    await fixture.whenStable();
     expect(component.users()).toEqual([]);
     expect(component.isLoading()).toBe(false);
     expect(component.emptyMessageKey()).toBe('discovery.audioIntroFeed.noAudioIntros');
   });
 
-  it('should render empty state by default', () => {
+  it('should render empty state by default', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('discovery.audioIntroFeed.noAudioIntros');
@@ -66,7 +69,7 @@ describe('AudioIntroFeedComponent', () => {
       onended: (() => void) | null = null;
       onerror: (() => void) | null = null;
     }
-    (window as unknown as Record<string, unknown>).Audio = MockAudio;
+    (window as unknown as Record<string, unknown>)['Audio'] = MockAudio;
 
     expect(component.playingId()).toBeNull();
 
@@ -78,7 +81,7 @@ describe('AudioIntroFeedComponent', () => {
     expect(component.playingId()).toBeNull();
     expect(pauseSpy).toHaveBeenCalled();
 
-    (window as unknown as Record<string, unknown>).Audio = origAudio;
+    (window as unknown as Record<string, unknown>)['Audio'] = origAudio;
   });
 
   it('should expose userList computed signal', () => {

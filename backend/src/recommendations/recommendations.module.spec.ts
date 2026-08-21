@@ -1,3 +1,5 @@
+import { MetricsModule } from '../metrics/metrics.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { RecommendationsModule } from './recommendations.module';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
@@ -23,6 +25,15 @@ describe('RecommendationsModule', () => {
       [];
 
     expect(providersMetadata).toContain(RecommendationsService);
+  });
+
+  it('should declare the data and metrics dependencies used by the daily cron job', () => {
+    const importsMetadata =
+      (Reflect.getMetadata('imports', RecommendationsModule) as unknown[]) ??
+      [];
+
+    expect(importsMetadata).toContain(SupabaseModule);
+    expect(importsMetadata).toContain(MetricsModule);
   });
 
   it('should export RecommendationsService', () => {

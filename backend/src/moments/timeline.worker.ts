@@ -30,12 +30,14 @@ export class TimelineWorker {
       const followerIds = new Set<string>(rows.map((f) => f.follower_id));
       followerIds.add(authorId);
 
-      // Fan out via Redis RPUSH / LPUSH
+      // Fan out via Redis pipeline to reduce network roundtrips
+      const pipeline = redis.pipeline();
       for (const followerId of followerIds) {
         const queueKey = `timeline_queue:${followerId}`;
-        await redis.lpush(queueKey, momentId);
-        await redis.ltrim(queueKey, 0, 499); // Keep latest 500 IDs
+        pipeline.lpush(queueKey, momentId);
+        pipeline.ltrim(queueKey, 0, 499); // Keep latest 500 IDs
       }
+      await pipeline.exec();
 
       this.logger.log(
         `Fanned out moment ${momentId} to ${followerIds.size} followers via Redis queue.`,

@@ -56,12 +56,24 @@ export class MonetisationService {
     @Inject(forwardRef(() => AppleReceiptValidatorService))
     private readonly appleReceiptValidatorService: AppleReceiptValidatorService,
   ) {
-    this.stripe = new Stripe(
-      this.configService.get<string>('STRIPE_SECRET_KEY') || '',
-      {
-        apiVersion: '2023-10-16',
-      },
-    );
+    let secret = this.configService.get<string>('STRIPE_SECRET_KEY');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!secret || secret === 'sk_test_123' || secret === 'sk_test') {
+        throw new Error(
+          'STRIPE_SECRET_KEY must be configured securely in production',
+        );
+      }
+    } else {
+      if (!secret) {
+        secret = 'sk_test_123';
+      }
+    }
+
+    this.stripe = new Stripe(secret, {
+      apiVersion: '2023-10-16',
+    });
   }
 
   /**
@@ -482,8 +494,7 @@ export class MonetisationService {
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
     if (platform === 'stripe') {
-      const subscription =
-        await this.findActiveStripeSubscription(userId);
+      const subscription = await this.findActiveStripeSubscription(userId);
       if (subscription) {
         const tier =
           subscription.metadata?.tier ??
@@ -612,7 +623,11 @@ export class MonetisationService {
       }
 
       // No matching tier but active subscription exists -- restore as consumer VIP
-      await this.updateVipStatusFromWebhook(userId, true, 'consumer_8_ukp_10_usd');
+      await this.updateVipStatusFromWebhook(
+        userId,
+        true,
+        'consumer_8_ukp_10_usd',
+      );
       return { received: true, status: 'restored' };
     }
   }
