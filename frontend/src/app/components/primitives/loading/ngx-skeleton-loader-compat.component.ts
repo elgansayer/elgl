@@ -1,8 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import {
-  RelaySkeletonComponent,
-  type SkeletonShape,
-} from './skeleton.component';
+import { RelaySkeletonComponent, type SkeletonShape } from './skeleton.component';
 
 /**
  * Temporary source-compatible boundary while feature templates migrate from
@@ -11,18 +8,14 @@ import {
  * This component contains no third-party runtime and may be removed once all
  * templates consume the Relay primitive directly.
  */
+/* eslint-disable @angular-eslint/component-selector */
 @Component({
   selector: 'ngx-skeleton-loader',
   standalone: true,
   imports: [RelaySkeletonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-skeleton
-      [count]="count()"
-      [shape]="shape()"
-      [width]="width()"
-      [height]="height()"
-    />
+    <app-skeleton [count]="count()" [shape]="shape()" [width]="width()" [height]="height()" />
   `,
 })
 export class NgxSkeletonLoaderCompatibilityComponent {
@@ -41,21 +34,13 @@ export class NgxSkeletonLoaderCompatibilityComponent {
     return 'rectangle';
   });
 
-  readonly width = computed(() =>
-    normaliseCssLength(this.theme()?.['width'], '100%'),
-  );
+  readonly width = computed(() => normaliseCssLength(this.theme()?.['width'], '100%'));
   readonly height = computed(() =>
-    normaliseCssLength(
-      this.theme()?.['height'],
-      this.shape() === 'circle' ? this.width() : '1rem',
-    ),
+    normaliseCssLength(this.theme()?.['height'], this.shape() === 'circle' ? this.width() : '1rem'),
   );
 }
 
-function normaliseCssLength(
-  value: string | number | undefined,
-  fallback: string,
-): string {
+function normaliseCssLength(value: string | number | undefined, fallback: string): string {
   if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
     return `${value}px`;
   }

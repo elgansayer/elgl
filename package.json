@@ -10,6 +10,7 @@
   "packageManager": "npm@10.9.8",
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
+    "check:lint-contract": "node --test scripts/verify-project-lint-contract.test.mjs && node scripts/verify-project-lint-contract.mjs",
     "check:agent-ui-governance": "node scripts/check-agent-ui-governance.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
     "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
@@ -51,22 +52,22 @@
     "test:backend": "cd backend && npm run test",
     "test:admin": "cd admin-portal && npm run test",
     "test:r2-gateway": "cd workers/r2-gateway && npm test",
-    "verify": "npm run check:constitution && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:spartan-full-tree && npm run check:component-system && npm run check:visual-contract-matrix && npm run check:rtl-logical-contract && npm run check:focus-ring-contract && npm run check:reduced-motion-contract && npm run check:ux-platform-contract && npm run check:translation-safe-apis && npm run check:dependency-compatibility-lanes && npm run check:no-aws-sdk && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
+    "verify": "npm run check:constitution && npm run check:lint-contract && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:spartan-full-tree && npm run check:component-system && npm run check:visual-contract-matrix && npm run check:rtl-logical-contract && npm run check:focus-ring-contract && npm run check:reduced-motion-contract && npm run check:ux-platform-contract && npm run check:translation-safe-apis && npm run check:dependency-compatibility-lanes && npm run check:no-aws-sdk && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
   "dependencies": {
-    "@ngx-translate/core": "^15.0.0",
-    "@ngx-translate/http-loader": "^8.0.0",
+    "@ngx-translate/core": "^18.0.0",
+    "@ngx-translate/http-loader": "^18.0.0",
     "xss": "^1.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "artillery": "^2.0.34",
     "husky": "^9.1.7",
-    "lint-staged": "^15.2.10",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.3.3"
   },
   "lint-staged": {

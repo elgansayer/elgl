@@ -123,7 +123,6 @@ export class MatchmakingCacheInvalidationService {
   ): Promise<void> {
     const redis = this.getRedis();
     const processedSet = new Set(processedUserIds);
-    let staleCount = 0;
 
     try {
       // Scan all daily_recommendations:* keys
@@ -171,7 +170,7 @@ export class MatchmakingCacheInvalidationService {
       } while (cursor !== '0');
 
       if (staleKeys.length > 0) {
-        staleCount = await redis.del(...staleKeys);
+        const staleCount = await redis.del(...staleKeys);
         this.logger.log(
           `Invalidated ${staleCount} stale recommendation cache key(s) for users not processed in current cron run`,
         );

@@ -7,13 +7,13 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-User=hellotalk-factory
-Group=hellotalk-factory
+User=dev
+Group=dev
 WorkingDirectory=/var/lib/hellotalk-factory/repository
 EnvironmentFile=/etc/hellotalk-factory/factory.env
 EnvironmentFile=/etc/hellotalk-factory/runtime.env
-Environment=HOME=/var/lib/hellotalk-factory/home
-Environment=PATH=/var/lib/hellotalk-factory/home/.local/bin:/var/lib/hellotalk-factory/home/.opencode/bin:/var/lib/hellotalk-factory/home/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+Environment=HOME=/home/dev
+Environment=PATH=/home/dev/.local/bin:/home/dev/.opencode/bin:/home/dev/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 # Refuse generation takeover when a competing executor is active, repository
 # access fails, or GitHub merge rules fail closed. Temporary provider exhaustion
 # is reported as a warning so durable work can recover without a restart loop.
@@ -33,9 +33,11 @@ ProtectProc=ptraceable
 # network-constrained by secure_tools.py.
 PrivateDevices=false
 ProtectSystem=full
-# Keep /home and /root hidden while re-exposing /run/user for the service user's
-# rootless Podman runtime. Per-user Unix ownership remains authoritative there.
-ProtectHome=tmpfs
+# The service now runs as the operator's own login user (dev), reusing that
+# account's already-authenticated CLI subscriptions (claude/codex/google) in
+# place of a separate service-account credential set. Hiding /home would hide
+# the account from itself, so home protection is intentionally off here.
+ProtectHome=false
 BindPaths=/run/user
 ProtectKernelTunables=false
 ProtectKernelModules=true

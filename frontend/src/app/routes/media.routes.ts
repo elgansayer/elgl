@@ -4,7 +4,7 @@ export const mediaRoutes: Routes = [
   {
     path: 'audio-rooms',
     loadComponent: () =>
-      import('../audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
+      import('../components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
     path: 'classrooms',
