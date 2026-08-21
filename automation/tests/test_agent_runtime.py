@@ -708,7 +708,7 @@ def test_unclassified_provider_failure_is_normalised_and_falls_back(tmp_path: Pa
     assert job.provider_history[0]["failure_classification"] == "invalid_agent_output"
 
 
-def test_phase_policy_keeps_emergency_provider_last_and_rotates_repairs() -> None:
+def test_phase_policy_rotates_a_just_failed_provider_to_the_end() -> None:
     config = AgentsConfig()
     config.providers["opencode"].enabled = True
     job = Job(Task("42", "Policy", "", "github-issue", 0))
@@ -731,7 +731,7 @@ def test_phase_policy_keeps_emergency_provider_last_and_rotates_repairs() -> Non
     )
 
     assert candidates[0] == "claude"
-    assert candidates[-2:] == ["codex", "openhands"]
+    assert candidates[-2:] == ["pi", "codex"]
 
 
 def test_review_exclusion_prefers_independent_provider(tmp_path: Path) -> None:
