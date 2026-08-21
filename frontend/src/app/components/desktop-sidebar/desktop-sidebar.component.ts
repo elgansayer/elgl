@@ -1,8 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UnreadCounterService, NavTab } from '../../services/unread-counter.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
+
+interface SidebarNavItem {
+  path: string;
+  icon: string;
+  key: string;
+  exact: boolean;
+  tab: NavTab;
+}
 
 @Component({
   selector: 'app-desktop-sidebar',
@@ -11,12 +20,19 @@ import { UnreadCounterService, NavTab } from '../../services/unread-counter.serv
 })
 export class DesktopSidebarComponent {
   readonly unreadCounter = inject(UnreadCounterService);
+  readonly seriousLearnerMode = inject(SeriousLearnerModeService);
 
-  readonly navItems: { path: string; icon: string; key: string; exact: boolean; tab: NavTab }[] = [
+  private readonly allNavItems: readonly SidebarNavItem[] = [
     { path: '/chat', icon: '💬', key: 'nav.helloTalk', exact: false, tab: 'chat' },
     { path: '/moments', icon: '⭕', key: 'nav.moments', exact: false, tab: 'moments' },
     { path: '/discovery', icon: '🌍', key: 'nav.connect', exact: false, tab: 'discovery' },
     { path: '/audio-rooms', icon: '🎙️', key: 'nav.liveRooms', exact: false, tab: 'audioRooms' },
     { path: '/profile', icon: '👤', key: 'nav.profile', exact: false, tab: 'profile' },
   ];
+
+  readonly navItems = computed(() =>
+    this.seriousLearnerMode.enabled()
+      ? this.allNavItems.filter((item) => item.path !== '/moments')
+      : [...this.allNavItems],
+  );
 }
