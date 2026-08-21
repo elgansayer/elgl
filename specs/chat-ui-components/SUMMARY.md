@@ -9,7 +9,7 @@
 | Emoji Picker        | `emoji-picker.md`        | ✅ Complete | Categories, search, recently used, skin tones, keyboard navigation             |
 | Attachment Menu     | `attachment-menu.md`     | ✅ Complete | Camera, photos, documents, location, permissions handling                      |
 | Voice Note Recorder | `voice-note-recorder.md` | ✅ Complete | Waveform, 60s limit, slide to cancel, preview, error states                    |
-| Doodle Pad          | `doodle-pad.md`          | ✅ Complete | Drawing tools, colors, stroke widths, text, undo/redo                          |
+| Doodle Pad          | `doodle-pad.md`          | ✅ Complete | Drawing tools, colours, stroke widths, text, undo/redo                          |
 | Gift Picker         | `gift-picker.md`         | ✅ Complete | Categories, coin costs, insufficient coins, send animation                     |
 | Favourites Tab      | `favourites-tab.md`      | ✅ Complete | Filter by type, play audio, delete, empty state                                |
 | Search Bar          | `search-bar.md`          | ✅ Complete | Real-time search, filters, highlights, pagination                              |
@@ -21,7 +21,7 @@
 
 All components follow the same design tokens defined in `README.md`:
 
-- **Color palette**: Dark theme with purple accents
+- **Colour palette**: Dark theme with purple accents
 - **Typography**: Inter font family, consistent sizing scale
 - **Spacing**: 4px base unit, consistent padding/margins
 - **Border radius**: Rounded corners with specific exceptions
@@ -35,7 +35,7 @@ All components meet WCAG AA standards:
 - ✅ Proper ARIA roles and labels
 - ✅ Keyboard navigation
 - ✅ Focus indicators
-- ✅ Color contrast (4.5:1 minimum)
+- ✅ Colour contrast (4.5:1 minimum)
 - ✅ Screen reader announcements
 - ✅ Touch targets (44x44px minimum)
 

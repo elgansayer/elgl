@@ -16,13 +16,13 @@ describe('XpController', () => {
   let controller: XpController;
 
   const mockXpService = {
-    getXpTotal: jest.fn<Promise<number>, [string]>(),
-    getLevel: jest.fn<Promise<number>, [string]>(),
-    getXpHistory: jest.fn<
+    getXpTotal: vi.fn<Promise<number>, [string]>(),
+    getLevel: vi.fn<Promise<number>, [string]>(),
+    getXpHistory: vi.fn<
       Promise<XpHistoryEntry[]>,
       [string, number?, number?]
     >(),
-    getActivityPoints: jest.fn<Record<string, number>, []>(),
+    getActivityPoints: vi.fn<Record<string, number>, []>(),
   };
 
   beforeEach(async () => {
@@ -31,11 +31,11 @@ describe('XpController', () => {
       providers: [{ provide: XpService, useValue: mockXpService }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = moduleRef.get<XpController>(XpController);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const makeReq = (user?: { sub?: string; id?: string }) =>

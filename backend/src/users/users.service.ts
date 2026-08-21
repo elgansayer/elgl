@@ -416,7 +416,6 @@ export class UsersService {
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
-      auto_play_voice_notes: false,
       auto_download_media: false,
       auto_download_wifi_only: false,
       auto_download_preference: 'wifi',
@@ -462,7 +461,15 @@ export class UsersService {
       }
     }
 
-    if (dto.mock_location && !isVip) {
+    // Location spoofing is a consumer VIP benefit. A free user must not be
+    // able to set spoofed coordinates, city, country, or enable the spoofing
+    // toggle itself. Disabling the toggle (false) stays allowed for everyone.
+    const setsSpoofedLocation =
+      dto.mock_location !== undefined ||
+      dto.mock_country !== undefined ||
+      dto.mock_city !== undefined ||
+      dto.enable_location_spoofing === true;
+    if (setsSpoofedLocation && !isVip) {
       throw new BadRequestException(
         'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
       );
@@ -595,12 +602,69 @@ export class UsersService {
         `Supabase update failed, falling back to mock: ${updateError.message}`,
       );
     }
+
+    // Invalidate matchmaking caches when profile fields that affect
+    // discovery / recommendations / partner-of-week are mutated.
+    this.invalidateMatchmakingCachesAfterUpdate(userId, dto);
+
     const profile = await this.getProfile(userId);
 
     // Fire-and-forget: emit profile.updated event for system bubble broadcasting
     this.eventEmitter.emit('profile.updated', { userId });
 
     return { ...profile, ...updatePayload };
+  }
+
+  /**
+   * Invalidate Redis matchmaking caches when profile fields that drive
+   * discovery, recommendations, or Partner of the Week eligibility are
+   * mutated.
+   */
+  private invalidateMatchmakingCachesAfterUpdate(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): void {
+    const affectsMatchmaking =
+      dto.native_languages !== undefined ||
+      dto.target_languages !== undefined ||
+      dto.proficiency_level !== undefined ||
+      dto.privacy_hide_from_search !== undefined ||
+      dto.serious_learner_mode !== undefined ||
+      dto.interests !== undefined;
+
+    const affectsPartnerOfWeek =
+      affectsMatchmaking ||
+      dto.study_streak_days !== undefined ||
+      dto.correction_ratio !== undefined;
+
+    if (!affectsMatchmaking && !affectsPartnerOfWeek) return;
+
+    void (async () => {
+      try {
+        const redis = this.supabaseService.getRedisClient();
+        const keys: string[] = [];
+
+        if (affectsMatchmaking) {
+          keys.push(
+            `daily_recommendations:${userId}`,
+            `recommendations:daily:${userId}`,
+          );
+        }
+
+        if (affectsPartnerOfWeek) {
+          keys.push('partner_of_week_ids');
+        }
+
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } catch (err: unknown) {
+        // Non-critical cache invalidation; log and continue.
+        Logger.warn(
+          `Failed to invalidate matchmaking caches after profile update for ${userId}: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      }
+    })();
   }
 
   async updateNotificationPreferences(
@@ -1210,7 +1274,6 @@ export class UsersService {
         | 'moment_comments'
         | 'moment_likes'
         | 'flashcards'
-        | 'decks'
         | 'chat_messages'
         | 'favourites'
         | 'profile_visits'
@@ -1234,7 +1297,6 @@ export class UsersService {
       { table: 'moment_comments', column: 'author_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
-      { table: 'decks', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },
       { table: 'favourites', column: 'user_id' },
       { table: 'profile_visits', column: 'visitor_id' },

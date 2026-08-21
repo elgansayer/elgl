@@ -1,7 +1,0 @@
-backend/src/chat/chat-backup.service.ts
-backend/src/chat/chat-backup.controller.ts
-backend/src/chat/chat-backup.module.ts
-backend/src/chat/dto/create-backup.dto.ts
-backend/src/chat/dto/restore-backup.dto.ts
-frontend/src/app/services/chat-backup.service.ts
-frontend/src/app/pages/chat-backup/chat-backup.component.ts

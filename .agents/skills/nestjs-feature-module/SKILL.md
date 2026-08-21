@@ -1,6 +1,6 @@
 ---
 name: nestjs-feature-module
-description: 'Scaffold a new NestJS backend module in backend/src (controller, service, DTOs, module wiring, Jest specs). Use when adding a new API resource, endpoint group, or backend feature area to the HelloTalk NestJS API.'
+description: 'Scaffold a new NestJS backend module in backend/src (controller, service, DTOs, module wiring, Vitest specs). Use when adding a new API resource, endpoint group, or backend feature area to the HelloTalk NestJS API.'
 ---
 
 # NestJS Feature Module
@@ -59,7 +59,7 @@ backend/src/<feature>/
 
 4. **Service** - inject `SupabaseService` (`backend/src/supabase/supabase.service.ts`) for `getClient()` (Postgres/Auth) and `getRedisClient()` (rate limits/queues/cache). Throw NestJS HTTP exceptions (`BadRequestException`, `ForbiddenException`, `NotFoundException`) for expected failure paths rather than returning ambiguous nulls.
 
-5. **Tests** - add a `*.spec.ts` next to every controller/service (Jest, mocking `SupabaseService`/`CentrifugoService`/`ConfigService` as needed). Per `AGENTS.md` Section 7, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
+5. **Tests** - add a `*.spec.ts` next to every controller/service (Vitest, mocking `SupabaseService`/`CentrifugoService`/`ConfigService` as needed). Per `AGENTS.md` Section 7, every controller/service/guard must have coverage for DTO validation, auth flows, and external-service mocks.
 
 6. **Verify** - run the `verification-gate` skill's backend steps (`npm run lint`, `npm test`, `npm run build` inside `backend/`) before considering the module done.
 
@@ -71,7 +71,7 @@ backend/src/<feature>/
 ---
 
 name: nestjs-feature-module
-description: 'Scaffold a new NestJS backend feature module in backend/src (controller, service, DTOs, module wiring, Jest specs). Use when adding a new REST resource, API endpoint, background worker, or backend capability to the HelloTalk clone (e.g. a new "flashcards", "safety", "economy"-style module).'
+description: 'Scaffold a new NestJS backend feature module in backend/src (controller, service, DTOs, module wiring, Vitest specs). Use when adding a new REST resource, API endpoint, background worker, or backend capability to the HelloTalk clone (e.g. a new "flashcards", "safety", "economy"-style module).'
 ---
 
 # NestJS Feature Module

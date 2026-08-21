@@ -82,9 +82,13 @@ export class VocabularyStore {
       ...fc,
       word_token: this.sanitisation.sanitiseText(fc.word_token),
       translation: this.sanitisation.sanitiseText(fc.translation),
-      original_context: fc.original_context ? this.sanitisation.sanitiseText(fc.original_context) : undefined,
+      original_context: fc.original_context
+        ? this.sanitisation.sanitiseText(fc.original_context)
+        : undefined,
       definition: fc.definition ? this.sanitisation.sanitiseText(fc.definition) : undefined,
-      pronunciation_url: fc.pronunciation_url ? this.sanitisation.sanitiseUrl(fc.pronunciation_url) : undefined,
+      pronunciation_url: fc.pronunciation_url
+        ? this.sanitisation.sanitiseUrl(fc.pronunciation_url)
+        : undefined,
     };
   }
 
@@ -100,7 +104,7 @@ export class VocabularyStore {
   readonly pendingReviewCards = signal<Flashcard[]>([]);
 
   /** Whether the device is currently offline (used for UI indicators) */
-  readonly isOffline = computed(() => !navigator.onLine);
+  readonly isOffline = computed(() => this.srsOffline.online() === false);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -126,7 +130,7 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadAllFlashcards', e);
       // Offline fallback - serve from local cache
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
@@ -154,7 +158,7 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadDueReviews', e);
       // Offline fallback
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
@@ -173,19 +177,19 @@ export class VocabularyStore {
     const clean = word.toLowerCase().trim();
     const fc = this.flashcardMap().get(clean);
     if (!fc) {
-      // Level 0 = New / Blue
+      // Level 0 = New / secondary accent
       const cls =
-        'bg-blue-500/20 text-blue-900 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200';
+        'bg-secondary/20 text-secondary border-b-2 border-secondary cursor-pointer hover:bg-secondary/30';
       return { level: 0, colorClass: cls, colourClass: cls };
     }
     if (fc.srs_level >= 4) {
-      // Level 4+ = Known / White (normal text appearance)
+      // Level 4+ = Known / normal text appearance
       const cls = 'text-text-primary  cursor-pointer hover:underline';
       return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
     }
-    // Level 1 to 3 = Learning / Yellow
+    // Level 1 to 3 = Learning / warning accent
     const cls =
-      'bg-amber-500/20 text-amber-400 border-b-2 border-amber-500 cursor-pointer hover:bg-amber-200 font-medium';
+      'bg-warning/20 text-warning border-b-2 border-warning cursor-pointer hover:bg-warning/30 font-medium';
     return { level: fc.srs_level, colorClass: cls, colourClass: cls, flashcard: fc };
   }
 
@@ -199,12 +203,20 @@ export class VocabularyStore {
     const sanitisedPayload = {
       word_token: this.sanitisation.sanitiseText(payload.word_token),
       translation: this.sanitisation.sanitiseText(payload.translation),
-      original_context: payload.original_context ? this.sanitisation.sanitiseText(payload.original_context) : undefined,
-      definition: payload.definition ? this.sanitisation.sanitiseText(payload.definition) : undefined,
-      pronunciation_url: payload.pronunciation_url ? this.sanitisation.sanitiseUrl(payload.pronunciation_url) : undefined,
+      original_context: payload.original_context
+        ? this.sanitisation.sanitiseText(payload.original_context)
+        : undefined,
+      definition: payload.definition
+        ? this.sanitisation.sanitiseText(payload.definition)
+        : undefined,
+      pronunciation_url: payload.pronunciation_url
+        ? this.sanitisation.sanitiseUrl(payload.pronunciation_url)
+        : undefined,
     };
     const fc = await firstValueFrom(
-      this.http.post<Flashcard>(this.flashcardsUrl, sanitisedPayload, { headers: this.getHeaders() }),
+      this.http.post<Flashcard>(this.flashcardsUrl, sanitisedPayload, {
+        headers: this.getHeaders(),
+      }),
     );
     const sanitisedFc = this.sanitiseFlashcard(fc);
     this.allFlashcards.update((list) => {
@@ -236,7 +248,9 @@ export class VocabularyStore {
       );
       const sanitisedFc = this.sanitiseFlashcard(fc);
       this.triggerHapticFeedback(sanitisedFc.srs_level);
-      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitisedFc.id ? sanitisedFc : item)));
+      this.allFlashcards.update((list) =>
+        list.map((item) => (item.id === sanitisedFc.id ? sanitisedFc : item)),
+      );
       this.flashcardMap.update((map) => {
         const next = new Map(map);
         next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
@@ -245,14 +259,12 @@ export class VocabularyStore {
       return sanitisedFc;
     } catch {
       // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
         this.allFlashcards.update((list) =>
-          list.map((item) =>
-            item.id === flashcardId ? { ...item, srs_level: newLevel } : item,
-          ),
+          list.map((item) => (item.id === flashcardId ? { ...item, srs_level: newLevel } : item)),
         );
         this.flashcardMap.update((map) => {
           const next = new Map(map);

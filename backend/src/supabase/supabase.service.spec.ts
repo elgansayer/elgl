@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from './supabase.service';
 import { createClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(),
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(),
 }));
 
-jest.mock('ioredis');
+vi.mock('ioredis');
 
 describe('SupabaseService', () => {
   let service: SupabaseService;
@@ -25,7 +26,7 @@ describe('SupabaseService', () => {
       ...overrides,
     };
     return {
-      get: jest.fn((key: string) => values[key] ?? null),
+      get: vi.fn((key: string) => values[key] ?? null),
     } as unknown as ConfigService;
   };
 
@@ -47,23 +48,25 @@ describe('SupabaseService', () => {
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn(),
-      auth: { getUser: jest.fn() },
+      from: vi.fn(),
+      auth: { getUser: vi.fn() },
     };
-    (createClient as jest.Mock).mockReturnValue(mockSupabaseClient);
+    (createClient as Mock).mockReturnValue(mockSupabaseClient);
 
     mockRedisInstance = {
-      on: jest.fn(),
-      get: jest.fn(),
-      set: jest.fn(),
+      on: vi.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
     };
-    (Redis as unknown as jest.Mock).mockImplementation(() => mockRedisInstance);
+    (Redis as unknown as Mock).mockImplementation(function () {
+      return mockRedisInstance;
+    });
 
     service = await createService(buildConfigService());
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -116,7 +119,7 @@ describe('SupabaseService', () => {
     });
 
     it('should log redis error when error event is emitted', () => {
-      const loggerSpy = jest
+      const loggerSpy = vi
         .spyOn(require('@nestjs/common').Logger.prototype, 'error')
         .mockImplementation(() => {});
 
@@ -147,18 +150,20 @@ describe('SupabaseService - Methods', () => {
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn(),
-      rpc: jest.fn(),
-      auth: { getUser: jest.fn() },
+      from: vi.fn(),
+      rpc: vi.fn(),
+      auth: { getUser: vi.fn() },
     };
-    (createClient as jest.Mock).mockReturnValue(mockSupabaseClient);
+    (createClient as Mock).mockReturnValue(mockSupabaseClient);
 
     mockRedisInstance = {
-      on: jest.fn(),
-      get: jest.fn(),
-      set: jest.fn(),
+      on: vi.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
     };
-    (Redis as unknown as jest.Mock).mockImplementation(() => mockRedisInstance);
+    (Redis as unknown as Mock).mockImplementation(function () {
+      return mockRedisInstance;
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -166,7 +171,7 @@ describe('SupabaseService - Methods', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn(
+            get: vi.fn(
               (key: string) =>
                 ({
                   SUPABASE_URL: 'https://test.supabase.co',
@@ -183,7 +188,7 @@ describe('SupabaseService - Methods', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('updateLastActivity', () => {
@@ -192,14 +197,12 @@ describe('SupabaseService - Methods', () => {
       const mockData = { study_streak_days: 10, correction_ratio: 0.85 };
       const mockUpdateResponse = { error: null };
 
-      const mockEq = jest.fn().mockReturnValueOnce({
-        single: jest
-          .fn()
-          .mockResolvedValueOnce({ data: mockData, error: null }),
+      const mockEq = vi.fn().mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({ data: mockData, error: null }),
       });
-      const mockSelect = jest.fn().mockReturnValueOnce({ eq: mockEq });
-      const mockUpdateEq = jest.fn().mockReturnValueOnce(mockUpdateResponse);
-      const mockUpdate = jest.fn().mockReturnValueOnce({ eq: mockUpdateEq });
+      const mockSelect = vi.fn().mockReturnValueOnce({ eq: mockEq });
+      const mockUpdateEq = vi.fn().mockReturnValueOnce(mockUpdateResponse);
+      const mockUpdate = vi.fn().mockReturnValueOnce({ eq: mockUpdateEq });
 
       mockSupabaseClient.from.mockReturnValueOnce({ select: mockSelect });
       mockSupabaseClient.from.mockReturnValueOnce({ update: mockUpdate });
@@ -218,15 +221,15 @@ describe('SupabaseService - Methods', () => {
     });
 
     it('should log an error if fetching user data fails', async () => {
-      const consoleSpy = jest
+      const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
       const mockUserId = 'user123';
 
       mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest.fn().mockResolvedValueOnce({
+        select: vi.fn().mockReturnValueOnce({
+          eq: vi.fn().mockReturnValueOnce({
+            single: vi.fn().mockResolvedValueOnce({
               data: null,
               error: { message: 'Fetch error' },
             }),
@@ -267,14 +270,12 @@ describe('SupabaseService - Methods', () => {
       mockSupabaseClient.rpc.mockResolvedValueOnce({
         error: { message: 'RPC error' },
       });
-      const mockSelectEq = jest.fn().mockReturnValueOnce({
-        single: jest
-          .fn()
-          .mockResolvedValueOnce({ data: mockData, error: null }),
+      const mockSelectEq = vi.fn().mockReturnValueOnce({
+        single: vi.fn().mockResolvedValueOnce({ data: mockData, error: null }),
       });
-      const mockSelect = jest.fn().mockReturnValueOnce({ eq: mockSelectEq });
-      const mockUpdateEq = jest.fn().mockResolvedValueOnce({ error: null });
-      const mockUpdate = jest.fn().mockReturnValueOnce({ eq: mockUpdateEq });
+      const mockSelect = vi.fn().mockReturnValueOnce({ eq: mockSelectEq });
+      const mockUpdateEq = vi.fn().mockResolvedValueOnce({ error: null });
+      const mockUpdate = vi.fn().mockReturnValueOnce({ eq: mockUpdateEq });
 
       mockSupabaseClient.from.mockReturnValueOnce({ select: mockSelect });
       mockSupabaseClient.from.mockReturnValueOnce({ update: mockUpdate });
@@ -289,7 +290,7 @@ describe('SupabaseService - Methods', () => {
     });
 
     it('should log an error if both RPC and manual update fail', async () => {
-      const consoleSpy = jest
+      const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
       const mockUserId = 'user123';
@@ -299,9 +300,9 @@ describe('SupabaseService - Methods', () => {
         error: { message: 'RPC error' },
       });
       mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest.fn().mockResolvedValueOnce({
+        select: vi.fn().mockReturnValueOnce({
+          eq: vi.fn().mockReturnValueOnce({
+            single: vi.fn().mockResolvedValueOnce({
               data: null,
               error: { message: 'Fetch error' },
             }),
@@ -325,9 +326,9 @@ describe('SupabaseService - Methods', () => {
       const mockData = { xp_total: 200 };
 
       mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest
+        select: vi.fn().mockReturnValueOnce({
+          eq: vi.fn().mockReturnValueOnce({
+            single: vi
               .fn()
               .mockResolvedValueOnce({ data: mockData, error: null }),
           }),
@@ -343,9 +344,9 @@ describe('SupabaseService - Methods', () => {
       const mockUserId = 'user123';
 
       mockSupabaseClient.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValueOnce({
-          eq: jest.fn().mockReturnValueOnce({
-            single: jest.fn().mockResolvedValueOnce({
+        select: vi.fn().mockReturnValueOnce({
+          eq: vi.fn().mockReturnValueOnce({
+            single: vi.fn().mockResolvedValueOnce({
               data: null,
               error: { message: 'Fetch error' },
             }),

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
+import { randomUUID } from 'crypto';
 
 /**
  * Result of a connection rate-limit check.
@@ -76,8 +77,25 @@ export class CentrifugoService implements OnModuleInit {
 
   async onModuleInit() {
     this.apiUrl = `${this.configService.get<string>('CENTRIFUGO_URL')}/api`;
-    this.apiKey = this.configService.get<string>('CENTRIFUGO_API_KEY')!;
-    this.tokenSecret = this.configService.get<string>('CENTRIFUGO_SECRET')!;
+
+    // Security enhancement: Fail-fast securely if critical credentials are missing in production.
+    // This prevents the application from booting into a state where secrets evaluate to undefined,
+    // which could allow forged connections or bypassed API limits.
+    const apiKey = this.configService.get<string>('CENTRIFUGO_API_KEY');
+    const secret = this.configService.get<string>('CENTRIFUGO_SECRET');
+
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+    if (env === 'production') {
+      if (!apiKey) {
+        throw new Error('CENTRIFUGO_API_KEY must be configured in production');
+      }
+      if (!secret) {
+        throw new Error('CENTRIFUGO_SECRET must be configured in production');
+      }
+    }
+
+    this.apiKey = apiKey!;
+    this.tokenSecret = secret!;
 
     const redisUrl =
       this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
@@ -129,7 +147,7 @@ export class CentrifugoService implements OnModuleInit {
     const key = `centrifugo:conn_rate:${identityKey}`;
     const now = Date.now();
     const windowStart = now - this.connectionRateWindowSec * 1000;
-    const member = `${now}:${Math.random().toString(36).slice(2)}`;
+    const member = `${now}:${randomUUID()}`;
 
     try {
       // Prefer atomic Lua script; fall back to pipeline when not loaded
