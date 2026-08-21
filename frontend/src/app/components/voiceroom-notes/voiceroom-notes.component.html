@@ -1,27 +1,28 @@
-<div class="flex h-full flex-col bg-[#121212] text-white">
-  <header class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+<div class="flex h-full flex-col bg-surface-300 text-text-primary">
+  <header class="flex items-center justify-between border-b border-surface-100 px-4 py-3">
     <h2 class="text-base font-semibold">{{ 'voices.notes.title' | t }}</h2>
-    <span class="text-xs text-slate-400">
+    <span class="text-xs text-text-secondary">
       {{ 'voices.notes.subtitle' | t }}
     </span>
   </header>
 
   <div class="flex-1 overflow-y-auto p-4">
     @if (notesResource.isLoading()) {
-      <p class="text-sm text-slate-400">{{ 'global.loading' | t }}</p>
+      <p class="text-sm text-text-secondary">{{ 'global.loading' | t }}</p>
     } @else if (notesResource.error()) {
-      <p class="text-sm text-red-400">{{ 'global.error' | t }}</p>
+      <p class="text-sm text-danger">{{ 'global.error' | t }}</p>
     } @else {
       @if (notesResource.value()?.length === 0) {
-        <p class="text-sm text-slate-400">{{ 'voices.notes.empty' | t }}</p>
+        <p class="text-sm text-text-secondary">{{ 'voices.notes.empty' | t }}</p>
       } @else {
         <ul class="space-y-3">
           @for (note of notesResource.value(); track note.id) {
-            <li class="rounded-lg bg-white/5 ps-3 pe-3 pt-2 pb-2">
+            <li class="rounded-lg bg-surface-200 ps-3 pe-3 pt-2 pb-2">
               <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold text-purple-300">{{ note.author_name }}</p>
+                <p class="text-xs font-semibold text-secondary">{{ note.author_name }}</p>
                 <button
-                  class="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                  hlmBtn
+                  class="text-xs text-danger/70 hover:text-danger transition-colors"
                   (click)="deleteNote(note.id)"
                   [attr.aria-label]="'voices.notes.delete' | t"
                 >
@@ -32,7 +33,9 @@
               @if (note.vocabulary) {
                 <div class="mt-2 flex flex-wrap gap-1">
                   @for (word of note.vocabulary.split(','); track word) {
-                    <span class="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-200">
+                    <span
+                      class="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                    >
                       {{ word.trim() }}
                     </span>
                   }
@@ -45,30 +48,33 @@
     }
   </div>
 
-  <form class="flex flex-col gap-2 border-t border-white/10 p-3" (submit)="addNote()">
+  <form class="flex flex-col gap-2 border-t border-surface-100 p-3" (submit)="addNote()">
     <textarea
+      hlmTextarea
       [value]="content()"
       (input)="onContentInput($event)"
       placeholder="{{ 'voices.notes.content_placeholder' | t }}"
       rows="2"
-      class="w-full resize-none rounded-lg bg-white/10 px-3 py-2 text-sm outline-none placeholder:text-slate-500 focus:bg-white/15"
+      class="w-full resize-none rounded-lg bg-surface-200 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:bg-surface-100"
       [attr.aria-label]="'voices.notes.content_label' | t"
     ></textarea>
 
     <label class="flex items-center gap-2">
-      <span class="text-xs text-slate-400">{{ 'voices.notes.vocabulary_label' | t }}</span>
+      <span class="text-xs text-text-secondary">{{ 'voices.notes.vocabulary_label' | t }}</span>
       <input
+        hlmInput
         [value]="vocabulary()"
         (input)="onVocabularyInput($event)"
         placeholder="{{ 'voices.notes.vocabulary_placeholder' | t }}"
-        class="flex-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs outline-none placeholder:text-slate-500 focus:bg-white/15"
+        class="flex-1 rounded-lg bg-surface-200 px-3 py-1.5 text-xs text-text-primary outline-none placeholder:text-text-muted focus:bg-surface-100"
         [attr.aria-label]="'voices.notes.vocabulary_label' | t"
       />
     </label>
 
     <button
+      hlmBtn
       type="submit"
-      class="mt-1 rounded-app bg-purple-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-purple-400 disabled:cursor-not-allowed disabled:opacity-50"
+      class="mt-1 rounded-app bg-primary px-4 py-2 text-sm font-bold text-on-fill transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="isPosting() || !content().trim()"
       [attr.aria-label]="'voices.notes.post' | t"
     >

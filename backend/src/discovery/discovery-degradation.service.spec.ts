@@ -1,4 +1,4 @@
-/// <reference types="jest" />
+/// <reference types="vi" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -9,9 +9,9 @@ describe('DiscoveryDegradationService', () => {
 
   beforeEach(async () => {
     mockRedisClient = {
-      lpush: jest.fn().mockResolvedValue(1),
-      ltrim: jest.fn().mockResolvedValue('OK'),
-      lrange: jest.fn().mockResolvedValue([]),
+      lpush: vi.fn().mockResolvedValue(1),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      lrange: vi.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +20,7 @@ describe('DiscoveryDegradationService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -32,7 +32,7 @@ describe('DiscoveryDegradationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -138,8 +138,8 @@ describe('DiscoveryDegradationService', () => {
   // ---------------------------------------------------------------------------
   describe('executeWithBreaker', () => {
     it('should return operation result when successful', async () => {
-      const operation = jest.fn().mockResolvedValue('success');
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockResolvedValue('success');
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,
@@ -159,8 +159,8 @@ describe('DiscoveryDegradationService', () => {
     });
 
     it('should use fallback when operation fails', async () => {
-      const operation = jest.fn().mockRejectedValue(new Error('DB down'));
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockRejectedValue(new Error('DB down'));
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,
@@ -185,8 +185,8 @@ describe('DiscoveryDegradationService', () => {
         service.recordFailure('supabase');
       }
 
-      const operation = jest.fn().mockResolvedValue('primary');
-      const fallback = jest.fn().mockResolvedValue('fallback');
+      const operation = vi.fn().mockResolvedValue('primary');
+      const fallback = vi.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,
         reason: undefined as string | undefined,
@@ -212,9 +212,9 @@ describe('DiscoveryDegradationService', () => {
   // ---------------------------------------------------------------------------
   describe('executeWithCascade', () => {
     it('should return primary result when available', async () => {
-      const primary = jest.fn().mockResolvedValue(['primary']);
-      const secondary = jest.fn();
-      const ultimate = jest.fn();
+      const primary = vi.fn().mockResolvedValue(['primary']);
+      const secondary = vi.fn();
+      const ultimate = vi.fn();
 
       const result = await service.executeWithCascade(
         'supabase',
@@ -230,9 +230,9 @@ describe('DiscoveryDegradationService', () => {
     });
 
     it('should fall through secondary to mock when secondary returns empty', async () => {
-      const primary = jest.fn().mockRejectedValue(new Error('DB down'));
-      const secondary = jest.fn().mockResolvedValue([]);
-      const ultimate = jest.fn().mockResolvedValue(['mock']);
+      const primary = vi.fn().mockRejectedValue(new Error('DB down'));
+      const secondary = vi.fn().mockResolvedValue([]);
+      const ultimate = vi.fn().mockResolvedValue(['mock']);
 
       const result = await service.executeWithCascade(
         'supabase',
@@ -249,9 +249,9 @@ describe('DiscoveryDegradationService', () => {
     });
 
     it('should use secondary results when primary fails and secondary has data', async () => {
-      const primary = jest.fn().mockRejectedValue(new Error('RPC error'));
-      const secondary = jest.fn().mockResolvedValue(['secondary']);
-      const ultimate = jest.fn();
+      const primary = vi.fn().mockRejectedValue(new Error('RPC error'));
+      const secondary = vi.fn().mockResolvedValue(['secondary']);
+      const ultimate = vi.fn();
 
       const result = await service.executeWithCascade(
         'supabase',
@@ -267,9 +267,9 @@ describe('DiscoveryDegradationService', () => {
     });
 
     it('should use ultimate fallback when secondary also fails', async () => {
-      const primary = jest.fn().mockRejectedValue(new Error('RPC error'));
-      const secondary = jest.fn().mockRejectedValue(new Error('DB error'));
-      const ultimate = jest.fn().mockResolvedValue(['mock']);
+      const primary = vi.fn().mockRejectedValue(new Error('RPC error'));
+      const secondary = vi.fn().mockRejectedValue(new Error('DB error'));
+      const ultimate = vi.fn().mockResolvedValue(['mock']);
 
       const result = await service.executeWithCascade(
         'supabase',

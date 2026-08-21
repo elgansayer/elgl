@@ -30,7 +30,7 @@ Provide quick actions for chat messages: reply, copy, edit, delete, forward, fav
 - **Icon size**: 18x18px
 - **Padding**: 8px horizontal, 0px vertical
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-800` (`#1e293b`)
 - **Border**: `border border-slate-700`
@@ -64,7 +64,7 @@ Provide quick actions for chat messages: reply, copy, edit, delete, forward, fav
 ### Hover
 
 - Item background: `bg-slate-700`
-- Icon color brightens
+- Icon colour brightens
 - Cursor: pointer
 
 ### Active/Pressed
@@ -116,7 +116,7 @@ Provide quick actions for chat messages: reply, copy, edit, delete, forward, fav
 ### Item Hover
 
 ```css
-transition: background-color 100ms ease;
+transition: background-colour 100ms ease;
 ```
 
 ## Positioning

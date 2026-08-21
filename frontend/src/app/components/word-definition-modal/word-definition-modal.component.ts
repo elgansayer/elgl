@@ -1,20 +1,37 @@
-import { Component, inject, signal, computed, input, output, viewChild, ErrorHandler } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  input,
+  output,
+  viewChild,
+  ErrorHandler,
+} from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import {
+  SrsErrorBoundaryComponent,
+  SrsErrorContext,
+} from '../srs-error-boundary/srs-error-boundary.component';
 
 @Component({
   selector: 'app-word-definition-modal',
-  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+  imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
       [showReportButton]="true"
       (retry)="handleRetry()"
     >
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-300 p-6 shadow-2xl">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
+        <div
+          class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-300 p-6 shadow-2xl"
+        >
           @if (isLoading()) {
             <div class="text-center py-8" role="status" aria-busy="true">
               <p class="animate-spin text-2xl" aria-hidden="true">&#8635;</p>
@@ -25,14 +42,21 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
               <div class="flex items-start justify-between">
                 <div>
                   <h3 class="text-xl font-black text-text-primary">{{ wordToken() }}</h3>
-                  <p class="text-sm font-bold text-emerald-400">{{ result.translated_text }}</p>
+                  <p class="text-sm font-bold text-success">{{ result.translated_text }}</p>
                 </div>
                 <button
+                  hlmBtn
                   (click)="close()"
                   class="rounded-app p-1.5 text-text-muted hover:bg-surface-200 hover:text-text-primary"
                   [attr.aria-label]="'wordModal.closeAriaLabel' | t"
                 >
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -42,6 +66,7 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
               }
               @if (result.pronunciation_url) {
                 <button
+                  hlmBtn
                   (click)="playAudio()"
                   class="rounded-app border border-surface-100 px-3 py-1.5 text-xs font-bold text-text-secondary hover:bg-surface-200"
                 >
@@ -49,26 +74,31 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
                 </button>
               }
               <div class="border-t border-surface-100 pt-4">
-                <p class="mb-2 text-xs font-bold text-text-primary">{{ 'wordModal.srsLabel' | t }}</p>
+                <p class="mb-2 text-xs font-bold text-text-primary">
+                  {{ 'wordModal.srsLabel' | t }}
+                </p>
                 <div class="flex gap-2">
                   <button
+                    hlmBtn
                     (click)="setLevel(0)"
                     [disabled]="isSaving()"
-                    class="flex-1 rounded-app bg-rose-500/20 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/30 disabled:opacity-50"
+                    class="flex-1 rounded-app bg-danger/20 py-2 text-xs font-bold text-danger hover:bg-danger/30 disabled:opacity-50"
                   >
                     {{ 'wordModal.resetBtn' | t }}
                   </button>
                   <button
+                    hlmBtn
                     (click)="setLevel(1)"
                     [disabled]="isSaving()"
-                    class="flex-1 rounded-app bg-amber-500/20 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/30 disabled:opacity-50"
+                    class="flex-1 rounded-app bg-warning/20 py-2 text-xs font-bold text-warning hover:bg-warning/30 disabled:opacity-50"
                   >
                     {{ 'wordModal.learningBtn' | t }}
                   </button>
                   <button
+                    hlmBtn
                     (click)="setLevel(4)"
                     [disabled]="isSaving()"
-                    class="flex-1 rounded-app bg-emerald-500/20 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                    class="flex-1 rounded-app bg-success/20 py-2 text-xs font-bold text-success hover:bg-success/30 disabled:opacity-50"
                   >
                     {{ 'wordModal.knownBtn' | t }}
                   </button>
@@ -142,9 +172,13 @@ export class WordDefinitionModalComponent {
         original_text: this.sanitisation.sanitiseText(res.original_text),
         translated_text: this.sanitisation.sanitiseText(res.translated_text),
         detected_language: this.sanitisation.sanitiseText(res.detected_language),
-        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        transliteration: res.transliteration
+          ? this.sanitisation.sanitiseText(res.transliteration)
+          : undefined,
         definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
-        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+        pronunciation_url: res.pronunciation_url
+          ? this.sanitisation.sanitiseUrl(res.pronunciation_url)
+          : undefined,
       });
     } catch (e) {
       this.translationResult.set({
@@ -186,7 +220,9 @@ export class WordDefinitionModalComponent {
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
+          translation:
+            this.translationResult()?.translated_text ||
+            `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,

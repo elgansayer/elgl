@@ -13,23 +13,14 @@ import * as dns from 'dns';
 import * as http from 'http';
 import * as https from 'https';
 import { LinkPreview } from './interfaces/link-preview.interface';
+import { isPrivateIp } from './ip-guard';
 import Redis from 'ioredis';
 
-function isPrivateIp(ip: string): boolean {
-  if (ip.startsWith('127.')) return true;
-  if (ip.startsWith('10.')) return true;
-  if (ip.startsWith('169.254.')) return true;
-  if (ip.startsWith('192.168.')) return true;
-  if (ip.startsWith('0.')) return true;
-  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true;
-  if (ip === '::1') return true;
-  if (/^[fF][cCdD]/.test(ip)) return true;
-  if (/^[fF][eE][89aAbB][0-9a-fA-F]/.test(ip)) return true;
-  if (ip.toLowerCase().startsWith('::ffff:')) {
-    return isPrivateIp(ip.substring(7));
-  }
-  return false;
-}
+/**
+ * Maximum accepted HTML document size (bytes) for a scraped page. Pages larger
+ * than this are rejected so a malicious site cannot exhaust server memory.
+ */
+const MAX_RESPONSE_BYTES = 5_000_000;
 
 const safeLookup = (
   hostname: string,
@@ -39,25 +30,25 @@ const safeLookup = (
     address: string | dns.LookupAddress[],
     family: number,
   ) => void,
-) => {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
+): void => {
+  const lookupOptions: dns.LookupOptions =
+    typeof options === 'number' ? { family: options } : options;
 
-  dns.lookup(hostname, options as dns.LookupOptions, (err, address, family) => {
-    if (err) return callback(err, address, family);
+  dns.lookup(hostname, lookupOptions, (err, address, family) => {
+    if (err) {
+      callback(err, address, family);
+      return;
+    }
 
-    const ip =
-      typeof address === 'string'
-        ? address
-        : address[0] && (address[0] as any).address;
-    if (ip && isPrivateIp(ip)) {
-      return callback(
-        new Error(`SSRF blocked: Private IP ${ip} is not allowed.`),
+    const candidate =
+      typeof address === 'string' ? address : address[0]?.address;
+    if (candidate && isPrivateIp(candidate)) {
+      callback(
+        new Error(`SSRF blocked: Private IP ${candidate} is not allowed.`),
         address,
         family,
       );
+      return;
     }
     callback(null, address, family);
   });
@@ -152,6 +143,8 @@ export class LinkPreviewService {
         maxRedirects: 3,
         httpAgent,
         httpsAgent,
+        maxContentLength: MAX_RESPONSE_BYTES,
+        maxBodyLength: MAX_RESPONSE_BYTES,
       }),
     );
 
