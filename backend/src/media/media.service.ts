@@ -1,131 +1,139 @@
-import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import {
-  PutObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import * as crypto from 'crypto';
-import * as fs from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
-import { PresignedUrlDto } from './dto/presigned-url.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PresignedMediaUploadDto } from './dto/presigned-media-upload.dto';
+import { PresignedUrlDto } from './dto/presigned-url.dto';
 import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
 
 @Injectable()
-export class MediaService implements OnModuleInit {
-  private s3Client!: S3Client;
-  private bucket!: string;
-  private publicDomain!: string;
+export class MediaService {
+  private static readonly ALLOWED_IMAGE_CONTENT_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+
+  private static readonly ALLOWED_AUDIO_CONTENT_TYPES = [
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/webm',
+    'audio/ogg',
+    'audio/wav',
+    'audio/aac',
+    'audio/x-m4a',
+  ];
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly r2ObjectService: R2ObjectService,
     private readonly supabaseService: SupabaseService,
     private readonly audioCompressionService: AudioCompressionService,
     private readonly imageCompressionService: ImageCompressionService,
   ) {}
 
-  onModuleInit() {
-    const endpoint = this.configService.get<string>('CLOUDFLARE_R2_ENDPOINT')!;
-    const accessKeyId = this.configService.get<string>(
-      'CLOUDFLARE_R2_ACCESS_KEY_ID',
-    )!;
-    const secretAccessKey = this.configService.get<string>(
-      'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
-    )!;
-    this.bucket = this.configService.get<string>('CLOUDFLARE_R2_BUCKET')!;
-    this.publicDomain = this.configService.get<string>(
-      'CLOUDFLARE_R2_PUBLIC_DOMAIN',
-    )!;
-
-    this.s3Client = new S3Client({
-      region: 'auto',
-      endpoint,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
-  }
-
   async generatePresignedUrl(
     userId: string,
     dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
-    const uniqueHash = crypto.randomBytes(8).toString('hex');
-    const extension = dto.filename.split('.').pop() || 'bin';
+    const uniqueHash = randomBytes(8).toString('hex');
+    const extension = this.safeExtension(dto.filename, 'bin');
     const objectKey = `${dto.folder}/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+    const upload = this.r2ObjectService.createUploadUrl(
+      objectKey,
+      dto.contentType,
+    );
 
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: objectKey,
-      ContentType: dto.contentType,
-    });
-
-    const uploadUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: 3600,
-    });
-    const mediaUrl = `${this.publicDomain}/${objectKey}`;
-
-    return { uploadUrl, mediaUrl, objectKey };
+    return {
+      uploadUrl: upload.uploadUrl,
+      mediaUrl: upload.publicUrl,
+      objectKey,
+    };
   }
 
   async generateCoverPresignedUrl(
     userId: string,
     dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(dto.contentType)) {
-      throw new BadRequestException(
-        'Only JPEG, PNG, and WebP images are allowed',
-      );
-    }
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
 
-    const coverDto = { ...dto, folder: 'covers' };
-    return this.generatePresignedUrl(userId, coverDto);
+    return this.generatePresignedUrl(userId, { ...dto, folder: 'covers' });
+  }
+
+  async generateAvatarPresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
+    return this.generatePresignedUrl(userId, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'avatars',
+    });
+  }
+
+  async generateAudioIntroPresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_AUDIO_CONTENT_TYPES,
+      'Only MP3, M4A, WebM, OGG, WAV, and AAC audio files are allowed',
+    );
+    return this.generatePresignedUrl(userId, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'audio-intros',
+    });
   }
 
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,
   ): Promise<{ url: string }> {
-    const tempDir = os.tmpdir();
-    const inputPath = path.join(
-      tempDir,
-      `${Date.now()}-input-${file.originalname}`,
+    this.assertAllowedContentType(
+      file.mimetype,
+      MediaService.ALLOWED_AUDIO_CONTENT_TYPES,
+      'Unsupported voice note format',
     );
-    const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
+
+    const randomName = randomBytes(8).toString('hex');
+    const safeExtension = this.safeExtension(file.originalname, 'bin');
+    const inputPath = path.join(
+      os.tmpdir(),
+      `${Date.now()}-input-${randomName}.${safeExtension}`,
+    );
+    const outputPath = path.join(
+      os.tmpdir(),
+      `${Date.now()}-output-${randomName}.ogg`,
+    );
 
     try {
-      // 1. Save uploaded buffer to temp file
       await fs.writeFile(inputPath, file.buffer);
-
-      // 2. Compress to OGG
       await this.audioCompressionService.compressToOgg(inputPath, outputPath);
-
-      // 3. Read compressed file and upload to R2
       const compressedBuffer = await fs.readFile(outputPath);
-      const uniqueHash = crypto.randomBytes(8).toString('hex');
-      const objectKey = `voice-notes/${userId}/${Date.now()}-${uniqueHash}.ogg`;
-
-      const command = new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: objectKey,
-        Body: compressedBuffer,
-        ContentType: 'audio/ogg',
-      });
-
-      await this.s3Client.send(command);
-
-      return { url: `${this.publicDomain}/${objectKey}` };
+      const objectKey = `voice-notes/${userId}/${Date.now()}-${randomName}.ogg`;
+      const object = await this.r2ObjectService.uploadBytes(
+        objectKey,
+        'audio/ogg',
+        compressedBuffer,
+      );
+      return { url: object.publicUrl };
     } finally {
-      // 4. Clean up temp files
-      await fs.unlink(inputPath).catch(() => {});
-      await fs.unlink(outputPath).catch(() => {});
+      await fs.unlink(inputPath).catch(() => undefined);
+      await fs.unlink(outputPath).catch(() => undefined);
     }
   }
 
@@ -133,99 +141,50 @@ export class MediaService implements OnModuleInit {
     userId: string,
     objectKey: string,
   ): Promise<{ coverUrl: string }> {
-    const bucket = this.bucket;
-    const key = objectKey;
-
-    // 1. Retrieve object metadata (ContentType)
-    let contentType: string;
-    try {
-      const headResult = await this.s3Client.send(
-        new HeadObjectCommand({ Bucket: bucket, Key: key }),
-      );
-      contentType = headResult.ContentType || 'image/jpeg';
-    } catch {
-      contentType = 'image/jpeg';
-    }
-
-    // 2. Download original object
-    const getResult = await this.s3Client.send(
-      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    const object = await this.r2ObjectService.downloadObject(objectKey);
+    this.assertAllowedContentType(
+      object.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Uploaded cover image has an unsupported content type',
     );
-    const stream = getResult.Body as import('stream').Readable;
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    const originalBuffer = Buffer.concat(chunks);
-
-    // 3. Compress image
     const compressedBuffer = await this.imageCompressionService.compress(
-      originalBuffer,
-      contentType,
+      Buffer.from(object.bytes),
+      object.contentType,
+    );
+    const stored = await this.r2ObjectService.uploadBytes(
+      objectKey,
+      object.contentType,
+      compressedBuffer,
     );
 
-    // 4. Overwrite with compressed version
-    await this.s3Client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: compressedBuffer,
-        ContentType: contentType,
-      }),
-    );
-
-    // 5. Update user record (same URL)
     const supabase = this.supabaseService.getClient();
-    const coverUrl = `${this.publicDomain}/${key}`;
     const { error } = await supabase
       .from('users')
-      .update({ cover_url: coverUrl })
+      .update({ cover_url: stored.publicUrl })
       .eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update cover photo URL');
     }
 
-    return { coverUrl };
+    return { coverUrl: stored.publicUrl };
   }
 
   async processUploadedImage(objectKey: string): Promise<void> {
-    // Retrieve object metadata (ContentType)
-    let contentType: string;
-    try {
-      const headResult = await this.s3Client.send(
-        new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }),
-      );
-      contentType = headResult.ContentType || 'image/jpeg';
-    } catch {
-      contentType = 'image/jpeg';
-    }
-
-    // Download original object
-    const getResult = await this.s3Client.send(
-      new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
+    const object = await this.r2ObjectService.downloadObject(objectKey);
+    this.assertAllowedContentType(
+      object.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Uploaded image has an unsupported content type',
     );
-    const stream = getResult.Body as import('stream').Readable;
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    const originalBuffer = Buffer.concat(chunks);
-
-    // Compress image
     const compressedBuffer = await this.imageCompressionService.compress(
-      originalBuffer,
-      contentType,
+      Buffer.from(object.bytes),
+      object.contentType,
     );
-
-    // Overwrite with compressed version
-    await this.s3Client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: objectKey,
-        Body: compressedBuffer,
-        ContentType: contentType,
-      }),
+    await this.r2ObjectService.uploadBytes(
+      objectKey,
+      object.contentType,
+      compressedBuffer,
     );
   }
 
@@ -233,90 +192,77 @@ export class MediaService implements OnModuleInit {
     userId: string,
     file: Express.Multer.File,
   ): Promise<{ coverUrl: string }> {
-    // 1. Compress image
+    this.assertAllowedContentType(
+      file.mimetype,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
     const compressedBuffer = await this.imageCompressionService.compress(
       file.buffer,
       file.mimetype,
     );
-
-    // 2. Generate unique object key
-    const uniqueHash = crypto.randomBytes(8).toString('hex');
-    const extension = file.originalname.split('.').pop() || 'jpg';
+    const uniqueHash = randomBytes(8).toString('hex');
+    const extension = this.safeExtension(file.originalname, 'jpg');
     const objectKey = `covers/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+    const object = await this.r2ObjectService.uploadBytes(
+      objectKey,
+      file.mimetype,
+      compressedBuffer,
+    );
 
-    // 3. Upload compressed buffer to R2
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: objectKey,
-      Body: compressedBuffer,
-      ContentType: file.mimetype || 'image/jpeg',
-    });
-
-    await this.s3Client.send(command);
-
-    const coverUrl = `${this.publicDomain}/${objectKey}`;
-
-    // 4. Update user record
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ cover_url: coverUrl })
+      .update({ cover_url: object.publicUrl })
       .eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update cover photo URL');
     }
 
-    return { coverUrl };
+    return { coverUrl: object.publicUrl };
   }
 
   async uploadAndSetAvatarImage(
     userId: string,
     file: Express.Multer.File,
   ): Promise<{ avatarUrl: string }> {
-    // 1. Compress image
+    this.assertAllowedContentType(
+      file.mimetype,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
     const compressedBuffer = await this.imageCompressionService.compress(
       file.buffer,
       file.mimetype,
     );
-
-    // 2. Generate unique object key
-    const uniqueHash = crypto.randomBytes(8).toString('hex');
-    const extension = file.originalname.split('.').pop() || 'jpg';
+    const uniqueHash = randomBytes(8).toString('hex');
+    const extension = this.safeExtension(file.originalname, 'jpg');
     const objectKey = `avatars/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+    const object = await this.r2ObjectService.uploadBytes(
+      objectKey,
+      file.mimetype,
+      compressedBuffer,
+    );
 
-    // 3. Upload compressed buffer to R2
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: objectKey,
-      Body: compressedBuffer,
-      ContentType: file.mimetype || 'image/jpeg',
-    });
-
-    await this.s3Client.send(command);
-
-    const avatarUrl = `${this.publicDomain}/${objectKey}`;
-
-    // 4. Update user record
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('users')
-      .update({ avatar_url: avatarUrl })
+      .update({ avatar_url: object.publicUrl })
       .eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update avatar photo URL');
     }
 
-    return { avatarUrl };
+    return { avatarUrl: object.publicUrl };
   }
+
   async markMediaAsViewed(
     userId: string,
     mediaId: string,
   ): Promise<{ success: boolean }> {
     const supabase = this.supabaseService.getClient();
-
-    // Check if the media exists and belongs to the user
     const { data: media, error: fetchError } = await supabase
       .from('media')
       .select('id, view_once, viewed')
@@ -327,12 +273,10 @@ export class MediaService implements OnModuleInit {
     if (fetchError || !media) {
       throw new BadRequestException('Media not found or access denied');
     }
-
     if (!media.view_once || media.viewed) {
       throw new BadRequestException('Media is not view-once or already viewed');
     }
 
-    // Mark the media as viewed
     const { error: updateError } = await supabase
       .from('media')
       .update({ viewed: true })
@@ -343,5 +287,25 @@ export class MediaService implements OnModuleInit {
     }
 
     return { success: true };
+  }
+
+  private assertAllowedContentType(
+    contentType: string,
+    allowedTypes: readonly string[],
+    message: string,
+  ): void {
+    const normalisedContentType = contentType
+      .split(';', 1)[0]
+      .trim()
+      .toLowerCase();
+    if (!allowedTypes.includes(normalisedContentType)) {
+      throw new BadRequestException(message);
+    }
+  }
+
+  private safeExtension(filename: string, fallback: string): string {
+    const extension = filename.split('.').pop()?.toLowerCase() ?? '';
+    const sanitised = extension.replace(/[^a-z0-9]/g, '').slice(0, 10);
+    return sanitised || fallback;
   }
 }

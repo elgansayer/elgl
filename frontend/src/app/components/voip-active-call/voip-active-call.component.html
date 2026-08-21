@@ -1,54 +1,60 @@
-<div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 text-white">
-  <div class="ps-4 pe-4 w-full max-w-md">
+<div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-900 text-white">
+  <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 w-full max-w-md">
     <!-- caller info -->
-    <div class="text-center mb-8">
+    <div class="text-center mb-6 sm:mb-8">
       <img
+        loading="lazy"
         [src]="avatarUrl()"
         [alt]="callerName()"
-        class="w-24 h-24 rounded-full mx-auto object-cover ring-4 ring-blue-500"
+        class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto object-cover ring-4 ring-secondary"
       />
-      <p class="text-xl font-semibold mt-2">{{ callerName() }}</p>
-      <p class="text-sm text-white/60">{{ formattedDuration() }}</p>
+      <p class="text-lg sm:text-xl font-semibold mt-2">{{ callerName() }}</p>
+      <p class="text-xs sm:text-sm text-white/60">{{ formattedDuration() }}</p>
     </div>
 
     <!-- call controls -->
-    <div class="flex items-center justify-center gap-6">
+    <div class="flex items-center justify-center gap-3 sm:gap-6">
       <!-- Mute -->
       <button
+        hlmBtn
         (click)="toggleMute()"
-        class="flex flex-col items-center justify-center w-16 h-16 rounded-full transition-colors"
-        [class.bg-blue-600]="!isMuted()"
-        [class.bg-red-600]="isMuted()"
+        class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-colors"
+        [class.bg-secondary]="!isMuted()"
+        [class.bg-danger]="isMuted()"
         [attr.aria-label]="'call.mute' | t"
       >
-        <span class="material-icons text-2xl">
+        <span class="material-icons text-xl sm:text-2xl">
           {{ isMuted() ? 'mic_off' : 'mic' }}
         </span>
-        <span class="text-xs mt-1">{{ isMuted() ? ('call.unmute' | t) : ('call.mute' | t) }}</span>
+        <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{
+          isMuted() ? ('call.unmute' | t) : ('call.mute' | t)
+        }}</span>
       </button>
 
       <!-- Speakerphone -->
       <button
+        hlmBtn
         (click)="toggleSpeaker()"
-        class="flex flex-col items-center justify-center w-16 h-16 rounded-full transition-colors"
-        [class.bg-blue-600]="isSpeakerOn()"
-        [class.bg-gray-700]="!isSpeakerOn()"
+        class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-colors"
+        [class.bg-secondary]="isSpeakerOn()"
+        [class.bg-white/20]="!isSpeakerOn()"
         [attr.aria-label]="'call.speaker' | t"
       >
-        <span class="material-icons text-2xl">
+        <span class="material-icons text-xl sm:text-2xl">
           {{ isSpeakerOn() ? 'volume_up' : 'volume_off' }}
         </span>
-        <span class="text-xs mt-1">{{ 'call.speaker' | t }}</span>
+        <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{ 'call.speaker' | t }}</span>
       </button>
 
       <!-- End Call -->
       <button
+        hlmBtn
         (click)="endCall.emit()"
-        class="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 transition-colors"
+        class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-danger hover:bg-danger/90 transition-colors"
         [attr.aria-label]="'call.hang_up' | t"
       >
-        <span class="material-icons text-2xl">call_end</span>
-        <span class="text-xs mt-1">{{ 'call.hang_up' | t }}</span>
+        <span class="material-icons text-xl sm:text-2xl">call_end</span>
+        <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{ 'call.hang_up' | t }}</span>
       </button>
     </div>
   </div>

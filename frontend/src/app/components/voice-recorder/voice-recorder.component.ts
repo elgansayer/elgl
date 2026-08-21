@@ -1,20 +1,28 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
-import { UserService } from '../../services/user.service';
-import { AudioCompressionService } from '../../services/audio-compression.service';
+import { MediaService } from '../../services/media.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-voice-recorder',
-  imports: [TranslatePipe],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })
 export class VoiceRecorderComponent implements OnDestroy {
-  private userService = inject(UserService);
-  private audioCompressionService = inject(AudioCompressionService);
+  private mediaService = inject(MediaService);
 
   audioUploaded = output<string>();
   cancelled = output<void>();
@@ -76,29 +84,11 @@ export class VoiceRecorderComponent implements OnDestroy {
     this.isUploading.set(true);
 
     try {
-      // Compress the audio blob before uploading
-      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob);
-
-      const filename = `voice_${Date.now()}.wav`;
-      const presigned = await this.userService.getPresignedUploadUrl(
-        filename,
-        'audio/wav',
-        'chat-voice',
-      );
-
-      if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
-        await fetch(presigned.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'audio/wav' },
-          body: compressedBlob,
-        });
-      }
-
-      this.audioUploaded.emit(presigned.mediaUrl);
+      const result = await this.mediaService.uploadVoiceNote(this.recordedBlob, 'ogg');
+      this.audioUploaded.emit(result.url);
     } catch (e) {
       console.error('Failed to upload voice note:', e);
-      // Fallback: emit preview URL or mock object
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/wav');
+      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/ogg');
     } finally {
       this.isUploading.set(false);
     }

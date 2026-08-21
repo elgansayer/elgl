@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +12,7 @@ import { UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-create-group',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
   templateUrl: './create-group.component.html',
   styleUrls: ['./create-group.component.scss'],
 })
@@ -19,6 +21,7 @@ export class CreateGroupComponent {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
+  private searchRequestId = 0;
 
   readonly MAX_MEMBERS = 49;
 
@@ -36,8 +39,11 @@ export class CreateGroupComponent {
 
   async searchUsers(): Promise<void> {
     const query = this.searchQuery.trim();
-    if (!query) {
+    const requestId = ++this.searchRequestId;
+
+    if (!query || !this.canAddMore()) {
       this.searchResults.set([]);
+      this.isSearching.set(false);
       return;
     }
 
@@ -47,19 +53,33 @@ export class CreateGroupComponent {
         native_languages: query,
         target_language: query,
       });
+
+      if (requestId !== this.searchRequestId || query !== this.searchQuery.trim()) {
+        return;
+      }
+
+      const normalizedQuery = query.toLowerCase();
       const filtered = results.filter(
         (u) =>
           !this.selectedMemberIds().includes(u.id) &&
-          (u.display_name?.toLowerCase().includes(query.toLowerCase()) ||
-            u.native_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
-            u.target_languages?.some((l: string) => l.toLowerCase().includes(query.toLowerCase())) ||
-            u.id.toLowerCase().includes(query.toLowerCase())),
+          (u.display_name?.toLowerCase().includes(normalizedQuery) ||
+            u.native_languages?.some((l: string) =>
+              l.toLowerCase().includes(normalizedQuery),
+            ) ||
+            u.target_languages?.some((l: string) =>
+              l.toLowerCase().includes(normalizedQuery),
+            ) ||
+            u.id.toLowerCase().includes(normalizedQuery)),
       );
       this.searchResults.set(filtered.slice(0, 20));
     } catch {
-      this.searchResults.set([]);
+      if (requestId === this.searchRequestId) {
+        this.searchResults.set([]);
+      }
     } finally {
-      this.isSearching.set(false);
+      if (requestId === this.searchRequestId) {
+        this.isSearching.set(false);
+      }
     }
   }
 
@@ -67,18 +87,24 @@ export class CreateGroupComponent {
     if (!this.canAddMore()) return;
     if (this.selectedMemberIds().includes(profile.id)) return;
     this.selectedMembers.update((members) => [...members, profile]);
-    this.searchResults.update((results) => results.filter((r) => r.id !== profile.id));
+    this.searchRequestId += 1;
+    this.isSearching.set(false);
+    this.searchResults.set([]);
     this.searchQuery = '';
   }
 
   removeMember(profile: UserProfile): void {
-    this.selectedMembers.update((members) =>
-      members.filter((m) => m.id !== profile.id),
-    );
+    this.selectedMembers.update((members) => members.filter((m) => m.id !== profile.id));
   }
 
   async createGroup(): Promise<void> {
-    if (!this.groupName.trim() || this.selectedMembers().length === 0) return;
+    if (
+      this.isCreating() ||
+      !this.groupName.trim() ||
+      this.selectedMembers().length === 0
+    ) {
+      return;
+    }
 
     this.isCreating.set(true);
     this.error.set(null);
@@ -90,7 +116,10 @@ export class CreateGroupComponent {
       this.success.set(true);
       await this.router.navigate(['/']);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : this.i18n.translate('group.errorCreate');
+      const message =
+        err instanceof Error
+          ? err.message
+          : this.i18n.translate('group.errorCreate');
       this.error.set(message);
     } finally {
       this.isCreating.set(false);

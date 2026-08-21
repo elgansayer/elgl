@@ -1,8 +1,12 @@
-import { Component, inject, input, resource, signal } from '@angular/core';
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, input, resource, signal, DestroyRef, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
 
 interface VoiceRoomNote {
   id: string;
@@ -16,80 +20,17 @@ interface VoiceRoomNote {
 
 @Component({
   selector: 'app-voiceroom-notes',
-  standalone: true,
-  imports: [TranslatePipe],
-  template: `
-    <div class="p-4 bg-surface rounded-lg">
-      <h2 class="text-lg font-semibold mb-2">{{ 'voices.notes.title' | t }}</h2>
-
-      @if (notesResource.isLoading()) {
-        <p>{{ 'global.loading' | t }}</p>
-      } @else if (notesResource.error()) {
-        <p class="text-red-400">{{ 'global.error' | t }}</p>
-      } @else {
-        <ul class="space-y-3">
-          @for (note of notesResource.value(); track note.id) {
-            <li class="border-s-2 border-primary-500 ps-3 py-2">
-              <p class="text-sm font-medium">{{ note.author_name }}</p>
-              <p class="text-base">{{ note.content }}</p>
-              @if (note.vocabulary) {
-                <p class="text-xs text-muted-foreground mt-1">{{ note.vocabulary }}</p>
-              }
-              <button
-                class="text-xs text-red-400 hover:underline mt-1"
-                (click)="deleteNote(note.id)"
-              >
-                {{ 'voices.notes.delete' | t }}
-              </button>
-            </li>
-          }
-        </ul>
-      }
-
-      <hr class="my-4 border-muted" />
-
-      <form (ngSubmit)="addNote()">
-        <label class="block mb-1 text-sm">
-          {{ 'voices.notes.content_label' | t }}
-          <textarea
-            class="w-full border rounded p-2 bg-surface-2"
-            rows="3"
-            [value]="content()"
-            (input)="onContentInput($event)"
-          ></textarea>
-        </label>
-
-        <label class="block mt-2 mb-1 text-sm">
-          {{ 'voices.notes.vocabulary_label' | t }}
-          <input
-            class="w-full border rounded p-2 bg-surface-2"
-            [value]="vocabulary()"
-            (input)="onVocabularyInput($event)"
-          />
-        </label>
-
-        <button
-          type="submit"
-          class="mt-3 btn-primary"
-          [disabled]="isPosting()"
-        >
-          {{ 'voices.notes.post' | t }}
-        </button>
-      </form>
-    </div>
-  `,
-  styles: [`
-    .btn-primary { background: #6366f1; color: #fff; padding: 0.5rem 1rem; border-radius: 0.375rem; }
-    .bg-surface { background-color: #1e1e1e; }
-    .bg-surface-2 { background-color: #2a2a2a; }
-    .border-muted { border-color: #333; }
-    .text-muted-foreground { color: #9ca3af; }
-    .text-red-400 { color: #f87171; }
-  `],
+  imports: [HlmTextarea, HlmInput, HlmButton, TranslatePipe],
+  templateUrl: './voiceroom-notes.component.html',
+  styleUrls: ['./voiceroom-notes.component.css'],
 })
 export class VoiceroomNotesComponent {
   private http = inject(HttpClient);
   private i18n = inject(I18nService);
+  private centrifugo = inject(CentrifugoService);
+  private destroyRef = inject(DestroyRef);
+  private subscribedRoomId?: string;
+
   roomId = input.required<string>();
 
   content = signal('');
@@ -104,11 +45,36 @@ export class VoiceroomNotesComponent {
       refreshKey: this.refreshCounter(),
     }),
     loader: ({ params }) =>
-      firstValueFrom(
-        this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)
-      ),
+      firstValueFrom(this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)),
     defaultValue: [],
   });
+
+  constructor() {
+    effect(() => {
+      const currentRoomId = this.roomId();
+      if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
+        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.subscribedRoomId = undefined;
+      }
+
+      if (currentRoomId) {
+        this.subscribedRoomId = currentRoomId;
+        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+          if (data.type === 'voice_room_note') {
+            this.refreshCounter.update((value) => value + 1);
+          } else if (data.type === 'voice_room_note_deleted') {
+            this.refreshCounter.update((value) => value + 1);
+          }
+        });
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.subscribedRoomId) {
+        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+      }
+    });
+  }
 
   onContentInput(event: Event): void {
     const target = event.target;
@@ -133,7 +99,7 @@ export class VoiceroomNotesComponent {
         this.http.post(`/audio-rooms/${this.roomId()}/notes`, {
           content: c,
           vocabulary: this.vocabulary().trim() || undefined,
-        })
+        }),
       );
       this.content.set('');
       this.vocabulary.set('');
@@ -147,9 +113,7 @@ export class VoiceroomNotesComponent {
 
   async deleteNote(noteId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`)
-      );
+      await firstValueFrom(this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`));
       this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "elgl-r2-gateway",
+  "main": "src/gateway.js",
+  "compatibility_date": "2026-08-19",
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "hellotalk-media",
+      "preview_bucket_name": "hellotalk-media-preview"
+    }
+  ],
+  "vars": {
+    "PUBLIC_BASE_URL": "https://media.example.com",
+    "ALLOWED_ORIGINS": "https://app.example.com",
+    "MAX_SINGLE_UPLOAD_BYTES": "26214400",
+    "MAX_MULTIPART_PART_BYTES": "104857600",
+    "MAX_SIGNED_URL_LIFETIME_SECONDS": "86400"
+  }
+}

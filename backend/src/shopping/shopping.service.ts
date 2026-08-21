@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { sanitiseShoppingData } from './sanitise-shopping.helper';
 
 export interface CatalogItem {
   id: string;
@@ -39,11 +40,12 @@ export class ShoppingService {
   ];
 
   getCatalog(): CatalogItem[] {
-    return this.catalog;
+    return sanitiseShoppingData(this.catalog);
   }
 
   getItem(id: string): CatalogItem | undefined {
-    return this.catalog.find((item) => item.id === id);
+    const item = this.catalog.find((item) => item.id === id);
+    return item ? sanitiseShoppingData(item) : undefined;
   }
 
   /**
