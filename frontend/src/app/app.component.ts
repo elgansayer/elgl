@@ -41,6 +41,7 @@ import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-si
 import { TourService } from './services/tour.service';
 import { NotificationService } from './services/notification.service';
 import { ChatService } from './services/chat.service';
+import { SeriousLearnerModeService } from './services/serious-learner-mode.service';
 import { JoyrideModule } from 'ngx-joyride';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -90,6 +91,7 @@ export class AppComponent implements OnInit {
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
   readonly versionCheckService = inject(VersionCheckService);
+  readonly seriousLearnerMode = inject(SeriousLearnerModeService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);

@@ -21,6 +21,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { SeriousLearnerModeService } from '../../services/serious-learner-mode.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
@@ -75,6 +76,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   // audio playback uses imperative HTMLAudioElement API requiring manual teardown.
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
+  private readonly seriousLearnerModeService = inject(SeriousLearnerModeService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
@@ -105,6 +107,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly hasError = computed(() => this.searchError() !== null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
+  readonly primaryNativeLanguage = signal<string>('');
+  readonly primaryTargetLanguage = signal<string>('');
 
   readonly distanceBandsKm: readonly number[] = [10, 25, 50, 100, 250];
   readonly selectedDistanceKm = signal<number>(50);
@@ -114,7 +118,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedGender = signal<string>('');
   readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
-  readonly seriousLearnerMode = signal<boolean>(false);
+  readonly seriousLearnerMode = this.seriousLearnerModeService.enabled;
+  readonly seriousLearnerRelaxed = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
@@ -223,7 +228,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   onFilterSelect(id: string) {
     this.selectedFilter.set(id);
-    this.seriousLearnerOnly.set(id === 'serious');
+    this.seriousLearnerOnly.set(id === 'serious' || this.seriousLearnerMode());
     if (id === 'nearby') {
       this.selectedDistanceKm.set(10); // 10km for nearby
     } else if (id === 'city') {
@@ -261,6 +266,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         void this.searchPartners();
       });
 
+    // Refresh the app-level preference before the first discovery request. This
+    // avoids a flash of ordinary matching for users who saved Serious Learner mode.
+    await this.seriousLearnerModeService.refresh();
+
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -271,18 +280,17 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
             labelKey: `lang.${code.toLowerCase()}`,
           }));
           this.myTargetLangs.set(langs);
+          this.primaryTargetLanguage.set(profile.target_languages[0] ?? '');
         }
-        // Restore serious learner mode
-        if (profile.is_serious_learner != null) {
-          this.seriousLearnerMode.set(profile.is_serious_learner);
-          if (profile.is_serious_learner) {
-            this.seriousLearnerOnly.set(true);
-            this.selectedFilter.set('serious');
-          }
-        }
+        this.primaryNativeLanguage.set(profile.native_languages?.[0] ?? '');
       }
     } catch (e) {
       console.warn('Could not load user profile for target languages', e);
+    }
+
+    if (this.seriousLearnerMode()) {
+      this.seriousLearnerOnly.set(true);
+      this.selectedFilter.set('serious');
     }
 
     try {
@@ -309,16 +317,26 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
+      const seriousMode = this.seriousLearnerMode();
+      const strictLanguageGoals = seriousMode && !this.seriousLearnerRelaxed();
+      const strictCandidateNative = this.primaryTargetLanguage() || undefined;
+      const strictCandidateTarget = this.primaryNativeLanguage() || undefined;
       const results = await this.discoveryService.findPartners(
         {
           radius_metres: this.selectedDistanceKm() * 1000,
-          native_languages: this.selectedNativeLanguage() || undefined,
-          target_language: this.selectedTargetLanguage() || undefined,
-          serious_learner_only: this.seriousLearnerOnly(),
+          native_languages:
+            strictLanguageGoals && strictCandidateNative
+              ? strictCandidateNative
+              : this.selectedNativeLanguage() || undefined,
+          target_language:
+            strictLanguageGoals && strictCandidateTarget
+              ? strictCandidateTarget
+              : this.selectedTargetLanguage() || undefined,
+          serious_learner_only: seriousMode || this.seriousLearnerOnly(),
           gender: isVip ? genderVal : undefined,
           age_min: this.ageRangeMin(),
           age_max: this.ageRangeMax(),
-          serious_learner_mode: this.seriousLearnerMode(),
+          serious_learner_mode: seriousMode,
           proficiency_level: this.selectedProficiencyLevel() || undefined,
           available_time_start: this.availableTimeStart() || undefined,
           available_time_end: this.availableTimeEnd() || undefined,
@@ -380,18 +398,27 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async toggleSeriousLearnerMode(): Promise<void> {
-    const newMode = !this.seriousLearnerMode();
-    try {
-      await this.userService.updateMyProfile({ is_serious_learner: newMode });
-      this.seriousLearnerMode.set(newMode);
-      if (newMode) {
-        this.seriousLearnerOnly.set(true);
-        this.selectedFilter.set('serious');
-      }
-      await this.searchPartners();
-    } catch (e) {
-      console.error('Failed to update serious learner mode', e);
+    const saved = await this.seriousLearnerModeService.toggle();
+    if (!saved) {
+      this.searchError.set(this.i18n.translate('discovery.searchError'));
+      return;
     }
+
+    this.seriousLearnerRelaxed.set(false);
+    if (this.seriousLearnerMode()) {
+      this.seriousLearnerOnly.set(true);
+      this.selectedFilter.set('serious');
+    } else if (this.selectedFilter() === 'serious') {
+      this.seriousLearnerOnly.set(false);
+      this.selectedFilter.set('all');
+    }
+    await this.searchPartners();
+  }
+
+  showBroaderSeriousLearnerMatches(): void {
+    if (!this.seriousLearnerMode()) return;
+    this.seriousLearnerRelaxed.set(true);
+    void this.searchPartners();
   }
 
   private formatDistanceHelper(metres: number | undefined): string {
@@ -498,8 +525,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedTargetLanguage.set('');
     this.selectedProficiencyLevel.set('');
     this.selectedGender.set('');
-    this.seriousLearnerOnly.set(false);
-    this.seriousLearnerMode.set(false);
+    this.seriousLearnerOnly.set(this.seriousLearnerMode());
+    this.selectedFilter.set(this.seriousLearnerMode() ? 'serious' : 'all');
+    this.seriousLearnerRelaxed.set(false);
     this.ageRangeMin.set(18);
     this.ageRangeMax.set(100);
     this.availableTimeStart.set('');
