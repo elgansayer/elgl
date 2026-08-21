@@ -8,12 +8,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     @if (guideResource.value(); as text) {
       <div
-        class="ps-4 pe-4 py-3 rounded-xl bg-surface-2 border-s-4 border-e-0 border-accent
-               text-sm leading-relaxed"
+        class="rounded-card border-s-4 border-primary bg-surface-100 px-4 py-3 text-sm leading-relaxed
+               text-text-secondary shadow-card sm:px-5 sm:py-4"
         role="region"
-        aria-labelledby="cultural-tip-heading"
+        [attr.aria-label]="'culturalGuide.title' | t"
       >
-        <h3 id="cultural-tip-heading" class="font-semibold mb-1">
+        <h3 class="mb-1 font-semibold text-text-primary">
           {{ 'culturalGuide.title' | t }}
         </h3>
         <p>{{ text }}</p>

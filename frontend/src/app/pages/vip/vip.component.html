@@ -1,16 +1,22 @@
 <div class="min-h-screen bg-surface-300 text-text-primary">
   <!-- Hero Section -->
-  <section class="relative overflow-hidden bg-gradient-to-br from-primary/20 via-surface-200 to-surface-300 pt-16 pb-20 ps-4 pe-4 md:ps-8 md:pe-8">
+  <section
+    class="relative overflow-hidden bg-gradient-to-br from-primary/20 via-surface-200 to-surface-300 pt-16 pb-20 ps-4 pe-4 md:ps-8 md:pe-8"
+  >
     <div class="max-w-4xl mx-auto text-center">
-      <h1 class="text-4xl md:text-5xl font-extrabold mb-4">{{ 'vip.heroTitle' | t }}</h1>
-      <p class="text-lg md:text-xl text-text-secondary mb-8 max-w-2xl mx-auto">{{ 'vip.heroSubtitle' | t }}</p>
+      <span joyrideStep="economyTour@vipLink" [text]="'tour.vipLinkDesc' | t" stepPosition="bottom">
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-4">{{ 'vip.heroTitle' | t }}</h1>
+      </span>
+      <p class="text-lg md:text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
+        {{ 'vip.heroSubtitle' | t }}
+      </p>
       <div class="flex flex-wrap justify-center gap-4">
-        <app-button variant="primary" size="lg" (buttonAction)="scrollToPlans()">
+        <app-button-primary size="lg" (clicked)="scrollToPlans()">
           {{ 'vip.seePlans' | t }}
-        </app-button>
-        <app-button variant="outline" size="lg" (buttonAction)="onStartFree()">
+        </app-button-primary>
+        <app-button-secondary size="lg" (clicked)="onStartFree()">
           {{ 'vip.startFree' | t }}
-        </app-button>
+        </app-button-secondary>
       </div>
     </div>
   </section>
@@ -23,7 +29,7 @@
         <p class="text-text-secondary">{{ 'vip.premiumSubtitle' | t }}</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         @for (plan of plans(); track plan.id) {
           <app-card
             [variant]="plan.isPopular ? 'elevated' : 'default'"
@@ -46,14 +52,13 @@
                   </li>
                 }
               </ul>
-              <app-button
-                variant="primary"
+              <app-button-primary
                 size="md"
                 [customClass]="'w-full'"
-                (buttonAction)="onSubscribe(plan.id)"
+                (clicked)="onSubscribe(plan.id)"
               >
                 {{ plan.ctaKey | t }}
-              </app-button>
+              </app-button-primary>
             </div>
           </app-card>
         }
@@ -69,10 +74,17 @@
         <table class="w-full text-sm text-start border-collapse">
           <thead>
             <tr class="border-b border-surface-400">
-              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-text-secondary font-semibold">{{ 'vip.featureTableHeader' | t }}</th>
+              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-text-secondary font-semibold">
+                {{ 'vip.featureTableHeader' | t }}
+              </th>
               <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">{{ 'vip.freePlan' | t }}</th>
-              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">{{ 'vip.consumerPlan' | t }}</th>
-              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">{{ 'vip.developerPlan' | t }}</th>
+              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">
+                {{ 'vip.consumerPlan' | t }}
+              </th>
+              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">{{ 'vip.proPlan' | t }}</th>
+              <th scope="col" class="ps-4 pe-4 pt-3 pb-3 text-center">
+                {{ 'vip.developerPlan' | t }}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -90,6 +102,15 @@
                 </td>
                 <td class="ps-4 pe-4 pt-2 pb-2 text-center">
                   @if (row.consumer) {
+                    <span class="text-primary text-lg" aria-hidden="true">✓</span>
+                    <span class="sr-only">{{ 'vip.included' | t }}</span>
+                  } @else {
+                    <span class="text-text-muted" aria-hidden="true">-</span>
+                    <span class="sr-only">{{ 'vip.notIncluded' | t }}</span>
+                  }
+                </td>
+                <td class="ps-4 pe-4 pt-2 pb-2 text-center">
+                  @if (row.pro) {
                     <span class="text-primary text-lg" aria-hidden="true">✓</span>
                     <span class="sr-only">{{ 'vip.included' | t }}</span>
                   } @else {
@@ -122,13 +143,19 @@
         @for (faq of faqItems(); track $index; let idx = $index) {
           <app-card variant="outlined" padding="sm">
             <button
+              hlmBtn
               type="button"
               class="w-full text-start flex justify-between items-center ps-4 pe-4 pt-3 pb-3 focus:outline-none"
               (click)="toggleFaq(idx)"
               [attr.aria-expanded]="openFaqIndex() === idx"
-             [attr.aria-label]="faq.questionKey | t"|[attr.aria-label]="faq.questionKey | t">
+              [attr.aria-label]="faq.questionKey | t"
+            >
               <span class="font-medium">{{ faq.questionKey | t }}</span>
-              <span class="text-primary transition-transform duration-200" [class.rotate-180]="openFaqIndex() === idx" aria-hidden="true">
+              <span
+                class="text-primary transition-transform duration-200"
+                [class.rotate-180]="openFaqIndex() === idx"
+                aria-hidden="true"
+              >
                 ▼
               </span>
             </button>
@@ -149,12 +176,12 @@
       <h2 class="text-3xl font-bold mb-4">{{ 'vip.ctaTitle' | t }}</h2>
       <p class="text-lg text-text-secondary mb-8">{{ 'vip.ctaSubtitle' | t }}</p>
       <div class="flex flex-wrap justify-center gap-4">
-        <app-button variant="primary" size="lg" (buttonAction)="scrollToPlans()">
+        <app-button-primary size="lg" (clicked)="scrollToPlans()">
           {{ 'vip.viewPlans' | t }}
-        </app-button>
-        <app-button variant="outline" size="lg" (buttonAction)="onContinueFree()">
+        </app-button-primary>
+        <app-button-secondary size="lg" (clicked)="onContinueFree()">
           {{ 'vip.continueFree' | t }}
-        </app-button>
+        </app-button-secondary>
       </div>
     </div>
   </section>

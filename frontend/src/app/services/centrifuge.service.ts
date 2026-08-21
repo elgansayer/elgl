@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpResponseBase } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Centrifuge, Subscription } from 'centrifuge';
 import { environment } from '../../environments/environment';
@@ -39,14 +39,33 @@ export class CentrifugeService {
     return Math.max(0, Math.round(exponentialDelay + jitter));
   }
 
-  private scheduleReconnect(): void {
+  /**
+   * Reads the `Retry-After` header from an HTTP response, falling back to our
+   * exponential backoff when the header is absent or unparseable.
+   */
+  private getRetryAfterMs(
+    response: HttpResponseBase,
+    fallbackMs: number,
+  ): number {
+    const raw = response.headers.get('Retry-After');
+    if (!raw) return fallbackMs;
+    const seconds = parseInt(raw, 10);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.min(seconds * 1000, MAX_RECONNECT_DELAY_MS);
+    }
+    return fallbackMs;
+  }
+
+  private scheduleReconnect(
+    overrideDelayMs?: number,
+  ): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.connectionStatus.set('error: max reconnection attempts reached');
       console.error('Max Centrifugo reconnection attempts reached. Giving up.');
       return;
     }
 
-    const delay = this.calculateBackoffDelay();
+    const delay = overrideDelayMs ?? this.calculateBackoffDelay();
     this.reconnectAttempts += 1;
 
     if (this.reconnectTimer) {
@@ -72,24 +91,25 @@ export class CentrifugeService {
 
     this.connectionStatus.set('connecting');
     try {
-      const tokenObj = await firstValueFrom(
+      const tokenResponse = await firstValueFrom(
         this.http.post<{ token: string }>(
           `${environment.apiUrl}/chat/token`,
           {},
           {
             headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
+            observe: 'response',
           },
         ),
       );
 
-      if (!tokenObj?.token) {
+      if (!tokenResponse?.body?.token) {
         this.connectionStatus.set('error: rate limited or missing token');
         this.scheduleReconnect();
         return;
       }
 
       this.centrifuge = new Centrifuge(environment.centrifugoUrl, {
-        token: tokenObj.token,
+        token: tokenResponse.body.token,
       });
 
       this.centrifuge.on('connected', () => {
@@ -117,11 +137,14 @@ export class CentrifugeService {
       // Check for 429 Too Many Requests from rate-limited token endpoint
       if (e instanceof HttpErrorResponse && e.status === 429) {
         this.connectionStatus.set('error: rate limited');
+        // Use the Retry-After header provided by the backend
+        const retryMs = this.getRetryAfterMs(e, this.calculateBackoffDelay());
+        this.scheduleReconnect(retryMs);
       } else {
         console.error('Failed to initialize Centrifugo:', e);
         this.connectionStatus.set('error');
+        this.scheduleReconnect();
       }
-      this.scheduleReconnect();
     }
   }
 

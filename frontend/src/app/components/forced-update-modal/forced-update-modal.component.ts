@@ -1,12 +1,14 @@
-import { Component, input } from '@angular/core';
+import { Component, input, OnInit, OnDestroy, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 /**
- * A modal overlay that blocks all interaction until the user navigates
- * to the app store for an update.
+ * A blocking modal overlay that prevents all interaction until the user
+ * navigates to the app store for an update.
  *
- * The modal prevents all background interaction: clicks, scrolling,
- * and keyboard events are intercepted.
+ * The modal locks body scrolling (via `overflow: hidden`) and intercepts
+ * all clicks, scroll, touch, and keyboard events. The Escape key is
+ * explicitly suppressed so the user cannot dismiss the overlay.
  *
  * Place `<app-forced-update-modal .../>` at the top of your root component
  * template and bind with `@if (versionCheck.isDeprecated())`.
@@ -58,12 +60,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
     '(window:scroll)': 'preventScroll($event)',
     '(window:touchmove)': 'preventScroll($event)',
     '(window:wheel)': 'preventScroll($event)',
-    '(window:keydown)': 'preventScroll($event)',
+    '(window:keydown)': 'onKeydown($event)',
   },
 })
-export class ForcedUpdateModalComponent {
+export class ForcedUpdateModalComponent implements OnInit, OnDestroy {
   /** URL to the app store listing */
   storeUrl = input('https://yourapp.com/update');
+
+  private document = inject(DOCUMENT);
+
+  ngOnInit(): void {
+    this.document.body.style.overflow = 'hidden';
+  }
+
+  ngOnDestroy(): void {
+    this.document.body.style.overflow = '';
+  }
 
   /**
    * Prevent any background clicks from reaching elements behind the overlay.
@@ -85,6 +97,20 @@ export class ForcedUpdateModalComponent {
    */
   blockEvent(event: Event): void {
     event.stopPropagation();
+    event.preventDefault();
+  }
+
+  /**
+   * Intercept all keyboard events and block Escape to prevent dismissal.
+   * Only allows Tab within the modal for accessibility.
+   */
+  onKeydown(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key === 'Escape' || keyboardEvent.key === 'Esc') {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
   }
 }

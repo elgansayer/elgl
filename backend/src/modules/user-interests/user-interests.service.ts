@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../supabase/supabase.service';
 
@@ -22,6 +22,8 @@ export interface VocabularyEntry {
 
 @Injectable()
 export class UserInterestsService {
+  private readonly logger = new Logger(UserInterestsService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   private get supabase(): SupabaseClient {
@@ -45,6 +47,30 @@ export class UserInterestsService {
     const rows = tags.map((tag) => ({ user_id: userId, tag }));
     const { error } = await this.supabase.from('user_interests').insert(rows);
     if (error) throw error;
+
+    // Invalidate interest-based recommendation caches for this user.
+    void this.invalidateInterestMatchmakingCaches(userId);
+  }
+
+  /**
+   * Invalidate matchmaking caches that are affected by an interests mutation.
+   * Interest changes affect both the interest-based recommendation tiers in
+   * RecommendationsService and the interests overlap filter in discovery.
+   */
+  private async invalidateInterestMatchmakingCaches(
+    userId: string,
+  ): Promise<void> {
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      await redis.del(
+        `daily_recommendations:${userId}`,
+        `recommendations:daily:${userId}`,
+      );
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Failed to invalidate matchmaking caches after interests update for ${userId}: ${(err as Error)?.message ?? 'unknown'}`,
+      );
+    }
   }
 
   async getVocabularyForInterests(

@@ -5,16 +5,13 @@ import type { Lesson } from './lessons.model';
 
 @Component({
   selector: 'app-lessons',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="ps-4 pe-4 py-6">
       <h1 class="text-lg font-bold mb-4">{{ 'lessons.title' | t }}</h1>
 
       @for (lesson of lessons(); track lesson.id) {
-        <div
-          class="ps-4 pe-4 py-3 mb-2 rounded-lg bg-surface-elevated border-s-2 border-accent"
-        >
+        <div class="ps-4 pe-4 py-3 mb-2 rounded-lg bg-surface-elevated border-s-2 border-accent">
           <h2 class="font-medium">{{ lesson.titleKey | t }}</h2>
           <p class="text-sm text-on-surface-secondary">
             {{ lesson.descriptionKey | t }}
@@ -27,14 +24,11 @@ import type { Lesson } from './lessons.model';
               >{{ lesson.wordCount }} {{ 'lessons.words' | t }}</span
             >
             @if (lesson.completed) {
-              <span class="ms-auto text-green-400 text-sm">{{
-                'lessons.completed' | t
-              }}</span>
+              <span class="ms-auto text-success text-sm">{{ 'lessons.completed' | t }}</span>
             }
           </div>
         </div>
-      }
-      @empty {
+      } @empty {
         <p class="text-on-surface-secondary">{{ 'lessons.none' | t }}</p>
       }
     </div>

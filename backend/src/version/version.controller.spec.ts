@@ -4,8 +4,8 @@ import { VersionService } from './version.service';
 
 describe('VersionController', () => {
   let controller: VersionController;
-  const mockGetVersion = jest.fn();
-  const mockGetMinimumSupportedVersion = jest.fn();
+  const mockGetVersion = vi.fn();
+  const mockGetMinimumSupportedVersion = vi.fn();
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -25,7 +25,7 @@ describe('VersionController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
