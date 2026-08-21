@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
@@ -13,18 +14,18 @@ import { ExecutionContext } from '@nestjs/common';
 describe('RecommendationsRateLimiterGuard', () => {
   let guard: RecommendationsRateLimiterGuard;
   let redisMock: {
-    incr: jest.Mock;
-    expire: jest.Mock;
-    ttl: jest.Mock;
-    get: jest.Mock;
-    set: jest.Mock;
+    incr: Mock;
+    expire: Mock;
+    ttl: Mock;
+    get: Mock;
+    set: Mock;
   };
-  let supabaseClientMock: { from: jest.Mock };
-  let supabaseService: jest.Mocked<
+  let supabaseClientMock: { from: Mock };
+  let supabaseService: Mocked<
     Pick<SupabaseService, 'getRedisClient' | 'getClient'>
   >;
-  let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
-  let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let reflector: Mocked<Pick<Reflector, 'get'>>;
+  let logger: Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -38,8 +39,8 @@ describe('RecommendationsRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
-        getNext: jest.fn(),
+        getResponse: vi.fn(),
+        getNext: vi.fn(),
       }),
       getType: () => 'http',
     } as unknown as ExecutionContext;
@@ -47,35 +48,35 @@ describe('RecommendationsRateLimiterGuard', () => {
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      ttl: jest.fn().mockResolvedValue(60),
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      ttl: vi.fn().mockResolvedValue(60),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     supabaseClientMock = {
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),
         }),
       }),
     };
 
     supabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
-      getClient: jest.fn().mockReturnValue(supabaseClientMock),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
+      getClient: vi.fn().mockReturnValue(supabaseClientMock),
     };
 
     reflector = {
-      get: jest.fn().mockReturnValue(undefined),
+      get: vi.fn().mockReturnValue(undefined),
     };
 
     logger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     guard = new RecommendationsRateLimiterGuard(
@@ -113,13 +114,13 @@ describe('RecommendationsRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    const handler = async () => {
+    const handler = () => {
       /* empty */
     };
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === RECOMMENDATIONS_RATE_LIMIT_KEY) return options;
         return undefined;
       });
@@ -278,9 +279,9 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(5);
       redisMock.get.mockResolvedValue(null); // cache miss
       supabaseClientMock.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
               data: { is_vip: true },
               error: null,
             }),
@@ -307,9 +308,9 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(31); // exceeds free limit
       redisMock.get.mockResolvedValue(null);
       supabaseClientMock.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockRejectedValue(new Error('DB down')),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockRejectedValue(new Error('DB down')),
           }),
         }),
       });

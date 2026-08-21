@@ -1,0 +1,31 @@
+<!-- @dsCard group="Foundations" name="Reduced motion" subtitle="prefers-reduced-motion contract" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relay reduced motion contract</title>
+    <style>
+      .sample {
+        display: inline-block;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        50% {
+          transform: scale(1.04);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sample {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Reduced motion</h1>
+      <p class="sample">Meaning remains visible while decorative motion is removed.</p>
+    </main>
+  </body>
+</html>

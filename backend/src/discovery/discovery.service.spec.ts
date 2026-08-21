@@ -1,17 +1,18 @@
-/// <reference types="jest" />
+import type { Mock } from 'vitest';
+/// <reference types="vi" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
-jest.mock('../mock-data', () => ({
+
+vi.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
-jest.mock('./sanitise-discovery.helper', () => ({
+vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: <T>(value: T): T => value,
 }));
 
@@ -20,22 +21,20 @@ describe('DiscoveryService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockRedisClient: any;
-  let mockRedisSet: jest.Mock;
-  let mockPipelineSet: jest.Mock;
-  let mockPipelineExec: jest.Mock;
+  let mockRedisSet: Mock;
+  let mockPipelineSet: Mock;
+  let mockPipelineExec: Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
-  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
   let mockDegradationService: {
-    executeWithBreaker: jest.Mock;
-    executeWithCascade: jest.Mock;
-    recordDegradationEvent: jest.Mock;
-    isAvailable: jest.Mock;
-    recordSuccess: jest.Mock;
-    recordFailure: jest.Mock;
-    getAllBreakerStates: jest.Mock;
+    executeWithBreaker: Mock;
+    executeWithCascade: Mock;
+    recordDegradationEvent: Mock;
+    isAvailable: Mock;
+    recordSuccess: Mock;
+    recordFailure: Mock;
+    getAllBreakerStates: Mock;
   };
-
   function createMockQueryBuilder() {
     const builder: any = {};
     const chainableMethods = [
@@ -55,9 +54,9 @@ describe('DiscoveryService', () => {
       'overlaps',
     ];
     for (const method of chainableMethods) {
-      builder[method] = jest.fn().mockReturnValue(builder);
+      builder[method] = vi.fn().mockReturnValue(builder);
     }
-    builder.limit = jest.fn();
+    builder.limit = vi.fn();
     return builder;
   }
 
@@ -73,50 +72,46 @@ describe('DiscoveryService', () => {
     mockQueryBuilder = createMockQueryBuilder();
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
-      rpc: jest.fn(),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn(),
     };
 
-    mockRedisSet = jest.fn();
-    mockPipelineSet = jest.fn().mockReturnThis();
-    mockPipelineExec = jest.fn().mockResolvedValue(undefined);
+    mockRedisSet = vi.fn();
+    mockPipelineSet = vi.fn().mockReturnThis();
+    mockPipelineExec = vi.fn().mockResolvedValue(undefined);
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
+      get: vi.fn().mockResolvedValue(null),
       set: mockRedisSet,
-      pipeline: jest.fn().mockReturnValue({
+      del: vi.fn().mockResolvedValue(1),
+      pipeline: vi.fn().mockReturnValue({
         set: mockPipelineSet,
         exec: mockPipelineExec,
       }),
     };
 
     mockSafetyService = {
-      getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
+      getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
     };
 
     mockAudioRoomsService = {
-      getActiveHostIds: jest.fn().mockResolvedValue([]),
-    };
-
-    mockCloudflareCacheService = {
-      purgeByCacheTags: jest.fn().mockResolvedValue(true),
+      getActiveHostIds: vi.fn().mockResolvedValue([]),
     };
 
     mockDegradationService = {
-      executeWithBreaker: jest
+      executeWithBreaker: vi
         .fn()
         .mockImplementation((_svc: string, op: () => Promise<unknown>) => op()),
-      executeWithCascade: jest
+      executeWithCascade: vi
         .fn()
         .mockImplementation((_svc: string, primary: () => Promise<unknown>) =>
           primary(),
         ),
-      recordDegradationEvent: jest.fn(),
-      isAvailable: jest.fn().mockReturnValue(true),
-      recordSuccess: jest.fn(),
-      recordFailure: jest.fn(),
-      getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
+      recordDegradationEvent: vi.fn(),
+      isAvailable: vi.fn().mockReturnValue(true),
+      recordSuccess: vi.fn(),
+      recordFailure: vi.fn(),
+      getAllBreakerStates: vi.fn().mockReturnValue(new Map()),
     };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -127,8 +122,8 @@ describe('DiscoveryService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -140,17 +135,13 @@ describe('DiscoveryService', () => {
           useValue: mockAudioRoomsService,
         },
         {
-          provide: CloudflareCacheService,
-          useValue: mockCloudflareCacheService,
-        },
-        {
           provide: `PinoLogger:${DiscoveryService.name}`,
           useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            trace: vi.fn(),
           },
         },
       ],
@@ -160,7 +151,7 @@ describe('DiscoveryService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -200,31 +191,73 @@ describe('DiscoveryService', () => {
   // calculatePartnerOfWeek
   // ---------------------------------------------------------------------------
   describe('calculatePartnerOfWeek', () => {
+    const makeCandidates = (
+      count: number,
+    ): Array<{
+      id: string;
+      display_name: string;
+      native_languages: string[];
+      target_languages: string[];
+      privacy_hide_from_search: boolean;
+      is_deletion_pending: boolean;
+      correction_ratio: number;
+      study_streak_days: number;
+    }> =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `u${i + 1}`,
+        display_name: `User ${i + 1}`,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
+        correction_ratio: 0.6 + (count - i) * 0.005,
+        study_streak_days: 10 + (count - i),
+      }));
+
     it('should store partner IDs in redis when users qualify', async () => {
-      mockQueryBuilder.gt = jest.fn().mockReturnThis();
-      mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [{ id: 'u1' }, { id: 'u2' }],
+      const candidates = makeCandidates(20);
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: candidates,
         error: null,
       });
 
       await service.calculatePartnerOfWeek();
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockRedisSet).toHaveBeenCalledWith(
-        'partner_of_week_ids',
-        '["u1","u2"]',
-        'EX',
-        604800,
-      );
+      expect(mockRedisSet).toHaveBeenCalled();
+      const setCall = mockRedisSet.mock.calls[0];
+      expect(setCall[0]).toBe('partner_of_week_ids');
+      expect(setCall[2]).toBe('EX');
+      expect(setCall[3]).toBe(604800);
+      const ids: string[] = JSON.parse(setCall[1]);
+      expect(ids.length).toBe(10);
+      // Top 10 candidates should be selected
+      for (let i = 0; i < 10; i++) {
+        expect(ids[i]).toBe(candidates[i].id);
+      }
     });
 
-    it('should not set redis key when no users qualify', async () => {
-      mockQueryBuilder.gt = jest.fn().mockReturnThis();
-      mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [],
-        error: null,
+    it('should not set redis key when no users qualify (empty candidates)', async () => {
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should not set redis key when candidates are null (error)', async () => {
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: { message: 'DB down' },
       });
 
       await service.calculatePartnerOfWeek();
@@ -232,16 +265,49 @@ describe('DiscoveryService', () => {
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
 
-    it('should not set redis key when query returns error', async () => {
-      mockQueryBuilder.gt = jest.fn().mockReturnThis();
-      mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'DB down' },
+    it('should handle fewer than 10 candidates', async () => {
+      const candidates = makeCandidates(5);
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: candidates,
+        error: null,
       });
 
       await service.calculatePartnerOfWeek();
 
+      expect(mockRedisSet).toHaveBeenCalled();
+      const ids = JSON.parse(mockRedisSet.mock.calls[0][1]);
+      expect(ids.length).toBe(5);
+      expect(ids).toEqual(candidates.map((c) => c.id));
+    });
+
+    it('should catch and log errors without crashing', async () => {
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockRejectedValue(new Error('network error'));
+
+      await expect(service.calculatePartnerOfWeek()).resolves.toBeUndefined();
+      expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should handle zero study_streak_days gracefully', async () => {
+      const zeroStreak = [
+        { id: 'low', correction_ratio: 0.8, study_streak_days: 0 },
+      ];
+      mockQueryBuilder.gt = vi.fn().mockReturnThis();
+      mockQueryBuilder.gte = vi.fn().mockReturnThis();
+      mockQueryBuilder.order = vi.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: zeroStreak,
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      // redis.set should not be called since no partners qualify
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
   });
@@ -450,7 +516,7 @@ describe('DiscoveryService', () => {
 
       await service.searchPartners('user-1', null, { has_audio_intro: true });
 
-      const calls = (mockQueryBuilder.not as jest.Mock).mock.calls;
+      const calls = (mockQueryBuilder.not as Mock).mock.calls;
       expect(
         calls.some(
           (c: string[]) => c[0] === 'audio_intro_url' && c[1] === 'is',
@@ -753,6 +819,114 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
     });
 
+    it('should pass target_language as filter_target to RPC call', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        target_language: 'JA',
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_target: 'JA' }),
+      );
+    });
+
+    it('should pass filter_target null when target_language is not provided', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_target: null }),
+      );
+    });
+
+    it('should post-filter RPC results by interests when RPC succeeds', async () => {
+      stubRpcResponse([
+        { id: 'p1', interests: ['music', 'sports'] },
+        { id: 'p2', interests: ['reading'] },
+        { id: 'p3', interests: ['music'] },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
+    });
+
+    it('should filter out all users when no RPC results match interests', async () => {
+      stubRpcResponse([
+        { id: 'p1', interests: ['reading'] },
+        { id: 'p2', interests: ['sports'] },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle RPC results without interests field gracefully', async () => {
+      stubRpcResponse([{ id: 'p1' }, { id: 'p2' }]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      // No interests field, no match, empty result
+      expect(result).toHaveLength(0);
+    });
+
+    it('should force serious_only true in RPC when profile has serious_learner_mode', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners(
+        'user-1',
+        { is_serious_learner: true } as any,
+        { latitude: 1, longitude: 2, serious_learner_mode: true },
+      );
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ serious_only: true }),
+      );
+    });
+
+    it('should not apply country/city ilike on RPC results when RPC succeeds', async () => {
+      // When RPC succeeds, queryBuilder ilike filters are NOT applied.
+      // RPC results may include users from any country/city.
+      stubRpcResponse([
+        { id: 'p1', country: 'US', city: 'NYC' },
+        { id: 'p2', country: 'JP', city: 'Tokyo' },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        country: 'Canada',
+        city: 'Toronto',
+      });
+
+      // RPC succeeds, ilike filters on queryBuilder not consulted
+      // Both users returned (country/city filtering is post-DB via enrich only)
+      expect(result.map((u) => u.id)).toEqual(['p1', 'p2']);
+    });
+
     // -- RPC fallback chain --------------------------------------------------
     it('should fall back to standard query when RPC returns error', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
@@ -990,7 +1164,7 @@ describe('DiscoveryService', () => {
       const result = await service.getAudioIntros('user-1', null, {});
 
       expect(result).toHaveLength(1);
-      const notCalls = (mockQueryBuilder.not as jest.Mock).mock.calls;
+      const notCalls = (mockQueryBuilder.not as Mock).mock.calls;
       expect(notCalls.some((c: string[]) => c[0] === 'audio_intro_url')).toBe(
         true,
       );
@@ -1088,7 +1262,7 @@ describe('DiscoveryService', () => {
   // ---------------------------------------------------------------------------
   describe('findByLanguagePair', () => {
     it('should cross-match native and target languages', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: [{ id: 'lp1' }],
         error: null,
       });
@@ -1109,7 +1283,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should handle native_language only', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: [{ id: 'lp1' }],
         error: null,
       });
@@ -1125,7 +1299,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should handle target_language only', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: [{ id: 'lp1' }],
         error: null,
       });
@@ -1141,7 +1315,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should fallback to mock data when query errors', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: null,
         error: { message: 'fail' },
       });
@@ -1154,7 +1328,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should apply sort=newest ordering', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: [{ id: 'lp1' }],
         error: null,
       });
@@ -1170,7 +1344,7 @@ describe('DiscoveryService', () => {
     });
 
     it('should apply pagination via range', async () => {
-      mockQueryBuilder.range = jest.fn().mockResolvedValue({
+      mockQueryBuilder.range = vi.fn().mockResolvedValue({
         data: [{ id: 'lp1' }],
         error: null,
       });
@@ -1190,7 +1364,7 @@ describe('DiscoveryService', () => {
       // resolves directly. We check that when the query succeeds, the flag is
       // attached. We test two users, where only lp2 is Partner of the Week.
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['lp2']));
-      mockQueryBuilder.range = jest.fn().mockReturnThis();
+      mockQueryBuilder.range = vi.fn().mockReturnThis();
       // findByLanguagePair calls supabase.from('users') which returns mockQueryBuilder.
       // After building up the chain, it does 'await queryBuilder'.
       // Since mockQueryBuilder is a plain object, await resolves it immediately,

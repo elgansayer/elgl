@@ -84,9 +84,17 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     category: 'self-assessment',
     options: [
       { id: 'o1', text: 'I struggle to understand and reply.', points: 1 },
-      { id: 'o2', text: 'I can do it with simple phrases if the other person speaks slowly.', points: 2 },
+      {
+        id: 'o2',
+        text: 'I can do it with simple phrases if the other person speaks slowly.',
+        points: 2,
+      },
       { id: 'o3', text: 'I can do it easily and confidently.', points: 3 },
-      { id: 'o4', text: 'I can do it fluently and naturally, adapting to context.', points: 4 },
+      {
+        id: 'o4',
+        text: 'I can do it fluently and naturally, adapting to context.',
+        points: 4,
+      },
     ],
   },
   {
@@ -96,9 +104,21 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     category: 'comprehension',
     options: [
       { id: 'o1', text: 'No, I need translation for most things.', points: 1 },
-      { id: 'o2', text: 'Yes, if the topic is very familiar to me.', points: 2 },
-      { id: 'o3', text: 'Yes, I understand almost everything clearly.', points: 3 },
-      { id: 'o4', text: 'Yes, I understand complex and nuanced content effortlessly.', points: 4 },
+      {
+        id: 'o2',
+        text: 'Yes, if the topic is very familiar to me.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'Yes, I understand almost everything clearly.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'Yes, I understand complex and nuanced content effortlessly.',
+        points: 4,
+      },
     ],
   },
   {
@@ -108,9 +128,21 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     category: 'expression',
     options: [
       { id: 'o1', text: 'I cannot do this yet.', points: 1 },
-      { id: 'o2', text: 'I can give brief reasons and explanations.', points: 2 },
-      { id: 'o3', text: 'I can express myself fluently and spontaneously.', points: 3 },
-      { id: 'o4', text: 'I can present complex arguments with precision and nuance.', points: 4 },
+      {
+        id: 'o2',
+        text: 'I can give brief reasons and explanations.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I can express myself fluently and spontaneously.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I can present complex arguments with precision and nuance.',
+        points: 4,
+      },
     ],
   },
   {
@@ -119,10 +151,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'listening',
     category: 'comprehension',
     options: [
-      { id: 'o1', text: 'I can only follow if spoken slowly and clearly.', points: 1 },
-      { id: 'o2', text: 'I understand most of the main ideas even on unfamiliar topics.', points: 2 },
-      { id: 'o3', text: 'I understand complex arguments and nuanced meanings easily.', points: 3 },
-      { id: 'o4', text: 'I understand all nuances, accents, and implied meanings.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I can only follow if spoken slowly and clearly.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I understand most of the main ideas even on unfamiliar topics.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I understand complex arguments and nuanced meanings easily.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I understand all nuances, accents, and implied meanings.',
+        points: 4,
+      },
     ],
   },
   {
@@ -131,10 +179,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'writing',
     category: 'production',
     options: [
-      { id: 'o1', text: 'I can only write simple isolated phrases and sentences.', points: 1 },
-      { id: 'o2', text: 'I can write connected text on familiar topics with reasonable clarity.', points: 2 },
-      { id: 'o3', text: 'I can write well-structured text expressing nuanced points of view.', points: 3 },
-      { id: 'o4', text: 'I can write sophisticated, stylistically appropriate texts.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I can only write simple isolated phrases and sentences.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I can write connected text on familiar topics with reasonable clarity.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I can write well-structured text expressing nuanced points of view.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I can write sophisticated, stylistically appropriate texts.',
+        points: 4,
+      },
     ],
   },
   {
@@ -143,10 +207,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'speaking',
     category: 'interaction',
     options: [
-      { id: 'o1', text: 'I struggle to keep up and need them to adapt for me.', points: 1 },
-      { id: 'o2', text: 'I can handle most situations with some pauses to think.', points: 2 },
-      { id: 'o3', text: 'I interact fluently and spontaneously without strain for either party.', points: 3 },
-      { id: 'o4', text: 'I participate effortlessly in any conversation, including specialised ones.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I struggle to keep up and need them to adapt for me.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I can handle most situations with some pauses to think.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I interact fluently and spontaneously without strain for either party.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I participate effortlessly in any conversation, including specialised ones.',
+        points: 4,
+      },
     ],
   },
   {
@@ -155,10 +235,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'reading',
     category: 'comprehension',
     options: [
-      { id: 'o1', text: 'I can only understand very short, simple texts.', points: 1 },
-      { id: 'o2', text: 'I understand contemporary prose and articles with occasional dictionary use.', points: 2 },
-      { id: 'o3', text: 'I read complex literary and technical texts with ease.', points: 3 },
-      { id: 'o4', text: 'I read and critically analyse any text with full comprehension.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I can only understand very short, simple texts.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I understand contemporary prose and articles with occasional dictionary use.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I read complex literary and technical texts with ease.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I read and critically analyse any text with full comprehension.',
+        points: 4,
+      },
     ],
   },
   {
@@ -167,10 +263,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'grammar',
     category: 'accuracy',
     options: [
-      { id: 'o1', text: 'I make frequent basic errors that sometimes cause misunderstanding.', points: 1 },
-      { id: 'o2', text: 'I am generally accurate with occasional errors that do not cause misunderstanding.', points: 2 },
-      { id: 'o3', text: 'I use grammar accurately and appropriately, even in complex structures.', points: 3 },
-      { id: 'o4', text: 'I use grammar flawlessly, including subtle and idiomatic structures.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I make frequent basic errors that sometimes cause misunderstanding.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I am generally accurate with occasional errors that do not cause misunderstanding.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I use grammar accurately and appropriately, even in complex structures.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I use grammar flawlessly, including subtle and idiomatic structures.',
+        points: 4,
+      },
     ],
   },
   {
@@ -179,10 +291,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'vocabulary',
     category: 'range',
     options: [
-      { id: 'o1', text: 'I rely on a limited set of basic words and phrases.', points: 1 },
-      { id: 'o2', text: 'I have enough vocabulary to express myself on most everyday topics.', points: 2 },
-      { id: 'o3', text: 'I have a broad vocabulary and can use idiomatic expressions naturally.', points: 3 },
-      { id: 'o4', text: 'I have an extensive vocabulary and use language with precision and creativity.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I rely on a limited set of basic words and phrases.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I have enough vocabulary to express myself on most everyday topics.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I have a broad vocabulary and can use idiomatic expressions naturally.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I have an extensive vocabulary and use language with precision and creativity.',
+        points: 4,
+      },
     ],
   },
   {
@@ -191,10 +319,26 @@ const FALLBACK_QUESTIONS: QuizQuestion[] = [
     skill: 'writing',
     category: 'production',
     options: [
-      { id: 'o1', text: 'I find summarising very difficult and miss key points.', points: 1 },
-      { id: 'o2', text: 'I can summarise the main points from simple sources.', points: 2 },
-      { id: 'o3', text: 'I can reconstruct arguments and accounts coherently from multiple sources.', points: 3 },
-      { id: 'o4', text: 'I can synthesise information from diverse sources into coherent, original summaries.', points: 4 },
+      {
+        id: 'o1',
+        text: 'I find summarising very difficult and miss key points.',
+        points: 1,
+      },
+      {
+        id: 'o2',
+        text: 'I can summarise the main points from simple sources.',
+        points: 2,
+      },
+      {
+        id: 'o3',
+        text: 'I can reconstruct arguments and accounts coherently from multiple sources.',
+        points: 3,
+      },
+      {
+        id: 'o4',
+        text: 'I can synthesise information from diverse sources into coherent, original summaries.',
+        points: 4,
+      },
     ],
   },
 ];
@@ -233,9 +377,7 @@ export class QuizService {
       .order('difficulty_level', { ascending: true });
 
     if (error) {
-      this.logger.error(
-        `Failed to fetch quiz questions: ${error.message}`,
-      );
+      this.logger.error(`Failed to fetch quiz questions: ${error.message}`);
       return FALLBACK_QUESTIONS;
     }
 
@@ -272,9 +414,8 @@ export class QuizService {
       skillScores[skill].max += maxPointsPerQuestion;
     }
 
-    const percentage = maxScore > 0
-      ? Math.round((totalScore / maxScore) * 100)
-      : 0;
+    const percentage =
+      maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
     const cefrEntry =
       CEFR_THRESHOLDS.slice()

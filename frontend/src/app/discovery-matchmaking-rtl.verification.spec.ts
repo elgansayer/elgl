@@ -52,7 +52,7 @@ function collectFiles(rootPath: string): string[] {
   return files.filter((f) => !f.endsWith('.spec.ts') && TEMPLATE_EXTS.has(extname(f)));
 }
 
-describe('RTL Logical CSS Properties — Matchmaking Algorithm', () => {
+describe('RTL Logical CSS Properties - Matchmaking Algorithm', () => {
   let allContent: string;
   let fileList: string[];
 

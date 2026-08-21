@@ -40,6 +40,18 @@ export interface StickerPackRow {
   animation_url?: string | null;
 }
 
+interface StickerUnlockRpcRow {
+  success: boolean;
+  newly_unlocked: boolean;
+  coins_remaining: number;
+  pack_id: string;
+  pack_name: string;
+  pack_cost_coins: number;
+  pack_is_animated: boolean | null;
+  pack_sticker_urls: string[] | null;
+  pack_animation_url: string | null;
+}
+
 export interface UserCoinRow {
   id: string;
   coins_balance: number;
@@ -197,6 +209,39 @@ function isStickerPackRow(value: unknown): value is StickerPackRow {
     typeof value.id === 'string' &&
     typeof value.name === 'string' &&
     typeof value.cost_coins === 'number'
+  );
+}
+
+function isStickerUnlockRpcRow(value: unknown): value is StickerUnlockRpcRow {
+  if (typeof value !== 'object' || value === null) return false;
+  if (
+    !('success' in value) ||
+    !('newly_unlocked' in value) ||
+    !('coins_remaining' in value) ||
+    !('pack_id' in value) ||
+    !('pack_name' in value) ||
+    !('pack_cost_coins' in value) ||
+    !('pack_is_animated' in value) ||
+    !('pack_sticker_urls' in value) ||
+    !('pack_animation_url' in value)
+  )
+    return false;
+
+  const stickerUrls = value.pack_sticker_urls;
+  return (
+    typeof value.success === 'boolean' &&
+    typeof value.newly_unlocked === 'boolean' &&
+    typeof value.coins_remaining === 'number' &&
+    typeof value.pack_id === 'string' &&
+    typeof value.pack_name === 'string' &&
+    typeof value.pack_cost_coins === 'number' &&
+    (typeof value.pack_is_animated === 'boolean' ||
+      value.pack_is_animated === null) &&
+    (stickerUrls === null ||
+      (Array.isArray(stickerUrls) &&
+        stickerUrls.every((url) => typeof url === 'string'))) &&
+    (typeof value.pack_animation_url === 'string' ||
+      value.pack_animation_url === null)
   );
 }
 
@@ -1306,6 +1351,17 @@ export class EconomyService {
             `Centrifugo publish to room_${dto.room_id} failed: ${pubMsg}`,
           );
         });
+
+      // Also insert a gift chat message so it appears in the chat feed
+      this.insertGiftChatMessage(senderId, dto.room_id, gift).catch(
+        (insertErr: unknown) => {
+          const insertMsg =
+            insertErr instanceof Error ? insertErr.message : String(insertErr);
+          this.logger.warn(
+            `Failed to insert gift chat message for room ${dto.room_id}: ${insertMsg}`,
+          );
+        },
+      );
     }
 
     this.invalidateUserEconomyCaches(senderId);
@@ -1323,6 +1379,53 @@ export class EconomyService {
     });
   }
 
+  /** Inserts a gift message into the chat feed so GiftAnimationComponent can render it inline. */
+  private async insertGiftChatMessage(
+    senderId: string,
+    roomId: string,
+    gift: VirtualGiftRow,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error: insertError, data: savedMessage } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id: roomId,
+        sender_id: senderId,
+        message_type: 'gift',
+        gift_payload: {
+          gift_id: gift.id,
+          gift_name: gift.name,
+          gift_icon: gift.icon,
+          coin_value: gift.cost_coins,
+          animation_type: gift.animation_type,
+          animation_url: gift.animation_url?.slice(0, 512) ?? null,
+        },
+      })
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (insertError || !savedMessage) {
+      throw new Error(
+        `Failed to insert gift chat message: ${insertError?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    // Publish to Centrifugo chat channel so receivers see it immediately
+    await this.centrifugoService.publish(`chat:${roomId}`, {
+      message: savedMessage,
+    });
+  }
+
   async unlockStickerPack(
     userId: string,
     dto: UnlockStickerPackDto,
@@ -1332,76 +1435,59 @@ export class EconomyService {
     pack: StickerPackRow;
   }> {
     const supabase = this.supabaseService.getClient();
-
-    // 1. Fetch the sticker pack details
-    const packResponse = await withExponentialBackoff(
+    const response = await withExponentialBackoff(
       () =>
-        supabase
-          .from('sticker_packs')
-          .select('*')
-          .eq('id', dto.pack_id)
-          .single(),
-      'unlockStickerPack',
-      { logger: this.logger },
-    );
-
-    if (!packResponse.data) {
-      throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
-    }
-    const packData = packResponse.data;
-    if (!isStickerPackRow(packData)) {
-      throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
-    }
-    const pack = packData;
-
-    // 2. Check user's coin balance
-    const { coins_balance } = await this.getBalance(userId);
-    if (coins_balance < pack.cost_coins) {
-      throw new BadRequestException(
-        `Insufficient coin balance (${coins_balance} available, ${pack.cost_coins} required).`,
-      );
-    }
-
-    // 3. Deduct coins
-    const newBalance = coins_balance - pack.cost_coins;
-    const { error: updateError } = await withExponentialBackoff(
-      () =>
-        supabase
-          .from('users')
-          .update({ coins_balance: newBalance })
-          .eq('id', userId),
-      'unlockStickerPack',
-      { logger: this.logger },
-    );
-
-    if (updateError) {
-      throw new InternalServerErrorException('Failed to deduct coins');
-    }
-
-    // 4. Record ownership
-    const { error: insertError } = await withExponentialBackoff(
-      () =>
-        supabase.from('user_sticker_packs').insert({
-          user_id: userId,
-          pack_id: pack.id,
+        supabase.rpc('unlock_sticker_pack_atomic', {
+          p_user_id: userId,
+          p_pack_id: dto.pack_id,
         }),
       'unlockStickerPack',
       { logger: this.logger },
     );
 
-    if (insertError) {
-      // Note: In a robust system, you'd want to rollback the coin deduction here
+    if (response.error) {
+      const message = response.error.message;
+      if (message.includes('STICKER_PACK_NOT_FOUND')) {
+        throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
+      }
+      if (message.includes('USER_NOT_FOUND')) {
+        throw new NotFoundException('User not found.');
+      }
+      if (message.includes('INSUFFICIENT_COINS')) {
+        throw new BadRequestException('Insufficient coin balance.');
+      }
+
       this.logger.error(
-        `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`,
+        `Atomic sticker pack unlock failed for user ${userId}: ${message}`,
       );
+      throw new InternalServerErrorException('Failed to unlock sticker pack.');
     }
 
+    const row = Array.isArray(response.data) ? response.data[0] : undefined;
+    if (!isStickerUnlockRpcRow(row) || !row.success) {
+      this.logger.error(
+        `Atomic sticker pack unlock returned an invalid result for user ${userId}.`,
+      );
+      throw new InternalServerErrorException('Failed to unlock sticker pack.');
+    }
+
+    const pack: StickerPackRow = {
+      id: row.pack_id,
+      name: row.pack_name,
+      cost_coins: row.pack_cost_coins,
+      is_animated: row.pack_is_animated,
+      sticker_urls: row.pack_sticker_urls,
+      animation_url: row.pack_animation_url,
+    };
+
     this.invalidateUserEconomyCaches(userId);
-    this.metricsService.recordStickerPurchase(pack.id, pack.cost_coins);
+    if (row.newly_unlocked) {
+      this.metricsService.recordStickerPurchase(pack.id, pack.cost_coins);
+    }
 
     return sanitiseEconomyData({
       success: true,
-      coins_remaining: newBalance,
+      coins_remaining: row.coins_remaining,
       pack,
     });
   }

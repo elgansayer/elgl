@@ -36,8 +36,15 @@ async function bootstrap() {
     }),
   );
 
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl) {
+    throw new Error(
+      'FRONTEND_URL must be configured in all environments for secure CORS',
+    );
+  }
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: frontendUrl,
     credentials: true,
   });
   app.useGlobalPipes(

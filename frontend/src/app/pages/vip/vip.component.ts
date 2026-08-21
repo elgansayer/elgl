@@ -1,7 +1,10 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AppButtonComponent } from '../../components/primitives/button/button.component';
+import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 
@@ -29,7 +32,15 @@ interface FaqItem {
 
 @Component({
   selector: 'app-vip',
-  imports: [TranslatePipe, AppButtonComponent, AppCardComponent, AppPillComponent],
+  imports: [
+    HlmButton,
+    JoyrideModule,
+    TranslatePipe,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
+    AppCardComponent,
+    AppPillComponent,
+  ],
   templateUrl: './vip.component.html',
   styleUrl: './vip.component.scss',
 })
@@ -42,11 +53,7 @@ export class VipComponent {
       nameKey: 'vip.freePlan',
       priceKey: 'vip.freePrice',
       isPopular: false,
-      features: [
-        'vip.freeFeature1',
-        'vip.freeFeature2',
-        'vip.freeFeature3',
-      ],
+      features: ['vip.freeFeature1', 'vip.freeFeature2', 'vip.freeFeature3'],
       ctaKey: 'vip.startFree',
     },
     {
@@ -114,10 +121,34 @@ export class VipComponent {
     { labelKey: 'vip.proFeature3', free: false, consumer: false, pro: true, developer: false },
     { labelKey: 'vip.proFeature4', free: false, consumer: false, pro: true, developer: false },
     { labelKey: 'vip.proFeature5', free: false, consumer: false, pro: true, developer: false },
-    { labelKey: 'vip.developerFeature2', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature3', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature4', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature5', free: false, consumer: false, pro: false, developer: true },
+    {
+      labelKey: 'vip.developerFeature2',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature3',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature4',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature5',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
   ]);
 
   scrollToPlans(): void {

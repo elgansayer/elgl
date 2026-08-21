@@ -49,9 +49,14 @@ describe('AppGradientButtonComponent', () => {
     expect(buttonElement.textContent?.trim()).toBe('End call');
   });
 
-  it('should apply gradient styles and size md by default', () => {
+  it('should apply product gradient styles on the owned Helm touch size', () => {
     expect(buttonElement.classList.contains('bg-gradient-to-r')).toBe(true);
-    expect(buttonElement.classList.contains('px-6')).toBe(true);
+    expect(buttonElement.classList.contains('from-vip')).toBe(true);
+    expect(buttonElement.classList.contains('to-accent')).toBe(true);
+    expect(buttonElement.classList.contains('text-on-fill')).toBe(true);
+    expect(buttonElement.classList.contains('rounded-pill')).toBe(true);
+    expect(buttonElement.classList.contains('min-h-11')).toBe(true);
+    expect(buttonElement.classList.contains('px-4')).toBe(true);
   });
 
   it('should emit clicked event when clicked and not disabled', () => {
@@ -67,12 +72,13 @@ describe('AppGradientButtonComponent', () => {
     expect(host.clickCount).toBe(0);
   });
 
-  it('should apply disabled classes when disabled', () => {
+  it('should expose native and product disabled semantics', () => {
     host.disabled.set(true);
     fixture.detectChanges();
 
     expect(buttonElement.disabled).toBe(true);
-    expect(buttonElement.classList.contains('cursor-not-allowed')).toBe(true);
+    expect(buttonElement.classList.contains('bg-surface-300')).toBe(true);
+    expect(buttonElement.classList.contains('opacity-50')).toBe(true);
   });
 
   it('should not set an aria-label attribute by default', () => {
