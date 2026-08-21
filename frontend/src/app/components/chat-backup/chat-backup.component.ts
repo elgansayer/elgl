@@ -1,30 +1,27 @@
 import { Component, input, inject, signal } from '@angular/core';
 import { ChatBackupService } from '../../services/chat-backup.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-chat-backup',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="flex flex-col gap-4 p-4">
       <h2 class="text-lg font-bold">{{ 'chat_backup.title' | t }}</h2>
 
       @if (exporting()) {
-        <p class="text-primary-500">{{ 'chat_backup.exporting' | t }}</p>
+        <p class="text-primary">{{ 'chat_backup.exporting' | t }}</p>
       }
 
       @if (importing()) {
-        <p class="text-primary-500">{{ 'chat_backup.importing' | t }}</p>
+        <p class="text-primary">{{ 'chat_backup.importing' | t }}</p>
       }
 
-      <button
-        class="btn btn-primary"
-        (click)="onExport()"
-        [disabled]="exporting()"
-      >
+      <app-button-primary (clicked)="onExport()" [disabled]="exporting()">
         {{ 'chat_backup.export_button' | t }}
-      </button>
+      </app-button-primary>
 
       <input
         type="file"
@@ -33,19 +30,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
         style="display: none"
         (change)="onFileSelected($event)"
       />
-      <button
-        class="btn btn-outline"
-        (click)="fileInput.click()"
-        [disabled]="importing()"
-      >
+      <app-button-secondary (clicked)="fileInput.click()" [disabled]="importing()">
         {{ 'chat_backup.import_button' | t }}
-      </button>
+      </app-button-secondary>
 
       @if (exportError()) {
-        <p class="text-red-500">{{ 'chat_backup.export_error' | t }}</p>
+        <p class="text-danger">{{ 'chat_backup.export_error' | t }}</p>
       }
       @if (importError()) {
-        <p class="text-red-500">{{ 'chat_backup.import_error' | t }}</p>
+        <p class="text-danger">{{ 'chat_backup.import_error' | t }}</p>
       }
     </div>
   `,
@@ -115,4 +108,3 @@ export class ChatBackupComponent {
     reader.readAsText(file);
   }
 }
-

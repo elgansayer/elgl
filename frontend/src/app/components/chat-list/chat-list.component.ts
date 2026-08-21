@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -7,7 +9,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
+import { GroupsService, ChatGroup } from '../../services/groups.service';
 
 interface ChatRoomPreview {
   id: string;
@@ -25,13 +31,25 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    ScrollablePillsComponent,
+    AppEmptyStateComponent,
+    GroupsDiscoveryComponent,
+  ],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly groupsService = inject(GroupsService);
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
@@ -39,9 +57,25 @@ export class ChatListComponent implements OnInit {
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
 
+  /** Active tab: 'chats' | 'groups' */
+  readonly activeTab = signal<'chats' | 'groups'>('chats');
+  readonly groups = signal<ChatGroup[]>([]);
+
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);
   readonly showLocked = signal<boolean>(false);
+
+  switchTab(tab: 'chats' | 'groups'): void {
+    this.activeTab.set(tab);
+    if (tab === 'groups' && this.groups().length === 0) {
+      void this.groupsService.getDiscoverableGroups().then((groups) => this.groups.set(groups));
+    }
+  }
+
+  async handleJoinGroup(groupId: string): Promise<void> {
+    await this.groupsService.joinGroup(groupId);
+    this.groups.set(await this.groupsService.getDiscoverableGroups());
+  }
 
   // Computed previews after excluding locked rooms
   readonly regularAndPinnedPreviews = computed(() => {
@@ -175,6 +209,9 @@ export class ChatListComponent implements OnInit {
       });
 
       this.previews.set(previewList);
+      // Sync global chat unread counter
+      const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
+      this.unreadCounter.setChatUnread(totalChatUnread);
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
       this.previews.set([]);
@@ -264,14 +301,30 @@ export class ChatListComponent implements OnInit {
   private getFlagEmoji(languages?: string[]): string | null {
     if (!languages || languages.length === 0) return null;
     const flagMap: Record<string, string> = {
-      'en': '\u{1F1EC}\u{1F1E7}', 'es': '\u{1F1EA}\u{1F1F8}', 'fr': '\u{1F1EB}\u{1F1F7}',
-      'de': '\u{1F1E9}\u{1F1EA}', 'it': '\u{1F1EE}\u{1F1F9}', 'pt': '\u{1F1F5}\u{1F1F9}',
-      'ru': '\u{1F1F7}\u{1F1FA}', 'zh': '\u{1F1E8}\u{1F1F3}', 'ja': '\u{1F1EF}\u{1F1F5}',
-      'ko': '\u{1F1F0}\u{1F1F7}', 'ar': '\u{1F1F8}\u{1F1E6}', 'hi': '\u{1F1EE}\u{1F1F3}',
-      'tr': '\u{1F1F9}\u{1F1F7}', 'nl': '\u{1F1F3}\u{1F1F1}', 'pl': '\u{1F1F5}\u{1F1F1}',
-      'sv': '\u{1F1F8}\u{1F1EA}', 'da': '\u{1F1E9}\u{1F1F0}', 'fi': '\u{1F1EB}\u{1F1EE}',
-      'no': '\u{1F1F3}\u{1F1F4}', 'cs': '\u{1F1E8}\u{1F1FF}', 'he': '\u{1F1EE}\u{1F1F1}',
-      'th': '\u{1F1F9}\u{1F1ED}', 'vi': '\u{1F1FB}\u{1F1F3}', 'id': '\u{1F1EE}\u{1F1E9}',
+      en: '\u{1F1EC}\u{1F1E7}',
+      es: '\u{1F1EA}\u{1F1F8}',
+      fr: '\u{1F1EB}\u{1F1F7}',
+      de: '\u{1F1E9}\u{1F1EA}',
+      it: '\u{1F1EE}\u{1F1F9}',
+      pt: '\u{1F1F5}\u{1F1F9}',
+      ru: '\u{1F1F7}\u{1F1FA}',
+      zh: '\u{1F1E8}\u{1F1F3}',
+      ja: '\u{1F1EF}\u{1F1F5}',
+      ko: '\u{1F1F0}\u{1F1F7}',
+      ar: '\u{1F1F8}\u{1F1E6}',
+      hi: '\u{1F1EE}\u{1F1F3}',
+      tr: '\u{1F1F9}\u{1F1F7}',
+      nl: '\u{1F1F3}\u{1F1F1}',
+      pl: '\u{1F1F5}\u{1F1F1}',
+      sv: '\u{1F1F8}\u{1F1EA}',
+      da: '\u{1F1E9}\u{1F1F0}',
+      fi: '\u{1F1EB}\u{1F1EE}',
+      no: '\u{1F1F3}\u{1F1F4}',
+      cs: '\u{1F1E8}\u{1F1FF}',
+      he: '\u{1F1EE}\u{1F1F1}',
+      th: '\u{1F1F9}\u{1F1ED}',
+      vi: '\u{1F1FB}\u{1F1F3}',
+      id: '\u{1F1EE}\u{1F1E9}',
     };
     return flagMap[languages[0]] ?? null;
   }

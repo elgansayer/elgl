@@ -4,134 +4,175 @@
     <p class="create-group-subtitle">{{ 'group.createSubtitle' | t }}</p>
   </header>
 
-  <section class="create-group-form">
-    <div class="form-group">
-      <label for="groupNameInput" class="form-label">{{ 'group.nameLabel' | t }}</label>
-      <input
-        id="groupNameInput"
-        type="text"
-        [(ngModel)]="groupName"
-        class="form-input"
-        [placeholder]="'group.namePlaceholder' | t"
-        maxlength="200"
-      />
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">
-        {{ 'group.addMembers' | t }} ({{ selectedCount() }}/{{ MAX_MEMBERS }})
-      </label>
-
-      <div class="search-row">
-        <div class="search-input-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="searchUsers()"
-            class="search-input"
-            [placeholder]="'group.searchPlaceholder' | t"
-            [disabled]="!canAddMore()"
-          />
-          @if (isSearching()) {
-            <span class="search-spinner"></span>
-          }
-        </div>
+  <form (ngSubmit)="createGroup()" novalidate>
+    <section class="create-group-form">
+      <div class="form-group">
+        <label for="groupNameInput" class="form-label">{{ 'group.nameLabel' | t }}</label>
+        <input
+          hlmInput
+          id="groupNameInput"
+          name="groupName"
+          type="text"
+          [(ngModel)]="groupName"
+          class="form-input"
+          [placeholder]="'group.namePlaceholder' | t"
+          maxlength="200"
+        />
       </div>
 
-      @if (!canAddMore()) {
-        <p class="max-hint">{{ 'group.maxMembersReached' | t: { max: MAX_MEMBERS } }}</p>
-      }
+      <div class="form-group">
+        <label for="memberSearchInput" class="form-label">
+          {{ 'group.addMembers' | t }} ({{ selectedCount() }}/{{ MAX_MEMBERS }})
+        </label>
 
-      @if (searchResults().length > 0) {
-        <div class="search-results">
-          @for (user of searchResults(); track user.id) {
-            <button
-              class="search-result-item"
-              (click)="addMember(user)"
-              [disabled]="selectedMemberIds().includes(user.id)"
+        <div class="search-row">
+          <div class="search-input-wrapper">
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
             >
-              <div class="user-avatar">
-                @if (user.avatar_url) {
-                  <img [src]="user.avatar_url" alt="" class="avatar-img" />
-                } @else {
-                  <span class="avatar-placeholder">{{ (user.display_name || user.id).charAt(0).toUpperCase() }}</span>
-                }
-              </div>
-              <div class="user-info">
-                <span class="user-name">{{ user.display_name || user.id }}</span>
-                @if (user.native_languages?.length) {
-                  <span class="user-lang">{{ user.native_languages[0] }}</span>
-                }
-              </div>
-              <span class="add-indicator">+</span>
-            </button>
-          }
-        </div>
-      }
-
-      <div class="selected-section">
-        <h3 class="selected-heading">
-          {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
-        </h3>
-        @if (selectedMembers().length === 0) {
-          <div class="no-selection">
-            <p class="empty-hint">{{ 'group.noMembersSelected' | t }}</p>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              hlmInput
+              id="memberSearchInput"
+              name="memberSearch"
+              type="text"
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="searchUsers()"
+              (keydown.enter)="$event.preventDefault()"
+              class="search-input"
+              [placeholder]="'group.searchPlaceholder' | t"
+              [disabled]="!canAddMore()"
+              [attr.disabled]="!canAddMore() ? '' : null"
+              [attr.aria-busy]="isSearching()"
+              [attr.aria-describedby]="!canAddMore() ? 'memberSearchLimit' : null"
+            />
+            @if (isSearching()) {
+              <span class="search-spinner" aria-hidden="true"></span>
+            }
           </div>
-        } @else {
-          <ul class="selected-list">
-            @for (member of selectedMembers(); track member.id) {
-              <li class="selected-item">
-                <div class="user-avatar small">
-                  @if (member.avatar_url) {
-                    <img [src]="member.avatar_url" alt="" class="avatar-img" />
+        </div>
+
+        @if (!canAddMore()) {
+          <p id="memberSearchLimit" class="max-hint" role="status">
+            {{ 'group.maxMembersReached' | t: { max: MAX_MEMBERS } }}
+          </p>
+        }
+
+        @if (searchResults().length > 0) {
+          <div class="search-results">
+            @for (user of searchResults(); track user.id) {
+              <button
+                hlmBtn
+                type="button"
+                class="search-result-item"
+                (click)="addMember(user)"
+                [disabled]="!canAddMore() || selectedMemberIds().includes(user.id)"
+                [attr.aria-label]="user.display_name || user.id"
+              >
+                <div class="user-avatar">
+                  @if (user.avatar_url) {
+                    <img [src]="user.avatar_url" alt="" class="avatar-img" />
                   } @else {
-                    <span class="avatar-placeholder">{{ (member.display_name || member.id).charAt(0).toUpperCase() }}</span>
+                    <span class="avatar-placeholder">{{
+                      (user.display_name || user.id).charAt(0).toUpperCase()
+                    }}</span>
                   }
                 </div>
                 <div class="user-info">
-                  <span class="user-name">{{ member.display_name || member.id }}</span>
+                  <span class="user-name">{{ user.display_name || user.id }}</span>
+                  @if (user.native_languages?.length) {
+                    <span class="user-lang">{{ user.native_languages[0] }}</span>
+                  }
                 </div>
-                <button
-                  class="remove-btn"
-                  (click)="removeMember(member)"
-                  [attr.aria-label]="'group.removeMemberAria' | t: { name: member.display_name || member.id }"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="remove-icon">
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                </button>
-              </li>
+                <span class="add-indicator" aria-hidden="true">+</span>
+              </button>
             }
-          </ul>
+          </div>
         }
+
+        <div class="selected-section">
+          <h3 class="selected-heading">
+            {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
+          </h3>
+          @if (selectedMembers().length === 0) {
+            <div class="no-selection">
+              <p class="empty-hint">{{ 'group.noMembersSelected' | t }}</p>
+            </div>
+          } @else {
+            <ul class="selected-list">
+              @for (member of selectedMembers(); track member.id) {
+                <li class="selected-item">
+                  <div class="user-avatar small">
+                    @if (member.avatar_url) {
+                      <img [src]="member.avatar_url" alt="" class="avatar-img" />
+                    } @else {
+                      <span class="avatar-placeholder">{{
+                        (member.display_name || member.id).charAt(0).toUpperCase()
+                      }}</span>
+                    }
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name">{{ member.display_name || member.id }}</span>
+                  </div>
+                  <button
+                    hlmBtn
+                    type="button"
+                    class="remove-btn"
+                    (click)="removeMember(member)"
+                    [attr.aria-label]="
+                      'group.removeMemberAria' | t: { name: member.display_name || member.id }
+                    "
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      class="remove-icon"
+                      aria-hidden="true"
+                    >
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <footer class="create-group-footer">
-    @if (error()) {
-      <p class="error-message">{{ error() }}</p>
-    }
-    @if (success()) {
-      <p class="success-message">{{ 'group.successMsg' | t }}</p>
-    }
-
-    <button
-      class="create-btn"
-      (click)="createGroup()"
-      [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
-    >
-      @if (isCreating()) {
-        <span class="btn-spinner"></span>
-        {{ 'group.creatingBtn' | t }}
-      } @else {
-        {{ 'group.createBtn' | t }}
+    <footer class="create-group-footer">
+      @if (error()) {
+        <p class="error-message" role="alert">{{ error() }}</p>
       }
-    </button>
-  </footer>
+      @if (success()) {
+        <p class="success-message" role="status">{{ 'group.successMsg' | t }}</p>
+      }
+
+      <button
+        hlmBtn
+        type="submit"
+        class="create-btn"
+        [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
+        [attr.aria-busy]="isCreating()"
+        [attr.aria-label]="(isCreating() ? 'group.creatingBtn' : 'group.createBtn') | t"
+      >
+        @if (isCreating()) {
+          <span class="btn-spinner" aria-hidden="true"></span>
+          {{ 'group.creatingBtn' | t }}
+        } @else {
+          {{ 'group.createBtn' | t }}
+        }
+      </button>
+    </footer>
+  </form>
 </div>

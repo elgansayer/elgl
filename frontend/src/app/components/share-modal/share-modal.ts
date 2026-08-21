@@ -1,6 +1,9 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 export interface ShareEntity {
   id: string;
@@ -14,21 +17,21 @@ export interface ShareEntity {
 @Component({
   selector: 'app-share-modal',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe, A11yClickableDirective],
   templateUrl: './share-modal.html',
-  styleUrls: ['./share-modal.scss']
+  styleUrls: ['./share-modal.scss'],
 })
 export class ShareModalComponent {
   readonly i18n = inject(I18nService);
-  
+
   // Inputs
   readonly entity = input.required<ShareEntity>();
   readonly isOpen = input<boolean>(false);
-  
+
   // Outputs
   readonly closed = output<void>();
   readonly sharedToChat = output<string>(); // emits chat ID or generic indicator
-  
+
   // State
   readonly isCopying = signal(false);
   readonly shareUrl = computed(() => `${this.entity().externalLink}?ref=user_token_123`);

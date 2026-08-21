@@ -1,16 +1,12 @@
-import {
-  Component,
-  inject,
-  signal,
-  output,
-} from '@angular/core';
+import { Component, inject, signal, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SupabaseService } from '../../services/supabase.service';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-avatar-upload',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   templateUrl: './avatar-upload.component.html',
   styleUrls: ['./avatar-upload.component.scss'],
 })
@@ -142,10 +138,8 @@ export class AvatarUploadComponent {
   async confirmCrop(): Promise<void> {
     this.uploading.set(true);
     try {
-      const scaleX =
-        this.naturalWidth() / (this.displayWidth() || 1);
-      const scaleY =
-        this.naturalHeight() / (this.displayHeight() || 1);
+      const scaleX = this.naturalWidth() / (this.displayWidth() || 1);
+      const scaleY = this.naturalHeight() / (this.displayHeight() || 1);
       const srcX = this.cropX() * scaleX;
       const srcY = this.cropY() * scaleY;
       const srcSize = this.cropSize() * Math.min(scaleX, scaleY);
@@ -157,24 +151,11 @@ export class AvatarUploadComponent {
       const ctx = canvas.getContext('2d')!;
 
       // 2. Draw the selected region from the original image
-      ctx.drawImage(
-        this.imageElement,
-        srcX,
-        srcY,
-        srcSize,
-        srcSize,
-        0,
-        0,
-        srcSize,
-        srcSize,
-      );
+      ctx.drawImage(this.imageElement, srcX, srcY, srcSize, srcSize, 0, 0, srcSize, srcSize);
 
       // 3. Convert canvas to Blob (PNG)
       const blob = await new Promise<Blob>((resolve, reject) =>
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
-          'image/png',
-        ),
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'),
       );
 
       // 4. Create a File from the Blob
