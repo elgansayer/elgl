@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 EXPOSE 4200
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
 
 # Stage 3: Production Nginx serve
 FROM nginx:alpine AS production

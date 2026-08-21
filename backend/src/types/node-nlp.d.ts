@@ -5,11 +5,11 @@ declare module 'node-nlp' {
       text: string,
       whitelist?: string[],
       limit?: number,
-    ): Array<{
+    ): {
       alpha3: string;
       alpha2: string;
       language: string;
       score: number;
-    }>;
+    }[];
   }
 }

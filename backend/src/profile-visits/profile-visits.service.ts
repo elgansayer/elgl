@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { ProfileViewEvent } from '../notifications/events/notification.events';
 
 export interface VisitorUser {
   id: string;
@@ -26,7 +28,10 @@ interface RawVisitRow {
 
 @Injectable()
 export class ProfileVisitsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async recordVisit(
     visitorId: string,
@@ -34,20 +39,26 @@ export class ProfileVisitsService {
     isVipVisitor: boolean,
   ): Promise<Record<string, unknown>> {
     if (visitorId === viewedId) return { ignored: true };
+
+    const supabase = this.supabaseService.getClient();
+
     if (isVipVisitor) {
-      // VIP Incognito Mode option check
-      const supabase = this.supabaseService.getClient();
-      const userRes = await supabase
+      const { data: user, error: userError } = await supabase
         .from('users')
-        .select('privacy_hide_from_search')
+        .select('incognito_visits')
         .eq('id', visitorId)
         .single();
-      if (userRes.data?.privacy_hide_from_search) {
+
+      if (userError || !user) {
+        const msg = userError?.message ?? 'Unknown error';
+        throw new Error(`Failed to load visitor privacy settings: ${msg}`);
+      }
+
+      if (user.incognito_visits) {
         return { incognito: true, ignored: true };
       }
     }
 
-    const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('profile_visits')
       .insert({
@@ -61,7 +72,14 @@ export class ProfileVisitsService {
       const msg = response.error?.message ?? 'Unknown error';
       throw new Error(`Failed to record visit: ${msg}`);
     }
-    return response.data as Record<string, unknown>;
+
+    // Emit push notification event
+    this.eventEmitter.emit(
+      'profile.view',
+      new ProfileViewEvent(visitorId, viewedId),
+    );
+
+    return response.data;
   }
 
   async getVisitors(
@@ -117,5 +135,38 @@ export class ProfileVisitsService {
       is_blurred: false,
       visitor: visit.visitor,
     }));
+  }
+
+  async getVisitCount(userId: string): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .select('count(*) as visit_count')
+      .eq('viewed_id', userId)
+      .single();
+
+    if (response.error) {
+      throw new Error(`Failed to fetch visit count: ${response.error.message}`);
+    }
+
+    const data = response.data as unknown as { visit_count: number } | null;
+    return data?.visit_count ?? 0;
+  }
+
+  async deleteVisit(visitId: string): Promise<Record<string, unknown>> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .delete()
+      .eq('id', visitId)
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      const msg = response.error?.message ?? 'Unknown error';
+      throw new Error(`Failed to delete visit: ${msg}`);
+    }
+
+    return response.data;
   }
 }

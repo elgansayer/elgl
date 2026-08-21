@@ -1,94 +1,121 @@
-<div class="max-w-4xl mx-auto p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
-  <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4 mb-6">
-    <div>
-      <h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <span>👀 Who Viewed Me</span>
-      </h2>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        See language learners who recently visited your profile.
-      </p>
-    </div>
-  </div>
-
-  <!-- VIP Upgrade Banner for Free Users -->
-  <div *ngIf="profile() && !profile()?.is_vip" class="mb-6 p-6 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-    <div class="flex items-center gap-4">
-      <div class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400 text-2xl font-bold">
-        🔒
-      </div>
-      <div>
-        <h3 class="font-bold text-slate-900 dark:text-white text-base">Unlock Profile Visitor History</h3>
-        <p class="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-          Visitor identities and avatars are currently blurred. Upgrade to VIP to instantly reveal all visitor profiles!
-        </p>
-      </div>
-    </div>
-    <div class="flex flex-col items-end gap-1">
-      <span class="text-lg font-extrabold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-        8 UKP / $10 USD
+<div class="visitor-logs-screen">
+  <section class="visitor-header">
+    <h1 class="visitor-title">{{ 'visitors.title' | t }}</h1>
+    <p class="visitor-subtitle">{{ 'visitors.subtitle' | t }}</p>
+    <div class="visitor-controls">
+      <span class="visitor-chip visible-chip">
+        {{ 'visitors.visibleCount' | t: { count: visibleVisitorsCount() } }}
       </span>
-      <span class="text-xs text-slate-500 dark:text-slate-400">per month</span>
-      <button class="mt-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl shadow-md transition-colors whitespace-nowrap">
-        Upgrade to VIP
+      <span class="visitor-chip blurred-chip">
+        {{ 'visitors.blurredCount' | t: { count: blurredVisitorsCount() } }}
+      </span>
+      <button
+        hlmBtn
+        type="button"
+        class="visitor-toggle-btn"
+        (click)="toggleHideBlurred()"
+        [attr.aria-label]="'visitors.showAllBtn' | t"
+      >
+        @if (hideBlurred()) {
+          {{ 'visitors.showAllBtn' | t }}
+        } @else {
+          {{ 'visitors.hideBlurredBtn' | t }}
+        }
       </button>
     </div>
-  </div>
+  </section>
 
-  <div *ngIf="isLoading()" class="flex justify-center items-center py-12">
-    <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-  </div>
-
-  <div *ngIf="!isLoading() && visitors().length === 0" class="text-center py-12 text-slate-500 dark:text-slate-400">
-    <span class="text-4xl block mb-2">🔭</span>
-    <p class="font-medium">No profile visitors yet.</p>
-    <p class="text-sm mt-1">Engage in community moments or voice chat rooms to get discovered!</p>
-  </div>
-
-  <!-- Visitor List -->
-  <div *ngIf="!isLoading() && visitors().length > 0" class="space-y-3">
-    <div
-      *ngFor="let log of visitors()"
-      class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 transition-all"
-      [ngClass]="{'opacity-80': log.is_blurred}"
-    >
-      <div class="flex items-center gap-4">
-        <div class="relative">
-          <img
-            [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
-            alt="Visitor Avatar"
-            class="w-14 h-14 rounded-full object-cover border-2 border-slate-300 dark:border-slate-600"
-            [ngClass]="{'blur-md select-none': log.is_blurred}"
+  @if (profile() && !profile()?.is_vip) {
+    <section class="vip-banner">
+      <div class="vip-banner-icon" aria-hidden="true">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
           />
-        </div>
-        <div>
-          <h4
-            class="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2"
-            [ngClass]="{'blur-sm select-none': log.is_blurred}"
-          >
-            {{ log.visitor.display_name || 'Language Partner' }}
-          </h4>
-          <div class="flex items-center gap-2 mt-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
-            <span class="uppercase bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ log.visitor.native_language }}</span>
-            <span>→</span>
-            <span *ngFor="let t of log.visitor.target_languages" class="uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">{{ t }}</span>
+        </svg>
+      </div>
+      <div class="vip-banner-content">
+        <p class="vip-banner-title">{{ 'visitors.vipBannerTitle' | t }}</p>
+        <p class="vip-banner-desc">{{ 'visitors.vipBannerDesc' | t }}</p>
+        <p class="vip-banner-price">{{ 'visitors.vipPrice' | t }}</p>
+      </div>
+      <a class="vip-banner-cta" routerLink="/vip" [attr.aria-label]="'vip.seePlans' | t">
+        {{ 'vip.seePlans' | t }}
+      </a>
+    </section>
+  }
+
+  @if (isLoading()) {
+    <div class="visitor-empty-state">
+      <div class="visitor-spinner" aria-hidden="true"></div>
+      <p>{{ 'visitors.loading' | t }}</p>
+    </div>
+  }
+
+  @if (!isLoading() && filteredVisitors().length === 0) {
+    <div class="visitor-empty-state">
+      <p>{{ 'visitors.empty' | t }}</p>
+    </div>
+  }
+
+  <div class="visitor-list">
+    @for (log of filteredVisitors(); track log.id) {
+      <article class="visitor-card" [class.visitor-card--blurred]="log.is_blurred">
+        <div class="visitor-card-inner">
+          <div class="visitor-avatar-wrapper">
+            <img
+              [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
+              [alt]="'visitors.partnerFallback' | t"
+              class="visitor-avatar"
+              [class.visitor-avatar--blurred]="log.is_blurred"
+              loading="lazy"
+            />
+          </div>
+          <div class="visitor-details" [class.visitor-details--blurred]="log.is_blurred">
+            <p class="visitor-name">
+              {{ log.visitor.display_name || ('visitors.partnerFallback' | t) }}
+            </p>
+            <p class="visitor-languages">
+              <span class="visitor-lang-native">{{ log.visitor.native_languages }}</span>
+              <span class="visitor-lang-arrow" aria-hidden="true">&rarr;</span>
+              <span class="visitor-lang-target">{{ log.visitor.target_languages.join(', ') }}</span>
+            </p>
+          </div>
+          <div class="visitor-meta">
+            <p class="visitor-time">{{ log.created_at | date: 'short' }}</p>
+            @if (log.is_blurred) {
+              <span class="visitor-badge visitor-badge--blurred">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                {{ 'visitors.vipOnly' | t }}
+              </span>
+            }
+            @if (!log.is_blurred) {
+              <span class="visitor-badge visitor-badge--visible">
+                {{ 'visitors.visibleStatus' | t }}
+              </span>
+            }
           </div>
         </div>
-      </div>
-
-      <div class="text-end">
-        <span class="text-xs text-slate-400 dark:text-slate-500 block">
-          {{ log.created_at | date:'shortTime' }} · {{ log.created_at | date:'mediumDate' }}
-        </span>
-        <button
-          *ngIf="!log.is_blurred"
-          class="mt-2 text-xs font-bold text-primary hover:underline"
-        >
-          View Profile →
-        </button>
-        <span *ngIf="log.is_blurred" class="mt-2 inline-block text-xs font-bold text-amber-600 dark:text-amber-400">
-          🔒 VIP Only
-        </span>
-      </div>
-    </div>
+      </article>
+    }
   </div>
 </div>

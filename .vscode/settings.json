@@ -6,5 +6,47 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true
     },
-    "hide-files.files": []
+    "hide-files.files": [],
+
+    // AI & GitHub Copilot Custom Context Configuration
+    "github.copilot.chat.codeGeneration.instructions": [
+        {
+            "file": "${workspaceFolder}/.github/copilot-instructions.md"
+        },
+        {
+            "file": "${workspaceFolder}/AGENTS.md"
+        }
+    ],
+    "github.copilot.advanced": {},
+
+    // Angular Language Service Configuration
+    "angular.strictTemplates": true,
+    "angular.enable-strict-mode-prompt": false,
+
+    // Tailwind CSS Logical Properties & SCSS IntelliSense
+    "tailwindCSS.includeLanguages": {
+        "html": "html",
+        "typescript": "javascript",
+        "scss": "css"
+    },
+    "tailwindCSS.experimental.classRegex": [
+        ["class:\\s*\"([^\"]*)\"", "([^\"]+)"],
+        ["ngClass:\\s*\"([^\"]*)\"", "([^\"]+)"]
+    ],
+
+    // Default Formatters and Auto-Fixing
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[scss]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

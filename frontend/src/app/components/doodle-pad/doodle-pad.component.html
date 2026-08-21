@@ -1,12 +1,24 @@
-<div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-700 max-w-2xl mx-auto">
-  <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
-    <h3 class="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-      <span>🎨 Interactive Doodle Pad</span>
+<app-card customClass="p-6 max-w-2xl mx-auto shadow-lift">
+  <div class="flex items-center justify-between border-b border-surface-100 pb-3 mb-4">
+    <h3 class="app-section-title flex items-center gap-2">
+      <span>{{ 'doodle.title' | t }}</span>
     </h3>
-    <button (click)="cancel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-xl">✕</button>
+    <button
+      hlmBtn
+      variant="ghost"
+      size="icon-touch"
+      type="button"
+      aria-label="Cancel doodle"
+      (click)="cancel()"
+      class="text-text-muted hover:text-text-secondary font-bold text-xl"
+    >
+      ✕
+    </button>
   </div>
 
-  <div class="border-2 border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white shadow-inner flex justify-center">
+  <div
+    class="border-2 border-surface-100 rounded-app overflow-hidden bg-surface-200 shadow-inner flex justify-center"
+  >
     <canvas
       #canvas
       (mousedown)="startDrawing($event)"
@@ -16,58 +28,107 @@
       (touchstart)="startDrawing($event)"
       (touchmove)="draw($event)"
       (touchend)="stopDrawing()"
-      class="cursor-crosshair max-w-full h-auto bg-white"
+      class="cursor-crosshair max-w-full h-auto bg-surface-200"
     ></canvas>
   </div>
 
-  <!-- Tools bar -->
-  <div class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Colour:</span>
-      <button
-        *ngFor="let color of colors"
-        (click)="setColor(color)"
-        class="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
-        [ngStyle]="{'background-color': color}"
-        [ngClass]="currentColor === color ? 'border-primary ring-2 ring-primary/40 scale-110' : 'border-slate-300'"
-      ></button>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Brush:</span>
-      <button
-        *ngFor="let w of [2, 4, 8, 14]"
-        (click)="setBrushWidth(w)"
-        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
-        [ngClass]="brushWidth === w ? 'bg-primary text-white shadow' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200'"
+  <div
+    class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-surface-100"
+  >
+    <fieldset class="m-0 flex items-center gap-2 border-0 p-0">
+      <legend class="app-muted me-2 font-bold uppercase tracking-wider">
+        {{ 'doodle.colorLabel' | t }}
+      </legend>
+      <hlm-radio-group
+        name="doodle-color"
+        class="flex items-center gap-2"
+        [value]="currentColor"
+        (valueChange)="setColor($event)"
       >
-        {{ w }}px
-      </button>
-    </div>
+        @for (color of colors; track color; let index = $index) {
+          <label
+            [class]="
+              'inline-flex size-9 cursor-pointer items-center justify-center rounded-full border-2 transition-transform hover:scale-110 focus-within:ring-2 focus-within:ring-primary/50 ' +
+              (currentColor === color
+                ? 'border-primary ring-2 ring-primary/40 scale-110'
+                : 'border-surface-100')
+            "
+          >
+            <hlm-radio
+              class="sr-only"
+              [value]="color"
+              [inputId]="'doodle-color-' + index"
+              [attr.aria-label]="'Select ' + color"
+            >
+              <hlm-radio-indicator indicator />
+            </hlm-radio>
+            <span
+              class="size-7 rounded-full"
+              [style.background-color]="color"
+              aria-hidden="true"
+            ></span>
+          </label>
+        }
+      </hlm-radio-group>
+    </fieldset>
+
+    <fieldset class="m-0 flex items-center gap-2 border-0 p-0">
+      <legend class="app-muted me-2 font-bold uppercase tracking-wider">
+        {{ 'doodle.brushLabel' | t }}
+      </legend>
+      <hlm-radio-group
+        name="doodle-brush-width"
+        class="flex items-center gap-2"
+        [value]="brushWidth.toString()"
+        (valueChange)="setBrushWidthFromValue($event)"
+      >
+        @for (width of brushWidths; track width) {
+          <label
+            [class]="
+              'inline-flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 py-1 text-xs font-bold transition-all focus-within:ring-2 focus-within:ring-primary/50 ' +
+              (brushWidth === width
+                ? 'bg-primary text-on-fill shadow'
+                : 'bg-surface-100 text-text-primary hover:bg-surface-100')
+            "
+          >
+            <hlm-radio
+              class="sr-only"
+              [value]="width.toString()"
+              [inputId]="'doodle-brush-' + width"
+              [attr.aria-label]="width + 'px stroke width'"
+            >
+              <hlm-radio-indicator indicator />
+            </hlm-radio>
+            <span aria-hidden="true">{{ width }}px</span>
+          </label>
+        }
+      </hlm-radio-group>
+    </fieldset>
   </div>
 
-  <!-- Actions -->
   <div class="flex justify-between items-center mt-6">
-    <button
-      (click)="clearCanvas()"
-      class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl text-sm font-bold hover:bg-red-200 transition-colors"
+    <app-button-secondary
+      (clicked)="clearCanvas()"
+      [ariaLabel]="'doodle.clearBtn' | t"
+      customClass="bg-danger/20 text-danger px-4 py-2 text-sm hover:bg-danger/30"
     >
-      🗑️ Clear Canvas
-    </button>
+      {{ 'doodle.clearBtn' | t }}
+    </app-button-secondary>
 
     <div class="flex gap-3">
-      <button
-        (click)="cancel()"
-        class="px-5 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-bold hover:bg-slate-300 transition-colors"
+      <app-button-secondary
+        (clicked)="cancel()"
+        [ariaLabel]="'doodle.cancelBtn' | t"
+        customClass="px-5 py-2 text-sm"
       >
-        Cancel
-      </button>
-      <button
-        (click)="save()"
-        class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2"
+        {{ 'doodle.cancelBtn' | t }}
+      </app-button-secondary>
+      <app-button-primary
+        (clicked)="save()"
+        customClass="px-6 py-2 text-sm flex items-center gap-2"
       >
-        <span>📤 Send Doodle</span>
-      </button>
+        <span>{{ 'doodle.sendBtn' | t }}</span>
+      </app-button-primary>
     </div>
   </div>
-</div>
+</app-card>

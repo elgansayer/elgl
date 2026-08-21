@@ -1,10 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
-import { Request } from 'express';
-
-interface AuthenticatedRequest extends Request {
-  user?: User;
-}
+import { AuthenticatedRequest } from './authenticated-request.interface';
 
 interface AuthenticatedWsClient {
   user?: User;

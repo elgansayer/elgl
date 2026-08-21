@@ -1,0 +1,89 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directories:
+      - '/'
+      - '/frontend'
+      - '/backend'
+      - '/admin-portal'
+      - '/e2e'
+      - '/tests/load'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 12
+    assignees:
+      - 'elgansayer'
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      routine-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'pip'
+    directory: '/automation'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'elgansayer'
+    groups:
+      python-security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      python-routine-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'elgansayer'
+    groups:
+      actions-security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      actions-routine-updates:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'docker'
+    directories:
+      - '/frontend'
+      - '/backend'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'elgansayer'
+    groups:
+      container-security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      container-routine-updates:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'

@@ -1,0 +1,182 @@
+<div class="h-full flex flex-col bg-surface-500 text-text-primary overflow-y-auto">
+  <div
+    class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-4">
+      <button
+        hlmBtn
+        aria-label="Go back"
+        (click)="goBack()"
+        class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
+      >
+        <span class="text-xl">←</span>
+      </button>
+      <h1 class="text-lg font-bold">{{ profile()?.display_name || ('common.unknownUser' | t) }}</h1>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex items-center justify-center flex-1">
+      <div class="animate-spin text-4xl text-neon-blue">↻</div>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="flex items-center justify-center flex-1 text-center p-8">
+      <p class="text-neon-pink">{{ errorMessage() }}</p>
+    </div>
+  } @else if (profile()) {
+    <div class="relative w-full h-48 bg-surface-300">
+      @if (profile()?.cover_photo_url) {
+        <img [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
+      }
+      <div class="absolute inset-0 bg-gradient-to-t from-surface-500 to-transparent"></div>
+    </div>
+
+    <div class="px-6 relative -mt-16 pb-8">
+      <div class="flex justify-between items-end mb-4">
+        <div
+          class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
+        >
+          @if (profile()?.avatar_url) {
+            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+          } @else {
+            <span class="text-3xl font-bold text-text-secondary">{{
+              profile()?.display_name?.charAt(0) || '?'
+            }}</span>
+          }
+        </div>
+
+        <div class="flex gap-2">
+          @if (profile()) {
+            <app-report-button [userId]="profile()!.id" />
+          }
+
+          <button
+            hlmBtn
+            (click)="toggleLike()"
+            class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
+            [class.text-neon-pink]="isLiked()"
+            [class.border-neon-pink]="isLiked()"
+            aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
+          >
+            {{ isLiked() ? '❤️' : '🤍' }}
+          </button>
+
+          <button
+            hlmBtn
+            (click)="toggleFollow()"
+            class="h-10 px-6 rounded-full font-bold transition-colors"
+            [class.bg-neon-blue]="!isFollowing()"
+            [class.text-white]="!isFollowing()"
+            [class.bg-surface-300]="isFollowing()"
+            [class.text-text-primary]="isFollowing()"
+            [class.border]="isFollowing()"
+            [class.border-surface-100]="isFollowing()"
+            [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t"
+          >
+            {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <h2 class="text-2xl font-black">{{ profile()?.display_name }}</h2>
+        <p class="text-text-secondary text-sm">ID: {{ profile()?.id }}</p>
+
+        <div class="flex gap-4 mt-2 text-sm">
+          <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
+            <span class="font-bold text-text-primary">{{ profile()?.followers_count ?? 0 }}</span>
+            <span class="text-text-secondary ms-1">{{ 'userProfile.followersLabel' | t }}</span>
+          </a>
+          <a [routerLink]="['/profile', profile()?.id, 'following']" class="hover:underline">
+            <span class="font-bold text-text-primary">{{ profile()?.following_count ?? 0 }}</span>
+            <span class="text-text-secondary ms-1">{{ 'userProfile.followingLabel' | t }}</span>
+          </a>
+        </div>
+
+        @if (profile()?.is_vip) {
+          <div
+            class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-on-fill shadow-[0_0_10px_rgba(255,215,0,0.5)]"
+          >
+            {{ 'discovery.vipBadge' | t }}
+          </div>
+        }
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-surface-300 p-4 rounded-2xl">
+          <p class="text-text-secondary text-xs font-bold uppercase mb-1">
+            {{ 'profile.nativeLang' | t }}
+          </p>
+          <p class="text-lg font-bold">{{ profile()?.native_languages?.join(', ') | uppercase }}</p>
+        </div>
+        <div class="bg-surface-300 p-4 rounded-2xl">
+          <p class="text-text-secondary text-xs font-bold uppercase mb-1">
+            {{ 'profile.targetLang' | t }}
+          </p>
+          <p class="text-lg font-bold">{{ profile()?.target_languages?.join(', ') | uppercase }}</p>
+        </div>
+      </div>
+
+      <div class="bg-surface-300 p-5 rounded-2xl mb-6 shadow-inner border border-surface-100">
+        <h3 class="text-text-secondary text-xs font-bold uppercase mb-3">
+          {{ 'profile.about' | t }}
+        </h3>
+        <p class="text-sm whitespace-pre-wrap leading-relaxed">
+          {{ displayBio || ('discovery.partnerBioFallback' | t) }}
+        </p>
+        @if (profile()?.bio_text) {
+          <button
+            hlmBtn
+            type="button"
+            class="mt-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+            [disabled]="isTranslating()"
+            [attr.aria-busy]="isTranslating() ? 'true' : null"
+            [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
+            (click)="toggleTranslation()"
+          >
+            {{ translationLabelKey | t }}
+          </button>
+          @if (translationErrorKey()) {
+            <p
+              [id]="translationStatusId()"
+              class="mt-2 text-xs text-danger"
+              role="status"
+              aria-live="polite"
+            >
+              {{ translationErrorKey() | t }}
+            </p>
+          }
+        }
+
+        @if (profile()?.audio_intro_url) {
+          <div class="mt-4 pt-4 border-t border-surface-100">
+            <button
+              hlmBtn
+              (click)="playAudioIntro(profile()?.audio_intro_url)"
+              class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
+              [attr.aria-label]="'profile.playAudioIntro' | t"
+            >
+              <span class="bg-neon-blue/20 p-2 rounded-full">▶️</span>
+              {{ 'profile.playAudioIntro' | t }}
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (profile()?.id) {
+        <div class="mb-6">
+          <app-achievements [userId]="profile()!.id" />
+        </div>
+      }
+
+      <div class="flex flex-col gap-3">
+        <a
+          [routerLink]="['/chat', profile()?.id]"
+          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+        >
+          {{ 'chatList.tapToChat' | t }}
+        </a>
+      </div>
+    </div>
+  }
+</div>

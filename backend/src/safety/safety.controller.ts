@@ -1,8 +1,15 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Req,
+  Param,
+} from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
+import { BlockUserDto, ReportUserDto, UnblockUserDto } from './dto/safety.dto';
+import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 import { SafetyService } from './safety.service';
 
 @Controller('safety')
@@ -10,24 +17,94 @@ import { SafetyService } from './safety.service';
 export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
+  @Get('report-categories')
+  getReportCategories() {
+    return this.safetyService.getCategories();
+  }
+
   @Post('report')
   async reportUser(
-    @CurrentUser() user: User | null,
+    @Req() req: { user: { id: string } },
     @Body() dto: ReportUserDto,
-  ) {
-    if (!user) return null;
-    return await this.safetyService.reportUser(user.id, dto);
+  ): Promise<{ success: boolean; message: string }> {
+    await this.safetyService.reportUser(req.user.id, dto);
+    return { success: true, message: 'Report submitted successfully' };
   }
 
   @Post('block')
-  async blockUser(@CurrentUser() user: User | null, @Body() dto: BlockUserDto) {
-    if (!user) return null;
-    return await this.safetyService.blockUser(user.id, dto);
+  async blockUser(
+    @Req() req: { user: { id: string } },
+    @Body() dto: BlockUserDto,
+  ): Promise<{ success: boolean; blocked_id: string }> {
+    return this.safetyService.blockUser(req.user.id, dto);
+  }
+
+  @Post('unblock')
+  async unblockUser(
+    @Req() req: { user: { id: string } },
+    @Body() dto: UnblockUserDto,
+  ): Promise<{ success: boolean }> {
+    return this.safetyService.unblockUser(req.user.id, dto.blocked_id);
   }
 
   @Get('blocked-ids')
-  async getBlockedIds(@CurrentUser() user: User | null): Promise<string[]> {
-    if (!user) return [];
-    return await this.safetyService.getBlockedIds(user.id);
+  async getBlockedIds(@Req() req: { user: { id: string } }): Promise<string[]> {
+    return this.safetyService.getBlockedUserIds(req.user.id);
+  }
+
+  @Get('blocked-users')
+  async getBlockedUsers(
+    @Req() req: { user: { id: string } },
+  ): Promise<string[]> {
+    return this.safetyService.getBlockedUserIds(req.user.id);
+  }
+
+  @Get('blocked-ids/:userId')
+  async getBlockedUserIds(@Param('userId') userId: string): Promise<string[]> {
+    return this.safetyService.getBlockedUserIds(userId);
+  }
+
+  @Get('blocker-ids/:userId')
+  async getBlockerUserIds(@Param('userId') userId: string): Promise<string[]> {
+    return this.safetyService.getBlockerUserIds(userId);
+  }
+
+  @Get('is-blocked/:blockedId')
+  async isBlocked(
+    @Req() req: { user: { id: string } },
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ blocked: boolean }> {
+    const blocked = await this.safetyService.isBlocked(req.user.id, blockedId);
+    return { blocked };
+  }
+
+  @Post('block/:blockedId')
+  async blockUserByParam(
+    @Req() req: { user: { id: string } },
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ success: boolean; blocked_id: string }> {
+    return this.safetyService.blockUser(req.user.id, { blocked_id: blockedId });
+  }
+
+  @Post('unblock/:blockedId')
+  async unblockUserByParam(
+    @Req() req: { user: { id: string } },
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ success: boolean }> {
+    return this.safetyService.unblockUser(req.user.id, blockedId);
+  }
+
+  @Get('blocked-and-blocker-ids/:userId')
+  async getBlockedAndBlockerIds(
+    @Param('userId') userId: string,
+  ): Promise<string[]> {
+    return this.safetyService.getBlockedAndBlockerIds(userId);
+  }
+
+  @Get('blocked-users-details')
+  async getBlockedUserDetails(
+    @Req() req: { user: { id: string } },
+  ): Promise<BlockedUserResponseDto[]> {
+    return this.safetyService.getBlockedUserDetails(req.user.id);
   }
 }

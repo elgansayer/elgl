@@ -1,38 +1,55 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService, VisitorLog, UserProfile } from '../../services/user.service';
 
 @Component({
   selector: 'app-visitor-logs',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
   templateUrl: './visitor-logs.component.html',
-  styleUrls: ['./visitor-logs.component.scss']
+  styleUrls: ['./visitor-logs.component.scss'],
 })
-export class VisitorLogsComponent implements OnInit {
+export class VisitorLogsComponent {
   private userService = inject(UserService);
 
   readonly visitors = signal<VisitorLog[]>([]);
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
+  readonly hideBlurred = signal<boolean>(false);
 
-  async ngOnInit(): Promise<void> {
-    await this.loadData();
+  readonly visibleVisitorsCount = computed(
+    () => this.visitors().filter((v) => !v.is_blurred).length,
+  );
+  readonly blurredVisitorsCount = computed(
+    () => this.visitors().filter((v) => v.is_blurred).length,
+  );
+  readonly filteredVisitors = computed(() =>
+    this.hideBlurred() ? this.visitors().filter((v) => !v.is_blurred) : this.visitors(),
+  );
+
+  constructor() {
+    this.loadData();
   }
 
-  async loadData(): Promise<void> {
+  private async loadData(): Promise<void> {
     this.isLoading.set(true);
     try {
       const [profileData, logs] = await Promise.all([
         this.userService.getMyProfile(),
-        this.userService.getMyVisitors()
+        this.userService.getMyVisitors(),
       ]);
       this.profile.set(profileData);
       this.visitors.set(logs);
-    } catch (e) {
-      console.error('Failed to load visitor logs:', e);
+    } catch {
+      // Silently handle - data may not be available yet
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  toggleHideBlurred(): void {
+    this.hideBlurred.update((value) => !value);
   }
 }

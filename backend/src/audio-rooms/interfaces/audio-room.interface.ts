@@ -3,13 +3,22 @@ export interface AudioRoomRecord {
   room_name: string;
   title: string;
   target_language: string;
+  language_pair?: string;
+  topic_tag?: string;
+  party_type?: string | null;
+  event_id?: string | null;
   host_id: string;
+  co_host_id?: string | null;
+  is_video_stream: boolean;
   is_active: boolean;
   speakers: string[];
   raised_hands: string[];
   listeners_count: number;
   recording_url?: string | null;
   created_at: string;
+  is_private?: boolean;
+  invited_user_ids?: string[];
+  biometric_lock?: boolean;
   host?: {
     id: string;
     display_name?: string;
