@@ -3,6 +3,8 @@
   "rendering": {
     "browser": "electron",
     "viewportMobile": { "width": 390, "height": 844 },
+    "viewportTabletMd": { "width": 768, "height": 1024 },
+    "viewportTabletLgBoundary": { "width": 1024, "height": 900 },
     "viewportWide": { "width": 1280, "height": 900 },
     "animations": "disabled",
     "network": "repository-preview-only"
@@ -36,22 +38,72 @@
     {
       "designSyncId": "screen.discovery",
       "previewPath": "frontend/design-preview/screens/discovery.html",
-      "states": ["light", "dark", "390px", "wide", "rtl"]
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
     },
     {
       "designSyncId": "screen.chat",
       "previewPath": "frontend/design-preview/screens/chat.html",
-      "states": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "400%-zoom",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
     },
     {
       "designSyncId": "screen.vocabulary",
       "previewPath": "frontend/design-preview/screens/vocabulary.html",
-      "states": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "400%-zoom",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
     },
     {
       "designSyncId": "screen.moderation",
       "previewPath": "frontend/design-preview/screens/moderation.html",
-      "states": ["light", "dark", "390px", "wide", "rtl"]
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
     }
   ]
 }

@@ -23,11 +23,11 @@ The sources of truth are:
 | Relay role | Owner | Spartan mapping rule |
 | --- | --- | --- |
 | `surface-*` | Relay | Background, card, popover, border, input and muted aliases map to an appropriate Relay surface. |
-| `primary` / Ember | Relay + per-user ThemeService override | Spartan `--primary`, `--ring` and primary sidebar aliases use `--color-primary-rgb`. |
+| `primary` / Ember | Relay + per-user ThemeService override | Spartan `--primary`, `--ring` and primary sidebar aliases use `--colour-primary-rgb`. |
 | `secondary` / Tide | Relay | Tide remains the partner/product colour. Spartan `--secondary` is an affordance role and intentionally maps to a neutral Relay surface, not Tide. |
-| `danger` | Relay | Spartan `--destructive` maps to `--color-danger-rgb`. |
+| `danger` | Relay | Spartan `--destructive` maps to `--colour-danger-rgb`. |
 | `success`, `warning`, `vip` | Relay | Product semantics remain Relay-owned and are not replaced by generic Spartan palette values. |
-| `accent` | Relay | Spartan `--accent` maps directly to `--color-accent-rgb`. |
+| `accent` | Relay | Spartan `--accent` maps directly to `--colour-accent-rgb`. |
 | `on-fill` | Relay | Foregrounds on saturated fills map to `--on-fill-rgb`; hardcoded white is not an acceptable substitute. |
 | `text-*` | Relay | Spartan foreground aliases map to Relay text roles. |
 
@@ -37,7 +37,7 @@ Light and dark values are independently authored in Relay's `:root` and `.dark` 
 
 Do not duplicate the Spartan alias block under `.dark`. Doing so creates a second theme authority and makes future Relay changes incomplete by default.
 
-`primary` is additionally runtime-mutable through the existing theme service. Any Spartan or Relay component that represents the user's primary accent must therefore resolve through `--color-primary-rgb`, never through a copied hex, static RGB value or generated Spartan default.
+`primary` is additionally runtime-mutable through the existing theme service. Any Spartan or Relay component that represents the user's primary accent must therefore resolve through `--colour-primary-rgb`, never through a copied hex, static RGB value or generated Spartan default.
 
 ## Allowed literal colours
 
@@ -79,9 +79,9 @@ The gate is intentionally structural rather than screenshot-based. Visual regres
 Correct:
 
 ```scss
---primary: rgb(var(--color-primary-rgb));
+--primary: rgb(var(--colour-primary-rgb));
 --primary-foreground: rgb(var(--on-fill-rgb));
---destructive: rgb(var(--color-danger-rgb));
+--destructive: rgb(var(--colour-danger-rgb));
 ```
 
 Incorrect:

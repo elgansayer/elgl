@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, input, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -6,9 +7,10 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-moment-translate',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <button
+      hlmBtn
       type="button"
       (click)="toggle()"
       class="inline-flex items-center gap-1 ps-2 pe-2 py-0.5 rounded-full text-sm text-text-muted hover:text-accent transition-colors"

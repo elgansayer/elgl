@@ -1,4 +1,4 @@
-"""Routing policy implementations."""
+"""Configurable phase routing and provider-rotation policy."""
 
 from __future__ import annotations
 
@@ -21,51 +21,30 @@ class ConfigRoutingPolicy(RoutingPolicy):
         provider_health: Mapping[str, ProviderHealth],
     ) -> Sequence[str]:
         if not self.config.routing_enabled:
-            return ["openhands"]
+            openhands = self.config.providers.get("openhands")
+            return ["openhands"] if openhands is not None and openhands.enabled else []
 
-        routing = self.config.routing
-        if phase == AgentPhase.PLANNING:
-            preferred = routing.planning
-        elif phase == AgentPhase.ARCHITECTURE:
-            preferred = routing.architecture
-        elif phase == AgentPhase.IMPLEMENTATION:
-            preferred = routing.implementation
-        elif phase == AgentPhase.SECURITY_REVIEW:
-            preferred = routing.security_review
-        elif phase == AgentPhase.QUALITY_REPAIR:
-            preferred = routing.quality_repair
-        elif phase == AgentPhase.CODE_REVIEW:
-            preferred = routing.code_review
-        elif phase == AgentPhase.CI_REPAIR:
-            preferred = routing.ci_repair
-        elif phase == AgentPhase.GENERAL_ACTION:
-            preferred = routing.general_action
-        else:
-            preferred = ["openhands"]
-
-        valid_candidates = []
+        preferred = list(getattr(self.config.routing, phase.value.replace("-", "_")))
+        eligible: list[str] = []
+        emergency: list[str] = []
         for name in preferred:
-            if name not in self.config.providers or not self.config.providers[name].enabled:
-                continue
-
+            provider = self.config.providers.get(name)
             health = provider_health.get(name)
-            if health and health.status not in (
-                ProviderStatus.HEALTHY,
-                ProviderStatus.DEGRADED,
-            ):
+            if provider is None or not provider.enabled or health is None:
                 continue
+            if health.status not in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}:
+                continue
+            target = emergency if provider.emergency_only else eligible
+            if name not in target:
+                target.append(name)
 
-            valid_candidates.append(name)
-
-        if not valid_candidates:
-            for name, provider_cfg in self.config.providers.items():
-                if not (provider_cfg.emergency_only and provider_cfg.enabled):
-                    continue
-                health = provider_health.get(name)
-                if not health or health.status in (
-                    ProviderStatus.HEALTHY,
-                    ProviderStatus.DEGRADED,
-                ):
-                    valid_candidates.append(name)
-
-        return valid_candidates
+        if phase in {AgentPhase.QUALITY_REPAIR, AgentPhase.CI_REPAIR}:
+            used = {
+                str(entry.get("provider"))
+                for entry in job.provider_history
+                if entry.get("phase") == phase.value
+            }
+            eligible = [name for name in eligible if name not in used] + [
+                name for name in eligible if name in used
+            ]
+        return [*eligible, *emergency]

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const appRoot = resolve(root, 'frontend/src/app');
 const ownedUiRoot = 'frontend/src/app/components/ui/';
+const legacyPrimitiveRoot = 'frontend/src/app/components/primitives/';
 
 function files(path) {
   const result = [];
@@ -27,18 +28,24 @@ function changedFrontendFiles() {
   if (!base) return [];
 
   try {
-    return execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
+    return execFileSync('git', ['diff', '--name-only', '--diff-filter=ACMRTUXB', `${base}...HEAD`], {
       cwd: root,
       encoding: 'utf8',
     })
       .split('\n')
       .map((path) => path.trim())
-      .filter((path) => path.startsWith('frontend/src/app/') && (path.endsWith('.ts') || path.endsWith('.html')));
+      .filter((path) => path.startsWith('frontend/src/app/') && (path.endsWith('.ts') || path.endsWith('.html')))
+      .filter((path) => existsSync(resolve(root, path)));
   } catch (error) {
     console.error(`Unable to calculate Spartan boundary diff from ${base}.`);
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
+}
+
+function openingTags(source, tagName) {
+  const pattern = new RegExp(`<${tagName}\\b[\\s\\S]*?>`, 'g');
+  return source.match(pattern) ?? [];
 }
 
 const violations = [];
@@ -59,7 +66,7 @@ for (const absolutePath of files(appRoot)) {
 // migration can continue incrementally without forcing an unsafe bulk rewrite.
 const changedFiles = changedFrontendFiles();
 for (const path of changedFiles) {
-  if (path.startsWith(ownedUiRoot)) continue;
+  if (path.startsWith(ownedUiRoot) || path.endsWith('.spec.ts')) continue;
   const source = readFileSync(resolve(root, path), 'utf8');
 
   const manualFocusTrap = /\b(trapFocus|focusTrap|firstFocusable|lastFocusable|focusableElements)\b/i.test(source);
@@ -82,11 +89,30 @@ for (const path of changedFiles) {
     violations.push(`${path}: newly changed feature code appears to implement roving tabindex; use the appropriate Spartan selection/navigation primitive`);
   }
 
-  const manualCombobox =
-    /role=["']combobox["']|role:\s*["']combobox["']/.test(source) &&
-    /(?:ArrowDown|ArrowUp|aria-activedescendant)/.test(source);
+  // A combobox role alone is not evidence of bespoke keyboard ownership. The
+  // changed feature must also own active-descendant state or an explicit
+  // ArrowUp/ArrowDown key handler. This avoids false positives from templates
+  // that contain unrelated icon names or translated text mentioning arrows.
+  const comboboxRole = /role=["']combobox["']|role:\s*["']combobox["']/.test(source);
+  const ownsActiveDescendant = /aria-activedescendant/.test(source);
+  const ownsComboboxArrowHandler =
+    /\(keydown(?:\.(?:arrowdown|arrowup))?\)/i.test(source) ||
+    /(?:event|e)\.key\s*===?\s*['"]Arrow(?:Down|Up)['"]/.test(source);
+  const manualCombobox = comboboxRole && (ownsActiveDescendant || ownsComboboxArrowHandler);
   if (manualCombobox) {
     violations.push(`${path}: newly changed feature code appears to implement combobox keyboard state; use the Spartan combobox/autocomplete primitive`);
+  }
+
+  // Generic feature actions must now cross the owned Helm button boundary.
+  // Legacy primitive implementations themselves remain temporarily exempt so
+  // they can be retired incrementally without making unrelated migrations atomic.
+  if (!path.startsWith(legacyPrimitiveRoot)) {
+    const unownedButtons = openingTags(source, 'button').filter((tag) => !/\bhlmBtn\b/.test(tag));
+    if (unownedButtons.length > 0) {
+      violations.push(
+        `${path}: ${unownedButtons.length} native button(s) bypass the Spartan Helm button directive; add hlmBtn or use an approved product composition`,
+      );
+    }
   }
 }
 

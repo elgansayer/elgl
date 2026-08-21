@@ -4,6 +4,7 @@ import { extname, join, relative, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const sourceRoot = resolve(root, 'src');
 const primitiveRoot = resolve(sourceRoot, 'app/components/primitives');
+const uiRoot = resolve(sourceRoot, 'app/components/ui');
 const tailwind = readFileSync(resolve(root, 'tailwind.config.js'), 'utf8');
 const failures = [];
 
@@ -16,10 +17,10 @@ for (const role of ["app: '0.75rem'", "card: '1rem'", "sheet: '1.25rem'", "bubbl
 }
 
 const card = readFileSync(resolve(primitiveRoot, 'card/card.component.ts'), 'utf8');
-const primaryButton = readFileSync(resolve(primitiveRoot, 'button-primary/button-primary.component.ts'), 'utf8');
+const helmButton = readFileSync(resolve(uiRoot, 'button/src/lib/hlm-button.ts'), 'utf8');
 const pill = readFileSync(resolve(primitiveRoot, 'pill/pill.component.ts'), 'utf8');
 requireFragment(card, 'rounded-card', 'AppCard radius role');
-requireFragment(primaryButton, 'rounded-app', 'Primary button radius role');
+requireFragment(helmButton, 'rounded-app', 'Owned Helm button radius role');
 requireFragment(pill, 'rounded-pill', 'AppPill radius role');
 if (/\brounded-full\b/.test(pill)) failures.push('AppPill must use rounded-pill, not rounded-full');
 
@@ -58,4 +59,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('Radius hierarchy check passed. Shared primitives use named Relay radius roles.');
+console.log('Radius hierarchy check passed. Shared primitives and owned Helm controls use named Relay radius roles.');

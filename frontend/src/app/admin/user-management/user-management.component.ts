@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
@@ -9,7 +10,15 @@ import { AppEmptyStateComponent } from '../../components/primitives/empty-state/
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppCardComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+  ],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {

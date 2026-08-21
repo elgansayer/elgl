@@ -21,7 +21,7 @@ def test_check_quality_gate_blocks_production_mock() -> None:
     workflow.runner.return_value = Mock(
         stdout="""+++ b/backend/src/app.service.ts
 @@ -1 +1,2 @@
-+    // TODO: implement
++    return { id: 1, name: "mock user" };
 """
     )
     findings = check_quality_gate(workflow, "main")
@@ -35,7 +35,7 @@ def test_check_quality_gate_allows_test_mock() -> None:
     workflow.runner.return_value = Mock(
         stdout="""+++ b/backend/test/app.e2e-spec.ts
 @@ -1 +1,2 @@
-+    // TODO: implement
++    const mockData = 'mock';
 """
     )
     findings = check_quality_gate(workflow, "main")
@@ -80,6 +80,33 @@ def test_check_quality_gate_blocks_e2e_skip() -> None:
     findings = check_quality_gate(workflow, "main")
 
     assert [finding.code for finding in findings] == ["skipped-test"]
+
+
+def test_check_quality_gate_blocks_provider_credential_artifacts() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/.codex/auth.json
+@@ -0,0 +1 @@
++{"token":"opaque-value"}
+"""
+    )
+
+    findings = check_quality_gate(workflow, "main")
+
+    assert [finding.code for finding in findings] == ["credential-artifact"]
+
+
+def test_check_quality_gate_blocks_high_confidence_secret_patterns() -> None:
+    workflow = Mock()
+    fake_token = "ghp_" + "A" * 24
+    workflow.runner.return_value = Mock(
+        stdout=(f'+++ b/backend/src/config.ts\n@@ -0,0 +1 @@\n+const token = "{fake_token}";\n')
+    )
+
+    findings = check_quality_gate(workflow, "main")
+
+    assert [finding.code for finding in findings] == ["credential-leak"]
+    assert fake_token not in findings[0].evidence
 
 
 def test_check_quality_gate_reports_diff_failure() -> None:

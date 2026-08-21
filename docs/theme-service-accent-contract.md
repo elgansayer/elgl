@@ -11,7 +11,7 @@ This document is the implementation contract for Spartan UI 0021-0024.
 
 ## Theme behaviour
 
-`currentTheme` supports `light`, `dark`, and `system`. In system mode the service follows `prefers-color-scheme` and toggles the root `dark` class. Components must consume semantic tokens rather than inspect theme state to choose literal colours.
+`currentTheme` supports `light`, `dark`, and `system`. In system mode the service follows `prefers-colour-scheme` and toggles the root `dark` class. Components must consume semantic tokens rather than inspect theme state to choose literal colours.
 
 ## Accent behaviour
 
@@ -22,14 +22,14 @@ The service must:
 1. validate persisted and profile-sourced values before converting them to RGB;
 2. remove invalid persisted values instead of emitting malformed CSS variables;
 3. clear the previous accent when a profile is absent or has no valid custom accent;
-4. remove both `--color-primary` and `--color-primary-rgb` when resetting so Relay defaults become authoritative again;
+4. remove both `--colour-primary` and `--colour-primary-rgb` when resetting so Relay defaults become authoritative again;
 5. never let one user's profile accent leak into the next user's session.
 
 ## Prohibited patterns
 
 Do not:
 
-- write `--color-primary` or `--color-primary-rgb` from feature components;
+- write `--colour-primary` or `--colour-primary-rgb` from feature components;
 - store separate feature-local theme/accent signals;
 - accept arbitrary CSS colour syntax for profile accents without extending the validation contract and tests;
 - keep the previous profile accent when the active profile becomes null or has no valid accent;

@@ -1,10 +1,14 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { SafetyService, ReportCategory, ReportUserDto } from '../../services/safety.service';
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 
 interface ReportFormModel {
   category: string;
@@ -14,7 +18,15 @@ interface ReportFormModel {
 
 @Component({
   selector: 'app-report-user-modal',
-  imports: [FormField, TranslatePipe, ...HlmDialogImports],
+  imports: [
+    HlmCheckbox,
+    HlmTextarea,
+    FormField,
+    TranslatePipe,
+    ...HlmRadioGroupImports,
+    ...HlmButtonImports,
+    ...HlmDialogImports,
+  ],
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent {
@@ -123,7 +135,6 @@ export class ReportUserModalComponent {
       showToast(this.i18n.translate('report.toast_success'), 'success');
 
       if (model.blockUser) {
-        // Fire-and-forget: a block failure shouldn't prevent the report from closing out.
         this.safetyService
           .blockUserAsync(this.reportUserId())
           .catch((err) => console.error('Failed to block user after report:', err));
