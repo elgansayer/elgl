@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -24,9 +31,10 @@ import {
   TranslateUiResult,
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
+import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 
 @Controller('nlp')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, NlpRateLimiterGuard)
 export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
@@ -50,6 +58,8 @@ export class NlpController {
    * Translation: mutation-like (counts toward rate limit), no-store.
    */
   @Post('translate')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 20, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translate(
     @CurrentUser() user: User | null,
@@ -78,6 +88,8 @@ export class NlpController {
    * Grammar check: mutation (counts toward rate limit), no-store.
    */
   @Post('grammar-check')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 20, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async grammarCheck(
     @CurrentUser() user: User | null,
@@ -96,6 +108,8 @@ export class NlpController {
    * Grammar explanation: mutation (counts toward rate limit), no-store.
    */
   @Post('explain-grammar')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async explainGrammar(
     @CurrentUser() user: User | null,
@@ -118,6 +132,8 @@ export class NlpController {
    * Pronunciation scoring: mutation (counts toward rate limit), no-store.
    */
   @Post('pronunciation-score')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async pronunciationScore(
     @CurrentUser() user: User | null,
@@ -136,6 +152,8 @@ export class NlpController {
    * Simplification: mutation (counts toward rate limit), no-store.
    */
   @Post('simplify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async simplify(
     @CurrentUser() user: User | null,
@@ -154,6 +172,8 @@ export class NlpController {
    * Combined translate + correct: mutation, no-store.
    */
   @Post('translate-and-correct')
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 15, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translateAndCorrect(
     @CurrentUser() user: User | null,
@@ -172,6 +192,8 @@ export class NlpController {
    * Bio translation: mutation (counts toward rate limit), no-store.
    */
   @Post('translate-bio')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 10, windowSeconds: 60 })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translateBio(
     @CurrentUser() user: User | null,

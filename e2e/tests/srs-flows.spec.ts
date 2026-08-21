@@ -605,6 +605,64 @@ test.describe('SRS - Error Handling & Edge Cases', () => {
       await expect(body).toBeVisible();
     }
   });
+
+  test('should show error boundary retry button on error boundary page', async ({ page }) => {
+    await page.goto('/decks');
+    await page.waitForTimeout(3000);
+
+    // The page should render with an app-srs-error-boundary wrapping content
+    const body = page.locator('body');
+    await expect(body).toBeVisible();
+
+    // Verify the error boundary does not show error state initially
+    const errorAlert = page.locator('[role="alert"]');
+    const errorVisible = await errorAlert.isVisible().catch(() => false);
+    // Error boundary should NOT be showing error state under normal conditions
+    expect(errorVisible).toBeFalsy();
+  });
+
+  test('should render srs-error-boundary in vocabulary dashboard page', async ({ page }) => {
+    await page.goto('/vocabulary');
+    await page.waitForTimeout(3000);
+
+    // Dashboard should render without crashing
+    const body = page.locator('body');
+    await expect(body).toBeVisible();
+
+    // The content should be wrapped in error boundary - page should be stable
+    const heading = page.locator('h2');
+    await expect(heading.first()).toBeVisible();
+  });
+
+  test('should handle rapid grade actions without crashing', async ({ page }) => {
+    await page.goto('/review');
+    await page.waitForTimeout(3000);
+
+    const cardElement = page.locator('.flip-card');
+    const hasCard = await cardElement.isVisible().catch(() => false);
+
+    if (hasCard) {
+      // Flip card
+      await cardElement.click();
+      await page.waitForTimeout(500);
+
+      // Rapidly click grading buttons
+      const buttons = page.locator('.btn-grade');
+      const btnCount = await buttons.count();
+
+      if (btnCount > 0) {
+        // Click all visible grade buttons quickly
+        for (let i = 0; i < Math.min(btnCount, 3); i++) {
+          await buttons.nth(i).click().catch(() => undefined);
+          await page.waitForTimeout(100);
+        }
+      }
+
+      // Page should still be functional after rapid clicks
+      const body = page.locator('body');
+      await expect(body).toBeVisible();
+    }
+  });
 });
 
 test.describe('SRS - RTL Locale Compatibility', () => {

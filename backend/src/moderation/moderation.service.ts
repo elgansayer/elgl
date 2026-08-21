@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -26,7 +28,12 @@ export interface ModerationDegradedResponse {
   error?: string;
 }
 
-const DATING_FLAGS: ReadonlyArray<string> = [
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
+
+// Pre-compiled dating-behaviour detection regex patterns to avoid
+// re-compilation on every analyseUserForDatingBehaviour() call.
+const DATING_FLAGS = [
   'dating',
   'date',
   'relationship',
@@ -71,28 +78,37 @@ const DATING_FLAGS: ReadonlyArray<string> = [
   'daddy',
   'mommy',
   'horny',
-] as const;
+];
 
-const DATING_REGEXPS: ReadonlyArray<RegExp> = [...new Set(DATING_FLAGS)].map(
+const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map(
   (flag) => {
     const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}\\b`, 'i');
+    return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
   },
 );
 
 @Injectable()
 export class ModerationService {
-  private readonly logger = new Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+    @InjectPinoLogger(ModerationService.name)
+    private readonly logger: PinoLogger,
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
   async getItems(
     type: 'moment' | 'profile',
     status?: string,
+    page?: number,
+    pageSize?: number,
   ): Promise<ModerationItem[]> {
+    const limit = Math.min(pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = ((page ?? 1) - 1) * limit;
+
     let query = this.supabase
       .from('reports')
       .select(
@@ -101,30 +117,26 @@ export class ModerationService {
         status,
         reason_category,
         created_at,
+        reporter_id,
+        reported_user_id,
         reported_moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
         reported_user:reported_user_id ( id, display_name )
       `,
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (status) {
       query = query.eq('status', status);
-    }
-
-    // DB-level filtering: profile type requires reported_user_id, moment type requires reported_moment_id
-    if (type === 'profile') {
-      query = query.not('reported_user_id', 'is', null);
-    } else {
-      query = query.not('reported_moment_id', 'is', null);
     }
 
     try {
       const { data, error } = await query;
 
       if (error) {
-        this.logger.warn(`Failed to fetch moderation items: ${error.message}`);
+        this.logger.warn(error, 'Failed to fetch moderation items');
         return [];
       }
 
@@ -144,6 +156,14 @@ export class ModerationService {
         };
       });
 
+      // Record pending report count for Datadog monitoring
+      if (!status || status === 'pending') {
+        const pendingCount = status
+          ? items.length
+          : items.filter((item) => item.status === 'pending').length;
+        this.metricsService.setTsPendingReports(pendingCount);
+      }
+
       // Batch-fetch moment content for all moment items in a single query
       if (type !== 'profile') {
         const momentIds = items
@@ -162,13 +182,15 @@ export class ModerationService {
             }
           }
         }
+
+        return items;
       }
 
-      return items;
+      return items.filter((item) => item.reported_user != null);
     } catch (err) {
       this.logger.warn(
-        'Failed to fetch moderation items, returning empty result',
         err,
+        'Failed to fetch moderation items, returning empty result',
       );
       return [];
     }
@@ -188,16 +210,15 @@ export class ModerationService {
       .in('id', momentIds);
 
     if (error || !data) {
+      this.logger.warn(error, 'Failed to batch-fetch moment content');
       return result;
     }
 
-    const rows = data as Array<{
+    for (const row of data as Array<{
       id: string;
-      content_text: string;
-      author: { display_name?: string } | null;
-    }>;
-
-    for (const row of rows) {
+      content_text?: string;
+      author?: { display_name?: string } | null;
+    }>) {
       result.set(row.id, {
         content_text: row.content_text ?? '',
         authorName: row.author?.display_name ?? null,
@@ -221,18 +242,22 @@ export class ModerationService {
       });
 
       if (error) {
-        this.logger.warn(`Failed to create report: ${error.message}`);
+        this.logger.warn(error, 'Failed to create report');
         return { success: false, error: 'Failed to create report' };
       }
 
+      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to create report, degraded', err);
+      this.logger.warn(err, 'Failed to create report, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
 
-  async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async approveItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -240,18 +265,30 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
-        this.logger.warn(`Failed to approve item ${dto.itemId}: ${error.message}`);
+        this.metricsService.recordAdminReportResolution('approve', 'failure');
+        this.logger.warn(error, `Failed to approve item ${dto.itemId}`);
         return { success: false, error: 'Failed to approve item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'approve',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
+      this.metricsService.recordAdminReportResolution('approve', 'success');
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to approve item, degraded', err);
+      this.metricsService.recordAdminReportResolution('approve', 'failure');
+      this.metricsService.recordTsModerationAction('approve', dto.type, 0);
+      this.logger.warn(err, 'Failed to approve item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
 
-  async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async rejectItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -262,13 +299,22 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
-        this.logger.warn(`Failed to reject item ${dto.itemId}: ${error.message}`);
+        this.metricsService.recordAdminReportResolution('reject', 'failure');
+        this.logger.warn(error, `Failed to reject item ${dto.itemId}`);
         return { success: false, error: 'Failed to reject item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'reject',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
+      this.metricsService.recordAdminReportResolution('reject', 'success');
       return { success: true };
     } catch (err) {
-      this.logger.warn('Failed to reject item, degraded', err);
+      this.metricsService.recordAdminReportResolution('reject', 'failure');
+      this.metricsService.recordTsModerationAction('reject', dto.type, 0);
+      this.logger.warn(err, 'Failed to reject item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
   }
@@ -286,7 +332,7 @@ export class ModerationService {
         .single();
 
       if (userError || !userData) {
-        this.logger.warn(`User ${userId} not found for analysis`);
+        this.logger.warn(userError, `User ${userId} not found for analysis`);
         return { riskScore: 0, flags: [] };
       }
 
@@ -312,7 +358,7 @@ export class ModerationService {
 
       const { data: moments } = await this.supabase
         .from('moments')
-        .select('content_text')
+        .select('id, content_text')
         .eq('author_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -328,28 +374,28 @@ export class ModerationService {
       const fullText = (combinedText + ' ' + momentText).toLowerCase();
 
       const flags: string[] = [];
-      const uniqueFlags = [...new Set(DATING_FLAGS)];
 
-      for (let i = 0; i < uniqueFlags.length; i++) {
-        if (DATING_REGEXPS[i].test(fullText)) {
-          flags.push(uniqueFlags[i]);
+      for (const { flag, regex } of DATING_REGEXES) {
+        if (regex.test(fullText)) {
+          flags.push(flag);
         }
       }
 
-      const matchedFlags = [...new Set(flags)];
-      const hitRatio = matchedFlags.length / uniqueFlags.length;
+      const uniqueFlags = [...new Set(flags)];
+      const hitRatio = uniqueFlags.length / DATING_REGEXES.length;
       const riskScore = Math.min(
         100,
         Math.round(
           hitRatio * 100 +
-            (matchedFlags.length > 5 ? 20 : 0) +
-            (matchedFlags.length > 10 ? 10 : 0),
+            (uniqueFlags.length > 5 ? 20 : 0) +
+            (uniqueFlags.length > 10 ? 10 : 0),
         ),
       );
 
-      return { riskScore, flags: matchedFlags };
+      this.metricsService.recordTsDatingRiskScore(riskScore);
+      return { riskScore, flags: uniqueFlags };
     } catch (err) {
-      this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
+      this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };
     }
   }

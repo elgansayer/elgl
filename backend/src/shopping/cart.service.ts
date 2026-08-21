@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ShoppingService } from './shopping.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
+import { sanitiseShoppingData } from './sanitise-shopping.helper';
 
 export interface CartItem {
   itemId: string;
@@ -76,7 +77,7 @@ export class CartService implements OnModuleInit, OnModuleDestroy {
 
   getCart(userId: string): CartItem[] {
     const entry = this.touchCart(userId);
-    return entry.items;
+    return sanitiseShoppingData(entry.items);
   }
 
   addItem(userId: string, itemId: string, quantity: number): CartItem[] {
@@ -106,12 +107,12 @@ export class CartService implements OnModuleInit, OnModuleDestroy {
     } else {
       items.push({
         itemId,
-        name: item.name,
+        name: sanitiseShoppingData(item.name),
         quantity,
         unitPrice: item.price,
       });
     }
-    return items;
+    return sanitiseShoppingData(items);
   }
 
   removeItem(userId: string, itemId: string, quantity: number): CartItem[] {
@@ -122,7 +123,7 @@ export class CartService implements OnModuleInit, OnModuleDestroy {
     const items = entry.items;
     const existing = items.find((i) => i.itemId === itemId);
     if (!existing) {
-      return items;
+      return sanitiseShoppingData(items);
     }
     if (quantity >= existing.quantity) {
       const idx = items.indexOf(existing);
@@ -130,7 +131,7 @@ export class CartService implements OnModuleInit, OnModuleDestroy {
     } else {
       existing.quantity -= quantity;
     }
-    return items;
+    return sanitiseShoppingData(items);
   }
 
   async checkout(

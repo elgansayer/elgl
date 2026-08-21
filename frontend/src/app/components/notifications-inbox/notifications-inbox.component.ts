@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -11,7 +12,7 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [TranslatePipe, ScrollablePillsComponent],
+  imports: [HlmButton, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })
@@ -80,7 +81,8 @@ export class NotificationsInboxComponent {
     if (
       notif.type === 'like_moment' ||
       notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment'
+      notif.type === 'reply_comment' ||
+      notif.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
     } else if (notif.type === 'mention_chat') {
@@ -99,6 +101,7 @@ export class NotificationsInboxComponent {
         return '❤️';
       case 'comment_moment':
       case 'reply_comment':
+      case 'mention_comment':
         return '💬';
       case 'mention_chat':
         return '📣';
@@ -123,6 +126,8 @@ export class NotificationsInboxComponent {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_comment':
+        return 'notifications.mentionedInComment';
       case 'mention_chat':
         return 'notifications.mentionedInChat';
       case 'follow':

@@ -1,3 +1,0 @@
-* Priority: High Impact
-* Description: Implement the Social & Privacy Settings UI (Discord style).
-* Technical Implementation: Refactor the existing `PrivacySettingsComponent` (if applicable) or create a new one to manage profile visibility, custom statuses, read receipts, DM controls (server member filtering, explicit image filters), and friend request origins. Use Angular Signals for optimistic state updates on checkbox toggles and dropdown selections, ensuring rollback logic is present in the `SettingsService` if the backend request fails.

@@ -8,16 +8,14 @@ export interface EscrowOnboardingStep {
 
 /**
  * Manages the onboarding tour state for the Escrow Payments feature.
- * Steps correspond to `joyrideStep` directive names in the template.
+ * Joyride-based tours have been removed; this service is retained as a compat shim.
  */
 @Injectable({ providedIn: 'root' })
 export class EscrowOnboardingService {
   private readonly storageKey = 'hellotalk_escrow_onboarding_done';
 
-  /** Whether the escrow onboarding tour has been completed this session. */
   readonly isTourInProgress = signal(false);
 
-  /** Step names registered with the JoyrideDirective in the EscrowPaymentsComponent. */
   readonly steps: EscrowOnboardingStep[] = [
     {
       key: 'escrowStepTitle',
@@ -45,10 +43,24 @@ export class EscrowOnboardingService {
     return this.steps.map((s) => s.key);
   }
 
+  startTour(): void {
+    // Tour disabled -- mark as complete immediately
+    this.markComplete();
+  }
+
   markComplete(): void {
     this.isTourInProgress.set(false);
     try {
       window.localStorage.setItem(this.storageKey, 'true');
+    } catch {
+      // storage unavailable, ignore
+    }
+  }
+
+  resetTour(): void {
+    this.isTourInProgress.set(false);
+    try {
+      window.localStorage.removeItem(this.storageKey);
     } catch {
       // storage unavailable, ignore
     }

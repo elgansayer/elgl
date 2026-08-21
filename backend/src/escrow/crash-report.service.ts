@@ -61,15 +61,15 @@ export class CrashReportService {
       return {
         id: data.id,
         operation: data.operation,
-        escrow_id: data.escrow_id,
-        user_id: data.user_id,
+        escrow_id: data.escrow_id ?? undefined,
+        user_id: data.user_id ?? undefined,
         error_type: data.error_type,
         error_message: data.error_message,
-        stack_trace: data.stack_trace,
-        context: data.context,
+        stack_trace: data.stack_trace ?? undefined,
+        context: data.context ?? undefined,
         created_at: data.created_at,
         acknowledged: data.acknowledged ?? false,
-        resolved_at: data.resolved_at ?? null,
+        resolved_at: data.resolved_at ?? undefined,
       };
     } catch (persistError) {
       this.logger.error(

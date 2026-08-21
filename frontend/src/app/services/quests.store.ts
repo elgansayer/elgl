@@ -27,7 +27,7 @@ export class QuestStore {
       );
       this.quests.set(data);
     } catch {
-      // quests remain at current value on error
+      this.quests.set([]);
     } finally {
       this.loading.set(false);
     }
