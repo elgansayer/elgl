@@ -24,7 +24,8 @@ export class CloudflareCacheService {
     private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
   ) {
-    this.apiToken = this.configService.get<string>('CLOUDFLARE_API_TOKEN') ?? '';
+    this.apiToken =
+      this.configService.get<string>('CLOUDFLARE_API_TOKEN') ?? '';
     this.zoneId = this.configService.get<string>('CLOUDFLARE_ZONE_ID') ?? '';
     this.apiBase = `https://api.cloudflare.com/client/v4/zones/${this.zoneId}`;
   }
@@ -53,17 +54,14 @@ export class CloudflareCacheService {
     }
 
     try {
-      const response = await fetch(
-        `${this.apiBase}/purge_cache`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.apiToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ tags }),
+      const response = await fetch(`${this.apiBase}/purge_cache`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({ tags }),
+      });
 
       const body = await response.json();
 

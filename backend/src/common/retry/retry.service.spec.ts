@@ -1,20 +1,26 @@
 import { RetryService } from './retry.service';
 
 const MOCK_LOGGER = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
 } as any;
 
-function make429Error(): Error & { status: number; response: { status: number; headers: Record<string, string> } } {
+function make429Error(): Error & {
+  status: number;
+  response: { status: number; headers: Record<string, string> };
+} {
   return Object.assign(new Error('Too Many Requests'), {
     status: 429,
     response: { status: 429, headers: {} },
   });
 }
 
-function makeRateLimitStripeError(): Error & { type: string; statusCode: number } {
+function makeRateLimitStripeError(): Error & {
+  type: string;
+  statusCode: number;
+} {
   return Object.assign(new Error('Stripe Rate Limit'), {
     type: 'RateLimitError',
     statusCode: 429,
@@ -39,7 +45,7 @@ describe('RetryService', () => {
 
   beforeEach(() => {
     service = new RetryService(MOCK_LOGGER);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,10 +54,9 @@ describe('RetryService', () => {
 
   describe('withRetry', () => {
     it('should return the result on first attempt without retrying', async () => {
-      const result = await service.withRetry(
-        async () => 'success',
-        { maxRetries: 2 },
-      );
+      const result = await service.withRetry(async () => 'success', {
+        maxRetries: 2,
+      });
 
       expect(result).toEqual({
         result: 'success',

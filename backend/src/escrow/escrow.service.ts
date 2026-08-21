@@ -7,11 +7,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { MetricsService } from '../metrics/metrics.service';
-import Redis from 'ioredis';
 import {
   EscrowTransaction,
   EscrowStatus,
@@ -246,14 +246,14 @@ export class EscrowService {
     dto: CreateEscrowHoldDto,
   ): Promise<EscrowTransaction> {
     const redis = this.supabaseService.getRedisClient();
-    const id = `degraded_escrow_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const id = `degraded_escrow_${Date.now()}_${randomUUID()}`;
     const degradedRecord = {
       id,
       payer_id: payerId,
       payee_id: dto.payee_id,
       amount_coins: dto.amount_coins,
       status: 'pending' as EscrowStatus,
-      reason: dto.reason,
+      reason: dto.reason ?? '',
       metadata: dto.metadata || {},
       degraded: true,
       created_at: new Date().toISOString(),
@@ -282,7 +282,7 @@ export class EscrowService {
       payee_id: dto.payee_id,
       amount_coins: dto.amount_coins,
       status: 'pending',
-      reason: dto.reason,
+      reason: dto.reason ?? '',
       metadata: dto.metadata || {},
       held_at: null,
       released_at: null,
@@ -439,7 +439,7 @@ export class EscrowService {
       payer_id: '',
       payee_id: '',
       amount_coins: 0,
-          status: 'held' as EscrowStatus,
+      status: 'held' as EscrowStatus,
       reason: 'Processing delayed - queued for retry',
       metadata: {},
       held_at: now,
@@ -550,7 +550,10 @@ export class EscrowService {
         );
 
         // Record metric for Datadog alerting (#2381)
-        this.metricsService.recordEscrowRefunded(tx.amount_coins, reason || 'manual');
+        this.metricsService.recordEscrowRefunded(
+          tx.amount_coins,
+          reason || 'manual',
+        );
 
         return updated;
       },
@@ -578,7 +581,7 @@ export class EscrowService {
           payer_id: '',
           payee_id: '',
           amount_coins: 0,
-          status: 'held' as EscrowStatus,
+          status: 'held',
           reason: 'Refund delayed - queued for retry',
           metadata: {},
           held_at: now,
@@ -596,7 +599,7 @@ export class EscrowService {
       degradedMarker,
     );
 
-    const tx = result as EscrowTransaction;
+    const tx = result;
 
     if (!degradedMarker.degraded && tx.payer_id && tx.payee_id) {
       this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
@@ -728,7 +731,7 @@ export class EscrowService {
         status: 'disputed' as EscrowStatus,
         reason: `${tx.reason ?? ''}\n[DISPUTE by ${userId}: ${reason}]`.trim(),
         metadata: {
-          ...(tx.metadata as Record<string, unknown> ?? {}),
+          ...(tx.metadata ?? {}),
           dispute_initiator: userId,
           dispute_filed_at: now,
           dispute_evidence: evidence ?? null,
@@ -806,12 +809,7 @@ export class EscrowService {
       throw new BadRequestException('Not authorised to view this escrow');
     }
 
-    void redis.set(
-      cacheKey,
-      JSON.stringify(tx),
-      'EX',
-      ESCROW_DETAIL_TTL,
-    );
+    void redis.set(cacheKey, JSON.stringify(tx), 'EX', ESCROW_DETAIL_TTL);
 
     return this.toResponse(tx);
   }
@@ -868,9 +866,16 @@ export class EscrowService {
       return [];
     }
 
-    const result = (data as EscrowTransaction[]).map((tx) => this.toResponse(tx));
+    const result = (data as EscrowTransaction[]).map((tx) =>
+      this.toResponse(tx),
+    );
 
-    void redis.set(cacheKey, JSON.stringify(result), 'EX', ESCROW_USER_LIST_TTL);
+    void redis.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      ESCROW_USER_LIST_TTL,
+    );
 
     return result;
   }
@@ -1032,6 +1037,97 @@ export class EscrowService {
     }
 
     throw new NotFoundException('Escrow transaction not found');
+  }
+
+  /**
+   * Auto-refunds stale escrow transactions that have been held for more than
+   * 30 days without being released, refunded, or cancelled. This ensures coins
+   * are returned to users rather than being locked indefinitely.
+   *
+   * Records metrics for Datadog alerting (#2381).
+   */
+  async processStaleEscrows(): Promise<{
+    autoRefunded: number;
+    failed: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const staleThreshold = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    let autoRefunded = 0;
+    let failed = 0;
+
+    try {
+      const { data: staleRows } = await supabase
+        .from('escrow_transactions' as never)
+        .select('id, payer_id, amount_coins')
+        .eq('status', 'held')
+        .lt('created_at', staleThreshold)
+        .limit(100);
+
+      if (!staleRows || staleRows.length === 0) {
+        return { autoRefunded: 0, failed: 0 };
+      }
+
+      for (const row of staleRows as {
+        id: string;
+        payer_id: string;
+        amount_coins: number;
+      }[]) {
+        try {
+          // Refund coins to payer
+          const { data: payerRow } = await supabase
+            .from('users')
+            .select('coins_balance')
+            .eq('id', row.payer_id)
+            .single();
+
+          if (payerRow) {
+            const payerBalance = (payerRow as { coins_balance: number })
+              .coins_balance;
+            await supabase
+              .from('users')
+              .update({ coins_balance: payerBalance + row.amount_coins })
+              .eq('id', row.payer_id);
+          }
+
+          const now = new Date().toISOString();
+          await supabase
+            .from('escrow_transactions' as never)
+            .update({
+              status: 'refunded' as EscrowStatus,
+              refunded_at: now,
+              metadata: { auto_refund: true, refunded_at: now },
+            } as never)
+            .eq('id', row.id);
+
+          this.metricsService.recordEscrowAutoRefunded(row.amount_coins);
+          this.metricsService.recordEscrowRefunded(
+            row.amount_coins,
+            'auto_expiry',
+          );
+
+          this.invalidateEscrowCaches(row.id, row.payer_id, '');
+
+          autoRefunded++;
+          this.logger.log(
+            `Auto-refunded stale escrow ${row.id}: ${row.amount_coins} coins to ${row.payer_id}`,
+          );
+        } catch (error: unknown) {
+          failed++;
+          this.logger.error(
+            `Failed to auto-refund stale escrow ${row.id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    } catch (error: unknown) {
+      this.logger.error(
+        `Failed to fetch stale escrows: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    return { autoRefunded, failed };
   }
 
   /**

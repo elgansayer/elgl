@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { ExecutionContext, HttpException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -9,17 +10,17 @@ import {
 
 describe('SrsRateLimiterGuard', () => {
   let guard: SrsRateLimiterGuard;
-  let mockRedis: { incr: jest.Mock; expire: jest.Mock };
-  let mockSupabaseService: { getRedisClient: jest.Mock };
+  let mockRedis: { incr: Mock; expire: Mock };
+  let mockSupabaseService: { getRedisClient: Mock };
 
   beforeEach(async () => {
     mockRedis = {
-      incr: jest.fn(),
-      expire: jest.fn(),
+      incr: vi.fn(),
+      expire: vi.fn(),
     };
 
     mockSupabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(mockRedis),
+      getRedisClient: vi.fn().mockReturnValue(mockRedis),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,10 +30,10 @@ describe('SrsRateLimiterGuard', () => {
         {
           provide: 'PinoLogger:SrsRateLimiterGuard',
           useValue: {
-            warn: jest.fn(),
-            error: jest.fn(),
-            info: jest.fn(),
-            debug: jest.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            info: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
@@ -46,11 +47,11 @@ describe('SrsRateLimiterGuard', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  function createHandler(handlerName: string): jest.Mock {
-    const mock = jest.fn();
+  function createHandler(handlerName: string): Mock {
+    const mock = vi.fn();
     Object.defineProperty(mock, 'name', { value: handlerName });
     return mock;
   }
