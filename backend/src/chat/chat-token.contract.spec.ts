@@ -12,13 +12,21 @@ import { ChatService } from './chat.service';
 
 describe('Centrifugo connection token contract', () => {
   it('keeps POST /chat/token behind Supabase authentication', () => {
-    const controllerPath = Reflect.getMetadata(PATH_METADATA, ChatController) as string;
-    const guards = Reflect.getMetadata(GUARDS_METADATA, ChatController) as unknown[];
+    const controllerPath = Reflect.getMetadata(
+      PATH_METADATA,
+      ChatController,
+    ) as string;
+    const guards = Reflect.getMetadata(
+      GUARDS_METADATA,
+      ChatController,
+    ) as unknown[];
     const handler = ChatController.prototype.getConnectionToken;
 
     expect(controllerPath).toBe('chat');
     expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe('token');
-    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(RequestMethod.POST);
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.POST,
+    );
     expect(guards).toContain(SupabaseAuthGuard);
   });
 
@@ -53,6 +61,8 @@ describe('Centrifugo connection token contract', () => {
 
     await expect(
       ChatService.prototype.generateConnectionToken.call(service, 'user-123'),
-    ).rejects.toThrow('Failed to generate Centrifugo token: signing unavailable');
+    ).rejects.toThrow(
+      'Failed to generate Centrifugo token: signing unavailable',
+    );
   });
 });
