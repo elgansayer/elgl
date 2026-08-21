@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -8,30 +9,30 @@ describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
-  let mockNotificationsService: { sendVisitNotification: jest.Mock };
-  let mockEventEmitter: { emit: jest.Mock };
+  let mockNotificationsService: { sendVisitNotification: Mock };
+  let mockEventEmitter: { emit: Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      insert: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     mockNotificationsService = {
-      sendVisitNotification: jest.fn(),
+      sendVisitNotification: vi.fn(),
     };
 
     mockEventEmitter = {
-      emit: jest.fn(),
+      emit: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +41,7 @@ describe('ProfileVisitsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
@@ -129,7 +130,7 @@ describe('ProfileVisitsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

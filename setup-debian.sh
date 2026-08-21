@@ -1,190 +1,198 @@
 #!/usr/bin/env bash
-# setup-debian.sh - One-shot HelloTalk VPS bootstrap (non-interactive).
-#
-# What it does:
-#   1. Installs system packages (git, curl, tmux, build tools, python3, playwright deps)
-#   2. Ensures at least 4 GiB swap
-#   3. Installs Node.js 22 LTS via NVM
-#   4. Installs npm deps across root/backend/frontend
-#   5. Installs Aider (AI coding agent)
-#   6. Configures sudo askpass for non-interactive apt installs
-#   7. Installs watchdog (cron + systemd timer + logrotate)
-#
-# VPS Bootstrap Checklist (what this script does NOT automate):
-#   1. Git clone the repo:   git clone git@github.com:elgansayer/hellotalk.git
-#   2. Create .env file:     cp backend/.env.example .env && nano .env
-#      (fill in TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DEEPSEEK_API_KEY
-#       and all backend secrets from backend/.env.example)
-#   3. Set up SSH for GitHub: ssh-keygen && cat ~/.ssh/id_ed25519.pub
-#      (add to GitHub Settings -> SSH Keys so the swarm can push commits)
-#   4. Git config:           git config user.name "AI Swarm" && git config user.email "swarm@hellotalk.local"
-#   5. Install Docker:       curl -fsSL https://get.docker.com | sh
-#      (needed for docker-compose app services: api, web, redis, centrifugo, livekit)
-#   6. Run this script:      ./setup-debian.sh
-#   7. Launch the swarm:     ./kickoff.sh
-#   8. (Optional) Install the systemd watchdog timer:
-#      sudo cp config/systemd/swarm-watchdog.service /etc/systemd/system/
-#      sudo cp config/systemd/swarm-watchdog.timer /etc/systemd/system/
-#      sudo sed -i "s|User=%u|User=$(whoami)|g" /etc/systemd/system/swarm-watchdog.service
-#      sudo sed -i "s|%h/hellotalk|$(pwd)|g" /etc/systemd/system/swarm-watchdog.service
-#      sudo systemctl daemon-reload && sudo systemctl enable --now swarm-watchdog.timer
-#   9. (Optional) Install logrotate: sudo cp config/logrotate/ai-swarm /etc/logrotate.d/
-#
-# Usage: ./setup-debian.sh
-set -eo pipefail
+# Idempotent HelloTalk OpenHands factory bootstrap for Debian 13 and Ubuntu LTS.
+set -euo pipefail
 
-echo "=========================================="
-echo " Setting up HelloTalk on Debian instance "
-echo "=========================================="
+REPOSITORY_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FACTORY_REPOSITORY_URL="${FACTORY_REPOSITORY_URL:-https://github.com/elgansayer/elgl.git}"
+FACTORY_ROOT=/opt/hellotalk-factory
+FACTORY_STATE=/var/lib/hellotalk-factory
+FACTORY_LOG=/var/log/hellotalk-factory
+FACTORY_CONFIG=/etc/hellotalk-factory
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
+FACTORY_HOME=/home/dev
+# Optional secondary data volume. When mounted, worker image storage is
+# relocated there to keep the root disk from filling with permanent image
+# layers; see the Podman storage relocation block below.
+FACTORY_SECONDARY_VOLUME=/mnt/HC_Volume_106574422
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$(id -u)" -ne 0 ]; then
+  echo 'Run this bootstrap as root. It never stores or requests a sudo password.' >&2
+  exit 1
+fi
 
-# ---- 1. System packages ----
-echo "[1/7] Installing system packages..."
-sudo apt-get update -qq
-sudo apt-get install -y -qq \
-    curl git build-essential xz-utils ca-certificates \
-    tmux python3 python3-venv python3-pip \
-    jq logrotate \
-    libatk-bridge2.0-0 libatspi2.0-0 libcups2 libdrm2 \
-    libgbm1 libasound2 libxkbcommon0 libpango-1.0-0 \
-    libxcomposite1 libxdamage1 libxfixes3 libxrandr2
+# shellcheck disable=SC1091
+. /etc/os-release
+case "${ID}:${VERSION_ID}" in
+  debian:13|ubuntu:24.04|ubuntu:26.04) ;;
+  *) echo "Unsupported distribution: ${PRETTY_NAME}" >&2; exit 1 ;;
+esac
 
-# ---- 2. Swap (minimum 4 GiB) ----
-echo "[2/7] Ensuring swap file (>= 4 GiB)..."
-CURRENT_SWAP_KB=$(awk '/SwapTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
-if [ "$CURRENT_SWAP_KB" -lt 4194304 ]; then
-    SWAPFILE="/swapfile"
-    if [ -f "$SWAPFILE" ]; then
-        sudo swapoff "$SWAPFILE" 2>/dev/null || true
-        sudo rm -f "$SWAPFILE"
-    fi
-    echo "   Creating 4 GiB swap file (this may take a minute)..."
-    sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=4096 status=progress
-    sudo chmod 600 "$SWAPFILE"
-    sudo mkswap "$SWAPFILE"
-    sudo swapon "$SWAPFILE"
-    if ! grep -q "$SWAPFILE" /etc/fstab; then
-        echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab >/dev/null
-    fi
-    echo "   Swap active: $(free -h | grep Swap)"
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman sudo \
+  iproute2 python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux \
+  uidmap util-linux
+
+if apt-cache show libgtk-3-0t64 >/dev/null 2>&1; then
+  gtk_package=libgtk-3-0t64
 else
-    echo "   Swap already sufficient ($(free -h | grep Swap | awk '{print $2}'))."
+  gtk_package=libgtk-3-0
+fi
+DEBIAN_FRONTEND=noninteractive apt-get install -y "$gtk_package"
+
+install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
+  gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' |
+  tee /etc/apt/sources.list.d/nodesource.list >/dev/null
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+node_major="$(node --version | sed -E 's/^v([0-9]+).*/\1/')"
+if [ "$node_major" -lt 22 ]; then
+  echo "Node.js 22 or newer is required, found $(node --version)" >&2
+  exit 1
 fi
 
-# ---- 3. Node.js 22 LTS via NVM ----
-echo "[3/7] Installing Node.js 22 LTS..."
-export NVM_DIR="$HOME/.nvm"
-if [ ! -d "$NVM_DIR" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+if ! id "$FACTORY_USER" >/dev/null 2>&1; then
+  echo "Missing operator user: $FACTORY_USER. Create it before running this bootstrap." >&2
+  exit 1
 fi
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-nvm install 22
-nvm use 22
-nvm alias default 22
+if ! grep -q "^${FACTORY_USER}:" /etc/subuid; then
+  usermod --add-subuids 200000-265535 --add-subgids 200000-265535 "$FACTORY_USER"
+fi
+factory_uid="$(id -u "$FACTORY_USER")"
+loginctl enable-linger "$FACTORY_USER"
+systemctl start "user@${factory_uid}.service"
 
-NODE_BIN="$(which node || true)"
-NPM_BIN="$(which npm || true)"
-[ -n "$NODE_BIN" ] && sudo ln -sf "$NODE_BIN" /usr/local/bin/node
-[ -n "$NPM_BIN" ] && sudo ln -sf "$NPM_BIN" /usr/local/bin/npm
+install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 \
+  "$FACTORY_STATE" "$FACTORY_STATE/profiles" \
+  "$FACTORY_STATE/worktrees" "$FACTORY_STATE/recovery" \
+  "$FACTORY_STATE/conversations" "$FACTORY_LOG"
 
-if ! grep -q 'NVM_DIR' "$HOME/.bashrc" 2>/dev/null; then
-    {
-        echo ''
-        echo 'export NVM_DIR="$HOME/.nvm"'
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-    } >> "$HOME/.bashrc"
-fi
+# Worker image builds accumulate rootless Podman graph-storage layers
+# permanently (unlike the transient build-context checkout). Relocating that
+# storage off the root disk and onto the secondary volume, when one is
+# present, keeps repeated builds from tightening root disk headroom over
+# time. Podman is left on its default root-disk location when no secondary
+# volume is mounted.
+if [ -d "$FACTORY_SECONDARY_VOLUME" ] && mountpoint -q "$FACTORY_SECONDARY_VOLUME"; then
+  podman_storage="$FACTORY_SECONDARY_VOLUME/podman-storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$podman_storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$FACTORY_HOME/.config/containers"
+  podman_storage_conf="$FACTORY_HOME/.config/containers/storage.conf"
+  if [ ! -f "$podman_storage_conf" ]; then
+    cat > "$podman_storage_conf" <<EOF
+[storage]
+driver = "overlay"
+graphroot = "$podman_storage"
 
-# ---- 4. NPM dependencies ----
-echo "[4/7] Installing workspace dependencies..."
-if [ -f "$SCRIPT_DIR/package.json" ]; then
-    (cd "$SCRIPT_DIR" && npm install)
+[storage.options]
+EOF
+    chown "$FACTORY_USER:$FACTORY_USER" "$podman_storage_conf"
+  fi
 fi
-if [ -f "$SCRIPT_DIR/backend/package.json" ]; then
-    (cd "$SCRIPT_DIR/backend" && npm install)
-fi
-if [ -f "$SCRIPT_DIR/frontend/package.json" ]; then
-    (cd "$SCRIPT_DIR/frontend" && npm install)
-fi
-if [ -f "$SCRIPT_DIR/e2e/package.json" ]; then
-    (cd "$SCRIPT_DIR/e2e" && npm install)
-fi
+install -d -o root -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT" "$FACTORY_CONFIG"
 
-# ---- 5. Aider AI Coding Agent ----
-echo "[5/7] Installing Aider..."
-if ! command -v aider &> /dev/null; then
-    curl -LsSf https://aider.chat/install.sh | sh
+factory_environment_created=false
+if [ ! -f "$FACTORY_CONFIG/factory.env" ]; then
+  install -o root -g root -m 0600 \
+    "$REPOSITORY_SOURCE/config/systemd/factory.env.example" \
+    "$FACTORY_CONFIG/factory.env"
+  factory_environment_created=true
 fi
-
-# ---- 6. Sudo askpass (optional) ----
-echo "[6/7] Configuring sudo askpass helper..."
-mkdir -p "$SCRIPT_DIR/scripts"
-if [ ! -f "$SCRIPT_DIR/scripts/sudo-askpass.sh" ]; then
-    cat > "$SCRIPT_DIR/scripts/sudo-askpass.sh" << 'ASKPASS_EOF'
-#!/bin/bash
-PW_FILE="${HOME}/.swarm_sudo"
-if [ -f "$PW_FILE" ]; then
-    cat "$PW_FILE"
-else
-    exit 1
+if [ "$factory_environment_created" = true ] && [ -r "$REPOSITORY_SOURCE/.env" ]; then
+  "$REPOSITORY_SOURCE/scripts/install-factory-env.sh" "$REPOSITORY_SOURCE/.env"
 fi
-ASKPASS_EOF
-    chmod +x "$SCRIPT_DIR/scripts/sudo-askpass.sh"
-fi
-echo "   Set SWARM_SUDO_PW in .env or create ~/.swarm_sudo (chmod 600) for non-interactive sudo."
-
-# ---- 7. Watchdog (cron + systemd timer + logrotate) ----
-echo "[7/7] Installing watchdog (cron + systemd + logrotate)..."
-
-# Cron fallback (compatible with all Linux distros)
-WATCHDOG_CRON="*/5 * * * * cd $SCRIPT_DIR && ./scripts/watchdog.sh >> /tmp/watchdog.log 2>&1"
-if ! crontab -l 2>/dev/null | grep -q "watchdog.sh"; then
-    (crontab -l 2>/dev/null; echo "$WATCHDOG_CRON") | crontab -
-    echo "   Watchdog cron installed (every 5 min)."
-else
-    echo "   Watchdog cron already installed."
+factory_github_token="$({
+  set +u
+  # shellcheck disable=SC1090,SC1091
+  . "$FACTORY_CONFIG/factory.env"
+  printf '%s' "${GITHUB_TOKEN:-}"
+})"
+if [ -z "$factory_github_token" ]; then
+  echo "Set GITHUB_TOKEN in $FACTORY_CONFIG/factory.env before repository bootstrap." >&2
+  exit 1
 fi
 
-# Systemd timer (more robust: survives cron daemon crashes, has OnFailure hooks)
-if command -v systemctl &> /dev/null && [ -d /etc/systemd/system ]; then
-    if [ ! -f /etc/systemd/system/swarm-watchdog.service ]; then
-        sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.service" /etc/systemd/system/
-        sudo cp "$SCRIPT_DIR/config/systemd/swarm-watchdog.timer" /etc/systemd/system/
-        sudo sed -i "s|User=%u|User=$(whoami)|g" /etc/systemd/system/swarm-watchdog.service
-        sudo sed -i "s|%h/hellotalk|$SCRIPT_DIR|g" /etc/systemd/system/swarm-watchdog.service
-        sudo systemctl daemon-reload
-        sudo systemctl enable --now swarm-watchdog.timer
-        echo "   Systemd watchdog timer installed and started."
-    else
-        echo "   Systemd watchdog timer already installed."
-    fi
-else
-    echo "   Systemd not available - using cron only."
+factory_git() {
+  runuser -u "$FACTORY_USER" -- env \
+    HOME="$FACTORY_HOME" \
+    PATH="/usr/local/bin:/usr/bin:/bin" \
+    GH_TOKEN="$factory_github_token" \
+    "$@"
+}
+
+if [ ! -d "$FACTORY_STATE/repository/.git" ]; then
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$FACTORY_STATE/repository"
+  factory_git git -c credential.helper='!gh auth git-credential' \
+    clone "$FACTORY_REPOSITORY_URL" "$FACTORY_STATE/repository"
+fi
+factory_git git -C "$FACTORY_STATE/repository" remote set-url origin "$FACTORY_REPOSITORY_URL"
+factory_git git -C "$FACTORY_STATE/repository" config --unset-all credential.helper || true
+factory_git git -C "$FACTORY_STATE/repository" config --add credential.helper ''
+factory_git git -C "$FACTORY_STATE/repository" config --add credential.helper \
+  '!gh auth git-credential'
+factory_git git -C "$FACTORY_STATE/repository" config user.name 'HelloTalk Factory'
+factory_git git -C "$FACTORY_STATE/repository" config user.email \
+  'hellotalk-factory@users.noreply.github.com'
+factory_git git -C "$FACTORY_STATE/repository" fetch origin main
+factory_git git -C "$FACTORY_STATE/repository" switch main
+factory_git git -C "$FACTORY_STATE/repository" merge --ff-only origin/main
+
+python3 -m venv "$FACTORY_ROOT/venv-0.1.0"
+"$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install --upgrade 'pip==25.2'
+"$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install 'uv==0.12.5'
+VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
+  --active --frozen --inexact --no-editable --extra development \
+  --project "$REPOSITORY_SOURCE/automation"
+ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
+
+for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/repository/admin-portal"; do
+  if [ -f "$directory/package-lock.json" ]; then
+    sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
+  fi
+done
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
+  'cd "$1" && npm exec -- cypress install' _ "$FACTORY_STATE/repository/frontend"
+install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
+rsync -a --delete \
+  --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \
+  "$REPOSITORY_SOURCE/automation/" "$FACTORY_ROOT/build-context/"
+chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
+# Rootless Podman may inspect the inherited working directory. Enter the
+# service-owned build context before starting it because the source checkout
+# can be inaccessible to the service user.
+# $1 is intentionally expanded by the child shell.
+# shellcheck disable=SC2016
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
+  'cd "$1" && exec podman build \
+    --cgroup-manager=cgroupfs \
+    --tag localhost/hellotalk-factory-worker:current \
+    --file "$1/Containerfile" "$1"' _ "$FACTORY_ROOT/build-context"
+
+printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > "$FACTORY_CONFIG/runtime.env"
+chown root:"$FACTORY_USER" "$FACTORY_CONFIG/runtime.env"
+chmod 0640 "$FACTORY_CONFIG/runtime.env"
+install -o root -g "$FACTORY_USER" -m 0640 \
+  "$REPOSITORY_SOURCE/config/factory/agents.production.json" \
+  "$FACTORY_CONFIG/agents.example.json"
+if [ ! -f "$FACTORY_CONFIG/agents.json" ]; then
+  install -o root -g "$FACTORY_USER" -m 0640 \
+    "$REPOSITORY_SOURCE/config/factory/agents.production.json" \
+    "$FACTORY_CONFIG/agents.json"
 fi
 
-# Logrotate
-if [ ! -f /etc/logrotate.d/ai-swarm ] && [ -d /etc/logrotate.d ]; then
-    sudo cp "$SCRIPT_DIR/config/logrotate/ai-swarm" /etc/logrotate.d/ai-swarm
-    echo "   Logrotate config installed for swarm logs."
-else
-    echo "   Logrotate config already installed or logrotate.d missing."
-fi
+install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory.service" /etc/systemd/system/
+install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.service" /etc/systemd/system/
+install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.timer" /etc/systemd/system/
+install -o root -g root -m 0755 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-watchdog.sh" "$FACTORY_ROOT/hellotalk-factory-watchdog.sh"
+install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/logrotate/hellotalk-factory" /etc/logrotate.d/
+systemctl daemon-reload
 
-# ---- Done ----
-echo ""
-echo "=========================================="
-echo " Setup complete!"
-echo "   Node: $(node -v)"
-echo "   NPM:  $(npm -v)"
-echo "   Aider: $(aider --version 2>/dev/null || echo 'installed')"
-echo "   Swap: $(free -h | grep Swap)"
-echo ""
-echo " Notifications: Telegram only. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env."
-echo ""
-echo " Next steps:"
-echo "   1. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env"
-echo "   2. Set DEEPSEEK_API_KEY in .env"
-echo "   3. (Optional) Set SWARM_SUDO_PW in .env or create ~/.swarm_sudo"
-echo "   4. Run ./kickoff.sh to start the 24/7 swarm"
-echo "=========================================="
+echo "OpenHands SDK: $("$FACTORY_ROOT/venv/bin/python" -c 'import openhands.sdk; print(openhands.sdk.__version__)')"
+"$FACTORY_ROOT/venv/bin/python" -c 'from openhands.sdk import Agent, Conversation, LLM, LLMProfileStore, Tool; from openhands.sdk.llm import FallbackStrategy; from openhands.tools.terminal import TerminalTool; from openhands.tools.file_editor import FileEditorTool; print("OpenHands imports verified")'
+echo 'Bootstrap complete. Edit /etc/hellotalk-factory/factory.env, authenticate, then run doctor.'

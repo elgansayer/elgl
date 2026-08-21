@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, Component, input, output, signal } from '@angular/core';
+import { Pipe, PipeTransform, Component, input } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StickerStoreComponent } from './sticker-store.component';
@@ -36,8 +36,23 @@ class MockEmptyStateComponent {
 }
 
 const mockPacks: StickerPack[] = [
-  { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, owned: false },
-  { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500, owned: true },
+  {
+    id: 'stk_pack_1',
+    name: 'Happy Corgi Pack',
+    cost_coins: 50,
+    owned: false,
+    is_animated: false,
+    sticker_urls: ['assets/stickers/happy.png'],
+  },
+  {
+    id: 'stk_pack_4',
+    name: 'Golden Dragons',
+    cost_coins: 500,
+    owned: true,
+    is_animated: true,
+    sticker_urls: ['assets/stickers/dragon-fire.webm'],
+    animation_url: 'assets/animations/dragon.json',
+  },
 ];
 
 describe('StickerStoreComponent', () => {
@@ -96,6 +111,21 @@ describe('StickerStoreComponent', () => {
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
+    const coinDisplay = fixture.nativeElement.querySelector('app-pill');
+    if (coinDisplay) {
+      const html = coinDisplay.outerHTML;
+      expect(html).not.toMatch(/\bpl-\d/);
+      expect(html).not.toMatch(/\bpr-\d/);
+      expect(html).not.toMatch(/\bml-\d/);
+      expect(html).not.toMatch(/\bmr-\d/);
+    }
+    // Verify no physical direction classes exist in the entire component
+    const componentHtml = fixture.nativeElement.innerHTML;
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
 
   it('should load sticker packs on init', async () => {

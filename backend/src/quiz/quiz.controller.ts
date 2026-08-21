@@ -1,5 +1,12 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
-import { QuizService, QuizResults } from './quiz.service';
+import { QuizService } from './quiz.service';
+
+interface QuizSubmission {
+  score: number;
+  maxScore: number;
+  suggestedLevel: string;
+  answers: Record<string, number>;
+}
 
 @Controller('quiz')
 export class QuizController {
@@ -11,7 +18,7 @@ export class QuizController {
   }
 
   @Post('results')
-  submitResults(@Body() results: QuizResults) {
+  submitResults(@Body() results: QuizSubmission) {
     return this.quizService.submitResults(results);
   }
 }

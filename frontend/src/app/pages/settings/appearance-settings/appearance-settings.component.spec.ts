@@ -1,12 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
-import { signal } from '@angular/core';
+import { signal, Pipe, PipeTransform } from '@angular/core';
 import { AppearanceSettingsComponent } from './appearance-settings.component';
 import { I18nService } from '../../../services/i18n.service';
 import { FontScaleService } from '../../../services/font-scale.service';
 import { ThemeService } from '../../../services/theme.service';
 import { UserService } from '../../../services/user.service';
+import { TranslatePipe } from '../../../services/translate.pipe';
+
+// A minimal stub pipe so we do not depend on the real I18nService translation dictionary
+@Pipe({ name: 't', standalone: true })
+class MockTranslatePipe implements PipeTransform {
+  transform(key: string, _params?: Record<string, unknown>): string {
+    return key;
+  }
+}
 
 describe('AppearanceSettingsComponent', () => {
   let component: AppearanceSettingsComponent;
@@ -23,21 +32,24 @@ describe('AppearanceSettingsComponent', () => {
       translate: vi.fn((key: string) => key),
       setLanguage: vi.fn(),
       availableLanguages: [
-        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English' },
-        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish' },
+        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English', isRtl: false },
+        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish', isRtl: false },
       ],
     };
 
     themeServiceMock = {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
+      setPrimaryAccentColor: vi.fn(),
+      primaryAccentColor: signal('#4f46e5'),
+      loadFromProfile: vi.fn(),
     };
 
     fontScaleServiceMock = {
       scaleFactor: signal(1.0),
       setScale: vi.fn(),
       min: 0.8,
-      max: 1.2,
+      max: 1.5,
       step: 0.05,
     };
 
@@ -76,7 +88,12 @@ describe('AppearanceSettingsComponent', () => {
         { provide: UserService, useValue: userServiceMock },
         { provide: Location, useValue: locationMock },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(AppearanceSettingsComponent, {
+        remove: { imports: [TranslatePipe, FontScaleService] },
+        add: { imports: [MockTranslatePipe] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(AppearanceSettingsComponent);
     component = fixture.componentInstance;
@@ -93,10 +110,10 @@ describe('AppearanceSettingsComponent', () => {
     expect(themeServiceMock.setTheme).toHaveBeenCalledWith('dark');
   });
 
-  it('should set the font scale from input event', () => {
-    const event = { target: { value: '110' } } as unknown as Event;
-    component.onFontScaleChange(event);
-    expect(fontScaleServiceMock.setScale).toHaveBeenCalledWith(1.1);
+  it('should render font scale percent label', () => {
+    fontScaleServiceMock.scaleFactor?.set(1.1);
+    fixture.detectChanges();
+    expect(component.fontScalePercentLabel()).toBe('110%');
   });
 
   it('should navigate back', () => {
@@ -109,12 +126,8 @@ describe('AppearanceSettingsComponent', () => {
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
-  it('should change language from select event', () => {
-    const select = document.createElement('select');
-    select.value = 'es';
-    Object.defineProperty(select, 'value', { value: 'es' });
-    const event = { target: select } as unknown as Event;
-    component.onLanguageSelect(event);
+  it('should change language from the select value change', () => {
+    component.onLanguageValueChange('es');
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
@@ -127,6 +140,47 @@ describe('AppearanceSettingsComponent', () => {
   it('should not set accent colour when not VIP', () => {
     component.isVip.set(false);
     component.setAccentColor('#e11d48');
+    expect(component.primaryAccentColor()).toBe('#4f46e5');
+  });
+
+  it('should update theme service accent colour when profile loads', async () => {
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  });
+
+  it('should update theme service accent colour on save', async () => {
+    component.primaryAccentColor.set('#e11d48');
+    await component.saveSettings();
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
+  });
+
+  it('should set custom colour from color input when VIP', () => {
+    component.isVip.set(true);
+    const input = document.createElement('input');
+    input.value = '#ff6b6b';
+    Object.defineProperty(input, 'value', { value: '#ff6b6b' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
+    expect(component.primaryAccentColor()).toBe('#ff6b6b');
+  });
+
+  it('should set custom colour from text input when VIP', () => {
+    component.isVip.set(true);
+    const input = document.createElement('input');
+    input.value = '#c0ffee';
+    Object.defineProperty(input, 'value', { value: '#c0ffee' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
+    expect(component.primaryAccentColor()).toBe('#c0ffee');
+  });
+
+  it('should not set custom colour when not VIP', () => {
+    component.isVip.set(false);
+    component.primaryAccentColor.set('#4f46e5');
+    const input = document.createElement('input');
+    input.value = '#badbad';
+    Object.defineProperty(input, 'value', { value: '#badbad' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
 });

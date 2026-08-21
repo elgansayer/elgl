@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Admin Moderation Dashboard. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Moderation] High pending report backlog",
+      "type": "query alert",
+      "query": "max(last_30m):max:hellotalk_ts_pending_reports{*} > 50",
+      "message": "{{#is_alert}}\nThe moderation queue has {{value}} pending reports over the last 30 minutes. This may indicate moderator unavailability or a surge in user reports.\n\n**Current value:** {{value}}\n**Threshold:** 50\n\n**Actions:**\n1. Check the moderation dashboard for report details.\n2. Verify moderator accounts are active and have access.\n3. Investigate whether a specific user or automated attack is generating reports.\n4. Consider temporarily enabling stricter rate limiting on the report endpoint.\n{{/is_alert}}\n\n{{#is_warning}}\nModeration queue approaching backlog threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 50,
+          "warning": 25
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moderation] Report creation spike by category",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_ts_reports_submitted_total{*} by {reason_category}.as_rate() > 10",
+      "message": "{{#is_alert}}\nThe report submission rate for reason '{{reason_category.name}}' has spiked to {{value}}/s over the last 15 minutes. This may indicate a coordinated abuse campaign or trending toxic event.\n\n**Current value:** {{value}} reports/s\n**Threshold:** 10 reports/s\n\n**Actions:**\n1. Check the reports table for common reporters or reported users.\n2. Verify the Supabase database is healthy.\n3. If a single reporter is flooding, review their account.\n4. Cross-reference with Centrifugo/WebSocket channels for correlated user complaints.\n{{/is_alert}}\n\n{{#is_warning}}\nReport creation rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moderation] No moderation activity for 30 minutes",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_ts_moderation_actions_total{*} by {action}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo moderation actions (approve/reject) have been recorded in the last 30 minutes. This could indicate moderator disengagement, an API outage, or a halt in moderation activity.\n\n**Actions:**\n1. Check the moderation API health endpoint.\n2. Verify moderator accounts can authenticate and access the dashboard.\n3. Check for deployment or infrastructure incidents.\n4. Review the NestJS backend logs for errors in ModerationController.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:critical", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 30,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Moderation] High average dating risk score",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_ts_dating_risk_score{*} > 70",
+      "message": "{{#is_alert}}\nThe average dating-behaviour risk score from moderator analyses has exceeded 70 over the last 15 minutes. This indicates a cluster of high-risk users being analysed via the moderation dashboard.\n\n**Current value:** {{value}}\n**Threshold:** 70\n\n**Actions:**\n1. Review the recent analyses in the moderation dashboard.\n2. Check if a specific region or language pair is driving the high scores.\n3. Consider whether newly registered accounts are skewing the metric.\n4. Audit flagged users for coordinated platform abuse.\n{{/is_alert}}\n\n{{#is_warning}}\nAverage risk score trending high.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 180,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 70,
+          "warning": 50
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moderation] Action latency spike",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_ts_moderation_queue_latency_seconds{*} by {action} > 5",
+      "message": "{{#is_alert}}\nThe average moderation action duration (action: {{action.name}}) has exceeded 5 seconds over the last 10 minutes. Moderation actions should be near-instant as they are simple database updates.\n\n**Current value:** {{value}}s\n**Threshold:** 5s\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance on the reports table.\n2. Inspect for missing indexes on reports.id or reports.status.\n3. Check for connection pool exhaustion or rate limiting.\n4. Verify the NestJS backend is not CPU-bound.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        }
+      }
+    },
+    {
+      "name": "[Moderation] Rejection rate anomaly",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_ts_moderation_actions_total{action:reject} by {type}.as_rate() > 20",
+      "message": "{{#is_alert}}\nThe moderation rejection rate has exceeded 20/s (type: {{type.name}}) over the last 30 minutes. This could indicate a bulk cleanup operation, an automated moderation rule misfiring, or moderator error.\n\n**Current value:** {{value}} rejections/s\n**Threshold:** 20/s\n\n**Actions:**\n1. Check the reports table for recently rejected items and verify correctness.\n2. Review moderator activity logs.\n3. If an automated rule is involved, temporarily pause it and review thresholds.\n4. Ensure rejected content is properly archived before removal.\n{{/is_alert}}\n\n{{#is_warning}}\nRejection rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:trust-and-safety", "severity:warning", "feature:moderation-dashboard"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        }
+      }
+    }
+  ]
+}

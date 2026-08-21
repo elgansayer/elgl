@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +7,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [CommonModule, FormsModule],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -17,11 +19,12 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
           <span>💬 Synchronised room chat and subtitles</span>
         </span>
         <button
+          hlmBtn
           (click)="activeTab.set(activeTab() === 'chat' ? 'subtitles' : 'chat')"
           [class]="
             'px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-colors ' +
             (activeTab() === 'subtitles'
-              ? 'bg-purple-600 text-white'
+              ? 'bg-secondary text-on-fill'
               : 'bg-surface-100 text-text-primary')
           "
         >
@@ -63,8 +66,8 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
-            <div class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200">
-              <span class="font-bold text-[10px] text-purple-900 block mb-1"
+            <div class="p-2.5 rounded-xl bg-secondary/10 border border-secondary/30">
+              <span class="font-bold text-[10px] text-secondary block mb-1"
                 >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
               >
               <p class="text-xs font-medium text-text-primary">
@@ -78,6 +81,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       @if (activeTab() === 'chat') {
         <div class="p-3 bg-surface-300 border-t border-surface-100 flex gap-2">
           <input
+            hlmInput
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
@@ -85,8 +89,9 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
           <button
+            hlmBtn
             (click)="send()"
-            class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow"
+            class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-on-fill rounded-xl font-bold text-xs shadow"
           >
             Send
           </button>
@@ -94,23 +99,26 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
       }
 
       @if (activeTab() === 'subtitles' && store.isSpeaker()) {
-        <div class="p-3 bg-purple-500/10 border-t border-purple-200 flex gap-2">
+        <div class="p-3 bg-secondary/10 border-t border-secondary/30 flex gap-2">
           <input
+            hlmInput
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
             placeholder="Simulate speech-to-text live subtitle broadcast..."
-            class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-purple-600"
+            class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-secondary"
           />
           <button
+            hlmBtn
             (click)="sendSubtitle()"
-            class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
+            class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >
             Broadcast caption
           </button>
           <button
+            hlmBtn
             (click)="broadcastAICaption()"
-            class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
+            class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >
             Broadcast AI Caption
           </button>

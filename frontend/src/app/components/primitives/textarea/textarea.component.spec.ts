@@ -75,6 +75,18 @@ describe('AppTextareaComponent', () => {
     expect(textareaElement.placeholder).toBe('Tell us about yourself...');
   });
 
+  it('should generate a secure default textarea ID when none is provided', () => {
+    const generatedFixture = TestBed.createComponent(AppTextareaComponent);
+    generatedFixture.detectChanges();
+    const generatedTextarea: HTMLTextAreaElement =
+      generatedFixture.nativeElement.querySelector('textarea');
+
+    expect(generatedTextarea.id).toMatch(
+      /^app-textarea-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    generatedFixture.destroy();
+  });
+
   it('should emit valueChange on input event when not disabled', () => {
     textareaElement.value = 'updated bio text';
     textareaElement.dispatchEvent(new Event('input'));
@@ -89,12 +101,13 @@ describe('AppTextareaComponent', () => {
     expect(host.blurCount).toBe(1);
   });
 
-  it('should apply disabled styles and not emit valueChange when disabled', () => {
+  it('should apply owned Helm disabled semantics and not emit valueChange when disabled', () => {
     host.disabled.set(true);
     fixture.detectChanges();
 
     expect(textareaElement.disabled).toBe(true);
-    expect(textareaElement.classList.contains('cursor-not-allowed')).toBe(true);
+    expect(textareaElement.classList.contains('disabled:cursor-not-allowed')).toBe(true);
+    expect(textareaElement.classList.contains('disabled:opacity-50')).toBe(true);
 
     textareaElement.value = 'ignored text';
     textareaElement.dispatchEvent(new Event('input'));

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { User } from '@supabase/supabase-js';
@@ -7,11 +8,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('DailyTipController', () => {
   let controller: DailyTipController;
-  let service: { getTodayTipForUser: jest.Mock };
+  let service: { getTodayTipForUser: Mock };
 
   beforeEach(async () => {
     service = {
-      getTodayTipForUser: jest
+      getTodayTipForUser: vi
         .fn()
         .mockResolvedValue('Practise a little every day.'),
     };
@@ -21,7 +22,7 @@ describe('DailyTipController', () => {
       providers: [{ provide: DailyTipService, useValue: service }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<DailyTipController>(DailyTipController);

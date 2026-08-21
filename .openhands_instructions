@@ -1,10 +1,31 @@
 # OpenHands Instructions for HelloTalk
 
-Welcome to the HelloTalk project! When you start a task, you **MUST** read and adhere to `AGENTS.md` or `SPEC.md` if available.
+Welcome to the HelloTalk project. Before starting any task, you **MUST** read and follow:
 
-## Key Directives:
-1. **GitHub Projects & Issues**: When you start a task, use the `gh issue view <issue_number>` command to understand the full context and requirements. If the issue is part of a GitHub Project, use `gh project item-edit` to update its status.
-2. **Verification Gate**: Before you consider a task complete, you must run local tests (e.g. `npm run test` or `jest` in the backend, `ng test` in frontend) to ensure you did not break existing functionality. Code must pass linting and tests before you push.
-3. **Clean Commits**: Ensure your commits are descriptive.
+1. `docs/factory/ACTIVE_ARCHITECTURE.md` for the authoritative autonomous-coding architecture.
+2. `AGENTS.md` for repository-wide engineering instructions.
+3. `SPEC.md` when present and relevant to the task.
 
-Read `AGENTS.md` thoroughly before starting.
+## Non-negotiable architecture
+
+The active autonomous coding system is the OpenHands Factory daemon on the VPS. The retired AI swarm, Aider workers, swarm watchdogs, legacy guardians, resolver/reviewer daemons, and other pre-OpenHands orchestration are not active systems and must never be invoked, restored, used as fallbacks, or treated as authoritative state.
+
+The default provider order is conversation-scoped:
+
+1. ChatGPT/OpenAI subscription OAuth through OpenHands `LLM.subscription_login(vendor="openai", ...)` using the configured supported Codex model.
+2. OpenCode Go.
+3. No third provider by default. Gemini is explicit opt-in only.
+
+Do not replace conversation-scoped provider selection with a per-call cross-provider fallback chain for multi-turn agent conversations.
+
+## Key directives
+
+1. **GitHub issues are the work queue**: use `gh issue view <issue_number>` to read the full issue and acceptance criteria. If the issue belongs to a GitHub Project, update its status through the supported GitHub workflow.
+2. **One task attempt, one bounded OpenHands conversation**: preserve task isolation and let the Factory own retries, leases, provider selection, recovery, and reconciliation.
+3. **Verification gate**: run the relevant local tests, lint, type checks, builds, and Factory quality/security gates before considering work complete.
+4. **Pull requests only**: use descriptive commits and branches. Never push autonomous work directly to protected `main` and never bypass required checks.
+5. **Credential boundary**: never copy controller OAuth caches, GitHub tokens, Telegram credentials, environment secrets, or unrelated host credentials into worker containers, task prompts, logs, commits, or PRs.
+6. **Legacy isolation**: if old swarm scripts, services, queues, state, tmux sessions, cron entries, or documentation are discovered, treat them as retired. Do not consume their state. Remove them when safe or clearly mark historical material as retired.
+7. **Architecture changes require explicit review**: provider order, authentication, isolation, merge authority, and legacy-system reactivation require changes to `docs/factory/ACTIVE_ARCHITECTURE.md` plus corresponding tests.
+
+Read the architecture contract and `AGENTS.md` thoroughly before making changes.
