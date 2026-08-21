@@ -1,12 +1,4 @@
-import {
-  Directive,
-  ElementRef,
-  OnDestroy,
-  Renderer2,
-  effect,
-  inject,
-  input,
-} from '@angular/core';
+import { Directive, ElementRef, OnDestroy, Renderer2, effect, inject, input } from '@angular/core';
 
 const VIEW_TRANSITION_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 
@@ -22,7 +14,7 @@ const VIEW_TRANSITION_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 })
 export class ViewTransitionNameDirective implements OnDestroy {
   readonly appViewTransitionName = input.required<string>();
-  readonly disabled = input(false, { alias: 'appViewTransitionDisabled' });
+  readonly appViewTransitionDisabled = input(false);
 
   private readonly element = inject(ElementRef<HTMLElement>);
   private readonly renderer = inject(Renderer2);
@@ -30,7 +22,7 @@ export class ViewTransitionNameDirective implements OnDestroy {
   constructor() {
     effect(() => {
       const name = this.appViewTransitionName().trim();
-      if (this.disabled()) {
+      if (this.appViewTransitionDisabled()) {
         this.removeName();
         return;
       }
@@ -39,11 +31,7 @@ export class ViewTransitionNameDirective implements OnDestroy {
           'View transition names must begin with a letter and contain only letters, numbers, hyphens or underscores',
         );
       }
-      this.renderer.setStyle(
-        this.element.nativeElement,
-        'view-transition-name',
-        name,
-      );
+      this.renderer.setStyle(this.element.nativeElement, 'view-transition-name', name);
     });
   }
 
@@ -52,9 +40,6 @@ export class ViewTransitionNameDirective implements OnDestroy {
   }
 
   private removeName(): void {
-    this.renderer.removeStyle(
-      this.element.nativeElement,
-      'view-transition-name',
-    );
+    this.renderer.removeStyle(this.element.nativeElement, 'view-transition-name');
   }
 }
