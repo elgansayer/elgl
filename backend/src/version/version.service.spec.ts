@@ -1,7 +1,8 @@
+import type { Mock } from 'vitest';
 import { VersionService } from './version.service';
 
 describe('VersionService', () => {
-  let fetchMock: jest.Mock;
+  let fetchMock: Mock;
   const originalFetch = (global as any).fetch;
 
   beforeAll(() => {
@@ -22,12 +23,12 @@ describe('VersionService', () => {
   });
 
   beforeEach(() => {
-    fetchMock = jest.fn();
+    fetchMock = vi.fn();
     (global as any).fetch = fetchMock;
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should have currentVersion from environment', () => {

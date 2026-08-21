@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -9,8 +10,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-join-group',
-  standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [HlmButton, TranslatePipe, RouterLink],
   templateUrl: './join-group.component.html',
 })
 export class JoinGroupComponent {

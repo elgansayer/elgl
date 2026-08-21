@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 
 /**
  * Detailed translation result that includes the main translation,
@@ -20,7 +21,11 @@ export class TranslationService {
   private readonly translationCache = new Map<string, string>();
   private readonly detectionCache = new Map<string, string>();
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @InjectPinoLogger(TranslationService.name)
+    private readonly logger: PinoLogger,
+  ) {
     this.deeplApiKey = this.configService.get<string>('DEEPL_API_KEY');
   }
 
@@ -60,7 +65,10 @@ export class TranslationService {
       });
 
       if (!detectRes.ok) {
-        console.warn('Language detection failed, falling back to en');
+        this.logger.warn(
+          { status: detectRes.status, textLength: trimmed.length },
+          'Language detection failed, falling back to en',
+        );
         return 'en';
       }
 
@@ -86,8 +94,11 @@ export class TranslationService {
       }
 
       return 'en';
-    } catch {
-      console.warn('Language detection error, falling back to en');
+    } catch (err) {
+      this.logger.warn(
+        { error: (err as Error).message, textLength: trimmed.length },
+        'Language detection error, falling back to en',
+      );
       return 'en';
     }
   }
@@ -128,7 +139,14 @@ export class TranslationService {
       });
 
       if (!response.ok) {
-        console.warn(`Translation API returned ${response.status}`);
+        this.logger.warn(
+          {
+            status: response.status,
+            sourceLang: sourceLang.toUpperCase(),
+            targetLang: targetLang.toUpperCase(),
+          },
+          `Translation API returned ${response.status}`,
+        );
         return text;
       }
 
@@ -152,9 +170,16 @@ export class TranslationService {
 
       this.translationCache.set(key, text);
       return text;
-    } catch {
+    } catch (err) {
       this.translationCache.set(key, text);
-      console.warn('Translation error, returning original text');
+      this.logger.warn(
+        {
+          error: (err as Error).message,
+          sourceLang: sourceLang.toUpperCase(),
+          targetLang: targetLang.toUpperCase(),
+        },
+        'Translation error, returning original text',
+      );
       return text;
     }
   }

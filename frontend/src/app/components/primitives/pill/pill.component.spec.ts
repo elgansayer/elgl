@@ -1,22 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { AppPillComponent } from './pill.component';
-import { I18nService } from '../../../services/i18n.service';
-
-const colourClassMap: Record<string, string> = {
-  'pill.colour_primary': 'bg-primary/10 text-primary',
-  'pill.colour_success': 'bg-emerald-500/20 text-emerald-400',
-  'pill.colour_warning': 'bg-yellow-500/20 text-yellow-400',
-  'pill.colour_danger': 'bg-red-500/20 text-red-400',
-  'pill.colour_info': 'bg-sky-500/20 text-sky-400',
-  'pill.colour_neutral': 'bg-slate-500/20 text-slate-400',
-};
-
-class MockI18nService {
-  translate(key: string): string {
-    return colourClassMap[key] ?? '';
-  }
-}
 
 @Component({
   template: `
@@ -42,9 +26,6 @@ describe('AppPillComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestHostComponent, AppPillComponent],
-      providers: [
-        { provide: I18nService, useClass: MockI18nService },
-      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
@@ -86,16 +67,16 @@ describe('AppPillComponent', () => {
     expect(pillElement.classList.contains('items-center')).toBe(true);
     expect(pillElement.classList.contains('justify-center')).toBe(true);
     expect(pillElement.classList.contains('font-extrabold')).toBe(true);
-    expect(pillElement.classList.contains('rounded-full')).toBe(true);
+    expect(pillElement.classList.contains('rounded-pill')).toBe(true);
   });
 
-  it('should apply success colour and md logical size classes', () => {
+  it('should apply success colour (token-driven, not i18n-smuggled) and md logical size classes', () => {
     host.colour.set('success');
     host.size.set('md');
     fixture.detectChanges();
 
-    expect(pillElement.classList.contains('bg-emerald-500/20')).toBe(true);
-    expect(pillElement.classList.contains('text-emerald-400')).toBe(true);
+    expect(pillElement.classList.contains('bg-success')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
     expect(pillElement.classList.contains('ps-3')).toBe(true);
     expect(pillElement.classList.contains('pe-3')).toBe(true);
     expect(pillElement.classList.contains('py-1')).toBe(true);
@@ -108,8 +89,8 @@ describe('AppPillComponent', () => {
     host.customClass.set('pill-custom');
     fixture.detectChanges();
 
-    expect(pillElement.classList.contains('bg-primary/10')).toBe(true);
-    expect(pillElement.classList.contains('text-primary')).toBe(true);
+    expect(pillElement.classList.contains('bg-primary')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
     expect(pillElement.classList.contains('ps-2')).toBe(true);
     expect(pillElement.classList.contains('pe-2')).toBe(true);
     expect(pillElement.classList.contains('py-0.5')).toBe(true);
@@ -120,22 +101,22 @@ describe('AppPillComponent', () => {
   it('should apply warning colour classes', () => {
     host.colour.set('warning');
     fixture.detectChanges();
-    expect(pillElement.classList.contains('bg-yellow-500/20')).toBe(true);
-    expect(pillElement.classList.contains('text-yellow-400')).toBe(true);
+    expect(pillElement.classList.contains('bg-warning')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
   });
 
   it('should apply danger colour classes', () => {
     host.colour.set('danger');
     fixture.detectChanges();
-    expect(pillElement.classList.contains('bg-red-500/20')).toBe(true);
-    expect(pillElement.classList.contains('text-red-400')).toBe(true);
+    expect(pillElement.classList.contains('bg-danger')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
   });
 
-  it('should apply info colour classes', () => {
+  it('should apply info colour classes using the secondary (Tide) token', () => {
     host.colour.set('info');
     fixture.detectChanges();
-    expect(pillElement.classList.contains('bg-sky-500/20')).toBe(true);
-    expect(pillElement.classList.contains('text-sky-400')).toBe(true);
+    expect(pillElement.classList.contains('bg-secondary')).toBe(true);
+    expect(pillElement.classList.contains('text-on-fill')).toBe(true);
   });
 
   it('should use default neutral colour and md size classes when no inputs are provided', () => {
@@ -145,8 +126,8 @@ describe('AppPillComponent', () => {
     host.customClass.set('');
     fixture.detectChanges();
 
-    expect(pillElement.classList.contains('bg-slate-500/20')).toBe(true);
-    expect(pillElement.classList.contains('text-slate-400')).toBe(true);
+    expect(pillElement.classList.contains('bg-surface-100')).toBe(true);
+    expect(pillElement.classList.contains('text-text-primary')).toBe(true);
     expect(pillElement.classList.contains('ps-3')).toBe(true);
     expect(pillElement.classList.contains('pe-3')).toBe(true);
   });

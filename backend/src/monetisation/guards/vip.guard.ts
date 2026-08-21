@@ -26,8 +26,10 @@ export class VipGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as { id?: string } | undefined;
+    const request = context.switchToHttp().getRequest<{
+      user?: { id?: string };
+    }>();
+    const user = request.user;
     if (!user?.id) {
       throw new ForbiddenException('Authentication required');
     }

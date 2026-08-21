@@ -1,0 +1,134 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for Escrow Payments (#2381). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Escrow] High volume of held escrow transactions",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrow_total_held{*} > 500",
+      "message": "{{#is_alert}}\nThe number of escrow transactions in held status has exceeded 500 over the last 10 minutes. This may indicate a growing backlog of unreleased or unrefunded escrows.\n\n**Current value:** {{value}}\n**Threshold:** 500\n\n**Actions:**\n1. Check if the release/refund API endpoints are healthy.\n2. Investigate whether users are failing to complete transactions.\n3. Check for stalled escrow cleanup jobs.\n{{/is_alert}}\n\n{{#is_warning}}\nHeld escrow count approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 500,
+          "warning": 250
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Escrow] High total coin value held in escrow",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrow_total_coins_held{*} > 50000",
+      "message": "{{#is_alert}}\nThe total coin value held in escrow has exceeded 50,000 coins. This represents significant locked user funds and may indicate a problem with the release/refund flow.\n\n**Current value:** {{value}}\n**Threshold:** 50,000 coins\n\n**Actions:**\n1. Audit recent escrow transactions for anomalies.\n2. Check if large-value escrows are stuck.\n3. Verify the expiry cleanup job is running.\n{{/is_alert}}\n\n{{#is_warning}}\nTotal coins held approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 50000,
+          "warning": 25000
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Escrow] Stale escrow transactions not clearing",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrow_stale_held_count{*} > 20",
+      "message": "{{#is_alert}}\nMore than 20 escrow transactions have been held for over 30 days without being released or refunded. The auto-cleanup job may not be functioning correctly.\n\n**Current value:** {{value}}\n**Threshold:** 20\n\n**Actions:**\n1. Check the EscrowMetricsAggregator cron job logs.\n2. Verify the escrow cleanup timer is running in EscrowService.\n3. Manually audit and resolve stale escrows if necessary.\n{{/is_alert}}\n\n{{#is_warning}}\nStale escrow count approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 360,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        }
+      }
+    },
+    {
+      "name": "[Escrow] Escrow creation rate zero activity",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrow_transactions_created_total{*} by {status}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo escrow transactions have been created in the last 10 minutes. This could indicate a complete outage of the escrow creation pipeline or zero user engagement.\n\n**Actions:**\n1. Check the escrow API health endpoint.\n2. Verify the NestJS backend is running and the Supabase connection is healthy.\n3. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 10,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Escrow] High auto-refund rate",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_escrow_auto_refund_total{*} > 50",
+      "message": "{{#is_alert}}\nMore than 50 escrow transactions have been auto-refunded in the last hour. This indicates a high volume of stale transactions being cleaned up, which may point to a user-experience problem where escrows are not being released or refunded manually.\n\n**Current value:** {{value}}\n**Threshold:** 50\n\n**Actions:**\n1. Investigate why escrows are expiring without manual resolution.\n2. Check if there was a batch of abandoned transactions.\n3. Review user complaints related to escrow timeouts.\n{{/is_alert}}\n\n{{#is_warning}}\nAuto-refund rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 50,
+          "warning": 20
+        }
+      }
+    },
+    {
+      "name": "[Escrow] High refund-to-release ratio",
+      "type": "query alert",
+      "query": "avg(last_1h):(avg:hellotalk_escrow_transactions_refunded_total{*} by {reason}.as_count() / avg:hellotalk_escrow_transactions_released_total{*}.as_count()) > 0.5",
+      "message": "{{#is_alert}}\nThe ratio of refunded to released escrow transactions has exceeded 0.5 (50%) over the last hour. A high refund rate may indicate disputes, unsatisfactory service delivery, or a UX issue where users are not completing transactions successfully.\n\n**Current value:** {{value}}\n**Threshold:** 0.5\n\n**Actions:**\n1. Review recent dispute reasons in the escrow_transactions table.\n2. Check for patterns in refunded transactions (specific users, amounts, time periods).\n3. Investigate whether the escrow flow needs UX improvements.\n{{/is_alert}}\n\n{{#is_warning}}\nRefund-to-release ratio elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.5,
+          "warning": 0.3
+        }
+      }
+    },
+    {
+      "name": "[Escrow] Degraded queue backing up",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrow_degraded_queue_size{*} > 100",
+      "message": "{{#is_alert}}\nThe escrow degraded (fallback) queue has grown beyond 100 items. This indicates that the primary database is unavailable and escrow operations are being buffered in Redis.\n\n**Current value:** {{value}}\n**Threshold:** 100\n\n**Actions:**\n1. Check Supabase / PostgreSQL database health.\n2. Investigate why the circuit breaker is open.\n3. Verify the EscrowQueueWorker is processing the backlog.\n{{/is_alert}}\n\n{{#is_warning}}\nDegraded queue size approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:escrow", "severity:critical"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 100,
+          "warning": 50
+        }
+      }
+    }
+  ]
+}

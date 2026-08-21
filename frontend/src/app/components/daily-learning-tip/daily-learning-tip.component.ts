@@ -14,13 +14,13 @@ interface DailyTipResponse {
   imports: [TranslatePipe, AppCardComponent],
   template: `
     <app-card variant="default" padding="md" customClass="space-y-2">
-      <h2 class="text-sm uppercase tracking-wider text-gray-400 font-medium">
+      <h2 class="text-sm uppercase tracking-wider text-text-muted font-medium">
         {{ 'home.dailyTip.title' | t }}
       </h2>
       @if (tipResource.isLoading()) {
-        <p class="text-sm text-gray-400">{{ 'home.dailyTip.loading' | t }}</p>
+        <p class="text-sm text-text-muted">{{ 'home.dailyTip.loading' | t }}</p>
       } @else {
-        <p class="text-base text-white">{{ tip() }}</p>
+        <p class="text-base text-text-primary">{{ tip() }}</p>
       }
     </app-card>
   `,

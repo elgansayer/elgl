@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AchievementsController } from './achievements.controller';
 import { AchievementsService } from './achievements.service';
@@ -6,18 +7,18 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 describe('AchievementsController', () => {
   let controller: AchievementsController;
   let service: {
-    listAchievements: jest.Mock;
-    getUserAchievements: jest.Mock;
-    getFullAchievements: jest.Mock;
-    evaluateAchievements: jest.Mock;
+    listAchievements: Mock;
+    getUserAchievements: Mock;
+    getFullAchievements: Mock;
+    evaluateAchievements: Mock;
   };
 
   beforeEach(async () => {
     service = {
-      listAchievements: jest.fn().mockResolvedValue([]),
-      getUserAchievements: jest.fn().mockResolvedValue([]),
-      getFullAchievements: jest.fn().mockResolvedValue([]),
-      evaluateAchievements: jest.fn().mockResolvedValue(undefined),
+      listAchievements: vi.fn().mockResolvedValue([]),
+      getUserAchievements: vi.fn().mockResolvedValue([]),
+      getFullAchievements: vi.fn().mockResolvedValue([]),
+      evaluateAchievements: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({

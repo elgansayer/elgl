@@ -1,11 +1,13 @@
-<div class="min-h-screen bg-surface p-6 text-on-surface">
+<div class="min-h-screen bg-surface-500 p-6 text-text-primary">
+  <app-admin-offline-banner />
   <h1 class="mb-4 text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h1>
 
   <div class="mb-4 flex gap-2">
     <button
+      hlmBtn
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'profile'"
-      [class.text-white]="type() === 'profile'"
+      [class.text-on-fill]="type() === 'profile'"
       [class.bg-surface-100]="type() !== 'profile'"
       [class.text-text-secondary]="type() !== 'profile'"
       (click)="setType('profile')"
@@ -13,9 +15,10 @@
       {{ 'moderation.profiles' | t }}
     </button>
     <button
+      hlmBtn
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'moment'"
-      [class.text-white]="type() === 'moment'"
+      [class.text-on-fill]="type() === 'moment'"
       [class.bg-surface-100]="type() !== 'moment'"
       [class.text-text-secondary]="type() !== 'moment'"
       (click)="setType('moment')"
@@ -26,9 +29,10 @@
 
   <div class="mb-4 flex gap-2">
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="!status()"
-      [class.text-white]="!status()"
+      [class.text-on-fill]="!status()"
       [class.bg-surface-100]="!!status()"
       [class.text-text-secondary]="!!status()"
       (click)="setStatus('')"
@@ -36,9 +40,10 @@
       {{ 'moderation.all' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'pending'"
-      [class.text-white]="status() === 'pending'"
+      [class.text-on-fill]="status() === 'pending'"
       [class.bg-surface-100]="status() !== 'pending'"
       [class.text-text-secondary]="status() !== 'pending'"
       (click)="setStatus('pending')"
@@ -46,9 +51,10 @@
       {{ 'moderation.pending' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'approved'"
-      [class.text-white]="status() === 'approved'"
+      [class.text-on-fill]="status() === 'approved'"
       [class.bg-surface-100]="status() !== 'approved'"
       [class.text-text-secondary]="status() !== 'approved'"
       (click)="setStatus('approved')"
@@ -56,9 +62,10 @@
       {{ 'moderation.approved' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'rejected'"
-      [class.text-white]="status() === 'rejected'"
+      [class.text-on-fill]="status() === 'rejected'"
       [class.bg-surface-100]="status() !== 'rejected'"
       [class.text-text-secondary]="status() !== 'rejected'"
       (click)="setStatus('rejected')"
@@ -68,9 +75,13 @@
   </div>
 
   @if (actionError()) {
-    <div class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm" role="alert">
+    <div
+      class="mb-3 p-3 rounded bg-danger/10 border border-danger/20 text-danger text-sm"
+      role="alert"
+    >
       {{ actionError() }}
       <button
+        hlmBtn
         type="button"
         class="ms-2 underline hover:no-underline"
         (click)="actionError.set(null)"
@@ -113,18 +124,22 @@
   } @else {
     <ul class="space-y-4">
       @for (item of items.value(); track item.id) {
-        <li class="rounded bg-elevated p-4">
+        <li class="rounded bg-surface-200 p-4">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-text-primary">{{ 'moderation.reason' | t }}: {{ item.reason }}</span>
-            <span class="text-sm text-muted">{{ item.created_at | date: 'medium' }}</span>
+            <span class="font-semibold text-text-primary"
+              >{{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}</span
+            >
+            <span class="text-sm text-text-muted">{{ item.created_at | date: 'medium' }}</span>
           </div>
 
           @if (item.type === 'profile' && item.reported_user) {
             <p class="text-text-secondary">
-              {{ 'moderation.user' | t }}: {{ item.reported_user.display_name || item.reported_user.name }}
+              {{ 'moderation.user' | t }}:
+              {{ item.reported_user.display_name || item.reported_user.name | sanitiseHtml }}
             </p>
             <button
-              class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold disabled:opacity-50"
+              hlmBtn
+              class="mt-2 rounded bg-secondary text-on-fill px-3 py-1 text-sm font-bold disabled:opacity-50"
               (click)="analyse(item)"
               [disabled]="analysisLoading() || actionInProgress() === item.id"
             >
@@ -133,23 +148,29 @@
           }
 
           @if (item.type === 'moment' && item.moment_content) {
-            <p class="text-text-secondary">{{ 'moderation.content' | t }}: {{ item.moment_content }}</p>
+            <p class="text-text-secondary">
+              {{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}
+            </p>
           }
 
           @if (item.description) {
-            <p class="text-text-secondary">{{ 'moderation.description' | t }}: {{ item.description }}</p>
+            <p class="text-text-secondary">
+              {{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}
+            </p>
           }
 
           <div class="mt-4 flex gap-2">
             <button
-              class="rounded bg-emerald-600 px-3 py-1 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              hlmBtn
+              class="rounded bg-success px-3 py-1 text-on-fill text-sm font-bold hover:bg-success/90 transition-colors disabled:opacity-50"
               (click)="approve(item)"
               [disabled]="actionInProgress() === item.id"
             >
               {{ 'moderation.approve' | t }}
             </button>
             <button
-              class="rounded bg-rose-600 px-3 py-1 text-white text-sm font-bold hover:bg-rose-700 transition-colors disabled:opacity-50"
+              hlmBtn
+              class="rounded bg-danger px-3 py-1 text-on-fill text-sm font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
               (click)="reject(item)"
               [disabled]="actionInProgress() === item.id"
             >
@@ -162,17 +183,19 @@
   }
 
   @if (analysisResult()) {
-    <section class="mt-6 rounded bg-elevated p-4">
+    <section class="mt-6 rounded bg-surface-200 p-4">
       <h2 class="mb-2 text-lg font-semibold text-text-primary">
         {{ 'moderation.riskScore' | t }}: {{ analysisResult()?.riskScore }}%
       </h2>
       @if (analysisResult()?.flags?.length) {
-        <p class="text-text-secondary">{{ 'moderation.flags' | t }}: {{ analysisResult()?.flags?.join(', ') }}</p>
+        <p class="text-text-secondary">
+          {{ 'moderation.flags' | t }}: {{ analysisResult()?.flags?.join(', ') }}
+        </p>
       } @else {
         <p class="text-text-secondary">{{ 'moderation.noFlags' | t }}</p>
       }
       @if ((analysisResult()?.riskScore ?? 0) > 70) {
-        <p class="mt-2 text-rose-500">{{ 'moderation.behaviourWarning' | t }}</p>
+        <p class="mt-2 text-danger">{{ 'moderation.behaviourWarning' | t }}</p>
       }
     </section>
   }

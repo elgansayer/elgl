@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AssessmentsController } from './assessments.controller';
 import { AssessmentsService } from './assessments.service';
 
 describe('AssessmentsController', () => {
   let controller: AssessmentsController;
-  let service: { getQuestions: jest.Mock };
+  let service: { getQuestions: Mock };
 
   beforeEach(async () => {
     service = {
-      getQuestions: jest.fn(),
+      getQuestions: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

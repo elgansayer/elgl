@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   computed,
@@ -8,7 +9,6 @@ import {
   afterNextRender,
   effect,
   DestroyRef,
-  PLATFORM_ID,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
@@ -17,8 +17,6 @@ import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
-import { routeAnimations } from './animations/route.animations';
-import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -40,6 +38,10 @@ import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+import { TourService } from './services/tour.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
+import { JoyrideModule } from 'ngx-joyride';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -48,6 +50,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 @Component({
   selector: 'app-root',
   imports: [
+    HlmButton,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -64,22 +67,23 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ForcedUpdateModalComponent,
     NoNetworkBannerComponent,
     DesktopSidebarComponent,
+    JoyrideModule,
   ],
   templateUrl: './app.component.html',
   host: {
     '[class.app-locked]': 'appLockService.appLocked()',
   },
   styleUrls: ['./app.component.scss'],
-  animations: [routeAnimations],
 })
 export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
 
   public startProductTour(): void {
-    // Placeholder method for the interactive product tour feature.
+    this.tourService.startEconomyTour();
   }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
+  private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
@@ -88,25 +92,13 @@ export class AppComponent implements OnInit {
   readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
-  private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
-  private platformId = inject(PLATFORM_ID);
+  private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
-
-  protected prepareRoute(): string {
-    if (isPlatformServer(this.platformId)) {
-      return 'default';
-    }
-    const outlet = this.routerOutlet();
-    if (!outlet?.isActivated) {
-      return 'default';
-    }
-    const url = outlet.activatedRoute.snapshot.url.join('/');
-    return url || 'root';
-  }
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
@@ -134,15 +126,14 @@ export class AppComponent implements OnInit {
 
     // Lock when app goes to background
     effect(() => {
-      const doc = this.document;
       const handleVisibility = (): void => {
-        if (doc.hidden && this.authService.isAuthenticated()) {
+        if (document.hidden && this.authService.isAuthenticated()) {
           this.appLockService.lockNow();
         }
       };
-      doc.addEventListener('visibilitychange', handleVisibility);
+      document.addEventListener('visibilitychange', handleVisibility);
       this.destroyRef.onDestroy(() =>
-        doc.removeEventListener('visibilitychange', handleVisibility),
+        document.removeEventListener('visibilitychange', handleVisibility),
       );
     });
 
@@ -164,7 +155,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    await this.versionCheckService.checkVersion();
+    this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
@@ -252,9 +243,41 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Load initial unread counts from backend
+      await this.loadInitialUnreadCounts();
+
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+    }
+  }
+
+  private async loadInitialUnreadCounts(): Promise<void> {
+    try {
+      const [notificationCount] = await Promise.all([this.notificationService.getUnreadCount()]);
+      this.unreadCounter.setNotificationUnread(notificationCount);
+    } catch {
+      // Silently ignore - real-time events will update counts
+    }
+
+    // Load chat unread counts from backend
+    try {
+      const rooms = await this.chatService.getRooms();
+      let totalChatUnread = 0;
+      for (const room of rooms) {
+        try {
+          const messages = await this.chatService.getMessages(room.id);
+          const currentUserId = this.authService.currentUser()?.id;
+          totalChatUnread += messages.filter(
+            (m) => !m.is_read && m.sender_id !== currentUserId,
+          ).length;
+        } catch {
+          // Skip rooms with errors
+        }
+      }
+      this.unreadCounter.setChatUnread(totalChatUnread);
+    } catch {
+      // Silently ignore - real-time events will update counts
     }
   }
 

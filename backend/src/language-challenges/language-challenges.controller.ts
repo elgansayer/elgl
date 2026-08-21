@@ -7,7 +7,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LanguageChallengesService } from './language-challenges.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { JoinChallengeDto } from './dto/join-challenge.dto';

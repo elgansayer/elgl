@@ -17,7 +17,7 @@ services:
       - cache
       - websocket
     healthcheck:
-      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
+      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,6 +110,7 @@ services:
       - '9090:9090'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/tutor-profiles.rules.yml:/etc/prometheus/tutor-profiles.rules.yml:ro
       - prometheus_data:/prometheus
     depends_on:
       - api
