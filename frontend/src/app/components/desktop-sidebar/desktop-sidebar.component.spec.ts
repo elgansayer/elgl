@@ -69,17 +69,17 @@ describe('DesktopSidebarComponent', () => {
   });
 
   it('should render a labelled navigation landmark', () => {
-    const nav = fixture.nativeElement.querySelector('nav[role="navigation"]');
+    const nav: HTMLElement | null = fixture.nativeElement.querySelector('nav[role="navigation"]');
     expect(nav).toBeTruthy();
-    expect(nav.getAttribute('aria-label')).toBe('nav.mainNav');
+    expect(nav?.matches('[aria-label="nav.mainNav"]')).toBe(true);
   });
 
   it('should preserve native link semantics and visible focus treatment', () => {
     const links: NodeListOf<HTMLAnchorElement> = fixture.nativeElement.querySelectorAll('nav a');
 
     for (const link of links) {
-      expect(link.hasAttribute('role')).toBe(false);
-      expect(link.hasAttribute('tabindex')).toBe(false);
+      expect(link.matches('[role]')).toBe(false);
+      expect(link.matches('[tabindex]')).toBe(false);
       expect(link.classList.toString()).toContain('focus-visible:ring-2');
       expect(link.classList.toString()).toContain('focus-visible:ring-primary');
     }
@@ -94,8 +94,8 @@ describe('DesktopSidebarComponent', () => {
     const momentsLink: HTMLAnchorElement =
       fixture.nativeElement.querySelector('a[href="/moments"]');
 
-    expect(chatLink.getAttribute('aria-current')).toBe('page');
-    expect(momentsLink.hasAttribute('aria-current')).toBe(false);
+    expect(chatLink.matches('[aria-current="page"]')).toBe(true);
+    expect(momentsLink.matches('[aria-current]')).toBe(false);
   });
 
   it('should expose the active economy route with aria-current="page"', async () => {
@@ -106,8 +106,8 @@ describe('DesktopSidebarComponent', () => {
     const shopLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/shop"]');
     const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
 
-    expect(shopLink.getAttribute('aria-current')).toBe('page');
-    expect(chatLink.hasAttribute('aria-current')).toBe(false);
+    expect(shopLink.matches('[aria-current="page"]')).toBe(true);
+    expect(chatLink.matches('[aria-current]')).toBe(false);
   });
 
   it('should bind every primary navigation tab to its own unread counter', () => {
