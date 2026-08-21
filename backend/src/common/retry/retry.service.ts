@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import { PinoLogger } from 'nestjs-pino';
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
@@ -24,10 +24,7 @@ export class RetryService {
   private static readonly DEFAULT_BASE_DELAY_MS = 1000;
   private static readonly DEFAULT_MAX_DELAY_MS = 30000;
 
-  constructor(
-    @InjectPinoLogger(RetryService.name)
-    private readonly logger: PinoLogger,
-  ) {}
+  constructor(private readonly logger: PinoLogger) {}
 
   /**
    * Executes an async operation with exponential backoff retry on HTTP 429 responses.

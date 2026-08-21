@@ -3,7 +3,9 @@
     class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
   >
     <div class="flex items-center gap-4">
-      <button aria-label="Go back"
+      <button
+        hlmBtn
+        aria-label="Go back"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -24,7 +26,7 @@
   } @else if (profile()) {
     <div class="relative w-full h-48 bg-surface-300">
       @if (profile()?.cover_photo_url) {
-        <img loading="lazy" [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
+        <img [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
       }
       <div class="absolute inset-0 bg-gradient-to-t from-surface-500 to-transparent"></div>
     </div>
@@ -35,7 +37,7 @@
           class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
         >
           @if (profile()?.avatar_url) {
-            <img loading="lazy" [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
           } @else {
             <span class="text-3xl font-bold text-text-secondary">{{
               profile()?.display_name?.charAt(0) || '?'
@@ -49,6 +51,7 @@
           }
 
           <button
+            hlmBtn
             (click)="toggleLike()"
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
             [class.text-neon-pink]="isLiked()"
@@ -59,6 +62,7 @@
           </button>
 
           <button
+            hlmBtn
             (click)="toggleFollow()"
             class="h-10 px-6 rounded-full font-bold transition-colors"
             [class.bg-neon-blue]="!isFollowing()"
@@ -67,7 +71,8 @@
             [class.text-text-primary]="isFollowing()"
             [class.border]="isFollowing()"
             [class.border-surface-100]="isFollowing()"
-           [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t">
+            [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t"
+          >
             {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
           </button>
         </div>
@@ -90,7 +95,7 @@
 
         @if (profile()?.is_vip) {
           <div
-            class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-black shadow-[0_0_10px_rgba(255,215,0,0.5)]"
+            class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-on-fill shadow-[0_0_10px_rgba(255,215,0,0.5)]"
           >
             {{ 'discovery.vipBadge' | t }}
           </div>
@@ -121,17 +126,32 @@
         </p>
         @if (profile()?.bio_text) {
           <button
+            hlmBtn
             type="button"
             class="mt-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+            [disabled]="isTranslating()"
+            [attr.aria-busy]="isTranslating() ? 'true' : null"
+            [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
             (click)="toggleTranslation()"
           >
             {{ translationLabelKey | t }}
           </button>
+          @if (translationErrorKey()) {
+            <p
+              [id]="translationStatusId()"
+              class="mt-2 text-xs text-danger"
+              role="status"
+              aria-live="polite"
+            >
+              {{ translationErrorKey() | t }}
+            </p>
+          }
         }
 
         @if (profile()?.audio_intro_url) {
           <div class="mt-4 pt-4 border-t border-surface-100">
             <button
+              hlmBtn
               (click)="playAudioIntro(profile()?.audio_intro_url)"
               class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
               [attr.aria-label]="'profile.playAudioIntro' | t"
@@ -152,7 +172,7 @@
       <div class="flex flex-col gap-3">
         <a
           [routerLink]="['/chat', profile()?.id]"
-          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-purple-600 text-white font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
         >
           {{ 'chatList.tapToChat' | t }}
         </a>

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -13,6 +13,7 @@ import {
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -48,33 +49,176 @@ export class DiscoveryService {
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     private readonly degradationService: DiscoveryDegradationService,
+    @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
+  // Multi-signal ranking algorithm:
+  //   1. Fetch a candidate pool: discoverable, complete users with correction_ratio > 0.5,
+  //      and at least a 7-day study streak, ordered by descending correction_ratio (top 50).
+  //   2. For each candidate, fetch their corrector rating score via CorrectorScoreService.
+  //   3. Compute a weighted composite score:
+  //        - Correction ratio .................. 30 %
+  //        - Corrector rating average (normalised 1-5 -> 0-1) ... 35 %
+  //        - Total corrector ratings count (log-scaled) .......... 15 %
+  //        - Study streak days (log-scaled) ...................... 20 %
+  //   4. Rank by composite score descending, select top 10.
+  //   5. Store the list as JSON in Redis with a 7-day TTL.
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
     this.logger.info('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    try {
-      const { data: topUsers, error } = await supabase
-        .from('users')
-        .select('id')
-        .gt('correction_ratio', 0.5)
-        .order('correction_ratio', { ascending: false })
-        .order('study_streak_days', { ascending: false })
-        .limit(10);
-
-      if (error || !topUsers || topUsers.length === 0) {
-        this.logger.warn(
-          'No users qualified for Partner of the Week',
-          error?.message,
+    const clearStalePartnerCache = async (): Promise<void> => {
+      try {
+        await redis.del('partner_of_week_ids');
+      } catch (err) {
+        this.logger.error(
+          'Failed to clear stale Partner of the Week cache',
+          err,
         );
+      }
+    };
+
+    try {
+      // Step 1: Keep the weekly highlight inside the same core visibility boundary
+      // as ordinary discovery: hidden or deletion-pending accounts must never be
+      // surfaced, and incomplete profiles are not useful recommendations.
+      const { data: candidates, error } = await supabase
+        .from('users')
+        .select(
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',
+        )
+        .eq('privacy_hide_from_search', false)
+        .eq('is_deletion_pending', false)
+        .not('display_name', 'is', null)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
+        .gt('correction_ratio', 0.5)
+        .gte('study_streak_days', 7)
+        .order('correction_ratio', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        this.logger.error(
+          'Failed to fetch Partner of the Week candidates',
+          error,
+        );
+        await clearStalePartnerCache();
         return;
       }
 
-      const partnerIds = topUsers.map((u) => u.id);
+      const qualifiedCandidates = candidates?.filter(
+        (candidate) =>
+          candidate.privacy_hide_from_search === false &&
+          candidate.is_deletion_pending === false &&
+          typeof candidate.display_name === 'string' &&
+          candidate.display_name.trim().length > 0 &&
+          Array.isArray(candidate.native_languages) &&
+          candidate.native_languages.length > 0 &&
+          Array.isArray(candidate.target_languages) &&
+          candidate.target_languages.length > 0 &&
+          (candidate.correction_ratio ?? 0) > 0.5 &&
+          (candidate.study_streak_days ?? 0) >= 7,
+      );
+
+      if (!qualifiedCandidates || qualifiedCandidates.length === 0) {
+        this.logger.warn('No users qualified for Partner of the Week');
+        await clearStalePartnerCache();
+        return;
+      }
+
+      // Step 2: Fetch corrector scores for all candidates in parallel
+      const scoreMap = new Map<
+        string,
+        { averageScore: number; totalRatings: number }
+      >();
+
+      if (this.correctorScoreService) {
+        const scorePromises = qualifiedCandidates.map(async (c) => {
+          try {
+            const score = await this.correctorScoreService!.getCorrectorScore(
+              c.id,
+            );
+            return { id: c.id, score };
+          } catch {
+            const fallback: {
+              averageScore: number | null;
+              totalRatings: number;
+            } = {
+              averageScore: null,
+              totalRatings: 0,
+            };
+            return { id: c.id, score: fallback };
+          }
+        });
+        const scores = await Promise.all(scorePromises);
+        for (const { id, score } of scores) {
+          scoreMap.set(id, {
+            averageScore: score.averageScore ?? 0,
+            totalRatings: score.totalRatings,
+          });
+        }
+      }
+
+      // Step 3: Compute composite ranking score
+      // Normalisation helpers
+      const maxStreak = Math.max(
+        ...qualifiedCandidates.map((c) => c.study_streak_days ?? 0),
+        1,
+      );
+      const maxRatings = Math.max(
+        ...[...scoreMap.values()].map((v) => v.totalRatings),
+        1,
+      );
+
+      const computeComposite = (candidate: {
+        id: string;
+        correction_ratio: number | null;
+        study_streak_days: number | null;
+      }): number => {
+        const ratings = scoreMap.get(candidate.id) ?? {
+          averageScore: 0,
+          totalRatings: 0,
+        };
+
+        const correctionRatio = candidate.correction_ratio ?? 0;
+        // Normalise average rating to 0-1 (1-5 scale)
+        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        // Log-scale the ratings count so it doesn't dominate
+        const ratingsCountLog =
+          ratings.totalRatings > 0
+            ? Math.log10(ratings.totalRatings + 1) / Math.log10(maxRatings + 1)
+            : 0;
+        // Log-scale the streak
+        const streakDays = candidate.study_streak_days ?? 0;
+        const streakLog =
+          streakDays > 0
+            ? Math.log10(streakDays + 1) / Math.log10(maxStreak + 1)
+            : 0;
+
+        return (
+          correctionRatio * 0.3 +
+          avgRatingNorm * 0.35 +
+          ratingsCountLog * 0.15 +
+          streakLog * 0.2
+        );
+      };
+
+      // Step 4: Rank and select top 10. User ID is a stable, privacy-neutral
+      // tie-breaker so the same inputs always produce the same ordering.
+      const ranked = qualifiedCandidates
+        .map((c) => ({
+          id: c.id,
+          composite: computeComposite(c),
+        }))
+        .sort((a, b) => b.composite - a.composite || a.id.localeCompare(b.id));
+
+      const top10 = ranked.slice(0, 10);
+      const partnerIds = top10.map((r) => r.id);
+
+      // Step 5: Store in Redis
       await redis.set(
         'partner_of_week_ids',
         JSON.stringify(partnerIds),
@@ -82,10 +226,11 @@ export class DiscoveryService {
         604800,
       );
       this.logger.info(
-        `Partner of the Week set for ${partnerIds.length} users`,
+        `Partner of the Week cache refreshed for ${partnerIds.length} users`,
       );
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
+      await clearStalePartnerCache();
     }
   }
 
@@ -192,14 +337,23 @@ export class DiscoveryService {
             (m) => m.id,
           );
 
+          // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+          // Promise.all batch map to drastically reduce network latency during recommendation generation.
+          // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
+          const blockedIdsList = await Promise.all(
+            userEntries.map((entry) =>
+              this.safetyService.getBlockedAndBlockerIds(entry.userId),
+            ),
+          );
+
           // Cache the same match list for every user in this pair bucket
-          for (const entry of userEntries) {
+          for (let entryIdx = 0; entryIdx < userEntries.length; entryIdx++) {
+            const entry = userEntries[entryIdx];
+            const blockedIds = blockedIdsList[entryIdx];
             let filtered = matchIds.filter((id) => id !== entry.userId);
-            const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
-              entry.userId,
-            );
             if (blockedIds.length > 0) {
-              filtered = filtered.filter((id) => !blockedIds.includes(id));
+              const blockedSet = new Set(blockedIds);
+              filtered = filtered.filter((id) => !blockedSet.has(id));
             }
             const topN = filtered.slice(0, 10);
             if (topN.length > 0) {
@@ -431,8 +585,9 @@ export class DiscoveryService {
           distance_metres: undefined,
         }));
         if (blockedIds.length > 0) {
+          const blockedSet = new Set(blockedIds);
           fallbackResults = fallbackResults.filter(
-            (u) => !blockedIds.includes(u.id),
+            (u) => !blockedSet.has(u.id),
           );
         }
         if (query.level) {
@@ -461,7 +616,8 @@ export class DiscoveryService {
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
       if (blockedIds.length > 0) {
-        rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+        const blockedSet = new Set(blockedIds);
+        rpcResults = rpcResults.filter((u) => !blockedSet.has(u.id));
       }
       // RPC now handles level, gender, age, and audio_intro filters natively,
       // but interests still needs post-processing since the RPC returns interests column
@@ -493,7 +649,8 @@ export class DiscoveryService {
       distance_metres: item.distance_metres ?? item.distance ?? undefined,
     }));
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
@@ -653,7 +810,8 @@ export class DiscoveryService {
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // Apply voice room active filter
     results = await this.filterByVoiceRoomActive(
@@ -688,7 +846,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -730,7 +889,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -853,7 +1013,8 @@ export class DiscoveryService {
 
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
@@ -901,7 +1062,8 @@ export class DiscoveryService {
     if (!voiceRoomActive) return users;
     try {
       const activeHostIds = await this.audioRoomsService.getActiveHostIds();
-      return users.filter((u) => activeHostIds.includes(u.id));
+      const activeHostSet = new Set(activeHostIds);
+      return users.filter((u) => activeHostSet.has(u.id));
     } catch (err) {
       this.logger.error(
         'Voice room active filter failed, returning unfiltered results',
@@ -918,7 +1080,8 @@ export class DiscoveryService {
     let filtered = MOCK_USERS as unknown as DiscoveryUser[];
 
     if (blockedIds.length > 0) {
-      filtered = filtered.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      filtered = filtered.filter((u) => !blockedSet.has(u.id));
     }
 
     if (query.native_languages) {
@@ -1109,7 +1272,8 @@ export class DiscoveryService {
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     return sanitiseDiscoveryData(results);
   }

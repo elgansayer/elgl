@@ -8,8 +8,6 @@ import { EconomyService } from './economy.service';
 import { CoinEconomyHealthService } from './coin-economy-health.service';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
-import { AppleNotificationService } from './apple-notification.service';
-import { GooglePlayNotificationService } from './google-play-notification.service';
 
 @Module({
   imports: [UsersModule, ChatModule, HttpModule, MetricsModule],
@@ -18,8 +16,6 @@ import { GooglePlayNotificationService } from './google-play-notification.servic
     EconomyService,
     CoinEconomyHealthService,
     EconomyRateLimiterGuard,
-    AppleNotificationService,
-    GooglePlayNotificationService,
     EconomyExceptionFilter,
   ],
   exports: [EconomyService, CoinEconomyHealthService],

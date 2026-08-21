@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -9,13 +10,13 @@ describe('DataExportWorker', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +25,7 @@ describe('DataExportWorker', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -53,27 +54,27 @@ describe('DataExportWorker', () => {
       const mockFavourites = [{ id: 'fav-1', moment_id: 'moment-1' }];
 
       // Table-aware mock: returns different builders based on table name
-      const fromMock = mockSupabaseClient.from as jest.Mock;
+      const fromMock = mockSupabaseClient.from as Mock;
       fromMock.mockImplementation((table: string) => {
         if (table === 'users') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi
               .fn()
               .mockResolvedValue({ data: mockProfile, error: null }),
           };
         }
         if (table === 'decks') {
           return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockResolvedValue({ data: mockDecks, error: null }),
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: mockDecks, error: null }),
           };
         }
         if (table === 'deck_flashcards') {
           return {
-            select: jest.fn().mockReturnThis(),
-            in: jest
+            select: vi.fn().mockReturnThis(),
+            in: vi
               .fn()
               .mockResolvedValue({ data: mockDeckFlashcards, error: null }),
           };
@@ -88,8 +89,8 @@ describe('DataExportWorker', () => {
           favourites: mockFavourites,
         };
         return {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockResolvedValue({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
             data: tableDataMap[table] ?? [],
             error: null,
           }),
@@ -110,11 +111,11 @@ describe('DataExportWorker', () => {
     });
 
     it('should handle profile fetch error and throw', async () => {
-      const fromMock = mockSupabaseClient.from as jest.Mock;
+      const fromMock = mockSupabaseClient.from as Mock;
       fromMock.mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'Database error' },
         }),

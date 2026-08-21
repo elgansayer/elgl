@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   OnInit,
@@ -31,74 +32,108 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
-  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, LiveChatOverlayComponent, AppSkeletonLoaderComponent, TranslatePipe],
+  imports: [
+    HlmButton,
+    AppButtonSecondaryComponent,
+    AppGradientButtonComponent,
+    LiveChatOverlayComponent,
+    AppSkeletonLoaderComponent,
+    TranslatePipe,
+  ],
   template: `
-    <section class="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" [attr.aria-label]="'video_call.end_call_aria' | t">
+    <section
+      class="fixed inset-0 z-50 bg-surface-900 flex flex-col"
+      role="dialog"
+      [attr.aria-label]="'video_call.end_call_aria' | t"
+    >
       <!-- Remote Video (full screen background) -->
-      <div class="flex-1 relative bg-gray-900">
+      <div class="flex-1 relative bg-surface-900">
         @if (connectionState() === 'connecting') {
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-white/60 space-y-4">
-              <app-skeleton-loader
-                [height]="'80px'"
-                [width]="'80px'"
-                [variant]="'circle'"
-              />
-              <app-skeleton-loader
-                [height]="'16px'"
-                [width]="'200px'"
-                [variant]="'text'"
-              />
-              <p class="text-sm text-slate-400" aria-live="polite">{{ 'video_call.connecting' | t }}</p>
+              <app-skeleton-loader [height]="'80px'" [width]="'80px'" [variant]="'circle'" />
+              <app-skeleton-loader [height]="'16px'" [width]="'200px'" [variant]="'text'" />
+              <p class="text-sm text-white/50" aria-live="polite">
+                {{ 'video_call.connecting' | t }}
+              </p>
             </div>
           </div>
         } @else if (connectionState() === 'error') {
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-white/60 space-y-4 px-6">
               <span class="text-5xl" aria-hidden="true">&#9888;&#65039;</span>
-              <h3 class="text-lg font-bold text-rose-400">{{ 'videoClassroomErrorBoundary.title' | t }}</h3>
-              <p class="text-sm text-slate-400">{{ 'videoClassroomErrorBoundary.description' | t }}</p>
+              <h3 class="text-lg font-bold text-danger">
+                {{ 'videoClassroomErrorBoundary.title' | t }}
+              </h3>
+              <p class="text-sm text-white/50">
+                {{ 'videoClassroomErrorBoundary.description' | t }}
+              </p>
               <button
+                hlmBtn
                 type="button"
                 (click)="endCall()"
-                class="rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold px-6 py-2.5 text-sm transition-colors"
+                class="rounded-full bg-danger hover:bg-danger/90 text-on-fill font-bold px-6 py-2.5 text-sm transition-colors"
               >
                 {{ 'video_call.end_call_aria' | t }}
               </button>
             </div>
           </div>
         } @else if (mainVideoTrack()) {
-          <video #remoteVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_video_aria' | t"></video>
+          <video
+            #remoteVideo
+            autoplay
+            playsinline
+            class="w-full h-full object-cover"
+            [attr.aria-label]="'video_call.remote_video_aria' | t"
+          ></video>
         } @else {
-          <div class="flex items-center justify-center h-full" role="img" [attr.aria-label]="'video_call.remote_avatar_aria' | t: { initials: otherUserInitials() }">
+          <div
+            class="flex items-center justify-center h-full"
+            role="img"
+            [attr.aria-label]="
+              'video_call.remote_avatar_aria' | t: { initials: otherUserInitials() }
+            "
+          >
             <div class="text-center text-white/60">
               <div class="text-4xl sm:text-6xl mb-3 sm:mb-4" aria-hidden="true">
                 {{ otherUserInitials() }}
               </div>
-              <p class="text-base sm:text-xl" aria-live="polite">{{ 'video_call.waiting_for' | t : { name: otherUserName() } }}</p>
+              <p class="text-base sm:text-xl" aria-live="polite">
+                {{ 'video_call.waiting_for' | t: { name: otherUserName() } }}
+              </p>
             </div>
           </div>
         }
 
         @if (isRemoteScreenSharing()) {
           <div class="absolute top-2 sm:top-4 inset-x-0 flex justify-center pointer-events-none">
-            <div class="bg-black/60 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-white text-[10px] sm:text-xs backdrop-blur-sm" role="status" aria-live="polite">
-              {{ 'video_call.remote_presenting' | t : { name: otherUserName() } }}
+            <div
+              class="bg-black/60 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-white text-[10px] sm:text-xs backdrop-blur-sm"
+              role="status"
+              aria-live="polite"
+            >
+              {{ 'video_call.remote_presenting' | t: { name: otherUserName() } }}
             </div>
           </div>
 
           @if (remoteCameraTrack()) {
             <div
-              class="absolute bottom-3 sm:bottom-4 start-3 sm:start-4 w-[72px] sm:w-24 h-[108px] sm:h-36 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+              class="absolute bottom-3 sm:bottom-4 start-3 sm:start-4 w-[72px] sm:w-24 h-[108px] sm:h-36 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-surface-50/30"
             >
-              <video #remoteCameraVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_camera_aria' | t"></video>
+              <video
+                #remoteCameraVideo
+                autoplay
+                playsinline
+                class="w-full h-full object-cover"
+                [attr.aria-label]="'video_call.remote_camera_aria' | t"
+              ></video>
             </div>
           }
         }
 
         <!-- Local Camera Preview (PiP overlay) -->
         <div
-          class="absolute top-3 sm:top-4 end-3 sm:end-4 w-24 sm:w-32 h-36 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+          class="absolute top-3 sm:top-4 end-3 sm:end-4 w-24 sm:w-32 h-36 sm:h-48 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-surface-50/30"
           role="region"
           [attr.aria-label]="'video_call.local_video_aria' | t"
         >
@@ -111,15 +146,17 @@ import { TranslatePipe } from '../../services/translate.pipe';
               class="w-full h-full object-cover"
             ></video>
           } @else {
-            <div class="w-full h-full bg-gray-800 flex items-center justify-center">
-              <span class="text-white/40 text-xl sm:text-3xl" aria-hidden="true">{{ otherUserInitials() }}</span>
+            <div class="w-full h-full bg-surface-800 flex items-center justify-center">
+              <span class="text-white/40 text-xl sm:text-3xl" aria-hidden="true">{{
+                otherUserInitials()
+              }}</span>
             </div>
           }
         </div>
 
         @if (isScreenSharing()) {
           <div
-            class="absolute bottom-3 sm:bottom-4 end-3 sm:end-4 bg-green-600/90 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-white text-[10px] sm:text-xs font-semibold"
+            class="absolute bottom-3 sm:bottom-4 end-3 sm:end-4 bg-success/90 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-on-fill text-[10px] sm:text-xs font-semibold"
             role="status"
             [attr.aria-label]="'video_call.presenting_badge_aria' | t"
           >
@@ -128,23 +165,29 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
 
         <!-- Call duration -->
-        <div class="absolute top-2 sm:top-4 start-3 sm:start-4 text-white/80 text-xs sm:text-sm font-mono" role="timer" [attr.aria-label]="'video_call.call_duration_aria' | t">
+        <div
+          class="absolute top-2 sm:top-4 start-3 sm:start-4 text-white/80 text-xs sm:text-sm font-mono"
+          role="timer"
+          [attr.aria-label]="'video_call.call_duration_aria' | t"
+        >
           {{ callDuration() }}
         </div>
 
         <!-- Live chat overlay over host video stream -->
-        <app-live-chat-overlay
-          [roomId]="roomName()"
-        ></app-live-chat-overlay>
+        <app-live-chat-overlay [roomId]="roomName()"></app-live-chat-overlay>
       </div>
 
       <!-- Controls bar -->
-      <div class="bg-gray-900/95 backdrop-blur-sm px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-center gap-2 sm:gap-4 flex-wrap" role="toolbar" [attr.aria-label]="'video_call.controls_toolbar_aria' | t">
+      <div
+        class="bg-surface-900/95 backdrop-blur-sm px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-center gap-2 sm:gap-4 flex-wrap"
+        role="toolbar"
+        [attr.aria-label]="'video_call.controls_toolbar_aria' | t"
+      >
         <!-- Mute/Unmute Audio -->
         <app-button-secondary
           [customClass]="
             isAudioMuted()
-              ? 'bg-red-500 hover:bg-red-600 rounded-full w-11 h-11 sm:w-14 sm:h-14'
+              ? 'bg-danger hover:bg-danger/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
           "
           [ariaLabel]="
@@ -160,7 +203,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-             aria-hidden="true">
+              aria-hidden="true"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -181,7 +225,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-             aria-hidden="true">
+              aria-hidden="true"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -196,7 +241,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-button-secondary
           [customClass]="
             isVideoMuted()
-              ? 'bg-red-500 hover:bg-red-600 rounded-full w-11 h-11 sm:w-14 sm:h-14'
+              ? 'bg-danger hover:bg-danger/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
           "
           [ariaLabel]="
@@ -212,7 +257,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-             aria-hidden="true">
+              aria-hidden="true"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -228,7 +274,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-             aria-hidden="true">
+              aria-hidden="true"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -243,13 +290,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-button-secondary
           [customClass]="
             isScreenSharing()
-              ? 'bg-green-500 hover:bg-green-600 rounded-full w-11 h-11 sm:w-14 sm:h-14'
+              ? 'bg-success hover:bg-success/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
               : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
           "
           [ariaLabel]="
             (isScreenSharing()
               ? 'video_call.stop_screen_share_aria'
-              : 'video_call.start_screen_share_aria') | t
+              : 'video_call.start_screen_share_aria'
+            ) | t
           "
           [ariaPressed]="isScreenSharing()"
           (clicked)="toggleScreenShare()"
@@ -261,7 +309,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             viewBox="0 0 24 24"
             stroke="currentColor"
             stroke-width="2"
-           aria-hidden="true">
+            aria-hidden="true"
+          >
             <rect x="2" y="3" width="20" height="14" rx="2" />
             <line x1="8" y1="21" x2="16" y2="21" />
             <line x1="12" y1="17" x2="12" y2="21" />
@@ -272,12 +321,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <app-button-secondary
             [customClass]="
               isInPip()
-                ? 'bg-blue-500 hover:bg-blue-600 rounded-full w-11 h-11 sm:w-14 sm:h-14'
+                ? 'bg-secondary hover:bg-secondary/90 rounded-full w-11 h-11 sm:w-14 sm:h-14'
                 : 'bg-white/20 hover:bg-white/30 rounded-full w-11 h-11 sm:w-14 sm:h-14'
             "
-            [ariaLabel]="
-              (isInPip() ? 'video_call.exit_pip_aria' : 'video_call.enter_pip_aria') | t
-            "
+            [ariaLabel]="(isInPip() ? 'video_call.exit_pip_aria' : 'video_call.enter_pip_aria') | t"
             [ariaPressed]="isInPip()"
             (clicked)="togglePip()"
           >
@@ -288,7 +335,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
               viewBox="0 0 24 24"
               stroke="currentColor"
               stroke-width="2"
-             aria-hidden="true">
+              aria-hidden="true"
+            >
               <path d="M15 3h6v6" />
               <path d="M10 14l11-11" />
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -299,7 +347,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <!-- End Call -->
         <app-gradient-button
           size="md"
-          [customClass]="'rounded-full w-11 h-11 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700'"
+          [customClass]="'rounded-full w-11 h-11 sm:w-16 sm:h-16 bg-danger hover:bg-danger/90'"
           [ariaLabel]="'video_call.end_call_aria' | t"
           (clicked)="endCall()"
         >
@@ -309,7 +357,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-           aria-hidden="true">
+            aria-hidden="true"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -355,7 +404,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private onTrackSubscribedBound: ((track: RemoteTrack) => void) | null = null;
   private onTrackUnsubscribedBound: ((track: RemoteTrack) => void) | null = null;
   private onLocalTrackPublishedBound: ((publication: LocalTrackPublication) => void) | null = null;
-  private onLocalTrackUnpublishedBound: ((publication: LocalTrackPublication) => void) | null = null;
+  private onLocalTrackUnpublishedBound: ((publication: LocalTrackPublication) => void) | null =
+    null;
   private onParticipantDisconnectedBound: (() => void) | null = null;
   private onDisconnectedBound: (() => void) | null = null;
 
@@ -370,7 +420,9 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly isVideoMuted = signal(false);
   readonly callDuration = signal('00:00');
   readonly isInPip = signal(false);
-  readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
+  readonly pipAvailable = computed(
+    () => typeof document !== 'undefined' && document.pictureInPictureEnabled,
+  );
   readonly isScreenSharing = signal(false);
   readonly connectionState = signal<'connecting' | 'connected' | 'error'>('connecting');
   private callStartTime: number = 0;
@@ -424,7 +476,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       });
     });
   }
-
 
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
@@ -487,7 +538,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
           `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
         );
       });
-} catch {
+    } catch {
       this.connectionState.set('error');
     }
   }
@@ -560,10 +611,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   async toggleScreenShare(): Promise<void> {
     if (!this.room) return;
     try {
-      await this.livekitService.toggleScreenShare(
-        !this.isScreenSharing(),
-        this.room,
-      );
+      await this.livekitService.toggleScreenShare(!this.isScreenSharing(), this.room);
     } catch {
       // User cancelled the share picker or denied permission; state is unchanged.
     }
@@ -596,6 +644,10 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       this.durationSub.unsubscribe();
       this.durationSub = null;
     }
+
+    // Detach all remote tracks from video elements before stopping them
+    this.remoteCameraTrack()?.detach();
+    this.remoteScreenShareTrack()?.detach();
 
     if (this.localVideo) {
       this.localVideo.stop();
@@ -645,5 +697,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.remoteCameraTrack.set(null);
     this.remoteScreenShareTrack.set(null);
     this.isScreenSharing.set(false);
+    this.isAudioMuted.set(false);
+    this.isVideoMuted.set(false);
+    this.isInPip.set(false);
   }
 }

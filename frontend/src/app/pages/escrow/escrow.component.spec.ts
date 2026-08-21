@@ -70,7 +70,7 @@ describe.skip('EscrowComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    fixture.componentInstance.onFilterChange('released');
+    fixture.componentInstance['onFilterChange']('released');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -90,7 +90,7 @@ describe.skip('EscrowComponent', () => {
     let cards = (fixture.nativeElement as HTMLElement).querySelectorAll('app-card');
     expect(cards.length).toBeGreaterThanOrEqual(2);
 
-    fixture.componentInstance.onFilterChange('released');
+    fixture.componentInstance['onFilterChange']('released');
     fixture.detectChanges();
     await fixture.whenStable();
 

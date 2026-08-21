@@ -5,7 +5,6 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { GroupsDiscoveryComponent } from './groups-discovery.component';
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { Pipe, PipeTransform, signal } from '@angular/core';
 
 @Pipe({ name: 't' })

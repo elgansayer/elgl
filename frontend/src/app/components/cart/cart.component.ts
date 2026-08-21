@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -15,29 +16,35 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-4">
       <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300" aria-live="polite">{{ message() }}</p>
+        <p class="mb-4 text-sm text-primary" aria-live="polite">{{ message() }}</p>
       }
       @if (items().length === 0) {
         <p class="text-sm opacity-60" role="status">{{ 'cart.empty' | t }}</p>
       } @else {
         <ul class="space-y-3" role="list">
           @for (item of items(); track item.itemId) {
-            <li class="flex items-center justify-between rounded-xl bg-surface p-3" role="listitem">
+            <li
+              class="flex items-center justify-between rounded-xl bg-surface-200 p-3"
+              role="listitem"
+            >
               <div>
                 <span class="font-medium">{{ item.name }}</span>
                 <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
+                <span class="text-sm font-semibold"
+                  >{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span
+                >
                 <button
-                  class="rounded-full bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600"
+                  hlmBtn
+                  class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-on-fill hover:bg-danger/90"
                   (click)="removeItem(item.itemId)"
-                  [attr.aria-label]="('cart.removeItem' | t)"
+                  [attr.aria-label]="'cart.removeItem' | t"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
@@ -45,14 +52,20 @@ interface CartItem {
             </li>
           }
         </ul>
-        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3">
+        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface-200 p-3">
           <span class="font-semibold">{{ 'cart.total' | t }}</span>
-          <span class="font-bold text-indigo-400" [attr.aria-label]="('cart.totalAria' | t: { total: totalCoins() })">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
+          <span
+            class="font-bold text-vip"
+            [attr.aria-label]="'cart.totalAria' | t: { total: totalCoins() }"
+            >{{ totalCoins() }} {{ 'common.coins' | t }}</span
+          >
         </div>
         <button
-          class="mt-4 w-full rounded-full bg-indigo-600 py-2 font-semibold hover:bg-indigo-500"
+          hlmBtn
+          class="mt-4 w-full rounded-full bg-primary text-on-fill py-2 font-semibold hover:bg-primary/90"
           (click)="checkout()"
-          [attr.aria-label]="('cart.checkoutAria' | t)">
+          [attr.aria-label]="'cart.checkoutAria' | t"
+        >
           {{ 'cart.checkout' | t }}
         </button>
       }

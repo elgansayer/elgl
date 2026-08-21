@@ -1,31 +1,40 @@
 import { Component, input, output } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   selector: 'app-message-reaction-bar',
-  imports: [],
+  imports: [...HlmButtonImports],
   template: `
     <div class="mt-1 flex flex-wrap gap-1">
       @for (reaction of getReactionEntries(); track reaction.emoji) {
         <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="xs"
+          class="rounded-full"
           (click)="toggleReaction(reaction.emoji)"
-          [class]="
-            'flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ' +
-            (reaction.users.includes(currentUserId())
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'bg-surface-200 text-text-secondary hover:bg-surface-100')
-          "
+          [class.bg-primary/20]="reaction.users.includes(currentUserId())"
+          [class.text-primary]="reaction.users.includes(currentUserId())"
+          [attr.aria-pressed]="reaction.users.includes(currentUserId())"
+          [attr.aria-label]="reaction.emoji + ' ' + reaction.users.length"
         >
-          <span>{{ reaction.emoji }}</span>
+          <span aria-hidden="true">{{ reaction.emoji }}</span>
           <span>{{ reaction.users.length }}</span>
         </button>
       }
-      <div class="flex gap-1 ms-1">
+      <div class="ms-1 flex gap-1">
         @for (emoji of quickEmojis; track emoji) {
           <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            class="rounded-full opacity-60 hover:opacity-100"
             (click)="toggleReaction(emoji)"
-            class="flex h-5 w-5 items-center justify-center rounded-full bg-surface-200 text-[12px] opacity-60 hover:bg-surface-100 hover:opacity-100"
+            [attr.aria-label]="emoji"
           >
-            {{ emoji }}
+            <span aria-hidden="true">{{ emoji }}</span>
           </button>
         }
       </div>
@@ -38,14 +47,14 @@ export class MessageReactionBarComponent {
   messageId = input('');
   reacted = output<{ messageId: string; emoji: string; added: boolean }>();
 
-  quickEmojis = ['❤️', '😂', '👍', '😮', '😢', '🙏'];
+  readonly quickEmojis = ['❤️', '😂', '👍', '😮', '😢', '🙏'];
 
-  getReactionEntries() {
+  getReactionEntries(): Array<{ emoji: string; users: string[] }> {
     if (!this.reactions()) return [];
     return Object.entries(this.reactions()).map(([emoji, users]) => ({ emoji, users }));
   }
 
-  toggleReaction(emoji: string) {
+  toggleReaction(emoji: string): void {
     const users = this.reactions()?.[emoji] || [];
     const added = !users.includes(this.currentUserId());
     this.reacted.emit({ messageId: this.messageId(), emoji, added });

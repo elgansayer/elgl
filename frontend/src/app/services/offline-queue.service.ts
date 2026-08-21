@@ -12,6 +12,7 @@ export class OfflineQueueService {
 
   /** Reactive count of queued messages for UI indicators */
   readonly queuedCount = signal(0);
+  readonly queueSize = this.queuedCount;
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
@@ -30,10 +31,10 @@ export class OfflineQueueService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target && (target as any).result)) {
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) {
           return;
         }
-        const db = (target as any).result;
+        const db = target.result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           db.createObjectStore(this.storeName, { keyPath: 'id' });
         }

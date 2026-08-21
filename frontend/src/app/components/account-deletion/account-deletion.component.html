@@ -2,49 +2,51 @@
   <h2 class="text-xl font-bold">{{ 'account_deletion.title' | t }}</h2>
 
   @if (deletionScheduled(); as date) {
-    <p class="text-sm text-yellow-300">
+    <p class="text-sm text-warning">
       {{ 'account_deletion.scheduled' | t: { date: date } }}
     </p>
     <button
+      hlmBtn
       class="btn btn-secondary"
       (click)="restoreAccount()"
       [disabled]="isLoading()"
-     [attr.aria-label]="'account_deletion.restore_button' | t">
+      [attr.aria-label]="'account_deletion.restore_button' | t"
+    >
       {{ 'account_deletion.restore_button' | t }}
     </button>
   } @else {
-    <p class="text-sm text-slate-300">
+    <p class="text-sm text-text-secondary">
       {{ 'account_deletion.description' | t }}
     </p>
     <button
+      hlmBtn
       class="btn btn-danger"
       (click)="requestDeletion()"
       [disabled]="isLoading()"
-     [attr.aria-label]="'account_deletion.delete_button' | t">
+      [attr.aria-label]="'account_deletion.delete_button' | t"
+    >
       {{ 'account_deletion.delete_button' | t }}
     </button>
   }
 
-  <hr class="border-slate-700 my-6" />
+  <hr class="border-surface-200 my-6" />
 
   <h3 class="text-lg font-bold">{{ 'account_deletion.export_title' | t }}</h3>
-  <p class="text-sm text-slate-300">
+  <p class="text-sm text-text-secondary">
     {{ 'account_deletion.export_description' | t }}
   </p>
   <button
+    hlmBtn
     class="btn btn-primary"
     (click)="exportData()"
     [disabled]="isLoading()"
-   [attr.aria-label]="'account_deletion.export_button' | t">
+    [attr.aria-label]="'account_deletion.export_button' | t"
+  >
     {{ 'account_deletion.export_button' | t }}
   </button>
 
   @if (message(); as msg) {
-    <p
-      [class.text-green-400]="!isError()"
-      [class.text-red-400]="isError()"
-      class="mt-2 text-sm"
-    >
+    <p [class.text-success]="!isError()" [class.text-danger]="isError()" class="mt-2 text-sm">
       {{ msg }}
     </p>
   }

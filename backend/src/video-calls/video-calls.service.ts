@@ -10,6 +10,8 @@ import {
   VideoCallsDegradationService,
   DegradationMarker,
 } from './video-calls-degradation.service';
+import { LivekitService, IceServer } from '../livekit/livekit.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class VideoCallsService {
@@ -20,6 +22,8 @@ export class VideoCallsService {
   constructor(
     private configService: ConfigService,
     private degradationService: VideoCallsDegradationService,
+    private livekitService: LivekitService,
+    private readonly metricsService: MetricsService,
   ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
@@ -28,16 +32,18 @@ export class VideoCallsService {
     );
   }
 
-  async createRoom(
-    userId: string,
-  ): Promise<{
+  async createRoom(userId: string): Promise<{
     token: string;
     roomName: string;
+    iceServers: IceServer[];
     degraded?: boolean;
     degradationReason?: string;
   }> {
     const roomName = `video_${uuidv4()}`;
-    const marker: DegradationMarker = { degraded: false, fallbackSource: 'none' };
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
 
     const result = await this.degradationService.executeWithBreaker(
       this.LIVEXIT_SERVICE_NAME,
@@ -47,15 +53,34 @@ export class VideoCallsService {
           emptyTimeout: 30,
           maxParticipants: 2,
         };
-        await this.roomService.createRoom(createOptions);
-        const token = await this.generateToken(userId, roomName, true);
-        this.degradationService.cacheToken(roomName, userId, token);
-        return { token, roomName };
+
+        try {
+          await this.roomService.createRoom(createOptions);
+        } catch (error) {
+          const errorType =
+            error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomCreationFailed(errorType);
+          throw error;
+        }
+
+        const tokenStart = Date.now();
+        try {
+          const token = await this.generateToken(userId, roomName, true);
+          this.degradationService.cacheToken(roomName, userId, token);
+          this.metricsService.recordVideoClassroomTokenGenerationDuration(
+            'create',
+            (Date.now() - tokenStart) / 1000,
+          );
+          this.metricsService.recordVideoClassroomCreated();
+          return { token, roomName };
+        } catch (error) {
+          const errorType =
+            error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomCreationFailed(errorType);
+          throw error;
+        }
       },
       async () => {
-        // Fallback: generate a standalone token without LiveKit room creation
-        // The room creation failed, so we generate a token for a
-        // best-effort peer-to-peer connection
         const token = await this.generateToken(userId, roomName, true);
         return { token, roomName };
       },
@@ -76,6 +101,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,
     };
@@ -87,20 +113,36 @@ export class VideoCallsService {
   ): Promise<{
     token: string;
     roomName: string;
+    iceServers: IceServer[];
     degraded?: boolean;
     degradationReason?: string;
   }> {
-    const marker: DegradationMarker = { degraded: false, fallbackSource: 'none' };
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
 
     const result = await this.degradationService.executeWithBreaker(
       this.LIVEXIT_SERVICE_NAME,
       async () => {
-        const token = await this.generateToken(userId, roomName, true);
-        this.degradationService.cacheToken(roomName, userId, token);
-        return { token, roomName };
+        const tokenStart = Date.now();
+        try {
+          const token = await this.generateToken(userId, roomName, true);
+          this.degradationService.cacheToken(roomName, userId, token);
+          this.metricsService.recordVideoClassroomTokenGenerationDuration(
+            'join',
+            (Date.now() - tokenStart) / 1000,
+          );
+          this.metricsService.recordVideoClassroomJoined();
+          return { token, roomName };
+        } catch (error) {
+          const errorType =
+            error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomJoinFailed(errorType);
+          throw error;
+        }
       },
       async () => {
-        // Fallback: try cached token first, then generate a new one
         const cachedToken = this.degradationService.getCachedToken(
           roomName,
           userId,
@@ -128,6 +170,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,
     };

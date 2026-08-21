@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, computed, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
@@ -5,7 +6,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
 @Component({
   selector: 'app-split-screen-video',
-  imports: [TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [HlmButton, TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './split-screen-video.component.html',
 })
 export class SplitScreenVideoComponent {
