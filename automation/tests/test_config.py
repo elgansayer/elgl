@@ -377,7 +377,7 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     assert "jobs-stalled" not in watchdog
     for directive in (
         "PrivateTmp=true",
-        "ProtectHome=tmpfs",
+        "ProtectHome=false",
         "BindPaths=/run/user",
         "ProtectKernelModules=true",
         "ProtectKernelLogs=true",
@@ -465,12 +465,12 @@ def test_agent_routing_rejects_a_phase_without_an_enabled_provider(tmp_path: Pat
     config_path = tmp_path / "agents.json"
     config_path.write_text(
         '{"routing_enabled": true, "providers": {'
-        '"codex": {"enabled": false}, "openhands": {"enabled": true}}, '
+        '"codex": {"enabled": false}, "pi": {"enabled": true}}, '
         '"routing": {"implementation": ["codex"]}}',
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="implementation.*no enabled provider"):
+    with pytest.raises(ConfigurationError, match=r"implementation.*no enabled provider"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -491,45 +491,41 @@ def test_production_agent_configuration_loads() -> None:
     assert factory_config.agents.providers["codex"].model == "gpt-5.6-sol"
     assert factory_config.agents.providers["codex"].enabled
     assert factory_config.agents.providers["codex"].credential_paths == [".codex"]
-    assert factory_config.agents.providers["google"].enabled is False
+    assert factory_config.agents.providers["google"].enabled is True
     assert factory_config.agents.providers["google"].command == "agy"
     assert factory_config.agents.providers["google"].cli_variant == "antigravity"
     assert factory_config.agents.providers["google"].model == "gemini-3.1-pro-high"
-    assert factory_config.agents.providers["opencode"].model == "opencode-go/kimi-k3"
+    assert factory_config.agents.providers["opencode"].model == "opencode-go/deepseek-v4-flash"
     assert factory_config.agents.providers["opencode"].enabled
     assert factory_config.agents.providers["opencode"].credential_paths == [
         ".config/opencode",
         ".local/share/opencode",
     ]
-    assert (
-        factory_config.agents.providers["opencode"].phase_models["code_review"]
-        == "opencode-go/qwen3.8-max"
-    )
-    assert (
-        factory_config.agents.providers["opencode"].phase_models["general_action"]
-        == "opencode-go/kimi-k2.7-code"
-    )
     assert factory_config.agents.providers["openhands"].emergency_only
+    assert not factory_config.agents.providers["openhands"].enabled
+    assert factory_config.agents.providers["pi"].enabled
+    assert factory_config.agents.providers["pi"].model == "github-copilot/claude-sonnet-5"
+    assert factory_config.agents.providers["pi"].credential_paths == [".pi"]
     assert factory_config.agents.routing.implementation == [
         "claude",
         "codex",
         "google",
         "opencode",
-        "openhands",
+        "pi",
     ]
     assert factory_config.agents.routing.code_review == [
         "codex",
         "claude",
         "google",
         "opencode",
-        "openhands",
+        "pi",
     ]
     assert factory_config.agents.routing.general_action == [
         "opencode",
         "google",
         "codex",
         "claude",
-        "openhands",
+        "pi",
     ]
 
 
@@ -562,7 +558,7 @@ def test_agent_routing_rejects_google_variant_on_another_provider(tmp_path: Path
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="cli_variant.*google"):
+    with pytest.raises(ConfigurationError, match=r"cli_variant.*google"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -575,7 +571,7 @@ def test_agent_routing_rejects_a_transport_the_adapter_would_ignore(tmp_path: Pa
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="codex.*requires transport.*cli"):
+    with pytest.raises(ConfigurationError, match=r"codex.*requires transport.*cli"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -589,7 +585,7 @@ def test_openhands_transport_defaults_to_the_sdk_and_rejects_an_explicit_cli(
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="openhands.*requires transport.*openhands-sdk"):
+    with pytest.raises(ConfigurationError, match=r"openhands.*requires transport.*openhands-sdk"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -602,7 +598,7 @@ def test_subscription_provider_rejects_api_auth_mode(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigurationError, match="codex.*requires auth_mode.*subscription"):
+    with pytest.raises(ConfigurationError, match=r"codex.*requires auth_mode.*subscription"):
         FactoryConfig.from_environment(environment(FACTORY_AGENTS_CONFIG=str(config_path)))
 
 
@@ -635,10 +631,8 @@ def test_start_script_uses_the_systemd_service_path_for_online_doctor() -> None:
         if line.startswith("Environment=PATH=")
     )
 
-    assert "FACTORY_HOME=/var/lib/hellotalk-factory/home" in start_script
-    service_path_expression = service_path.replace(
-        "/var/lib/hellotalk-factory/home", "$FACTORY_HOME"
-    )
+    assert "FACTORY_HOME=/home/dev" in start_script
+    service_path_expression = service_path.replace("/home/dev", "$FACTORY_HOME")
     assert f'FACTORY_SERVICE_PATH="{service_path_expression}"' in start_script
     assert 'export HOME="$FACTORY_HOME"' in start_script
     path_export = 'export PATH="$FACTORY_SERVICE_PATH"'
