@@ -1,8 +1,0 @@
-# .aiderignore
-node_modules/
-dist/
-coverage/
-.angular/
-backend/dist/
-*.log
-.env

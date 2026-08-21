@@ -1,44 +1,54 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NlpService } from './nlp.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
-const mockGuess = jest.fn();
+const mockGuess = vi.fn();
 
-jest.mock('node-nlp', () => ({
-  Language: jest.fn().mockImplementation(() => ({
-    guess: mockGuess,
-  })),
+vi.mock('node-nlp', () => ({
+  Language: vi.fn().mockImplementation(function () {
+    return {
+      guess: mockGuess,
+    };
+  }),
 }));
 
 describe('NlpService', () => {
   let service: NlpService;
   let mockRedisClient: {
-    get: jest.Mock;
-    incr: jest.Mock;
-    expire: jest.Mock;
-    set: jest.Mock;
+    get: Mock;
+    incr: Mock;
+    expire: Mock;
+    set: Mock;
   };
 
-  let mockConfigService: { get: jest.Mock };
+  let mockConfigService: { get: Mock };
+  let mockLlmProxyService: { proxyMessage: Mock };
 
   beforeEach(async () => {
     mockGuess.mockClear();
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      set: jest.fn().mockResolvedValue('OK'),
+      get: vi.fn().mockResolvedValue(null),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
         if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
         if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        if (key === 'LLM_API_KEY') return 'mock-llm-key';
         return null;
       }),
+    };
+
+    mockLlmProxyService = {
+      proxyMessage: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -51,20 +61,24 @@ describe('NlpService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
+        },
+        {
+          provide: LlmProxyService,
+          useValue: mockLlmProxyService,
         },
       ],
     }).compile();
 
     service = module.get<NlpService>(NlpService);
 
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
-    (global.fetch as jest.Mock).mockClear();
+    vi.clearAllMocks();
+    (global.fetch as Mock).mockClear();
   });
 
   it('should be defined', () => {
@@ -119,28 +133,101 @@ describe('NlpService', () => {
       );
     });
 
-    it('should throw BadRequestException when free tier usage reaches 10 limit (verifying dual currency format)', async () => {
+    it('should return a semantic rate-limit response when free tier usage reaches 10', async () => {
       mockRedisClient.get.mockResolvedValue('10');
 
-      await expect(service.checkRateLimit('free-user', false)).rejects.toThrow(
-        new BadRequestException(
-          'Daily AI request limit (10 requests/day) reached on Free Tier. Upgrade to VIP (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent) for unlimited AI translations, grammar checks, and pronunciation scoring!',
+      await expect(
+        service.checkRateLimit('free-user', false),
+      ).rejects.toMatchObject({
+        status: 429,
+        response: {
+          statusCode: 429,
+          message: expect.stringContaining('8 UKP / $10 USD'),
+        },
+      });
+      expect(mockRedisClient.incr).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('simplify', () => {
+    it('uses the configured LLM to simplify text without sending it to DeepL', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: 'We kept going even though it rained.',
+      });
+
+      const result = await service.simplify('user-1', true, {
+        text: 'Although precipitation commenced, we continued our endeavour.',
+      });
+
+      expect(result).toEqual({
+        original:
+          'Although precipitation commenced, we continued our endeavour.',
+        simplified: 'We kept going even though it rained.',
+      });
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Message as JSON: "Although precipitation commenced, we continued our endeavour."',
         ),
       );
-      expect(mockRedisClient.incr).not.toHaveBeenCalled();
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledWith(
+        expect.stringContaining('untrusted text'),
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an empty response', { response: '   ' }],
+      [
+        'an unchanged response',
+        {
+          response:
+            'We will utilise sufficient time to commence the demonstration.',
+        },
+      ],
+      ['a provider failure', new Error('provider unavailable')],
+    ])(
+      'uses a bounded local fallback after %s',
+      async (_description, outcome) => {
+        if (outcome instanceof Error) {
+          mockLlmProxyService.proxyMessage.mockRejectedValueOnce(outcome);
+        } else {
+          mockLlmProxyService.proxyMessage.mockResolvedValueOnce(outcome);
+        }
+
+        const result = await service.simplify('user-1', true, {
+          text: 'We will utilise sufficient time to commence the demonstration.',
+        });
+
+        expect(result.simplified).toBe(
+          'We will use enough time to start the demonstration.',
+        );
+      },
+    );
+
+    it('reports an unavailable service when no honest local simplification is possible', async () => {
+      mockLlmProxyService.proxyMessage.mockRejectedValueOnce(
+        new Error('provider unavailable'),
+      );
+
+      await expect(
+        service.simplify('user-1', true, { text: 'Already simple.' }),
+      ).rejects.toMatchObject({
+        status: 503,
+        response: {
+          statusCode: 503,
+          message: 'Message simplification is temporarily unavailable',
+        },
+      });
     });
   });
 
   describe('translate', () => {
     it('should use custom dictionary translation when exact match exists (es -> en)', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
             Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
-        })
-        .mockResolvedValueOnce({
-          ok: true, // glossary check
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -167,7 +254,7 @@ describe('NlpService', () => {
     });
 
     it('should use simulated format when dictionary match is not found', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
@@ -200,7 +287,7 @@ describe('NlpService', () => {
 
   describe('grammarCheck', () => {
     it('should correct known phrase go to store yesterday', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -227,7 +314,7 @@ describe('NlpService', () => {
     });
 
     it('should report 0 errors for properly terminated sentence', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -252,7 +339,7 @@ describe('NlpService', () => {
     });
 
     it('should append period and report 1 error if sentence lacks ending punctuation', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -277,8 +364,8 @@ describe('NlpService', () => {
   });
 
   describe('pronunciationScore', () => {
-    it('should score words, calculate average, and return positive feedback for high scores', async () => {
-      (global.fetch as jest.Mock)
+    it('should score words with phonetic breakdown and return positive feedback for high scores', async () => {
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
@@ -288,6 +375,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: 'Hello world test',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -296,22 +384,65 @@ describe('NlpService', () => {
                     FluencyScore: 85,
                     CompletenessScore: 90,
                   },
-                  Words: [],
+                  Words: [
+                    {
+                      Word: 'Hello',
+                      Phonemes: [
+                        { Phoneme: 'h', AccuracyScore: 92 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 'l', AccuracyScore: 95 },
+                        { Phoneme: 'oʊ', AccuracyScore: 90 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 91 },
+                    },
+                    {
+                      Word: 'world',
+                      Phonemes: [
+                        { Phoneme: 'w', AccuracyScore: 85 },
+                        { Phoneme: 'ɝ', AccuracyScore: 80 },
+                        { Phoneme: 'l', AccuracyScore: 90 },
+                        { Phoneme: 'd', AccuracyScore: 93 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 87 },
+                    },
+                    {
+                      Word: 'test',
+                      Phonemes: [
+                        { Phoneme: 't', AccuracyScore: 96 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 's', AccuracyScore: 94 },
+                        { Phoneme: 't', AccuracyScore: 95 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 93 },
+                    },
+                  ],
                 },
               ],
             }),
         });
-      const dto = { target_text: 'Hello world test', audio_url: 'http://test' };
+      const dto = {
+        target_text: 'Hello world test',
+        audio_url: 'http://test',
+        language: 'en-US',
+      };
       const result = await service.pronunciationScore('user-1', true, dto);
 
       expect(result.breakdown).toHaveLength(3);
-      // scores: 85 + 0 = 85, 85 + 1 = 86, 85 + 2 = 87 -> avg 86
       expect(result.overall_score).toBe(95);
       expect(result.feedback_summary).toBe('Excellent pronunciation!');
+      expect(result.detected_language).toBe('en-US');
+      expect(result.transcription).toBe('Hello world test');
+
+      // Verify phonetic breakdown on first word
+      const firstWord = result.breakdown[0];
+      expect(firstWord.phonemes.length).toBeGreaterThan(0);
+      expect(firstWord.phonemes[0]).toHaveProperty('phoneme');
+      expect(firstWord.phonemes[0]).toHaveProperty('score');
+      expect(firstWord.phonemes[0]).toHaveProperty('expected_phoneme');
     });
 
     it('should handle empty target_text gracefully returning 90 default overall score', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
@@ -321,6 +452,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: '',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -340,6 +472,20 @@ describe('NlpService', () => {
       expect(result.overall_score).toBe(95);
       expect(result.breakdown).toEqual([]);
       expect(result.feedback_summary).toContain('Excellent pronunciation!');
+    });
+
+    it('should fallback with phonetic breakdown when Azure is unavailable', async () => {
+      const dto = {
+        target_text: 'Hello world',
+        audio_url: 'http://test',
+      };
+      const result = await service.pronunciationScore('user-1', true, dto);
+
+      expect(result.overall_score).toBe(85);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown[0].phonemes.length).toBeGreaterThan(0);
+      expect(result.breakdown[0].phonemes[0].expected_phoneme).toBeTruthy();
+      expect(result.feedback_summary).toContain('temporarily unavailable');
     });
   });
 
@@ -379,7 +525,7 @@ describe('NlpService', () => {
 
     it('should call DeepL and save the result to Redis when not cached', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'App de Prueba' }],
@@ -413,7 +559,7 @@ describe('NlpService', () => {
 
     it('should translate dictionaries for any target language dynamically (de)', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'Willkommen' }, { text: 'Startseite' }],
@@ -453,7 +599,7 @@ describe('NlpService', () => {
 
     it('should throw BadRequestException when DeepL API call fails', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         text: () => 'Internal Server Error',
@@ -472,7 +618,7 @@ describe('NlpService', () => {
     it('should catch Redis errors during get and set gracefully without crashing', async () => {
       mockRedisClient.get.mockRejectedValueOnce(new Error('Redis get fail'));
       mockRedisClient.set.mockRejectedValueOnce(new Error('Redis set fail'));
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'Clon de HelloTalk' }],
@@ -487,6 +633,83 @@ describe('NlpService', () => {
       const result = await service.translateUi(dto);
       expect(result.cached).toBe(false);
       expect(result.translations['app.title']).toBe('Clon de HelloTalk');
+    });
+  });
+
+  describe('generateSessionSummary', () => {
+    const transcriptText =
+      'Welcome to the language exchange room. Today we discussed travel vocabulary and cultural customs in Japan. We compared the Japanese tea ceremony with British afternoon tea traditions. The group also practised ordering food in a restaurant setting.';
+
+    it('should return empty summary for empty text', async () => {
+      const result = await service.generateSessionSummary('');
+      expect(result.summary).toBe('No transcript available.');
+      expect(result.vocabulary).toEqual([]);
+    });
+
+    it('should generate summary via LLM proxy when API key is configured', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: JSON.stringify({
+          summary:
+            'This session covered travel vocabulary, cultural customs in Japan, and compared tea ceremonies. The group practised restaurant ordering scenarios.',
+          vocabulary: [
+            'travel',
+            'cultural',
+            'customs',
+            'tea ceremony',
+            'restaurant',
+            'ordering',
+            'vocabulary',
+            'practised',
+          ],
+        }),
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledTimes(1);
+      expect(result.summary).toContain('travel vocabulary');
+      expect(result.summary).toContain('tea ceremonies');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+      expect(result.vocabulary).toContain('travel');
+      expect(result.vocabulary).toContain('tea ceremony');
+    });
+
+    it('should fall back to extractSummaryFallback when LLM response lacks JSON', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: 'Here is a plain text summary without JSON formatting.',
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+    });
+
+    it('should fall back to extractSummaryFallback when LLM API key is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'LLM_API_KEY') return null;
+        if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
+        if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
+        if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        return null;
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(mockLlmProxyService.proxyMessage).not.toHaveBeenCalled();
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+    });
+
+    it('should fall back to extractSummaryFallback when LLM proxy throws', async () => {
+      mockLlmProxyService.proxyMessage.mockRejectedValueOnce(
+        new Error('LLM unavailable'),
+      );
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
     });
   });
 });

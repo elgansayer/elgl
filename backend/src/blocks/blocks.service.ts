@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class BlocksService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   async getBlockedUsers(requestUserId: string): Promise<any[]> {
     const client = this.supabaseService.getClient();
@@ -35,6 +39,23 @@ export class BlocksService {
     return users ?? [];
   }
 
+  async blockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    const client = this.supabaseService.getClient();
+
+    const { error } = await client
+      .from('blocks')
+      .insert({ blocker_id: blockerId, blocked_id: blockedId });
+
+    if (error) {
+      throw new Error(`Failed to block user: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
   async unblockUser(
     blockerId: string,
     blockedId: string,
@@ -49,6 +70,8 @@ export class BlocksService {
     if (error) {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
+
+    this.metricsService.recordTsBlockRemoved();
 
     return { success: true };
   }

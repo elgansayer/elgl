@@ -1,0 +1,666 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Moderation &amp; Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .page-head {
+        max-width: 810px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      .frames {
+        max-width: 810px;
+        margin: 0 auto;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .frame-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .frame-col .frame-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .phone {
+        width: 390px;
+        background: rgb(var(--surface-500));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        max-height: 820px;
+        overflow-y: auto;
+      }
+
+      /* ---- Moderation queue ---- */
+      .mod-wrap {
+        padding: 18px 14px;
+      }
+      .mod-wrap h1 {
+        font-size: 18px;
+        font-weight: 800;
+        margin: 0 0 12px;
+      }
+      .seg-row {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .seg-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 8px 14px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .seg-btn.on {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .seg-btn.off {
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-secondary));
+      }
+      .status-row {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .status-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 6px 11px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .status-btn.on {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .status-btn.off {
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-secondary));
+      }
+      .report-card {
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .report-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .report-top .reason {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .report-top .time {
+        font-size: 10px;
+        color: rgb(var(--text-muted));
+        white-space: nowrap;
+      }
+      .report-line {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        margin: 3px 0;
+      }
+      .report-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .btn-approve {
+        border: none;
+        border-radius: 8px;
+        background: rgb(var(--success));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 13px;
+      }
+      .btn-reject {
+        border: none;
+        border-radius: 8px;
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 13px;
+      }
+      .btn-analyse {
+        border: none;
+        border-radius: 8px;
+        background: rgb(var(--secondary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 13px;
+      }
+      .risk-card {
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        padding: 14px;
+        margin-top: 6px;
+      }
+      .risk-card h2 {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .risk-card .score {
+        color: rgb(var(--danger));
+      }
+      .risk-card p {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        margin: 4px 0;
+      }
+      .risk-warning {
+        color: rgb(var(--danger));
+        font-weight: 600;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+
+      /* ---- Admin portal ---- */
+      .admin-wrap {
+        padding: 18px 14px;
+      }
+      .admin-wrap h1 {
+        font-size: 18px;
+        font-weight: 800;
+        margin: 0 0 2px;
+      }
+      .admin-wrap .sub {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 14px;
+      }
+      .search-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .search-input {
+        flex: 1;
+        border-radius: 10px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-200));
+        padding: 9px 11px;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .search-btn {
+        border: none;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 9px 16px;
+      }
+      .user-card {
+        border-radius: 12px;
+        background: rgb(var(--surface-200));
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .user-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .user-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        flex-shrink: 0;
+      }
+      .user-info {
+        flex: 1;
+        min-width: 8rem;
+      }
+      .user-info .name {
+        font-weight: 700;
+        font-size: 13px;
+        margin: 0;
+      }
+      .user-info .joined {
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        margin: 1px 0 0;
+      }
+      .pill-badge {
+        font-size: 9px;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 3px 8px;
+      }
+      .pill-badge.admin {
+        background: rgb(var(--secondary) / 0.18);
+        color: rgb(var(--secondary));
+      }
+      .pill-badge.vip {
+        background: rgb(var(--success) / 0.18);
+        color: rgb(var(--success));
+      }
+      .pill-badge.free {
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-secondary));
+      }
+      .pill-badge.coins {
+        background: rgb(var(--warning) / 0.18);
+        color: rgb(var(--warning));
+      }
+      .badge-row {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin: 6px 0;
+      }
+      .action-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .app-pill-btn {
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 6px 11px;
+        border: 1px solid rgb(var(--surface-100));
+        background: transparent;
+        color: rgb(var(--text-primary));
+      }
+      .app-pill-btn.warn {
+        background: rgb(var(--warning));
+        color: rgb(var(--on-fill));
+        border-color: transparent;
+      }
+      .app-pill-btn.ban {
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+        border-color: transparent;
+      }
+      .login-history {
+        margin-top: 10px;
+        padding-inline-start: 12px;
+        border-inline-start: 1px solid rgb(var(--surface-100));
+      }
+      .login-history summary {
+        font-size: 11px;
+        color: rgb(var(--primary));
+        cursor: pointer;
+        margin-inline-start: -12px;
+        padding-inline-start: 12px;
+      }
+      .login-entry {
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        margin: 6px 0 0;
+      }
+      .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 14px;
+      }
+      .pagination .app-pill-btn {
+        border: 1px solid rgb(var(--surface-100));
+      }
+      .pagination .page-status {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+      }
+
+      .caption {
+        max-width: 810px;
+        margin: 18px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Moderation &amp; Admin</h1>
+        <p>moderation-queue.component.html + admin-portal.component.html</p>
+      </div>
+      <div class="toggle" id="toggle">
+        <button id="btn-light" class="active">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="frames">
+      <div class="frame-col">
+        <span class="frame-label">Moderation queue</span>
+        <div class="phone">
+          <div class="mod-wrap">
+            <h1>Moderation queue</h1>
+            <div class="seg-row">
+              <button class="seg-btn on">Profiles</button>
+              <button class="seg-btn off">Moments</button>
+            </div>
+            <div class="status-row">
+              <button class="status-btn on">All</button>
+              <button class="status-btn off">Pending</button>
+              <button class="status-btn off">Approved</button>
+              <button class="status-btn off">Rejected</button>
+            </div>
+
+            <div class="report-card">
+              <div class="report-top">
+                <span class="reason">Reason: Harassment</span>
+                <span class="time">Today, 09:12</span>
+              </div>
+              <p class="report-line">User: Marco Rossi</p>
+              <button class="btn-analyse">Analyse</button>
+              <div class="report-actions">
+                <button class="btn-approve">Approve</button>
+                <button class="btn-reject">Reject</button>
+              </div>
+            </div>
+
+            <div class="risk-card">
+              <h2>Risk score: <span class="score">82%</span></h2>
+              <p>Flags: aggressive_language, repeat_offender</p>
+              <p class="risk-warning">⚠ High-risk behaviour pattern - recommend priority review</p>
+            </div>
+
+            <div class="report-card">
+              <div class="report-top">
+                <span class="reason">Reason: Spam content</span>
+                <span class="time">Today, 08:47</span>
+              </div>
+              <p class="report-line">Content: "Check out my crypto page 🚀🚀🚀..."</p>
+              <div class="report-actions">
+                <button class="btn-approve">Approve</button>
+                <button class="btn-reject">Reject</button>
+              </div>
+            </div>
+
+            <div class="report-card">
+              <div class="report-top">
+                <span class="reason">Reason: Impersonation</span>
+                <span class="time">Yesterday</span>
+              </div>
+              <p class="report-line">User: 田中 健太</p>
+              <p class="report-line">Description: Profile photo matches a public figure</p>
+              <button class="btn-analyse">Analyse</button>
+              <div class="report-actions">
+                <button class="btn-approve">Approve</button>
+                <button class="btn-reject">Reject</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame-col">
+        <span class="frame-label">Admin portal</span>
+        <div class="phone">
+          <div class="admin-wrap">
+            <h1>Admin</h1>
+            <p class="sub">Search and manage user accounts</p>
+            <div class="search-row">
+              <span class="search-input">Search by name or email…</span>
+              <button class="search-btn">Search</button>
+            </div>
+
+            <div class="user-card">
+              <div class="user-row">
+                <div class="user-avatar">L</div>
+                <div class="user-info">
+                  <p class="name">Lena Kowalski</p>
+                  <p class="joined">Joined 12 Mar 2024</p>
+                </div>
+              </div>
+              <div class="badge-row">
+                <span class="pill-badge admin">Admin</span>
+                <span class="pill-badge vip">VIP</span>
+                <span class="pill-badge coins">4,120 coins</span>
+              </div>
+              <div class="action-row">
+                <button class="app-pill-btn">Revoke VIP</button>
+                <button class="app-pill-btn warn">Warn</button>
+                <button class="app-pill-btn ban">Ban</button>
+              </div>
+              <details class="login-history" open>
+                <summary>View login history</summary>
+                <p class="login-entry">11 Aug 2026, 08:02 · 82.19.44.2 · Chrome / macOS</p>
+                <p class="login-entry">9 Aug 2026, 21:47 · 82.19.44.2 · Safari / iOS</p>
+              </details>
+            </div>
+
+            <div class="user-card">
+              <div class="user-row">
+                <div class="user-avatar">P</div>
+                <div class="user-info">
+                  <p class="name">Priya Sharma</p>
+                  <p class="joined">Joined 3 Jan 2025</p>
+                </div>
+              </div>
+              <div class="badge-row">
+                <span class="pill-badge vip">VIP</span>
+                <span class="pill-badge coins">980 coins</span>
+              </div>
+              <div class="action-row">
+                <button class="app-pill-btn">Revoke VIP</button>
+                <button class="app-pill-btn warn">Warn</button>
+                <button class="app-pill-btn ban">Ban</button>
+              </div>
+              <details class="login-history">
+                <summary>View login history</summary>
+              </details>
+            </div>
+
+            <div class="user-card">
+              <div class="user-row">
+                <div class="user-avatar">O</div>
+                <div class="user-info">
+                  <p class="name">Omar Farouk</p>
+                  <p class="joined">Joined 22 Jun 2025</p>
+                </div>
+              </div>
+              <div class="badge-row">
+                <span class="pill-badge free">Free</span>
+                <span class="pill-badge coins">40 coins</span>
+              </div>
+              <div class="action-row">
+                <button class="app-pill-btn">Grant VIP</button>
+                <button class="app-pill-btn warn">Warn</button>
+                <button class="app-pill-btn ban">Ban</button>
+              </div>
+              <details class="login-history">
+                <summary>View login history</summary>
+              </details>
+            </div>
+
+            <nav class="pagination">
+              <button class="app-pill-btn" disabled>Previous</button>
+              <span class="page-status">Page 1 of 6</span>
+              <button class="app-pill-btn">Next</button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="caption">
+      Moderation queue mirrors <code>moderation-queue.component.html</code>'s type toggle
+      (profiles/moments), status filter pills, report cards (reason, reporter-facing description,
+      analyse/approve/reject actions) and the risk-score analysis panel shown after "Analyse" -
+      trimmed to 3 sample reports instead of a live queue. Admin portal mirrors
+      <code>admin-portal.component.html</code>'s search bar, user cards (avatar, badges, grant/
+      revoke VIP, warn, ban, expandable login history) and pagination footer, trimmed to 3 sample
+      users of a 6-page set. The "Admin" badge's colour is <code>DESIGN.md</code>'s
+      <code>secondary</code> (Tide) token, standing in for the component's
+      <code>colour="info"</code> pill variant, which the current Relay token table has no formal
+      <code>info</code> entry for. Omitted from both: loading skeletons, empty/error states, and the
+      offline banner (<code>app-admin-offline-banner</code>) that only renders when connectivity is
+      lost.
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

@@ -94,6 +94,16 @@ const TAG_BASE_VOCABULARY: Record<string, BaseVocabularyItem[]> = {
   ],
 };
 
+function isTargetVocabularyItem(value: unknown): value is TargetVocabularyItem {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'word' in value &&
+    'translation' in value &&
+    'language' in value
+  );
+}
+
 @Injectable()
 export class HobbyTagsService {
   private readonly logger = new Logger(HobbyTagsService.name);
@@ -329,11 +339,12 @@ export class HobbyTagsService {
       const hobbyTag = uht.hobby_tag;
       if (!hobbyTag) continue;
 
-      const targetVocab: TargetVocabularyItem[] = Array.isArray(
-        hobbyTag.target_vocabulary,
-      )
+      const rawVocab = Array.isArray(hobbyTag.target_vocabulary)
         ? hobbyTag.target_vocabulary
         : [];
+      const targetVocab: TargetVocabularyItem[] = rawVocab.filter(
+        isTargetVocabularyItem,
+      );
 
       const cachedVocab = targetVocab.filter((v) => v.language === language);
 
@@ -367,21 +378,21 @@ export class HobbyTagsService {
     }
 
     if (tagsNeedingTranslation.length > 0) {
-      const allBaseWords: string[] = [];
       const wordToTagMap = new Map<string, string[]>();
 
       for (const tnt of tagsNeedingTranslation) {
         const baseVocab = this.getBaseVocabulary(tnt.tagName);
         for (const bv of baseVocab) {
-          if (!wordToTagMap.has(bv.word)) {
-            wordToTagMap.set(bv.word, []);
+          let tags = wordToTagMap.get(bv.word);
+          if (!tags) {
+            tags = [];
+            wordToTagMap.set(bv.word, tags);
           }
-          wordToTagMap.get(bv.word)!.push(tnt.tagName);
-          if (!allBaseWords.includes(bv.word)) {
-            allBaseWords.push(bv.word);
-          }
+          tags.push(tnt.tagName);
         }
       }
+
+      const allBaseWords = Array.from(wordToTagMap.keys());
 
       const translations = await this.translateVocabulary(
         allBaseWords,
@@ -416,21 +427,52 @@ export class HobbyTagsService {
 
         const updatedVocab = [...tnt.existingVocab, ...newVocabItems];
 
-        setImmediate(async () => {
-          try {
-            await supabase
-              .from('hobby_tags')
-              .update({ target_vocabulary: updatedVocab })
-              .eq('id', tnt.hobbyTagId);
-          } catch (err) {
-            this.logger.warn(
-              `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
-            );
-          }
+        setImmediate(() => {
+          void (async () => {
+            try {
+              await supabase
+                .from('hobby_tags')
+                .update({ target_vocabulary: updatedVocab })
+                .eq('id', tnt.hobbyTagId);
+            } catch (err) {
+              this.logger.warn(
+                `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
+              );
+            }
+          })();
         });
       }
     }
 
     return results;
+  }
+
+  async getUserVocabulary(
+    userId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
+    return this.getVocabularyForUser(userId, language || 'en');
+  }
+
+  async getVocabularyForTag(
+    tagId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('hobby_tags')
+      .select('*')
+      .eq('id', tagId)
+      .single();
+    if (!data) return [];
+    return this.getBaseVocabulary(data.name).map((item, index) => ({
+      id: `${tagId}-${index}`,
+      word: item.word,
+      translation: item.word,
+      language: language || 'en',
+      hobbyTagName: data.name,
+      difficulty: 'beginner',
+      hobby_tag: { icon: data.icon ?? '✨', name: data.name },
+    }));
   }
 }

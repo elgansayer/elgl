@@ -1,7 +1,9 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { UnauthorizedException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { of } from 'rxjs';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -64,35 +66,44 @@ describe('GooglePlayNotificationService', () => {
   let service: GooglePlayNotificationService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
-  let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
-  let httpService: { get: jest.Mock };
-  let subscriptionPlansService: { getTierByProductId: jest.Mock };
+  let monetisationService: { updateVipStatusFromWebhook: Mock };
+  let httpService: { get: Mock };
+  let subscriptionPlansService: { getTierByProductId: Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: null }),
-      upsert: jest.fn().mockResolvedValue({ error: null }),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
     monetisationService = {
-      updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
+      updateVipStatusFromWebhook: vi.fn().mockResolvedValue(undefined),
     };
-    httpService = { get: jest.fn() };
+    httpService = { get: vi.fn() };
     subscriptionPlansService = {
-      getTierByProductId: jest.fn((productId: string) => productId),
+      getTierByProductId: vi.fn((productId: string) => productId),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: 'PinoLogger:GooglePlayNotificationService',
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+          },
+        },
         GooglePlayNotificationService,
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               if (key === 'GOOGLE_PLAY_PACKAGE_NAME')
                 return 'com.hellotalk.app';
               if (key === 'GOOGLE_PLAY_ACCESS_TOKEN') return 'access-token';
@@ -109,7 +120,7 @@ describe('GooglePlayNotificationService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         { provide: MonetisationService, useValue: monetisationService },
@@ -127,14 +138,14 @@ describe('GooglePlayNotificationService', () => {
     // Stand in for the real Google JWKS endpoint - hand back the test key
     // pair instead of hitting the network.
     (service as any).jwksClient = {
-      getSigningKey: jest.fn().mockResolvedValue({
+      getSigningKey: vi.fn().mockResolvedValue({
         getPublicKey: () => publicKey,
       }),
     };
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   function mockActiveSubscription(
@@ -270,7 +281,7 @@ describe('GooglePlayNotificationService', () => {
 
     it('should reject when GOOGLE_PUBSUB_AUDIENCE/SERVICE_ACCOUNT_EMAIL are not configured (fail closed)', async () => {
       const configService = {
-        get: jest.fn((key: string) => {
+        get: vi.fn((key: string) => {
           if (key === 'GOOGLE_PLAY_PACKAGE_NAME') return 'com.hellotalk.app';
           if (key === 'GOOGLE_PLAY_ACCESS_TOKEN') return 'access-token';
           return undefined;
@@ -278,13 +289,22 @@ describe('GooglePlayNotificationService', () => {
       };
       const module: TestingModule = await Test.createTestingModule({
         providers: [
+          {
+            provide: 'PinoLogger:GooglePlayNotificationService',
+            useValue: {
+              info: vi.fn(),
+              warn: vi.fn(),
+              error: vi.fn(),
+              debug: vi.fn(),
+            },
+          },
           GooglePlayNotificationService,
           { provide: ConfigService, useValue: configService },
           { provide: HttpService, useValue: httpService },
           {
             provide: SupabaseService,
             useValue: {
-              getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+              getClient: vi.fn().mockReturnValue(mockSupabaseClient),
             },
           },
           {

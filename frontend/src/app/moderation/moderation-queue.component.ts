@@ -1,4 +1,5 @@
-import { Component, inject, signal, resource } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, resource, ErrorHandler } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import {
   ModerationService,
@@ -6,25 +7,35 @@ import {
   ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
+import { OfflineAdminStorageService } from '../services/offline-admin-storage.service';
+import { AdminOfflineBannerComponent } from '../components/admin-offline-banner/admin-offline-banner.component';
 import { TranslatePipe } from '../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
+import { CrashReportService } from '../services/crash-report.service';
 
 @Component({
   selector: 'app-moderation-queue',
-  standalone: true,
   imports: [
+    HlmButton,
     DatePipe,
     TranslatePipe,
+    SanitiseHtmlPipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
+    AdminOfflineBannerComponent,
   ],
   templateUrl: './moderation-queue.component.html',
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  private crashReportService = inject(CrashReportService);
+  private errorHandler = inject(ErrorHandler);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
@@ -53,8 +64,10 @@ export class ModerationQueueComponent {
     this.analysisResult.set(null);
   }
 
-  setStatus(status: string): void {
-    this.status.set(status || undefined);
+  setStatus(newStatus: string): void {
+    this.status.set(newStatus || undefined);
+    // Clear analysis when switching status filter
+    this.analysisResult.set(null);
   }
 
   async approve(item: ModerationItem): Promise<void> {
@@ -70,8 +83,9 @@ export class ModerationQueueComponent {
       } else {
         this.actionError.set(result.error ?? 'Failed to approve item');
       }
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Service temporarily unavailable');
+      this.reportCrash(err, 'approve');
     } finally {
       this.actionInProgress.set(null);
     }
@@ -90,8 +104,9 @@ export class ModerationQueueComponent {
       } else {
         this.actionError.set(result.error ?? 'Failed to reject item');
       }
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Service temporarily unavailable');
+      this.reportCrash(err, 'reject');
     } finally {
       this.actionInProgress.set(null);
     }
@@ -105,13 +120,25 @@ export class ModerationQueueComponent {
     this.analysisLoading.set(true);
     this.analysisResult.set(null);
     try {
-      this.analysisResult.set(
-        await this.moderationService.getUserRiskAnalysis(userId),
-      );
-    } catch {
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
+      this.analysisResult.set(result);
+    } catch (err: unknown) {
       this.actionError.set('Failed to analyse user');
+      this.reportCrash(err, 'analyse');
     } finally {
       this.analysisLoading.set(false);
     }
+  }
+
+  private reportCrash(err: unknown, action: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.crashReportService.reportCrash(error, {
+      route: typeof window !== 'undefined' ? window.location.href : '/admin/moderation',
+      component: 'ModerationQueueComponent',
+      adminRole: 'admin',
+      offline: !this.isOnline(),
+      action,
+    });
+    this.errorHandler.handleError(error);
   }
 }

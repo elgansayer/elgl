@@ -54,7 +54,8 @@ export class ModerationController {
   @ApiQuery({
     name: 'status',
     required: false,
-    description: 'Filter by report status (e.g., "pending", "approved", "rejected")',
+    description:
+      'Filter by report status (e.g., "pending", "approved", "rejected")',
     example: 'pending',
   })
   @ApiOkResponse({
@@ -65,16 +66,33 @@ export class ModerationController {
         type: 'object',
         properties: {
           id: { type: 'string', description: 'Report record ID (UUID)' },
-          status: { type: 'string', description: 'Report status: pending, approved, or rejected' },
-          reason: { type: 'string', description: 'Reason category for the report' },
-          created_at: { type: 'string', format: 'date-time', description: 'Report creation timestamp' },
-          description: { type: 'string', nullable: true, description: 'Additional report description' },
+          status: {
+            type: 'string',
+            description: 'Report status: pending, approved, or rejected',
+          },
+          reason: {
+            type: 'string',
+            description: 'Reason category for the report',
+          },
+          created_at: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Report creation timestamp',
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            description: 'Additional report description',
+          },
           reporter: {
             type: 'object',
             nullable: true,
             properties: {
               id: { type: 'string', description: 'Reporter user ID' },
-              display_name: { type: 'string', description: 'Reporter display name' },
+              display_name: {
+                type: 'string',
+                description: 'Reporter display name',
+              },
             },
           },
           reported_user: {
@@ -82,24 +100,50 @@ export class ModerationController {
             nullable: true,
             properties: {
               id: { type: 'string', description: 'Reported user ID' },
-              display_name: { type: 'string', description: 'Reported user display name' },
+              display_name: {
+                type: 'string',
+                description: 'Reported user display name',
+              },
             },
           },
-          reportedMomentId: { type: 'string', nullable: true, description: 'Reported moment ID if applicable' },
-          moment_content: { type: 'string', nullable: true, description: 'Content text of the reported moment' },
-          momentAuthorName: { type: 'string', nullable: true, description: 'Display name of the moment author' },
+          reportedMomentId: {
+            type: 'string',
+            nullable: true,
+            description: 'Reported moment ID if applicable',
+          },
+          moment_content: {
+            type: 'string',
+            nullable: true,
+            description: 'Content text of the reported moment',
+          },
+          momentAuthorName: {
+            type: 'string',
+            nullable: true,
+            description: 'Display name of the moment author',
+          },
         },
       },
     },
   })
   @ApiBadRequestResponse({ description: 'Invalid type parameter' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded (30 req/min)' })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (30 req/min)',
+  })
   async getItems(
     @Query('type') type: 'moment' | 'profile',
     @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ): Promise<ModerationItem[]> {
-    return this.moderationService.getItems(type, status);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    const parsedPageSize = pageSize ? parseInt(pageSize, 10) : undefined;
+    return this.moderationService.getItems(
+      type,
+      status,
+      parsedPage,
+      parsedPageSize,
+    );
   }
 
   @Post('report')
@@ -119,17 +163,25 @@ export class ModerationController {
         properties: {
           id: { type: 'string', description: 'Report record ID (UUID)' },
           reporter_id: { type: 'string', description: 'Reporter user UUID' },
-          reported_user_id: { type: 'string', description: 'Reported user UUID' },
+          reported_user_id: {
+            type: 'string',
+            description: 'Reported user UUID',
+          },
           reason_category: { type: 'string', description: 'Reason category' },
           description: { type: 'string', nullable: true },
-          status: { type: 'string', description: 'Report status (always "pending")' },
+          status: {
+            type: 'string',
+            description: 'Report status (always "pending")',
+          },
         },
       },
     },
   })
   @ApiBadRequestResponse({ description: 'Invalid report payload' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded (5 req/min)' })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (5 req/min)',
+  })
   async reportUser(
     @Req() req: { user: { id: string } },
     @Body() dto: ReportUserDto,
@@ -156,8 +208,12 @@ export class ModerationController {
   @ApiBadRequestResponse({ description: 'Invalid moderation action payload' })
   @ApiNotFoundResponse({ description: 'Report item not found' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
-  @ApiForbiddenResponse({ description: 'User does not have moderator privileges' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded (10 req/min)' })
+  @ApiForbiddenResponse({
+    description: 'User does not have moderator privileges',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (10 req/min)',
+  })
   async approve(@Body() dto: ModerationActionDto) {
     return this.moderationService.approveItem(dto);
   }
@@ -181,8 +237,12 @@ export class ModerationController {
   @ApiBadRequestResponse({ description: 'Invalid moderation action payload' })
   @ApiNotFoundResponse({ description: 'Report item not found' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
-  @ApiForbiddenResponse({ description: 'User does not have moderator privileges' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded (10 req/min)' })
+  @ApiForbiddenResponse({
+    description: 'User does not have moderator privileges',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (10 req/min)',
+  })
   async reject(@Body() dto: ModerationActionDto) {
     return this.moderationService.rejectItem(dto);
   }
@@ -206,7 +266,8 @@ export class ModerationController {
       properties: {
         riskScore: {
           type: 'number',
-          description: 'Risk score from 0 to 100. Higher values indicate stronger dating-behaviour signals.',
+          description:
+            'Risk score from 0 to 100. Higher values indicate stronger dating-behaviour signals.',
           minimum: 0,
           maximum: 100,
           example: 42,
@@ -214,7 +275,8 @@ export class ModerationController {
         flags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'List of matched dating-related keywords found in the user content',
+          description:
+            'List of matched dating-related keywords found in the user content',
           example: ['dating', 'relationship', 'single'],
         },
       },
@@ -222,7 +284,9 @@ export class ModerationController {
   })
   @ApiNotFoundResponse({ description: 'User not found' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded (5 req/min)' })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (5 req/min)',
+  })
   async analyseUser(@Param('userId') userId: string) {
     return this.moderationService.analyseUserForDatingBehaviour(userId);
   }
