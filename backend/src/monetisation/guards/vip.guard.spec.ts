@@ -1,11 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SupabaseService } from '../../supabase/supabase.service';
-import {
-  VIP_TIER_METADATA,
-  VipGuard,
-  type VipRequirement,
-} from './vip.guard';
+import { VIP_TIER_METADATA, VipGuard, type VipRequirement } from './vip.guard';
 
 function buildContext(user?: { id: string }): ExecutionContext {
   return {
