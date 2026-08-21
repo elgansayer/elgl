@@ -1,13 +1,18 @@
 import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-button-secondary',
+  imports: [...HlmButtonImports],
   template: `
     <button
+      hlmBtn
+      variant="secondary"
+      [size]="helmSize()"
       [type]="type()"
       [disabled]="disabled()"
-      [class]="buttonClasses()"
+      [class]="customClass()"
       [attr.aria-label]="ariaLabel() || null"
       [attr.aria-pressed]="ariaPressed() === null ? null : ariaPressed()"
       (click)="onClick($event)"
@@ -26,37 +31,14 @@ export class AppButtonSecondaryComponent {
   readonly customClass = input<string>('');
   readonly ariaLabel = input<string>('');
   readonly ariaPressed = input<boolean | null>(null);
-
   readonly clicked = output<MouseEvent>();
 
-  readonly buttonClasses = computed(() => {
-    const base =
-      'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2';
-
-    let sizeClass = '';
-    switch (this.size()) {
-      case 'sm':
-        sizeClass = 'ps-3 pe-3 pt-1.5 pb-1.5 text-xs';
-        break;
-      case 'md':
-        sizeClass = 'ps-4 pe-4 pt-2.5 pb-2.5 text-sm';
-        break;
-      case 'lg':
-        sizeClass = 'ps-6 pe-6 pt-3.5 pb-3.5 text-base';
-        break;
-    }
-
-    const stateClass = this.disabled()
-      ? 'bg-surface-100 text-text-muted border border-surface-100 cursor-not-allowed shadow-none'
-      : 'bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-100 hover:border-surface-100 shadow-sm cursor-pointer';
-
-    const extra = this.customClass();
-    return `${base} ${sizeClass} ${stateClass}${extra ? ' ' + extra : ''}`.trim();
+  readonly helmSize = computed(() => {
+    const size = this.size();
+    return size === 'md' ? 'touch' : size;
   });
 
   onClick(event: MouseEvent): void {
-    if (!this.disabled()) {
-      this.clicked.emit(event);
-    }
+    if (!this.disabled()) this.clicked.emit(event);
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 interface Particle {
   x: number;
@@ -27,8 +28,7 @@ interface Particle {
 
 @Component({
   selector: 'app-celebration-overlay',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppButtonPrimaryComponent],
   templateUrl: './celebration-overlay.component.html',
   styleUrl: './celebration-overlay.component.scss',
 })
@@ -77,10 +77,7 @@ export class CelebrationOverlayComponent implements OnDestroy {
     // will be cleaned when component destroyed (listener removed)
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', resize));
 
-    const colors = [
-      '#FF6B6B', '#FFE66D', '#4ECDC4', '#45B7D1',
-      '#96CEB4', '#FFEAA7', '#DDA0DD',
-    ];
+    const colors = ['#FF6B6B', '#FFE66D', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
 
     for (let i = 0; i < 120; i++) {
       this.particles.push({
@@ -103,7 +100,7 @@ export class CelebrationOverlayComponent implements OnDestroy {
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / durationMs, 1);
-      const alpha = progress > 0.8 ? 1 - ((progress - 0.8) / 0.2) : 1;
+      const alpha = progress > 0.8 ? 1 - (progress - 0.8) / 0.2 : 1;
 
       ctx!.clearRect(0, 0, canvas.width, canvas.height);
 

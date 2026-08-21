@@ -38,6 +38,17 @@ export class AchievementsService implements OnModuleInit {
     },
   ];
 
+  private readonly messageMilestoneCodes: readonly string[] = [
+    'first_message',
+    '100_messages',
+    '500_messages',
+  ];
+
+  private readonly streakMilestoneCodes: readonly string[] = [
+    '7_day_streak',
+    '30_day_streak',
+  ];
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async onModuleInit(): Promise<void> {
@@ -47,18 +58,17 @@ export class AchievementsService implements OnModuleInit {
 
   private async seedAchievements(): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    for (const m of this.milestones) {
-      const { error } = await supabase
-        .from('achievements')
-        .upsert(
-          { code: m.code, name: m.name, description: m.description },
-          { onConflict: 'code' },
-        );
-      if (error) {
-        this.logger.warn(
-          `Failed to upsert achievement ${m.code}: ${error.message}`,
-        );
-      }
+    const achievements = this.milestones.map((milestone) => ({
+      code: milestone.code,
+      name: milestone.name,
+      description: milestone.description,
+    }));
+    const { error } = await supabase
+      .from('achievements')
+      .upsert(achievements, { onConflict: 'code' });
+
+    if (error) {
+      this.logger.warn(`Failed to bulk upsert achievements: ${error.message}`);
     }
   }
 
@@ -192,7 +202,9 @@ export class AchievementsService implements OnModuleInit {
   }
 
   async evaluateAchievements(userId: string): Promise<void> {
-    // Fetch user's existing achievements once
+    // The earned-state lookup is bounded by the small achievement catalogue. Once a
+    // milestone family is complete, skip its potentially growing source query on
+    // every subsequent event. This keeps message.sent cheap for long-lived users.
     const earnedRows = await this.getUserAchievements(userId);
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
@@ -200,37 +212,43 @@ export class AchievementsService implements OnModuleInit {
       if (code) earnedCodes.add(code);
     }
 
-    // Check if we need to evaluate message milestones
-    const needsMessageEval =
-      !earnedCodes.has('first_message') ||
-      !earnedCodes.has('100_messages') ||
-      !earnedCodes.has('500_messages');
+    const messageMilestonesComplete = this.messageMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
+    );
+    const streakMilestonesComplete = this.streakMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
+    );
 
-    if (needsMessageEval) {
-      const msgCount = await this.getUserMessageCount(userId);
-      if (msgCount >= 1 && !earnedCodes.has('first_message')) {
-        await this.awardAchievement(userId, 'first_message');
-      }
-      if (msgCount >= 100 && !earnedCodes.has('100_messages')) {
-        await this.awardAchievement(userId, '100_messages');
-      }
-      if (msgCount >= 500 && !earnedCodes.has('500_messages')) {
-        await this.awardAchievement(userId, '500_messages');
-      }
+    const [msgCount, streakDays] = await Promise.all([
+      messageMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getUserMessageCount(userId),
+      streakMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getStudyStreakDays(userId),
+    ]);
+
+    const newAwards: Promise<void>[] = [];
+
+    // Award milestones based on thresholds
+    if (msgCount >= 1 && !earnedCodes.has('first_message')) {
+      newAwards.push(this.awardAchievement(userId, 'first_message'));
+    }
+    if (msgCount >= 100 && !earnedCodes.has('100_messages')) {
+      newAwards.push(this.awardAchievement(userId, '100_messages'));
+    }
+    if (msgCount >= 500 && !earnedCodes.has('500_messages')) {
+      newAwards.push(this.awardAchievement(userId, '500_messages'));
+    }
+    if (streakDays >= 7 && !earnedCodes.has('7_day_streak')) {
+      newAwards.push(this.awardAchievement(userId, '7_day_streak'));
+    }
+    if (streakDays >= 30 && !earnedCodes.has('30_day_streak')) {
+      newAwards.push(this.awardAchievement(userId, '30_day_streak'));
     }
 
-    // Check if we need to evaluate streak milestones
-    const needsStreakEval =
-      !earnedCodes.has('7_day_streak') || !earnedCodes.has('30_day_streak');
-
-    if (needsStreakEval) {
-      const streakDays = await this.getStudyStreakDays(userId);
-      if (streakDays >= 7 && !earnedCodes.has('7_day_streak')) {
-        await this.awardAchievement(userId, '7_day_streak');
-      }
-      if (streakDays >= 30 && !earnedCodes.has('30_day_streak')) {
-        await this.awardAchievement(userId, '30_day_streak');
-      }
+    if (newAwards.length > 0) {
+      await Promise.all(newAwards);
     }
   }
 

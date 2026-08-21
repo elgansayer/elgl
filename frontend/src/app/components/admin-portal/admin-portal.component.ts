@@ -1,35 +1,54 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
-import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
-import { AdminOfflineBannerComponent } from '../admin-offline-banner/admin-offline-banner.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, SanitiseHtmlPipe, AdminOfflineBannerComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    TranslatePipe,
+    DatePipe,
+    AppCardComponent,
+    AppPillComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
-export class AdminPortalComponent implements OnInit {
+export class AdminPortalComponent {
   private readonly adminService = inject(AdminService);
-  private readonly offlineStorage = inject(OfflineAdminStorageService);
   private readonly i18n = inject(I18nService);
-
-  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly searchTerm = signal<string>('');
   readonly page = signal<number>(1);
   readonly pageSize = 20;
-  readonly users = signal<AdminUserSummary[]>([]);
-  readonly total = signal<number>(0);
-  readonly isLoading = signal<boolean>(true);
+
+  private readonly usersResource = resource({
+    params: () => ({
+      search: this.searchTerm().trim(),
+      page: this.page(),
+      pageSize: this.pageSize,
+    }),
+    loader: ({ params }) =>
+      this.adminService.listUsers(params.search, params.page, params.pageSize),
+  });
+
+  readonly users = computed(() => this.usersResource.value()?.users ?? []);
+  readonly total = computed(() => this.usersResource.value()?.total ?? 0);
+  readonly isLoading = this.usersResource.isLoading;
   readonly errorMessage = signal<string>('');
+
   readonly vipUpdatingId = signal<string | null>(null);
   readonly moderationActingId = signal<string | null>(null);
   readonly loginHistoryByUser = signal<Record<string, LoginHistoryEntry[]>>({});
@@ -37,49 +56,29 @@ export class AdminPortalComponent implements OnInit {
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
-  async ngOnInit(): Promise<void> {
-    await this.loadUsers();
-  }
-
-  async loadUsers(): Promise<void> {
-    this.isLoading.set(true);
-    this.errorMessage.set('');
-    try {
-      const result = await this.adminService.listUsers(
-        this.searchTerm().trim(),
-        this.page(),
-        this.pageSize,
-      );
-      this.users.set(result.users);
-      this.total.set(result.total);
-    } catch {
-      this.errorMessage.set(this.i18n.translate('admin.loadError'));
-    } finally {
-      this.isLoading.set(false);
-    }
+  loadUsers(): void {
+    this.usersResource.reload();
   }
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);
   }
 
-  async runSearch(): Promise<void> {
+  runSearch(): void {
     this.page.set(1);
-    await this.loadUsers();
   }
 
-  async goToPage(delta: number): Promise<void> {
+  goToPage(delta: number): void {
     const nextPage = this.page() + delta;
     if (nextPage < 1 || nextPage > this.totalPages()) return;
     this.page.set(nextPage);
-    await this.loadUsers();
   }
 
   async toggleVip(user: AdminUserSummary): Promise<void> {
     this.vipUpdatingId.set(user.id);
     try {
-      const updated = await this.adminService.setVipStatus(user.id, !user.is_vip);
-      this.users.update((list) => list.map((u) => (u.id === user.id ? updated : u)));
+      await this.adminService.setVipStatus(user.id, !user.is_vip);
+      this.usersResource.reload();
     } catch {
       this.errorMessage.set(this.i18n.translate('admin.vipUpdateError'));
     } finally {

@@ -1,0 +1,194 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Tutor Profiles architecture (#2092). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent. The Tutor Profiles module is planned: monitors activate automatically once the backend starts emitting the hellotalk_tutor_profiles_* metrics documented in docs/tutor-profiles-monitoring.md.",
+  "monitors": [
+    {
+      "name": "[Tutor Profiles] Zero tutor profile creation activity",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_tutor_profiles_created_total{status:success}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo tutor profiles have been created in the last 30 minutes. This could indicate a complete outage of the tutor onboarding pipeline or zero new tutor signups.\n\n**Actions:**\n1. Verify the NestJS backend is running and healthy.\n2. Check the tutor profile creation API directly.\n3. Confirm the Datadog Agent is scraping the metrics endpoint correctly.\n4. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 35,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutor profile creation failure rate",
+      "type": "query alert",
+      "query": "avg(last_10m):(avg:hellotalk_tutor_profiles_created_total{status:failed}.as_count() / (avg:hellotalk_tutor_profiles_created_total{status:success}.as_count() + avg:hellotalk_tutor_profiles_created_total{status:failed}.as_count())) * 100 > 10",
+      "message": "{{#is_alert}}\nThe tutor profile creation failure rate has exceeded 10% over the last 10 minutes. New tutors may be unable to complete their onboarding.\n\n**Current value:** {{value}}%\n**Threshold:** 10%\n\n**Actions:**\n1. Check the tutor profile creation endpoint logs for validation or persistence errors.\n2. Verify the Supabase connection and the tutor_profiles table schema.\n3. Check for a recent deployment that introduced a breaking change.\n{{/is_alert}}\n\n{{#is_warning}}\nTutor profile creation failure rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutor verification failure rate",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_tutor_profiles_verification_failures_total{*}.as_rate() > 0.2",
+      "message": "{{#is_alert}}\nThe tutor verification failure rate has exceeded 0.2 events per second over the last 30 minutes. This may indicate a broken identity check integration or a spike in fraudulent tutor applications.\n\n**Current value:** {{value}} events/s\n**Threshold:** 0.2 events/s\n\n**Actions:**\n1. Inspect the verification provider health and credentials.\n2. Review recent verification attempts for a pattern (reason tag).\n3. Check the trust and safety queue for tutor applications.\n{{/is_alert}}\n\n{{#is_warning}}\nTutor verification failure rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.2,
+          "warning": 0.1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutor search latency",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_tutor_profiles_search_duration_seconds{*} by {endpoint} > 2",
+      "message": "{{#is_alert}}\nTutor search latency has exceeded 2 seconds for endpoint {{endpoint.name}} over the last 10 minutes. This indicates a degraded experience for learners browsing the tutor marketplace.\n\n**Current value:** {{value}}s\n**Threshold:** 2s\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance on tutor_profiles and availability tables.\n2. Inspect the tutor search indexes (language pair, availability, rating).\n3. Verify the Redis cache is operational and that cache misses are not spiking.\n{{/is_alert}}\n\n{{#is_warning}}\nTutor search latency approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 2,
+          "warning": 1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] Tutor search volume dropped to zero",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_tutor_profiles_search_requests_total{*} by {endpoint}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo tutor search requests have been recorded in the last 30 minutes. This could indicate a complete outage of the tutor discovery feature or a metrics pipeline issue.\n\n**Actions:**\n1. Verify the NestJS backend is running and healthy.\n2. Check the tutor search endpoints directly.\n3. Confirm the Datadog Agent is scraping metrics correctly.\n4. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 35,
+        "renotify_interval": 15,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutor search empty result rate",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_tutor_profiles_search_empty_results_total{*}.as_rate() > 0.5",
+      "message": "{{#is_alert}}\nTutor searches are returning empty results at a rate above 0.5 per second over the last hour. Learners may be seeing an empty tutor marketplace.\n\n**Current value:** {{value}} events/s\n**Threshold:** 0.5 events/s\n\n**Actions:**\n1. Check whether the tutor_profiles table has sufficient active tutors.\n2. Verify the availability and language filters are not incorrectly excluding all tutors.\n3. Inspect whether a data migration removed or deprecated tutor records.\n{{/is_alert}}\n\n{{#is_warning}}\nTutor search empty result rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.5,
+          "warning": 0.2
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutoring session cancellation rate",
+      "type": "query alert",
+      "query": "avg(last_1h):(avg:hellotalk_tutor_profiles_sessions_cancelled_total{*}.as_count() / avg:hellotalk_tutor_profiles_sessions_booked_total{status:success}.as_count()) > 0.2",
+      "message": "{{#is_alert}}\nMore than 20% of booked tutoring sessions were cancelled over the last hour. A high cancellation rate may indicate scheduling problems, tutor no-shows, or a broken booking flow.\n\n**Current value:** {{value}}\n**Threshold:** 0.2 (20%)\n\n**Actions:**\n1. Review the cancellation reasons in the tutoring sessions table.\n2. Check for a pattern of tutor unavailability or double bookings.\n3. Verify the booking confirmation notifications are being delivered.\n{{/is_alert}}\n\n{{#is_warning}}\nSession cancellation rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.2,
+          "warning": 0.1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High tutoring session refund rate",
+      "type": "query alert",
+      "query": "avg(last_1h):(avg:hellotalk_tutor_profiles_sessions_refunded_total{*}.as_count() / avg:hellotalk_tutor_profiles_sessions_completed_total{*}.as_count()) > 0.1",
+      "message": "{{#is_alert}}\nMore than 10% of completed tutoring sessions were refunded over the last hour. This indicates a service quality problem, disputes, or an issue with the escrow release flow.\n\n**Current value:** {{value}}\n**Threshold:** 0.1 (10%)\n\n**Actions:**\n1. Review recent refund reasons in the escrow and session records.\n2. Check for patterns by tutor, language, or time period.\n3. Investigate whether the tutoring session quality controls need tightening.\n{{/is_alert}}\n\n{{#is_warning}}\nSession refund rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.1,
+          "warning": 0.05
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] Stale tutor availability records",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_tutor_profiles_availability_stale{*} > 20",
+      "message": "{{#is_alert}}\nMore than 20 tutor profiles have not refreshed their availability in over 7 days. Learners may be booking tutors who are no longer active.\n\n**Current value:** {{value}}\n**Threshold:** 20\n\n**Actions:**\n1. Send a re-engagement notification to inactive tutors.\n2. Review the tutor availability refresh job logs.\n3. Consider surfacing stale tutors lower in search results.\n{{/is_alert}}\n\n{{#is_warning}}\nStale tutor availability count approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 360,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Tutor Profiles] High API error rate on tutor profile endpoints",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_tutor_profiles_api_errors_total{*} by {operation}.as_count() > 20",
+      "message": "{{#is_alert}}\nThe tutor profiles API has recorded more than 20 errors for operation {{operation.name}} in the last 10 minutes. This indicates a systemic failure in the tutor profile endpoints.\n\n**Current value:** {{value}}\n**Threshold:** 20\n\n**Actions:**\n1. Inspect backend logs for the affected operation ({{operation.name}}).\n2. Check Supabase connectivity and schema compatibility.\n3. Review the latest deployment for regressions in the tutor profile routes.\n{{/is_alert}}\n\n{{#is_warning}}\nTutor profile API error rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:tutor-profiles", "severity:critical"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}

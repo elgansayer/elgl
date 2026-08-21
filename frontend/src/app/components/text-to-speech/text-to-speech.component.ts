@@ -1,4 +1,5 @@
 import { Component, inject, input, computed, DestroyRef } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 
@@ -6,17 +7,18 @@ let nextInstanceId = 0;
 
 @Component({
   selector: 'app-text-to-speech',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <button
+      hlmBtn
       type="button"
+      variant="secondary"
+      size="sm"
+      class="rounded-xl"
       (click)="toggleSpeech()"
-      class="inline-flex items-center gap-1 ps-2.5 pe-2.5 py-1 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="isSpeaking()"
-      [class.text-white]="isSpeaking()"
+      [class.text-on-fill]="isSpeaking()"
       [class.animate-pulse]="isSpeaking()"
-      [class.bg-surface-100]="!isSpeaking()"
-      [class.text-text-primary]="!isSpeaking()"
       [attr.aria-label]="isSpeaking() ? ('moments.stopReading' | t) : ('moments.readAloud' | t)"
       [attr.aria-pressed]="isSpeaking()"
     >
@@ -37,9 +39,7 @@ export class TextToSpeechComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => {
-      if (this.isSpeaking()) {
-        this.tts.stop();
-      }
+      if (this.isSpeaking()) this.tts.stop();
     });
   }
 

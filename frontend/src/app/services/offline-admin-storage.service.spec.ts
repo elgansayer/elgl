@@ -4,14 +4,13 @@ import { signal } from '@angular/core';
 
 import { OfflineAdminStorageService } from './offline-admin-storage.service';
 import { NetworkStatusService } from './network-status.service';
-import type { AdminUserSummary, AdminBlockEntry, LoginHistoryEntry } from './admin.service';
-import type { ModerationItem } from './moderation.service';
+import type { AdminUserSummary } from './admin.service';
 
 function createMockUser(id: string): AdminUserSummary {
   return {
     id,
     display_name: `User ${id}`,
-    avatar_url: null,
+    avatar_url: undefined,
     native_languages: ['en'],
     target_languages: ['es'],
     is_vip: false,
@@ -24,63 +23,11 @@ function createMockUser(id: string): AdminUserSummary {
   };
 }
 
-function createMockBlock(id: string): AdminBlockEntry {
-  return {
-    id,
-    blocker_id: 'admin-1',
-    blocked_id: `user-${id}`,
-    blocker_name: 'Admin',
-    blocked_name: `Blocked ${id}`,
-    blocker_avatar: null,
-    blocked_avatar: null,
-    created_at: new Date().toISOString(),
-  };
-}
-
-function createMockLoginEntry(id: string, userId: string): LoginHistoryEntry {
-  return {
-    id,
-    user_id: userId,
-    ip_address: '192.168.0.1',
-    user_agent: 'TestAgent/1.0',
-    created_at: new Date().toISOString(),
-  };
-}
-
-function createMockModerationItem(id: string): ModerationItem {
-  return {
-    id,
-    type: 'profile',
-    status: 'pending',
-    reason: 'spam',
-    created_at: new Date().toISOString(),
-    reporter: { id: 'r1', display_name: 'Reporter' },
-    reported_user: { id: 'u1', display_name: 'ReportedUser' },
-  };
-}
-
 describe('OfflineAdminStorageService', () => {
   let service: OfflineAdminStorageService;
   let onlineSignal: ReturnType<typeof signal<boolean>>;
-  let mockStore: Map<string, unknown>;
-
-  function createIDBReq(result?: unknown) {
-    const req: Record<string, unknown> = { result: result ?? null };
-    Object.defineProperty(req, 'onsuccess', {
-      set(fn: () => void) {
-        setTimeout(fn, 0);
-      },
-    });
-    Object.defineProperty(req, 'onerror', {
-      set() {},
-    });
-    return req;
-  }
-
   beforeEach(() => {
     onlineSignal = signal(true);
-    mockStore = new Map();
-
     vi.stubGlobal('indexedDB', {
       open: vi.fn().mockReturnValue({
         result: {

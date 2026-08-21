@@ -1,4 +1,5 @@
-import { Injectable, signal, inject, computed } from '@angular/core';
+import { Injectable, signal, inject, DestroyRef, computed } from '@angular/core';
+import { firstValueFrom, interval, take } from 'rxjs';
 
 export type GiftAnimationType = 'float' | 'confetti' | 'premium' | 'sparkle' | 'hearts';
 
@@ -68,8 +69,7 @@ function generateParticles(count: number): SvgParticle[] {
 
 @Injectable({ providedIn: 'root' })
 export class GiftAnimationService {
-  private autoHideTimer: ReturnType<typeof setTimeout> | null = null;
-  private fadeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private destroyRef = inject(DestroyRef);
   private animationFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
   private startTime = 0;
 
@@ -82,12 +82,29 @@ export class GiftAnimationService {
   readonly elapsed = signal<number>(0);
   readonly hasAnimation = computed(() => this.currentAnimation() !== null);
 
+  private generateSecureId(): string {
+    // Check for a complete lack of the crypto API, which should be very rare in modern browsers
+    if (typeof crypto === 'undefined') {
+      console.warn('Crypto API not available, using fallback PRNG');
+      // Use a slightly less terrible fallback if crypto is completely unavailable, but avoid Math.random() as the primary fallback
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    if (crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback using cryptographically secure random values
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
   playAnimation(overlay: GiftAnimationOverlay): void {
     this.cleanup();
 
     this.currentAnimation.set({
       ...overlay,
-      id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
+      id: this.generateSecureId(),
     });
     this.isVisible.set(true);
 
@@ -99,24 +116,36 @@ export class GiftAnimationService {
     this.animationFrameId = requestAnimationFrame(this.tick);
 
     // Hide after 5 seconds, then clear the overlay after a short fade-out.
-    this.autoHideTimer = setTimeout(() => {
-      this.isVisible.set(false);
-      this.fadeoutTimer = setTimeout(() => {
-        this.currentAnimation.set(null);
-        this.cancelParticles();
-        this.isPlaying = false;
-      }, 600);
-    }, 5000);
+    void this.scheduleAutoHide();
+
+    this.destroyRef.onDestroy(() => this.cleanup());
+  }
+
+  private async scheduleAutoHide(): Promise<void> {
+    const hideTimeout = interval(5000).pipe(take(1));
+    await firstValueFrom(hideTimeout);
+    this.isVisible.set(false);
+    const cleanupTimeout = interval(600).pipe(take(1));
+    await firstValueFrom(cleanupTimeout);
+    if (this.destroyRef.destroyed) return;
+    this.currentAnimation.set(null);
+    this.cancelParticles();
+    this.isPlaying = false;
   }
 
   dismiss(): void {
     this.cleanup();
     this.isVisible.set(false);
-    this.fadeoutTimer = setTimeout(() => {
-      this.currentAnimation.set(null);
-      this.cancelParticles();
-      this.isPlaying = false;
-    }, 600);
+    void this.scheduleCleanup();
+  }
+
+  private async scheduleCleanup(): Promise<void> {
+    const cleanupTimeout = interval(600).pipe(take(1));
+    await firstValueFrom(cleanupTimeout);
+    if (this.destroyRef.destroyed) return;
+    this.currentAnimation.set(null);
+    this.cancelParticles();
+    this.isPlaying = false;
   }
 
   private tick = (): void => {
@@ -167,15 +196,6 @@ export class GiftAnimationService {
   }
 
   private cleanup(): void {
-    // Stop timers.
-    if (this.autoHideTimer !== null) {
-      clearTimeout(this.autoHideTimer);
-      this.autoHideTimer = null;
-    }
-    if (this.fadeoutTimer !== null) {
-      clearTimeout(this.fadeoutTimer);
-      this.fadeoutTimer = null;
-    }
     this.cancelParticles();
     this.isPlaying = false;
   }
