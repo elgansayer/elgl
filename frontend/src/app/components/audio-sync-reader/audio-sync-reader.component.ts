@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -27,7 +28,13 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [TranslatePipe, WordDefinitionModalComponent, AppCardComponent, AppChipComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    WordDefinitionModalComponent,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './audio-sync-reader.component.html',
   styleUrls: ['./audio-sync-reader.component.scss'],
 })

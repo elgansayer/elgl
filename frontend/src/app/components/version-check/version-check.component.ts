@@ -1,11 +1,12 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { VersionService, VersionInfo } from '../../services/version.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-version-check',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="p-4">
       <h2>{{ 'appVersion' | t }}</h2>
@@ -20,19 +21,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
         @if (updateAvailable()) {
           <p class="text-success">{{ 'updateAvailable' | t }}</p>
           @if (version().updateUrl) {
-            <a
-              [href]="version().updateUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-block mt-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90"
-            >
+            <a hlmBtn [href]="version().updateUrl" target="_blank" rel="noopener noreferrer" size="touch">
               {{ 'downloadUpdate' | t }}
             </a>
           }
         } @else {
           <p>{{ 'upToDate' | t }}</p>
         }
-        <button (click)="checkUpdate()">{{ 'checkForUpdates' | t }}</button>
+        <button hlmBtn type="button" variant="secondary" size="touch" (click)="checkUpdate()">
+          {{ 'checkForUpdates' | t }}
+        </button>
       }
     </div>
   `,
@@ -49,12 +47,12 @@ export class VersionCheckComponent implements OnInit {
     await this.checkUpdate();
   }
 
-  async checkUpdate() {
+  async checkUpdate(): Promise<void> {
     try {
-      const v = await firstValueFrom(this.versionService.getVersion());
-      this.version.set(v);
+      const version = await firstValueFrom(this.versionService.getVersion());
+      this.version.set(version);
       this.versionLoaded.set(true);
-      this.updateAvailable.set(v.current !== v.latest);
+      this.updateAvailable.set(version.current !== version.latest);
     } catch {
       this.versionError.set('Failed to fetch version');
     }

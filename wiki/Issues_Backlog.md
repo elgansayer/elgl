@@ -1,272 +1,67 @@
-# GitHub Issues Backlog
+# 📋 Consolidated Product Backlog
 
-Total open issues: 272
+*Organized by complete user outcomes rather than individual technical chores.*
 
-- **#3152**: Guardian: repair stale Discovery Map Cypress assertions [guardian-alert, factory-active, factory-quarantined, needs-human]
-- **#2044**: Epic: Compliance: Implement COPPA age-gating and an automated DMCA takedown request flow
-- **#2043**: Epic: Media: Build HLS/DASH on-the-fly video transcoding for class replays
-- **#2042**: Epic: Data Privacy: Automated PII scrubbing before sending chat text to Azure/DeepL
-- **#2041**: Epic: i18n & RTL: Comprehensive Arabic/Hebrew UI audit using logical properties
-- **#2040**: Epic: State Management: Audit RxJS subscriptions and migrate to Angular Signals where possible to prevent memory leaks
-- **#2039**: Epic: WebRTC Edge Cases: Handle Bluetooth headset interrupts and background audio state for LiveKit
-- **#2038**: Epic: Gamification: Expand progress tracking with unlockable badges and detailed performance reports
-- **#2037**: Epic: Exchange Mechanics: Enforce 50/50 language exchange timers in 1-on-1 calls to ensure reciprocal learning
-- **#2036**: Epic: Learning: Implement partial credit scoring for minor typos during SRS flashcard reviews
-- **#2035**: Epic: Learning: Build a dedicated verb conjugation trainer and IPA alphabet module
-- **#2034**: Epic: Economy Anti-Cheat: Server-side App Store receipt validation for coin purchases (e.g., verifying a 10 UKP / 12.50 USD transaction)
-- **#2033**: Epic: Security: Implement strict LLM prompt injection protection on all AI tools
-- **#2032**: Epic: Offline Support: Implement IndexedDB PWA caching for LingQ offline reading and chat queueing
-- **#2031**: Admin Portal, Compliance & Version Control
-- **#2030**: Gamification, Retention & Habit Loops
-- **#2029**: Dedicated Groups & Scheduled Events System
-- **#2028**: Universal In-App Sharing & External Deep Linking Engine
-- **#2027**: Hashtag & Topic Following System
-- **#2026**: Complete 'Classrooms' & Tutor Marketplace Integration (italki Clone)
-- **#1923**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
-- **#1918**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
-- **#1915**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`.
-- **#1914**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
-- **#1913**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#1912**: Build filtering endpoints for Moments feed: `All`, `Classmates` (same target language), and `Following`.
-- **#1911**: Cache translated text client-side to allow toggling between original and translation without extra API calls.
-- **#1909**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview).
-- **#1908**: Add Restore Purchases workflow.
-- **#1907**: build a new agent workflow to check for security issues and vulnerability
-- **#1906**: Configure Angular Router to handle deep links (`hellotalk://profile/:id`).
-- **#1905**: Real-time text messaging with delivery and read receipts (single tick, double tick, blue tick).
-- **#1904**: Build Terms of Service and Privacy Policy document viewers.
-- **#1903**: Build dynamic diagnostic quiz component for new sign-ups.
-- **#1902**: Build Sticker Store UI.
-- **#1901**: Build swipeable full-screen lightbox for Moments with multiple images.
-- **#1900**: Ensure full keyboard tab-navigation support for desktop viewports.
-- **#1898**: Create system message integration (backend Centrifugo publish and frontend i18n bubble).
-- **#1895**: Build a centralized Events discovery feed for users to find upcoming scheduled activities.
-- **#1894**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
-- **#1892**: Implement Who can message me filters (Age, Gender, Native Language).
-- **#1891**: Build Read Receipts (Sent vs Delivered vs Read checkmarks).
-- **#1890**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
-- **#1889**: Build My Stats dashboard tracking study hours, messages sent, and corrections made.
-- **#1888**: Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month).
-- **#1887**: Build Restore Purchases button for app store compliance.
-- **#1886**: Implement dynamic Hobbies & Interests tags mapped to target vocabulary.
-- **#1885**: Implement RSVP functionality allowing users to mark Attending or Interested.
-- **#1884**: Implement a user-level Corrector Score based on ratings to display on profiles.
-- **#1882**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#1880**: Build GPS-based Nearby search rendering distance in miles or kilometres.
-- **#1879**: Instant video messages (short circular video notes).
-- **#1878**: Implement frontend Angular component for the diagnostic quiz.
-- **#1877**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules.
-- **#1876**: Build animated audio equalizer visualizer for active stage speakers.
-- **#1875**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed.
-- **#1874**: Configure Angular Service Worker (`@angular/pwa`) for asset caching.
-- **#1873**: Analyse search screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- **#1872**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes).
-- **#1871**: Categorise active Voicerooms by target language pair.
-- **#1870**: The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1869**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#1868**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
-- **#1867**: Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
-- **#1866**: Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts).
-- **#1863**: Identify and fix the specific test file causing ReferenceError: describe is not defined (need the failing test file path added to the chat).
-- **#1862**: Build Nearby Search PostGIS distance slider for VIP users.
-- **#1861**: Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
-- **#1860**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#1859**: Implement WebSockets typing indicators (User is typing...).
-- **#1858**: Wire `LinkPreviewModule` into the main `AppModule` imports array.
-- **#1857**: Implement backend endpoint for daily check-in coin reward and frontend modal UI.
-- **#1856**: Allow VIP users to select custom primary accent colours.
-- **#1855**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
-- **#1854**: Build NestJS endpoint returning minimum supported app version.
-- **#1852**: Implement `@mention` notifications when tagged in a comment.
-- **#1850**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#1849**: Implement WebSocket connection rate limiting in Centrifugo.
-- **#1847**: Build VIP Profile Visitor Log UI with blurred cards for free users.
-- **#1846**: Build real-time text chat overlay inside live rooms.
-- **#1845**: Add settings toggle to auto-play sequential voice notes in chat.
-- **#1843**: Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes).
-- **#1842**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
-- **#1841**: Implement Word of the Day feature on the
-- **#1840**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- **#1839**: Create GiftAnimationComponent and integrate it into chat/feed for gift payloads.
-- **#1838**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
-- **#1837**: Search functionality within individual chats or across all conversations.
-- **#1836**: Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the
-- **#1835**: Build Help & About page displaying App Version, build number, and open-source licences.
-- **#1834**: Add quick-action Send Message and Follow buttons on list items.
-- **#1833**: Build Privacy Settings hub.
-- **#1832**: Implement audio compression converting voice notes to lightweight `.m4a`/`.ogg`.
-- **#1831**: Block and report users or businesses.
-- **#1830**: Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- **#1829**: Build direct Send Message and Follow action buttons on external profiles.
-- **#1828**: Build Favourites bookmarking tab for saved messages and corrections.
-- **#1827**: Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.
-- **#1826**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- **#1824**: Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events.
-- **#1822**: Add long-press context menu on mobile to copy, favourite, or report messages.
-- **#1821**: Write Angular unit tests for `VocabularyStore` signals.
-- **#1820**: Build Appearance Settings menu.
-- **#1819**: End-to-end encrypted voice calls.
-- **#1818**: Implement 1‑click ban and warning buttons.
-- **#1817**: Implement Angular Lazy Loading for non-critical feature modules.
-- **#1816**: Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
-- **#1815**: The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
-- **#1814**: Build Profile Cover Photo uploader with client-side cropping.
-- **#1813**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic.
-- **#1812**: Implement full-screen SVG gift animations when viewers tip the host.
-- **#1811**: Doodle message sharing.
-- **#1810**: Add Interests filter to Discovery search to match users with shared hobbies.
-- **#1809**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
-- **#1808**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
-- **#1807**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#1806**: Implement Download My Data button triggering a NestJS JSON export worker.
-- **#1805**: Build dynamic Terms of Service and Privacy Policy document viewer.
-- **#1804**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call).
-- **#1802**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
-- **#1801**: Build Account Deletion workflow with 30-day grace period.
-- **#1800**: Message reactions using emojis.
-- **#1799**: Build Recommended for You carousel based on mutual interests and activity levels.
-- **#1798**: Implement Who Viewed Me visitor logs.
-- **#1797**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
-- **#1796**: Build Top Corrector community leaderboard.
-- **#1795**: Reply to specific messages (swipe-to-reply gesture).
-- **#1794**: Build Lessons module in Angular.
-- **#1793**: Implement SRS review scheduling algorithm in NestJS.
-- **#1792**: Build interactive Flashcard Review UI (Flip animations and grading buttons).
-- **#1791**: Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step.
-- **#1790**: Implement Voice-to-Text transcription next to audio messages.
-- **#1789**: Create Angular component for the Liked By modal.
-- **#1788**: Implement Raise Hand button and Approve Speaker modal for Hosts.
-- **#1787**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
-- **#1786**: Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them.
-- **#1785**: Build blocking update modal in Angular if current app version is deprecated.
-- **#1783**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
-- **#1782**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar).
-- **#1781**: Implement 1-click ban and warning buttons.
-- **#1780**: Render visual charts using Chart.js inside Angular.
-- **#1779**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics.
-- **#1778**: Configure Angular Universal (SSR) for public Voiceroom preview pages.
-- **#1777**: Build scrolling live chat comment overlay over host video stream.
-- **#1775**: Build Global Search UI with translated dropdowns for Native Language, Target Language, and Level.
-- **#1774**: Implement Invite Co-Host split-screen video layout.
-- **#1770**: Audit Web Vitals and optimize images using `loading=lazy`.
-- **#1769**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
-- **#1767**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#1766**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
-- **#1765**: Implement Has Audio Intro required filter. [swarm-active]
-- **#1763**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
-- **#1761**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#1760**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections. [swarm-active]
-- **#1759**: Implement Host Moderation controls (Mute speaker, kick off stage).
-- **#1758**: Initialise NestJS backend (`nest new backend --package-manager npm`).
-- **#1757**: Integrate ngx-lottie or similar to render actual SVG animations for gifts. [swarm-active]
-- **#1756**: Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
-- **#1755**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
-- **#1753**: Audit and add `aria-label` attributes to all icon buttons and interactive tags. [swarm-active]
-- **#1752**: Implement in-app translations and language corrections with an interface mirroring
-- **#1751**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
-- **#1750**: Build Flashcard Deck UI to organize saved vocabulary.
-- **#1749**: Pin priority chats to the top of the inbox.
-- **#1748**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#1747**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
-- **#1746**: Build Angular Admin Portal for user management.
-- **#1745**: Starred messages for easy retrieval.
-- **#1744**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#1742**: Build Incoming Call modal with ringtone audio and accept/reject controls. [swarm-active]
-- **#1740**: Build NestJS background job calculating top 10 recommended language partners daily.
-- **#1739**: Add Hide Online Status and Hide VIP Status toggles.
-- **#1737**: Implement a calendar view for users to track all their upcoming
-- **#1736**: Build Language Settings menu to switch UI language independently of study target.
-- **#1735**: Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature).
-- **#1734**: Build HTML5 Canvas Doodle Pad component in chat modal.
-- **#1733**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals.
-- **#1732**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#1730**: Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
-- **#1729**: Persist unsent chat messages and Moment drafts to `localStorage`.
-- **#1728**: Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: word`) to render clickable tokens.
-- **#1727**: Build 30-second Audio Introduction recorder and playback card on profile.
-- **#1726**: Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
-- **#1725**: Build global No Network Connection banner component.
-- **#1723**: Implement client-side image compression (max 1080p) before R2 upload.
-- **#1722**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
-- **#1721**: Build Voiceroom Creation modal (Title, Language Pair, Topic).
-- **#1720**: Photo and video sharing with an HD quality toggle.
-- **#1719**: End-to-end encryption for all personal messages and calls.
-- **#1718**: Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
-- **#1717**: Rich link previews for URLs.
-- **#1716**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#1715**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle.
-- **#1714**: Build Create Group UI supporting up to 50 users.
-- **#1713**: Voice messages with playback speed control (1x, 1.5x, 2x).
-- **#1712**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
-- **#1711**: Edit sent messages within a specific time limit.
-- **#1710**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- **#1709**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak).
-- **#1708**: Add Voice Room Active filter to find users currently hosting streams.
-- **#1707**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
-- **#1706**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
-- **#1705**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- **#1704**: Forwarding messages with a forwarded label to prevent spam. [swarm-active]
-- **#1703**: Disappearing messages (set to expire after 24 hours, 7 days, or 90 days). [swarm-active]
-- **#1702**: Build Liked By modal listing all users who liked a Moment. [swarm-active]
-- **#1701**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`). [swarm-active]
-- **#1700**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
-- **#1698**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments. [swarm-active]
-- **#1697**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals. [swarm-active]
-- **#1696**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback. [swarm-active]
-- **#1692**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning). [swarm-active]
-- **#1691**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts. [swarm-active]
-- **#1690**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
-- **#1689**: Verify clean linting across both projects (`npm run lint`). [swarm-active]
-- **#1688**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
-- **#1687**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub. [swarm-active]
-- **#1685**: Chat archiving and hidden chat folders. [swarm-active]
-- **#1684**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles). [swarm-active]
-- **#1683**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes). [swarm-active]
-- **#1682**: Build Profile Cover Photo upload and positioning. [swarm-active]
-- **#1681**: Typing indicators and online status visibility. [swarm-active]
-- **#1680**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
-- **#1679**: Integrate UnreadCounterService into navigation tabs UI to display unread badges. [swarm-active]
-- **#1678**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat. [swarm-active]
-- **#1677**: Setup Cypress inside `frontend/`. [swarm-active]
-- **#1676**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
-- **#1675**: Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`. [swarm-active]
-- **#1673**: Build group participant drawer. [swarm-active]
-- **#1672**: Build Block Management page to manage and unblock users. [swarm-active]
-- **#1671**: Build Virtual Gift picker modal with coin balance auto-deduction. [swarm-active]
-- **#1670**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
-- **#1669**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks. [swarm-active]
-- **#1668**: use x-algorithm to power for you on the moments feed. [swarm-active]
-- **#1667**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`). [swarm-active]
-- **#1666**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
-- **#1665**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
-- **#1664**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
-- **#1663**: Implement global unread counter service updating app badge and navigation tabs. [swarm-active]
-- **#1662**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description. [swarm-active]
-- **#1661**: Add Do Not Disturb scheduling. [swarm-active]
-- **#1660**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`. [swarm-active]
-- **#1659**: Allow spending virtual coins to unlock animated sticker packs. [swarm-active]
-- **#1644**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables. [swarm-active]
-- **#1609**: Ankii intergration [swarm-active]
-- **#1442**: Build Linked Accounts settings page to manage connected social accounts. [swarm-active]
-- **#1439**: Build Forgot Password UI and NestJS email dispatch service. [swarm-active]
-- **#1400**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts). [swarm-active]
-- **#1384**: Fetch multiple-choice assessment questions from backend database. [swarm-active]
-- **#1344**: Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown. [swarm-active]
-- **#1337**: Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White). [swarm-active]
-- **#1335**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`. [swarm-active]
-- **#2350**: Epic: Implement complete end-to-end user outcome for Spaced Repetition (SRS) (consolidated chores)
-- **#2255**: Epic: Implement complete end-to-end user outcome for Discovery Map (consolidated chores)
-- **#2240**: Epic: Implement complete end-to-end user outcome for Video Classrooms (consolidated chores)
-- **#2225**: Epic: Implement complete end-to-end user outcome for Live Audio Rooms (consolidated chores)
-- **#2201**: Epic: Implement complete end-to-end user outcome for Group Chat (consolidated chores)
-- **#2176**: Epic: Implement complete end-to-end user outcome for 1-on-1 Chat (consolidated chores)
-- **#2151**: Epic: Implement complete end-to-end user outcome for Moments Feed (consolidated chores)
-- **#2126**: Epic: Implement complete end-to-end user outcome for User Profiles (consolidated chores)
-- **#2101**: Epic: Implement complete end-to-end user outcome for User Settings (consolidated chores)
-- **#2094**: Epic: Implement complete end-to-end user outcome for Tutor Profiles (consolidated chores)
-- **#2087**: Epic: Implement complete end-to-end user outcome for Discovery (consolidated chores)
-- **#2080**: Epic: Implement complete end-to-end user outcome for LingQ Engine (consolidated chores)
-- **#2073**: Epic: Implement complete end-to-end user outcome for Classrooms (consolidated chores)
-- **#2066**: Epic: Implement complete end-to-end user outcome for Live Rooms (consolidated chores)
-- **#2059**: Epic: Implement complete end-to-end user outcome for Chat (consolidated chores)
-- **#2051**: Epic: Implement complete end-to-end user outcome for Moments (consolidated chores)
+## 💬 1-on-1 Chat & Messaging
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Chat systems.
+- Build disappearing messages (set to expire after 24 hours, 7 days, or 90 days).
+- Implement audio compression and hold-to-record voice note recorder with playback speed controls.
+- Enhance message interaction with edit capability, typing indicators, read receipts, and emoji reactions.
+- Implement search functionality (client-side and server-side) within individual chats or across all conversations.
+- Enable direct messaging filters based on age, gender, and native language.
+- Provide AI tools in chat: conversation starter suggestions, role-play scenarios, and "Simplify this text" options.
+
+## 👥 Group Chat
+
+- Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
+- Dedicated Groups & Scheduled Events System.
+
+## 📰 Moments & Social Feed
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Moments and Social feeds.
+- Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
+- Enhance discovery feeds with advanced filters (Serious Learner mode, Interests, Mute Word) and algorithmic recommendations (Partner of the Week).
+- Build interactive multi-media posts: swipeable full-screen lightboxes for images and Audio Intros feed.
+- Implement AI Pronunciation Scoring service for spoken audio in posts and provide haptic feedback for flashcard grading.
+
+## 👤 User Profiles & Settings
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for User Profiles and Settings.
+- Build comprehensive Profile Settings and UI: Cover Photo uploader, Language Settings, Appearance Settings, Dynamic Font Size slider, and Privacy Settings hub.
+- Support detailed profile metadata: Learning Goals, proficiency levels (`a1` to `c2`), 30-second Audio Introduction, and translated bio.
+- Implement advanced user controls: Personal Data Collection GDPR hub, Linked Accounts page, Account Deletion workflow, Block Management page, and RSVP functionality for events.
+- Deploy monetisation features: VIP tier (location spoofing, incognito profile views, unlimited AI), Developer Tier API key management, and Virtual Gift animations.
+
+## 🎙️ Live Audio Rooms & Video
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Live Audio and Video Rooms.
+- Implement Private Parties (VIP/Pro tier) and split-screen video layout for Invite Co-Host features.
+- Develop Host Moderation controls (Mute speaker, kick off stage, Raise Hand button, Soundboard for pre-recorded audio clips).
+- Enhance audience engagement with full-screen SVG gift animations, Quick Polls, animated audio equalizer visualizer, and live chat comment overlay.
+- Provide post-session resources: AI-generated Session Summaries and HLS/DASH on-the-fly video transcoding for class replays.
+
+## 🔍 Discovery & Search
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Discovery map and search features.
+- Build Matchmaking & Discovery tools with GPS-based distance slider, dynamic Hobbies & Interests tags, and Serious Learner filter.
+- Build a Pro subscription tier (Tandem Pro clone) offering unlimited translations, advanced visitor logs, nearby members visibility, and ad-free browsing.
+
+## 🧠 Learning, Vocabulary & AI Tools
+
+- **Stabilization:** Complete technical foundation, security audits (GDPR, RLS), performance optimization (Caching, Rate Limiting), error handling, testing (Vitest, Cypress), and monitoring (Datadog/Prometheus) for Spaced Repetition (SRS) and LingQ Engine.
+- Build robust learning tools: Flashcard Deck UI, interactive Flashcard Review UI with flip animations, verb conjugation trainer, and IPA alphabet module.
+- Implement advanced AI integrations: Context menu option for AI-generated grammar breakdowns, partial credit scoring for minor typos during SRS reviews, and Suggest Flashcards feature.
+- Foster language habits with push notification reminders, daily check-in coin rewards, and progress tracking with unlockable badges.
+
+## 👑 Monetisation & VIP
+
+- Implement subscription and purchasing mechanisms: Restore Purchases workflow, server-side App Store receipt validation, and coin balance auto-deduction for gifts.
+- Build in-app economy features: Language Challenge system with coin-based entry fees, Sticker Store UI, and animated sticker packs.
+- Provide enhanced user toggles: Hide Online Status and Hide VIP Status.
+
+## ✨ Feature Enhancements
+
+- Integrate diagnostic tools: Dynamic diagnostic quiz component for new sign-ups and custom Angular `ErrorHandler` logging client crashes to backend analytics.
+- Optimize app infrastructure and UX: Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and WebSocket connection rate limiting.
+- Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.

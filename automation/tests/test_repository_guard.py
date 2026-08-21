@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,8 @@ from openhands_factory.repository_guard import (
     branch_name,
     ensure_push_target,
     find_conflict_markers,
+    request_process_shutdown,
+    reset_process_shutdown,
     run_process,
 )
 
@@ -76,6 +79,35 @@ def test_run_process_kills_the_process_group_on_timeout(tmp_path: Path) -> None:
     child_pid = int(pid_file.read_text().strip())
 
     _assert_eventually_dead(child_pid)
+
+
+def test_shutdown_stops_active_repository_processes_and_blocks_new_starts(
+    tmp_path: Path,
+) -> None:
+    pid_file = tmp_path / "process.pid"
+    reset_process_shutdown()
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                run_process,
+                ("bash", "-lc", f"echo $$ > {pid_file}; sleep 300"),
+                tmp_path,
+            )
+            for _ in range(50):
+                if pid_file.exists():
+                    break
+                time.sleep(0.1)
+            process_pid = int(pid_file.read_text().strip())
+
+            request_process_shutdown()
+
+            result = future.result(timeout=10)
+            assert result.returncode != 0
+            _assert_eventually_dead(process_pid)
+            with pytest.raises(RuntimeError, match="Factory shutdown"):
+                run_process(("true",), tmp_path)
+    finally:
+        reset_process_shutdown()
 
 
 def test_safe_branch_name() -> None:

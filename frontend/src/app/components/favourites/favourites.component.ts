@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -16,7 +17,14 @@ interface TabDefinition {
 
 @Component({
   selector: 'app-favourites',
-  imports: [CommonModule, VisualDiffComponent, TranslatePipe, AppCardComponent, AppChipComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    VisualDiffComponent,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
 })

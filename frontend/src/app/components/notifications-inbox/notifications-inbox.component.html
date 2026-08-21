@@ -1,7 +1,7 @@
 <div class="flex flex-col h-full bg-surface-500 text-text-primary">
   <!-- Header -->
   <div class="flex items-center ps-4 pe-4 py-3 border-b border-surface-100">
-    <button aria-label="Go back" class="text-lg me-2" (click)="goBack()">&larr;</button>
+    <button hlmBtn aria-label="Go back" class="text-lg me-2" (click)="goBack()">&larr;</button>
     <h1 class="flex-1 text-lg font-semibold">{{ 'notifications.title' | t }}</h1>
     @if (unreadCount() > 0) {
       <span class="bg-danger text-on-fill text-[10px] font-bold px-2 py-0.5 rounded-full me-2">
@@ -9,6 +9,7 @@
       </span>
     }
     <button
+      hlmBtn
       class="text-sm text-text-muted hover:text-text-primary cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"

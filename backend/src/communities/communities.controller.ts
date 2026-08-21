@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CommunitiesService } from './communities.service';
-import { CreateCommunityDto } from './dto/create-community.dto';
+import { CreateCommunityDto } from '../groups/dto/create-community.dto';
 import { AddGroupDto } from './dto/add-group.dto';
-import { UpdateCommunityDto } from './dto/update-community.dto';
+import { UpdateCommunityDto } from '../groups/dto/update-community.dto';
 
 @Controller('communities')
 export class CommunitiesController {

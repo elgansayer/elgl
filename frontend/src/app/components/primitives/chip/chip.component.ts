@@ -1,26 +1,35 @@
 import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-chip',
+  imports: [...HlmButtonImports],
   template: `
-    <span
-      [class]="chipClasses()"
-      role="button"
-      tabindex="0"
-      (click)="onClick($event)"
-      (keydown.enter)="onClickKey($event)"
-    >
-      @if (label()) {
-        {{ label() }}
-      } @else {
-        <ng-content />
-      }
+    <span class="inline-flex items-center rounded-pill" [class]="containerClasses()">
+      <button
+        hlmBtn
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="rounded-pill"
+        [attr.aria-pressed]="selected()"
+        (click)="onClick($event)"
+      >
+        @if (label()) {
+          {{ label() }}
+        } @else {
+          <ng-content />
+        }
+      </button>
       @if (removable()) {
         <button
+          hlmBtn
           type="button"
+          variant="ghost"
+          size="icon-xs"
+          class="me-1 rounded-full"
           (click)="onRemove($event)"
-          class="ms-1.5 rounded-full p-0.5 hover:bg-black/10 focus:outline-none focus:ring-1"
           aria-label="Remove chip"
         >
           ✕
@@ -42,10 +51,7 @@ export class AppChipComponent {
   readonly removed = output<void>();
   readonly clicked = output<MouseEvent>();
 
-  readonly chipClasses = computed(() => {
-    const base =
-      'inline-flex items-center rounded-xl font-bold text-xs ps-3 pe-3 pt-1.5 pb-1.5 transition-all cursor-pointer';
-
+  readonly containerClasses = computed(() => {
     let variantClass = '';
     switch (this.variant()) {
       case 'default':
@@ -59,21 +65,14 @@ export class AppChipComponent {
           : 'border border-surface-100 text-text-primary bg-surface-200';
         break;
       case 'primary':
-        variantClass = 'bg-primary text-on-fill shadow-sm';
+        variantClass = 'bg-primary text-on-fill shadow-card';
         break;
     }
-
-    const extra = this.customClass();
-    return `${base} ${variantClass}${extra ? ' ' + extra : ''}`.trim();
+    return `${variantClass}${this.customClass() ? ` ${this.customClass()}` : ''}`;
   });
 
   onClick(event: MouseEvent): void {
     this.clicked.emit(event);
-  }
-
-  onClickKey(_event: Event): void {
-    const syntheticEvent = new MouseEvent('click');
-    this.clicked.emit(syntheticEvent);
   }
 
   onRemove(event: MouseEvent): void {

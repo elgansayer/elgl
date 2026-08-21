@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -15,7 +16,7 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-4">
       <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
@@ -40,6 +41,7 @@ interface CartItem {
                   >{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span
                 >
                 <button
+                  hlmBtn
                   class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-on-fill hover:bg-danger/90"
                   (click)="removeItem(item.itemId)"
                   [attr.aria-label]="'cart.removeItem' | t"
@@ -59,6 +61,7 @@ interface CartItem {
           >
         </div>
         <button
+          hlmBtn
           class="mt-4 w-full rounded-full bg-primary text-on-fill py-2 font-semibold hover:bg-primary/90"
           (click)="checkout()"
           [attr.aria-label]="'cart.checkoutAria' | t"

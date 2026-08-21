@@ -1,60 +1,46 @@
 import { Component, inject, input, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CrashReportService, AdminCrashContext } from '../../services/crash-report.service';
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 
 @Component({
   selector: 'app-admin-error-boundary',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, ...HlmButtonImports],
   template: `
     @if (hasError()) {
       <div
-        class="flex flex-col items-center justify-center p-6 rounded-lg bg-surface-2 border border-danger/30 max-w-lg mx-auto mt-8"
+        class="mx-auto mt-8 flex max-w-lg flex-col items-center justify-center rounded-lg border border-danger/30 bg-surface-2 p-6"
         role="alert"
         aria-live="assertive"
       >
-        <div class="text-4xl mb-3" aria-hidden="true">⚠️</div>
-        <h2 class="text-lg font-semibold text-text-primary mb-2">
+        <div class="mb-3 text-4xl" aria-hidden="true">⚠️</div>
+        <h2 class="mb-2 text-lg font-semibold text-text-primary">
           {{ 'admin.errorBoundary.title' | t }}
         </h2>
-        <p class="text-sm text-text-secondary mb-1 text-center">
+        <p class="mb-1 text-center text-sm text-text-secondary">
           {{ 'admin.errorBoundary.description' | t }}
         </p>
         @if (errorMessage()) {
-          <p class="text-xs text-danger mt-2 mb-3 font-mono break-all text-center max-w-full">
+          <p class="mt-2 mb-3 max-w-full break-all text-center font-mono text-xs text-danger">
             {{ errorMessage() }}
           </p>
         }
         @if (pendingCount() > 0) {
-          <p class="text-xs text-warning mt-2 mb-3">
+          <p class="mt-2 mb-3 text-xs text-warning">
             {{ 'admin.errorBoundary.pendingReports' | t: { count: pendingCount() } }}
           </p>
         }
-        <div class="flex gap-3 mt-3">
-          <button
-            type="button"
-            class="px-4 py-2 bg-primary text-on-fill rounded-lg text-sm hover:bg-primary/90 transition-colors"
-            (click)="retry()"
-            [attr.aria-label]="'admin.errorBoundary.retryAria' | t"
-          >
+        <div class="mt-3 flex flex-wrap justify-center gap-3">
+          <button hlmBtn type="button" size="touch" (click)="retry()" [attr.aria-label]="'admin.errorBoundary.retryAria' | t">
             {{ 'admin.errorBoundary.retry' | t }}
           </button>
-          <button
-            type="button"
-            class="px-4 py-2 border border-surface-100 rounded-lg text-sm hover:bg-surface-100 transition-colors"
-            (click)="goHome()"
-            [attr.aria-label]="'admin.errorBoundary.goHomeAria' | t"
-          >
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="goHome()" [attr.aria-label]="'admin.errorBoundary.goHomeAria' | t">
             {{ 'admin.errorBoundary.goHome' | t }}
           </button>
-          <button
-            type="button"
-            class="px-4 py-2 border border-surface-100 rounded-lg text-sm hover:bg-surface-100 transition-colors"
-            (click)="toggleDetails()"
-            [attr.aria-label]="'admin.errorBoundary.toggleDetailsAria' | t"
-          >
+          <button hlmBtn type="button" variant="outline" size="touch" (click)="toggleDetails()" [attr.aria-label]="'admin.errorBoundary.toggleDetailsAria' | t" [attr.aria-expanded]="showDetails()">
             {{
               (showDetails()
                 ? 'admin.errorBoundary.hideDetails'
@@ -64,18 +50,14 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
           </button>
         </div>
         @if (showDetails()) {
-          <div class="mt-4 p-3 bg-surface-1 rounded w-full max-h-64 overflow-y-auto">
-            <p class="text-xs text-text-secondary font-mono whitespace-pre-wrap break-all">
+          <div class="mt-4 max-h-64 w-full overflow-y-auto rounded bg-surface-1 p-3">
+            <p class="break-all whitespace-pre-wrap font-mono text-xs text-text-secondary">
               {{ errorStack() || ('admin.errorBoundary.noStack' | t) }}
             </p>
             @if (crashContext()) {
-              <div class="mt-2 pt-2 border-t border-surface-100">
-                <p class="text-xs text-text-secondary">
-                  {{ 'admin.errorBoundary.route' | t }}: {{ crashContext()?.route }}
-                </p>
-                <p class="text-xs text-text-secondary">
-                  {{ 'admin.errorBoundary.component' | t }}: {{ crashContext()?.component }}
-                </p>
+              <div class="mt-2 border-t border-surface-100 pt-2">
+                <p class="text-xs text-text-secondary">{{ 'admin.errorBoundary.route' | t }}: {{ crashContext()?.route }}</p>
+                <p class="text-xs text-text-secondary">{{ 'admin.errorBoundary.component' | t }}: {{ crashContext()?.component }}</p>
                 <p class="text-xs text-text-secondary">
                   {{ 'admin.errorBoundary.offline' | t }}:
                   {{ crashContext()?.offline ? ('common.yes' | t) : ('common.no' | t) }}
@@ -89,13 +71,7 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
       <ng-content />
     }
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
+  styles: [`:host { display: block; }`],
 })
 export class AdminErrorBoundaryComponent {
   private crashReportService = inject(CrashReportService);
@@ -104,7 +80,6 @@ export class AdminErrorBoundaryComponent {
   private errorHandler = inject(ErrorHandler);
 
   readonly componentName = input('AdminErrorBoundary');
-
   protected readonly hasError = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly errorStack = signal('');
@@ -113,17 +88,12 @@ export class AdminErrorBoundaryComponent {
   protected readonly pendingCount = this.crashReportService.pendingCrashCount;
 
   handleError(error: Error): void {
-    const context: AdminCrashContext = this.buildCrashContext();
-
+    const context = this.buildCrashContext();
     this.hasError.set(true);
     this.errorMessage.set(error.message || 'Unknown rendering error');
     this.errorStack.set(error.stack || '');
     this.crashContext.set(context);
-
-    // Trigger crash reporting
     this.crashReportService.reportCrash(error, context);
-
-    // Also invoke the global error handler for centralized analytics
     this.errorHandler.handleError(error);
   }
 
@@ -140,13 +110,12 @@ export class AdminErrorBoundaryComponent {
   }
 
   toggleDetails(): void {
-    this.showDetails.update((v) => !v);
+    this.showDetails.update((value) => !value);
   }
 
   private buildCrashContext(): AdminCrashContext {
-    const routePath = this.router.url || '';
     return {
-      route: routePath,
+      route: this.router.url || '',
       component: this.componentName(),
       adminRole: 'admin',
       offline: !this.offlineStorage.isOnline(),

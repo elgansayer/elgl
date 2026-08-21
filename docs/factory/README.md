@@ -1,282 +1,464 @@
-# HelloTalk OpenHands Factory Runbook
+# HelloTalk OpenHands Factory runbook
 
-## Architecture and threat model
+The Factory is the sole autonomous engineering control plane for this repository. It discovers GitHub work,
+schedules durable jobs, creates isolated worktrees, routes each AI-backed phase to an eligible provider, verifies
+the result, obtains an independent review, repairs failures, and permits merge only for the reviewed head SHA.
 
-The controller leases work, builds task-specific context, communicates with providers, records metrics and
-brokers GitHub operations. Terminal calls run in rootless Podman without controller credentials. File editor
-calls are constrained to the canonical task worktree. One conversation handles one task.
+The daemon is deployed from `origin/main`. Task agents still work on isolated task branches and pull requests and
+never write application changes directly to `main`.
 
-Issues, pull requests, source comments, logs and documentation are untrusted. They cannot override security
-policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
-branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
+## Production readiness
 
-The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
-`gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
-handles credentials, model compatibility, budgets, malformed responses and open circuits.
+Code on `main` is not proof that the production daemon is healthy. A rollout is complete only when the Factory
+host proves all of the following:
 
-The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Issue intake,
-repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through
-GitHub issues; the daemon does not invent duplicate planning issues.
+- the dedicated checkout is clean and fast-forwarded to `origin/main`;
+- `hellotalk-factory.service` and `hellotalk-factory-health.timer` are active;
+- every enabled subscription CLI is installed and authenticated as the daemon's operating-system user (`dev`);
+- trusted intake is enabled for this public repository, with every automatic actor explicitly listed;
+- `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
+- `hellotalk-factory doctor --online` passes;
+- root and Factory-state volumes both retain the configured free-space reserve;
+- one baseline GitHub ruleset requires pull requests and `CI / required` on `main`;
+- `factory/independent-review` is required by either that ruleset or a review-only ruleset whose sole optional
+  bypass is the exact repository-owner user in pull-request mode;
+- the baseline ruleset may use the same exact-owner, pull-request-only bypass, while role, team, app, deploy-key,
+  direct-push, and always-mode bypasses remain prohibited;
+- the required statuses are pinned to their expected GitHub App sources before any additional write actor is
+  trusted;
+- `hellotalk-factory legacy scan` reports no active competing executor;
+- non-paid diagnostics prove configuration, fallback, circuit, structured-output, and stale-SHA behaviour;
+- one deliberately small issue completes issue, implementation, review, CI, merge, and closure end to end.
 
-Every implementation runs a dedicated security review workflow before the branch is verified. A bounded agent
-conversation (`automation/prompts/security.md`) inspects the diff for hardcoded secrets, webhook signature
-weaknesses, client-controlled privileged state, authentication and authorisation gaps, injection and unsafe
-security configuration. It fixes confirmed findings with tests or leaves the worktree unchanged, and the normal
-verification gate then runs on the combined diff before the pull request is opened.
+The daemon runs as the operator's own login user (`dev`) and systemd sets `HOME=/home/dev`, so it reuses that
+account's already-authenticated CLI sessions directly. There is no separate service-account home to keep in sync.
 
-## Issue Intake and Classification
+Temporary exhaustion of every provider does not stop an already configured daemon. `providers check` reports
+`agent-usable` as a warning, the durable queue remains online, and jobs wait for the earliest provider recovery.
+An initial production activation still needs one usable provider because the required end-to-end canary cannot
+otherwise run.
 
-For unattended operation, the factory operates with `FACTORY_REQUIRE_READY_LABEL=false`, meaning no human `factory-ready` labelling step is required. Open issues not specifically excluded are picked up automatically. Setting it to `true` is an optional manual-queueing mode and is not used by the autonomous deployment.
+The 2026-08-17 audit began with a failed host, stale service, and unenforced Factory statuses. The repaired daemon
+is now running a partial production canary, but no complete implementation-to-merge cycle has passed yet. Treat
+[AUDIT-2026-08-17.md](AUDIT-2026-08-17.md) as the current evidence ledger. A green repository revision is not an
+operational canary.
 
-Excluded from implementation:
-- `factory-epic`: Broad outcomes (e.g., "Improve onboarding").
-- `factory-planning`: Architecture mapping, research, or decomposition.
-- `factory-quality-blocked`: Issues held back by a quality decision.
-- `factory-quarantined`, `needs-human`: Legacy failure markers. The factory no longer adds these labels
-  itself (see below); they only matter for issues a human has labelled that way on purpose, or for issues
-  quarantined before this behaviour changed.
-- `swarm-active`: Claimed by the separate GitHub Actions Swarm pipeline, to avoid two systems working the
-  same issue at once.
-- `duplicate`: Issues sharing an identical title with a lower-numbered issue are closed and labelled
-  automatically on every backlog refresh, so the factory never implements the same work twice.
+## Architecture
 
-There is no permanent give-up state. A task that keeps failing is retried indefinitely with exponential
-backoff (5 minutes, doubling up to a 24-hour cap) instead of being quarantined - see "Failure handling"
-below. Telegram is paged (batched, see "Costs" below) but nothing requires a human to unblock it.
+```text
+GitHub issues and external PRs
+              |
+              v
+      Factory daemon and scheduler
+              |
+              v
+      durable FactoryPipeline state
+              |
+              v
+          AgentRouter
+       /      |      |       |          \
+ Claude   Codex   Google  OpenCode  OpenHands SDK
+       \      |      |       |          /
+              v
+       isolated task worktree
+              |
+       security and verification
+              |
+       independent structured review
+              |
+        PR checks and CI repair
+              |
+     SHA-bound merge eligibility
+```
 
-## Pull Request Intake
+Direct subscription providers run non-interactively as the dedicated service user inside private user, mount,
+PID, and proc namespaces. They receive a small environment with API keys, GitHub tokens, Telegram tokens, and
+unrelated daemon settings removed. The sandbox restores only the current worktree, the read-only canonical
+repository, provider-specific credential paths, and read-only executable paths after hiding every other provider
+session, Factory state, logs, runtime sockets, and host temporary files. OpenHands is a provider adapter using the
+existing SDK runner. Its terminal remains inside the rootless, networkless Podman worker and its file editor
+remains confined to the task worktree. Its child configuration omits GitHub, Telegram, and legacy Gemini
+credentials which are unrelated to model execution.
+The direct-provider namespace also remounts the installed Factory tree read-only and gives `/tmp`, `/var/tmp`, and
+`/dev/shm` private filesystems, so an agent cannot rewrite the deployed runtime or communicate through shared
+temporary files.
 
-The factory also independently reviews, fixes and merges pull requests it did not create itself (from
-other bots or humans), not just the ones it opens from issues. `collect_open_pull_requests` picks up every
-open, non-draft pull request except:
-- Its own, identified by a `factory/*` head branch (those are already tracked by the issue that opened
-  them).
-- Anything already labelled `factory-reviewed` or `factory-skip`.
+A direct provider must read its own subscription session and contact its vendor. Namespace isolation therefore
+does not make arbitrary public issue text safe. Production intake admits configured GitHub actors automatically
+and requires a maintainer-controlled `factory-ready` label for everyone else. A vendor-domain egress proxy or
+credential broker is still recommended for defence in depth.
 
-A picked-up pull request skips straight to the review phase - there is no re-implementation step - and then
-reuses the same review, CI-repair and merge state machine as an issue-driven job, including the same
-`factory-merge.yml` gate. The only structural difference is that repair commits push back to the pull
-request's own existing branch instead of a new `factory/*` one; `ensure_push_target` allows this only for
-the exact branch a job is assigned to review; this is still trusted-code-directed, not open to indirect LLM
-influence, and pushing to `main`/`master`/the base branch stays forbidden unconditionally.
+Provider installation, authentication, and model probes run in disposable empty directories. A nominal health
+check never receives the writable canonical checkout as its working directory.
 
-## Weekly Gap Analysis (Architect)
+Repository-controlled verification runs in a separate no-network namespace with a fresh home and temporary
+directory. It can write the task worktree and read the canonical dependency tree, but cannot read provider
+sessions, durable Factory state, logs, rootless Podman sockets, shared host temporary files, or sibling process
+environments. The deployed Factory tree is read-only there too.
 
-Once per `FACTORY_ARCHITECT_INTERVAL_HOURS` (default 168, i.e. weekly), the daemon runs one bounded
-conversation - not modelled as a durable retried job, since it isn't blocking any specific piece of work -
-that compares `AGENTS.md`, `FEATURES_SPEC.md`, `README.md` and `ROADMAP.md` against the actual codebase:
-- If it updates `ROADMAP.md`/`SPEC.md`, that goes through a normal pull request and the same independent
-  review and `factory-merge.yml` gate as everything else. It is not a direct edit to `main`.
-- New gaps it identifies are written to a structured `.factory-architect.json` file, not created on GitHub
-  directly - the worker has no network access and could not run `gh issue create` even if it tried. Trusted
-  code reads that file, drops any proposal whose (normalised) title matches an already-open issue
-  regardless of that issue's labels, caps the rest at `FACTORY_ARCHITECT_MAX_NEW_ISSUES` (default 8), and
-  only then creates them, labelled `architect-proposed`.
+See [ACTIVE_ARCHITECTURE.md](ACTIVE_ARCHITECTURE.md), [AGENT-ROUTING.md](AGENT-ROUTING.md),
+[SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md), [MANUAL-MERGE.md](MANUAL-MERGE.md),
+[CONTROL-PANEL.md](CONTROL-PANEL.md), and [HOST-STORAGE.md](HOST-STORAGE.md) for the detailed contract.
 
-That dedup step is not optional: an earlier, unchecked version of this idea (the retired GitHub Actions "AI
-Architect Planner") is what produced the bulk-duplicate-issue floods this factory has had to recover from
-more than once. If a cycle finds nothing worth proposing, it does nothing - that is a normal outcome, not a
-failure.
+## Durable lifecycle
 
-## Deterministic Quality Gate
+```text
+DISCOVERED -> IMPLEMENTING -> SECURITY_REVIEW -> VERIFYING
+  -> QUALITY_REPAIRING when needed
+  -> PR_DRAFT -> REVIEWING -> CI_PENDING
+  -> REPAIRING when needed -> REVIEWING
+  -> MERGE_QUEUED -> MERGED -> DONE
+```
 
-Before a pull request is created, the factory runs a deterministic quality gate on the implementation diff to detect incomplete work. The gate checks for:
-- Mock/fake/stub production behaviour.
-- Obvious placeholder implementations (e.g., "TODO: implement").
-- Unsafe type escapes (`as any`, `<any>`).
-- Newly skipped tests.
+External pull requests enter through discovery and local verification before `REVIEWING`. A changed PR head
+immediately loses `factory-reviewed` and `factory-review`; the old worktree is safely retired or archived, then
+the current remote head is verified and reviewed again. Reopened external PRs return to `DISCOVERED`.
 
-The gate inspects only newly added diff lines in production paths. Test fixtures and test-only mocks remain allowed.
+If no PR review is already active, the scheduler submits the highest-priority runnable external pull request
+before issue work, including when only one worker is available. It also withholds one provider slot from new issue
+jobs until that review worker finishes. Pull requests default to priority 5, while trusted `guardian-alert`,
+`priority:critical`, and `priority:high` labels promote urgent reviews. Ties use the oldest numeric identifier.
+Other slots remain ordered by issue priority and identifier. This bounded lane prevents required independent
+reviews from starving behind a large critical-issue backlog.
 
-If blocked, the factory executes up to two bounded quality-repair passes before treating it as a normal
-failure (see "Failure handling").
+Provider exhaustion does not consume a task attempt. The job remains in its current state with `next_attempt_at`
+set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
+rotation. Persisted failure classes and deterministic jittered backoff remain authoritative across restart.
 
-## Independent Review
+### New-issue admission cadence
 
-The independent reviewer proves actual completion against the issue's requirements and writes a structured `.factory-review.json` report. The review checks:
-- Structured review report validity.
-- Acceptance criteria coverage (every explicit bullet must pass).
-- Absence of blocking findings (e.g., UI without backend).
-- Reviewed SHA integrity (the approved SHA must match the PR head).
+Production admits one newly discovered GitHub issue per hour through:
 
-The reviewer report must contain the exact current head SHA, non-empty evidence for every criterion, and no
-unrequested criteria. Reviewer edits trigger verification and a fresh review before approval is published.
+```text
+FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
+```
 
-## Failure handling
+This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
+and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; implementation, security review,
+verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
+review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
+admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
 
-There is no quarantine terminal state. When a job fails (a conversation error, a verification failure, a
-blocked quality gate), it stays in its current phase and is retried later rather than being marked done,
-failed, or handed off to a human:
-- Backoff is exponential per job: 5 minutes after the first failure, doubling on each subsequent one, capped
-  at 24 hours. `select_batch` in `daemon.py` skips a job until its `next_attempt_at` has passed.
-- One exception: if implementation repeatedly produces an empty diff (`"no repository changes"`), that is
-  treated as the work already being done, usually by another pipeline racing on the same issue, and the
-  issue is closed instead of retried forever for no reason.
-- Once `FACTORY_MAX_CONSECUTIVE_FAILURES` (default 3) is reached, an alert fires. This is informational, not
-  a call to action - the factory keeps retrying on its own. Alerts are batched (see "Operator recovery").
-- If a systemic bug caused a wave of failures and you fixed it, issues already in backoff resume on their
-  own schedule with no extra step. Only GitHub-side `needs-human`/`factory-quarantined` labels from before
-  this behaviour changed, or added manually, need `backlog requeue-quarantined` to clear.
+All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
+commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
+job, preventing one difficult task from growing durable state without bound.
 
-## Costs
+Durable execution states abandoned by a dead worker are recovered through the same timeout retry policy. Live
+futures and polling-only `CI_PENDING` or `MERGE_QUEUED` jobs are never treated as abandoned work.
 
-ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is
-budgeted at USD 10 monthly. The VPS is approximately USD 5 monthly. Gemini uses the free tier only, with
-billing disabled and variable budget USD 0. The steady operating ceiling is USD 35, not USD 30. Unknown-cost
-subscription calls are counted separately.
+## Safety gates
 
-Free-tier Gemini content may be used by Google to improve its products. Never send secrets, production data,
-private keys, environment files, OAuth caches or database dumps to an LLM.
+Before a task branch can merge, the Factory preserves these controls:
 
-## Bootstrap
+- isolated worktree rooted beneath `FACTORY_WORKTREE_DIR`;
+- fresh `origin/main` base for issue work;
+- trusted host-owned Git add, commit, push, PR, status, and merge operations;
+- rejection of protected-base pushes inside `GitWorkflow`;
+- local validation of every persisted external pull-request branch before fetch or push;
+- repository-native verification selected by `verification.py`;
+- networkless verification namespaces with provider homes, durable state, logs, runtime sockets, and sibling
+  processes hidden;
+- deterministic quality checks for placeholders, unsafe type escapes, skipped tests, and production mocks;
+- deterministic pre-push rejection of provider credential artefacts, high-confidence tokens, and private keys;
+- stale report deletion before every structured-output attempt;
+- file-based report validation before provider success;
+- independent review by a different provider where possible;
+- one merge-queue lane submitted before issue work, with one provider slot withheld from new issue jobs while the
+  selected pull-request worker is active;
+- SHA-scoped `factory/independent-review` status, reset to `PENDING` before every PR-backed AI phase, refresh, or
+  base update;
+- head-SHA comparison before the scheduled merge queue;
+- atomic base updates and renewed verification/review when a head is behind `main`;
+- atomic `--match-head-commit` enforcement at the merge call;
+- literal success for `CI / required` and `factory/independent-review` in every autonomous merge;
+- a baseline ruleset requiring pull requests and strict `CI / required`;
+- an optional exact-owner, pull-request-only bypass on the baseline and review-only rulesets;
+- a review-only ruleset requiring `factory/independent-review`;
+- human `CHANGES_REQUESTED` review blocking;
+- no administrator bypass by the Factory or repository workflows.
 
-Keep at least 5 GB free for worktrees, dependency caches and build output. The reserve is configurable with
-`FACTORY_MINIMUM_FREE_DISK_GIB`; the factory pauses before starting new work when the reserve is breached.
+The repository owner can deliberately waive CI, independent review, or both through an existing pull request.
+See [MANUAL-MERGE.md](MANUAL-MERGE.md). Factory automation still requires both statuses and never invokes that
+manual authority. Roles, teams, apps, deploy keys, direct pushes, and always-mode bypasses remain prohibited.
+
+The structured report files are control artefacts. They are validated, deleted, and never committed as task
+code. Every code-mutating review or repair returns to verification and a fresh independent review.
+
+## Bootstrap and deployment
+
+Keep at least 5 GiB free for worktrees, dependency caches, and build output.
 
 ```bash
 REPOSITORY_ROOT="$(git rev-parse --show-toplevel)"
-sudo "$REPOSITORY_ROOT/setup-debian.sh"
+sudo install -d -m 0750 -o root -g root /etc/hellotalk-factory
+sudo install -m 0600 -o root -g root \
+  "$REPOSITORY_ROOT/config/systemd/factory.env.example" \
+  /etc/hellotalk-factory/factory.env
 sudoedit /etc/hellotalk-factory/factory.env
-sudo chmod 0640 /etc/hellotalk-factory/factory.env
-sudo chown root:hellotalk-factory /etc/hellotalk-factory/factory.env
+sudo "$REPOSITORY_ROOT/setup-debian.sh"
+sudoedit /etc/hellotalk-factory/agents.json
+sudo chmod 0600 /etc/hellotalk-factory/factory.env
+sudo chown root:root /etc/hellotalk-factory/factory.env
+sudo chmod 0640 /etc/hellotalk-factory/agents.json
+sudo chown root:hellotalk-factory /etc/hellotalk-factory/agents.json
 ```
 
-The idempotent bootstrap supports Debian 13, Ubuntu 24.04 and Ubuntu 26.04. It uses `npm ci`, creates a
-dedicated user, installs rootless Podman and a versioned Python environment, and never overwrites credentials.
+Set `GITHUB_TOKEN` before bootstrap. On a first install only, bootstrap can import the narrow Factory allowlist
+from a readable repository `.env`, but the explicit root-only file above is preferred. The service user must not
+run `gh auth login`: setup resets inherited Git credential helpers and every clone, fetch, push, and GitHub CLI
+operation receives the root-managed token only for that Factory-owned child process. Doctor fails if it finds a
+GitHub CLI OAuth token or persistent Git credential in the agent-readable service home.
 
-## ChatGPT subscription authentication
+The production starting policy is
+[`config/factory/agents.production.json`](../../config/factory/agents.production.json). It enables Claude Code,
+Codex CLI, and OpenCode, leaves Google disabled until service-user authentication is proven, and keeps OpenHands
+emergency-only. Providers are optional independently. Do not enable a provider merely because its binary exists.
 
-Complete OAuth before enabling systemd:
+Deploy only from `main`:
 
 ```bash
-tmux new -s hellotalk-auth
-sudo -u hellotalk-factory env HOME=/var/lib/hellotalk-factory/home \
-  /opt/hellotalk-factory/venv/bin/hellotalk-factory auth openai
+git switch main
+git pull --ff-only origin main
+sudo scripts/deploy-and-start-factory.sh --use-existing-credentials
 ```
 
-Copy the printed URL, open it locally and complete consent. Detach using `Ctrl-b d` and reattach with
-`tmux attach -t hellotalk-auth`. The cache is `/var/lib/hellotalk-factory/home/.openhands/auth`, owned by
-`hellotalk-factory`, mode `0600`, beneath a mode `0700` directory.
+The deploy script rejects a non-main ref, fast-forwards the dedicated checkout, disables the retired meta-agent,
+refreshes the frozen Python environment and Node dependency trees, installs Cypress, rebuilds the secretless
+worker image, verifies systemd, starts the daemon, and runs online diagnostics. It updates
+`agents.example.json` but creates `agents.json` only when the operator file is absent. Existing routing and
+credentials are not replaced or printed. It records whether the daemon and watchdog were active before the
+maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
+trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
+The Python refresh preserves the pinned `uv` bootstrap tool as an intentional extraneous package. If an older
+exact sync removed it, deployment restores the pinned version before continuing and proves it remains executable
+after the refresh. This keeps both startup doctor and isolated repository verification recoverable.
 
-Force renewal with `hellotalk-factory auth openai --force`. If OAuth is revoked, the factory alerts through
-Telegram and runs OpenCode-only for at most 24 hours before pausing. Account-owner action is the sole
-authentication break-glass exception.
-
-## Providers and doctor
-
-Store credentials only in `/etc/hellotalk-factory/factory.env`, never in commands or chat.
-
-`FACTORY_MAX_PARALLEL_JOBS` defaults to five for the current 8 GB/4 vCPU host. Issue agents implement and
-review in parallel, while the memory-heavy local verification suite is serialised. Reduce this to two or
-three if swap usage grows; increase it only after measuring memory and CPU saturation.
-
-All open issues are eligible by default. `needs-human`, `factory-skip` and `duplicate` always exclude an
-issue. Set `FACTORY_REQUIRE_READY_LABEL=true` if manual queueing is preferred.
-
-When a quarantined issue has an uncommitted worktree, the daemon archives it under
-`/var/lib/hellotalk-factory/recovery/` before removing the Git worktree registration. The branch is never
-deleted, so a human can restore the work later.
+For repeated deployments whose package manifests and worker inputs have not changed, use the verified fast path:
 
 ```bash
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models gemini
+sudo scripts/deploy-and-start-factory.sh --use-existing-credentials --fast
+```
+
+Both modes run the startup doctor with the same `HOME` and `PATH` as the systemd service. This is required for
+subscription CLIs installed beneath the operator account and for the deployed `uv` executable. A bare
+`sudo -u dev ... doctor` can inherit sudo's restricted path and falsely report that authenticated providers are
+not installed.
+
+Fast deployment still fetches and fast-forwards `main`, repairs canonical host configuration, refreshes the frozen
+Python environment, installs current systemd files, runs startup preflight, and verifies the live daemon. It skips
+a Node dependency tree only when the package manifests, lockfile, Node/npm toolchain, and npm hidden lock all match
+a deployment-owned fingerprint. Installed package manifests and executable links are also included, so a
+partially removed dependency tree is a cache miss. It skips the worker build only when all tracked `automation/`
+inputs and the rootless Podman image ID match. Cache misses automatically run the normal phase. The first fast
+deployment after installing this feature has no trusted fingerprints, so it performs a full refresh and warms
+the cache.
+
+Deployments are serialised with `/run/lock/hellotalk-factory-deploy.lock`. Maintenance stops and drains both the
+watchdog timer and any active watchdog invocation before stopping the daemon, preventing a watchdog restart from
+overlapping dependency or image replacement.
+
+Because deployment deliberately preserves the operator policy, compare it with the newly deployed model and
+adapter example after every upgrade, then merge reviewed changes explicitly:
+
+```bash
+sudo diff -u /etc/hellotalk-factory/agents.json /etc/hellotalk-factory/agents.example.json
+```
+
+The production environment sets `FACTORY_REQUIRE_TRUSTED_INTAKE=true`. Issues and same-repository pull requests
+from `FACTORY_TRUSTED_GITHUB_ACTORS` remain fully automatic. Work from any other actor requires the
+maintainer-controlled `factory-ready` label. `needs-human`, `factory-skip`, and `duplicate` still exclude an
+issue. Set `FACTORY_REQUIRE_READY_LABEL=true` only when every issue, including trusted-owner work, needs manual
+queue admission. The production example trusts `elgansayer` and `app/github-actions`; review that list whenever
+workflow ownership changes.
+
+## Subscription authentication
+
+The daemon runs as the operator's own login user (`dev`), so it reuses that account's normal, already-authenticated
+CLI sessions directly instead of maintaining a separate service-account credential set. Use this environment for
+every check:
+
+```bash
+FACTORY_HOME=/home/dev
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+```
+
+Authenticate each CLI normally as `dev` - the same login you'd use interactively. Do not place provider tokens in
+`factory.env` when the adapter is configured for subscription auth. Common API-key variables are stripped from
+direct subscription-provider environments so they cannot silently switch to PAYG authentication.
+
+In particular, do not put `OPENCODE_GO_API_KEY` in the repository `.env`. Use `opencode auth login --provider
+opencode-go` as `dev`. `auth list` and `models opencode-go` do not prove remaining balance, so classify an
+`insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
+provider when no separate SDK credential exists.
+
+Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
+pass. Gemini CLI remains configurable only for account types where Google still supports that path. Provider
+installation and authentication details are in [SUBSCRIPTION-AGENTS.md](SUBSCRIPTION-AGENTS.md).
+
+## Diagnostics
+
+```bash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard show
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
+sudo systemctl status hellotalk-factory.service hellotalk-factory-health.timer
+sudo journalctl -u hellotalk-factory.service -n 200 --no-pager
+sudo scripts/maintain-factory-host-storage.sh
 ```
 
-Discovery must list both configured models. A missing model, invalid credential, paid-tier response or
-unexpected endpoint response blocks activation.
+- `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
+  authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
+  usability, competing executors, authenticated repository access, and the layered GitHub merge policy. An
+  optional OpenHands SDK OpenAI OAuth failure is a warning when another configured provider is usable. That OAuth
+  profile is separate from Codex CLI's ChatGPT subscription login. Detached unrestricted provider processes
+  remain fail-closed competing executors. A provider attached to an operator TTY is treated as an interactive
+  session rather than a second autonomous control plane.
+- `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
+  rootless worker isolation,
+  provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
+  scoped Git credential helper, authenticated GitHub repository reads, and the layered server-side merge policy.
+- `status` prints the durable daemon generation, queue counts, active jobs, and heartbeat.
+- After a watchdog restart, the default 30-second grace window lets systemd preflight complete and the daemon
+  publish its initial heartbeat before recovery is judged. Set `FACTORY_WATCHDOG_RESTART_GRACE_SECONDS` only when
+  host startup measurements justify a different value.
+- GitHub and worktree reconciliation runs on a single control worker. The owner loop publishes heartbeat updates
+  every ten seconds while that pass is busy, and closed jobs are merged in one durable batch without overwriting
+  concurrent worker transitions.
+- Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
+  keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
+- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials.
+- `dashboard show` renders the sanitised GitHub control-panel body without network access.
+- `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
+  pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.
+- the dashboard storage rows distinguish root capacity from the secondary-backed Factory state volume and expose
+  a short-term exhaustion estimate only after a meaningful decline.
+- `reconcile` releases expired task leases and never deletes worktrees or branches.
+- `pause` stops new scheduling while preserving jobs, branches, active workers, and pull requests.
+- `resume` re-enables scheduling after the underlying cause is resolved.
 
-## systemd and operator commands
+Some CLIs expose only local authentication metadata. Exact quota is therefore best-effort until a real attempt
+returns a rate, quota, or retry signal. Never invent a remaining quota value.
+
+The no-generation adapter contract was checked on 2026-08-17 with Claude Code 2.1.233, Codex CLI 0.147.0,
+Antigravity 1.1.13, and OpenCode 1.18.15. These are evidence for the tested contract, not permanent version pins.
+Repeat harmless version, auth, and model probes after every CLI upgrade.
+
+## Rootless Podman checks
+
+The Factory service delegates only its own cgroup beneath the systemd resource cap. A healthy installation needs
+a real systemd user session for `dev`:
 
 ```bash
-sudo systemd-analyze verify /etc/systemd/system/hellotalk-factory.service
-sudo systemctl enable --now hellotalk-factory.service hellotalk-factory-health.timer
-sudo systemctl status hellotalk-factory.service
-sudo journalctl -u hellotalk-factory.service -f
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
+sudo loginctl enable-linger dev
+id -u dev
 ```
 
-Both units are enabled system-wide and the health timer is persistent, so the daemon and health checks start
-again after a machine reboot. Verify this with `systemctl is-enabled hellotalk-factory.service
-hellotalk-factory-health.timer` after deployment.
-
-Emergency stop: `sudo systemctl disable --now hellotalk-factory.service hellotalk-factory-health.timer`.
-
-Use a fine-grained GitHub token limited to repository metadata read, Actions read, contents read/write, issues
-read/write and pull requests read/write. The factory uses its cached backlog during GitHub outages and honours
-rate-limit reset times.
+`XDG_RUNTIME_DIR` in the unit must match `/run/user/<uid>`. If nested cgroup controller flags are unavailable,
+the diagnostic worker retries without per-container CPU, memory, and PID flags while preserving no-network,
+user-namespace, dropped-capability, and worktree confinement. Actual agent terminals continue to use `keep-id`
+isolation. A host-namespace fallback is permitted only for the read-only smoke diagnostic when `newuidmap` is
+blocked.
 
 ## Operator recovery
 
-When providers degrade or a task stalls, run these commands as the `hellotalk-factory` user from the service
-virtualenv:
+Run recovery commands as the operator user with the same environment used by systemd. Defining this helper in the
+current root shell prevents sudo's secure path from hiding authenticated provider executables:
 
 ```bash
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory backlog requeue-quarantined
+FACTORY_HOME=/home/dev
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+factory_cli() {
+  sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+    /opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"
+}
+factory_cli doctor --online
+factory_cli providers check
+factory_cli status
+factory_cli metrics
+factory_cli dashboard sync --force
+factory_cli reconcile
+factory_cli pause
+factory_cli resume
+factory_cli backlog requeue-quarantined
+factory_cli backlog requeue-quarantined --issue 1234
+factory_cli backlog requeue-quarantined --issue 1234 --announce
 ```
 
-- `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
-  provider endpoints. It also launches a constrained rootless worker-terminal smoke container and fails for
-  a stale daemon heartbeat, quarantined jobs or jobs stalled beyond the conversation deadline.
-- If the host cannot delegate nested cgroups to rootless Podman, the worker smoke test and terminal executor
-  retry without nested CPU, memory and PID flags. Network isolation, dropped capabilities, no-new-privileges,
-  user namespaces and worktree confinement remain enabled, while the systemd service limits the factory as a
-  whole.
-- Cgroup delegation itself depends on the `hellotalk-factory` user having a real systemd user session:
-  `loginctl enable-linger hellotalk-factory` creates `user@<uid>.service`, and the unit's
-  `XDG_RUNTIME_DIR=/run/user/<uid>` points Podman at it. Without both, Podman falls back to a cgroupfs mode
-  that races and intermittently fails container creation under concurrent worker load rather than reliably
-  hitting the degraded-limits fallback above. `<uid>` is the `hellotalk-factory` user's uid on the host
-  (`id -u hellotalk-factory`) and must match the unit file if a fresh install assigns a different one.
-- If the host blocks `newuidmap` for the diagnostic smoke test, doctor retries that diagnostic only with a
-  host namespace and labels the result. Actual agent terminals continue to use `keep-id` isolation.
-- `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
-  activation.
-- `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).
-- `metrics` prints the recorded provider usage and cost snapshot from `metrics.json`.
-- `reconcile` releases expired durable leases and never deletes branches or worktrees.
-- Doctor alerts through Telegram when active work has produced no pull request for
-  `FACTORY_MAX_NO_PR_HOURS` (default six hours).
-- `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
-- `resume` re-enables scheduling once the underlying issue is resolved.
-- `backlog requeue-quarantined` clears `factory-quarantined`, `needs-human`, `swarm-active` and
-  `factory-active` from every currently quarantined issue and comments to explain why. This is only needed
-  for issues carrying those labels from before quarantine stopped being a terminal state, or ones a human
-  labelled that way by hand - see "Failure handling" for how ordinary retries now recover on their own.
+If every provider is unavailable, do not delete the job, circuit, lease, or `jobs.json`. Fix service-user auth or
+wait for the earliest cooldown, confirm health, then resume. The daemon remains online and can continue work that
+has another eligible provider. If a recovery worktree is dirty or damaged, Factory archives it beneath
+`/var/lib/hellotalk-factory/recovery` before removing its Git registration.
 
-Typical recovery flow: run `doctor --online` to confirm the failure, `providers check` to isolate the provider,
-`status` and `metrics` to review daemon health and recent fallbacks, `pause` before touching credentials or
-state, fix the root cause, `backlog requeue-quarantined` if any issues carry legacy quarantine labels, then
-`resume`.
+Do not hand-edit a far-future retry or lease timestamp to pause work. Provider, task, and retry deadlines are
+schema checked and duration bounded so malformed state recovers instead of wedging the queue. Use `pause` for an
+operator hold.
 
-Duplicate issues (identical titles, usually from a bulk-generation run) are now detected and closed
-automatically on every backlog refresh, not just during manual recovery.
+Provider-side exhaustion remains automatic: it does not increment task attempts or trigger quarantine. When the
+same task-side failure reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory stores a recoverable quarantine and
+adds `factory-quarantined` plus `needs-human` once. A due circuit re-enters discovery automatically after the
+bounded recovery window. Before discovery, Factory silently clears GitHub quarantine labels that are no longer
+backed by durable quarantine state at startup and whenever a bounded circuit is released, so a partial recovery
+cannot hide the job without adding a high-volume query to every scheduler refresh. To retry sooner, pause the daemon,
+resolve the deterministic cause, run `backlog requeue-quarantined`, then resume. Use repeatable `--issue` options
+for a targeted reset. Recovery is quiet by default; add `--announce` only when a lifecycle comment is useful. The
+command reconciles the union of durable quarantine state and GitHub labels, so rerunning it safely completes a
+partially interrupted reset. Historical quarantine entries without the current reason marker are migrated into
+normal retry flow. Successful merge completion removes `factory-active` before closing the source issue. Existing
+historical `factory-active` and retired `swarm-active` drift is cleaned in batches of
+`FACTORY_LABEL_RECONCILIATION_BATCH_SIZE` per scheduler refresh. Durable active jobs and currently protected
+workers retain ownership. Released issues always regain `factory-ready` because `factory-active` also carried
+trusted-intake authority. The configured batch is validated between 1 and 100. This avoids an unbounded startup
+mutation or GitHub comment burst while converging automatically.
 
-Alerts are batched: repeated alerts of the same kind within a 30-minute window collapse into the first
-message, with the suppressed count reported on the next alert that actually sends. A burst of failures
-sends one Telegram message, not one per issue.
+Never restore the old swarm or create a parallel one-off resolver to bypass a red diagnostic.
 
-## Wiki, upgrades and recovery
+For an emergency stop:
 
-Every feature pull request must update application documentation. The deterministic wiki publisher derives
-pages from routes, modules, APIs, migrations, integrations and tests. An issue title is never evidence that a
-feature exists, and generated wiki content never pushes to application `main`.
+```bash
+sudo systemctl disable --now hellotalk-factory.service hellotalk-factory-health.timer
+```
 
-Build upgrades in `/opt/hellotalk-factory/venv-VERSION`, run tests and doctor, atomically change the `venv`
-symlink, restart and roll back the symlink if health fails.
+## Upgrade, rollback, and shutdown
 
-For a damaged worktree, pause the factory, preserve its branch and logs, remove only the named factory-owned
-worktree with `git worktree remove`, prune worktree metadata and resume. Never reset the human checkout or
-delete an unmerged branch. Full rollback disables the units and restores the prior factory version while
-leaving all task branches and pull requests recoverable.
+SIGTERM and SIGINT stop new scheduling, mark routing as stopping, terminate registered CLI, OpenHands, Git,
+verification, and repository child process groups, wait for workers to release capacity, and persist the daemon as
+stopped. TERM escalates to KILL after the configured grace period so a provider or repository command cannot
+leave an orphaned process indefinitely.
+
+Build upgrades in a versioned virtual environment, run the full Factory test and doctor gates, then atomically
+switch the installed virtual environment. Roll back code, environment, and routing configuration together if
+health fails. Never reset a human checkout, remove an unmerged branch, or edit durable JSON manually without a
+preserved backup.
+
+## Audit status and limitations
+
+The current engineering review is [AUDIT-2026-08-17.md](AUDIT-2026-08-17.md). It separates implemented and tested
+controls from production-host and paid-provider evidence. The Factory targets unattended operation, but it safely
+stops agent progress when credentials need account-owner renewal, branch policy blocks merge, a product decision
+is required, or no provider is usable. Cross-repository PRs are excluded from mutation because the repository
+token cannot safely push fork branches.
+
+Current limitations are explicit:
+
+- CI repair receives failed check names and mergeability, not full GitHub Actions log excerpts;
+- security review does not yet have a separate authoritative structured report;
+- canonical required status names are repository constants; online doctor fails when repository rules do not
+  require them;
+- OpenHands inner-provider attribution is separate from outer adapter provenance;
+- provider credential and runtime paths are operator-configured and must be reviewed whenever a CLI changes its
+  installation or authentication layout;
+- direct providers can read their own session and need vendor network access, so public intake must remain gated
+  and a vendor-domain egress broker is recommended;
+- status-context names are enforced, but source pinning requires a dedicated GitHub App identity and matching
+  ruleset integration IDs;
+- exact PAYG spend cannot be enforced where a provider does not expose cost;
+- production is not proven until host activation and one small end-to-end canary complete.

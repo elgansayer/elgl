@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.messageFilters.title' | t }}</h1>
@@ -42,6 +42,7 @@
               {{ 'settings.messageFilters.ageMin' | t }}
             </label>
             <input
+              hlmInput
               id="age-min"
               type="number"
               min="0"
@@ -57,6 +58,7 @@
               {{ 'settings.messageFilters.ageMax' | t }}
             </label>
             <input
+              hlmInput
               id="age-max"
               type="number"
               min="0"
@@ -81,6 +83,7 @@
         <div class="flex flex-wrap gap-2">
           @for (lang of languages; track lang.code) {
             <button
+              hlmBtn
               type="button"
               (click)="toggleLanguage(lang.code)"
               class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
@@ -121,6 +124,7 @@
         <div class="flex flex-wrap gap-2">
           @for (g of genderOptions; track g.code) {
             <button
+              hlmBtn
               type="button"
               (click)="toggleGender(g.code)"
               class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
@@ -140,6 +144,7 @@
       <!-- Save Button -->
       <div class="pt-4">
         <button
+          hlmBtn
           (click)="saveFilters()"
           [disabled]="isSaving()"
           class="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-fill transition-opacity hover:opacity-90 disabled:opacity-50"

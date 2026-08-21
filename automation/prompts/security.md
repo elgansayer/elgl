@@ -6,8 +6,9 @@ skills under `.agents/skills` for the authoritative checklists. Fix every confir
 complete change and add or update unit tests that prove the fix. Run the applicable verification suite before
 finishing. If no security issues are found, leave the worktree unchanged.
 
-Your terminal is network-isolated. Dependency audits that require network access are handled by the daily
-security automation, so focus on static review of the changed code.
+Do not fetch dependencies or send repository data to arbitrary external services. The provider transport may
+need network access, while OpenHands terminals are network-isolated. Dependency audits that require network
+access are handled by the daily security automation, so focus on static review of the changed code.
 
 Never weaken an existing security control, bypass a guard, disable verification, or commit a secret. Work only
 in the assigned worktree. Focus on the current diff; do not report pre-existing out-of-scope issues as new

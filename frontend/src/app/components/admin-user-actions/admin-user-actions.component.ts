@@ -1,12 +1,14 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, inject } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
 
 @Component({
+  imports: [HlmButton],
   selector: 'app-admin-user-actions',
   template: `
     <div class="flex gap-2">
-      <button (click)="handleBan()" class="btn btn-danger">Ban</button>
-      <button (click)="handleWarn()" class="btn btn-warning">Warn</button>
+      <button hlmBtn (click)="handleBan()" class="btn btn-danger">Ban</button>
+      <button hlmBtn (click)="handleWarn()" class="btn btn-warning">Warn</button>
     </div>
   `,
 })

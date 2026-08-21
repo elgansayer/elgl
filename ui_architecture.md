@@ -1,127 +1,155 @@
-# HelloTalk Clone - Comprehensive UI Architecture & Interaction Spec
+# HelloTalk UI Architecture & Interaction Spec
 
-This document provides a massive deep dive into every screen, component, and interaction within the application. It serves as the ultimate blueprint for the entire interface.
+This document describes the product-level screen and interaction architecture. It is not the visual-token or component-implementation authority.
 
-## 1. UI Philosophy & Guidelines
-- **Aesthetic**: Pixel-perfect, mobile-first design.
-- **Theme**: Strict dark mode (`#121212` backgrounds) featuring vibrant neon accents.
-- **Layouts**: Horizontal scrollable pills, dense flag indicators, sticky headers.
-- **RTL & Globalisation**: Zero physical directional CSS. We strictly use Tailwind logical properties (`ps-`, `pe-`, `border-s`, etc.) to support seamless mirroring for Arabic, Hebrew, and Persian. All text utilizes `TranslatePipe`.
-- **Reactivity**: All components use Angular Signals (`signal`, `computed`, `input()`, `output()`) and stand-alone component architecture.
+Authoritative design-system sources:
 
----
+- `DESIGN.md` for product visual direction and Relay semantics.
+- `docs/spartan-relay-architecture.md` for component ownership and Spartan boundaries.
+- `docs/claude-design-two-way-sync.md` for code ↔ Claude Design reconciliation.
+- `design-sync.manifest.json` for stable design artefact identity and provenance.
+- `frontend/design-preview/` for deterministic repository-local visual references.
 
-## 2. Core Screens (Routing)
+Original HelloTalk screenshots are product-reference evidence only. They may inform useful interaction and information-architecture patterns, but they are not a current palette, token or pixel-parity authority.
 
-### 2.1. Home & Onboarding
-- **`/home` (HomeComponent)**: The landing dashboard summarizing active streaks, upcoming lessons, and recent notifications.
-- **`/onboarding` (OnboardingWizardComponent)**: Multi-step setup for native language, target language(s), and proficiency level assessment.
-- **`/proficiency` (ProficiencyAssessmentComponent)**: Diagnostic quiz UI to benchmark the user's initial skill level.
+## 1. UI philosophy and guidelines
 
-### 2.2. Social & Discovery
-- **`/discovery` (DiscoveryComponent)**: The main matchmaking engine. Includes `GlobalSearchComponent`, filter drawers (age, language, serious learners), and renders `ProfileDiscoveryCard` components.
-- **`/moments` (MomentsFeedComponent)**: The Instagram-style global timeline. Infinite scrolling list of multi-modal posts (text, images, 60s voice notes).
-- **`/groups` & `/communities`**: Directories for joining language exchange groups based on shared interests.
-- **`/events` & `/language-parties`**: Calendars and feeds for upcoming scheduled LiveKit broadcasts and language events.
+- **Product character:** Mobile-first language exchange and learning, with deliberate tablet and desktop adaptations rather than stretched phone layouts.
+- **Visual system:** Use Relay semantic tokens and approved Relay public primitives. Do not prescribe raw product colours in feature architecture.
+- **Themes:** Light and dark are first-class. Per-user accent behaviour must preserve semantic contrast and text-on-fill rules.
+- **Interaction ownership:** Prefer approved Relay APIs backed by Spartan Helm/Brain for accessible keyboard, focus, overlay, selection and form behaviour. Feature code must not recreate interaction mechanics already owned by Spartan.
+- **Claude Design:** Material visual contracts may be explored design-first or code-first, but must be reconciled through the two-way sync contract before completion.
+- **Layouts:** Horizontal scrollers, language indicators, sticky navigation and dense social/learning surfaces remain valid product patterns when they fit the feature and accessibility requirements.
+- **Accessibility:** WCAG AA minimum, visible focus, keyboard operation, screen-reader semantics, reduced motion, forced-colours support where relevant, and usable 200%/400% zoom and reflow.
+- **RTL and globalisation:** Use logical direction properties and translated UI copy. Important state must never depend on colour alone.
+- **Reactivity:** Angular Signals and standalone components remain the default implementation model.
 
-### 2.3. Communication (Chat & Calls)
-- **`/chat` (ChatListComponent)**: The inbox. Displays recent conversations, unread badges, and typing indicators.
-- **`/chat/:id` (ChatRoomComponent)**: The core 1-on-1 and group messaging interface. Includes `MessageReactionBar`, `ChatSystemBubble`, and `StickerPicker`.
-- **`/audio-rooms` (AudioRoomComponent)**: The LiveKit audio room lobby. Displays active 24/7 drop-in voice rooms categorized by language pair.
-- **`/video-call` & `/active-call`**: Dedicated full-screen interfaces for WebRTC VoIP and video sessions. Includes `IncomingCallModal` and `VoipActiveCall`.
+## 2. Core screens
 
-### 2.4. Learning & Immersion
-- **`/vocabulary` (VocabularyDashboardComponent)**: SRS flashcard manager. Displays words color-coded by mastery (Blue, Yellow, White).
-- **`/lessons` (LessonsComponent)**: Structured learning modules and resource library.
-- **`/study-buddy` (StudyBuddyComponent)**: Algorithmic matchmaking interface to request and pair with serious learners.
+### Home and onboarding
+- `/home`: landing experience summarising relevant learning and social activity.
+- `/onboarding`: multi-step setup for native language, target languages and learner preferences.
+- `/proficiency`: diagnostic assessment and proficiency placement.
 
-### 2.5. Profiles & Monetization
-- **`/profile` & `/profile/:userId`**: The user identity screen. Displays bio, native/target flags, correction ratio, and pinned moments. VIPs can view the `VisitorLogsComponent`.
-- **`/vip` & `/subscription`**: Monetization surfaces detailing VIP tiers (8 UKP / 10 USD). Includes the `SubscriptionPlans` and `CoinsSuccess` pages.
-- **`/shop` & `/cart`**: The virtual economy store for purchasing digital gifts and stickers.
+### Social and discovery
+- `/discovery`: partner discovery with intentional filters, profile quality signals and language goals.
+- `/moments`: multimodal community timeline.
+- `/groups` and `/communities`: directories for language and interest communities.
+- `/events` and `/language-parties`: scheduled language events and live sessions.
 
-### 2.6. Settings & Admin
-- **`/settings` (SettingsComponent)**: Hub for account preferences, notification toggles, language settings, and privacy controls.
-- **`/admin` (AdminPortalComponent)**: Secure dashboard for moderation, user management, and viewing reported content.
+### Communication
+- `/chat`: conversation inbox with unread and live-state signals.
+- `/chat/:id`: direct/group messaging with reactions, correction, translation and media tools.
+- `/audio-rooms`: LiveKit room discovery and participation.
+- `/video-call` and `/active-call`: real-time calling surfaces.
 
----
+### Learning and immersion
+- `/vocabulary`: SRS vocabulary and review workflows. Mastery state must include non-colour cues.
+- `/lessons`: structured learning content.
+- `/study-buddy`: serious-learning partner matching.
 
-## 3. Component Library
+### Profiles and monetisation
+- `/profile` and `/profile/:userId`: identity, languages, learning/social signals and relevant activity.
+- `/vip` and `/subscription`: subscription and benefit surfaces using locale-aware price formatting.
+- `/shop` and `/cart`: virtual goods and purchase workflows.
 
-### 3.1. Primitives (Foundational UI)
-Located in `frontend/src/app/components/primitives/`:
-- **`Card`**: Standard surface container with elevated shadows and `#1e1e1e` background.
-- **`ButtonPrimary` / `ButtonSecondary` / `GradientButton`**: Touch-optimized buttons with tap animations and disabled states.
-- **`Input` / `Textarea`**: Form controls with floating labels and error state borders.
-- **`Chip` / `Pill` / `ScrollablePills`**: Compact indicators for interests, language levels, and filter toggles.
-- **`LanguagePicker` & `FluencyIndicator`**: Flag-based icons paired with a visual bar (1 to 5) indicating language mastery.
-- **`AudioEqualizer`**: A canvas-based visualizer for playing back voice notes.
-- **`Toast` / `EmptyState`**: Non-blocking alerts and placeholder graphics for empty lists.
+### Settings and administration
+- `/settings`: account, language, accessibility, notification and privacy preferences.
+- `/admin`: authorised moderation and operational tooling. Admin UI must use the same Relay/Spartan architecture rather than a separate generic dashboard design system.
 
-### 3.2. Feature Components (Complex Widgets)
-- **`TokenisedTextComponent` (LingQ Engine)**: The heart of the app's reading experience. Parses raw text via `Intl.Segmenter` into clickable spans. Maps tokens to the user's SRS vocabulary state, dynamically applying background colors (Blue, Yellow, White).
-- **`DoodlePad`**: An HTML5 canvas overlaid on the chat, allowing users to draw shapes, pick colors, and send the resulting data URL.
-- **`VisualDiff` / `CorrectionModal`**: Displays an inline comparison between a user's original text (red strikethrough) and a native speaker's correction (green text).
-- **`AudioSyncReader`**: Binds an `<audio>` element's `timeupdate` event to a `TokenisedTextComponent` to highlight words precisely as they are spoken.
-- **`GroupParticipantDrawer` / `HostDashboard`**: Slide-out panels for LiveKit rooms allowing hosts to approve "Raise Hand" requests and mute participants.
-- **`GiftAnimationOverlay` / `CelebrationOverlay`**: Full-screen, z-index-heavy Lottie animations triggered by Centrifugo broadcast events when virtual gifts are sent.
+The Angular router is the executable authority for exact current route names and lazy-loading boundaries.
 
----
+## 3. Component architecture
 
-## 4. Interaction Catalog
+### Relay public primitives
 
-### 4.1. The "Click-to-Translate" & Token Flow
-1. User taps a word in a chat bubble or moment.
-2. `TokenisedTextComponent` intercepts the click and emits the token.
-3. A `WordDefinitionModal` (bottom sheet on mobile) slides up, displaying the DeepL/Azure translation, dictionary definition, and a TTS audio play button.
-4. User taps "Save to Flashcards", dispatching an API call to Supabase and updating the token's UI state to "Yellow" (Learning).
+Feature code should consume approved Relay primitives and semantic tokens rather than a historical catalogue of custom `app-*` components. The current public API and migration status are defined by `DESIGN.md`, `frontend/src/app/components/relay/`, the generated/owned Helm layer under `frontend/src/app/components/ui/`, and the Spartan migration backlog.
 
-### 4.2. Chat Messaging Interactions
-- **Swipe-to-Reply**: Swiping a message bubble right populates the input area with a quoted reply context.
-- **Long-Press Menu**: Holding a message opens `LongPressContextMenu` with options: Translate, Transliterate, Copy, Report, or Correct (Visual Diff).
-- **Hold-to-Record**: Pressing and holding the microphone icon starts the `AudioRecorder`. Releasing stops the recording, uploads the blob to Cloudflare R2, and sends the URL payload via Centrifugo.
+Typical capability families include:
 
-### 4.3. LiveKit Audio Stage Protocol
-1. User joins an active room (Listener mode, `canPublish: false`).
-2. User taps "Raise Hand" (`/audio-rooms/raise-hand`).
-3. Host sees the request in the `HostDashboard` and clicks "Approve".
-4. The backend issues a new JWT with `canPublish: true`.
-5. The user's client automatically re-connects and enables their microphone.
-6. The `LiveChatOverlay` runs concurrently, allowing listeners to text chat while speakers talk.
+- buttons and icon actions,
+- cards and semantic surfaces,
+- inputs, text areas and form controls,
+- chips, badges, tabs and selection controls,
+- dialogs, sheets, menus, popovers and tooltips,
+- language and proficiency presentation,
+- loading, error and empty states,
+- navigation and responsive shell primitives.
 
-### 4.4. Community Correction Flow
-1. User A posts a Moment in their target language.
-2. User B (native speaker) taps "Correct" on the post.
-3. The `CorrectionModal` opens, presenting the original text in an editable `Textarea`.
-4. User B edits the text and adds explanatory notes.
-5. The system generates a structured JSON payload (`{ original, fixed, explanation }`).
-6. The post updates to render the `VisualDiff` component inline for all viewers.
+Where Spartan provides the interaction capability, Relay should own the application-facing presentation/API and Helm/Brain should own the underlying interaction mechanics. Do not bypass that boundary from feature code without a documented migration exception.
 
-### 4.5. VIP & Privacy Triggers
-- When visiting a profile, an API call is fired to log the visit.
-- If the visitor has "Incognito Mode" enabled (VIP feature), the API bypasses the logging.
-- Free users viewing their `VisitorLogsComponent` see blurred avatars for recent visitors. Tapping a blurred avatar triggers the `SubscriptionPlans` paywall modal.
+### Feature components
 
-## 5. Performance, State & Bundle Optimization
+Complex feature components remain product-owned compositions. Examples include tokenised reading text, correction/diff experiences, audio-synchronised reading, room participant management and media/celebration overlays. They should compose Relay/Spartan capabilities rather than becoming parallel primitive libraries.
 
-To maintain a fast, responsive mobile-first experience, the Angular architecture must strictly adhere to the following optimization strategies:
+## 4. Interaction catalogue
 
-### 5.1. Lazy Loading & Deferred Views
-- **Component-Level Deferral**: Use Angular's `@defer` control flow block to lazily load heavy, non-critical components that are below the fold or not immediately visible. This includes:
-  - `GiftAnimationOverlay` / `CelebrationOverlay` (which rely on the heavy `lottie-web` package).
-  - Data visualizations like `CoinEconomyDashboardComponent` charts.
-  - Complex UI elements like `DoodlePad` until the user interacts with the feature.
-- **Dynamic Imports for Third-Party Libraries**: Avoid statically importing large third-party libraries (e.g., `chart.js`, `livekit-client`, `dompurify`) at the top of a file. Use dynamic `import()` within the component or service only when the library's functionality is explicitly requested by the user.
-- **Route-Level Lazy Loading**: Continue utilizing standalone components and the `loadComponent` / `loadChildren` syntax in the router to ensure each route is chunked independently, preventing the initial bundle from bloating.
+### Click-to-translate and vocabulary flow
+1. The user selects a supported token in reading, chat or community content.
+2. Tokenisation uses `Intl.Segmenter` and emits stable token context.
+3. The definition experience opens through the approved overlay/sheet primitive and presents translation, definition and pronunciation actions.
+4. Saving to vocabulary updates server-backed learning state and exposes a text/icon/semantic cue in addition to colour.
 
-### 5.2. State Management
-- **Native Angular Signals**: Manage complex, globally shared state (e.g., the real-time chat engine, LiveKit room states, and user authentication) exclusively using native Angular Signals. Do not use or assume the presence of `@ngrx/signals` or `SignalStore`.
-- **Benefits**:
-  - Provides strict, unidirectional data flow, avoiding "spaghetti state" from ad-hoc RxJS `BehaviorSubject` architectures.
-  - Granular reactivity minimizes change detection cycles.
-- **Optimistic UI Updates**: Native signals allow for robust optimistic updates. For instance, when a user sends a message or updates a setting, the local signal state should update immediately. If the Supabase API or Centrifugo broadcast fails, the state can be cleanly rolled back.
+### Chat interactions
+- Swipe-to-reply may populate quoted reply context where the input method supports it; equivalent accessible controls must exist.
+- Long-press/context actions expose translation, transliteration, copy, report, correction and related actions through Spartan-backed overlay/menu behaviour.
+- Hold-to-record must have accessible start/stop alternatives and clear recording state.
 
-### 5.3. Bundle Size Reduction
-- **Image Optimization**: Replace standard `<img>` tags with the `NgOptimizedImage` directive (`ngSrc`). This enforces automated lazy loading, automatic generation of `srcset` for responsive images, and preconnect hints, dramatically reducing the LCP (Largest Contentful Paint).
-- **Strict Tree-Shaking**: Regularly audit imports to ensure only required functions/modules are included (e.g., import specific RxJS operators rather than the entire library).
-- **Bundle Analysis**: Utilize `source-map-explorer` or the Angular CLI's built-in bundle analyzer to regularly audit the output chunks. Any external dependency exceeding 50KB must be explicitly justified or lazy-loaded.
+### LiveKit audio stage
+1. Join with the appropriate publication permission.
+2. Request speaking permission.
+3. Host reviews the request.
+4. Backend issues or updates authorised LiveKit credentials.
+5. Client applies the new capability and exposes microphone state clearly.
+6. Text chat can remain available alongside the audio session.
+
+### Community correction
+1. A learner publishes target-language content.
+2. Another user chooses correction.
+3. The correction editor opens using approved form and overlay primitives.
+4. The correction and optional explanation are submitted through typed backend contracts.
+5. The UI presents original and corrected text accessibly without relying only on red/green colour differences.
+
+### VIP and privacy
+- Profile-visit behaviour must respect privacy and incognito rules enforced by the backend.
+- Paywall and entitlement surfaces use approved Relay/Spartan dialog/sheet primitives and accessible consequence/cost copy.
+
+## 5. Responsive, accessibility and visual-state contract
+
+Material screens and shared primitives should cover the states that apply:
+
+- light and dark themes,
+- 390px mobile baseline,
+- tablet/desktop layouts where structure changes,
+- keyboard focus-visible,
+- loading, empty, error and disabled states,
+- RTL where directionality matters,
+- 200% and 400% zoom/reflow for critical flows,
+- reduced motion for animation,
+- forced-colours/high-contrast for custom controls.
+
+These states should be represented in tests and repository previews according to `docs/claude-design-two-way-sync.md` and the visual-regression programme.
+
+## 6. Performance and state
+
+- Keep route-level lazy loading and use `@defer` for heavy non-critical content where appropriate.
+- Dynamically load substantial optional third-party libraries when that materially improves bundle cost.
+- Use Angular Signals for local and shared reactive state according to the engineering constitution.
+- Use `NgOptimizedImage` for appropriate static images.
+- Track meaningful bundle regressions and justify large dependencies.
+
+Performance optimisations must not bypass Relay/Spartan ownership or degrade accessibility.
+
+## 7. Change protocol
+
+For material UI changes:
+
+1. Check existing issues/PRs and the Spartan migration programme for overlap.
+2. Map the feature to Relay public APIs and Spartan capabilities before adding bespoke interaction code.
+3. Use semantic tokens rather than hard-coded product colours.
+4. Update tests for behaviour and accessibility.
+5. Update `frontend/design-preview/` and relevant `design-sync.manifest.json` entries when the visual contract changes.
+6. Reconcile with the canonical HelloTalk Design System Claude Design project using the documented design-first, code-first or reconciliation flow.
+7. Run the repository verification gates before merge.
+
+A screen is not considered migrated merely because it renders with Tailwind classes. Completion requires consistent Relay presentation, Spartan-owned interaction behaviour where applicable, accessibility, responsive/theme coverage, tests and reconciled design intent.

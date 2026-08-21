@@ -1,17 +1,23 @@
 import { Component, input, output } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   selector: 'app-scrollable-pills',
+  imports: [...HlmButtonImports],
   template: `
     <div
-      class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500"
+      class="hide-scrollbar flex gap-2 overflow-x-auto bg-surface-500 px-4 py-2"
       role="radiogroup"
       [attr.aria-label]="ariaLabel() || null"
     >
       @for (pill of pills(); track pill.id) {
         <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="whitespace-nowrap rounded-full"
           (click)="pillPicked.emit(pill.id)"
-          class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
           [class.bg-primary]="selected() === pill.id"
           [class.text-on-fill]="selected() === pill.id"
           [class.bg-surface-300]="selected() !== pill.id"
@@ -43,6 +49,5 @@ export class ScrollablePillsComponent {
   readonly pills = input.required<{ id: string; label: string }[]>();
   readonly selected = input.required<string>();
   readonly ariaLabel = input<string>('');
-  // Renamed to avoid collision with native DOM events (e.g. 'select')
   readonly pillPicked = output<string>();
 }

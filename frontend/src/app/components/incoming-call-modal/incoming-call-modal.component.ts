@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   input,
@@ -34,7 +35,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
 @Component({
   selector: 'app-incoming-call-modal',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (callData(); as data) {
       <div
@@ -82,6 +83,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           <div class="flex justify-center gap-4 sm:gap-6">
             <!-- Decline Button -->
             <button
+              hlmBtn
               (click)="onDecline()"
               class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.decline' | t"
@@ -110,6 +112,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
             <!-- Accept Button -->
             <button
+              hlmBtn
               (click)="onAccept()"
               class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.accept' | t"

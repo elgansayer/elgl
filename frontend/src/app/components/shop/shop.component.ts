@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -19,7 +20,7 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [JoyrideModule, TranslatePipe, RouterLink],
+  imports: [HlmButton, JoyrideModule, TranslatePipe, RouterLink],
   template: `
     <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
@@ -54,6 +55,7 @@ interface CatalogItem {
               {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
             <button
+              hlmBtn
               class="mt-2 w-full rounded-full bg-primary text-on-fill py-1.5 text-xs sm:text-sm font-medium hover:bg-primary/90 transition-colors"
               (click)="addToCart(item.id)"
               [attr.aria-label]="'shop.addToCartAria' | t: { name: item.name }"

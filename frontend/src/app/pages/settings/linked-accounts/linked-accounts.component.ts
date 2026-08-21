@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -13,7 +14,7 @@ interface ProviderInfo {
 
 @Component({
   selector: 'app-linked-accounts-settings',
-  imports: [TranslatePipe, AppButtonSecondaryComponent],
+  imports: [HlmButton, TranslatePipe, AppButtonSecondaryComponent],
   templateUrl: './linked-accounts.component.html',
   styleUrl: './linked-accounts.component.scss',
 })

@@ -16,6 +16,7 @@ import { MediaModule } from './media/media.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
+import { LearnerKnowledgeModule } from './learner-knowledge/learner-knowledge.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
 import { DecksModule } from './decks/decks.module';
@@ -43,6 +44,7 @@ import { HelpModule } from './help/help.module';
 import { ProficiencyModule } from './proficiency/proficiency.module';
 import { VersionModule } from './version/version.module';
 import { GroupsModule } from './groups/groups.module';
+import { CommunitiesModule } from './communities/communities.module';
 import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
@@ -150,6 +152,7 @@ import { LivekitModule } from './livekit/livekit.module';
     LanguageChallengesModule,
     PronunciationModule,
     GroupsModule,
+    CommunitiesModule,
     ShoppingModule,
     MilestonesModule,
     StudyBuddiesModule,
@@ -173,6 +176,7 @@ import { LivekitModule } from './livekit/livekit.module';
     MetricsModule,
     ReadingEngineModule,
     CloudflareModule,
+    LearnerKnowledgeModule,
   ],
   controllers: [AppController],
   providers: [

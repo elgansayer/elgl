@@ -1,10 +1,15 @@
-import { Component, signal, inject } from '@angular/core';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { from } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AiConversationService, Scenario } from '../services/ai-conversation.service';
 import { TranslatePipe } from '../services/translate.pipe';
+import { TokenisedTextComponent } from '../components/tokenised-text/tokenised-text.component';
+import { WordDefinitionModalComponent } from '../components/word-definition-modal/word-definition-modal.component';
+import { UserService } from '../services/user.service';
 
 const EMPTY_SCENARIO_LIST: Scenario[] = [];
 
@@ -16,7 +21,15 @@ interface ChatMessage {
 @Component({
   selector: 'app-ai-conversation',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    TokenisedTextComponent,
+    WordDefinitionModalComponent,
+  ],
   host: {
     class: 'flex flex-col h-full bg-surface-500 text-text-primary',
   },
@@ -29,6 +42,7 @@ interface ChatMessage {
         </p>
         @for (scenario of scenarioList(); track scenario.id) {
           <button
+            hlmBtn
             type="button"
             (click)="startScenario(scenario)"
             class="flex items-center gap-3 w-full text-start bg-surface-200 hover:bg-surface-300 active:bg-surface-400 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -42,6 +56,7 @@ interface ChatMessage {
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-200">
         <div class="flex items-center gap-2">
           <button
+            hlmBtn
             type="button"
             (click)="backToScenarios()"
             class="text-text-secondary hover:text-text-primary p-1"
@@ -79,7 +94,13 @@ interface ChatMessage {
               [class.text-on-fill]="msg.from === 'user'"
               [class.text-text-primary]="msg.from === 'ai'"
             >
-              <span class="whitespace-pre-wrap break-words">{{ msg.text }}</span>
+              <div class="whitespace-pre-wrap break-words">
+                <app-tokenised-text
+                  [text]="msg.text"
+                  [language]="targetLanguage()"
+                  (wordClicked)="onWordClicked($event)"
+                ></app-tokenised-text>
+              </div>
               @if (msg.from === 'user') {
                 <div
                   class="absolute -end-1.5 bottom-2 w-0 h-0
@@ -110,6 +131,7 @@ interface ChatMessage {
       <div class="ps-4 pe-4 pb-4">
         <div class="flex items-center gap-2 bg-surface-200 rounded-full ps-4 pe-2 py-2">
           <input
+            hlmInput
             type="text"
             class="flex-1 bg-transparent text-text-primary placeholder-text-secondary outline-none ps-0 pe-0"
             [placeholder]="'aiConversation.typeMessage' | t"
@@ -119,6 +141,7 @@ interface ChatMessage {
             [disabled]="isLoading()"
           />
           <button
+            hlmBtn
             type="button"
             (click)="send()"
             [disabled]="isLoading() || !inputText().trim()"
@@ -129,11 +152,20 @@ interface ChatMessage {
         </div>
       </div>
     }
+
+    @if (activeWordToken(); as token) {
+      <app-word-definition-modal
+        [wordToken]="token"
+        [contextSentence]="activeWordContext() ?? ''"
+        (closed)="activeWordToken.set(null)"
+      ></app-word-definition-modal>
+    }
   `,
   styles: [],
 })
-export class AiConversationComponent {
+export class AiConversationComponent implements OnInit {
   private aiService = inject(AiConversationService);
+  private userService = inject(UserService);
 
   readonly scenarioList = toSignal(from(this.aiService.getScenarios()), {
     initialValue: EMPTY_SCENARIO_LIST,
@@ -143,6 +175,21 @@ export class AiConversationComponent {
   readonly messages = signal<ChatMessage[]>([]);
   readonly inputText = signal('');
   readonly isLoading = signal(false);
+  readonly targetLanguage = signal('en');
+  readonly activeWordToken = signal<string | null>(null);
+  readonly activeWordContext = signal<string | null>(null);
+
+  async ngOnInit() {
+    const profile = await this.userService.getMyProfile();
+    if (profile && profile.target_languages && profile.target_languages.length > 0) {
+      this.targetLanguage.set(profile.target_languages[0]);
+    }
+  }
+
+  onWordClicked(event: { token: string; context: string }): void {
+    this.activeWordToken.set(event.token);
+    this.activeWordContext.set(event.context);
+  }
 
   private currentScenarioId: string | undefined;
 

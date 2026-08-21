@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +19,7 @@ interface HubNavItem {
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, RouterModule],
+  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
   templateUrl: './privacy-settings.component.html',
 })
 export class PrivacySettingsComponent {

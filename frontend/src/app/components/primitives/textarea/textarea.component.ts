@@ -1,22 +1,25 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { HlmTextareaImports } from '@spartan-ng/helm/textarea';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-textarea',
+  imports: [...HlmTextareaImports],
   template: `
     @if (label()) {
-      <label [for]="textareaId()" class="block font-bold text-xs text-text-primary mb-1">
+      <label [for]="textareaId()" class="mb-1 block text-xs font-bold text-text-primary">
         {{ label() }}
       </label>
     }
     <textarea
+      hlmTextarea
       [id]="textareaId()"
       [rows]="rows()"
       [value]="value()"
       [placeholder]="placeholder()"
       [disabled]="disabled()"
       [readOnly]="readonly()"
-      [class]="textareaClasses()"
+      [class]="customClass()"
       (input)="onInput($event)"
       (blur)="onBlur($event)"
       (focus)="onFocus($event)"
@@ -33,22 +36,12 @@ export class AppTextareaComponent {
   readonly disabled = input<boolean>(false);
   readonly readonly = input<boolean>(false);
   readonly label = input<string>('');
-  readonly textareaId = input<string>('app-textarea-' + Math.random().toString(36).substring(2, 9));
+  readonly textareaId = input<string>('app-textarea-' + crypto.randomUUID());
   readonly customClass = input<string>('');
 
   readonly valueChange = output<string>();
   readonly blurred = output<FocusEvent>();
   readonly focused = output<FocusEvent>();
-
-  readonly textareaClasses = computed(() => {
-    const base =
-      'block w-full rounded-app border ps-4 pe-4 pt-3 pb-3 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
-    const state = this.disabled()
-      ? 'bg-surface-100 text-text-muted border-surface-100 cursor-not-allowed'
-      : 'bg-surface-200 border-surface-100 text-text-primary';
-    const extra = this.customClass();
-    return `${base} ${state}${extra ? ' ' + extra : ''}`.trim();
-  });
 
   onInput(event: Event): void {
     const target = event.target;

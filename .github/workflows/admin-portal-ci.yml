@@ -1,0 +1,128 @@
+name: Admin portal CI
+
+on:
+  pull_request:
+    paths:
+      - 'admin-portal/**'
+      - 'backend/src/admin/**'
+      - '.github/workflows/admin-portal-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'admin-portal/**'
+      - 'backend/src/admin/**'
+      - '.github/workflows/admin-portal-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-portal-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  admin-portal-lint:
+    name: admin-portal / lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm ci --no-audit --no-fund
+      - name: Lint admin portal
+        working-directory: admin-portal
+        run: npm run lint:check
+
+  admin-portal-test:
+    name: admin-portal / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm ci --no-audit --no-fund
+      - name: Test admin portal
+        working-directory: admin-portal
+        run: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+      - name: Upload failed admin portal test report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: admin-portal-failure-report-${{ github.sha }}
+          path: admin-portal/test-results/unit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  admin-portal-build:
+    name: admin-portal / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm ci --no-audit --no-fund
+      - name: Build admin portal
+        working-directory: admin-portal
+        run: npm run build
+
+  backend-admin-lint:
+    name: admin-backend / lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --legacy-peer-deps
+      - name: Lint admin backend
+        working-directory: backend
+        run: npm run lint:check -- src/admin
+
+  backend-admin-test:
+    name: admin-backend / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --legacy-peer-deps
+      - name: Test admin backend
+        working-directory: backend
+        run: mkdir -p test-results && npm test -- src/admin --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/admin.json
+      - name: Upload failed admin backend test report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: admin-backend-failure-report-${{ github.sha }}
+          path: backend/test-results/admin.json
+          if-no-files-found: warn
+          retention-days: 14

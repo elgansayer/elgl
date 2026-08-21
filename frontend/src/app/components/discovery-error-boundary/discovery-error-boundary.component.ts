@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
@@ -72,7 +73,7 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
 @Component({
   selector: 'app-discovery-error-boundary',
   standalone: true,
-  imports: [TranslatePipe, AppButtonPrimaryComponent],
+  imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
@@ -100,6 +101,7 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
             </app-button-primary>
             @if (showReportButton()) {
               <button
+                hlmBtn
                 type="button"
                 (click)="reportCrash()"
                 class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"

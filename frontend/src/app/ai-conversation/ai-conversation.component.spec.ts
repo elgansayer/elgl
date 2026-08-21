@@ -1,8 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AiConversationComponent } from './ai-conversation.component';
+import { UserService } from '../services/user.service';
+import { TokenisedTextComponent } from '../components/tokenised-text/tokenised-text.component';
+import { WordDefinitionModalComponent } from '../components/word-definition-modal/word-definition-modal.component';
 import { AiConversationService, Scenario } from '../services/ai-conversation.service';
 import { TranslatePipe } from '../services/translate.pipe';
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, Component, Input, Output, EventEmitter } from '@angular/core';
+
+@Component({ selector: 'app-tokenised-text', template: '' })
+class MockTokenisedTextComponent {
+  @Input() text: string = '';
+  @Input() language: string = 'en';
+  @Output() wordClicked = new EventEmitter<any>();
+}
+
+@Component({ selector: 'app-word-definition-modal', template: '' })
+class MockWordDefinitionModalComponent {
+  @Input() wordToken: string = '';
+  @Input() contextSentence?: string;
+  @Output() closed = new EventEmitter<void>();
+}
 
 @Pipe({
   name: 't',
@@ -17,7 +34,9 @@ class MockTranslatePipe implements PipeTransform {
 describe('AiConversationComponent', () => {
   let component: AiConversationComponent;
   let fixture: ComponentFixture<AiConversationComponent>;
+
   let aiServiceMock: any;
+  let userServiceMock: any;
 
   const mockScenarios: Scenario[] = [
     { id: '1', name: 'Order Coffee', icon: '☕' },
@@ -32,15 +51,21 @@ describe('AiConversationComponent', () => {
       sendMessage: vi.fn().mockResolvedValue({ reply: 'Here is your coffee.' })
     };
 
+    userServiceMock = {
+      getMyProfile: vi.fn().mockResolvedValue({ target_languages: ['es'] })
+    };
+
+
     await TestBed.configureTestingModule({
       imports: [AiConversationComponent],
       providers: [
-        { provide: AiConversationService, useValue: aiServiceMock }
+        { provide: AiConversationService, useValue: aiServiceMock },
+        { provide: UserService, useValue: userServiceMock }
       ]
     })
     .overrideComponent(AiConversationComponent, {
-      remove: { imports: [TranslatePipe] },
-      add: { imports: [MockTranslatePipe] }
+      remove: { imports: [TranslatePipe, TokenisedTextComponent, WordDefinitionModalComponent] },
+      add: { imports: [MockTranslatePipe, MockTokenisedTextComponent, MockWordDefinitionModalComponent] }
     })
     .compileComponents();
 

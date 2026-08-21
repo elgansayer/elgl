@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -11,7 +12,7 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
 
 @Component({
   selector: 'app-notifications-inbox',
-  imports: [TranslatePipe, ScrollablePillsComponent],
+  imports: [HlmButton, TranslatePipe, ScrollablePillsComponent],
   templateUrl: './notifications-inbox.component.html',
   styleUrls: ['./notifications-inbox.component.scss'],
 })

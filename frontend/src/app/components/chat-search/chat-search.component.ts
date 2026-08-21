@@ -2,72 +2,81 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmInputImports } from '@spartan-ng/helm/input';
 import { ChatMessage, ChatService } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-search',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
   template: `
-    <div
-      class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden"
-    >
-      <!-- Search input -->
-      <div class="p-3 border-b border-surface-100">
+    <div class="max-h-96 w-80 overflow-hidden rounded-xl border border-surface-100 bg-surface-200 shadow-2xl">
+      <div class="border-b border-surface-100 p-3">
         <div class="relative">
           <input
+            hlmInput
             type="text"
             [(ngModel)]="query"
             (input)="onSearch()"
-            placeholder="{{ 'chatSearch.placeholder' | t }}"
-            class="w-full bg-surface-100 text-text-primary text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary placeholder-text-muted"
+            [placeholder]="'chatSearch.placeholder' | t"
+            class="ps-9"
           />
-          <span class="absolute start-3 top-2.5 text-text-muted text-sm">🔍</span>
+          <span class="absolute start-3 top-2.5 text-sm text-text-muted" aria-hidden="true">🔍</span>
         </div>
       </div>
 
-      <!-- Mode toggle: in-chat vs global -->
-      <div class="flex gap-1 p-2 border-b border-surface-100">
+      <div class="flex gap-1 border-b border-surface-100 p-2" role="radiogroup">
         <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="rounded-full whitespace-nowrap"
+          role="radio"
+          [attr.aria-checked]="searchMode() === 'within'"
+          [class.bg-primary]="searchMode() === 'within'"
+          [class.text-on-fill]="searchMode() === 'within'"
           (click)="searchMode.set('within')"
-          [class]="
-            searchMode() === 'within'
-              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
-              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
-          "
         >
           {{ 'chatSearch.thisChat' | t }}
         </button>
         <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="rounded-full whitespace-nowrap"
+          role="radio"
+          [attr.aria-checked]="searchMode() === 'global'"
+          [class.bg-primary]="searchMode() === 'global'"
+          [class.text-on-fill]="searchMode() === 'global'"
           (click)="searchMode.set('global')"
-          [class]="
-            searchMode() === 'global'
-              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
-              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
-          "
         >
           {{ 'chatSearch.allChats' | t }}
         </button>
       </div>
 
-      <!-- Filter by type -->
-      <div class="flex gap-1 p-2 border-b border-surface-100 overflow-x-auto">
+      <div class="flex gap-1 overflow-x-auto border-b border-surface-100 p-2" role="radiogroup">
         @for (type of messageTypes; track type) {
           <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="rounded-full whitespace-nowrap"
+            role="radio"
+            [attr.aria-checked]="selectedType() === type"
+            [class.bg-primary]="selectedType() === type"
+            [class.text-on-fill]="selectedType() === type"
             (click)="selectedType.set(type)"
-            [class]="
-              selectedType() === type
-                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
-                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
-            "
           >
             {{ type }}
           </button>
         }
       </div>
 
-      <!-- Results -->
-      <div class="overflow-y-auto max-h-64">
+      <div class="max-h-64 overflow-y-auto">
         @if (isSearching()) {
           <div class="p-4 text-center text-sm text-text-muted">
             {{ 'chatSearch.searching' | t }}
@@ -80,27 +89,31 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
         @for (msg of results(); track msg.id) {
           <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="touch"
+            class="h-auto w-full justify-start rounded-none border-b border-surface-100 px-3 py-2 text-start last:border-b-0"
             (click)="selectMessage(msg)"
-            class="w-full text-start px-3 py-2 hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0"
           >
-            <div class="flex items-center gap-2">
-              @if (searchMode() === 'global') {
-                <span
-                  class="text-xs text-text-muted bg-surface-100 px-1.5 py-0.5 rounded truncate max-w-[120px]"
-                >
-                  #{{ msg.room_id.slice(0, 8) }}
+            <span class="min-w-0 flex-1">
+              <span class="flex items-center gap-2">
+                @if (searchMode() === 'global') {
+                  <span class="max-w-[120px] truncate rounded bg-surface-100 px-1.5 py-0.5 text-xs text-text-muted">
+                    #{{ msg.room_id.slice(0, 8) }}
+                  </span>
+                }
+                <span class="flex-1 truncate text-sm font-bold text-text-primary">
+                  {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
                 </span>
-              }
-              <p class="text-sm font-bold text-text-primary truncate flex-1">
-                {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
-              </p>
-            </div>
-            <div class="text-sm text-text-secondary truncate mt-1">
-              {{ msg.text_content || msg.message_type }}
-            </div>
-            <div class="text-[10px] text-text-muted mt-1">
-              {{ msg.created_at | date: 'short' }}
-            </div>
+              </span>
+              <span class="mt-1 block truncate text-sm text-text-secondary">
+                {{ msg.text_content || msg.message_type }}
+              </span>
+              <span class="mt-1 block text-[10px] text-text-muted">
+                {{ msg.created_at | date: 'short' }}
+              </span>
+            </span>
           </button>
         }
       </div>
@@ -136,8 +149,8 @@ export class ChatSearchComponent {
       clearTimeout(this.searchTimeout);
     }
     this.searchTimeout = setTimeout(async () => {
-      const q = this.query().trim();
-      if (q.length < 2) {
+      const query = this.query().trim();
+      if (query.length < 2) {
         this.results.set([]);
         return;
       }
@@ -145,13 +158,12 @@ export class ChatSearchComponent {
       try {
         const mode = this.searchMode();
         const room = mode === 'within' && this.roomId() ? this.roomId() : undefined;
-        const messages = await this.chatService.searchMessages(q, room);
+        const messages = await this.chatService.searchMessages(query, room);
         const type = this.selectedType();
-        const filtered =
-          type === 'All' ? messages : messages.filter((m) => m.message_type === type);
+        const filtered = type === 'All' ? messages : messages.filter((message) => message.message_type === type);
         this.results.set(filtered);
-      } catch (e) {
-        console.error('Search failed:', e);
+      } catch (error) {
+        console.error('Search failed:', error);
         this.results.set([]);
       } finally {
         this.isSearching.set(false);
@@ -159,10 +171,10 @@ export class ChatSearchComponent {
     }, 300);
   }
 
-  selectMessage(msg: ChatMessage): void {
-    this.messageSelect.emit(msg);
-    if (this.searchMode() === 'global' && msg.room_id) {
-      void this.router.navigate(['/chat', msg.room_id]);
+  selectMessage(message: ChatMessage): void {
+    this.messageSelect.emit(message);
+    if (this.searchMode() === 'global' && message.room_id) {
+      void this.router.navigate(['/chat', message.room_id]);
     }
   }
 }

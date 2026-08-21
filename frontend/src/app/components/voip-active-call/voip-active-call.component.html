@@ -16,6 +16,7 @@
     <div class="flex items-center justify-center gap-3 sm:gap-6">
       <!-- Mute -->
       <button
+        hlmBtn
         (click)="toggleMute()"
         class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-colors"
         [class.bg-secondary]="!isMuted()"
@@ -32,6 +33,7 @@
 
       <!-- Speakerphone -->
       <button
+        hlmBtn
         (click)="toggleSpeaker()"
         class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-colors"
         [class.bg-secondary]="isSpeakerOn()"
@@ -46,6 +48,7 @@
 
       <!-- End Call -->
       <button
+        hlmBtn
         (click)="endCall.emit()"
         class="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-danger hover:bg-danger/90 transition-colors"
         [attr.aria-label]="'call.hang_up' | t"

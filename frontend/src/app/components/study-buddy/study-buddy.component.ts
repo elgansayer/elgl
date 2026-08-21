@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, resource, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import {
@@ -8,7 +9,7 @@ import {
 
 @Component({
   selector: 'app-study-buddy',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold text-text-primary">{{ 'studyBuddy.title' | t }}</h2>
@@ -41,6 +42,7 @@ import {
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   <button
+                    hlmBtn
                     type="button"
                     (click)="accept(req.id)"
                     class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md"
@@ -48,6 +50,7 @@ import {
                     {{ 'studyBuddy.acceptBtn' | t }}
                   </button>
                   <button
+                    hlmBtn
                     type="button"
                     (click)="decline(req.id)"
                     class="px-3 py-1 text-sm text-danger hover:text-danger/80"
@@ -76,6 +79,7 @@ import {
                 <span class="text-text-primary">{{ user.display_name }}</span>
               </div>
               <button
+                hlmBtn
                 type="button"
                 [disabled]="requestedIds().has(user.id)"
                 (click)="requestBuddy(user.id)"

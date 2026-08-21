@@ -1,16 +1,10 @@
-import {
-  Component,
-  input,
-  output,
-  afterNextRender,
-  inject,
-  ElementRef,
-} from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, input, output, afterNextRender, inject, ElementRef } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-streak-congratulations',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70"
@@ -19,10 +13,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       tabindex="0"
       role="dialog"
     >
-      <canvas
-        #confettiCanvas
-        class="absolute inset-0 pointer-events-none"
-      ></canvas>
+      <canvas #confettiCanvas class="absolute inset-0 pointer-events-none"></canvas>
 
       <div
         class="relative z-10 flex flex-col items-center gap-6 p-8 rounded-2xl bg-surface shadow-2xl border border-accent"
@@ -38,6 +29,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'streak_congratulations.subtitle' | t: { days: streakDays() } }}
         </p>
         <button
+          hlmBtn
           class="px-8 py-3 mt-4 rounded-full bg-accent text-white font-semibold text-lg hover:opacity-90 transition-opacity"
           (click)="dismiss.emit()"
           (keydown)="dismiss.emit()"
@@ -60,9 +52,7 @@ export class StreakCongratulationsComponent {
   }
 
   private startConfetti(): void {
-    const canvas = this.host.nativeElement.querySelector<HTMLCanvasElement>(
-      'canvas',
-    );
+    const canvas = this.host.nativeElement.querySelector<HTMLCanvasElement>('canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;

@@ -1,19 +1,16 @@
 import { Component, inject, computed, resource, output, input } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { QuickRepliesService, QuickReply } from '../../services/quick-replies.service';
 
 @Component({
   selector: 'app-quick-replies',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (replies().length > 0) {
       <div class="flex flex-wrap gap-2 p-2">
         @for (reply of replies(); track reply.id) {
-          <button
-            type="button"
-            class="rounded-full bg-surface-200 px-3 py-1 text-sm text-white transition-colors hover:bg-surface-300"
-            (click)="onSelect(reply)"
-          >
+          <button hlmBtn type="button" variant="secondary" size="sm" class="rounded-full" (click)="onSelect(reply)">
             {{ reply.key | t }}
           </button>
         }
@@ -30,7 +27,6 @@ export class QuickRepliesComponent {
   });
 
   readonly replies = computed(() => this.quickRepliesInput() ?? this.quickRepliesResource.value() ?? []);
-
   readonly replySelected = output<QuickReply>();
 
   onSelect(reply: QuickReply): void {

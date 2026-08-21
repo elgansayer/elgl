@@ -70,18 +70,23 @@ export class LivekitService {
     const turnEnabled =
       this.configService.get<string>('LIVEKIT_TURN_ENABLED') === 'true';
     if (turnEnabled) {
-      const turnDomain =
-        this.configService.get<string>('LIVEKIT_TURN_DOMAIN') ||
-        'turn.example.com';
+      const turnDomain = this.configService.get<string>('LIVEKIT_TURN_DOMAIN');
       const turnUdpPort =
         this.configService.get<string>('LIVEKIT_TURN_UDP_PORT') || '3478';
       const turnTlsPort =
         this.configService.get<string>('LIVEKIT_TURN_TLS_PORT') || '5349';
-      const turnUsername =
-        this.configService.get<string>('LIVEKIT_TURN_USERNAME') || 'guest';
-      const turnPassword =
-        this.configService.get<string>('LIVEKIT_TURN_PASSWORD') ||
-        'somepassword';
+      const turnUsername = this.configService.get<string>(
+        'LIVEKIT_TURN_USERNAME',
+      );
+      const turnPassword = this.configService.get<string>(
+        'LIVEKIT_TURN_PASSWORD',
+      );
+
+      if (!turnDomain || !turnUsername || !turnPassword) {
+        throw new Error(
+          'LIVEKIT_TURN_DOMAIN, LIVEKIT_TURN_USERNAME, and LIVEKIT_TURN_PASSWORD must be configured when LIVEKIT_TURN_ENABLED is true',
+        );
+      }
 
       // UDP TURN
       iceServers.push({

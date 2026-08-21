@@ -16,6 +16,7 @@
   <div class="flex flex-wrap items-center gap-3">
     @if (!isRecording()) {
       <button
+        hlmBtn
         class="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-on-fill transition hover:bg-primary/80"
         (click)="startRecording()"
         [attr.aria-label]="'audioIntro.record' | t"
@@ -31,6 +32,7 @@
 
     @if (isRecording()) {
       <button
+        hlmBtn
         class="flex items-center gap-2 rounded-full bg-danger px-4 py-2 text-sm font-medium text-on-fill animate-pulse"
         (click)="stopRecording()"
         [attr.aria-label]="'audioIntro.stop' | t"
@@ -48,6 +50,7 @@
       <audio controls [src]="recordingUrl()" class="h-9 w-full max-w-xs rounded"></audio>
 
       <button
+        hlmBtn
         class="rounded-full bg-success px-4 py-2 text-sm font-medium text-on-fill transition hover:bg-success/80"
         (click)="uploadRecording()"
         [attr.aria-label]="'profile.audioIntroSave' | t"

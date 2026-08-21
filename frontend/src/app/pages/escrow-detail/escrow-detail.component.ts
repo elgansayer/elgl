@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -14,6 +15,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 @Component({
   selector: 'app-escrow-detail',
   imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppEmptyStateComponent,
@@ -26,6 +28,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
     <div class="app-screen app-padded pb-10">
       <header class="flex items-center gap-3 pt-2">
         <button
+          hlmBtn
           type="button"
           (click)="goBack()"
           [attr.aria-label]="'common.back' | t"

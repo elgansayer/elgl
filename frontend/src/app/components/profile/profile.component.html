@@ -104,6 +104,7 @@
 
         <div class="flex items-center gap-2">
           <button
+            hlmBtn
             (click)="showVisitors.set(!showVisitors())"
             class="app-pill"
             [attr.aria-label]="'profile.visitorsHide' | t"
@@ -495,6 +496,7 @@
                       <span>{{ getLanguageFlagIcon(code) }}</span>
                       <span>{{ getLanguageName(code) }}</span>
                       <button
+                        hlmBtn
                         type="button"
                         (click)="removeNativeLanguage(code)"
                         class="text-on-fill/70 hover:text-on-fill"
@@ -525,6 +527,7 @@
                     <span>{{ getLanguageFlagIcon(code) }}</span>
                     <span>{{ getLanguageName(code) }}</span>
                     <button
+                      hlmBtn
                       type="button"
                       (click)="removeTargetLanguage(code)"
                       class="text-on-fill/70 hover:text-on-fill"
@@ -570,11 +573,12 @@
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'profile.proficiencyLabel' | t
             }}</label>
-            <select
+            <hlm-native-select
               [(ngModel)]="proficiencyLevel"
               name="proficiencyLevel"
               class="app-input"
-              [attr.aria-label]="'Select'"
+              selectClass="app-input"
+              [aria-label]="'Select'"
             >
               <option value="A1">A1</option>
               <option value="A2">A2</option>
@@ -582,7 +586,7 @@
               <option value="B2">B2</option>
               <option value="C1">C1</option>
               <option value="C2">C2</option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <div class="mt-4">
@@ -591,6 +595,7 @@
             }}</label>
             <div class="flex gap-2" role="radiogroup">
               <button
+                hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'everyone'"
@@ -604,6 +609,7 @@
                 {{ 'profile.visibility.everyone' | t }}
               </button>
               <button
+                hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'vips_only'"
@@ -617,6 +623,7 @@
                 {{ 'profile.visibility.vipsOnly' | t }}
               </button>
               <button
+                hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'hidden'"
@@ -635,61 +642,65 @@
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'privacy.lastSeen' | t
             }}</label>
-            <select
+            <hlm-native-select
               [(ngModel)]="privacyLastSeen"
               name="privacyLastSeen"
               class="app-input"
-              [attr.aria-label]="'Select'"
+              selectClass="app-input"
+              [aria-label]="'Select'"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'privacy.profilePhoto' | t
             }}</label>
-            <select
+            <hlm-native-select
               [(ngModel)]="privacyProfilePhoto"
               name="privacyProfilePhoto"
               class="app-input"
-              [attr.aria-label]="'Select'"
+              selectClass="app-input"
+              [aria-label]="'Select'"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'privacy.aboutInfo' | t
             }}</label>
-            <select
+            <hlm-native-select
               [(ngModel)]="privacyAboutInfo"
               name="privacyAboutInfo"
               class="app-input"
-              [attr.aria-label]="'Select'"
+              selectClass="app-input"
+              [aria-label]="'Select'"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'privacy.status' | t
             }}</label>
-            <select
+            <hlm-native-select
               [(ngModel)]="privacyStatus"
               name="privacyStatus"
               class="app-input"
-              [attr.aria-label]="'Select'"
+              selectClass="app-input"
+              [aria-label]="'Select'"
             >
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <div class="mt-4 rounded-card border border-surface-100 p-3">
@@ -713,8 +724,7 @@
                   }}
                 </span>
               </span>
-              <input
-                type="checkbox"
+              <hlm-checkbox
                 [checked]="incognitoVisits()"
                 (change)="onIncognitoVisitsChange($event)"
                 name="incognitoVisits"
@@ -730,6 +740,7 @@
               'profile.statusLabel' | t
             }}</label>
             <input
+              hlmInput
               type="text"
               [(ngModel)]="statusText"
               name="statusText"
@@ -809,11 +820,12 @@
                     (valueChange)="catalog[idx].price = $event"
                     [placeholder]="'profile.catalogPricePlaceholder'"
                   />
-                  <select
+                  <hlm-native-select
                     [(ngModel)]="catalog[idx].currency"
                     name="catalog-currency-{{ idx }}"
                     class="app-input"
-                    [attr.aria-label]="'Select'"
+                    selectClass="app-input"
+                    [aria-label]="'Select'"
                   >
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
@@ -821,7 +833,7 @@
                     <option value="JPY">JPY</option>
                     <option value="AUD">AUD</option>
                     <option value="CAD">CAD</option>
-                  </select>
+                  </hlm-native-select>
                   <app-input
                     type="url"
                     [value]="catalog[idx].image_url"

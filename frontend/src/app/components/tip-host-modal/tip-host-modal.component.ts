@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,7 +8,7 @@ import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-tip-host-modal',
-  imports: [TranslatePipe, FormsModule],
+  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
   template: `
     <div
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
@@ -31,6 +33,7 @@ import { EconomyStore } from '../../services/economy.store';
             </p>
           </div>
           <button
+            hlmBtn
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'common.close' | t"
@@ -62,6 +65,7 @@ import { EconomyStore } from '../../services/economy.store';
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             @for (amount of presetAmounts(); track amount) {
               <button
+                hlmBtn
                 (click)="selectAmount(amount)"
                 [class]="
                   'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
@@ -84,6 +88,7 @@ import { EconomyStore } from '../../services/economy.store';
             'audioRoom.tipCustomAmountLabel' | t
           }}</label>
           <input
+            hlmInput
             [id]="customAmountId"
             type="number"
             [ngModel]="customAmount()"
@@ -93,6 +98,7 @@ import { EconomyStore } from '../../services/economy.store';
             class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-vip focus:outline-none"
           />
           <button
+            hlmBtn
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
             class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
@@ -105,12 +111,14 @@ import { EconomyStore } from '../../services/economy.store';
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
+            hlmBtn
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
+            hlmBtn
             [disabled]="
               !selectedAmount() ||
               selectedAmount()! < 1 ||
@@ -162,9 +170,9 @@ export class TipHostModalComponent {
 
   readonly presetAmounts = signal<number[]>([10, 50, 100, 500]);
 
-  readonly titleId = 'tip-host-title-' + Math.random().toString(36).substring(2, 9);
-  readonly subtitleId = 'tip-host-subtitle-' + Math.random().toString(36).substring(2, 9);
-  readonly customAmountId = 'tip-host-custom-' + Math.random().toString(36).substring(2, 9);
+  readonly titleId = 'tip-host-title-' + crypto.randomUUID();
+  readonly subtitleId = 'tip-host-subtitle-' + crypto.randomUUID();
+  readonly customAmountId = 'tip-host-custom-' + crypto.randomUUID();
 
   selectAmount(amount: number): void {
     if (amount >= 1) {

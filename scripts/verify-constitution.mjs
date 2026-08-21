@@ -3,7 +3,7 @@
  * verify-constitution.mjs
  * Enforces the HelloTalk Engineering Constitution (AGENTS.md).
  * Checks for:
- * 1. Banned punctuation (no em dashes '—')
+ * 1. Banned punctuation (no em dashes '-')
  * 2. British English spelling enforcement (`colour`, `favourite`, `monetisation`, `tokenise`)
  * 3. Logical Tailwind CSS properties (`ps-`, `pe-`, `ms-`, `me-`, `border-s`) in frontend/
  * 4. API-First mandate (no direct @supabase/supabase-js createClient calls in frontend/)
@@ -90,7 +90,7 @@ function checkFile(filePath) {
     if (!isTestFixture && EM_DASH_REGEX.test(line)) {
       console.error(`❌ [EM DASH VIOLATION] ${relPath}:${lineNum}`);
       console.error(
-        `   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
+        `   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
       );
       totalErrors++;
     }

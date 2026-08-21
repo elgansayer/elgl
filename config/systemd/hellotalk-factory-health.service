@@ -1,33 +1,21 @@
 [Unit]
-Description=HelloTalk factory read-only health check
+Description=HelloTalk factory daemon self-healing watchdog
+After=hellotalk-factory.service
 
 [Service]
 Type=oneshot
-User=hellotalk-factory
-Group=hellotalk-factory
-WorkingDirectory=/var/lib/hellotalk-factory/repository
 EnvironmentFile=/etc/hellotalk-factory/factory.env
-Environment=HOME=/var/lib/hellotalk-factory/home
-ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory doctor
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
 UMask=0077
 PrivateTmp=true
-# Rootless Podman/runc needs the host device namespace to mount /proc for
-# the worker-terminal health probe.
-PrivateDevices=false
-ProtectKernelTunables=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=false
+ProtectHome=false
+BindPaths=/run/user
 ProtectKernelModules=true
 ProtectKernelLogs=true
-Delegate=yes
-ProtectControlGroups=false
 ProtectClock=true
 LockPersonality=true
 RestrictRealtime=true
 SystemCallArchitectures=native
-ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
-LimitNOFILE=4096
-LimitNPROC=128
-TasksMax=128
-MemoryMax=512M
+ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory /run/systemd
