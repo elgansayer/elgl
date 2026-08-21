@@ -12,6 +12,13 @@
 --   5. No index for the metrics aggregator "stuck cards" query (srs_level = 0 + repetitions >= 5).
 --   6. No index for the metrics aggregator avg easiness_factor scan.
 --   7. No composite index on deck_flashcards for ORDER BY added_at when listing deck cards.
+--   8. Missing unique constraint on (user_id, word_token) - the createOrUpdateFlashcard
+--      upsert uses onConflict: 'user_id, word_token' but no constraint exists.
+--   9. No index on srs_level alone - the SRS metrics aggregator queries cards
+--      per level without filtering by user_id, so composite indices with user_id
+--      as the leading column cannot be used.
+--  10. No global partial index for counting due cards (metrics aggregator queries
+--      without user_id).
 
 -- ── 1. Rename next_review_date → next_review_at (idempotent) ─────────────
 -- The column was originally created as `next_review_date` in 004.  All
@@ -85,3 +92,27 @@ CREATE INDEX IF NOT EXISTS idx_deck_flashcards_deck_added
 -- avoid a secondary filter step.  Also helps RLS policy evaluation.
 CREATE INDEX IF NOT EXISTS idx_decks_id_user
   ON public.decks (id, user_id);
+
+-- ── 6. Unique constraint on (user_id, word_token) ───────────────────────
+-- createOrUpdateFlashcard uses upsert with onConflict: 'user_id, word_token'
+-- but no unique index existed.  This prevents duplicate flashcards for the
+-- same word per user.  The existing idx_flashcards_user_word is a plain
+-- composite index, not a unique one, so we replace it.
+DROP INDEX IF EXISTS public.idx_flashcards_user_word;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_flashcards_user_word_unique
+  ON public.flashcards (user_id, word_token);
+
+-- ── 7. srs_level index for aggregator per-level queries ─────────────────
+-- collectSrsStats loops over levels 0-4 with .eq('srs_level', level)
+-- without filtering by user_id.  Composite indices with user_id as the
+-- leading column cannot be used for global scans by level.
+CREATE INDEX IF NOT EXISTS idx_flashcards_srs_level
+  ON public.flashcards (srs_level);
+
+-- ── 8. Global partial index for counting due cards ──────────────────────
+-- collectSrsStats also counts due cards globally (srs_level < 4 AND
+-- next_review_at <= now()) without user_id filter.  A partial index
+-- covers this aggregator query efficiently.
+CREATE INDEX IF NOT EXISTS idx_flashcards_due_global
+  ON public.flashcards (next_review_at)
+  WHERE srs_level < 4;

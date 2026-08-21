@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -12,46 +13,43 @@ import { SupabaseService } from '../supabase/supabase.service';
 describe('NlpRateLimiterGuard', () => {
   let guard: NlpRateLimiterGuard;
   let mockRedis: {
-    incr: jest.Mock;
-    expire: jest.Mock;
-    ttl: jest.Mock;
-    get: jest.Mock;
+    incr: Mock;
+    expire: Mock;
+    ttl: Mock;
+    get: Mock;
   };
-  let mockLogger: { warn: jest.Mock; error: jest.Mock };
+  let mockLogger: { warn: Mock; error: Mock };
 
   const buildExecutionContext = (
     userId: string | null,
     metadata: NlpRateLimitOptions | undefined,
   ) => {
-    const handler = jest.fn();
+    const handler = vi.fn();
     const reflector = new Reflector();
     if (metadata) {
       Reflect.defineMetadata(NLP_RATE_LIMIT_KEY, metadata, handler);
     }
-    const request = userId
-      ? { user: { id: userId } }
-      : { user: undefined };
+    const request = userId ? { user: { id: userId } } : { user: undefined };
     return {
       getHandler: () => handler,
       getClass: () => ({ name: 'NlpController' }),
       switchToHttp: () => ({
         getRequest: () => request,
       }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   };
 
   beforeEach(async () => {
     mockRedis = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      ttl: jest.fn().mockResolvedValue(60),
-      get: jest.fn().mockResolvedValue(null),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      ttl: vi.fn().mockResolvedValue(60),
+      get: vi.fn().mockResolvedValue(null),
     };
 
     mockLogger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,7 +62,7 @@ describe('NlpRateLimiterGuard', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedis),
+            getRedisClient: vi.fn().mockReturnValue(mockRedis),
           },
         },
       ],
@@ -74,7 +72,7 @@ describe('NlpRateLimiterGuard', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -108,7 +106,7 @@ describe('NlpRateLimiterGuard', () => {
     const result = await guard.canActivate(ctx);
     expect(result).toBe(true);
     expect(mockRedis.incr).toHaveBeenCalledWith(
-      'nlp:ratelimit:user-1:NlpController:mockConstructor',
+      'nlp:ratelimit:user-1:NlpController:Mock',
     );
     expect(mockRedis.expire).toHaveBeenCalledWith(expect.any(String), 60);
   });
@@ -123,7 +121,7 @@ describe('NlpRateLimiterGuard', () => {
     const result = await guard.canActivate(ctx);
     expect(result).toBe(true);
     expect(mockRedis.incr).toHaveBeenCalledWith(
-      'nlp:ratelimit:user-1:NlpController:mockConstructor',
+      'nlp:ratelimit:user-1:NlpController:Mock',
     );
   });
 
@@ -163,7 +161,7 @@ describe('NlpRateLimiterGuard', () => {
     }
 
     expect(mockRedis.incr).toHaveBeenCalledWith(
-      'nlp:ratelimit:user-42:NlpController:mockConstructor',
+      'nlp:ratelimit:user-42:NlpController:Mock',
     );
     expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({

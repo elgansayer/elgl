@@ -1,4 +1,5 @@
-import { Component, inject, signal, resource } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, resource, ErrorHandler } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import {
   ModerationService,
@@ -13,10 +14,12 @@ import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
+import { CrashReportService } from '../services/crash-report.service';
 
 @Component({
   selector: 'app-moderation-queue',
   imports: [
+    HlmButton,
     DatePipe,
     TranslatePipe,
     SanitiseHtmlPipe,
@@ -30,6 +33,8 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
   private offlineStorage = inject(OfflineAdminStorageService);
+  private crashReportService = inject(CrashReportService);
+  private errorHandler = inject(ErrorHandler);
   readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
@@ -78,8 +83,9 @@ export class ModerationQueueComponent {
       } else {
         this.actionError.set(result.error ?? 'Failed to approve item');
       }
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Service temporarily unavailable');
+      this.reportCrash(err, 'approve');
     } finally {
       this.actionInProgress.set(null);
     }
@@ -98,8 +104,9 @@ export class ModerationQueueComponent {
       } else {
         this.actionError.set(result.error ?? 'Failed to reject item');
       }
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Service temporarily unavailable');
+      this.reportCrash(err, 'reject');
     } finally {
       this.actionInProgress.set(null);
     }
@@ -115,10 +122,23 @@ export class ModerationQueueComponent {
     try {
       const result = await this.moderationService.getUserRiskAnalysis(userId);
       this.analysisResult.set(result);
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Failed to analyse user');
+      this.reportCrash(err, 'analyse');
     } finally {
       this.analysisLoading.set(false);
     }
+  }
+
+  private reportCrash(err: unknown, action: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.crashReportService.reportCrash(error, {
+      route: typeof window !== 'undefined' ? window.location.href : '/admin/moderation',
+      component: 'ModerationQueueComponent',
+      adminRole: 'admin',
+      offline: !this.isOnline(),
+      action,
+    });
+    this.errorHandler.handleError(error);
   }
 }

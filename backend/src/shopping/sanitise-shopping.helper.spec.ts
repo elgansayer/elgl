@@ -1,42 +1,47 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict mock: strip ALL HTML tags (mirrors the empty ALLOWED_TAGS config)
-const mockStrictSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  return dirty
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
-};
+const { mockStrictSanitize, mockSetConfig } = vi.hoisted(() => {
+  const mockStrictSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    return dirty
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
 
-const mockSetConfig = jest.fn();
+  const mockSetConfig = vi.fn();
+  return { mockStrictSanitize, mockSetConfig };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockStrictSanitize,
       setConfig: mockSetConfig,
     })),
@@ -51,18 +56,16 @@ describe('sanitiseShoppingData', () => {
     expect(sanitiseShoppingData('<script>alert("xss")</script>')).toBe(
       'alert("xss")',
     );
-    expect(
-      sanitiseShoppingData('<a href="javascript:alert(1)">link</a>'),
-    ).toBe('link');
+    expect(sanitiseShoppingData('<a href="javascript:alert(1)">link</a>')).toBe(
+      'link',
+    );
   });
 
   it('should strip event handler attributes', () => {
     expect(sanitiseShoppingData('<div onclick="steal()">click</div>')).toBe(
       'click',
     );
-    expect(
-      sanitiseShoppingData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseShoppingData('<img src=x onerror="alert(1)">')).toBe('');
   });
 
   it('should sanitise nested objects deeply', () => {
@@ -126,7 +129,7 @@ describe('sanitiseShoppingData', () => {
     const instance = new CustomClass();
     const result = sanitiseShoppingData(instance);
     expect(result).toBe(instance);
-    expect((result as CustomClass).a).toBe('<b>hello</b>');
+    expect(result.a).toBe('<b>hello</b>');
   });
 
   it('should handle checkout response with message', () => {

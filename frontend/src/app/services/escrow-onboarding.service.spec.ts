@@ -6,7 +6,9 @@ describe('EscrowOnboardingService', () => {
 
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_escrow_onboarding_done');
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [],
+    });
     service = TestBed.inject(EscrowOnboardingService);
   });
 
@@ -44,5 +46,26 @@ describe('EscrowOnboardingService', () => {
   it('should persist completion to localStorage', () => {
     service.markComplete();
     expect(window.localStorage.getItem('hellotalk_escrow_onboarding_done')).toBe('true');
+  });
+
+  it('should reset tour by removing localStorage item and setting isTourInProgress to false', () => {
+    service.markComplete();
+    expect(service.isCompleted()).toBe(true);
+    service.resetTour();
+    expect(service.isCompleted()).toBe(false);
+    expect(service.isTourInProgress()).toBe(false);
+    expect(window.localStorage.getItem('hellotalk_escrow_onboarding_done')).toBeNull();
+  });
+
+  it('should allow replaying the tour after reset', () => {
+    service.markComplete();
+    expect(service.isCompleted()).toBe(true);
+    service.resetTour();
+    expect(service.isCompleted()).toBe(false);
+    service.isTourInProgress.set(true);
+    expect(service.isTourInProgress()).toBe(true);
+    service.markComplete();
+    expect(service.isCompleted()).toBe(true);
+    expect(service.isTourInProgress()).toBe(false);
   });
 });

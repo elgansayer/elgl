@@ -80,8 +80,8 @@ export class EconomyExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       statusCode,
       errorCode,
-      userAgent: request.headers?.['user-agent'] as string | undefined,
-      ip: (request.ip ?? request.socket?.remoteAddress) as string | undefined,
+      userAgent: request.headers?.['user-agent'],
+      ip: request.ip ?? request.socket?.remoteAddress,
     };
 
     if (statusCode >= 500) {

@@ -5,11 +5,13 @@ import { SuggestFlashcardsComponent } from './suggest-flashcards.component';
 import { SuggestFlashcardsService } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
+import { VocabularyStore } from '../../services/vocabulary.store';
 
 describe('SuggestFlashcardsComponent', () => {
   let fixture: ComponentFixture<SuggestFlashcardsComponent>;
   let component: SuggestFlashcardsComponent;
   let mockSuggestService: { suggestFromMessage: ReturnType<typeof vi.fn> };
+  let mockVocabStore: { saveWord: ReturnType<typeof vi.fn> };
   let mockErrorHandler: { handleError: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -18,12 +20,16 @@ describe('SuggestFlashcardsComponent', () => {
     mockSuggestService = {
       suggestFromMessage: vi.fn().mockResolvedValue({ suggestions: ['word1', 'word2'] }),
     };
+    mockVocabStore = {
+      saveWord: vi.fn().mockResolvedValue({ id: 'abc', word_token: 'word1' }),
+    };
     mockErrorHandler = { handleError: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SuggestFlashcardsComponent],
       providers: [
         { provide: SuggestFlashcardsService, useValue: mockSuggestService },
+        { provide: VocabularyStore, useValue: mockVocabStore },
         {
           provide: I18nService,
           useValue: {
@@ -31,7 +37,6 @@ describe('SuggestFlashcardsComponent', () => {
               if (key === 'suggest_flashcards.error') return 'Failed to suggest flashcards';
               return key;
             }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         },
         {
@@ -55,6 +60,7 @@ describe('SuggestFlashcardsComponent', () => {
     expect(component.suggestions()).toEqual([]);
     expect(component.loading()).toBe(false);
     expect(component.error()).toBeNull();
+    expect(component.hasAttempted()).toBe(false);
   });
 
   it('should provide error context with metadata', () => {
@@ -80,7 +86,6 @@ describe('SuggestFlashcardsComponent', () => {
     await component.manualSuggest();
 
     mockSuggestService.suggestFromMessage.mockResolvedValueOnce({ suggestions: ['retry-word'] });
-    // handleRetry fires runSuggest which is async but not awaited
     component.handleRetry();
 
     expect(mockSuggestService.suggestFromMessage).toHaveBeenCalledTimes(2);
@@ -89,5 +94,38 @@ describe('SuggestFlashcardsComponent', () => {
   it('should not call api when message is empty', async () => {
     await component.manualSuggest();
     expect(mockSuggestService.suggestFromMessage).not.toHaveBeenCalled();
+  });
+
+  it('should populate suggestions on successful suggest call', async () => {
+    component.messageInput.set('Hello world');
+    await component.manualSuggest();
+
+    expect(component.suggestions()).toEqual(['word1', 'word2']);
+    expect(component.hasAttempted()).toBe(true);
+    expect(component.loading()).toBe(false);
+  });
+
+  it('should add a word to the vocabulary deck', async () => {
+    component.messageInput.set('Hello world');
+    component.suggestions.set(['hello', 'world']);
+
+    await component.addWordToDeck('hello');
+
+    expect(mockVocabStore.saveWord).toHaveBeenCalledWith({
+      word_token: 'hello',
+      translation: '',
+      original_context: 'Hello world',
+    });
+    expect(component.addedWords().has('hello')).toBe(true);
+  });
+
+  it('should not add the same word twice', async () => {
+    component.messageInput.set('test');
+    component.suggestions.set(['hello']);
+    component.addedWords.set(new Set(['hello']));
+
+    await component.addWordToDeck('hello');
+
+    expect(mockVocabStore.saveWord).not.toHaveBeenCalled();
   });
 });

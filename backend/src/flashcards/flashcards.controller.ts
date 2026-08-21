@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -29,8 +31,13 @@ import {
   CACHE_TAG_FLASHCARDS,
   CACHE_TAG_DUE_REVIEWS,
 } from '../common/cache.interceptor';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
-import { Flashcard } from './interfaces/flashcard.interface';
+import {
+  CreateFlashcardDto,
+  QueryDueReviewsDto,
+  QueryFlashcardsDto,
+  UpdateSrsDto,
+} from './dto/flashcard.dto';
+import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
@@ -40,6 +47,20 @@ import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 @ApiBearerAuth()
 export class FlashcardsController {
   constructor(private readonly flashcardsService: FlashcardsService) {}
+
+  @Get('health')
+  @ApiOperation({
+    summary: 'Get SRS health and degradation status',
+    description:
+      'Returns the current SRS health status indicating whether the system is operating in full or degraded mode.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'SRS health status.',
+  })
+  getHealth(): SrsHealthStatus {
+    return this.flashcardsService.getHealthStatus();
+  }
 
   @Post()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
@@ -61,11 +82,16 @@ export class FlashcardsController {
   async createFlashcard(
     @CurrentUser() user: User | null,
     @Body() dto: CreateFlashcardDto,
+    @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-    const result = await this.flashcardsService.createOrUpdateFlashcard(user.id, dto);
-    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
-    void this.flashcardsService.purgeSrsCache(user.id);
+    const result = await this.flashcardsService.createOrUpdateFlashcard(
+      user.id,
+      dto,
+    );
+    if (result.degraded && res) {
+      res.header('X-SRS-Degraded', 'true');
+    }
     return result;
   }
 
@@ -86,7 +112,14 @@ export class FlashcardsController {
   @ApiResponse({
     status: 200,
     description:
-      'SRS review applied successfully. Returns updated flashcard with new scheduling.',
+      'SRS review applied successfully. Returns updated flashcard with new scheduling. When X-SRS-Degraded header is present, results are locally computed and not yet persisted.',
+    headers: {
+      'X-SRS-Degraded': {
+        description:
+          'Present when the SRS system is operating in degraded mode (database unavailable)',
+        schema: { type: 'string', example: 'true' },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({
@@ -97,11 +130,17 @@ export class FlashcardsController {
     @CurrentUser() user: User | null,
     @Param('id') id: string,
     @Body() dto: UpdateSrsDto,
+    @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-    const result = await this.flashcardsService.updateSrsLevel(user.id, id, dto);
-    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
-    void this.flashcardsService.purgeSrsCache(user.id);
+    const result = await this.flashcardsService.updateSrsLevel(
+      user.id,
+      id,
+      dto,
+    );
+    if (result.degraded && res) {
+      res.header('X-SRS-Degraded', 'true');
+    }
     return result;
   }
 
@@ -114,24 +153,26 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
-      'Returns all flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
-  })
-  @ApiQuery({
-    name: 'level',
-    required: false,
-    description:
-      'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
-    example: '2',
+      'Returns flashcards owned by the user, ordered by creation date descending. Supports pagination via limit/offset. Optionally filters by SRS level (0-4).',
   })
   @ApiResponse({ status: 200, description: 'Array of flashcards.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
-    @Query('level') level?: string,
+    @Query() query: QueryFlashcardsDto,
+    @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard[]> {
     if (!user) return [];
-    const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    return await this.flashcardsService.getFlashcards(user.id, lvlNum);
+    const result = await this.flashcardsService.getFlashcards(
+      user.id,
+      query.level,
+      query.limit,
+      query.offset,
+    );
+    if (result.some((c) => c.degraded) && res) {
+      res.header('X-SRS-Degraded', 'true');
+    }
+    return result;
   }
 
   @Get('due')
@@ -143,15 +184,27 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:
-      'Returns flashcards with srs_level < 4 whose next_review_at <= now. Ordered by next_review_at ascending (most overdue first).',
+      'Returns flashcards with srs_level < 4 whose next_review_at <= now. Ordered by next_review_at ascending (most overdue first). Supports pagination.',
   })
   @ApiResponse({
     status: 200,
     description: 'Array of flashcards due for review.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async getDueReviews(@CurrentUser() user: User | null): Promise<Flashcard[]> {
+  async getDueReviews(
+    @CurrentUser() user: User | null,
+    @Query() query: QueryDueReviewsDto,
+    @Res({ passthrough: true }) res?: Response,
+  ): Promise<Flashcard[]> {
     if (!user) return [];
-    return await this.flashcardsService.getDueReviews(user.id);
+    const result = await this.flashcardsService.getDueReviews(
+      user.id,
+      query.limit,
+      query.offset,
+    );
+    if (result.some((c) => c.degraded) && res) {
+      res.header('X-SRS-Degraded', 'true');
+    }
+    return result;
   }
 }

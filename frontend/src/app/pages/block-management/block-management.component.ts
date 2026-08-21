@@ -1,16 +1,20 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../../components/primitives/card/card.component';
-import {
-  BlockedUserResponse,
-  BlockedUsersService,
-} from '../../services/blocked-users.service';
+import { BlockedUserResponse, BlockedUsersService } from '../../services/blocked-users.service';
 
 @Component({
   selector: 'app-block-management',
-  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './block-management.component.html',
   styles: [],
 })

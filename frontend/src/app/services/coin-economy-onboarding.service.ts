@@ -17,7 +17,7 @@ export class CoinEconomyOnboardingService {
   /** Whether the coin economy onboarding tour has been completed this session. */
   readonly isTourInProgress = signal(false);
 
-  /** Step names registered with the JoyrideDirective in the CoinEconomyDashboardComponent. */
+  /** Step names registered with the onboarding tour component in the template. */
   readonly steps: CoinEconomyOnboardingStep[] = [
     {
       key: 'coinEconomyStepBalance',

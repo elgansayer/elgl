@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -10,17 +11,17 @@ import { EscrowService } from './escrow.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { CreateEscrowHoldDto } from './dto/escrow.dto';
+import { CreateEscrowDto } from './dto/escrow.dto';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
-jest.mock('./sanitise-escrow.helper', () => ({
+vi.mock('./sanitise-escrow.helper', () => ({
   sanitiseEscrowData: <T>(value: T): T => value,
 }));
 
 describe('EscrowService', () => {
   let service: EscrowService;
-  let mockSupabaseClient: Record<string, jest.Mock>;
-  let mockRedisClient: Record<string, jest.Mock>;
+  let mockSupabaseClient: Record<string, Mock>;
+  let mockRedisClient: Record<string, Mock>;
   let cbService: CircuitBreakerService;
 
   const mockUserId = '12345678-1234-1234-1234-123456789012';
@@ -29,49 +30,49 @@ describe('EscrowService', () => {
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      or: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockReturnThis(),
     };
 
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      lpush: jest.fn().mockResolvedValue(1),
-      lrange: jest.fn().mockResolvedValue([]),
-      ltrim: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-      scan: jest.fn().mockResolvedValue(['0', []]),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      lpush: vi.fn().mockResolvedValue(1),
+      lrange: vi.fn().mockResolvedValue([]),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      scan: vi.fn().mockResolvedValue(['0', []]),
     };
 
     const mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-      getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+      getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
     };
 
     const mockConfigService = {
-      get: jest.fn().mockImplementation((key: string) => {
+      get: vi.fn().mockImplementation((key: string) => {
         if (key === 'FRONTEND_URL') return 'http://localhost:4200';
         return undefined;
       }),
     };
 
     const mockMetricsService = {
-      recordEscrowCreated: jest.fn(),
-      recordEscrowReleased: jest.fn(),
-      recordEscrowRefunded: jest.fn(),
-      recordEscrowCancelled: jest.fn(),
-      recordEscrowAutoRefunded: jest.fn(),
-      recordEscrowDegradedOperation: jest.fn(),
+      recordEscrowCreated: vi.fn(),
+      recordEscrowReleased: vi.fn(),
+      recordEscrowRefunded: vi.fn(),
+      recordEscrowCancelled: vi.fn(),
+      recordEscrowAutoRefunded: vi.fn(),
+      recordEscrowDegradedOperation: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -84,10 +85,10 @@ describe('EscrowService', () => {
         {
           provide: CrashReportService,
           useValue: {
-            reportCrash: jest.fn().mockResolvedValue(null),
-            listUnresolved: jest.fn().mockResolvedValue([]),
-            acknowledgeReport: jest.fn().mockResolvedValue(true),
-            resolveReport: jest.fn().mockResolvedValue(true),
+            reportCrash: vi.fn().mockResolvedValue(null),
+            listUnresolved: vi.fn().mockResolvedValue([]),
+            acknowledgeReport: vi.fn().mockResolvedValue(true),
+            resolveReport: vi.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -105,7 +106,7 @@ describe('EscrowService', () => {
   });
 
   describe('holdCoins', () => {
-    const dto: CreateEscrowHoldDto = {
+    const dto: CreateEscrowDto = {
       payee_id: mockPayeeId,
       amount_coins: 50,
       reason: 'Test escrow',
@@ -649,10 +650,8 @@ describe('EscrowService', () => {
         error: null,
       });
       // The deduction update should fail
-      mockSupabaseClient.update = jest.fn().mockReturnValue({
-        eq: jest
-          .fn()
-          .mockResolvedValue({ error: { message: 'Update failed' } }),
+      mockSupabaseClient.update = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Update failed' } }),
       });
 
       const result = await service.holdCoins(mockUserId, dto);
@@ -694,10 +693,8 @@ describe('EscrowService', () => {
         .mockResolvedValueOnce({ data: tx, error: null })
         .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null });
 
-      mockSupabaseClient.update = jest.fn().mockReturnValue({
-        eq: jest
-          .fn()
-          .mockResolvedValue({ error: { message: 'Credit failed' } }),
+      mockSupabaseClient.update = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Credit failed' } }),
       });
 
       const result = await service.releaseCoins(mockTransactionId, mockUserId);
@@ -815,7 +812,7 @@ describe('EscrowService', () => {
         updated_at: new Date().toISOString(),
       };
 
-      const eqMock = jest.fn().mockResolvedValue({ data: [tx], error: null });
+      const eqMock = vi.fn().mockResolvedValue({ data: [tx], error: null });
       mockSupabaseClient.range.mockReturnValue({ eq: eqMock });
 
       const result = await service.listTransactions(
@@ -989,7 +986,7 @@ describe('EscrowService', () => {
 
       it('should fall back to DB when list cache is invalid JSON', async () => {
         mockRedisClient.get.mockResolvedValueOnce('not-valid-json');
-        (mockSupabaseClient.range as jest.Mock).mockResolvedValueOnce({
+        mockSupabaseClient.range.mockResolvedValueOnce({
           data: [tx],
           error: null,
         });
@@ -1002,7 +999,7 @@ describe('EscrowService', () => {
 
       it('should cache list result after a DB miss', async () => {
         mockRedisClient.get.mockResolvedValueOnce(null);
-        (mockSupabaseClient.range as jest.Mock).mockResolvedValueOnce({
+        mockSupabaseClient.range.mockResolvedValueOnce({
           data: [tx],
           error: null,
         });
@@ -1049,7 +1046,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'released', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1068,7 +1070,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'refunded', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'refunded',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1087,7 +1094,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'cancelled', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'cancelled',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1106,7 +1118,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'released', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1129,15 +1146,9 @@ describe('EscrowService', () => {
 
         const allDelArgs = mockRedisClient.del.mock.calls.flat();
         expect(allDelArgs).toContain(cachedDetailKey);
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockUserId}:l20:o0`,
-        );
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockUserId}:l10:o0`,
-        );
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockPayeeId}:l20:o0`,
-        );
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l20:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l10:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockPayeeId}:l20:o0`);
       });
     });
   });

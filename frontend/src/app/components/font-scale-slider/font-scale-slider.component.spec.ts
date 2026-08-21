@@ -29,6 +29,9 @@ describe('FontScaleSliderComponent', () => {
 
     const fontScaleService: Partial<FontScaleService> = {
       scaleFactor,
+      min: 0.8,
+      max: 1.5,
+      step: 0.05,
       setScale: setScaleSpy,
     };
 
@@ -58,19 +61,32 @@ describe('FontScaleSliderComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the documented 80-150 percent range', () => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
+
+    expect(input).toBeTruthy();
+    expect(input.min).toBe('0.8');
+    expect(input.max).toBe('1.5');
+    expect(input.step).toBe('0.05');
+    expect(input.getAttribute('aria-valuemin')).toBe('0.8');
+    expect(input.getAttribute('aria-valuemax')).toBe('1.5');
+  });
+
   it('should render a range input reflecting the current scale factor', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
     expect(input).toBeTruthy();
     expect(input.value).toBe('1');
   });
 
-  it('should call setScale with the new value when the slider is moved', () => {
+  it('should call setScale with 150 percent when the slider reaches its maximum', () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="range"]');
-    input.value = '1.2';
+    input.value = '1.5';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
-    expect(setScaleSpy).toHaveBeenCalledWith(1.2);
+    expect(setScaleSpy).toHaveBeenCalledWith(1.5);
+    expect(input.getAttribute('aria-valuenow')).toBe('1.5');
+    expect(input.getAttribute('aria-valuetext')).toBe('150%');
   });
 
   it('should display the scale factor as a percentage label', () => {

@@ -17,7 +17,7 @@ export function isRateLimitError(error: unknown): boolean {
   }
   if (error && typeof error === 'object') {
     const err = error as Record<string, unknown>;
-    if (err.status === 429 || err.statusCode === 429) return true;
+    if (err['status'] === 429 || err['statusCode'] === 429) return true;
   }
   return false;
 }

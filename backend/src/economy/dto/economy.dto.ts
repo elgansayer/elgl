@@ -9,7 +9,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class PurchaseCoinsDto {
   @ApiProperty({
-    description: 'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
+    description:
+      'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
     example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
@@ -29,7 +30,8 @@ export class PurchaseCoinsDto {
 
 export class VerifyReceiptDto {
   @ApiProperty({
-    description: 'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
+    description:
+      'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
     example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
@@ -56,7 +58,8 @@ export class VerifiedPurchaseDto {
   transaction_id!: string;
 
   @ApiProperty({
-    description: 'Product ID from the platform (must match a COIN_PACKAGES platform_product_id entry)',
+    description:
+      'Product ID from the platform (must match a COIN_PACKAGES platform_product_id entry)',
     example: 'coins_small_web',
   })
   @IsString()
@@ -112,7 +115,8 @@ export class SendGiftDto {
   gift_id!: string;
 
   @ApiPropertyOptional({
-    description: 'UUID of the audio room where the gift is being sent (for room-level gift broadcasts)',
+    description:
+      'UUID of the audio room where the gift is being sent (for room-level gift broadcasts)',
     example: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
     format: 'uuid',
   })

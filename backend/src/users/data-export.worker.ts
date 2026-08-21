@@ -36,7 +36,10 @@ export class DataExportWorker {
         data: [],
         error: null,
       };
-      if (decksRes.data && (decksRes.data as Array<{ id: string }>).length > 0) {
+      if (
+        decksRes.data &&
+        (decksRes.data as Array<{ id: string }>).length > 0
+      ) {
         const deckIds = (decksRes.data as Array<{ id: string }>).map(
           (d) => d.id,
         );

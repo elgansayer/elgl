@@ -1,14 +1,24 @@
+import { HlmButton } from '@spartan-ng/helm/button';
+import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
+import { ModerationItem, ModerationService } from '../services/moderation.service';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
-import { ModerationItem, ModerationService } from '../services/moderation.service';
 
 @Component({
   selector: 'app-moderation-dashboard',
-  standalone: true,
-  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './moderation-dashboard.component.html',
 })
 export class ModerationDashboardComponent {

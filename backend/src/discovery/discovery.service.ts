@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -7,6 +8,12 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
+import {
+  DiscoveryDegradationService,
+  DegradationMarker,
+} from './discovery-degradation.service';
+import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -28,64 +35,231 @@ type DiscoveryUser = UserProfile & {
   coins_balance?: number;
 };
 
+export interface DiscoveryResult<T = UserProfile[]> {
+  data: T;
+  marker: DegradationMarker;
+}
+
 @Injectable()
 export class DiscoveryService {
-  private readonly logger = new Logger(DiscoveryService.name);
-
   constructor(
+    @InjectPinoLogger(DiscoveryService.name)
+    private readonly logger: PinoLogger,
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly degradationService: DiscoveryDegradationService,
+    @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
+  // Multi-signal ranking algorithm:
+  //   1. Fetch a candidate pool: discoverable, complete users with correction_ratio > 0.5,
+  //      and at least a 7-day study streak, ordered by descending correction_ratio (top 50).
+  //   2. For each candidate, fetch their corrector rating score via CorrectorScoreService.
+  //   3. Compute a weighted composite score:
+  //        - Correction ratio .................. 30 %
+  //        - Corrector rating average (normalised 1-5 -> 0-1) ... 35 %
+  //        - Total corrector ratings count (log-scaled) .......... 15 %
+  //        - Study streak days (log-scaled) ...................... 20 %
+  //   4. Rank by composite score descending, select top 10.
+  //   5. Store the list as JSON in Redis with a 7-day TTL.
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
-    this.logger.log('Starting Partner of the Week calculation...');
+    this.logger.info('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    try {
-      const { data: topUsers, error } = await supabase
-        .from('users')
-        .select('id')
-        .gt('correction_ratio', 0.5)
-        .order('correction_ratio', { ascending: false })
-        .order('study_streak_days', { ascending: false })
-        .limit(10);
-
-      if (error || !topUsers || topUsers.length === 0) {
-        this.logger.warn(
-          'No users qualified for Partner of the Week',
-          error?.message,
+    const clearStalePartnerCache = async (): Promise<void> => {
+      try {
+        await redis.del('partner_of_week_ids');
+      } catch (err) {
+        this.logger.error(
+          'Failed to clear stale Partner of the Week cache',
+          err,
         );
+      }
+    };
+
+    try {
+      // Step 1: Keep the weekly highlight inside the same core visibility boundary
+      // as ordinary discovery: hidden or deletion-pending accounts must never be
+      // surfaced, and incomplete profiles are not useful recommendations.
+      const { data: candidates, error } = await supabase
+        .from('users')
+        .select(
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',
+        )
+        .eq('privacy_hide_from_search', false)
+        .eq('is_deletion_pending', false)
+        .not('display_name', 'is', null)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
+        .gt('correction_ratio', 0.5)
+        .gte('study_streak_days', 7)
+        .order('correction_ratio', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        this.logger.error(
+          'Failed to fetch Partner of the Week candidates',
+          error,
+        );
+        await clearStalePartnerCache();
         return;
       }
 
-      const partnerIds = topUsers.map((u) => u.id);
+      const qualifiedCandidates = candidates?.filter(
+        (candidate) =>
+          candidate.privacy_hide_from_search === false &&
+          candidate.is_deletion_pending === false &&
+          typeof candidate.display_name === 'string' &&
+          candidate.display_name.trim().length > 0 &&
+          Array.isArray(candidate.native_languages) &&
+          candidate.native_languages.length > 0 &&
+          Array.isArray(candidate.target_languages) &&
+          candidate.target_languages.length > 0 &&
+          (candidate.correction_ratio ?? 0) > 0.5 &&
+          (candidate.study_streak_days ?? 0) >= 7,
+      );
+
+      if (!qualifiedCandidates || qualifiedCandidates.length === 0) {
+        this.logger.warn('No users qualified for Partner of the Week');
+        await clearStalePartnerCache();
+        return;
+      }
+
+      // Step 2: Fetch corrector scores for all candidates in parallel
+      const scoreMap = new Map<
+        string,
+        { averageScore: number; totalRatings: number }
+      >();
+
+      if (this.correctorScoreService) {
+        const scorePromises = qualifiedCandidates.map(async (c) => {
+          try {
+            const score = await this.correctorScoreService!.getCorrectorScore(
+              c.id,
+            );
+            return { id: c.id, score };
+          } catch {
+            const fallback: {
+              averageScore: number | null;
+              totalRatings: number;
+            } = {
+              averageScore: null,
+              totalRatings: 0,
+            };
+            return { id: c.id, score: fallback };
+          }
+        });
+        const scores = await Promise.all(scorePromises);
+        for (const { id, score } of scores) {
+          scoreMap.set(id, {
+            averageScore: score.averageScore ?? 0,
+            totalRatings: score.totalRatings,
+          });
+        }
+      }
+
+      // Step 3: Compute composite ranking score
+      // Normalisation helpers
+      const maxStreak = Math.max(
+        ...qualifiedCandidates.map((c) => c.study_streak_days ?? 0),
+        1,
+      );
+      const maxRatings = Math.max(
+        ...[...scoreMap.values()].map((v) => v.totalRatings),
+        1,
+      );
+
+      const computeComposite = (candidate: {
+        id: string;
+        correction_ratio: number | null;
+        study_streak_days: number | null;
+      }): number => {
+        const ratings = scoreMap.get(candidate.id) ?? {
+          averageScore: 0,
+          totalRatings: 0,
+        };
+
+        const correctionRatio = candidate.correction_ratio ?? 0;
+        // Normalise average rating to 0-1 (1-5 scale)
+        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        // Log-scale the ratings count so it doesn't dominate
+        const ratingsCountLog =
+          ratings.totalRatings > 0
+            ? Math.log10(ratings.totalRatings + 1) / Math.log10(maxRatings + 1)
+            : 0;
+        // Log-scale the streak
+        const streakDays = candidate.study_streak_days ?? 0;
+        const streakLog =
+          streakDays > 0
+            ? Math.log10(streakDays + 1) / Math.log10(maxStreak + 1)
+            : 0;
+
+        return (
+          correctionRatio * 0.3 +
+          avgRatingNorm * 0.35 +
+          ratingsCountLog * 0.15 +
+          streakLog * 0.2
+        );
+      };
+
+      // Step 4: Rank and select top 10. User ID is a stable, privacy-neutral
+      // tie-breaker so the same inputs always produce the same ordering.
+      const ranked = qualifiedCandidates
+        .map((c) => ({
+          id: c.id,
+          composite: computeComposite(c),
+        }))
+        .sort((a, b) => b.composite - a.composite || a.id.localeCompare(b.id));
+
+      const top10 = ranked.slice(0, 10);
+      const partnerIds = top10.map((r) => r.id);
+
+      // Step 5: Store in Redis
       await redis.set(
         'partner_of_week_ids',
         JSON.stringify(partnerIds),
         'EX',
         604800,
       );
-      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+      this.logger.info(
+        `Partner of the Week cache refreshed for ${partnerIds.length} users`,
+      );
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
+      await clearStalePartnerCache();
     }
   }
 
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
-    this.logger.log('Starting daily partner recommendations calculation...');
+    this.logger.info('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
+
+    let pipeline = redis.pipeline();
+    let pipelineOps = 0;
+    let totalCached = 0;
+
+    const flushPipeline = async (): Promise<void> => {
+      if (pipelineOps > 0) {
+        await pipeline.exec();
+        pipeline = redis.pipeline();
+        pipelineOps = 0;
+      }
+    };
 
     try {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_languages, target_languages')
+        .eq('is_deletion_pending', false)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
         .limit(1000);
 
       if (error || !users) {
@@ -99,41 +273,113 @@ export class DiscoveryService {
         target_languages: string[];
       }>;
 
+      // Collect unique language pairs to batch query, avoiding N+1 queries
+      const pairSet = new Set<string>();
+      const pairIndex = new Map<
+        string,
+        Array<{ userId: string; nativeLang: string; targetLang: string }>
+      >();
+
       for (const user of typedUsers) {
         if (!user.native_languages?.length || !user.target_languages?.length) {
           continue;
         }
+        const native = user.native_languages[0];
+        const target = user.target_languages[0];
+        const key = `${target}:${native}`; // matches speak user's target natively AND are learning user's native
+        pairSet.add(key);
+        const bucket = pairIndex.get(key) ?? [];
+        bucket.push({
+          userId: user.id,
+          nativeLang: native,
+          targetLang: target,
+        });
+        pairIndex.set(key, bucket);
+      }
 
-        const { data: matches } = await supabase
-          .from('users')
-          .select('id')
-          .neq('id', user.id)
-          .eq('privacy_hide_from_search', false)
-          .contains('native_languages', [user.target_languages[0]])
-          .contains('target_languages', [user.native_languages[0]])
-          .order('study_streak_days', { ascending: false })
-          .limit(10);
+      // Batch-fetch matches for each unique language pair (up to 20 queries in parallel)
+      const MAX_PAIR_BATCH = 20;
+      const pairs = Array.from(pairSet);
+      const batches: string[][] = [];
+      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
+        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
+      }
 
-        if (matches && matches.length > 0) {
-          let matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
-            user.id,
-          );
-          if (blockedIds.length > 0) {
-            matchIds = matchIds.filter((id) => !blockedIds.includes(id));
+      for (const batchPairs of batches) {
+        const queries = batchPairs.map((pairKey) => {
+          const [targetCode, nativeCode] = pairKey.split(':');
+          return supabase
+            .from('users')
+            .select('id')
+            .eq('privacy_hide_from_search', false)
+            .eq('is_deletion_pending', false)
+            .contains('native_languages', [targetCode])
+            .contains('target_languages', [nativeCode])
+            .order('study_streak_days', { ascending: false })
+            .limit(10);
+        });
+
+        const results = await Promise.all(queries);
+
+        for (let i = 0; i < batchPairs.length; i++) {
+          const pairKey = batchPairs[i];
+          const matchesData = results[i];
+          if (
+            matchesData.error ||
+            !matchesData.data ||
+            matchesData.data.length === 0
+          ) {
+            continue;
           }
-          if (matchIds.length > 0) {
-            await redis.set(
-              `daily_recommendations:${user.id}`,
-              JSON.stringify(matchIds),
-              'EX',
-              86400,
-            );
+
+          const userEntries = pairIndex.get(pairKey) ?? [];
+          const matchIds = (matchesData.data as Array<{ id: string }>).map(
+            (m) => m.id,
+          );
+
+          // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+          // Promise.all batch map to drastically reduce network latency during recommendation generation.
+          // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
+          const blockedIdsList = await Promise.all(
+            userEntries.map((entry) =>
+              this.safetyService.getBlockedAndBlockerIds(entry.userId),
+            ),
+          );
+
+          // Cache the same match list for every user in this pair bucket
+          for (let entryIdx = 0; entryIdx < userEntries.length; entryIdx++) {
+            const entry = userEntries[entryIdx];
+            const blockedIds = blockedIdsList[entryIdx];
+            let filtered = matchIds.filter((id) => id !== entry.userId);
+            if (blockedIds.length > 0) {
+              const blockedSet = new Set(blockedIds);
+              filtered = filtered.filter((id) => !blockedSet.has(id));
+            }
+            const topN = filtered.slice(0, 10);
+            if (topN.length > 0) {
+              pipeline.set(
+                `daily_recommendations:${entry.userId}`,
+                JSON.stringify(topN),
+                'EX',
+                86400,
+              );
+              pipelineOps++;
+              totalCached++;
+
+              if (pipelineOps >= 200) {
+                await flushPipeline();
+              }
+            }
           }
         }
       }
-      this.logger.log('Finished daily partner recommendations calculation.');
+
+      await flushPipeline();
+      this.logger.info(
+        `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
+      );
     } catch (err) {
+      await flushPipeline();
       this.logger.error('Error calculating daily recommendations', err);
     }
   }
@@ -142,7 +388,7 @@ export class DiscoveryService {
   async getPartnerOfWeekIds(): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
-    return this.parseStringArray(raw);
+    return sanitiseDiscoveryData(this.parseStringArray(raw));
   }
 
   async searchPartners(
@@ -267,18 +513,33 @@ export class DiscoveryService {
         query.availability_afternoon !== undefined ||
         query.availability_evening !== undefined
       ) {
-        filtered = this.applyAdvancedFilters(filtered, query);
+        try {
+          filtered = this.applyAdvancedFilters(filtered, query);
+        } catch (err) {
+          this.logger.error(
+            'Advanced filters failed, returning unfiltered results',
+            err,
+          );
+        }
       }
-      const raw = await this.supabaseService
-        .getRedisClient()
-        .get('partner_of_week_ids');
-      const partnerIds = this.parseStringArray(raw);
-      const partnerSet = new Set(partnerIds);
+      let partnerSet = new Set<string>();
+      try {
+        const raw = await this.supabaseService
+          .getRedisClient()
+          .get('partner_of_week_ids');
+        const partnerIds = this.parseStringArray(raw);
+        partnerSet = new Set(partnerIds);
+      } catch (err) {
+        this.logger.error(
+          'Failed to load partner-of-week IDs, continuing without PoW badges',
+          err,
+        );
+      }
       const enriched = filtered.map((u) => ({
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return this.sortUsers(enriched, query.sort);
+      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -287,9 +548,17 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native: query.native_languages ? [query.native_languages] : null,
+        filter_native_arr: query.native_languages
+          ? [query.native_languages]
+          : null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
+        filter_level: query.level || null,
+        filter_gender:
+          _currentUserProfile?.is_vip && query.gender ? query.gender : null,
+        filter_age_min: query.age_min ?? null,
+        filter_age_max: query.age_max ?? null,
+        filter_audio_intro: query.has_audio_intro === true,
       })) as unknown as {
         data: unknown[] | null;
         error: { message?: string } | null;
@@ -316,8 +585,9 @@ export class DiscoveryService {
           distance_metres: undefined,
         }));
         if (blockedIds.length > 0) {
+          const blockedSet = new Set(blockedIds);
           fallbackResults = fallbackResults.filter(
-            (u) => !blockedIds.includes(u.id),
+            (u) => !blockedSet.has(u.id),
           );
         }
         if (query.level) {
@@ -346,61 +616,14 @@ export class DiscoveryService {
         distance_metres: item.distance_metres ?? item.distance ?? undefined,
       }));
       if (blockedIds.length > 0) {
-        rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
+        const blockedSet = new Set(blockedIds);
+        rpcResults = rpcResults.filter((u) => !blockedSet.has(u.id));
       }
-      if (query.level) {
-        if (rpcResults.length > 0) {
-          const { data: levelData } = await supabase
-            .from('users')
-            .select('id, proficiency_level')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const levelMap = new Map<string, string>(
-            (levelData ?? []).map((u) => [u.id, u.proficiency_level as string]),
-          );
-          rpcResults = rpcResults.filter(
-            (u) => levelMap.get(u.id) === query.level,
-          );
-        } else {
-          rpcResults = rpcResults.filter(
-            (u) => u.proficiency_level === query.level,
-          );
-        }
-      }
+      // RPC now handles level, gender, age, and audio_intro filters natively,
+      // but interests still needs post-processing since the RPC returns interests column
       if (query.interests) {
-        if (rpcResults.length > 0) {
-          const { data: interestData } = await supabase
-            .from('users')
-            .select('id, interests')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const interestMap = new Map<string, string[]>(
-            (interestData ?? []).map((u) => [u.id, u.interests as string[]]),
-          );
-          rpcResults = rpcResults.filter((u) =>
-            interestMap.get(u.id)?.includes(query.interests!),
-          );
-        }
-      }
-      if (_currentUserProfile?.is_vip && query.gender) {
-        rpcResults = rpcResults.filter((u) => u.gender === query.gender);
-      }
-      if (query.age_min !== undefined) {
-        const ageMin = query.age_min;
-        rpcResults = rpcResults.filter((u) => u.age! >= ageMin);
-      }
-      if (query.age_max !== undefined) {
-        const ageMax = query.age_max;
-        rpcResults = rpcResults.filter((u) => u.age! <= ageMax);
-      }
-
-      if (query.has_audio_intro) {
-        rpcResults = rpcResults.filter(
-          (u) => u.audio_intro_url && u.audio_intro_url.trim() !== '',
+        rpcResults = rpcResults.filter((u) =>
+          u.interests?.includes(query.interests!),
         );
       }
       const filtered = await this.filterByVoiceRoomActive(
@@ -426,7 +649,8 @@ export class DiscoveryService {
       distance_metres: item.distance_metres ?? item.distance ?? undefined,
     }));
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // When a proficiency level is requested, keep users that either have the
     // matching level or do not yet have a level recorded (fresh profiles).
@@ -443,6 +667,70 @@ export class DiscoveryService {
       query.voice_room_active === true,
     );
     return enrich(filtered);
+  }
+  /**
+   * Degradation-aware variant of searchPartners.
+   * Returns a DiscoveryResult with a degradation marker indicating if
+   * fallback data was served and why.
+   */
+  async searchPartnersWithDegradation(
+    currentUserId: string,
+    currentUserProfile: UserProfile | null,
+    query: SearchQueryDto,
+  ): Promise<DiscoveryResult> {
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
+
+    try {
+      const result = await this.degradationService.executeWithBreaker(
+        'discovery_partners',
+        () => this.searchPartners(currentUserId, currentUserProfile, query),
+        () => {
+          marker.fallbackSource = 'basic_query';
+          return [] as UserProfile[];
+        },
+        marker,
+      );
+
+      if (marker.degraded && result.length === 0) {
+        const mockData = this.getMockDiscoveryData(query, []);
+        await this.degradationService.recordDegradationEvent(
+          '/discovery/partners',
+          marker.reason ?? 'Search failed, using mock data',
+          'mock',
+          currentUserId,
+        );
+        return {
+          data: mockData,
+          marker: {
+            degraded: true,
+            reason: `${marker.reason ?? 'unknown'}; fell through to mock data`,
+            fallbackSource: 'mock',
+          },
+        };
+      }
+
+      return { data: result, marker };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.degradationService.recordDegradationEvent(
+        '/discovery/partners',
+        message,
+        'mock',
+        currentUserId,
+      );
+      const mockData = this.getMockDiscoveryData(query, []);
+      return {
+        data: mockData,
+        marker: {
+          degraded: true,
+          reason: message,
+          fallbackSource: 'mock',
+        },
+      };
+    }
   }
 
   async getAudioIntros(
@@ -518,18 +806,19 @@ export class DiscoveryService {
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
     // Apply voice room active filter
     results = await this.filterByVoiceRoomActive(
       results,
       query.voice_room_active === true,
     );
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async getRecentNativeSpeakers(currentUserId: string): Promise<UserProfile[]> {
@@ -553,25 +842,30 @@ export class DiscoveryService {
       .limit(10);
 
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await this.supabaseService
-      .getRedisClient()
-      .get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
-    results = results.map((u) => ({
-      ...u,
-      is_partner_of_week: partnerSet.has(u.id),
-    }));
+    try {
+      const rawPoW = await this.supabaseService
+        .getRedisClient()
+        .get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      const partnerSet = new Set(partnerIds);
+      results = results.map((u) => ({
+        ...u,
+        is_partner_of_week: partnerSet.has(u.id),
+      }));
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async getSpotlightUsers(currentUserId: string): Promise<UserProfile[]> {
@@ -591,25 +885,30 @@ export class DiscoveryService {
       .limit(5);
 
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await this.supabaseService
-      .getRedisClient()
-      .get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
-    results = results.map((u) => ({
-      ...u,
-      is_partner_of_week: partnerSet.has(u.id),
-    }));
+    try {
+      const rawPoW = await this.supabaseService
+        .getRedisClient()
+        .get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      const partnerSet = new Set(partnerIds);
+      results = results.map((u) => ({
+        ...u,
+        is_partner_of_week: partnerSet.has(u.id),
+      }));
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async findByLanguagePair(
@@ -709,18 +1008,24 @@ export class DiscoveryService {
         mock,
         query.voice_room_active === true,
       );
-      return mock.slice(offset, offset + limit);
+      return sanitiseDiscoveryData(mock.slice(offset, offset + limit));
     }
 
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await redis.get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
+    let partnerSet = new Set<string>();
+    try {
+      const rawPoW = await redis.get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      partnerSet = new Set(partnerIds);
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
     results = results.map((u) => ({
       ...u,
       is_partner_of_week: partnerSet.has(u.id),
@@ -747,7 +1052,7 @@ export class DiscoveryService {
       query.voice_room_active === true,
     );
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   private async filterByVoiceRoomActive<T extends UserProfile>(
@@ -755,8 +1060,17 @@ export class DiscoveryService {
     voiceRoomActive: boolean,
   ): Promise<T[]> {
     if (!voiceRoomActive) return users;
-    const activeHostIds = await this.audioRoomsService.getActiveHostIds();
-    return users.filter((u) => activeHostIds.includes(u.id));
+    try {
+      const activeHostIds = await this.audioRoomsService.getActiveHostIds();
+      const activeHostSet = new Set(activeHostIds);
+      return users.filter((u) => activeHostSet.has(u.id));
+    } catch (err) {
+      this.logger.error(
+        'Voice room active filter failed, returning unfiltered results',
+        err,
+      );
+      return users;
+    }
   }
 
   private getMockDiscoveryData(
@@ -766,7 +1080,8 @@ export class DiscoveryService {
     let filtered = MOCK_USERS as unknown as DiscoveryUser[];
 
     if (blockedIds.length > 0) {
-      filtered = filtered.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      filtered = filtered.filter((u) => !blockedSet.has(u.id));
     }
 
     if (query.native_languages) {
@@ -953,13 +1268,14 @@ export class DiscoveryService {
     }
     const { data, error } = await qb.limit(50);
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
-      results = results.filter((u) => !blockedIds.includes(u.id));
+      const blockedSet = new Set(blockedIds);
+      results = results.filter((u) => !blockedSet.has(u.id));
     }
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   private parseStringArray(raw: string | null): string[] {

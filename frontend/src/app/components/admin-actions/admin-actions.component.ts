@@ -1,44 +1,46 @@
 import { Component, inject, resource, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, SanitiseHtmlPipe, ...HlmButtonImports],
   template: `
-    <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
+    <div class="m-4" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
       <h2>{{ 'admin.quickModeration' | t }}</h2>
-      <ul role="list">
+      <ul role="list" class="space-y-2">
         @for (user of users(); track user.id) {
-          <li>
-            <span>{{ user.display_name ?? user.id }}</span>
+          <li class="flex flex-wrap items-center gap-2">
+            <span class="me-auto">{{ (user.display_name ?? user.id) | sanitiseHtml }}</span>
             <button
+              hlmBtn
               type="button"
+              variant="destructive"
+              size="sm"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
               (click)="ban(user.id)"
-            >{{ 'admin.banBtn' | t }}</button>
+            >
+              {{ 'admin.banBtn' | t }}
+            </button>
             <button
+              hlmBtn
               type="button"
+              variant="secondary"
+              size="sm"
               [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
               (click)="warn(user.id)"
-            >{{ 'admin.warnBtn' | t }}</button>
+            >
+              {{ 'admin.warnBtn' | t }}
+            </button>
           </li>
         }
       </ul>
     </div>
   `,
-  styles: [
-    `
-      .admin-actions {
-        margin: 16px;
-      }
-      button {
-        margin-inline-start: 8px;
-      }
-    `,
-  ],
 })
 export class AdminActionsComponent {
   private readonly adminService = inject(AdminService);
@@ -51,7 +53,7 @@ export class AdminActionsComponent {
 
   readonly users = computed(() => this.usersResource.value()?.users ?? []);
 
-  async ban(userId: string) {
+  async ban(userId: string): Promise<void> {
     try {
       await this.adminService.banUser(userId);
       showToast(this.i18n.translate('admin.userBanned'), 'success');
@@ -60,7 +62,7 @@ export class AdminActionsComponent {
     }
   }
 
-  async warn(userId: string) {
+  async warn(userId: string): Promise<void> {
     try {
       await this.adminService.warnUser(userId);
       showToast(this.i18n.translate('admin.warningIssued'), 'success');
