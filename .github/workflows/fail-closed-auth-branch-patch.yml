@@ -14,12 +14,18 @@ jobs:
   patch:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
           ref: feat/fail-closed-supabase-auth
           fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Remove production mock identity and tokens
         run: |
@@ -36,54 +42,13 @@ jobs:
           const fallbackBlock = /\n\s*if \(!session\) \{\n\s*this\.currentUser\.set\(MOCK_CURRENT_USER\);\n\s*this\.currentSession\.set\(\{\n\s*access_token: 'mock-jwt-token',\n\s*refresh_token: 'mock-refresh-token',\n\s*expires_in: 3600,\n\s*token_type: 'bearer',\n\s*user: MOCK_CURRENT_USER,\n\s*\}\);\n\s*\}/g;
           source = source.replace(fallbackBlock, '');
 
-          const initPattern = /  private async initAuthListener\(\): Promise<void> \{[\s\S]*?\n  \}\n\n  \/\/ Starts unlocked:/;
-          const initReplacement = [
-            '  private async initAuthListener(): Promise<void> {',
-            '    try {',
-            '      const {',
-            '        data: { session },',
-            '        error,',
-            '      } = await this.supabase.auth.getSession();',
-            '      if (error) {',
-            '        throw error;',
-            '      }',
-            '',
-            '      this.updateAuthState(session);',
-            '      if (session) {',
-            '        void this.refreshEarnedBadges(session.user.id);',
-            '      } else {',
-            '        this.earnedBadges.set(null);',
-            '      }',
-            '    } catch {',
-            "      console.warn('Failed to restore authentication session');",
-            '      this.updateAuthState(null);',
-            '      this.earnedBadges.set(null);',
-            '    } finally {',
-            '      this.isLoading.set(false);',
-            '    }',
-            '',
-            '    this.supabase.auth.onAuthStateChange((_event, session) => {',
-            '      this.updateAuthState(session);',
-            '      if (session) {',
-            '        void this.refreshEarnedBadges(session.user.id);',
-            '      } else {',
-            '        this.earnedBadges.set(null);',
-            '      }',
-            '    });',
-            '  }',
-            '',
-            '  // Starts unlocked:',
-          ].join('\n');
-          if (!initPattern.test(source)) {
-            throw new Error('Auth listener did not match the expected source');
-          }
-          source = source.replace(initPattern, initReplacement);
-
           const updatePattern = /  private updateAuthState\(session: Session \| null\): void \{\n    this\.currentSession\.set\(session\);\n    if \(session\) \{\n      this\.currentUser\.set\(this\.toAppUser\(session\.user\)!\);\n    \}\n  \}/;
           const updateReplacement = [
             '  private updateAuthState(session: Session | null): void {',
             '    this.currentSession.set(session);',
-            '    this.currentUser.set(session ? this.toAppUser(session.user) : null);',
+            '    this.currentUser.set(',
+            '      session ? this.toAppUser(session.user) : null,',
+            '    );',
             '  }',
           ].join('\n');
           if (!updatePattern.test(source)) {
@@ -119,10 +84,23 @@ jobs:
           fs.writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
           NODE
 
+      - name: Install and verify frontend authentication
+        run: |
+          cd frontend
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx prettier --write \
+            src/app/services/auth.service.ts \
+            src/app/services/auth.service.spec.ts
+          npm run lint:check
+          npm run build
+          npm test
+          cd ..
+          node scripts/verify-no-runtime-fallbacks.mjs
+
       - name: Commit the authentication migration
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package.json frontend/src/app/services/auth.service.ts scripts/verify-no-runtime-fallbacks.mjs
+          git add package.json frontend/src/app/services/auth.service.ts frontend/src/app/services/auth.service.spec.ts scripts/verify-no-runtime-fallbacks.mjs
           git commit -m 'fix(auth): remove runtime mock identity and fail closed'
           git push origin HEAD:feat/fail-closed-supabase-auth
