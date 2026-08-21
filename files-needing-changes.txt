@@ -1,8 +1,0 @@
-backend/src/cultural-insights/cultural-insights.module.ts
-backend/src/cultural-insights/cultural-insights.controller.ts
-backend/src/cultural-insights/cultural-insights.service.ts
-backend/src/cultural-insights/dto/cultural-insights-filter.dto.ts
-backend/src/cultural-insights/dto/tag-create.dto.ts
-frontend/src/app/services/cultural-insights.service.ts
-frontend/src/app/components/cultural-insights-tagger/cultural-insights-tagger.component.ts
-frontend/src/app/components/cultural-insights-filter/cultural-insights-filter.component.ts

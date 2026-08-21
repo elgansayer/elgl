@@ -1,22 +1,33 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, input, effect } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
+import { DiscoveryService } from '../../services/discovery.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 import { AchievementsComponent } from '../../achievements/achievements.component';
 
 @Component({
   selector: 'app-user-detail',
-  imports: [CommonModule, RouterLink, TranslatePipe, ReportButtonComponent, AchievementsComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    RouterLink,
+    TranslatePipe,
+    ReportButtonComponent,
+    AchievementsComponent,
+  ],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
 })
 export class UserDetailComponent {
   private location = inject(Location);
   private userService = inject(UserService);
+  private discoveryService = inject(DiscoveryService);
   private readonly i18n = inject(I18nService);
+  private translationContextKey = '';
 
   userId = input.required<string>();
 
@@ -27,10 +38,26 @@ export class UserDetailComponent {
   readonly isFollowing = signal<boolean>(false);
   readonly isLiked = signal<boolean>(false);
 
+  readonly translatedBioText = signal<string>('');
+  readonly showTranslated = signal<boolean>(false);
+  readonly isTranslating = signal<boolean>(false);
+  readonly translationErrorKey = signal<string>('');
+
   constructor() {
     effect(() => {
       const id = this.userId();
       this.loadProfile(id);
+    });
+
+    effect(() => {
+      const context = this.getTranslationContext();
+      if (context === this.translationContextKey) return;
+
+      this.translationContextKey = context;
+      this.translatedBioText.set('');
+      this.showTranslated.set(false);
+      this.isTranslating.set(false);
+      this.translationErrorKey.set('');
     });
   }
 
@@ -54,6 +81,66 @@ export class UserDetailComponent {
       this.errorMessage.set(message || this.i18n.translate('userProfile.loadError'));
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  get displayBio(): string {
+    const p = this.profile();
+    if (!p?.bio_text) return '';
+    if (this.showTranslated() && this.translatedBioText()) {
+      return this.translatedBioText();
+    }
+    return p.bio_text;
+  }
+
+  get translationLabelKey(): string {
+    if (this.isTranslating()) return 'profile.translatingBio';
+    return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
+  }
+
+  translationStatusId(): string {
+    return `user-detail-bio-translation-status-${this.userId()}`;
+  }
+
+  async toggleTranslation(): Promise<void> {
+    const p = this.profile();
+    if (!p?.bio_text) return;
+
+    if (this.isTranslating()) return;
+
+    if (this.showTranslated()) {
+      this.showTranslated.set(false);
+      return;
+    }
+
+    if (this.translatedBioText()) {
+      this.showTranslated.set(true);
+      return;
+    }
+
+    const context = this.getTranslationContext();
+    const targetLang = this.i18n.currentLang() || 'en-GB';
+
+    this.translationErrorKey.set('');
+    this.isTranslating.set(true);
+    try {
+      const translated = await this.discoveryService.translateBio(p.id, targetLang);
+      if (context !== this.getTranslationContext()) return;
+
+      if (translated) {
+        this.translatedBioText.set(translated);
+        this.showTranslated.set(true);
+      } else {
+        this.translationErrorKey.set('common.error_generic');
+      }
+    } catch {
+      if (context === this.getTranslationContext()) {
+        this.translationErrorKey.set('common.error_generic');
+      }
+    } finally {
+      if (context === this.getTranslationContext()) {
+        this.isTranslating.set(false);
+      }
     }
   }
 
@@ -99,5 +186,11 @@ export class UserDetailComponent {
     if (!url) return;
     const audio = new Audio(url);
     audio.play();
+  }
+
+  private getTranslationContext(): string {
+    const targetLang = this.i18n.currentLang() || 'en-GB';
+    const profile = this.profile();
+    return `${this.userId()}\u0000${profile?.id ?? ''}\u0000${targetLang}\u0000${profile?.bio_text ?? ''}`;
   }
 }

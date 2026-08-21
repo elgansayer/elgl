@@ -1,36 +1,82 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+
+const mockPinoLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
 
 describe('ModerationService', () => {
   let service: ModerationService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: any;
+  let mockLogger: any;
 
   beforeEach(async () => {
+    mockLogger = {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    };
+
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      limit: jest.fn(),
-      single: jest.fn(),
-      maybeSingle: jest.fn(),
-      then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      limit: vi.fn(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
+      then: vi.fn((resolve: any) => resolve(mockQueryBuilder._response)),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    mockMetricsService = {
+      recordTsReportSubmitted: vi.fn(),
+      recordTsModerationAction: vi.fn(),
+      recordTsDatingRiskScore: vi.fn(),
+      setTsPendingReports: vi.fn(),
+      recordAdminReportResolution: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ModerationService,
         {
+          provide: 'PinoLogger:ModerationService',
+          useValue: mockPinoLogger,
+        },
+        {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
+        },
+        {
+          provide: `PinoLogger:${ModerationService.name}`,
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            trace: vi.fn(),
           },
         },
       ],
@@ -40,7 +86,7 @@ describe('ModerationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -241,7 +287,7 @@ describe('ModerationService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should hydrate moment reports with moment content', async () => {
+    it('should hydrate moment reports with moment content - batch fetch', async () => {
       const reportRow = {
         id: 'report-2',
         status: 'pending',
@@ -258,15 +304,20 @@ describe('ModerationService', () => {
       mockQueryBuilder._response = { data: [reportRow], error: null };
 
       const momentBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: {
-            content_text: 'Hello world',
-            author: { display_name: 'Moment Author' },
-          },
-          error: null,
-        }),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) =>
+          resolve({
+            data: [
+              {
+                id: 'moment-1',
+                content_text: 'Hello world',
+                author: { display_name: 'Moment Author' },
+              },
+            ],
+            error: null,
+          }),
+        ),
       };
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
@@ -283,7 +334,7 @@ describe('ModerationService', () => {
       });
     });
 
-    it('should handle missing moment content gracefully', async () => {
+    it('should handle missing moment content gracefully - batch fetch', async () => {
       const reportRow = {
         id: 'report-3',
         status: 'pending',
@@ -300,12 +351,11 @@ describe('ModerationService', () => {
       mockQueryBuilder._response = { data: [reportRow], error: null };
 
       const momentBuilder = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'not found' },
-        }),
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) =>
+          resolve({ data: null, error: { message: 'not found' } }),
+        ),
       };
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
@@ -314,7 +364,10 @@ describe('ModerationService', () => {
       });
 
       const result = await service.getItems('moment');
-      expect(result).toHaveLength(0);
+      // Moment with missing content is still returned (the item itself is valid)
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('report-3');
+      expect(result[0].moment_content).toBeUndefined();
     });
   });
 

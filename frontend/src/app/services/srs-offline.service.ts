@@ -1,163 +1,214 @@
-import { Injectable, inject, ErrorHandler } from '@angular/core';
-import { Flashcard } from './vocabulary.store';
+import { Injectable, signal } from '@angular/core';
+import type { Flashcard } from './vocabulary.store';
 
-interface QueuedReview {
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
-  srsLevel: number;
-  timestamp: number;
+  newLevel: number;
+  timestamp: string;
 }
 
-const FLASHCARDS_CACHE_KEY = 'srs_flashcards_cache';
-const DUE_REVIEWS_CACHE_KEY = 'srs_due_reviews_cache';
-const OFFLINE_REVIEWS_KEY = 'srs_offline_reviews';
+const DB_NAME = 'hellotalk_srs_offline';
+const DB_VERSION = 1;
+/** Maximum number of queued reviews to load in one batch during sync. */
+const SYNC_BATCH_SIZE = 25;
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class SrsOfflineService {
-  private errorHandler = inject(ErrorHandler);
+  private db: IDBDatabase | null = null;
+  private initPromise: Promise<void> | null = null;
 
-  async cacheFlashcards(cards: Flashcard[]): Promise<void> {
-    try {
-      localStorage.setItem(FLASHCARDS_CACHE_KEY, JSON.stringify(cards));
-    } catch (err) {
-      this.reportError('cacheFlashcards', err);
+  readonly pendingSyncCount = signal(0);
+  readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
+
+  constructor() {
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      this.initPromise = this.initDB();
+      this.initPromise
+        .then(() => this.refreshPendingCount())
+        .catch(() => undefined);
     }
   }
 
+  private initDB(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
+        if (!db.objectStoreNames.contains('flashcards')) {
+          db.createObjectStore('flashcards', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('due_reviews')) {
+          db.createObjectStore('due_reviews', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('sync_queue')) {
+          db.createObjectStore('sync_queue', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+
+  private async ensureDB(): Promise<IDBDatabase> {
+    if (this.initPromise) await this.initPromise;
+    if (!this.db) throw new Error('IndexedDB not initialised');
+    return this.db;
+  }
+
+  private isAvailable(): boolean {
+    return typeof window !== 'undefined' && !!window.indexedDB;
+  }
+
+  /** Cache flashcards locally for offline access (bulk write). */
+  async cacheFlashcards(list: Flashcard[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'flashcards');
+    if (list.length === 0) return;
+    const tx = db.transaction('flashcards', 'readwrite');
+    const store = tx.objectStore('flashcards');
+    // Bulk put using Promise.all instead of sequential awaits.
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
+  }
+
+  /** Retrieve cached flashcards when offline */
   async getCachedFlashcards(): Promise<Flashcard[]> {
-    try {
-      const raw = localStorage.getItem(FLASHCARDS_CACHE_KEY);
-      if (!raw) return [];
-      return this.parseFlashcardArray(raw);
-    } catch (err) {
-      this.reportError('getCachedFlashcards', err);
-      return [];
-    }
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'flashcards');
   }
 
-  async cacheDueReviews(cards: Flashcard[]): Promise<void> {
-    try {
-      localStorage.setItem(DUE_REVIEWS_CACHE_KEY, JSON.stringify(cards));
-    } catch (err) {
-      this.reportError('cacheDueReviews', err);
-    }
+  /** Cache due reviews for offline access (bulk write). */
+  async cacheDueReviews(list: Flashcard[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'due_reviews');
+    if (list.length === 0) return;
+    const tx = db.transaction('due_reviews', 'readwrite');
+    const store = tx.objectStore('due_reviews');
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
   }
 
+  /** Retrieve cached due reviews when offline */
   async getCachedDueReviews(): Promise<Flashcard[]> {
-    try {
-      const raw = localStorage.getItem(DUE_REVIEWS_CACHE_KEY);
-      if (!raw) return [];
-      return this.parseFlashcardArray(raw);
-    } catch (err) {
-      this.reportError('getCachedDueReviews', err);
-      return [];
-    }
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'due_reviews');
   }
 
-  async queueSrsReview(
-    flashcardId: string,
-    quality: number,
-    srsLevel: number,
-  ): Promise<void> {
-    try {
-      const queue = this.getReviewQueue();
-      queue.push({ flashcardId, quality, srsLevel, timestamp: Date.now() });
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(queue));
-    } catch (err) {
-      this.reportError('queueSrsReview', err);
-    }
+  /** Queue an SRS review operation for later sync when offline */
+  async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    const id = `srs_review_${Date.now()}_${crypto.randomUUID()}`;
+    const payload: QueuedReviewPayload & { id: string } = {
+      id,
+      flashcardId,
+      quality,
+      newLevel,
+      timestamp: new Date().toISOString(),
+    };
+    const store = db.transaction('sync_queue', 'readwrite').objectStore('sync_queue');
+    await this.putInStore(store, payload as unknown as Record<string, unknown>);
+    await this.refreshPendingCount();
   }
 
+  /** Sync queued offline reviews to the backend in batches to avoid memory pressure. */
   async syncQueuedReviews(
-    syncFn: (review: QueuedReview) => Promise<void>,
+    syncCallback: (queued: QueuedReviewPayload) => Promise<void>,
   ): Promise<{ synced: number; failed: number }> {
-    const queue = this.getReviewQueue();
-    if (queue.length === 0) {
-      return { synced: 0, failed: 0 };
-    }
+    if (!this.isAvailable()) return { synced: 0, failed: 0 };
+    const db = await this.ensureDB();
+    const items = await this.getAllFromStore(db, 'sync_queue');
+    if (items.length === 0) return { synced: 0, failed: 0 };
 
     let synced = 0;
     let failed = 0;
-    const remaining: QueuedReview[] = [];
 
-    for (const review of queue) {
-      try {
-        await syncFn(review);
-        synced++;
-      } catch {
-        failed++;
-        remaining.push(review);
+    // Process in batches to avoid holding all items in memory during sync.
+    for (let batchStart = 0; batchStart < items.length; batchStart += SYNC_BATCH_SIZE) {
+      const batch = items.slice(batchStart, batchStart + SYNC_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          const queued = item as unknown as QueuedReviewPayload & { id: string };
+          await syncCallback(queued);
+          await this.deleteFromStore(db, 'sync_queue', queued.id);
+        }),
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          synced++;
+        } else {
+          failed++;
+        }
       }
     }
 
-    try {
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(remaining));
-    } catch {
-      // ignore storage errors during sync
-    }
-
+    await this.refreshPendingCount();
     return { synced, failed };
   }
 
-  /**
-   * Type guard: validates an unknown parsed value against the Flashcard interface shape.
-   * Catches JSON.parse returning malformed data.
-   */
-  private isValidFlashcard(item: unknown): item is Flashcard {
-    if (typeof item !== 'object' || item === null) return false;
-    const obj: Record<string, unknown> = Object(item);
-    return (
-      typeof obj['id'] === 'string' &&
-      typeof obj['user_id'] === 'string' &&
-      typeof obj['word_token'] === 'string' &&
-      typeof obj['translation'] === 'string' &&
-      typeof obj['srs_level'] === 'number' &&
-      typeof obj['easiness_factor'] === 'number' &&
-      typeof obj['repetitions'] === 'number' &&
-      typeof obj['interval_days'] === 'number' &&
-      typeof obj['next_review_at'] === 'string' &&
-      typeof obj['created_at'] === 'string'
-    );
-  }
-
-  private parseFlashcardArray(raw: string): Flashcard[] {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item: unknown): item is Flashcard =>
-      this.isValidFlashcard(item),
-    );
-  }
-
-  private isValidQueuedReview(item: unknown): item is QueuedReview {
-    if (typeof item !== 'object' || item === null) return false;
-    const obj: Record<string, unknown> = Object(item);
-    return (
-      typeof obj['flashcardId'] === 'string' &&
-      typeof obj['quality'] === 'number' &&
-      typeof obj['srsLevel'] === 'number' &&
-      typeof obj['timestamp'] === 'number'
-    );
-  }
-
-  private getReviewQueue(): QueuedReview[] {
+  private async refreshPendingCount(): Promise<void> {
     try {
-      const raw = localStorage.getItem(OFFLINE_REVIEWS_KEY);
-      if (!raw) return [];
-      const parsed: unknown = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter((item: unknown): item is QueuedReview =>
-        this.isValidQueuedReview(item),
-      );
+      const db = await this.ensureDB();
+      const items = await this.getAllFromStore(db, 'sync_queue');
+      this.pendingSyncCount.set(items.length);
     } catch {
-      return [];
+      // silently ignore
     }
   }
 
-  private reportError(operation: string, err: unknown): void {
-    const serviceError = new Error(
-      `[SRS:SrsOfflineService] ${operation} failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    serviceError.name = 'SrsOfflineError';
-    this.errorHandler.handleError(serviceError);
+  // --- IDB Helpers ---
+
+  private putInStore(store: IDBObjectStore, value: Record<string, unknown>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const req = store.put(value);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private getAllFromStore<T = unknown>(db: IDBDatabase, storeName: string): Promise<T[]> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readonly').objectStore(storeName);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private deleteFromStore(db: IDBDatabase, storeName: string, key: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  private clearStore(db: IDBDatabase, storeName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   }
 }

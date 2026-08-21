@@ -1,5 +1,0 @@
-backend/src/chat/dto/create-correction.dto.ts
-backend/src/chat/services/correction.service.ts
-frontend/src/app/services/correction.service.ts
-frontend/src/app/components/correction-bubble/correction-bubble.component.ts
-frontend/src/app/components/correction-bubble/correction-bubble.component.html

@@ -1,18 +1,18 @@
 import { Component, inject } from '@angular/core';
 import { from } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   standalone: true,
-  imports: [TranslatePipe],
   selector: 'app-study-streak-counter',
+  imports: [TranslatePipe],
   template: `
     @if (streakValue() !== undefined) {
-      <div class="flex items-center gap-2 ps-3 pe-3 py-2 rounded-app bg-surface-300/80">
-        <span class="text-sm font-bold text-text-primary">
-          {{ streakValue() }} {{ (streakValue() === 1 ? 'studyStreak.day' : 'studyStreak.days') | t }}
+      <div class="flex items-center gap-2 ps-3 pe-3 py-2 rounded-lg bg-surface-300/80">
+        <span class="text-sm font-medium text-text-primary">
+          {{ streakValue() }} day{{ streakValue() === 1 ? '' : 's' }}
         </span>
       </div>
     } @else {
