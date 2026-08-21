@@ -112,6 +112,10 @@ describe('FavouritesComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -182,6 +186,74 @@ describe('FavouritesComponent', () => {
     await component.deleteFavourite(mockFavourites[0]);
     expect(mockChatService.removeFavourite).toHaveBeenCalledWith('fav-1');
     expect(component.favourites().length).toBe(2);
+  });
+
+  it('should prevent duplicate delete requests while a favourite is pending', async () => {
+    await fixture.whenStable();
+    let resolveDelete: (() => void) | undefined;
+    const deletePromise = new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    });
+    vi.mocked(mockChatService.removeFavourite!).mockReturnValue(deletePromise);
+
+    const firstDelete = component.deleteFavourite(mockFavourites[0]);
+    const duplicateDelete = component.deleteFavourite(mockFavourites[0]);
+
+    expect(component.isDeletingFavourite('fav-1')).toBe(true);
+    expect(mockChatService.removeFavourite).toHaveBeenCalledTimes(1);
+
+    resolveDelete?.();
+    await Promise.all([firstDelete, duplicateDelete]);
+
+    expect(component.isDeletingFavourite('fav-1')).toBe(false);
+    expect(component.favourites().some((favourite) => favourite.id === 'fav-1')).toBe(false);
+  });
+
+  it('should expose list semantics and keep item type badges non-interactive', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('[role="list"]')).not.toBeNull();
+    expect(host.querySelectorAll('[role="listitem"]').length).toBe(3);
+    expect(host.querySelectorAll('app-chip').length).toBe(5);
+  });
+
+  it('should only mark audio as playing after playback starts and stop it on destroy', async () => {
+    await fixture.whenStable();
+    const play = vi.fn().mockResolvedValue(undefined);
+    const pause = vi.fn();
+    const audio = {
+      play,
+      pause,
+      currentTime: 0,
+      onended: null as (() => void) | null,
+    };
+    vi.stubGlobal('Audio', vi.fn(() => audio));
+
+    component.toggleAudio(mockFavourites[2]);
+    expect(component.audioPlayingId()).toBeNull();
+
+    await play.mock.results[0].value;
+    await Promise.resolve();
+    expect(component.audioPlayingId()).toBe('fav-3');
+
+    fixture.destroy();
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(audio.currentTime).toBe(0);
+    expect(component.audioPlayingId()).toBeNull();
+  });
+
+  it('should expose the correct accessible audio action for play and pause', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('button[aria-label="favourites.audioPlay"]')).not.toBeNull();
+
+    component.audioPlayingId.set('fav-3');
+    fixture.detectChanges();
+    expect(host.querySelector('button[aria-label="favourites.audioPause"]')).not.toBeNull();
   });
 
   it('should set active tab via setTab', () => {
