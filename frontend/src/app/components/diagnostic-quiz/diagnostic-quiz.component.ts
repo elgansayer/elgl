@@ -211,7 +211,7 @@ export class DiagnosticQuizComponent {
   readonly progressPercentage = computed(() => {
     const qs = this.questions();
     if (qs.length === 0) return 0;
-    return (this.currentIndex() / qs.length) * 100;
+    return ((this.currentIndex() + 1) / qs.length) * 100;
   });
 
   readonly isLastQuestion = computed(() => {
@@ -247,9 +247,9 @@ export class DiagnosticQuizComponent {
   }
 
   next(): void {
-    if (!this.canProceed()) return;
+    if (this.isSubmitting() || !this.canProceed()) return;
     if (this.isLastQuestion()) {
-      this.finishQuiz();
+      void this.finishQuiz();
     } else {
       this.currentIndex.update((i) => i + 1);
     }
@@ -264,8 +264,10 @@ export class DiagnosticQuizComponent {
   private async finishQuiz(): Promise<void> {
     this.isSubmitting.set(true);
     const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
-    const totalQuestions = this.questions().length;
-    const maxScore = totalQuestions * 4;
+    const maxScore = this.questions().reduce(
+      (sum, question) => sum + Math.max(0, ...question.options.map((option) => option.points)),
+      0,
+    );
     const percentage = maxScore > 0 ? totalScore / maxScore : 0;
 
     let suggestedLevel = 'A1';
@@ -283,12 +285,11 @@ export class DiagnosticQuizComponent {
         suggestedLevel,
         answers: this.answers(),
       });
+      this.quizCompleted.emit({ score: totalScore, suggestedLevel, maxScore });
     } catch {
       showToast(this.i18n.translate('diagnosticQuiz.submitError'), 'error');
     } finally {
       this.isSubmitting.set(false);
     }
-
-    this.quizCompleted.emit({ score: totalScore, suggestedLevel, maxScore });
   }
 }

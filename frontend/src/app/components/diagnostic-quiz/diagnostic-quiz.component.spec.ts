@@ -204,7 +204,7 @@ describe('DiagnosticQuizComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('should emit quizCompleted on finish', async () => {
+  it('should emit quizCompleted only after results persist successfully', async () => {
     let emitted: { score: number; suggestedLevel: string; maxScore: number } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
@@ -230,23 +230,24 @@ describe('DiagnosticQuizComponent', () => {
 
     expect(emitted).toBeTruthy();
     expect(emitted!.score).toBe(5);
+    expect(emitted!.maxScore).toBe(8);
   });
 
-  it('should compute progress percentage', async () => {
+  it('should report progress for the current question, reaching 100% on the final question', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('/api/quiz/questions?language=en');
     req.flush(mockQuestions);
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(component.progressPercentage()).toBe(0);
+    expect(component.progressPercentage()).toBe(50);
     component.selectOption('q1', 1);
     component.next();
     fixture.detectChanges();
-    expect(component.progressPercentage()).toBe(50);
+    expect(component.progressPercentage()).toBe(100);
   });
 
-  it('should compute correct progress bar attributes', async () => {
+  it('should expose current progress through progressbar attributes', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('/api/quiz/questions?language=en');
     req.flush(mockQuestions);
@@ -255,7 +256,7 @@ describe('DiagnosticQuizComponent', () => {
 
     const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]');
     expect(progressBar).toBeTruthy();
-    expect(progressBar.getAttribute('aria-valuenow')).toBe('0');
+    expect(progressBar.getAttribute('aria-valuenow')).toBe('50');
     expect(progressBar.getAttribute('aria-valuemin')).toBe('0');
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
@@ -291,7 +292,6 @@ describe('DiagnosticQuizComponent', () => {
     let emitted: { suggestedLevel: string } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
-    // Score 8/8 = 100% >= 90% → C2
     component.selectOption('q1', 4);
     component.next();
     fixture.detectChanges();
@@ -306,7 +306,71 @@ describe('DiagnosticQuizComponent', () => {
     expect(emitted!.suggestedLevel).toBe('C2');
   });
 
-  it('should handle submit results API failure gracefully', async () => {
+  it('should derive maxScore from dynamic question options', async () => {
+    const dynamicQuestions = [
+      {
+        id: 'q1',
+        text: 'Question one',
+        options: [
+          { id: 'a', text: 'A', points: 1 },
+          { id: 'b', text: 'B', points: 2 },
+        ],
+      },
+      {
+        id: 'q2',
+        text: 'Question two',
+        options: [
+          { id: 'a', text: 'A', points: 5 },
+          { id: 'b', text: 'B', points: 10 },
+        ],
+      },
+    ];
+
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(dynamicQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    let emitted: { score: number; maxScore: number; suggestedLevel: string } | null = null;
+    component.quizCompleted.subscribe((v) => (emitted = v));
+
+    component.selectOption('q1', 2);
+    component.next();
+    component.selectOption('q2', 5);
+    component.next();
+
+    const resultsReq = httpTesting.expectOne('/api/quiz/results');
+    expect(resultsReq.request.body).toMatchObject({ score: 7, maxScore: 12, suggestedLevel: 'B1' });
+    resultsReq.flush({ received: true });
+    await fixture.whenStable();
+
+    expect(emitted).toEqual({ score: 7, maxScore: 12, suggestedLevel: 'B1' });
+  });
+
+  it('should not launch duplicate result submissions while one is in flight', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.selectOption('q1', 4);
+    component.next();
+    component.selectOption('q2', 4);
+
+    component.next();
+    component.next();
+
+    const requests = httpTesting.match('/api/quiz/results');
+    expect(requests).toHaveLength(1);
+    expect(component.isSubmitting()).toBe(true);
+    requests[0].flush({ received: true });
+    await fixture.whenStable();
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should keep completion retryable when submitting results fails', async () => {
     fixture.detectChanges();
     const req = httpTesting.expectOne('/api/quiz/questions?language=en');
     req.flush(mockQuestions);
@@ -323,8 +387,17 @@ describe('DiagnosticQuizComponent', () => {
     fixture.detectChanges();
     component.next();
 
-    const resultsReq = httpTesting.expectOne('/api/quiz/results');
-    resultsReq.error(new ErrorEvent('Network error'));
+    const failedResultsReq = httpTesting.expectOne('/api/quiz/results');
+    failedResultsReq.error(new ErrorEvent('Network error'));
+    await fixture.whenStable();
+
+    expect(emitted).toBeNull();
+    expect(component.isSubmitting()).toBe(false);
+    expect(component.canProceed()).toBe(true);
+
+    component.next();
+    const retryResultsReq = httpTesting.expectOne('/api/quiz/results');
+    retryResultsReq.flush({ received: true });
     await fixture.whenStable();
 
     expect(emitted).toBeTruthy();
