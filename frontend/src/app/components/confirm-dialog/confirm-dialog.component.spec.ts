@@ -51,6 +51,12 @@ describe('ConfirmDialogComponent', () => {
     expect(component.dialogState()).toBe('closed');
   });
 
+  it('should not render dialog content without an active confirmation', () => {
+    expect(component.dialogState()).toBe('closed');
+    expect(fixture.debugElement.query(By.css('[data-slot="dialog-content"]'))).toBeNull();
+    expect(actionButtons()).toHaveLength(0);
+  });
+
   it('should render native touch-sized Spartan actions in deterministic order', () => {
     openConfirmation();
 
@@ -59,6 +65,9 @@ describe('ConfirmDialogComponent', () => {
     expect(buttons).toHaveLength(2);
     expect(buttons[0].nativeElement.textContent.trim()).not.toBe('');
     expect(buttons[1].nativeElement.textContent.trim()).not.toBe('');
+    expect(buttons[0].nativeElement.textContent.trim()).not.toBe(
+      buttons[1].nativeElement.textContent.trim(),
+    );
     for (const button of buttons) {
       expect(button.nativeElement.tagName).toBe('BUTTON');
       expect(button.nativeElement.type).toBe('button');
@@ -68,6 +77,15 @@ describe('ConfirmDialogComponent', () => {
       expect(button.nativeElement.classList.contains('break-words')).toBe(true);
       expect(button.nativeElement.getAttribute('tabindex')).not.toBe('-1');
     }
+  });
+
+  it('should render caller-provided confirmation copy without treating it as a translation key', () => {
+    openConfirmation('Delete 日本語 draft?\nThis cannot be undone.');
+
+    const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
+
+    expect(title.nativeElement.textContent).toContain('Delete 日本語 draft?');
+    expect(title.nativeElement.textContent).toContain('This cannot be undone.');
   });
 
   it('should resolve false when the Cancel action is activated', async () => {
