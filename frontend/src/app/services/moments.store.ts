@@ -37,6 +37,14 @@ export interface VoteCorrectionResponse {
   userVote: string | null;
 }
 
+export interface MomentLikeUser {
+  id: string;
+  avatar_url: string | null;
+  display_name: string;
+  native_languages?: string[];
+  target_languages: string[];
+}
+
 export interface MomentRecord {
   id: string;
   user_id: string;
@@ -70,7 +78,9 @@ export class MomentsStore {
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
-  readonly activeFilter = signal<'All' | 'Classmates' | 'Following' | 'For You'>('All');
+  readonly activeFilter = signal<
+    'All' | 'Classmates' | 'Following' | 'For You'
+  >('All');
   readonly isLoading = signal<boolean>(false);
 
   private getHeaders() {
@@ -117,7 +127,9 @@ export class MomentsStore {
     target_language: string;
   }): Promise<MomentRecord> {
     const created = await firstValueFrom(
-      this.http.post<MomentRecord>(this.baseUrl, payload, { headers: this.getHeaders() }),
+      this.http.post<MomentRecord>(this.baseUrl, payload, {
+        headers: this.getHeaders(),
+      }),
     );
     this.feed.update((list) => [created, ...list]);
     return created;
@@ -136,7 +148,11 @@ export class MomentsStore {
       this.feed.update((list) =>
         list.map((m) => {
           if (m.id === momentId) {
-            return { ...m, likes_count: res.likes_count, is_liked_by_me: res.is_liked };
+            return {
+              ...m,
+              likes_count: res.likes_count,
+              is_liked_by_me: res.is_liked,
+            };
           }
           return m;
         }),
@@ -144,6 +160,23 @@ export class MomentsStore {
     } catch (e) {
       console.error('Failed to toggle moment like:', e);
     }
+  }
+
+  async loadMomentLikes(
+    momentId: string,
+    offset = 0,
+    limit = 50,
+  ): Promise<MomentLikeUser[]> {
+    const params = new HttpParams()
+      .set('offset', String(offset))
+      .set('limit', String(limit));
+
+    return await firstValueFrom(
+      this.http.get<MomentLikeUser[]>(`${this.baseUrl}/${momentId}/likes`, {
+        headers: this.getHeaders(),
+        params,
+      }),
+    );
   }
 
   async loadComments(momentId: string): Promise<MomentComment[]> {
@@ -154,7 +187,9 @@ export class MomentsStore {
         }),
       );
       this.feed.update((moments) =>
-        moments.map((m) => (m.id === momentId ? { ...m, comments: list } : m)),
+        moments.map((m) =>
+          m.id === momentId ? { ...m, comments: list } : m,
+        ),
       );
       return list;
     } catch (e) {
@@ -177,9 +212,13 @@ export class MomentsStore {
     },
   ): Promise<MomentComment> {
     const created = await firstValueFrom(
-      this.http.post<MomentComment>(`${this.baseUrl}/${momentId}/comments`, payload, {
-        headers: this.getHeaders(),
-      }),
+      this.http.post<MomentComment>(
+        `${this.baseUrl}/${momentId}/comments`,
+        payload,
+        {
+          headers: this.getHeaders(),
+        },
+      ),
     );
     this.feed.update((list) =>
       list.map((m) => {
@@ -214,7 +253,12 @@ export class MomentsStore {
         if (m.id !== momentId) return m;
         const comments = (m.comments ?? []).map((c) =>
           c.id === commentId
-            ? { ...c, upVotes: res.upVotes, downVotes: res.downVotes, userVote: res.userVote }
+            ? {
+                ...c,
+                upVotes: res.upVotes,
+                downVotes: res.downVotes,
+                userVote: res.userVote,
+              }
             : c,
         );
         return { ...m, comments };
