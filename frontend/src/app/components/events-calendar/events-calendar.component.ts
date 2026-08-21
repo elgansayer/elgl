@@ -9,7 +9,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
-  standalone: true,
   imports: [HlmButton, TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary p-4">
@@ -21,6 +20,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <div class="flex items-center justify-between mb-6">
           <button
             hlmBtn
+            type="button"
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="previousMonth()"
           >
@@ -29,6 +29,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           <span class="text-lg font-semibold">{{ monthLabel() }}</span>
           <button
             hlmBtn
+            type="button"
             class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="nextMonth()"
           >
@@ -50,22 +51,22 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Calendar grid -->
         <div class="grid grid-cols-7 gap-px bg-surface-400 rounded-lg overflow-hidden">
           @for (day of days(); track $index) {
-            <div
-              class="flex flex-col items-center min-h-[72px] p-1.5 bg-surface-300 transition-colors cursor-pointer"
-              role="button"
-              [attr.tabindex]="day ? 0 : null"
-              [attr.aria-label]="day ? ('events.calendar.selectDate' | t: { date: day }) : null"
-              [attr.aria-disabled]="!day"
-              [class.opacity-30]="!day"
-              [class.hover:bg-surface-200]="!!day"
-              [class.bg-primary/15]="!!day && isToday(day)"
-              [class.ring-1]="!!day && isToday(day)"
-              [class.ring-primary/50]="!!day && isToday(day)"
-              (click)="day && selectDate(day)"
-              (keydown.enter)="day && selectDate(day)"
-              (keydown.space)="day && selectDate(day)"
-            >
-              @if (day) {
+            @if (day) {
+              <button
+                hlmBtn
+                type="button"
+                class="flex w-full flex-col items-center min-h-[72px] p-1.5 bg-surface-300 text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                [attr.aria-label]="
+                  'events.calendar.selectDate' | t: { date: formatCalendarDate(day) }
+                "
+                [attr.aria-pressed]="selectedDay() === day"
+                [attr.aria-current]="isToday(day) ? 'date' : null"
+                [class.hover:bg-surface-200]="true"
+                [class.bg-primary/15]="isToday(day)"
+                [class.ring-1]="isToday(day)"
+                [class.ring-primary/50]="isToday(day)"
+                (click)="selectDate(day)"
+              >
                 <span class="text-sm font-medium mb-1" [class.text-primary]="isToday(day)">{{
                   day
                 }}</span>
@@ -89,8 +90,10 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     }
                   </div>
                 }
-              }
-            </div>
+              </button>
+            } @else {
+              <div class="min-h-[72px] bg-surface-300 opacity-30" aria-hidden="true"></div>
+            }
           }
         </div>
 
@@ -254,6 +257,18 @@ export class EventsCalendarComponent {
       today.getMonth() === start.getMonth() &&
       today.getDate() === day
     );
+  }
+
+  formatCalendarDate(day: number): string {
+    const start = this.monthStart();
+    const date = new Date(start.getFullYear(), start.getMonth(), day);
+    const locale = this.i18n.currentLang();
+    return date.toLocaleDateString(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   }
 
   formatEventTime(dateTimeStr: string): string {

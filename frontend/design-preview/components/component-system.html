@@ -457,6 +457,188 @@
           transition-duration: 0.01ms !important;
         }
       }
+      .device-lock-states {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        align-items: start;
+      }
+      .device-lock-preview {
+        min-block-size: 20rem;
+        padding: 1rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 4%, Canvas);
+        color: CanvasText;
+        display: grid;
+        place-items: center;
+      }
+      .device-lock-preview.light {
+        color-scheme: light;
+      }
+      .device-lock-preview.dark {
+        color-scheme: dark;
+      }
+      .device-lock-panel {
+        inline-size: min(100%, 24rem);
+        box-sizing: border-box;
+        padding: 1.5rem 1rem;
+        text-align: center;
+      }
+      .device-lock-panel h3 {
+        margin-block: 0 1rem;
+      }
+      .device-lock-panel p {
+        margin-block: 0 0 1.5rem;
+        color: GrayText;
+      }
+      .device-lock-action {
+        inline-size: 100%;
+        background: Highlight;
+        color: HighlightText;
+        border-color: Highlight;
+      }
+      .device-lock-preview.wide .device-lock-action {
+        inline-size: auto;
+      }
+      .document-viewer-states {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        align-items: start;
+      }
+      .document-viewer-preview {
+        box-sizing: border-box;
+        inline-size: 100%;
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 4%, Canvas);
+        color: CanvasText;
+      }
+      .document-viewer-preview.dark {
+        color-scheme: dark;
+      }
+      .document-viewer-card {
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 7%, Canvas);
+        box-shadow: 0 0.75rem 2rem color-mix(in srgb, CanvasText 10%, transparent);
+      }
+      .document-viewer-card h3 {
+        margin-block: 0 0.75rem;
+      }
+      .document-viewer-card p {
+        margin-block: 0 0.75rem;
+        color: color-mix(in srgb, CanvasText 72%, Canvas);
+      }
+      .document-viewer-preview.wide {
+        padding: 2rem;
+      }
+      .document-viewer-preview.wide .document-viewer-card {
+        padding: 2rem;
+      }
+      .cover-uploader-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      }
+      .cover-uploader-demo {
+        padding: 0.75rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: Canvas;
+        color: CanvasText;
+        box-shadow: 0 0.25rem 0.875rem color-mix(in srgb, CanvasText 8%, transparent);
+      }
+      .cover-uploader-demo.light {
+        color-scheme: light;
+      }
+      .cover-uploader-demo.dark {
+        color-scheme: dark;
+      }
+      .cover-photo-frame {
+        position: relative;
+        min-block-size: 10rem;
+        overflow: hidden;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, color-mix(in srgb, CanvasText 5%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+      }
+      .cover-photo-overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: color-mix(in srgb, Canvas 90%, transparent);
+        color: CanvasText;
+        text-align: center;
+      }
+      .cover-photo-overlay strong {
+        display: block;
+      }
+      .cover-crop-stage {
+        position: relative;
+        min-block-size: 10rem;
+        overflow: hidden;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, color-mix(in srgb, Highlight 20%, Canvas), color-mix(in srgb, CanvasText 14%, Canvas));
+      }
+      .cover-crop-stage::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, CanvasText 55%, transparent);
+      }
+      .cover-crop-window {
+        position: absolute;
+        z-index: 1;
+        inset-block-start: 32%;
+        inset-inline: 10%;
+        block-size: 36%;
+        border: 2px solid Highlight;
+      }
+      .cover-crop-window::before,
+      .cover-crop-window::after {
+        content: '';
+        position: absolute;
+        inline-size: 0.75rem;
+        block-size: 0.75rem;
+        border: 2px solid MarkText;
+        border-radius: 9999px;
+        background: Highlight;
+      }
+      .cover-crop-window::before {
+        inset-block-start: -0.45rem;
+        inset-inline-start: -0.45rem;
+      }
+      .cover-crop-window::after {
+        inset-block-end: -0.45rem;
+        inset-inline-end: -0.45rem;
+      }
+      .cover-actions {
+        display: grid;
+        gap: 0.5rem;
+        margin-block-start: 0.75rem;
+      }
+      .cover-actions button {
+        inline-size: 100%;
+      }
+      .viewport-label {
+        margin-block: 0 0.5rem;
+        font-size: 0.8125rem;
+        color: GrayText;
+      }
+      @media (min-width: 640px) {
+        .cover-actions {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .cover-actions button {
+          inline-size: auto;
+        }
+      }
       @media (forced-colors: active) {
         section,
         .dialog-panel,
@@ -465,6 +647,11 @@
         .translation-card,
         .create-group-preview,
         .sidebar-preview,
+        .device-lock-preview,
+        .document-viewer-card,
+        .cover-uploader-demo,
+        .cover-photo-frame,
+        .cover-crop-stage,
         .checkout-card,
         .lightbox-stage {
           border-color: CanvasText;
@@ -509,16 +696,31 @@
           <a href="/discovery"><span aria-hidden="true">🌍</span><span>Find partners</span></a>
         </nav>
       </section>
-      <section aria-labelledby="device-lock-interaction-title">
-        <h2 id="device-lock-interaction-title">Device lock interaction</h2>
+      <section aria-labelledby="device-lock-relay-title">
+        <h2 id="device-lock-relay-title">Device lock Relay states</h2>
         <p>
-          The unlock action remains a native Spartan button. While platform authentication is
-          active, the same action is disabled and exposes a busy state so repeated activation cannot
-          start overlapping credential requests.
+          The lock route uses semantic Relay surface and text roles in both themes. The native Spartan
+          unlock action inherits the user primary accent, stays full-width at the 390px baseline, and
+          returns to intrinsic width on wider layouts. Pending authentication preserves the same action
+          with disabled and busy semantics.
         </p>
-        <div class="row">
-          <button type="button">Unlock</button>
-          <button type="button" disabled aria-busy="true">Unlock</button>
+        <div class="device-lock-states">
+          <div class="device-lock-preview light" aria-label="Device lock light mobile preview">
+            <div class="device-lock-panel">
+              <h3>Unlock app</h3>
+              <p>Confirm your identity to continue.</p>
+              <button class="device-lock-action" type="button">Unlock</button>
+            </div>
+          </div>
+          <div class="device-lock-preview dark wide" aria-label="Device lock dark desktop preview">
+            <div class="device-lock-panel">
+              <h3>Unlock app</h3>
+              <p>Confirm your identity to continue.</p>
+              <button class="device-lock-action" type="button" disabled aria-busy="true">
+                Unlock
+              </button>
+            </div>
+          </div>
         </div>
       </section>
       <section aria-labelledby="checkout-cancellation-title">
@@ -672,6 +874,20 @@
         <label>Input <input value="Spartan-owned input" /></label>
         <label>Textarea <textarea>Relay content</textarea></label>
       </section>
+      <section aria-labelledby="mutation-controls-title">
+        <h2 id="mutation-controls-title">Mutation controls</h2>
+        <p>Feature forms keep native submit semantics while Spartan-owned fields and actions expose labelled, disabled and busy states during asynchronous mutations.</p>
+        <form aria-busy="true">
+          <div class="row">
+            <label>Community name <input value="Language Exchange" disabled /></label>
+            <label>Description <input value="Weekly practice" disabled /></label>
+            <button type="submit" disabled>Create community</button>
+          </div>
+        </form>
+        <ul aria-busy="true">
+          <li>Language Exchange <button type="button" aria-label="Delete Language Exchange" disabled>Delete</button></li>
+        </ul>
+      </section>
       <section>
         <h2>Dialog ownership</h2>
         <p>
@@ -758,6 +974,24 @@
         </div>
       </section>
       <section>
+        <h2>Correction dialog interaction</h2>
+        <p>The correction editor delegates overlay dismissal, Escape handling, focus containment and focus restoration to the owned Spartan dialog primitive. Relay keeps the correction fields, diff presentation and action layout while feature code retains validation and submit payload rules.</p>
+        <div class="dialog-stage">
+          <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="correction-dialog-title">
+            <div class="dialog-header">
+              <strong id="correction-dialog-title">Correct sentence</strong>
+              <button type="button" aria-label="Cancel correction">×</button>
+            </div>
+            <div class="dialog-body">
+              <p>Original: “I goes to market yesterday.”</p>
+              <label for="preview-correction">Corrected sentence <textarea id="preview-correction">I went to the market yesterday.</textarea></label>
+              <label for="preview-explanation">Explanation <input id="preview-explanation" value="Use the past tense." /></label>
+            </div>
+            <div class="dialog-footer"><button type="button">Cancel</button><button type="button">Send correction</button></div>
+          </div>
+        </div>
+      </section>
+      <section>
         <h2>Gift notification overlay</h2>
         <p>
           Gift celebrations remain non-modal live notifications. Relay owns the celebratory surface
@@ -827,6 +1061,44 @@
             </div>
             <button class="create-action">Create group</button>
           </article>
+        </div>
+      </section>
+      <section aria-labelledby="document-viewer-preview-title">
+        <h2 id="document-viewer-preview-title">Document viewer Relay theme states</h2>
+        <p>The document viewer uses neutral Relay surface and text roles in both themes. Mobile starts with compact padding at the 390px baseline, while wider tablet and desktop layouts increase the page and card spacing without changing the projected document contract.</p>
+        <div class="document-viewer-states">
+          <article class="document-viewer-preview" aria-label="Document viewer light mobile preview">
+            <div class="document-viewer-card">
+              <h3>Privacy policy</h3>
+              <p>Your privacy controls and account choices remain readable without a dark-only typography override.</p>
+              <p>Long document text wraps naturally within the semantic Relay card surface.</p>
+            </div>
+          </article>
+          <article class="document-viewer-preview dark wide" aria-label="Document viewer dark desktop preview">
+            <div class="document-viewer-card">
+              <h3>Terms of service</h3>
+              <p>The same semantic surface hierarchy adapts to dark mode while retaining text contrast and wider spacing.</p>
+              <p>Projected content inherits the active theme rather than forcing an inverted prose palette.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section>
+        <h2>Cover photo uploader theme and responsive parity</h2>
+        <p>Relay owns the card radius, surface, elevation and theme-aware media treatment. Spartan owns the action controls. At the 390px baseline actions stack to full width; tablet and desktop layouts return to wrapped inline actions.</p>
+        <div class="cover-uploader-grid">
+          <div class="cover-uploader-demo light">
+            <p class="viewport-label">Light theme · 390px mobile contract</p>
+            <div class="cover-photo-frame">
+              <div class="cover-photo-overlay"><div><strong>Add cover photo</strong><span>Theme-aware Relay surface over media</span></div></div>
+            </div>
+            <div class="cover-actions"><button>Crop</button><button>Upload</button><button>Cancel</button></div>
+          </div>
+          <div class="cover-uploader-demo dark">
+            <p class="viewport-label">Dark theme · tablet / desktop crop contract</p>
+            <div class="cover-crop-stage" aria-label="Cover crop preview"><div class="cover-crop-window"></div></div>
+            <div class="cover-actions"><button>Apply crop</button><button>Cancel</button><button>Upload</button></div>
+          </div>
         </div>
       </section>
       <section dir="rtl">

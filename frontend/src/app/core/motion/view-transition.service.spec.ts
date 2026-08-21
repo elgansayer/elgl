@@ -94,7 +94,7 @@ describe('ViewTransitionService', () => {
   });
 
   it('skips a previous active transition before replacing it', async () => {
-    let resolveFirst: (() => void) | null = null;
+    let resolveFirst: (() => void) | undefined;
     const first = {
       ...transition(),
       finished: new Promise<void>((resolve) => {
@@ -127,7 +127,9 @@ describe('ViewTransitionService', () => {
     await service.run(() => undefined);
 
     expect(first.skipTransition).toHaveBeenCalledOnce();
-    resolveFirst?.();
+    if (resolveFirst) {
+      (resolveFirst as () => void)();
+    }
     await firstRun;
   });
 

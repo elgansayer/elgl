@@ -7,7 +7,6 @@ import { LegalService } from '../../services/legal.service';
   selector: 'app-privacy',
   imports: [HlmButton, LegalDocumentViewerComponent],
   template: `
-    @let doc = privacyResource.value();
     @if (privacyResource.isLoading()) {
       <main
         class="min-h-screen bg-surface-500 px-4 py-8 text-text-secondary"
@@ -45,12 +44,15 @@ import { LegalService } from '../../services/legal.service';
           </button>
         </section>
       </main>
-    } @else if (doc) {
-      <app-legal-document-viewer
-        [title]="doc.title"
-        [lastUpdated]="doc.lastUpdated"
-        [sections]="doc.sections"
-      ></app-legal-document-viewer>
+    } @else if (privacyResource.hasValue()) {
+      @let doc = privacyResource.value();
+      @if (doc) {
+        <app-legal-document-viewer
+          [title]="doc.title"
+          [lastUpdated]="doc.lastUpdated"
+          [sections]="doc.sections"
+        ></app-legal-document-viewer>
+      }
     }
   `,
 })

@@ -1,8 +1,7 @@
 # Unified Learner Knowledge Model Design
 
 ## Introduction
-
-The Unified Learner Knowledge Model is designed to aggregate and synthesize data from various learning touchpoints within the application—vocabulary, flashcards, assessments, lessons, corrections, and conversation history. By centralizing this information, the system can build a comprehensive profile of what a user knows, what they are currently learning, concepts they struggle with, and content they have recently encountered. This profile serves as the foundation for deep personalization across all app features.
+The Unified Learner Knowledge Model is designed to aggregate and synthesize data from various learning touchpoints within the application: vocabulary, flashcards, assessments, lessons, corrections, and conversation history. By centralizing this information, the system can build a comprehensive profile of what a user knows, what they are currently learning, concepts they struggle with, and content they have recently encountered. This profile serves as the foundation for deep personalization across all app features.
 
 ## Data Sources & Signals
 

@@ -152,24 +152,55 @@ export class RecommendationsService {
 
           const userEntries = pairIndex.get(pairKey) ?? [];
 
-          for (const entry of userEntries) {
-            const filtered = matchRows.filter((m) => m.id !== entry.userId);
-            if (filtered.length > 0) {
-              const dtos: RecommendedUserDto[] = filtered.map((m) => ({
-                id: m.id,
-                displayName: m.display_name ?? null,
-                avatarUrl: m.avatar_url ?? null,
-                nativeLanguage: m.native_languages?.[0] ?? null,
-                targetLanguages: m.target_languages ?? null,
-                sharedInterests: 0,
-                isSeriousLearner: m.is_serious_learner ?? null,
-                studyStreakDays: m.study_streak_days ?? null,
-                correctionRatio: m.correction_ratio ?? null,
-              }));
+          // O(1) matching & pre-serialization string manipulation optimization
+          // 1. Map rows to DTOs once per batch, instead of once per user
+          const dtos = matchRows.map((m) => ({
+            id: m.id,
+            displayName: m.display_name ?? null,
+            avatarUrl: m.avatar_url ?? null,
+            nativeLanguage: m.native_languages?.[0] ?? null,
+            targetLanguages: m.target_languages ?? null,
+            sharedInterests: 0,
+            isSeriousLearner: m.is_serious_learner ?? null,
+            studyStreakDays: m.study_streak_days ?? null,
+            correctionRatio: m.correction_ratio ?? null,
+          }));
 
+          // 2. Pre-serialize to individual JSON strings and build full array string
+          const jsonParts = dtos.map((dto) => JSON.stringify(dto));
+          const fullJsonStr = `[${jsonParts.join(',')}]`;
+
+          // 3. Pre-compute O(1) lookup table for matches
+          const matchIndices = new Map<string, number>();
+          for (let k = 0; k < dtos.length; k++) {
+            matchIndices.set(dtos[k].id, k);
+          }
+
+          for (const entry of userEntries) {
+            const matchIndex = matchIndices.get(entry.userId);
+            let jsonToCache: string | null = null;
+
+            if (matchIndex === undefined) {
+              if (jsonParts.length > 0) {
+                jsonToCache = fullJsonStr;
+              }
+            } else {
+              if (jsonParts.length > 1) {
+                const strToRemove = jsonParts[matchIndex];
+                if (matchIndex === 0) {
+                  jsonToCache = fullJsonStr.replace(`${strToRemove},`, '');
+                } else if (matchIndex === jsonParts.length - 1) {
+                  jsonToCache = fullJsonStr.replace(`,${strToRemove}`, '');
+                } else {
+                  jsonToCache = fullJsonStr.replace(`,${strToRemove},`, ',');
+                }
+              }
+            }
+
+            if (jsonToCache !== null) {
               pipeline.set(
                 `recommendations:daily:${entry.userId}`,
-                JSON.stringify(dtos),
+                jsonToCache,
                 'EX',
                 DAILY_REDIS_TTL,
               );

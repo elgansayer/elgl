@@ -14,7 +14,7 @@ host proves all of the following:
 
 - the dedicated checkout is clean and fast-forwarded to `origin/main`;
 - `hellotalk-factory.service` and `hellotalk-factory-health.timer` are active;
-- every enabled subscription CLI is installed and authenticated as `hellotalk-factory`;
+- every enabled subscription CLI is installed and authenticated as the daemon's operating-system user (`dev`);
 - trusted intake is enabled for this public repository, with every automatic actor explicitly listed;
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
@@ -30,8 +30,8 @@ host proves all of the following:
 - non-paid diagnostics prove configuration, fallback, circuit, structured-output, and stale-SHA behaviour;
 - one deliberately small issue completes issue, implementation, review, CI, merge, and closure end to end.
 
-Do not infer authentication from a developer login. systemd uses `HOME=/var/lib/hellotalk-factory/home`, so each
-CLI session must exist and be readable in that service home.
+The daemon runs as the operator's own login user (`dev`) and systemd sets `HOME=/home/dev`, so it reuses that
+account's already-authenticated CLI sessions directly. There is no separate service-account home to keep in sync.
 
 Temporary exhaustion of every provider does not stop an already configured daemon. `providers check` reports
 `agent-usable` as a warning, the durable queue remains online, and jobs wait for the earliest provider recovery.
@@ -242,9 +242,9 @@ sudo scripts/deploy-and-start-factory.sh --use-existing-credentials --fast
 ```
 
 Both modes run the startup doctor with the same `HOME` and `PATH` as the systemd service. This is required for
-subscription CLIs installed beneath the service account and for the deployed `uv` executable. A bare
-`sudo -u hellotalk-factory ... doctor` can inherit sudo's restricted path and falsely report that authenticated
-providers are not installed.
+subscription CLIs installed beneath the operator account and for the deployed `uv` executable. A bare
+`sudo -u dev ... doctor` can inherit sudo's restricted path and falsely report that authenticated providers are
+not installed.
 
 Fast deployment still fetches and fast-forwards `main`, repairs canonical host configuration, refreshes the frozen
 Python environment, installs current systemd files, runs startup preflight, and verifies the live daemon. It skips
@@ -275,25 +275,26 @@ workflow ownership changes.
 
 ## Subscription authentication
 
-Use the service-user environment for every check:
+The daemon runs as the operator's own login user (`dev`), so it reuses that account's normal, already-authenticated
+CLI sessions directly instead of maintaining a separate service-account credential set. Use this environment for
+every check:
 
 ```bash
-FACTORY_HOME=/var/lib/hellotalk-factory/home
+FACTORY_HOME=/home/dev
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
-Authenticate each CLI manually once as `hellotalk-factory`. Do not copy another user's home or fixed credential
-directories. Do not place provider tokens in `factory.env` when the adapter is configured for subscription auth.
-Common API-key variables are stripped from direct subscription-provider environments so they cannot silently
-switch to PAYG authentication.
+Authenticate each CLI normally as `dev` - the same login you'd use interactively. Do not place provider tokens in
+`factory.env` when the adapter is configured for subscription auth. Common API-key variables are stripped from
+direct subscription-provider environments so they cannot silently switch to PAYG authentication.
 
 In particular, do not put `OPENCODE_GO_API_KEY` in the repository `.env`. Use `opencode auth login --provider
-opencode-go` as the service user. `auth list` and `models opencode-go` do not prove remaining balance, so classify
-an `insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
+opencode-go` as `dev`. `auth list` and `models opencode-go` do not prove remaining balance, so classify an
+`insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
 provider when no separate SDK credential exists.
 
 Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
@@ -354,11 +355,11 @@ Repeat harmless version, auth, and model probes after every CLI upgrade.
 ## Rootless Podman checks
 
 The Factory service delegates only its own cgroup beneath the systemd resource cap. A healthy installation needs
-a real systemd user session for `hellotalk-factory`:
+a real systemd user session for `dev`:
 
 ```bash
-sudo loginctl enable-linger hellotalk-factory
-id -u hellotalk-factory
+sudo loginctl enable-linger dev
+id -u dev
 ```
 
 `XDG_RUNTIME_DIR` in the unit must match `/run/user/<uid>`. If nested cgroup controller flags are unavailable,
@@ -369,14 +370,14 @@ blocked.
 
 ## Operator recovery
 
-Run recovery commands as the service user with the same environment used by systemd. Defining this helper in the
+Run recovery commands as the operator user with the same environment used by systemd. Defining this helper in the
 current root shell prevents sudo's secure path from hiding authenticated provider executables:
 
 ```bash
-FACTORY_HOME=/var/lib/hellotalk-factory/home
+FACTORY_HOME=/home/dev
 FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
 factory_cli() {
-  sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+  sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
     /opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"
 }
 factory_cli doctor --online

@@ -5,10 +5,11 @@ interface BrowserViewTransition {
   readonly finished: Promise<void>;
   readonly ready: Promise<void>;
   readonly updateCallbackDone: Promise<void>;
+  readonly types?: unknown;
   skipTransition(): void;
 }
 
-interface ViewTransitionDocument extends Document {
+interface ViewTransitionDocument {
   startViewTransition(
     updateCallback: () => void | Promise<void>,
   ): BrowserViewTransition;

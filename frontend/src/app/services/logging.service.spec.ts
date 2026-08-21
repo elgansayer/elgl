@@ -1,17 +1,25 @@
 import { TestBed } from '@angular/core/testing';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LoggingService } from './logging.service';
 import { CrashReportService } from './crash-report.service';
 
 describe('LoggingService', () => {
   let service: LoggingService;
-  let crashReportSpy: jasmine.SpyObj<CrashReportService>;
+  let reportCrashSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    crashReportSpy = jasmine.createSpyObj('CrashReportService', ['reportCrash']);
-    crashReportSpy.reportCrash.and.returnValue(Promise.resolve());
+    reportCrashSpy = vi.fn().mockResolvedValue(undefined);
 
     TestBed.configureTestingModule({
-      providers: [LoggingService, { provide: CrashReportService, useValue: crashReportSpy }],
+      providers: [
+        LoggingService,
+        {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: reportCrashSpy,
+          },
+        },
+      ],
     });
 
     service = TestBed.inject(LoggingService);
@@ -31,34 +39,35 @@ describe('LoggingService', () => {
 
   it('should forward ERROR-level logs to crash reporting', () => {
     service.error('Test error', 'TestContext');
-    expect(crashReportSpy.reportCrash).toHaveBeenCalled();
+    expect(reportCrashSpy).toHaveBeenCalled();
   });
 
   it('should forward FATAL-level logs to crash reporting', () => {
     service.fatal('Critical failure', 'FatalContext');
-    expect(crashReportSpy.reportCrash).toHaveBeenCalled();
+    expect(reportCrashSpy).toHaveBeenCalled();
   });
 
   it('should not forward DEBUG-level logs to crash reporting', () => {
     service.debug('Debug message', 'DebugContext');
-    expect(crashReportSpy.reportCrash).not.toHaveBeenCalled();
+    expect(reportCrashSpy).not.toHaveBeenCalled();
   });
 
   it('should not forward INFO-level logs to crash reporting', () => {
     service.info('Info message', 'InfoContext');
-    expect(crashReportSpy.reportCrash).not.toHaveBeenCalled();
+    expect(reportCrashSpy).not.toHaveBeenCalled();
   });
 
   it('should not forward WARN-level logs to crash reporting', () => {
     service.warn('Warning message', 'WarnContext');
-    expect(crashReportSpy.reportCrash).not.toHaveBeenCalled();
+    expect(reportCrashSpy).not.toHaveBeenCalled();
   });
 
   it('should include context in crash report', () => {
     service.error('Failure occurred', 'ChatService');
 
-    const reportedError = crashReportSpy.reportCrash.calls.mostRecent().args[0] as Error;
-    const reportedContext = crashReportSpy.reportCrash.calls.mostRecent().args[1];
+    const lastCall = reportCrashSpy.mock.calls[0];
+    const reportedError = lastCall[0] as Error;
+    const reportedContext = lastCall[1];
 
     expect(reportedError.message).toBe('Failure occurred');
     expect(reportedError.name).toBe('ChatService');
@@ -66,7 +75,7 @@ describe('LoggingService', () => {
   });
 
   it('should handle crash reporting failure gracefully', async () => {
-    crashReportSpy.reportCrash.and.returnValue(Promise.reject(new Error('Network failure')));
+    reportCrashSpy.mockRejectedValue(new Error('Network failure'));
 
     // Should not throw
     expect(() => service.error('Test error')).not.toThrow();
