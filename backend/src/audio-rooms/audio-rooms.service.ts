@@ -2,10 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
@@ -20,14 +20,6 @@ import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
-import {
-  CACHE_TAG_AUDIO_ROOMS,
-  CACHE_TAG_AUDIO_ROOM_STAGE,
-  CACHE_TAG_AUDIO_ROOM_POLLS,
-  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
-  CACHE_TAG_AUDIO_ROOM_NOTES,
-} from '../common/cache.interceptor';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -47,6 +39,7 @@ import {
 } from './dto/audio-room.dto';
 import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import { TipHostDto } from './dto/tip-host.dto';
+import { RoomPreviewDto } from './dto/room-preview.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -115,6 +108,7 @@ export interface StageInfo {
 
 @Injectable()
 export class AudioRoomsService implements OnModuleInit {
+  private readonly logger = new Logger(AudioRoomsService.name);
   private livekitUrl = '';
   private apiKey = '';
   private secretKey = '';
@@ -126,12 +120,9 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
-    @InjectPinoLogger(AudioRoomsService.name)
-    private readonly logger: PinoLogger,
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
     private readonly chatLlmService: ChatLlmService,
-    private readonly cloudflareCache: CloudflareCacheService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -172,15 +163,15 @@ export class AudioRoomsService implements OnModuleInit {
     const recordingUrl = dto.recording_url;
     const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
 
+    let r2RecordingUrl: string;
     try {
-      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
+      r2RecordingUrl = await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
-      this.logger.error({ error }, 'Failed to upload recording to R2');
-      throw new Error('Failed to upload recording to R2');
+      this.logger.error('Failed to upload recording to R2', error);
+      throw new Error('Failed to upload recording to R2', { cause: error });
     }
 
-    // Update the room record with the R2 URL
-    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    // Store the URL confirmed by the Cloudflare R2 gateway.
     await supabase
       .from('audio_rooms')
       .update({ recording_url: r2RecordingUrl, is_active: false })
@@ -214,7 +205,6 @@ export class AudioRoomsService implements OnModuleInit {
       recording_url: r2RecordingUrl,
     });
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -369,7 +359,6 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
-    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -457,7 +446,6 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
-    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -501,10 +489,9 @@ export class AudioRoomsService implements OnModuleInit {
       .eq('id', room.id);
 
     if (error) {
-      this.logger.warn({ error }, 'Failed to set private fields');
+      this.logger.warn('Failed to set private fields', error);
     }
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -569,10 +556,6 @@ export class AudioRoomsService implements OnModuleInit {
         .eq('id', room.id);
     }
 
-    this.invalidateAudioRoomCache([
-      CACHE_TAG_AUDIO_ROOMS,
-      CACHE_TAG_AUDIO_ROOM_STAGE,
-    ]);
     return {
       token: jwtToken,
       room_id: room.id,
@@ -587,6 +570,8 @@ export class AudioRoomsService implements OnModuleInit {
     partyType?: string,
     topic?: string,
     level?: string,
+    limit = 50,
+    offset = 0,
   ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
@@ -606,7 +591,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const response = await query
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     const data = response.data as AudioRoomRow[] | null;
     if (!data || data.length === 0) return [];
@@ -650,6 +635,45 @@ export class AudioRoomsService implements OnModuleInit {
         display_name: profile?.display_name ?? 'Room Host',
         avatar_url: profile?.avatar_url ?? null,
       },
+    };
+  }
+
+  /**
+   * Returns a safe, public subset of room metadata for the SSR-rendered
+   * Voiceroom preview page. Only non-sensitive fields are exposed and
+   * private or missing rooms are treated as not found so their existence
+   * is not leaked to unauthenticated visitors.
+   */
+  async getRoomPreview(roomId: string): Promise<RoomPreviewDto> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Audio room not found');
+    const row = response.data as AudioRoomRow;
+    if (row.is_private) {
+      throw new NotFoundException('Audio room not found');
+    }
+    const profile = row.host_id
+      ? await this.usersService.getProfile(row.host_id)
+      : undefined;
+    return {
+      id: row.id,
+      room_name: row.room_name,
+      title: row.title,
+      language_pair: row.language_pair,
+      topic_tag: row.topic_tag,
+      level: row.level,
+      listeners_count: row.listeners_count,
+      is_active: row.is_active,
+      host: profile
+        ? {
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+          }
+        : null,
     };
   }
 
@@ -726,7 +750,7 @@ export class AudioRoomsService implements OnModuleInit {
       .update({ speakers: speakerOrder })
       .eq('id', roomId);
     if (error) {
-      this.logger.error({ error }, 'Failed to reorder speakers');
+      this.logger.error('Failed to reorder speakers', error);
       throw new Error('Failed to reorder speakers.');
     }
     void this.centrifugoService.publish(`room_${roomId}`, {
@@ -734,7 +758,6 @@ export class AudioRoomsService implements OnModuleInit {
       speaker_order: speakerOrder,
       room_id: roomId,
     });
-    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -749,14 +772,13 @@ export class AudioRoomsService implements OnModuleInit {
       .update({ speakers: [hostId], raised_hands: [] })
       .eq('id', roomId);
     if (error) {
-      this.logger.error({ error }, 'Failed to clear stage');
+      this.logger.error('Failed to clear stage', error);
       throw new Error('Failed to clear stage.');
     }
     void this.centrifugoService.publish(`room_${roomId}`, {
       type: 'stage_cleared',
       room_id: roomId,
     });
-    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -771,7 +793,6 @@ export class AudioRoomsService implements OnModuleInit {
     const room = response.data as AudioRoomRow;
 
     if (room.raised_hands.includes(userId) || room.speakers.includes(userId)) {
-      this.invalidateAudioRoomCache();
       return this.getRoom(dto.room_id);
     }
 
@@ -788,7 +809,6 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -830,7 +850,6 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -850,44 +869,8 @@ export class AudioRoomsService implements OnModuleInit {
     if (room.host_id !== hostId) {
       throw new ForbiddenException('Only the host can mute a speaker.');
     }
-
     if (room.host_id === dto.target_user_id) {
       throw new ForbiddenException('The host cannot be muted.');
-    }
-
-    // Attempt to mute the speaker's microphone via LiveKit
-    if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
-      try {
-        const profile = await this.usersService.getProfile(
-          dto.target_user_id,
-        );
-        const identity = profile?.display_name
-          ? `${profile.display_name}_${dto.target_user_id.slice(0, 6)}`
-          : dto.target_user_id;
-        const participants = await this.roomServiceClient.listParticipants(
-          room.room_name,
-        );
-        const targetParticipant = participants.find(
-          (p) => p.identity === identity || p.identity.startsWith(identity),
-        );
-        if (targetParticipant) {
-          for (const track of targetParticipant.tracks ?? []) {
-            if (track.type === 0 /* TrackType.AUDIO */) {
-              await this.roomServiceClient.mutePublishedTrack(
-                room.room_name,
-                targetParticipant.identity,
-                track.sid,
-                true,
-              );
-            }
-          }
-        }
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(
-          `LiveKit mute speaker warning (${msg}). Falling back to Centrifugo notification.`,
-        );
-      }
     }
 
     // Notify user via Centrifugo to mute their microphone locally
@@ -896,85 +879,6 @@ export class AudioRoomsService implements OnModuleInit {
       target_user_id: dto.target_user_id,
       room_id: room.id,
     });
-
-    this.invalidateAudioRoomCache();
-    return this.getRoom(room.id);
-  }
-
-  async kickSpeaker(
-    hostId: string,
-    dto: DemoteSpeakerDto,
-  ): Promise<AudioRoomRecord> {
-    const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('audio_rooms')
-      .select('*')
-      .eq('id', dto.room_id)
-      .single();
-    if (!response.data) throw new NotFoundException('Room not found');
-    const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
-      throw new ForbiddenException(
-        'Only the host can kick a speaker off stage.',
-      );
-    }
-
-    if (room.host_id === dto.target_user_id) {
-      throw new ForbiddenException('The host cannot kick themselves.');
-    }
-
-    const updatedSpeakers = room.speakers.filter(
-      (id) => id !== dto.target_user_id,
-    );
-
-    const updatedCoHostId =
-      room.co_host_id === dto.target_user_id ? null : room.co_host_id;
-
-    await supabase
-      .from('audio_rooms')
-      .update({
-        speakers: updatedSpeakers,
-        co_host_id: updatedCoHostId,
-      })
-      .eq('id', room.id);
-
-    // Attempt to remove participant from LiveKit room
-    if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
-      try {
-        const profile = await this.usersService.getProfile(
-          dto.target_user_id,
-        );
-        const identity = profile?.display_name
-          ? `${profile.display_name}_${dto.target_user_id.slice(0, 6)}`
-          : dto.target_user_id;
-        await this.roomServiceClient.removeParticipant(
-          room.room_name,
-          identity,
-        );
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(
-          `LiveKit removeParticipant warning (${msg}). Falling back to Centrifugo notification.`,
-        );
-      }
-    }
-
-    // Notify kicked user via Centrifugo to leave the room
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'force_kick',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
-
-    // If we removed a co-host, also emit co_host_removed event
-    if (room.co_host_id === dto.target_user_id) {
-      void this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: dto.target_user_id,
-        room_id: room.id,
-      });
-    }
 
     return this.getRoom(room.id);
   }
@@ -1016,7 +920,44 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
-    this.invalidateAudioRoomCache();
+    return this.getRoom(room.id);
+  }
+
+  async kickSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+    if (room.host_id !== hostId)
+      throw new ForbiddenException(
+        'Only the host can kick a speaker off stage.',
+      );
+    if (room.host_id === dto.target_user_id)
+      throw new ForbiddenException('The host cannot kick themselves.');
+    const update: { speakers: string[]; co_host_id?: null } = {
+      speakers: room.speakers.filter((id) => id !== dto.target_user_id),
+    };
+    if (room.co_host_id === dto.target_user_id) update.co_host_id = null;
+    await supabase.from('audio_rooms').update(update).eq('id', room.id);
+    if (room.co_host_id === dto.target_user_id) {
+      void this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+      });
+    }
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'force_kick',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
     return this.getRoom(room.id);
   }
 
@@ -1030,29 +971,18 @@ export class AudioRoomsService implements OnModuleInit {
       .select('*')
       .eq('id', dto.room_id)
       .single();
-
     if (!response.data) throw new NotFoundException('Room not found');
-
     const room = response.data as AudioRoomRow;
-
-    if (room.host_id !== hostId) {
+    if (room.host_id !== hostId)
       throw new ForbiddenException('Only the host can dismiss raised hands.');
-    }
-
-    const updatedHands = (room.raised_hands ?? []).filter(
-      (id) => id !== dto.target_user_id,
-    );
-
     await supabase
       .from('audio_rooms')
-      .update({ raised_hands: updatedHands })
+      .update({
+        raised_hands: room.raised_hands.filter(
+          (id) => id !== dto.target_user_id,
+        ),
+      })
       .eq('id', room.id);
-
-    void this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'hand_dismissed',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
   }
 
   async inviteCoHost(
@@ -1102,17 +1032,25 @@ export class AudioRoomsService implements OnModuleInit {
       })
       .eq('id', room.id);
 
-    // Publish a single atomic co_host_changed event to prevent out-of-order delivery
-    // of separate co_host_removed / co_host_invited Centrifugo messages.
-    // The frontend resolves the full transition from a single payload.
+    if (previousCoHostId) {
+      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
+      // incoming co-host's invite, preventing the invite from being clobbered by a
+      // late-arriving removal for a different user.
+      await this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: previousCoHostId,
+        room_id: room.id,
+      });
+    }
+
+    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
     await this.centrifugoService.publish(`room_${room.id}`, {
       type: 'co_host_changed',
       target_user_id: dto.target_user_id,
-      previous_co_host_id: previousCoHostId,
       room_id: room.id,
+      previous_co_host_id: previousCoHostId,
     });
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1143,14 +1081,13 @@ export class AudioRoomsService implements OnModuleInit {
 
     if (removedUserId) {
       // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
-      await this.centrifugoService.publish(`room_${room.id}`, {
+      void this.centrifugoService.publish(`room_${room.id}`, {
         type: 'co_host_removed',
         target_user_id: removedUserId,
         room_id: room.id,
       });
     }
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1188,7 +1125,6 @@ export class AudioRoomsService implements OnModuleInit {
       caption,
     });
 
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_TRANSCRIPT]);
     return caption;
   }
 
@@ -1242,14 +1178,12 @@ export class AudioRoomsService implements OnModuleInit {
       room.room_name,
     );
 
-    const recordingUrl =
-      egressRecordingUrl ||
-      dto.recording_url ||
-      `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
+    const recordingUrl = egressRecordingUrl || dto.recording_url || null;
 
-    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
-    let transcriptText =
-      await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+    // Generate a transcript only when an authoritative recording exists.
+    let transcriptText = recordingUrl
+      ? await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl)
+      : '';
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available
@@ -1269,11 +1203,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
-<<<<<<< HEAD
-      ? await this.nlpService.generateSessionSummary(transcriptText)
-=======
       ? await this.generateAiSessionSummary(transcriptText)
->>>>>>> origin/main
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
@@ -1299,7 +1229,6 @@ export class AudioRoomsService implements OnModuleInit {
       recording_url: recordingUrl,
     });
 
-    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1310,7 +1239,7 @@ export class AudioRoomsService implements OnModuleInit {
       .select('topic_tag')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn({ error }, 'Could not fetch topics');
+      this.logger.warn('Could not fetch topics', error);
       return [];
     }
     const tags = new Set(
@@ -1326,7 +1255,7 @@ export class AudioRoomsService implements OnModuleInit {
       .select('level')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn({ error }, 'Could not fetch levels');
+      this.logger.warn('Could not fetch levels', error);
       return [];
     }
     const levels = new Set(
@@ -1349,7 +1278,7 @@ export class AudioRoomsService implements OnModuleInit {
       .limit(50);
 
     if (error || !data) {
-      this.logger.warn({ error }, 'Could not fetch invited private rooms');
+      this.logger.warn('Could not fetch invited private rooms', error);
       return [];
     }
 
@@ -1385,14 +1314,12 @@ export class AudioRoomsService implements OnModuleInit {
       .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn({ error }, 'Could not fetch active host IDs');
+      this.logger.warn('Could not fetch active host IDs', error);
       return [];
     }
     const rows = data as Array<{ host_id: string; is_private?: boolean }>;
     // Only return hosts of public active rooms
-    const publicHosts = rows
-      .filter((r) => !r.is_private)
-      .map((r) => r.host_id);
+    const publicHosts = rows.filter((r) => !r.is_private).map((r) => r.host_id);
     return [...new Set(publicHosts)];
   }
 
@@ -1455,7 +1382,6 @@ export class AudioRoomsService implements OnModuleInit {
       question: dto.question,
       options: dto.options,
     });
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
     return { poll_id: data.id };
   }
 
@@ -1488,8 +1414,6 @@ export class AudioRoomsService implements OnModuleInit {
       poll_id: dto.pollId,
       option_index: dto.optionIndex,
     });
-
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
   }
 
   async getPollResults(
@@ -1570,8 +1494,7 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
-    return noteRow;
+    return { ...noteRow, author_name: noteRow.author_name ?? 'Unknown' };
   }
 
   async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
@@ -1585,7 +1508,10 @@ export class AudioRoomsService implements OnModuleInit {
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
-    return response.data ?? [];
+    return (response.data ?? []).map((note) => ({
+      ...note,
+      author_name: note.author_name ?? 'Unknown',
+    }));
   }
 
   async deleteNote(noteId: string, userId: string): Promise<void> {
@@ -1617,8 +1543,6 @@ export class AudioRoomsService implements OnModuleInit {
       note_id: noteId,
       room_id: room.id,
     });
-
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
   }
 
   /**
@@ -1692,7 +1616,6 @@ export class AudioRoomsService implements OnModuleInit {
       timestamp: new Date().toISOString(),
     };
     await this.centrifugoService.publish(`room_${room.id}`, reactionPayload);
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return { emojiId: dto.emojiId, animationUrl: emoji.animationUrl };
   }
 
@@ -1717,7 +1640,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const { data, error } = await supabaseQuery;
     if (error) {
-      this.logger.warn({ error }, 'Failed to fetch call logs');
+      this.logger.warn('Failed to fetch call logs', error);
       return [];
     }
     return data ?? [];
@@ -1908,7 +1831,9 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
-    const senderUser = senderResponse.data as { display_name?: string | null } | null;
+    const senderUser = senderResponse.data as {
+      display_name?: string | null;
+    } | null;
     const senderName = senderUser?.display_name || 'Someone';
 
     void this.centrifugoService.publish(`room_${room.id}`, {
@@ -1922,7 +1847,6 @@ export class AudioRoomsService implements OnModuleInit {
       },
     });
 
-    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return {
       tip_id: tipRow.id,
       amount_coins: amount,
@@ -1976,9 +1900,7 @@ ${transcriptText.substring(0, 4000)}`;
         };
         return {
           summary: parsed.summary ?? '',
-          vocabulary: Array.isArray(parsed.vocabulary)
-            ? parsed.vocabulary
-            : [],
+          vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
         };
       }
     } catch (error) {
@@ -1990,31 +1912,5 @@ ${transcriptText.substring(0, 4000)}`;
 
     // Fallback to NLP heuristic
     return this.nlpService.generateSessionSummary(transcriptText);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Cloudflare edge cache invalidation helpers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Fire-and-forget invalidation of Cloudflare edge caches for audio room data.
-   *
-   * Called after every mutation that changes room state (create, archive, stage
-   * changes, polls, notes, transcript generation, etc.).  The invalidation is
-   * best-effort -- Cloudflare edge TTLs are short enough that the stale window
-   * is bounded even if the purge API call fails.
-   *
-   * @param tags -- specific Cache-Tag values to purge (e.g. ['audio-rooms', 'audio-rooms:stage'])
-   */
-  private invalidateAudioRoomCache(
-    tags: string[] = [
-      CACHE_TAG_AUDIO_ROOMS,
-      CACHE_TAG_AUDIO_ROOM_STAGE,
-      CACHE_TAG_AUDIO_ROOM_POLLS,
-      CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
-      CACHE_TAG_AUDIO_ROOM_NOTES,
-    ],
-  ): void {
-    void this.cloudflareCache.purgeByCacheTags(tags);
   }
 }

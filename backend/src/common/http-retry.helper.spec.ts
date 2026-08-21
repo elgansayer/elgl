@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { Logger } from '@nestjs/common';
 import { withExponentialBackoff } from './http-retry.helper';
 
@@ -11,18 +12,18 @@ function createHttp429Error(
 }
 
 describe('withExponentialBackoff', () => {
-  let mockLogger: jest.Mocked<Logger>;
+  let mockLogger: Mocked<Logger>;
 
   beforeEach(() => {
     mockLogger = {
-      debug: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    } as unknown as Mocked<Logger>;
   });
 
   it('should return the result on first success without retries', async () => {
-    const operation = jest.fn().mockResolvedValue('success');
+    const operation = vi.fn().mockResolvedValue('success');
 
     const result = await withExponentialBackoff(operation, 'test-op', {
       logger: mockLogger,
@@ -34,7 +35,7 @@ describe('withExponentialBackoff', () => {
   });
 
   it('should retry on HTTP 429 and succeed on the second attempt', async () => {
-    const operation = jest
+    const operation = vi
       .fn()
       .mockRejectedValueOnce(createHttp429Error())
       .mockResolvedValueOnce('recovered');
@@ -54,7 +55,7 @@ describe('withExponentialBackoff', () => {
 
   it('should use exponential backoff delay between retries', async () => {
     const httpError = createHttp429Error();
-    const operation = jest
+    const operation = vi
       .fn()
       .mockRejectedValueOnce(httpError)
       .mockRejectedValueOnce(httpError)
@@ -73,7 +74,7 @@ describe('withExponentialBackoff', () => {
 
   it('should throw a non-429 error immediately without retry', async () => {
     const networkError = new Error('Network failure');
-    const operation = jest.fn().mockRejectedValue(networkError);
+    const operation = vi.fn().mockRejectedValue(networkError);
 
     await expect(
       withExponentialBackoff(operation, 'test-op', { logger: mockLogger }),
@@ -85,7 +86,7 @@ describe('withExponentialBackoff', () => {
 
   it('should exhaust retries and throw the last 429 error', async () => {
     const httpError = createHttp429Error();
-    const operation = jest.fn().mockRejectedValue(httpError);
+    const operation = vi.fn().mockRejectedValue(httpError);
 
     const result = withExponentialBackoff(operation, 'test-op', {
       maxRetries: 2,
@@ -102,7 +103,7 @@ describe('withExponentialBackoff', () => {
 
   it('should throw when retries are exhausted even without configured maxRetries', async () => {
     const httpError = createHttp429Error();
-    const operation = jest.fn().mockRejectedValue(httpError);
+    const operation = vi.fn().mockRejectedValue(httpError);
 
     const result = withExponentialBackoff(operation, 'test-op', {
       maxRetries: 0,

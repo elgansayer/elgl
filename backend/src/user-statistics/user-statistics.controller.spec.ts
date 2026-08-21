@@ -20,7 +20,7 @@ describe('UserStatisticsController', () => {
   };
 
   const mockService = {
-    getUserStatistics: jest.fn(),
+    getUserStatistics: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -34,7 +34,7 @@ describe('UserStatisticsController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = moduleRef.get<UserStatisticsController>(
@@ -43,7 +43,7 @@ describe('UserStatisticsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

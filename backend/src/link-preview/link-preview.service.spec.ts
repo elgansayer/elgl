@@ -1,50 +1,56 @@
+import type { Mock } from 'vitest';
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
-const mockSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  // Remove script/style elements and their content entirely
-  let result = dirty
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
-  // Strip all remaining HTML tags
-  result = result.replace(/<[^>]*>/g, '');
-  // Decode common HTML entities
-  result = result
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'");
-  return result;
-};
+const { mockSanitize } = vi.hoisted(() => {
+  const mockSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    // Remove script/style elements and their content entirely
+    let result = dirty
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+    // Strip all remaining HTML tags
+    result = result.replace(/<[^>]*>/g, '');
+    // Decode common HTML entities
+    result = result
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'");
+    return result;
+  };
+  return { mockSanitize };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockSanitize,
-      setConfig: jest.fn(),
+      setConfig: vi.fn(),
     })),
   };
 });
@@ -58,17 +64,17 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkPreviewService', () => {
   let service: LinkPreviewService;
-  let httpService: { get: jest.Mock };
-  let redis: { get: jest.Mock; set: jest.Mock };
+  let httpService: { get: Mock };
+  let redis: { get: Mock; set: Mock };
 
   beforeEach(async () => {
     redis = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     httpService = {
-      get: jest.fn(),
+      get: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,7 +83,7 @@ describe('LinkPreviewService', () => {
         { provide: HttpService, useValue: httpService },
         {
           provide: SupabaseService,
-          useValue: { getRedisClient: jest.fn().mockReturnValue(redis) },
+          useValue: { getRedisClient: vi.fn().mockReturnValue(redis) },
         },
         { provide: 'REDIS_CLIENT', useValue: redis },
       ],
@@ -86,7 +92,7 @@ describe('LinkPreviewService', () => {
     service = module.get(LinkPreviewService);
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   function mockHtmlResponse(html: string, contentType = 'text/html') {
     httpService.get.mockReturnValue(
@@ -242,6 +248,16 @@ describe('LinkPreviewService', () => {
     await expect(
       service.getPreview('https://example.com/data.json'),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('bounds the response size to prevent memory exhaustion', async () => {
+    mockHtmlResponse('<html><head><title>Hello</title></head></html>');
+
+    await service.getPreview('https://example.com/');
+
+    const requestConfig = httpService.get.mock.calls[0][1];
+    expect(requestConfig.maxContentLength).toBe(5_000_000);
+    expect(requestConfig.maxBodyLength).toBe(5_000_000);
   });
 
   it('wraps network failures in a BadRequestException', async () => {

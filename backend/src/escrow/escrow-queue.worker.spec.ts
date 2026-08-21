@@ -1,24 +1,30 @@
-jest.mock('./escrow.service', () => {
-  const fn = jest.fn().mockResolvedValue({ processed: 0, failed: 0 });
-  return {
-    EscrowService: jest.fn().mockImplementation(() => ({
-      processDegradedQueue: fn,
-    })),
-    __mockProcessDegradedQueue: fn,
-  };
-});
+import type { Mock } from 'vitest';
+
+const { __mockProcessDegradedQueue } = vi.hoisted(() => ({
+  __mockProcessDegradedQueue: vi
+    .fn()
+    .mockResolvedValue({ processed: 0, failed: 0 }),
+}));
+
+vi.mock('./escrow.service', () => ({
+  EscrowService: vi.fn().mockImplementation(function () {
+    return {
+      processDegradedQueue: __mockProcessDegradedQueue,
+    };
+  }),
+  __mockProcessDegradedQueue,
+}));
 
 import { EscrowQueueWorker } from './escrow-queue.worker';
 import { EscrowService } from './escrow.service';
 
 describe('EscrowQueueWorker', () => {
   let worker: EscrowQueueWorker;
-  let mockProcessDegradedQueue: jest.Mock;
+  let mockProcessDegradedQueue: Mock;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    const { __mockProcessDegradedQueue } = require('./escrow.service');
-    mockProcessDegradedQueue = __mockProcessDegradedQueue;
+    vi.clearAllMocks();
+    mockProcessDegradedQueue = __mockProcessDegradedQueue as Mock;
     mockProcessDegradedQueue.mockResolvedValue({ processed: 0, failed: 0 });
 
     const escrowService = new EscrowService();
@@ -27,7 +33,7 @@ describe('EscrowQueueWorker', () => {
 
   afterEach(() => {
     worker.stop();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -36,7 +42,7 @@ describe('EscrowQueueWorker', () => {
 
   describe('onModuleInit / onModuleDestroy', () => {
     it('should start processing on module init', () => {
-      const startSpy = jest.spyOn(worker, 'start');
+      const startSpy = vi.spyOn(worker, 'start');
 
       worker.onModuleInit();
       expect(startSpy).toHaveBeenCalled();
@@ -45,7 +51,7 @@ describe('EscrowQueueWorker', () => {
     });
 
     it('should stop processing on module destroy', () => {
-      const stopSpy = jest.spyOn(worker, 'stop');
+      const stopSpy = vi.spyOn(worker, 'stop');
 
       worker.onModuleInit();
       worker.onModuleDestroy();

@@ -49,7 +49,7 @@ interface GiftItem {
   - Active: `bg-pink-600 text-white`
   - Inactive: `bg-gray-700 text-gray-300`
 - **Gift grid**: `grid grid-cols-3 gap-3`
-  - Each gift: `bg-gray-700 rounded-xl p-3 flex flex-col items-center gap-1 cursor-pointer hover:bg-gray-600 transition-colors`
+  - Each gift: `bg-gray-700 rounded-xl p-3 flex flex-col items-center gap-1 cursor-pointer hover:bg-gray-600 transition-colours`
   - Emoji: `text-3xl`
   - Name: `text-xs text-gray-300`
   - Cost: `text-xs text-yellow-400` with coin icon
