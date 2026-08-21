@@ -1,5 +1,4 @@
 import {
-  HttpErrorResponse,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
@@ -41,7 +40,7 @@ export const httpRetryInterceptor: HttpInterceptorFn = (
     retry({
       count: MAX_RETRIES,
       delay: (error, retryCount) => {
-        if (error instanceof HttpErrorResponse && error.status === 429) {
+        if (error && error.status === 429) {
           const delayMs =
             BASE_DELAY_MS * Math.pow(2, retryCount - 1) +
             jitter(BASE_DELAY_MS);

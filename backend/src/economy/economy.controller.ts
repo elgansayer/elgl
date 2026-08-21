@@ -31,7 +31,7 @@ import {
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
   CACHE_NO_STORE,
-} from './cache.interceptor';
+} from '../common/cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import {
   EconomyRateLimiterGuard,
@@ -393,8 +393,15 @@ export class EconomyController {
               id: { type: 'string', example: 'abc-123' },
               type: { type: 'string', example: 'daily_checkin' },
               amount: { type: 'number', example: 7 },
-              description: { type: 'string', nullable: true, example: 'Daily check-in reward' },
-              created_at: { type: 'string', example: '2026-08-08T12:00:00.000Z' },
+              description: {
+                type: 'string',
+                nullable: true,
+                example: 'Daily check-in reward',
+              },
+              created_at: {
+                type: 'string',
+                example: '2026-08-08T12:00:00.000Z',
+              },
             },
           },
         },
@@ -405,7 +412,9 @@ export class EconomyController {
   async getTransactions(@CurrentUser() user: User | null) {
     if (!user) return { transactions: [] };
     try {
-      const transactions = await this.economyService.getTransactionHistory(user.id);
+      const transactions = await this.economyService.getTransactionHistory(
+        user.id,
+      );
       return { transactions };
     } catch (err: unknown) {
       this.logger.warn(

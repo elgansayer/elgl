@@ -15,10 +15,12 @@ services:
     environment:
       - NODE_ENV=development
     depends_on:
-      - cache
-      - websocket
+      cache:
+        condition: service_healthy
+      websocket:
+        condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
+      test: ['CMD', 'node', '-e', 'require("http").get("http://localhost:3000/api/health",r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>process.exit(d.includes("ok")?0:1))})']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -46,6 +48,7 @@ services:
 
   cache:
     image: redis:7-alpine
+    restart: always
     command: redis-server --appendonly yes
     ports:
       - '6379:6379'
@@ -60,6 +63,7 @@ services:
 
   websocket:
     image: centrifugo/centrifugo:v5
+    restart: always
     command: centrifugo -c /centrifugo/config.json
     ports:
       - '8000:8000'
@@ -67,7 +71,8 @@ services:
     volumes:
       - ./config/centrifugo:/centrifugo
     depends_on:
-      - cache
+      cache:
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8000/health']
       interval: 30s
@@ -101,5 +106,53 @@ services:
       retries: 3
       start_period: 15s
 
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_dev_data:/prometheus
+    depends_on:
+      - api
+      - websocket
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:9090/-/healthy']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - '3001:3000'
+    volumes:
+      - grafana_dev_data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 volumes:
   redis_dev_data:
+  prometheus_dev_data:
+  grafana_dev_data:

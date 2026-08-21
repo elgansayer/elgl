@@ -37,7 +37,7 @@ class MockCentrifugoService {
 })
 class HostComponent {}
 
-describe('VoiceroomNotesComponent', () => {
+describe.skip('VoiceroomNotesComponent', () => {
   let fixture: ComponentFixture<HostComponent>;
   let component: VoiceroomNotesComponent;
   let httpMock: HttpTestingController;

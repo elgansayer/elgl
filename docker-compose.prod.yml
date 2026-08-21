@@ -118,6 +118,7 @@ services:
       - '9090:9090'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/tutor-profiles.rules.yml:/etc/prometheus/tutor-profiles.rules.yml:ro
       - prometheus_prod_data:/prometheus
     depends_on:
       - api
@@ -151,7 +152,7 @@ services:
       retries: 3
       start_period: 30s
 
-  datadog:
+datadog:
     image: gcr.io/datadoghq/agent:7
     restart: always
     env_file:

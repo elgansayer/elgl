@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StudyBuddiesService } from './study-buddies.service';
@@ -20,18 +21,18 @@ type MockResult = {
 };
 
 type QueryChainMock = {
-  select: jest.Mock;
-  from: jest.Mock;
-  eq: jest.Mock;
-  neq: jest.Mock;
-  overlaps: jest.Mock;
-  order: jest.Mock;
-  limit: jest.Mock;
-  returns: jest.Mock;
-  upsert: jest.Mock;
-  update: jest.Mock;
-  single: jest.Mock;
-  maybeSingle: jest.Mock;
+  select: Mock;
+  from: Mock;
+  eq: Mock;
+  neq: Mock;
+  overlaps: Mock;
+  order: Mock;
+  limit: Mock;
+  returns: Mock;
+  upsert: Mock;
+  update: Mock;
+  single: Mock;
+  maybeSingle: Mock;
   _setResolveData: (data: MockResult) => void;
   then: (resolve: (value: MockResult) => void) => undefined;
 };
@@ -53,7 +54,7 @@ const createQueryChain = (): QueryChainMock => {
     'maybeSingle',
   ] as const;
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   });
 
   let resolveData: MockResult | null = null;
@@ -82,14 +83,14 @@ const sampleRequestRow: BuddyRequestRow = {
 
 describe('StudyBuddiesService', () => {
   let service: StudyBuddiesService;
-  let supabaseMock: { from: jest.Mock };
-  let usersServiceMock: { followUser: jest.Mock; unfollowUser: jest.Mock };
+  let supabaseMock: { from: Mock };
+  let usersServiceMock: { followUser: Mock; unfollowUser: Mock };
 
   beforeEach(async () => {
-    supabaseMock = { from: jest.fn(() => createQueryChain()) };
+    supabaseMock = { from: vi.fn(() => createQueryChain()) };
     usersServiceMock = {
-      followUser: jest.fn().mockResolvedValue(undefined),
-      unfollowUser: jest.fn().mockResolvedValue(undefined),
+      followUser: vi.fn().mockResolvedValue(undefined),
+      unfollowUser: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -97,7 +98,7 @@ describe('StudyBuddiesService', () => {
         StudyBuddiesService,
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(supabaseMock) },
+          useValue: { getClient: vi.fn().mockReturnValue(supabaseMock) },
         },
         { provide: UsersService, useValue: usersServiceMock },
       ],

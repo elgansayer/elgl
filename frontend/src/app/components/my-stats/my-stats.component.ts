@@ -28,11 +28,11 @@ interface MyStatsResponse {
       </h1>
 
       @if (statsResource.isLoading()) {
-        <div class="text-center py-12 text-gray-400">
+        <div class="text-center py-12 text-text-secondary">
           {{ 'stats.myStats.loading' | t }}
         </div>
       } @else if (statsResource.error()) {
-        <div class="text-center py-12 text-red-400">
+        <div class="text-center py-12 text-danger">
           {{ 'stats.myStats.error' | t }}
         </div>
       } @else {
@@ -41,7 +41,7 @@ interface MyStatsResponse {
             <h2 class="text-lg font-semibold mb-4 text-text-primary">
               {{ 'stats.myStats.studyHours' | t }}
             </h2>
-            <canvas baseChart [data]="lineChartData()" [options]="lineChartOptions()" [type]="'line'">
+            <canvas baseChart [data]="lineChartData()" [options]="lineChartOptions" [type]="'line'">
             </canvas>
           </div>
 
@@ -53,22 +53,34 @@ interface MyStatsResponse {
             </canvas>
           </div>
 
-          <div class="bg-surface-200 p-5 rounded-2xl shadow-sm border border-surface-100 md:col-span-2">
+          <div
+            class="bg-surface-200 p-5 rounded-2xl shadow-sm border border-surface-100 md:col-span-2"
+          >
             <h2 class="text-lg font-semibold mb-4 text-text-primary">
               {{ 'stats.myStats.summary' | t }}
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-blue-400">{{ stats()?.messages_sent ?? 0 }}</div>
-                <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.messagesSent' | t }}</div>
+                <div class="text-3xl font-bold text-secondary">
+                  {{ stats()?.messages_sent ?? 0 }}
+                </div>
+                <div class="text-sm text-text-secondary mt-1">
+                  {{ 'stats.myStats.messagesSent' | t }}
+                </div>
               </div>
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-emerald-400">{{ stats()?.corrections_count ?? 0 }}</div>
-                <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.correctionsMade' | t }}</div>
+                <div class="text-3xl font-bold text-success">
+                  {{ stats()?.corrections_count ?? 0 }}
+                </div>
+                <div class="text-sm text-text-secondary mt-1">
+                  {{ 'stats.myStats.correctionsMade' | t }}
+                </div>
               </div>
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-amber-400">{{ stats()?.moments_count ?? 0 }}</div>
-                <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.momentsPosted' | t }}</div>
+                <div class="text-3xl font-bold text-warning">{{ stats()?.moments_count ?? 0 }}</div>
+                <div class="text-sm text-text-secondary mt-1">
+                  {{ 'stats.myStats.momentsPosted' | t }}
+                </div>
               </div>
             </div>
           </div>
@@ -81,7 +93,7 @@ export class MyStatsComponent {
   private readonly authService = inject(AuthService);
   private readonly i18nService = inject(I18nService);
 
-  readonly statsResource = resource<MyStatsResponse, unknown>({
+  protected readonly statsResource = resource<MyStatsResponse, unknown>({
     loader: () => {
       const token = this.authService.getAccessToken();
       if (!token) {
@@ -96,9 +108,9 @@ export class MyStatsComponent {
     },
   });
 
-  readonly stats = computed(() => this.statsResource.value() ?? null);
+  protected readonly stats = computed(() => this.statsResource.value() ?? null);
 
-  readonly lineChartData = computed<ChartConfiguration<'line'>['data']>(() => {
+  protected readonly lineChartData = computed<ChartConfiguration<'line'>['data']>(() => {
     const data = this.statsResource.value();
     const labels = data?.study_hours?.map((s) =>
       this.i18nService.translate(`stats.dayAbbr.${s.day.toLowerCase()}`),
@@ -120,7 +132,7 @@ export class MyStatsComponent {
     };
   });
 
-  readonly lineChartOptions = computed<ChartOptions<'line'>>(() => ({
+  protected readonly lineChartOptions: ChartOptions<'line'> = {
     responsive: true,
     plugins: {
       legend: { display: false },
@@ -134,9 +146,9 @@ export class MyStatsComponent {
         },
       },
     },
-  }));
+  };
 
-  readonly pieChartData = computed<ChartConfiguration<'pie'>['data']>(() => {
+  protected readonly pieChartData = computed<ChartConfiguration<'pie'>['data']>(() => {
     const data = this.statsResource.value();
     return {
       labels: [
@@ -146,18 +158,14 @@ export class MyStatsComponent {
       ],
       datasets: [
         {
-          data: [
-            data?.messages_sent ?? 0,
-            data?.corrections_count ?? 0,
-            data?.moments_count ?? 0,
-          ],
+          data: [data?.messages_sent ?? 0, data?.corrections_count ?? 0, data?.moments_count ?? 0],
           backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
         },
       ],
     };
   });
 
-  readonly pieChartOptions: ChartOptions<'pie'> = {
+  protected readonly pieChartOptions: ChartOptions<'pie'> = {
     responsive: true,
     plugins: {
       legend: {

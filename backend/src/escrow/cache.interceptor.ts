@@ -54,7 +54,9 @@ export class EscrowCacheInterceptor implements NestInterceptor {
           response.setHeader('Cache-Control', 'private, no-store');
           response.setHeader('CDN-Cache-Control', 'private, no-store');
           response.setHeader('Vary', 'Authorization');
-          response.removeHeader('Cache-Tag');
+          if (typeof response.removeHeader === 'function') {
+            response.removeHeader('Cache-Tag');
+          }
         },
       }),
     );

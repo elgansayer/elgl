@@ -1,10 +1,10 @@
 import { RetryService } from './retry.service';
 
 const MOCK_LOGGER = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
 } as any;
 
 function make429Error(): Error & {
@@ -45,7 +45,7 @@ describe('RetryService', () => {
 
   beforeEach(() => {
     service = new RetryService(MOCK_LOGGER);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
