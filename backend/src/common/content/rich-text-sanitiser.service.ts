@@ -62,9 +62,13 @@ export class RichTextSanitiserService {
     this.window.close();
   }
 
+  onModuleDestroy(): void {
+    this.destroy();
+  }
+
   private normaliseLinks(html: string): string {
     const document = new JSDOM(`<body>${html}</body>`).window.document;
-    for (const link of document.querySelectorAll('a[href]')) {
+    for (const link of document.querySelectorAll('a')) {
       const href = link.getAttribute('href')?.trim() ?? '';
       if (!isAllowedRichTextUrl(href)) {
         link.removeAttribute('href');

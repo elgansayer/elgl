@@ -14,9 +14,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
     '[attr.aria-valuetext]': 'valueText() || null',
   },
   template: `
-    <span class="relay-progress__track" aria-hidden="true">
+    <span class="relay-progress__track rounded-pill" aria-hidden="true">
       <span
-        class="relay-progress__value"
+        class="relay-progress__value rounded-pill"
         [class.relay-progress__value--indeterminate]="normalisedValue() === null"
         [style.inline-size]="percentage()"
       ></span>
@@ -35,17 +35,12 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       inline-size: 100%;
       block-size: 0.5rem;
       overflow: hidden;
-      border-radius: 999px;
-      background: var(
-        --surface-muted,
-        color-mix(in srgb, currentColor 12%, transparent)
-      );
+      background: var(--surface-muted, color-mix(in srgb, currentColor 12%, transparent));
     }
 
     .relay-progress__value {
       display: block;
       block-size: 100%;
-      border-radius: inherit;
       background: var(--accent-primary, currentColor);
       transition: inline-size var(--motion-duration-fast, 160ms)
         var(--motion-easing-standard, ease-out);
@@ -93,7 +88,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
   `,
 })
 export class ProgressBarComponent {
-  readonly label = input.required<string>();
+  readonly label = input<string>('');
   readonly value = input<number | null>(null);
   readonly max = input(100);
   readonly valueText = input<string | null>(null);

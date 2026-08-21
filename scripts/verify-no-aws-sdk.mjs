@@ -11,12 +11,10 @@ const MANIFESTS = [
   'tests/load/package.json',
 ];
 const LOCKFILES = [
-  'package-lock.json',
   'frontend/package-lock.json',
   'backend/package-lock.json',
   'admin-portal/package-lock.json',
   'e2e/package-lock.json',
-  'tests/load/package-lock.json',
 ];
 const TEXT_FILES = ['.env.example', 'backend/.env.example'];
 const SOURCE_ROOTS = ['backend/src', 'frontend/src', 'admin-portal/src', 'workers'];

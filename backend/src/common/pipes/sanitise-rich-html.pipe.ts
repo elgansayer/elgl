@@ -10,9 +10,7 @@ import { RichTextSanitiserService } from '../content/rich-text-sanitiser.service
  */
 @Injectable()
 export class SanitiseRichHtmlPipe implements PipeTransform<unknown, string> {
-  constructor(
-    private readonly richTextSanitiser: RichTextSanitiserService,
-  ) {}
+  constructor(private readonly richTextSanitiser: RichTextSanitiserService) {}
 
   transform(value: unknown): string {
     if (typeof value !== 'string') {

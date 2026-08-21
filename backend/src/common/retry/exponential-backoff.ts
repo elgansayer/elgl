@@ -49,6 +49,11 @@ export async function fetchWithExponentialBackoff(
     }
 
     if (attempt < maxRetries) {
+      // We are retrying. Cancel the response body so Node/undici can reuse the connection
+      // in the connection pool immediately, preventing socket exhaustion.
+      if (response.body) {
+        await response.body.cancel().catch(() => {});
+      }
       const computedDelay = Math.min(
         baseDelayMs * Math.pow(2, attempt),
         maxDelayMs,

@@ -54,7 +54,7 @@ export const chatRoutes: Routes = [
   {
     path: 'message-filters',
     loadComponent: () =>
-      import('../pages/message-filter-settings/message-filter-settings.component').then(
+      import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
         (m) => m.MessageFilterSettingsComponent,
       ),
     title: 'Message Filter Settings - HelloTalk',

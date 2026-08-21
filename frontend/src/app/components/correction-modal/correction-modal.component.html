@@ -73,6 +73,7 @@
         <textarea
           id="correction-corrected-text"
           hlmTextarea
+          cdkFocusInitial
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
@@ -114,6 +115,13 @@
           [placeholder]="'correction.explainPlaceholder' | t"
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
         />
+        <div class="flex flex-wrap gap-2 mt-2">
+          @for (tag of quickTags; track tag) {
+            <button hlmBtn size="sm" variant="outline" (click)="addQuickTag(tag)" class="text-[10px] py-0.5 px-2 h-auto rounded-full border-surface-200 text-text-secondary hover:text-text-primary hover:bg-surface-200 transition-colors">
+              + {{ tag }}
+            </button>
+          }
+        </div>
       </div>
     </div>
 

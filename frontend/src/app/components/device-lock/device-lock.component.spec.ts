@@ -48,6 +48,34 @@ describe('DeviceLockComponent', () => {
     expect(button.hasAttribute('role')).toBe(false);
   });
 
+  it('uses Relay semantic surface and text roles instead of dark-only colours', () => {
+    const shell: HTMLDivElement = fixture.nativeElement.querySelector('div');
+    const heading: HTMLHeadingElement = fixture.nativeElement.querySelector('h1');
+    const message: HTMLParagraphElement = fixture.nativeElement.querySelector('p');
+
+    expect(shell.classList).toContain('bg-surface-500');
+    expect(shell.classList).toContain('text-text-primary');
+    expect(shell.classList).not.toContain('bg-surface-900');
+    expect(shell.classList).not.toContain('text-white');
+    expect(heading.classList).toContain('text-text-primary');
+    expect(message.classList).toContain('text-text-secondary');
+    expect(message.classList).not.toContain('text-white/60');
+  });
+
+  it('uses mobile-first reflow and keeps the primary action reachable at narrow widths', () => {
+    const shell: HTMLDivElement = fixture.nativeElement.querySelector('div');
+    const content: HTMLDivElement = shell.querySelector('div')!;
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+
+    expect(shell.classList).toContain('min-h-full');
+    expect(shell.classList).toContain('p-4');
+    expect(shell.classList).toContain('sm:p-6');
+    expect(content.classList).toContain('w-full');
+    expect(content.classList).toContain('max-w-sm');
+    expect(button.classList).toContain('w-full');
+    expect(button.classList).toContain('sm:w-auto');
+  });
+
   it('prevents duplicate unlock attempts and exposes the pending state', async () => {
     let resolveUnlock: ((value: boolean) => void) | undefined;
     appLockService.unlock.mockImplementation(
