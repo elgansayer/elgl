@@ -1,9 +1,10 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-voip-active-call',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './voip-active-call.component.html',
   styleUrl: './voip-active-call.component.scss',
 })

@@ -83,12 +83,7 @@ describe('ChatPageComponent', () => {
     aiConversationServiceMock.sendMessage.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [
-        FormsModule,
-        DatePipe,
-        TranslatePipe,
-        ChatPageComponent,
-      ],
+      imports: [FormsModule, DatePipe, TranslatePipe, ChatPageComponent],
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
@@ -128,6 +123,23 @@ describe('ChatPageComponent', () => {
       expect(chatServiceMock.getMessages).toHaveBeenCalledWith('room-1');
       expect(component.selectedRoom()).toEqual(room);
       expect(component.messages()).toEqual(messages);
+    });
+
+    it('should select a room from the keyboard with Space', () => {
+      component.rooms.set([room]);
+      fixture.detectChanges();
+      const selectRoom = vi.spyOn(component, 'selectRoom').mockResolvedValue();
+      const roomAction = fixture.nativeElement.querySelector('div[role="button"]');
+      const event = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      roomAction.dispatchEvent(event);
+
+      expect(selectRoom).toHaveBeenCalledWith(room);
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 
@@ -222,9 +234,7 @@ describe('ChatPageComponent', () => {
     it('should close AI partner and reset state', () => {
       component.aiMode.set(true);
       component.aiSelectedScenario.set(scenarios[0]);
-      component.aiMessages.set([
-        { id: 'm1', role: 'user', text: 'hi', created_at: new Date() },
-      ]);
+      component.aiMessages.set([{ id: 'm1', role: 'user', text: 'hi', created_at: new Date() }]);
 
       component.closeAiPartner();
 
@@ -301,14 +311,8 @@ describe('ChatPageComponent', () => {
 
       await component.selectRoom(room);
 
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'delivered',
-      );
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'read',
-      );
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'delivered');
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'read');
       // Own messages should not be marked
       expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
         'msg-own',
@@ -337,10 +341,7 @@ describe('ChatPageComponent', () => {
         is_read: false,
         delivery_status: 'delivered',
       };
-      chatServiceMock.getMessages.mockResolvedValue([
-        alreadyReadMessage,
-        alreadyDeliveredMessage,
-      ]);
+      chatServiceMock.getMessages.mockResolvedValue([alreadyReadMessage, alreadyDeliveredMessage]);
 
       await component.selectRoom(room);
 
@@ -371,9 +372,9 @@ describe('ChatPageComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // Check for blue checkmark (text-blue-500)
-      const blueChecks = compiled.querySelectorAll('.text-blue-500');
-      expect(blueChecks.length).toBeGreaterThan(0);
+      // Check for the read-state checkmark (text-primary)
+      const readChecks = compiled.querySelectorAll('.text-primary');
+      expect(readChecks.length).toBeGreaterThan(0);
     });
   });
 
