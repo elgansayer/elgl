@@ -24,14 +24,17 @@ import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
+import { TransliterateDto } from './dto/transliterate.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
+  TransliterationResult,
   TranslateUiResult,
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
 import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
+import { TranslationRouterService } from './translation-router.service';
 
 @Controller('nlp')
 @UseGuards(SupabaseAuthGuard, NlpRateLimiterGuard)
@@ -39,6 +42,7 @@ export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
+    private readonly translationRouterService: TranslationRouterService,
   ) {}
 
   /**
@@ -55,7 +59,8 @@ export class NlpController {
   }
 
   /**
-   * Translation: mutation-like (counts toward rate limit), no-store.
+   * User translation is routed through DeepL with Azure Translator fallback.
+   * The router also adds Azure transliteration when the target script supports it.
    */
   @Post('translate')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
@@ -67,7 +72,29 @@ export class NlpController {
   ): Promise<TranslationResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    return await this.nlpService.translate(
+    return await this.translationRouterService.translate(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
+  /**
+   * Script conversion uses Azure Translator's transliteration API. Callers must
+   * provide the source and target ISO 15924 scripts explicitly so unsupported
+   * language/script combinations fail visibly instead of returning fake text.
+   */
+  @Post('transliterate')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  async transliterate(
+    @CurrentUser() user: User | null,
+    @Body() dto: TransliterateDto,
+  ): Promise<TransliterationResult | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.translationRouterService.transliterate(
       user.id,
       profile?.is_vip ?? false,
       dto,

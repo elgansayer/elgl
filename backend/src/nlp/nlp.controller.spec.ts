@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
+import { TranslationRouterService } from './translation-router.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -10,6 +11,7 @@ import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 describe('NlpController', () => {
   let controller: NlpController;
   let nlpService: NlpService;
+  let translationRouterService: TranslationRouterService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -20,10 +22,16 @@ describe('NlpController', () => {
           provide: NlpService,
           useValue: {
             detectLanguage: vi.fn(),
-            translate: vi.fn(),
             translateUi: vi.fn(),
             grammarCheck: vi.fn(),
             pronunciationScore: vi.fn(),
+          },
+        },
+        {
+          provide: TranslationRouterService,
+          useValue: {
+            translate: vi.fn(),
+            transliterate: vi.fn(),
           },
         },
         {
@@ -44,6 +52,9 @@ describe('NlpController', () => {
 
     controller = module.get<NlpController>(NlpController);
     nlpService = module.get<NlpService>(NlpService);
+    translationRouterService = module.get<TranslationRouterService>(
+      TranslationRouterService,
+    );
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -72,33 +83,75 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.translate(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.translate).not.toHaveBeenCalled();
+      expect(translationRouterService.translate).not.toHaveBeenCalled();
     });
 
-    it('should get user profile and call service translate when user is provided', async () => {
+    it('should get user profile and call the provider router when user is provided', async () => {
       const dto: any = { text: 'Hola', target_language: 'en' };
       const profile: any = { id: 'user-1', is_vip: true };
       const response: any = { translated_text: 'Hello' };
 
       (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.translate as Mock).mockResolvedValue(response);
+      (translationRouterService.translate as Mock).mockResolvedValue(response);
 
       const result = await controller.translate({ id: 'user-1' } as any, dto);
       expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
-      expect(nlpService.translate).toHaveBeenCalledWith('user-1', true, dto);
+      expect(translationRouterService.translate).toHaveBeenCalledWith(
+        'user-1',
+        true,
+        dto,
+      );
       expect(result).toEqual(response);
     });
 
     it('should fallback to false for isVip when user profile returns undefined is_vip', async () => {
       (usersService.getProfile as Mock).mockResolvedValue({});
-      (nlpService.translate as Mock).mockResolvedValue({});
+      (translationRouterService.translate as Mock).mockResolvedValue({});
 
       await controller.translate({ id: 'user-1' } as any, {} as any);
-      expect(nlpService.translate).toHaveBeenCalledWith(
+      expect(translationRouterService.translate).toHaveBeenCalledWith(
         'user-1',
         false,
         expect.any(Object),
       );
+    });
+  });
+
+  describe('transliterate', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.transliterate(null, {} as any);
+      expect(result).toBeNull();
+      expect(translationRouterService.transliterate).not.toHaveBeenCalled();
+    });
+
+    it('should resolve VIP state and call the provider router', async () => {
+      const dto: any = {
+        text: 'こんにちは',
+        language: 'ja',
+        from_script: 'Jpan',
+        to_script: 'Latn',
+      };
+      const response: any = {
+        original_text: 'こんにちは',
+        transliterated_text: "Kon'nichiwa",
+      };
+      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: false });
+      (translationRouterService.transliterate as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.transliterate(
+        { id: 'user-1' } as any,
+        dto,
+      );
+
+      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
+      expect(translationRouterService.transliterate).toHaveBeenCalledWith(
+        'user-1',
+        false,
+        dto,
+      );
+      expect(result).toEqual(response);
     });
   });
 
