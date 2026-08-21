@@ -21,6 +21,8 @@ export class BrowserGeolocationError extends Error {
 
 const GEOLOCATION_TIMEOUT_MS = 10_000;
 const GEOLOCATION_MAX_AGE_MS = 60_000;
+const GEOLOCATION_PERMISSION_DENIED = 1;
+const GEOLOCATION_TIMEOUT = 3;
 
 @Injectable({ providedIn: 'root' })
 export class BrowserGeolocationService {
@@ -54,10 +56,10 @@ export class BrowserGeolocationService {
         },
         (error) => {
           switch (error.code) {
-            case GeolocationPositionError.PERMISSION_DENIED:
+            case GEOLOCATION_PERMISSION_DENIED:
               reject(new BrowserGeolocationError('permission_denied'));
               return;
-            case GeolocationPositionError.TIMEOUT:
+            case GEOLOCATION_TIMEOUT:
               reject(new BrowserGeolocationError('timeout'));
               return;
             default:
