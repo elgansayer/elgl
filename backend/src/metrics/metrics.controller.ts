@@ -12,6 +12,7 @@ export class MetricsController {
   @Header('Content-Type', 'text/plain; version=0.0.4')
   async getMetrics(@Res() res: Response): Promise<void> {
     const metrics = await this.metricsService.getMetrics();
+    res.set('Content-Type', this.metricsService.getContentType());
     res.send(metrics);
   }
 }

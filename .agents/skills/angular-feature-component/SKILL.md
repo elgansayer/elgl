@@ -1,16 +1,20 @@
 ---
 name: angular-feature-component
-description: "Scaffold a new standalone Angular component under frontend/src/app/components following this project's clone-first, signals, i18n, RTL and accessibility rules. Use when adding a new UI component, page, modal, or feature surface to the HelloTalk clone frontend."
+description: "Scaffold a new standalone Angular component under frontend/src/app/components following this project's Relay, Spartan, signals, i18n, RTL, accessibility and Claude Design reconciliation rules. Use when adding a new UI component, page, modal, or feature surface."
 ---
 
 # Angular Feature Component
 
-## When to Use
+## Before implementation
 
-- Adding a new page-level or reusable component under `frontend/src/app/components/`.
-- Building a new modal, dashboard, or feed surface.
+1. Read `AGENTS.md`, `DESIGN.md`, `docs/spartan-relay-architecture.md` and `docs/claude-design-two-way-sync.md`.
+2. Search existing components, GitHub issues and active PRs for overlapping work.
+3. Map every interactive control to an existing Relay public API and, where applicable, its Spartan capability before writing bespoke interaction code.
+4. Check `design-sync.manifest.json` and `frontend/design-preview/` for an existing visual contract.
 
-## File Layout (mirror existing components, e.g. `frontend/src/app/components/profile/`)
+## File layout
+
+Mirror the established feature layout when separate template/style files are useful:
 
 ```
 frontend/src/app/components/<feature>/
@@ -20,62 +24,87 @@ frontend/src/app/components/<feature>/
 └── <feature>.component.spec.ts
 ```
 
-## Component Decorator Rules (strict - these are audited)
+Inline templates/styles are also acceptable when consistent with nearby code. Never create an unused duplicate sibling template or stylesheet.
+
+## Component rules
 
 ```typescript
 @Component({
-  selector: 'app-<feature>', // kebab-case, 'app' prefix - enforced by eslint
-  imports: [CommonModule, TranslatePipe /* + whatever else is used */],
+  selector: 'app-<feature>',
+  imports: [TranslatePipe /* + approved Relay/Helm imports actually used */],
   templateUrl: './<feature>.component.html',
-  styleUrls: ['./<feature>.component.scss'],
+  styleUrl: './<feature>.component.scss',
 })
 export class FeatureComponent {}
 ```
 
-- Do **NOT** add `standalone: true` - it is the default in Angular v20+ and is explicitly banned in `AGENTS.md`/`copilot-instructions.md`. (This codebase had 22 violations found and fixed in the 2026-07-22 audit - do not reintroduce them.)
-- Do **NOT** add `changeDetection: ChangeDetectionStrategy.OnPush` - default in Angular v22+.
-- Use `inject()` for all dependencies (`private userService = inject(UserService)`), never constructor injection.
-- Prefer `signal()` / `computed()` for all component state; never call `.mutate()` on a signal, use `.set()`/`.update()`.
-- Use `input.required<T>()` / `input<T>(default)` functions for all component inputs. NEVER `@Input()` decorator.
-- Use `output<T>()` functions for all component outputs. NEVER `@Output()` decorator or `EventEmitter` (do not import `EventEmitter` at all).
-- Use `viewChild()` / `viewChildren()` signal queries for template elements. NEVER `@ViewChild()` / `@ViewChildren()`.
-- Use `resource<T>({ loader, request })` for ALL async data fetching. NEVER `.subscribe()`, `Promise.then()`, or `ngOnInit()` for data loading.
-- Use `toSignal(observable)` to convert Observables to signals. NEVER `.subscribe()` and manually call `.set()`.
-- Use `effect(() => { ... })` ONLY for side effects that cannot be expressed declaratively. NEVER `effect()` for state derivation (use `computed()`).
-- NEVER `ngOnChanges()`, `ngAfterViewInit()`. NEVER `ngOnInit()` for data loading. NEVER `ngOnDestroy()` for subscription cleanup - use `takeUntilDestroyed()` / `DestroyRef`.
-- NEVER `Subject` / `BehaviorSubject` for state - use `signal<T>()` instead.
-- NEVER `setTimeout` / `setInterval` for state or async work - use `resource()` with polling or `interval()` from rxjs + `toSignal()`.
-- NEVER `@NgModule` or `@Module`. All Angular components MUST be standalone. Never use `@Module({` or `@NgModule({`.
-- NEVER import from `rxjs/operators` - all operators are exported from `rxjs` directly.
+- Do not add `standalone: true` or explicit OnPush metadata when they are framework defaults.
+- Use `inject()` rather than constructor injection.
+- Use `signal()` / `computed()` for component state and derivation.
+- Use `input.required<T>()` / `input<T>()`, `output<T>()`, and signal queries rather than legacy decorators.
+- Use the repository-approved async patterns from `AGENTS.md`; do not introduce ad-hoc subscriptions or lifecycle-driven data loading.
+- Do not introduce duplicate services/components or assume an external API/provider/package exists without verifying it.
 
-## Template Rules (strict - enforced by `npm run check:*` scripts in `frontend/`)
+## Relay + Spartan ownership
 
-- Native control flow only: `@if`, `@for (x of xs(); track x.id)`, `@switch`. Never `*ngIf`/`*ngFor`/`*ngSwitch`.
-- Never `[ngClass]`/`[ngStyle]` - use `[class.foo]="cond()"` / `[style.prop]="value()"`.
-- Never a hard-coded physical direction Tailwind class (`pl-`, `pr-`, `ml-`, `mr-`, `left-`, `right-`, `border-l`, `border-r`, `text-left`, `text-right`). Always use logical equivalents: `ps-`/`pe-`, `ms-`/`me-`, `border-s`/`border-e`, `text-start`/`text-end`.
-- Reuse shared primitives from `frontend/src/app/components/primitives/` (`app-card`, `app-button-primary`, `app-button-secondary`, `app-input`, `app-textarea`, `app-chip`, `app-pill`, `app-empty-state`) before inventing new markup.
+- Feature code consumes approved Relay public APIs and semantic tokens.
+- Spartan Brain is the accessible behaviour layer and project-owned Helm is the implementation/styling layer. Feature components should not import Brain directly when an approved Relay/Helm abstraction exists.
+- Run `npm run check:spartan-boundaries`; never add a permanent exception merely to make the check pass.
+- Prefer existing variants and semantic roles before adding one-off utility combinations.
+- Do not restore the retired `app-button-primary`, `app-card`, `app-chip` or similar legacy primitive catalogue as a parallel design system. Existing legacy uses should be migrated through their numbered Spartan issues rather than copied into new work.
+- Original HelloTalk screenshots may inform product behaviour and information architecture, but are not current palette or pixel-parity authority.
 
-## Zero Hard-Coded Strings (mandatory)
+## Template and styling rules
 
-Every piece of user-facing text goes through `TranslatePipe`:
+- Use native Angular control flow: `@if`, `@for`, `@switch`.
+- Use stable identities in `@for`.
+- Use native class/style bindings rather than `ngClass`/`ngStyle`.
+- Use logical direction utilities/properties for RTL.
+- Use Relay semantic tokens rather than raw product colours where a semantic role exists.
+- Preserve first-class light and dark themes and per-user accent semantics.
+- Ensure responsive behaviour is intentionally designed for mobile, tablet and desktop where layout changes.
 
-```html
-<button>{{ 'profile.saveButton' | t }}</button>
-<p>{{ 'moments.likeCount' | t: { count: likeCount() } }}</p>
-```
+## Internationalisation
 
-Add the corresponding keys to the dictionary in `frontend/src/app/services/i18n.service.ts` (`baseDictionary`). For programmatic (non-template) text, inject `I18nService` and call `this.i18n.translate('key', params)` - see `frontend/src/app/services/translate.pipe.ts` for the pipe implementation this wraps. See the `i18n-translation-workflow` skill for the full key-addition procedure.
+Every user-facing string goes through `TranslatePipe` or `I18nService`. Add translation keys through the repository's i18n workflow rather than hard-coding feature copy.
 
 ## Accessibility
 
-Every new interactive component must pass AXE checks and WCAG AA: visible focus states, sufficient colour contrast, correct ARIA roles/labels on custom controls (chips, pills, modals need `role`, `aria-modal`, `aria-label` as appropriate).
+Every interactive component must meet WCAG AA minimums and preserve the accessibility supplied by Spartan primitives. Verify as applicable:
+
+- keyboard operation and deterministic focus order,
+- visible focus,
+- screen-reader names/roles/states,
+- disabled/error/loading semantics,
+- touch and pointer operation,
+- RTL,
+- 200% and 400% zoom/reflow,
+- reduced motion,
+- forced colours/high contrast,
+- state cues that do not depend on colour alone.
+
+## Claude Design and previews
+
+For material visual/interaction-contract changes:
+
+1. Identify or add the stable design-sync ID.
+2. Update the deterministic repository preview.
+3. Use the design-first, code-first or reconciliation flow from `docs/claude-design-two-way-sync.md`.
+4. Reconcile with the canonical HelloTalk Design System Claude Design project before marking the visual contract complete.
+
+For a genuinely non-visual implementation change, explicitly document why design sync is not required.
 
 ## Tests
 
-Every component needs a `*.component.spec.ts` using `TestBed.configureTestingModule` with real or mocked signal-based service dependencies (see `audio-sync-reader.component.spec.ts` for a pattern using `Partial<Store>` mocks with `signal()` values). Cover: component creation, key signal-driven behaviour, and any `output()` emissions.
-
-**vi.fn() constructor gotcha:** when mocking a browser API that's invoked with `new` (e.g. `SpeechSynthesisUtterance`), `vi.fn().mockImplementation(() => obj)` with an arrow function will throw `TypeError: ... is not a constructor` at runtime. Use a `function` expression instead: `vi.fn().mockImplementation(function (this: Record<string, unknown>) { return this; })`.
+Every component needs relevant unit coverage for creation, signal-driven behaviour, outputs and interaction/accessibility regressions. Add integration/E2E coverage for critical user flows rather than relying only on shallow creation tests.
 
 ## Verification
 
-Run the `verification-gate` skill's frontend steps before considering the component done.
+Run the `verification-gate` frontend steps plus:
+
+```bash
+npm run check:spartan-boundaries
+npm run check:design-sync
+```
+
+A feature is not complete merely because it builds. It must satisfy runtime behaviour, tests, accessibility, Relay/Spartan ownership and applicable preview/Claude Design reconciliation.

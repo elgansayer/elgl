@@ -149,6 +149,12 @@ private durationSubscription: Subscription | null = null;
     }
 
     this.stopDurationTimer();
+
+    // Stop MediaStreamTracks to free camera/mic resources
+    this.localVideoTrack()?.stop();
+    this.remoteVideoTrack()?.stop();
+    this.remoteAudioTrack()?.stop();
+
     this.localVideoTrack.set(null);
     this.remoteVideoTrack.set(null);
     this.remoteAudioTrack.set(null);

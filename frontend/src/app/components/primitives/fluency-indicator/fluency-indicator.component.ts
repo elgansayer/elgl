@@ -32,7 +32,7 @@ import { getLanguageFlag } from '../language-picker/language-picker.component';
         @for (lang of targetLanguages(); track lang.code; let last = $last) {
           <span class="flex items-center gap-0.5">
             <span class="text-[10px]" aria-hidden="true">{{ getFlag(lang.code) }}</span>
-            <span class="uppercase text-purple-400">{{ lang.code }}</span>
+            <span class="uppercase text-neon-violet">{{ lang.code }}</span>
           </span>
           @if (!last) {
             <span class="text-text-muted" aria-hidden="true">|</span>
@@ -47,8 +47,12 @@ export class FluencyIndicatorComponent {
   targetLanguages = input.required<{ code: string; level?: number }[]>();
 
   readonly fluencyLabel = computed(() => {
-    const native = this.nativeLanguages().map((l) => l.code).join(', ');
-    const target = this.targetLanguages().map((l) => l.code).join(', ');
+    const native = this.nativeLanguages()
+      .map((l) => l.code)
+      .join(', ');
+    const target = this.targetLanguages()
+      .map((l) => l.code)
+      .join(', ');
     return `Speaks ${native}; learning ${target}`;
   });
 

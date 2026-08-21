@@ -1,19 +1,31 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
-import { AdminErrorBoundaryComponent } from '../../components/admin-error-boundary/admin-error-boundary.component';
+
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AdminOfflineBannerComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {
@@ -61,6 +73,7 @@ export class AdminUsersComponent {
   readonly selectedUserId = signal<string | null>(null);
   readonly showHistory = signal(false);
   readonly isVipUpdating = signal<string | null>(null);
+  readonly vipUpdateError = signal<string>('');
   readonly isBanning = signal<string | null>(null);
   readonly isWarning = signal<string | null>(null);
 
@@ -99,6 +112,7 @@ export class AdminUsersComponent {
       return;
     }
     this.isVipUpdating.set(user.id);
+    this.vipUpdateError.set('');
     try {
       const updated = await this.adminService.setVipStatus(
         user.id,
@@ -113,6 +127,7 @@ export class AdminUsersComponent {
         return { ...prev, users: list };
       });
     } catch (err: unknown) {
+      this.vipUpdateError.set((err as HttpErrorResponse)?.message ?? String(err));
       this.reportCrash(err, 'toggleVip');
     } finally {
       this.isVipUpdating.set(null);

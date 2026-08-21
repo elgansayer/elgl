@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
@@ -17,7 +18,7 @@ interface CategoryToggle {
 @Component({
   selector: 'app-notification-settings',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './notification-settings.component.html',
 })
 export class NotificationSettingsComponent {
@@ -25,7 +26,11 @@ export class NotificationSettingsComponent {
   private readonly i18n = inject(I18nService);
 
   readonly categories: CategoryToggle[] = [
-    { key: 'direct_messages', labelKey: 'notification_settings.category.direct_messages', icon: '💬' },
+    {
+      key: 'direct_messages',
+      labelKey: 'notification_settings.category.direct_messages',
+      icon: '💬',
+    },
     { key: 'groups', labelKey: 'notification_settings.category.groups', icon: '👥' },
     { key: 'likes', labelKey: 'notification_settings.category.likes', icon: '❤️' },
     { key: 'voice_rooms', labelKey: 'notification_settings.category.voice_rooms', icon: '🎤' },

@@ -53,11 +53,17 @@ describe('AppButtonSecondaryComponent', () => {
     expect(buttonElement.textContent?.trim()).toBe('Secondary Action');
   });
 
-  it('should apply secondary styles and size md by default', () => {
-    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
-    expect(buttonElement.classList.contains('text-text-primary')).toBe(true);
+  it('should apply owned Helm secondary styles and map legacy md to touch size', () => {
+    expect(buttonElement.classList.contains('bg-secondary')).toBe(true);
+    expect(buttonElement.classList.contains('text-secondary-foreground')).toBe(true);
     expect(buttonElement.classList.contains('border')).toBe(true);
-    expect(buttonElement.classList.contains('ps-4')).toBe(true);
+    expect(buttonElement.classList.contains('rounded-app')).toBe(true);
+    expect(buttonElement.classList.contains('min-h-11')).toBe(true);
+  });
+
+  it('should use the owned Helm secondary hover and focus-visible contract', () => {
+    expect(buttonElement.classList.contains('hover:bg-secondary/80')).toBe(true);
+    expect(buttonElement.classList.contains('focus-visible:ring-ring/50')).toBe(true);
   });
 
   it('should emit clicked event when clicked and not disabled', () => {
@@ -65,13 +71,13 @@ describe('AppButtonSecondaryComponent', () => {
     expect(host.clickCount).toBe(1);
   });
 
-  it('should apply disabled classes when disabled', () => {
+  it('should expose native disabled state and Helm disabled semantics', () => {
     host.disabled.set(true);
     fixture.detectChanges();
 
     expect(buttonElement.disabled).toBe(true);
-    expect(buttonElement.classList.contains('cursor-not-allowed')).toBe(true);
-    expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
+    expect(buttonElement.classList.contains('data-disabled:pointer-events-none')).toBe(true);
+    expect(buttonElement.classList.contains('data-disabled:opacity-50')).toBe(true);
   });
 
   it('should not set an aria-label attribute by default', () => {

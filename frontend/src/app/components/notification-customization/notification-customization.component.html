@@ -10,11 +10,12 @@
           {{ 'notification_customization.tone_url_label' | t }}
         </label>
         <input
+          hlmInput
           id="customToneUrl"
           type="url"
           [value]="customToneUrl()"
           (input)="onToneChange($event)"
-          class="mt-1 block w-full rounded-md border-s border-neutral-300 bg-surface px-3 py-2 text-sm"
+          class="mt-1 block w-full rounded-md border-s border-surface-300 bg-surface px-3 py-2 text-sm"
           placeholder="{{ 'notification_customization.tone_url_placeholder' | t }}"
         />
       </div>
@@ -24,11 +25,12 @@
           {{ 'notification_customization.vibration_pattern_label' | t }}
         </label>
         <input
+          hlmInput
           id="vibrationPattern"
           type="text"
           [value]="vibrationPattern()"
           (input)="onVibrationChange($event)"
-          class="mt-1 block w-full rounded-md border-s border-neutral-300 bg-surface px-3 py-2 text-sm"
+          class="mt-1 block w-full rounded-md border-s border-surface-300 bg-surface px-3 py-2 text-sm"
           placeholder="{{ 'notification_customization.vibration_pattern_placeholder' | t }}"
         />
       </div>
@@ -42,10 +44,12 @@
       }
 
       <button
+        hlmBtn
         type="submit"
         [disabled]="saving()"
-        class="rounded-md bg-primary px-4 py-2 text-white"
-       [attr.aria-label]="'common.save' | t">
+        class="rounded-md bg-primary px-4 py-2 text-on-fill"
+        [attr.aria-label]="'common.save' | t"
+      >
         {{ 'common.save' | t }}
       </button>
     </form>

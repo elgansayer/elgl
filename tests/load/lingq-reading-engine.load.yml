@@ -1,0 +1,302 @@
+config:
+  target: "{{ $processEnvironment.API_URL || 'http://localhost:3000' }}"
+  phases:
+    - name: "warmup"
+      duration: 30
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 20
+    - name: "sustained"
+      duration: 120
+      arrivalRate: 20
+    - name: "spike"
+      duration: 30
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+  processor: "./helpers/lingq-reading-helpers.js"
+  variables:
+    article_ids:
+      - "a1b2c3d4-e5f6-7890-abcd-ef0123456789"
+      - "b2c3d4e5-f6a7-8901-bcde-f01234567890"
+    dialogue_ids:
+      - "d1e2f3a4-b5c6-7890-def0-123456789abc"
+      - "e2f3a4b5-c6d7-8901-efab-cdef01234567"
+    flashcard_ids:
+      - "f1a2b3c4-d5e6-7890-abcd-ef0123456789"
+    languages:
+      - "fr"
+      - "es"
+      - "de"
+      - "ja"
+      - "ko"
+      - "zh"
+      - "pt"
+      - "it"
+      - "ru"
+      - "ar"
+    cefr_levels:
+      - "A1"
+      - "A2"
+      - "B1"
+      - "B2"
+      - "C1"
+
+scenarios:
+  # ─── Curated Content ──────────────────────────────────────────────
+  - name: "List articles (unfiltered)"
+    weight: 6
+    flow:
+      - get:
+          url: "/curated-content/articles"
+          expect:
+            - statusCode: 200
+
+  - name: "List articles by language and CEFR level"
+    weight: 5
+    flow:
+      - get:
+          url: "/curated-content/articles?language={{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}&cefr_level={{ $randomChoice('A1', 'A2', 'B1', 'B2', 'C1') }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get article by ID"
+    weight: 4
+    flow:
+      - get:
+          url: "/curated-content/articles/{{ $randomChoice('a1b2c3d4-e5f6-7890-abcd-ef0123456789', 'b2c3d4e5-f6a7-8901-bcde-f01234567890') }}"
+          expect:
+            - statusCode: [200, 404]
+
+  - name: "Create article"
+    weight: 2
+    flow:
+      - post:
+          url: "/curated-content/articles"
+          json:
+            title: "Load test article {{ $now }}"
+            cefrLevel: "{{ $randomChoice('A1', 'A2', 'B1', 'B2', 'C1') }}"
+            language: "{{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}"
+            contentText: "{{ $randomChoice('Bonjour le monde', 'Hola mundo', 'Hallo Welt', 'Ciao mondo') }} load test passage generated at {{ $now }}. This is a sample reading passage for the LingQ interactive reading engine."
+            wordCount: 25
+            difficultyRating: 3
+            tags: ["load-test", "lingq", "reading"]
+          expect:
+            - statusCode: [201, 400]
+
+  - name: "List dialogues (unfiltered)"
+    weight: 4
+    flow:
+      - get:
+          url: "/curated-content/dialogues"
+          expect:
+            - statusCode: 200
+
+  - name: "List dialogues by language and CEFR level"
+    weight: 3
+    flow:
+      - get:
+          url: "/curated-content/dialogues?language={{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}&cefr_level={{ $randomChoice('A1', 'A2', 'B1', 'B2', 'C1') }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get dialogue by ID"
+    weight: 3
+    flow:
+      - get:
+          url: "/curated-content/dialogues/{{ $randomChoice('d1e2f3a4-b5c6-7890-def0-123456789abc', 'e2f3a4b5-c6d7-8901-efab-cdef01234567') }}"
+          expect:
+            - statusCode: [200, 404]
+
+  # ─── NLP ──────────────────────────────────────────────────────────
+  - name: "Detect language"
+    weight: 5
+    flow:
+      - post:
+          url: "/nlp/detect-language"
+          json:
+            text: "{{ $randomChoice('Bonjour tout le monde', 'Hola a todos', 'Hallo zusammen', 'こんにちは世界') }}"
+          expect:
+            - statusCode: [200, 201]
+
+  - name: "Translate text"
+    weight: 5
+    flow:
+      - post:
+          url: "/nlp/translate"
+          json:
+            text: "{{ $randomChoice('Bonjour, comment allez-vous?', '¿Cómo estás?', 'Wie geht es Ihnen?', 'お元気ですか？') }}"
+            sourceLanguage: "{{ $randomChoice('fr', 'es', 'de', 'ja') }}"
+            targetLanguage: "en-GB"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Translate UI strings"
+    weight: 3
+    flow:
+      - post:
+          url: "/nlp/translate-ui"
+          json:
+            sourceLang: "en"
+            targetLang: "{{ $randomChoice('fr', 'es', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru', 'ar') }}"
+            keys: ["nav.lingqReader", "wordDef.lingqTitle", "wordModal.badge"]
+          expect:
+            - statusCode: [200, 201]
+
+  - name: "Grammar check"
+    weight: 4
+    flow:
+      - post:
+          url: "/nlp/grammar-check"
+          json:
+            text: "{{ $randomChoice('Je suis allé au marché hier', 'Me gusta mucho la playa', 'Ich habe gestern Fussball gespielt') }}"
+            language: "{{ $randomChoice('fr', 'es', 'de') }}"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Explain grammar"
+    weight: 2
+    flow:
+      - post:
+          url: "/nlp/explain-grammar"
+          json:
+            text: "{{ $randomChoice('Si je aurais su, je serais venu', 'Si tendria dinero, compraria un coche') }}"
+            language: "{{ $randomChoice('fr', 'es') }}"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Pronunciation score"
+    weight: 2
+    flow:
+      - post:
+          url: "/nlp/pronunciation-score"
+          json:
+            text: "{{ $randomChoice('Bonjour', 'Hola', 'Guten Tag') }}"
+            language: "{{ $randomChoice('fr', 'es', 'de') }}"
+            audioUrl: "https://audio.example.com/load-test-pronunciation.wav"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Simplify text"
+    weight: 3
+    flow:
+      - post:
+          url: "/nlp/simplify"
+          json:
+            text: "{{ $randomChoice('Les méandres de la bureaucratie hexagonale sont inextricables', 'La promulgación de la legislación fue pospuesta indefinidamente') }}"
+            language: "{{ $randomChoice('fr', 'es') }}"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Translate and correct"
+    weight: 3
+    flow:
+      - post:
+          url: "/nlp/translate-and-correct"
+          json:
+            text: "{{ $randomChoice('Je voudrais apprendre le français', 'Quiero aprender español') }}"
+            sourceLanguage: "{{ $randomChoice('fr', 'es') }}"
+            targetLanguage: "en-GB"
+          expect:
+            - statusCode: [200, 201, 401]
+
+  - name: "Transcribe audio"
+    weight: 1
+    flow:
+      - post:
+          url: "/nlp/transcribe-audio"
+          json:
+            audioUrl: "https://audio.example.com/load-test-audio.wav"
+            language: "{{ $randomChoice('fr', 'es', 'de') }}"
+          expect:
+            - statusCode: [200, 201]
+
+  # ─── SRS Flashcards ───────────────────────────────────────────────
+  - name: "Create flashcard"
+    weight: 6
+    flow:
+      - post:
+          url: "/flashcards"
+          json:
+            word_token: "{{ $randomChoice('apprendre', 'comprendre', 'parler', 'manger', 'dormir', 'travailler', 'étudier', 'voyager', 'chanter', 'danser', 'jugar', 'comer', 'beber', 'vivir', 'hablar') }}"
+            translation: "{{ $randomChoice('to learn', 'to understand', 'to speak', 'to eat', 'to sleep', 'to work', 'to study', 'to travel', 'to sing') }}"
+            original_context: "Load-test LingQ reading engine sentence at {{ $now }}."
+            definition: "A frequently used word in the target language"
+            pronunciation_url: "https://audio.example.com/lingq-pron.mp3"
+          capture:
+            - json: "$.id"
+              as: "flashcard_id"
+          expect:
+            - statusCode: [201, 401]
+
+  - name: "Review flashcard (good recall)"
+    weight: 5
+    flow:
+      - post:
+          url: "/flashcards"
+          json:
+            word_token: "lingq_rev_good_{{ $randomChoice('alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta') }}"
+            translation: "{{ $randomChoice('hello', 'greetings', 'good morning', 'goodbye') }}"
+          capture:
+            - json: "$.id"
+              as: "flashcard_id"
+      - patch:
+          url: "/flashcards/{{ flashcard_id }}/srs"
+          json:
+            quality: "{{ $randomChoice(4, 5) }}"
+          expect:
+            - statusCode: [200, 404]
+
+  - name: "Review flashcard (poor recall)"
+    weight: 3
+    flow:
+      - post:
+          url: "/flashcards"
+          json:
+            word_token: "lingq_rev_poor_{{ $randomChoice('iota', 'kappa', 'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi') }}"
+            translation: "{{ $randomChoice('difficult', 'complicated', 'challenging', 'obscure') }}"
+          capture:
+            - json: "$.id"
+              as: "flashcard_id"
+      - patch:
+          url: "/flashcards/{{ flashcard_id }}/srs"
+          json:
+            quality: "{{ $randomChoice(0, 1, 2) }}"
+          expect:
+            - statusCode: [200, 404]
+
+  - name: "List all flashcards"
+    weight: 4
+    flow:
+      - get:
+          url: "/flashcards"
+          expect:
+            - statusCode: [200, 401]
+
+  - name: "List flashcards by SRS level"
+    weight: 4
+    flow:
+      - get:
+          url: "/flashcards?level={{ $randomChoice(0, 1, 2, 3, 4) }}"
+          expect:
+            - statusCode: [200, 401]
+
+  - name: "Get due reviews"
+    weight: 5
+    flow:
+      - get:
+          url: "/flashcards/due"
+          expect:
+            - statusCode: [200, 401]
+
+  - name: "Suggest flashcards from message"
+    weight: 4
+    flow:
+      - get:
+          url: "/flashcards/suggest?message={{ $randomChoice('Je apprends le francais depuis six mois', 'Estoy aprendiendo espanol con mis amigos', 'Ich lerne Deutsch und es macht Spass') }}&sourceLanguage={{ $randomChoice('fr', 'es', 'de') }}&targetLanguage=en-GB"
+          expect:
+            - statusCode: [200, 401]

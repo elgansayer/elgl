@@ -51,3 +51,12 @@ export class LikeEvent {
     public readonly targetId?: string,
   ) {}
 }
+
+export class SystemAlertEvent {
+  constructor(
+    public readonly recipientId: string,
+    public readonly message: string,
+    public readonly actorId?: string,
+    public readonly entityId?: string,
+  ) {}
+}
