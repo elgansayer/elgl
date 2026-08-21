@@ -7,11 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSelectComponent } from '../primitives/select/select.component';
-import {
-  EventsService,
-  type Event,
-  type EventCategory,
-} from '../../services/events.service';
+import { EventsService, type Event, type EventCategory } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -106,7 +102,7 @@ const PAGE_SIZE = 20;
         <app-empty-state
           icon="📅"
           [description]="'events.calendar.noEvents' | t"
-          [aria-label]="'events.calendar.noEvents' | t"
+          [attr.aria-label]="'events.calendar.noEvents' | t"
         />
       } @else {
         <div class="space-y-3" role="list">
@@ -203,7 +199,9 @@ export class EventsFeedComponent implements OnInit {
   private readonly page = signal(1);
 
   readonly visibleEvents = computed(() =>
-    this.status() === 'upcoming' ? this.events().filter((event) => !event.is_cancelled) : this.events(),
+    this.status() === 'upcoming'
+      ? this.events().filter((event) => !event.is_cancelled)
+      : this.events(),
   );
 
   readonly languagePairOptions = computed(() => {
