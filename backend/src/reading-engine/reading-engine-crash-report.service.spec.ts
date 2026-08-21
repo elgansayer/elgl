@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ReadingEngineCrashReportService } from './reading-engine-crash-report.service';
@@ -5,50 +6,50 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ReadingEngineCrashReportService', () => {
   let service: ReadingEngineCrashReportService;
-  let supabaseService: jest.Mocked<Partial<SupabaseService>>;
-  let mockInsert: jest.Mock;
-  let mockInsertSelect: jest.Mock;
-  let mockInsertSingle: jest.Mock;
-  let mockSelect: jest.Mock;
-  let mockUpdate: jest.Mock;
-  let mockEq: jest.Mock;
-  let mockIs: jest.Mock;
-  let mockOrder: jest.Mock;
-  let mockLimit: jest.Mock;
-  let mockFrom: jest.Mock;
+  let supabaseService: Mocked<Partial<SupabaseService>>;
+  let mockInsert: Mock;
+  let mockInsertSelect: Mock;
+  let mockInsertSingle: Mock;
+  let mockSelect: Mock;
+  let mockUpdate: Mock;
+  let mockEq: Mock;
+  let mockIs: Mock;
+  let mockOrder: Mock;
+  let mockLimit: Mock;
+  let mockFrom: Mock;
 
   beforeEach(async () => {
     // Build chainable query mocks
-    mockInsertSingle = jest.fn();
-    mockInsertSelect = jest.fn().mockReturnValue({ single: mockInsertSingle });
+    mockInsertSingle = vi.fn();
+    mockInsertSelect = vi.fn().mockReturnValue({ single: mockInsertSingle });
 
-    mockInsert = jest.fn().mockReturnValue({
+    mockInsert = vi.fn().mockReturnValue({
       select: mockInsertSelect,
     });
 
-    mockLimit = jest.fn();
-    mockOrder = jest.fn().mockReturnValue({ limit: mockLimit });
-    mockIs = jest.fn().mockReturnValue({ order: mockOrder });
-    mockSelect = jest.fn().mockReturnValue({ is: mockIs });
+    mockLimit = vi.fn();
+    mockOrder = vi.fn().mockReturnValue({ limit: mockLimit });
+    mockIs = vi.fn().mockReturnValue({ order: mockOrder });
+    mockSelect = vi.fn().mockReturnValue({ is: mockIs });
 
     // Chainable eq for update/delete
-    mockEq = jest.fn();
+    mockEq = vi.fn();
 
     const buildUpdateChain = (result: unknown) =>
-      jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue(result) });
+      vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(result) });
 
-    mockUpdate = jest.fn();
+    mockUpdate = vi.fn();
 
-    mockFrom = jest.fn().mockReturnValue({
+    mockFrom = vi.fn().mockReturnValue({
       insert: mockInsert,
       select: mockSelect,
       update: mockUpdate,
-      delete: jest.fn().mockReturnValue({ eq: mockEq }),
+      delete: vi.fn().mockReturnValue({ eq: mockEq }),
       eq: mockEq,
     });
 
     supabaseService = {
-      getClient: jest.fn().mockReturnValue({
+      getClient: vi.fn().mockReturnValue({
         from: mockFrom,
       }),
     };
@@ -82,7 +83,10 @@ describe('ReadingEngineCrashReportService', () => {
         resolved_at: null,
       };
 
-      mockInsertSingle.mockResolvedValueOnce({ data: mockDbRecord, error: null });
+      mockInsertSingle.mockResolvedValueOnce({
+        data: mockDbRecord,
+        error: null,
+      });
 
       const result = await service.reportCrash({
         operation: 'GET /reading/resources',
@@ -175,7 +179,7 @@ describe('ReadingEngineCrashReportService', () => {
   describe('acknowledgeReport', () => {
     it('should acknowledge a crash report', async () => {
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
       const result = await service.acknowledgeReport('crash-001');
@@ -184,7 +188,7 @@ describe('ReadingEngineCrashReportService', () => {
 
     it('should return false on db error', async () => {
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: { message: 'Not found' } }),
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Not found' } }),
       });
 
       const result = await service.acknowledgeReport('crash-999');
@@ -193,7 +197,7 @@ describe('ReadingEngineCrashReportService', () => {
 
     it('should return false on exception', async () => {
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockRejectedValue(new Error('DB timeout')),
+        eq: vi.fn().mockRejectedValue(new Error('DB timeout')),
       });
 
       const result = await service.acknowledgeReport('crash-001');
@@ -204,7 +208,7 @@ describe('ReadingEngineCrashReportService', () => {
   describe('resolveReport', () => {
     it('should resolve a crash report', async () => {
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
       const result = await service.resolveReport('crash-001');
@@ -213,7 +217,7 @@ describe('ReadingEngineCrashReportService', () => {
 
     it('should return false on exception', async () => {
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockRejectedValue(new Error('Timeout')),
+        eq: vi.fn().mockRejectedValue(new Error('Timeout')),
       });
 
       const result = await service.resolveReport('crash-001');

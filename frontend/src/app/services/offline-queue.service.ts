@@ -12,6 +12,7 @@ export class OfflineQueueService {
 
   /** Reactive count of queued messages for UI indicators */
   readonly queuedCount = signal(0);
+  readonly queueSize = this.queuedCount;
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {

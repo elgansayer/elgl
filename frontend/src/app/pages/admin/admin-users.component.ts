@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -14,7 +16,16 @@ import { CrashReportService } from '../../services/crash-report.service';
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    HlmInput,
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AdminOfflineBannerComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

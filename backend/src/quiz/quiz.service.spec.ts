@@ -1,10 +1,11 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuizService } from './quiz.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('QuizService', () => {
   let service: QuizService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
 
   const mockAssessmentRows = [
     {
@@ -276,17 +277,17 @@ describe('QuizService', () => {
     data: unknown = mockAssessmentRows,
     error: unknown = null,
   ) {
-    const mockSelect = jest.fn().mockReturnValue({
-      eq: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data, error }),
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data, error }),
       }),
     });
-    return { from: jest.fn().mockReturnValue({ select: mockSelect }) };
+    return { from: vi.fn().mockReturnValue({ select: mockSelect }) };
   }
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn().mockReturnValue(createMockSupabaseClient()),
+      getClient: vi.fn().mockReturnValue(createMockSupabaseClient()),
     };
 
     const module: TestingModule = await Test.createTestingModule({

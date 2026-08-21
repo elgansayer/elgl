@@ -1,70 +1,71 @@
+import type { Mock } from 'vitest';
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { MediaService } from './media.service';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
-
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn(),
-  PutObjectCommand: jest.fn().mockImplementation((args) => args),
-}));
-
-jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn().mockResolvedValue('https://upload.r2.mock/url'),
-}));
+import { MediaService } from './media.service';
 
 describe('MediaService', () => {
   let service: MediaService;
+  let r2ObjectService: {
+    createUploadUrl: Mock;
+    uploadBytes: Mock;
+    downloadObject: Mock;
+  };
+  let imageCompressionService: { compress: Mock };
+  let usersUpdate: Mock;
 
   beforeEach(async () => {
-    (S3Client as unknown as jest.Mock).mockClear();
-    (PutObjectCommand as unknown as jest.Mock).mockClear();
-    (getSignedUrl as jest.Mock)
-      .mockClear()
-      .mockResolvedValue('https://upload.r2.mock/url');
+    r2ObjectService = {
+      createUploadUrl: vi.fn((key: string) => ({
+        uploadUrl: `https://gateway.example.test/upload/${key}`,
+        publicUrl: `https://media.example.test/${key}`,
+      })),
+      uploadBytes: vi.fn(
+        (key: string, _contentType: string, bytes: Uint8Array) =>
+          Promise.resolve({
+            key,
+            etag: 'etag',
+            size: bytes.byteLength,
+            uploadedAt: '2026-08-19T12:00:00.000Z',
+            publicUrl: `https://media.example.test/${key}`,
+          }),
+      ),
+      downloadObject: vi.fn().mockResolvedValue({
+        bytes: new Uint8Array([1, 2, 3]),
+        contentType: 'image/png',
+        etag: 'etag',
+      }),
+    };
+    imageCompressionService = {
+      compress: vi.fn().mockResolvedValue(Buffer.from([4, 5, 6])),
+    };
+    usersUpdate = vi.fn();
+    const usersEq = vi.fn().mockResolvedValue({ error: null });
+    usersUpdate.mockReturnValue({ eq: usersEq });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MediaService,
+        { provide: R2ObjectService, useValue: r2ObjectService },
         {
           provide: AudioCompressionService,
           useValue: {
-            compressToOgg: jest.fn(),
-            compressToM4a: jest.fn(),
+            compressToOgg: vi.fn(),
+            compressToM4a: vi.fn(),
           },
         },
         {
           provide: ImageCompressionService,
-          useValue: {
-            compress: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'CLOUDFLARE_R2_ENDPOINT')
-                return 'https://r2.cloudflare.mock';
-              if (key === 'CLOUDFLARE_R2_ACCESS_KEY_ID') return 'mock-key-id';
-              if (key === 'CLOUDFLARE_R2_SECRET_ACCESS_KEY')
-                return 'mock-secret-key';
-              if (key === 'CLOUDFLARE_R2_BUCKET') return 'hellotalk-media';
-              if (key === 'CLOUDFLARE_R2_PUBLIC_DOMAIN')
-                return 'https://media.hellotalk.mock';
-              return null;
-            }),
-          },
+          useValue: imageCompressionService,
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue({
-              from: jest.fn().mockReturnThis(),
-              update: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
+            getClient: vi.fn().mockReturnValue({
+              from: vi.fn().mockReturnValue({ update: usersUpdate }),
             }),
           },
         },
@@ -72,75 +73,105 @@ describe('MediaService', () => {
     }).compile();
 
     service = module.get<MediaService>(MediaService);
-    service.onModuleInit();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('onModuleInit', () => {
-    it('should initialise S3Client with Cloudflare R2 credentials from config', () => {
-      expect(S3Client).toHaveBeenCalledWith({
-        region: 'auto',
-        endpoint: 'https://r2.cloudflare.mock',
-        credentials: {
-          accessKeyId: 'mock-key-id',
-          secretAccessKey: 'mock-secret-key',
-        },
-      });
-    });
-  });
-
   describe('generatePresignedUrl', () => {
-    it('should generate object key and return presigned upload URL and media URL', async () => {
-      const dto = {
+    it('uses the Cloudflare gateway and returns a public media URL', async () => {
+      const result = await service.generatePresignedUrl('user-1', {
         filename: 'my-avatar.png',
         folder: 'avatars',
         contentType: 'image/png',
-      };
+      });
 
-      const result = await service.generatePresignedUrl('user-1', dto);
-
-      expect(PutObjectCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          Bucket: 'hellotalk-media',
-          Key: expect.stringMatching(
-            /^avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/,
-          ),
-          ContentType: 'image/png',
-        }),
+      expect(result.objectKey).toMatch(
+        /^avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/,
       );
-      expect(getSignedUrl).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(Object),
-        { expiresIn: 3600 },
+      expect(r2ObjectService.createUploadUrl).toHaveBeenCalledWith(
+        result.objectKey,
+        'image/png',
       );
       expect(result).toEqual({
-        uploadUrl: 'https://upload.r2.mock/url',
-        mediaUrl: expect.stringMatching(
-          /^https:\/\/media\.hellotalk\.mock\/avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/,
-        ),
-        objectKey: expect.stringMatching(
-          /^avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/,
-        ),
+        uploadUrl: `https://gateway.example.test/upload/${result.objectKey}`,
+        mediaUrl: `https://media.example.test/${result.objectKey}`,
+        objectKey: result.objectKey,
       });
     });
 
-    it('should use default bin extension if filename pop returns empty string', async () => {
-      const dto = {
+    it('uses the bin extension when the supplied extension is empty', async () => {
+      const result = await service.generatePresignedUrl('user-1', {
         filename: 'filewithoutdot.',
-        folder: 'audio',
+        folder: 'audio-intros',
         contentType: 'application/octet-stream',
-      };
-
-      const result = await service.generatePresignedUrl('user-1', dto);
+      });
 
       expect(result.objectKey).toMatch(/\.bin$/);
     });
+  });
+
+  it('rejects unsupported avatar types before issuing an upload URL', async () => {
+    await expect(
+      service.generateAvatarPresignedUrl('user-1', {
+        filename: 'avatar.svg',
+        contentType: 'image/svg+xml',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('downloads, compresses and overwrites a confirmed cover through the gateway', async () => {
+    const result = await service.confirmCoverUpload(
+      'user-1',
+      'covers/user-1/cover.png',
+    );
+
+    expect(r2ObjectService.downloadObject).toHaveBeenCalledWith(
+      'covers/user-1/cover.png',
+    );
+    expect(imageCompressionService.compress).toHaveBeenCalledWith(
+      Buffer.from([1, 2, 3]),
+      'image/png',
+    );
+    expect(r2ObjectService.uploadBytes).toHaveBeenCalledWith(
+      'covers/user-1/cover.png',
+      'image/png',
+      Buffer.from([4, 5, 6]),
+    );
+    expect(usersUpdate).toHaveBeenCalledWith({
+      cover_url: 'https://media.example.test/covers/user-1/cover.png',
+    });
+    expect(result).toEqual({
+      coverUrl: 'https://media.example.test/covers/user-1/cover.png',
+    });
+  });
+
+  it('uploads compressed avatar bytes without an AWS client', async () => {
+    const file = {
+      buffer: Buffer.from([1, 2, 3]),
+      mimetype: 'image/png',
+      originalname: 'avatar.png',
+    } as Express.Multer.File;
+
+    const result = await service.uploadAndSetAvatarImage('user-1', file);
+
+    expect(imageCompressionService.compress).toHaveBeenCalledWith(
+      file.buffer,
+      'image/png',
+    );
+    expect(r2ObjectService.uploadBytes).toHaveBeenCalledWith(
+      expect.stringMatching(/^avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/),
+      'image/png',
+      Buffer.from([4, 5, 6]),
+    );
+    expect(result.avatarUrl).toMatch(
+      /^https:\/\/media\.example\.test\/avatars\/user-1\/\d+-[a-f0-9]{16}\.png$/,
+    );
   });
 });
