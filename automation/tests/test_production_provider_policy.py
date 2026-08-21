@@ -8,14 +8,14 @@ def test_production_provider_policy_is_locked() -> None:
     providers = config["providers"]
     routing = config["routing"]
     expected_routes = {
-        "planning": ["claude", "codex", "google", "opencode", "openhands"],
-        "architecture": ["claude", "codex", "google", "opencode", "openhands"],
-        "implementation": ["claude", "codex", "google", "opencode", "openhands"],
-        "security_review": ["claude", "codex", "google", "opencode", "openhands"],
-        "quality_repair": ["codex", "claude", "google", "opencode", "openhands"],
-        "code_review": ["codex", "claude", "google", "opencode", "openhands"],
-        "ci_repair": ["codex", "claude", "google", "opencode", "openhands"],
-        "general_action": ["opencode", "google", "codex", "claude", "openhands"],
+        "planning": ["claude", "codex", "google", "opencode", "pi"],
+        "architecture": ["claude", "codex", "google", "opencode", "pi"],
+        "implementation": ["claude", "codex", "google", "opencode", "pi"],
+        "security_review": ["claude", "codex", "google", "opencode", "pi"],
+        "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
+        "code_review": ["codex", "claude", "google", "opencode", "pi"],
+        "ci_repair": ["codex", "claude", "google", "opencode", "pi"],
+        "general_action": ["opencode", "google", "codex", "claude", "pi"],
     }
 
     assert config["routing_enabled"] is True
@@ -34,10 +34,16 @@ def test_production_provider_policy_is_locked() -> None:
     assert providers["claude"]["enabled"] is True
     assert providers["claude"]["auth_mode"] == "subscription"
     assert providers["claude"]["transport"] == "cli"
-    assert providers["google"]["enabled"] is False
-    assert providers["openhands"]["enabled"] is True
+    assert providers["google"]["enabled"] is True
+    assert providers["google"]["auth_mode"] == "subscription"
+    assert providers["google"]["transport"] == "cli"
+    assert providers["pi"]["enabled"] is True
+    assert providers["pi"]["auth_mode"] == "subscription"
+    assert providers["pi"]["transport"] == "cli"
+    assert providers["openhands"]["enabled"] is False
     assert providers["openhands"]["emergency_only"] is True
     assert providers["openhands"]["transport"] == "openhands-sdk"
 
     assert expected_routes.keys() <= routing.keys()
     assert all(routing[phase] == route for phase, route in expected_routes.items())
+    assert "openhands" not in routing["planning"]
