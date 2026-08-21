@@ -1,0 +1,1090 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Vocabulary</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .page-head {
+        max-width: 1220px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      .frames {
+        max-width: 1220px;
+        margin: 0 auto;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .frame-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .frame-col .frame-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .phone {
+        width: 390px;
+        background: rgb(var(--surface-50));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        max-height: 860px;
+        overflow-y: auto;
+      }
+
+      /* App header bar */
+      .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 12px;
+        background: rgb(var(--surface-50));
+        border-bottom: 1px solid rgb(var(--surface-200));
+        position: sticky;
+        top: 0;
+      }
+      .app-header .back-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: rgb(var(--text-primary));
+      }
+      .app-header h1 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      /* ---- Study streak pill (study-streak-counter.component.ts) ---- */
+      .streak-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-inline: 12px;
+        padding-block: 8px;
+        border-radius: 8px;
+        background: rgb(var(--surface-300) / 0.8);
+        font-size: 13px;
+        font-weight: 500;
+        color: rgb(var(--text-primary));
+      }
+
+      main.vocab {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .section-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 8px;
+      }
+      section .section-sub {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+        margin: -4px 0 10px;
+      }
+
+      /* ---- Diagnostic quiz card (diagnostic-quiz.component.html) ---- */
+      .quiz-card {
+        border-radius: 24px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--primary) / 0.2);
+        overflow: hidden;
+      }
+      .quiz-head {
+        padding: 16px 16px 12px;
+      }
+      .quiz-head-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .quiz-head-row h3 {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .quiz-counter {
+        font-size: 11px;
+        color: rgb(var(--text-muted));
+        background: rgb(var(--primary) / 0.1);
+        padding: 3px 10px;
+        border-radius: 999px;
+      }
+      .quiz-progress-track {
+        width: 100%;
+        background: rgb(var(--surface-400));
+        border-radius: 999px;
+        height: 6px;
+        overflow: hidden;
+      }
+      .quiz-progress-fill {
+        height: 100%;
+        background: rgb(var(--primary));
+        border-radius: 999px;
+      }
+      .quiz-body {
+        padding: 4px 16px 16px;
+      }
+      .quiz-question {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+      .quiz-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .quiz-option {
+        text-align: start;
+        padding: 11px 13px;
+        border-radius: 14px;
+        border: 2px solid rgb(var(--primary) / 0.2);
+        background: rgb(var(--surface-400));
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      .quiz-option.selected {
+        border-color: rgb(var(--primary));
+        background: rgb(var(--primary) / 0.1);
+        box-shadow: 0 4px 10px rgb(var(--primary) / 0.15);
+      }
+      .quiz-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgb(var(--surface-400) / 0.6);
+        border-top: 1px solid rgb(var(--primary) / 0.1);
+      }
+      .quiz-btn {
+        border: none;
+        border-radius: 12px;
+        padding: 9px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .quiz-btn.prev {
+        background: rgb(var(--primary) / 0.1);
+        color: rgb(var(--text-secondary));
+      }
+      .quiz-btn.next {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      /* ---- Flashcard review (vocabulary-dashboard.component.ts) ---- */
+      .vocab-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .vocab-toolbar .counter {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .btn-secondary-pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: transparent;
+        border: 1px solid rgb(var(--surface-100));
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        font-family: inherit;
+      }
+      .flashcard {
+        border-radius: 16px;
+        padding: 24px;
+        background: rgb(var(--surface-800));
+        border: 1px solid rgb(var(--surface-100));
+        text-align: center;
+        min-height: 130px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .flashcard .term {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .flashcard .hint {
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        margin-top: 12px;
+      }
+      .flashcard-back {
+        border-radius: 16px;
+        padding: 24px;
+        background: rgb(var(--surface-700));
+        border: 1px solid rgb(var(--surface-100));
+        text-align: center;
+        margin-top: 10px;
+      }
+      .flashcard-back p {
+        margin: 0;
+        font-size: 13.5px;
+      }
+      .flashcard-back .example {
+        margin-top: 10px;
+        font-size: 12px;
+        font-style: italic;
+        color: rgb(var(--text-muted));
+      }
+      .grade-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .btn-grade {
+        min-width: 74px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 12px;
+        border: none;
+        color: rgb(var(--on-fill));
+        font-family: inherit;
+      }
+      .btn-grade.again {
+        background: rgb(var(--danger));
+      }
+      .btn-grade.good {
+        background: rgb(var(--warning));
+      }
+      .btn-grade.known {
+        background: rgb(var(--success));
+      }
+
+      /* ---- Milestones (milestone.component.ts) ---- */
+      .milestone-progress-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .milestone-progress-row .pct {
+        font-weight: 700;
+      }
+      .milestone-progress-track {
+        height: 8px;
+        width: 100%;
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        overflow: hidden;
+        margin-bottom: 14px;
+      }
+      .milestone-progress-fill {
+        height: 100%;
+        background: rgb(var(--primary));
+      }
+      .milestone-item {
+        padding: 11px 12px;
+        background: rgb(var(--surface-200));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .milestone-item + .milestone-item {
+        margin-top: 8px;
+      }
+      .milestone-item .title {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .milestone-item .title.done {
+        text-decoration: line-through;
+        color: rgb(var(--text-secondary));
+      }
+      .milestone-item .desc {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+        margin-top: 2px;
+      }
+      .milestone-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .milestone-check {
+        color: rgb(var(--success));
+        font-size: 15px;
+      }
+      .milestone-complete-btn {
+        padding: 5px 11px;
+        border-radius: 8px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        border: none;
+        font-family: inherit;
+      }
+      .milestone-remove-btn {
+        font-size: 11px;
+        font-weight: 600;
+        color: rgb(var(--danger));
+        background: none;
+        border: none;
+        font-family: inherit;
+      }
+
+      /* ---- AI flashcard suggestions (suggest-flashcards.component.ts) ---- */
+      .suggest-card {
+        border-radius: 16px;
+        background: rgb(var(--surface-100));
+        border: 1px solid rgb(var(--surface-200));
+        padding: 14px;
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.04);
+      }
+      .suggest-textarea {
+        width: 100%;
+        min-height: 56px;
+        border-radius: 10px;
+        border: 1px solid rgb(var(--surface-200));
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-primary));
+        font-size: 12.5px;
+        padding: 9px 10px;
+        font-family: inherit;
+        resize: none;
+      }
+      .suggest-btn {
+        margin-top: 10px;
+        padding: 9px 16px;
+        border-radius: 10px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        border: none;
+        font-family: inherit;
+      }
+      .suggest-list {
+        margin-top: 12px;
+      }
+      .suggest-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 0;
+        border-top: 1px solid rgb(var(--surface-700) / 0.35);
+      }
+      .suggest-row .word {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .suggest-add-btn {
+        border-radius: 8px;
+        border: 1px solid rgb(var(--secondary));
+        color: rgb(var(--secondary));
+        background: transparent;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 5px 11px;
+        font-family: inherit;
+      }
+
+      /* ---- Study buddy (study-buddy.component.ts) ---- */
+      .buddy-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px;
+        background: rgb(var(--surface-200));
+        border-radius: 10px;
+      }
+      .buddy-row + .buddy-row {
+        margin-top: 8px;
+      }
+      .buddy-row .left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .buddy-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        background: rgb(var(--surface-100));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+      .buddy-row .name {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .buddy-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .buddy-accept {
+        padding: 5px 11px;
+        border-radius: 6px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 600;
+        border: none;
+        font-family: inherit;
+      }
+      .buddy-decline {
+        font-size: 11px;
+        font-weight: 600;
+        color: rgb(var(--danger));
+        background: none;
+        border: none;
+        font-family: inherit;
+      }
+      .buddy-request {
+        padding: 5px 11px;
+        border-radius: 6px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 600;
+        border: none;
+        font-family: inherit;
+      }
+      .buddy-request.sent {
+        opacity: 0.5;
+      }
+
+      /* ---- Pronunciation feedback (pronunciation-feedback.component.ts) ---- */
+      .pron-card {
+        border-radius: 16px;
+        background: rgb(var(--surface-100));
+        border: 1px solid rgb(var(--surface-200));
+        padding: 16px;
+      }
+      .pron-label {
+        font-size: 12px;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 6px;
+      }
+      .pron-input {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-800));
+        color: rgb(var(--text-primary));
+        font-size: 13px;
+        padding: 9px 10px;
+      }
+      .pron-btns {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .pron-record-btn {
+        border-radius: 999px;
+        padding: 8px 20px;
+        font-size: 12px;
+        font-weight: 700;
+        border: none;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--primary));
+        font-family: inherit;
+      }
+      .pron-stop-btn {
+        border-radius: 999px;
+        padding: 8px 20px;
+        font-size: 12px;
+        font-weight: 700;
+        border: none;
+        color: rgb(var(--on-fill));
+        background: rgb(var(--danger));
+        font-family: inherit;
+      }
+      .pron-result {
+        margin-top: 14px;
+        border-radius: 14px;
+        background: rgb(var(--surface-700));
+        padding: 14px;
+      }
+      .pron-result .score {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .pron-result p {
+        margin: 0;
+        font-size: 12.5px;
+      }
+      .pron-result summary {
+        margin-top: 8px;
+        cursor: pointer;
+        font-size: 11.5px;
+        color: rgb(var(--primary));
+      }
+      .pron-result .phoneme-list {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+      }
+
+      /* ---- Resource library (resource-library.component.ts) ---- */
+      .rl-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .rl-select {
+        border: 1px solid rgb(var(--surface-200));
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        border-radius: 8px;
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+      .rl-filter-btn {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        border: none;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 12px;
+        font-family: inherit;
+      }
+      .rl-group-row {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .rl-group-btn {
+        padding: 5px 10px;
+        border-radius: 8px;
+        border: 1px solid rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        background: transparent;
+        font-size: 11px;
+        font-family: inherit;
+      }
+      .rl-group-btn.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        border-color: rgb(var(--primary));
+      }
+      .rl-card {
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-300));
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .rl-card + .rl-card {
+        margin-top: 8px;
+      }
+      .rl-card .title {
+        color: rgb(var(--primary));
+        text-decoration: underline;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .rl-card .desc {
+        font-size: 11.5px;
+        color: rgb(var(--text-secondary));
+        margin-top: 3px;
+      }
+      .rl-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      .rl-tag {
+        font-size: 9.5px;
+        font-weight: 700;
+        border-radius: 5px;
+        padding: 2px 6px;
+      }
+      .rl-tag.type {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-secondary));
+      }
+      .rl-tag.topic {
+        background: rgb(var(--primary) / 0.2);
+        color: rgb(var(--primary));
+      }
+      .rl-tag.difficulty {
+        background: rgb(var(--success) / 0.2);
+        color: rgb(var(--success));
+      }
+      .rl-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 6px;
+      }
+      .rl-edit {
+        color: rgb(var(--warning));
+        font-size: 11px;
+        font-weight: 700;
+        background: none;
+        border: none;
+        font-family: inherit;
+      }
+      .rl-delete {
+        color: rgb(var(--danger));
+        font-size: 11px;
+        font-weight: 700;
+        background: none;
+        border: none;
+        font-family: inherit;
+      }
+
+      .caption {
+        max-width: 1220px;
+        margin: 18px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Vocabulary</h1>
+        <p>
+          Study feature area - diagnostic quiz, spaced-repetition review, milestones, AI
+          suggestions, study buddies, pronunciation, resources
+        </p>
+      </div>
+      <div class="toggle" id="toggle">
+        <button id="btn-light" class="active">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="frames">
+      <div class="frame-col">
+        <span class="frame-label">Vocabulary hub</span>
+        <div class="phone">
+          <header class="app-header">
+            <div class="back-btn">←</div>
+            <h1>Vocabulary</h1>
+            <div class="streak-pill">🔥 47 days</div>
+          </header>
+          <main class="vocab">
+            <!-- Diagnostic quiz (diagnostic-quiz.component.html) -->
+            <section>
+              <h2 class="section-title">Placement quiz</h2>
+              <div class="quiz-card">
+                <div class="quiz-head">
+                  <div class="quiz-head-row">
+                    <h3>Diagnostic quiz</h3>
+                    <span class="quiz-counter">Question 3 of 8</span>
+                  </div>
+                  <div class="quiz-progress-track">
+                    <div class="quiz-progress-fill" style="width: 37%"></div>
+                  </div>
+                </div>
+                <div class="quiz-body">
+                  <p class="quiz-question">Which sentence uses the past perfect tense correctly?</p>
+                  <div class="quiz-options">
+                    <div class="quiz-option">"I have finished my homework before dinner."</div>
+                    <div class="quiz-option selected">
+                      "I had finished my homework before dinner."
+                    </div>
+                    <div class="quiz-option">"I finish my homework before dinner."</div>
+                  </div>
+                </div>
+                <div class="quiz-actions">
+                  <button class="quiz-btn prev">Previous</button>
+                  <button class="quiz-btn next">Next</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Flashcard review (vocabulary-dashboard.component.ts) -->
+            <section>
+              <h2 class="section-title">Review</h2>
+              <div class="vocab-toolbar">
+                <span class="counter">Card 2 of 5</span>
+                <button class="btn-secondary-pill">Restart</button>
+              </div>
+              <div class="flashcard">
+                <span class="term">benevolent</span>
+                <span class="hint">Tap to flip</span>
+              </div>
+              <div class="flashcard-back">
+                <p>well meaning and kindly</p>
+                <p class="example">"She was a benevolent presence at the meeting."</p>
+              </div>
+              <div class="grade-row">
+                <button class="btn-grade again">Again</button>
+                <button class="btn-grade good">Good</button>
+                <button class="btn-grade known">Known</button>
+              </div>
+            </section>
+
+            <!-- Milestones (milestone.component.ts) -->
+            <section>
+              <h2 class="section-title">Milestones</h2>
+              <div class="milestone-progress-row">
+                <span>Progress</span>
+                <span class="pct">62%</span>
+              </div>
+              <div class="milestone-progress-track">
+                <div class="milestone-progress-fill" style="width: 62%"></div>
+              </div>
+              <div>
+                <div class="milestone-item">
+                  <div>
+                    <div class="title done">Learn 50 core verbs</div>
+                    <div class="desc">Covers the most frequent verbs in everyday speech.</div>
+                  </div>
+                  <div class="milestone-actions">
+                    <span class="milestone-check">✓</span>
+                    <button class="milestone-remove-btn">Remove</button>
+                  </div>
+                </div>
+                <div class="milestone-item">
+                  <div>
+                    <div class="title">Hold a 5-minute unscripted call</div>
+                    <div class="desc">No notes, no translation app.</div>
+                  </div>
+                  <div class="milestone-actions">
+                    <button class="milestone-complete-btn">Complete</button>
+                    <button class="milestone-remove-btn">Remove</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- AI flashcard suggestions (suggest-flashcards.component.ts) -->
+            <section>
+              <h2 class="section-title">Suggested from your chats</h2>
+              <div class="suggest-card">
+                <textarea
+                  class="suggest-textarea"
+                  placeholder="Paste a message to pull vocabulary from…"
+                  readonly
+                >
+Sorry I'm late, the traffic was absolutely abysmal today.</textarea>
+                <button class="suggest-btn">Suggest flashcards</button>
+                <div class="suggest-list">
+                  <div class="suggest-row">
+                    <span class="word">abysmal</span>
+                    <button class="suggest-add-btn">Add</button>
+                  </div>
+                  <div class="suggest-row">
+                    <span class="word">traffic</span>
+                    <button class="suggest-add-btn">Add</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Study buddy (study-buddy.component.ts) -->
+            <section>
+              <h2 class="section-title">Study buddy</h2>
+              <p class="section-sub">Incoming requests</p>
+              <div class="buddy-row">
+                <div class="left">
+                  <div class="buddy-avatar">陈</div>
+                  <span class="name">Chén Wei</span>
+                </div>
+                <div class="buddy-actions">
+                  <button class="buddy-accept">Accept</button>
+                  <button class="buddy-decline">Decline</button>
+                </div>
+              </div>
+              <p class="section-sub" style="margin-top: 12px">Potential matches</p>
+              <div class="buddy-row">
+                <div class="left">
+                  <div class="buddy-avatar">M</div>
+                  <span class="name">Marta Silva</span>
+                </div>
+                <div class="buddy-actions">
+                  <button class="buddy-request">Request</button>
+                </div>
+              </div>
+              <div class="buddy-row">
+                <div class="left">
+                  <div class="buddy-avatar">Y</div>
+                  <span class="name">Yuki Tanaka</span>
+                </div>
+                <div class="buddy-actions">
+                  <button class="buddy-request sent">Sent</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Pronunciation feedback (pronunciation-feedback.component.ts) -->
+            <section>
+              <h2 class="section-title">Pronunciation practice</h2>
+              <div class="pron-card">
+                <label class="pron-label">Sentence to practise</label>
+                <input
+                  class="pron-input"
+                  value="Could you recommend a good café nearby?"
+                  readonly
+                />
+                <div class="pron-btns">
+                  <button class="pron-record-btn">Start recording</button>
+                </div>
+                <div class="pron-result">
+                  <p class="score">Score: 82%</p>
+                  <p>Good rhythm overall - the vowel in "café" ran slightly short.</p>
+                  <details>
+                    <summary>Phoneme breakdown</summary>
+                    <ul class="phoneme-list">
+                      <li>/kəˈfeɪ/ - 2nd syllable stress weak</li>
+                      <li>/ˈnɪəbi/ - clear</li>
+                    </ul>
+                  </details>
+                </div>
+              </div>
+            </section>
+
+            <!-- Resource library (resource-library.component.ts) -->
+            <section>
+              <h2 class="section-title">Resource library</h2>
+              <div class="rl-filters">
+                <select class="rl-select">
+                  <option>All topics</option>
+                </select>
+                <select class="rl-select">
+                  <option>All difficulties</option>
+                </select>
+                <button class="rl-filter-btn">Filter</button>
+              </div>
+              <div class="rl-group-row">
+                <button class="rl-group-btn active">None</button>
+                <button class="rl-group-btn">By topic</button>
+                <button class="rl-group-btn">By difficulty</button>
+              </div>
+              <div class="rl-card">
+                <span class="title">10 phrasal verbs for the office</span>
+                <div class="desc">A quick reference sheet with example sentences for each.</div>
+                <div class="rl-tags">
+                  <span class="rl-tag type">post</span>
+                  <span class="rl-tag topic">vocabulary</span>
+                  <span class="rl-tag difficulty">intermediate</span>
+                </div>
+                <div class="rl-card-actions">
+                  <button class="rl-edit">Edit</button>
+                  <button class="rl-delete">Delete</button>
+                </div>
+              </div>
+              <div class="rl-card">
+                <span class="title">Minimal pairs for /r/ and /l/</span>
+                <div class="desc">Practice list for commonly confused consonant sounds.</div>
+                <div class="rl-tags">
+                  <span class="rl-tag type">tip</span>
+                  <span class="rl-tag topic">pronunciation</span>
+                  <span class="rl-tag difficulty">beginner</span>
+                </div>
+                <div class="rl-card-actions">
+                  <button class="rl-edit">Edit</button>
+                  <button class="rl-delete">Delete</button>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <p class="caption">
+      Single combined "Vocabulary" hub representing the study feature area rather than a screen per
+      route. The header streak pill mirrors <code>study-streak-counter.component.ts</code>'s
+      surface-300 pill. The quiz card mirrors <code>diagnostic-quiz.component.html</code>'s
+      rounded-[2rem] primary-bordered card, progress bar, and two-tone (selected vs unselected)
+      option buttons - shown mid-quiz rather than in its loading/error/result states. The review
+      section mirrors <code>vocabulary-dashboard.component.ts</code>'s flip-card review flow (front
+      and back shown stacked here in lieu of the real 3D flip transition) with its three semantic
+      grade buttons - again in danger, good in warning, known in success, matching the component's
+      own colour choices. The milestones section mirrors <code>milestone.component.ts</code>'s
+      progress bar plus completed/incomplete list rows (create form omitted for brevity). The
+      suggestions card mirrors <code>suggest-flashcards.component.ts</code>'s textarea plus
+      add-to-deck row list, styled through its <code>app-card</code>/<code>app-textarea</code>/
+      <code>app-button-primary</code> primitives. The study buddy rows mirror
+      <code>study-buddy.component.ts</code>'s incoming-request and potential-match lists including
+      the accept/decline and request/sent button states. The pronunciation card mirrors
+      <code>pronunciation-feedback.component.ts</code>'s sentence input, record button, and
+      score/assessment/phoneme-breakdown result panel. The resource library section mirrors
+      <code>resource-library.component.ts</code>'s topic/difficulty filters, group-by toggle, and
+      resource cards with type/topic/difficulty tags plus warning-toned edit and danger-toned delete
+      actions. Omitted: <code>vocabulary-display</code> and <code>flashcard-deck</code> (already
+      Relay-token clean, structurally similar to the review card above), the milestone creation
+      form, and quiz loading/error/results states.
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

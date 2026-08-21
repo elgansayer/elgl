@@ -1,6 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
-import { JoyrideService } from 'ngx-joyride';
-import { I18nService } from './i18n.service';
+import { Injectable, signal } from '@angular/core';
 
 export interface EscrowOnboardingStep {
   key: string;
@@ -10,18 +8,14 @@ export interface EscrowOnboardingStep {
 
 /**
  * Manages the onboarding tour state for the Escrow Payments feature.
- * Steps correspond to `joyrideStep` directive names in the template.
+ * Joyride-based tours have been removed; this service is retained as a compat shim.
  */
 @Injectable({ providedIn: 'root' })
 export class EscrowOnboardingService {
-  private readonly joyrideService = inject(JoyrideService);
-  private readonly i18n = inject(I18nService);
   private readonly storageKey = 'hellotalk_escrow_onboarding_done';
 
-  /** Whether the escrow onboarding tour has been completed this session. */
   readonly isTourInProgress = signal(false);
 
-  /** Step names registered with the JoyrideDirective in the EscrowPaymentsComponent. */
   readonly steps: EscrowOnboardingStep[] = [
     {
       key: 'escrowStepTitle',
@@ -50,32 +44,8 @@ export class EscrowOnboardingService {
   }
 
   startTour(): void {
-    if (this.joyrideService.isTourInProgress()) {
-      return;
-    }
-
-    this.isTourInProgress.set(true);
-
-    this.joyrideService.startTour({
-      steps: this.stepNames,
-      stepDefaultPosition: 'bottom',
-      themeColor: '#6366f1',
-      showCounter: true,
-      showPrevButton: true,
-      customTexts: {
-        prev: this.i18n.translate('tour.prev'),
-        next: this.i18n.translate('tour.next'),
-        done: this.i18n.translate('tour.done'),
-        close: this.i18n.translate('tour.close'),
-      },
-    }).subscribe({
-      complete: () => {
-        this.markComplete();
-      },
-      error: () => {
-        this.isTourInProgress.set(false);
-      },
-    });
+    // Tour disabled -- mark as complete immediately
+    this.markComplete();
   }
 
   markComplete(): void {

@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Artillery load-testing suite for HelloTalk endpoints",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "test:trust-safety": "artillery run trust-and-safety.load.yml",
     "test:trust-safety:report": "artillery run --output ./reports/trust-safety-report.json trust-and-safety.load.yml && artillery report ./reports/trust-safety-report.json",
@@ -20,11 +25,14 @@
     "test:discovery-map:report": "artillery run --output ./reports/discovery-map-report.json discovery-map.load.yml && artillery report ./reports/discovery-map-report.json",
     "test:matchmaking": "artillery run matchmaking.load.yml",
     "test:matchmaking:report": "artillery run --output ./reports/matchmaking-report.json matchmaking.load.yml && artillery report ./reports/matchmaking-report.json",
+    "test:discovery-validate": "node validate-discovery-load-tests.js",
     "test:reading-engine": "artillery run reading-engine.load.yml",
     "test:reading-engine:report": "artillery run --output ./reports/reading-engine-report.json reading-engine.load.yml && artillery report ./reports/reading-engine-report.json",
-    "test:all": "npm run test:trust-safety && npm run test:spam-detection && npm run test:srs-flashcards && npm run test:escrow-payments && npm run test:economy && npm run test:video-classrooms && npm run test:discovery-map && npm run test:matchmaking"
+    "test:moments": "artillery run moments.load.yml",
+    "test:moments:report": "artillery run --output ./reports/moments-report.json moments.load.yml && artillery report ./reports/moments-report.json",
+    "test:all": "npm run test:trust-safety && npm run test:spam-detection && npm run test:srs-flashcards && npm run test:escrow-payments && npm run test:economy && npm run test:video-classrooms && npm run test:discovery-map && npm run test:matchmaking && npm run test:reading-engine && npm run test:moments"
   },
   "devDependencies": {
-    "artillery": "^2.0.33"
+    "artillery": "^2.0.34"
   }
 }

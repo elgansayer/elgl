@@ -39,6 +39,23 @@ export class BlocksService {
     return users ?? [];
   }
 
+  async blockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    const client = this.supabaseService.getClient();
+
+    const { error } = await client
+      .from('blocks')
+      .insert({ blocker_id: blockerId, blocked_id: blockedId });
+
+    if (error) {
+      throw new Error(`Failed to block user: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
   async unblockUser(
     blockerId: string,
     blockedId: string,

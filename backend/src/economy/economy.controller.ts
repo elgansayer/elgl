@@ -8,7 +8,7 @@ import {
   UseInterceptors,
   UseFilters,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -25,12 +25,13 @@ import {
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
 import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
   CACHE_NO_STORE,
-} from './cache.interceptor';
+} from '../common/cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import {
   EconomyRateLimiterGuard,
@@ -45,7 +46,10 @@ import {
 export class EconomyController {
   private readonly logger = new Logger(EconomyController.name);
 
-  constructor(private readonly economyService: EconomyService) {}
+  constructor(
+    private readonly economyService: EconomyService,
+    private readonly healthService: CoinEconomyHealthService,
+  ) {}
 
   /**
    * Virtual gift catalog: public, long-lived CDN cache.
@@ -63,7 +67,8 @@ export class EconomyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
+    description:
+      'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
     schema: {
       type: 'array',
       items: {
@@ -74,7 +79,11 @@ export class EconomyController {
           icon: { type: 'string', example: '\u{1F339}' },
           cost_coins: { type: 'number', example: 10 },
           animation_type: { type: 'string', example: 'float' },
-          animation_url: { type: 'string', nullable: true, example: 'https://r2.example.com/rose.json' },
+          animation_url: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/rose.json',
+          },
         },
       },
     },
@@ -99,7 +108,8 @@ export class EconomyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
+    description:
+      'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
     schema: {
       type: 'array',
       items: {
@@ -114,9 +124,21 @@ export class EconomyController {
           platform_product_id: {
             type: 'object',
             properties: {
-              ios: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
-              android: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
-              web: { type: 'string', nullable: true, example: 'price_small_coins' },
+              ios: {
+                type: 'string',
+                nullable: true,
+                example: 'com.linguaexchange.coins.small',
+              },
+              android: {
+                type: 'string',
+                nullable: true,
+                example: 'com.linguaexchange.coins.small',
+              },
+              web: {
+                type: 'string',
+                nullable: true,
+                example: 'price_small_coins',
+              },
             },
           },
         },
@@ -227,12 +249,18 @@ export class EconomyController {
     schema: {
       type: 'object',
       properties: {
-        sessionUrl: { type: 'string', example: 'https://checkout.stripe.com/pay/cs_test_abc123' },
+        sessionUrl: {
+          type: 'string',
+          example: 'https://checkout.stripe.com/pay/cs_test_abc123',
+        },
         sessionId: { type: 'string', example: 'cs_test_abc123' },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Package not available for web purchase.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Package not available for web purchase.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Coin package not found.' })
   async createCheckoutSession(
@@ -273,7 +301,10 @@ export class EconomyController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid receipt or receipt verification failed.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid receipt or receipt verification failed.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 409, description: 'Duplicate transaction.' })
   async purchaseCoins(
@@ -320,12 +351,77 @@ export class EconomyController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Insufficient balance or cannot send to self.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Insufficient balance or cannot send to self.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Gift not found in catalog or receiver not found.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Gift not found in catalog or receiver not found.',
+  })
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
+  }
+
+  /**
+   * Transaction history: strictly private, never cached.
+   * Returns the last 50 coin transactions for the authenticated user.
+   */
+  @Get('transactions')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get coin transaction history',
+    description:
+      'Returns the last 50 coin transactions (daily check-ins, purchases, gifts sent/received, sticker unlocks) ' +
+      'for the authenticated user, ordered most-recent first. This is strictly private data and is never cached.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of coin transactions.',
+    schema: {
+      type: 'object',
+      properties: {
+        transactions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'abc-123' },
+              type: { type: 'string', example: 'daily_checkin' },
+              amount: { type: 'number', example: 7 },
+              description: {
+                type: 'string',
+                nullable: true,
+                example: 'Daily check-in reward',
+              },
+              created_at: {
+                type: 'string',
+                example: '2026-08-08T12:00:00.000Z',
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async getTransactions(@CurrentUser() user: User | null) {
+    if (!user) return { transactions: [] };
+    try {
+      const transactions = await this.economyService.getTransactionHistory(
+        user.id,
+      );
+      return { transactions };
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Transaction history lookup failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}, returning empty list`,
+      );
+      return { transactions: [] };
+    }
   }
 
   /**
@@ -358,11 +454,19 @@ export class EconomyController {
               name: { type: 'string', example: 'Happy Corgi Pack' },
               cost_coins: { type: 'number', example: 50 },
               is_animated: { type: 'boolean', example: false },
-              sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+              sticker_urls: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['assets/stickers/happy.png'],
+              },
             },
           },
         },
-        owned_pack_ids: { type: 'array', items: { type: 'string' }, example: ['stk_pack_1'] },
+        owned_pack_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['stk_pack_1'],
+        },
         user_coins: { type: 'number', example: 250 },
       },
     },
@@ -402,7 +506,11 @@ export class EconomyController {
             name: { type: 'string', example: 'Happy Corgi Pack' },
             cost_coins: { type: 'number', example: 50 },
             is_animated: { type: 'boolean', example: false },
-            sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+            sticker_urls: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['assets/stickers/happy.png'],
+            },
           },
         },
       },
@@ -417,5 +525,47 @@ export class EconomyController {
   ) {
     if (!user) return null;
     return await this.economyService.unlockStickerPack(user.id, dto);
+  }
+
+  /**
+   * Economy health check: returns the health status of all virtual coin
+   * economy dependencies (Redis, Supabase, Stripe, Centrifugo) plus any
+   * degraded features. This endpoint does NOT require authentication so
+   * monitoring systems (Prometheus, Grafana) can poll it.
+   */
+  @Get('health')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get coin economy health status',
+    description:
+      'Returns the health status of all economy dependencies (Redis, Supabase, Stripe, Centrifugo) ' +
+      'and lists any degraded features. This endpoint is unauthenticated for monitoring integration.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Economy health snapshot.',
+    schema: {
+      type: 'object',
+      properties: {
+        overall: { type: 'string', example: 'healthy' },
+        timestamp: { type: 'string', example: '2026-08-07T12:00:00.000Z' },
+        dependencies: {
+          type: 'object',
+          properties: {
+            redis: { type: 'object' },
+            supabase: { type: 'object' },
+            stripe: { type: 'object' },
+            centrifugo: { type: 'object' },
+          },
+        },
+        degradedFeatures: { type: 'array', items: { type: 'string' } },
+        uptimeSeconds: { type: 'number', example: 3600 },
+      },
+    },
+  })
+  async getHealth() {
+    return this.healthService.getHealthSnapshot();
   }
 }

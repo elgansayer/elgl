@@ -22,6 +22,17 @@ function persistCellularPreference(enabled: boolean): void {
   }
 }
 
+async function responseSize(response: Response): Promise<number> {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength !== null && contentLength.trim() !== '') {
+    const parsedLength = Number(contentLength);
+    if (Number.isSafeInteger(parsedLength) && parsedLength >= 0) {
+      return parsedLength;
+    }
+  }
+  return (await response.clone().blob()).size;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DataStorageService {
   readonly cellularAutoDownload = signal<boolean>(loadCellularPreference());
@@ -44,17 +55,15 @@ export class DataStorageService {
     if ('caches' in window) {
       try {
         const cacheNames = await caches.keys();
-        for (const cacheName of cacheNames) {
-          const cache = await caches.open(cacheName);
-          const requests = await cache.keys();
-          for (const request of requests) {
-            const response = await cache.match(request);
-            if (response) {
-              const blob = await response.clone().blob();
-              total += blob.size;
-            }
-          }
-        }
+        const cacheSizes = await Promise.all(
+          cacheNames.map(async (cacheName) => {
+            const cache = await caches.open(cacheName);
+            const responses = await cache.matchAll();
+            const responseSizes = await Promise.all(responses.map(responseSize));
+            return responseSizes.reduce((sum, size) => sum + size, 0);
+          }),
+        );
+        total += cacheSizes.reduce((a, b) => a + b, 0);
       } catch {
         // Cache API estimation unavailable
       }

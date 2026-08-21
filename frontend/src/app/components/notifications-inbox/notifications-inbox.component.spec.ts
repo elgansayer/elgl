@@ -93,6 +93,8 @@ describe('NotificationsInboxComponent', () => {
   it('should return correct badge icon', () => {
     expect(component.getBadgeIcon('like_moment')).toBe('❤️');
     expect(component.getBadgeIcon('comment_moment')).toBe('💬');
+    expect(component.getBadgeIcon('mention_comment')).toBe('💬');
+    expect(component.getBadgeIcon('mention_chat')).toBe('📣');
     expect(component.getBadgeIcon('follow')).toBe('👤');
     expect(component.getBadgeIcon('system')).toBe('🔔');
     expect(component.getBadgeIcon('unknown_type')).toBe('🔔');
@@ -101,6 +103,8 @@ describe('NotificationsInboxComponent', () => {
   it('should return correct notification message key', () => {
     expect(component.getNotificationMessageKey('follow')).toBe('notifications.followedYou');
     expect(component.getNotificationMessageKey('like_profile')).toBe('notifications.likedProfile');
+    expect(component.getNotificationMessageKey('mention_comment')).toBe('notifications.mentionedInComment');
+    expect(component.getNotificationMessageKey('mention_chat')).toBe('notifications.mentionedInChat');
     expect(component.getNotificationMessageKey('system')).toBe('notifications.systemAlert');
     expect(component.getNotificationMessageKey('unknown_type')).toBe('notifications.newActivity');
   });

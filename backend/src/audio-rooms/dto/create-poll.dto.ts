@@ -22,7 +22,11 @@ export class CreatePollDto {
   @ApiProperty({
     description: 'Array of poll options (each max 100 characters)',
     type: [String],
-    example: ['Travel experiences', 'Food and culture', 'Music and entertainment'],
+    example: [
+      'Travel experiences',
+      'Food and culture',
+      'Music and entertainment',
+    ],
   })
   @IsArray()
   @ArrayNotEmpty()

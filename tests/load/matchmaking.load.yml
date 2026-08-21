@@ -7,308 +7,85 @@ config:
     - name: "ramp"
       duration: 60
       arrivalRate: 5
-      rampTo: 25
+      rampTo: 20
     - name: "sustained"
       duration: 120
-      arrivalRate: 25
+      arrivalRate: 20
     - name: "spike"
       duration: 30
-      arrivalRate: 60
+      arrivalRate: 50
   defaults:
     headers:
       Content-Type: "application/json"
-      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN }}"
   processor: "./helpers/matchmaking-helpers.js"
-  variables:
-    native_languages:
-      - "en"
-      - "es"
-      - "fr"
-      - "de"
-      - "ja"
-      - "ko"
-      - "zh"
-      - "ar"
-      - "pt"
-      - "it"
-    target_languages:
-      - "en"
-      - "es"
-      - "fr"
-      - "de"
-      - "ja"
-      - "ko"
-      - "zh"
-      - "ar"
-      - "pt"
-      - "it"
-    levels:
-      - "beginner"
-      - "intermediate"
-      - "advanced"
-      - "native"
-    sort_options:
-      - "best_match"
-      - "newest"
-      - "active"
-      - "proximity"
-    countries:
-      - "United Kingdom"
-      - "United States"
-      - "Japan"
-      - "South Korea"
-      - "Brazil"
-      - "France"
-      - "Germany"
-      - "Spain"
-      - "Italy"
-      - "Mexico"
-    genders:
-      - "male"
-      - "female"
-      - "non-binary"
-    learning_goals:
-      - "fluency"
-      - "conversation"
-      - "grammar"
-      - "pronunciation"
-      - "vocabulary"
-      - "culture"
-    radius_metres:
-      - 5000
-      - 10000
-      - 25000
-      - 50000
-      - 100000
+  plugins:
+    expect: {}
+  ensure:
+    thresholds:
+      - "http.response_time.p99 < 2000"
+      - "http.response_time.p95 < 1000"
+      - "http.response_time.p50 < 500"
 
 scenarios:
-  # Core partner search - most heavily weighted
-  - name: "Partner search (basic)"
-    weight: 20
+  # ── Multi‑tier "for‑you" recommendations ────────────────────────────
+
+  - name: "Get recommended partners (for-you)"
+    weight: 40
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
     flow:
       - get:
-          url: "/discovery/partners"
-          qs:
-            native_languages: "{{ native_languages }}"
-            target_language: "{{ target_languages }}"
-            sort: "{{ sort_options }}"
+          url: "/api/recommendations/for-you"
           expect:
             - statusCode: 200
             - contentType: "application/json"
 
-  # Partner search with distance filtering
-  - name: "Partner search (distance)"
-    weight: 12
+  # ── Daily cached recommendations ─────────────────────────────────────
+
+  - name: "Get daily recommendations"
+    weight: 35
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/discovery/partners"
-          qs:
-            latitude: "{{ $randomNumber(-85, 85) }}.{{ $randomNumber(100000, 999999) }}"
-            longitude: "{{ $randomNumber(-175, 175) }}.{{ $randomNumber(100000, 999999) }}"
-            radius_metres: "{{ radius_metres }}"
-            target_language: "{{ target_languages }}"
+          url: "/api/recommendations/daily"
+          expect:
+            - statusCode: 200
+            - contentType: "application/json"
+
+  # ── Concurrent mixed-load scenario (simulates dashboard) ─────────────
+
+  - name: "Dashboard mixed: for-you + daily"
+    weight: 15
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
+    flow:
+      - get:
+          url: "/api/recommendations/for-you"
+          expect:
+            - statusCode: 200
+      - get:
+          url: "/api/recommendations/daily"
           expect:
             - statusCode: 200
 
-  # Partner search with serious learner filter
-  - name: "Partner search (serious learners)"
+  # ── Rapid polling (simulates pull-to-refresh) ────────────────────────
+
+  - name: "Rapid poll: for-you"
     weight: 10
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
     flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            serious_learner_only: "true"
-            target_language: "{{ target_languages }}"
-            sort: "best_match"
-          expect:
-            - statusCode: 200
-
-  # Partner search with level filter
-  - name: "Partner search (level filter)"
-    weight: 8
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            level: "{{ levels }}"
-            native_languages: "{{ native_languages }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with age range
-  - name: "Partner search (age range)"
-    weight: 6
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            age_min: "{{ $randomNumber(16, 25) }}"
-            age_max: "{{ $randomNumber(35, 60) }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with country filter
-  - name: "Partner search (country)"
-    weight: 6
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            country: "{{ countries }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with interests filter
-  - name: "Partner search (interests)"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            interests: "{{ $randomChoice('travel', 'music', 'sports', 'reading', 'cooking') }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with voice room active filter
-  - name: "Partner search (voice room active)"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            voice_room_active: "true"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with audio intro filter
-  - name: "Partner search (audio intros)"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            has_audio_intro: "true"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner of the week (cached, public)
-  - name: "Partner of the week"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/partner-of-week"
-          expect:
-            - statusCode: 200
-
-  # Audio intros discovery
-  - name: "Audio intros"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/audio-intros"
-          qs:
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Recent native speakers
-  - name: "Recent native speakers"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/recent-native-speakers"
-          expect:
-            - statusCode: 200
-
-  # Spotlight users
-  - name: "Spotlight users"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/spotlight"
-          expect:
-            - statusCode: 200
-
-  # Language pair matching
-  - name: "Language pair matching"
-    weight: 5
-    flow:
-      - get:
-          url: "/discovery/language-pair"
-          qs:
-            native_language: "{{ native_languages }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Location-based search
-  - name: "Location-based search"
-    weight: 4
-    flow:
-      - get:
-          url: "/discovery/search-by-location"
-          qs:
-            country: "{{ countries }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with learning goals filter
-  - name: "Partner search (learning goals)"
-    weight: 4
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            learning_goals: "{{ learning_goals }}"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Partner search with availability filters
-  - name: "Partner search (availability)"
-    weight: 3
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            availability_morning: "{{ $randomChoice('true', 'false') }}"
-            availability_evening: "true"
-            target_language: "{{ target_languages }}"
-          expect:
-            - statusCode: 200
-
-  # Combined heavy filter search (worst-case for DB)
-  - name: "Partner search (combined filters)"
-    weight: 3
-    flow:
-      - get:
-          url: "/discovery/partners"
-          qs:
-            native_languages: "{{ native_languages }}"
-            target_language: "{{ target_languages }}"
-            level: "{{ levels }}"
-            serious_learner_only: "true"
-            sort: "best_match"
-            age_min: "18"
-            age_max: "65"
-            country: "{{ countries }}"
-            has_audio_intro: "true"
-          expect:
-            - statusCode: 200
-
-  # Location search with city
-  - name: "Location-based search (city)"
-    weight: 4
-    flow:
-      - get:
-          url: "/discovery/search-by-location"
-          qs:
-            city: "{{ $randomChoice('London', 'Tokyo', 'Seoul', 'Paris', 'Berlin', 'New York', 'Los Angeles', 'Sao Paulo') }}"
-          expect:
-            - statusCode: 200
+      - loop:
+          - get:
+              url: "/api/recommendations/for-you"
+              expect:
+                - statusCode: 200
+        count: 3

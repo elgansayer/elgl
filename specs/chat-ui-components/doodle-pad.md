@@ -30,16 +30,16 @@ Allow users to draw freehand sketches, add text, and use basic shapes to create 
 - **Canvas**: 100% width, 300px height (mobile), 400px (desktop)
 - **Header**: 48px height
 - **Toolbar**: 56px height
-- **Color swatches**: 28x28px
+- **Colour swatches**: 28x28px
 - **Stroke width buttons**: 36x36px
 
-### Color Scheme
+### Colour Scheme
 
 - **Canvas background**: `bg-white` (`#ffffff`)
 - **Header background**: `bg-slate-800`
 - **Toolbar background**: `bg-slate-900`
 - **Active tool**: `ring-2 ring-purple-400`
-- **Color swatches**: Various colors with `rounded-full`
+- **Colour swatches**: Various colours with `rounded-full`
 
 ### Tools
 
@@ -49,7 +49,7 @@ Allow users to draw freehand sketches, add text, and use basic shapes to create 
 4. **Text** (📝): Tap to add text, drag to position
 5. **Eraser** (⬜): Erases by stroke or area
 
-### Colors
+### Colours
 
 - Black, White, Red, Orange, Yellow, Green, Blue, Purple, Pink, Brown, Gray
 
@@ -63,7 +63,7 @@ Allow users to draw freehand sketches, add text, and use basic shapes to create 
 
 - Empty white canvas
 - Pen tool selected
-- Black color, 4px stroke
+- Black colour, 4px stroke
 
 ### Drawing
 
@@ -75,7 +75,7 @@ Allow users to draw freehand sketches, add text, and use basic shapes to create 
 
 - Tap on canvas to place text cursor
 - Keyboard appears for text input
-- Font: 24px, bold, selected color
+- Font: 24px, bold, selected colour
 - Drag to reposition after placement
 
 ### Eraser Mode
@@ -124,7 +124,7 @@ transition: all 150ms ease;
 - `role="application"` with `aria-label="Doodle pad"`
 - Canvas: `role="img"`, `aria-label="Drawing canvas"`
 - Each tool button: `aria-label="[Tool name] tool"`
-- Color buttons: `aria-label="[Color name] color"`
+- Colour buttons: `aria-label="[Colour name] colour"`
 - Stroke buttons: `aria-label="[Width] pixels stroke width"`
 - Keyboard shortcuts: Ctrl+Z (undo), Ctrl+Y (redo), Delete (clear)
 

@@ -1,5 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import { SupabaseService } from '../supabase/supabase.service';
+import { UsersService } from '../users/users.service';
+import { FlashcardsService } from '../flashcards/flashcards.service';
+import { StudyStreakService } from '../study-streak/study-streak.service';
+import { UserProfile } from '../users/interfaces/user-profile.interface';
+import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
+import {
+  LearnerKnowledgeService,
+  LearnerKnowledgeProfile,
+} from '../learner-knowledge/learner-knowledge.service';
 
 export interface Scenario {
   id: string;
@@ -7,6 +17,10 @@ export interface Scenario {
   systemPrompt: string;
   icon: string;
 }
+
+const DAILY_AI_LIMIT_FREE = 10;
+const REDIS_KEY_PREFIX = 'daily_ai_usage:';
+const REDIS_TTL_SECONDS = 86400; // 24 hours
 
 @Injectable()
 export class AiConversationService {
@@ -174,20 +188,91 @@ The user's role: Someone practising casual English.
     },
   ];
 
-  constructor(private readonly llmProxy: LlmProxyService) {}
+  constructor(
+    private readonly llmProxy: LlmProxyService,
+    private readonly supabaseService: SupabaseService,
+    private readonly usersService: UsersService,
+    private readonly flashcardsService: FlashcardsService,
+    private readonly studyStreakService: StudyStreakService,
+    private readonly learnerKnowledgeService: LearnerKnowledgeService,
+  ) {}
 
   getScenarios(): Omit<Scenario, 'systemPrompt'>[] {
     return this.scenarios.map(({ id, name, icon }) => ({ id, name, icon }));
   }
 
+  /**
+   * Checks and increments the Redis-backed daily AI usage counter.
+   * Free users are capped at DAILY_AI_LIMIT_FREE requests per day;
+   * VIP users are unlimited. Returns true when the request is allowed.
+   */
+  async checkDailyAiRateLimit(userId: string): Promise<boolean> {
+    const isVip = await this.supabaseService.isVipUser(userId);
+    if (isVip) return true;
+
+    const redis = this.supabaseService.getRedisClient();
+    if (!redis) {
+      // No Redis; allow but log a warning
+      this.logger.warn(
+        'Redis unavailable for AI rate limiting; allowing request.',
+      );
+      return true;
+    }
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `${REDIS_KEY_PREFIX}${userId}:${today}`;
+
+    try {
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.expire(key, REDIS_TTL_SECONDS);
+      }
+      return count <= DAILY_AI_LIMIT_FREE;
+    } catch (err) {
+      this.logger.warn(
+        `Redis error checking AI rate limit, allowing request: ${(err as Error).message}`,
+      );
+      return true;
+    }
+  }
+
   async generateReply(
+    userId: string,
     userMessage: string,
     scenarioId?: string,
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
-    const systemPrompt =
-      scenario?.systemPrompt ?? this.getDefaultSystemPrompt();
+    let learnerKnowledge: LearnerKnowledgeProfile | null = null;
+    try {
+      learnerKnowledge = await this.learnerKnowledgeService.getProfile(
+        userId,
+        'en',
+      );
+    } catch (e) {
+      this.logger.warn(
+        `Failed to fetch learner knowledge profile for user ${userId}`,
+        e,
+      );
+    }
+
+    let systemPrompt = scenario?.systemPrompt;
+
+    if (!systemPrompt) {
+      const [profile, flashcards, streak] = await Promise.all([
+        this.usersService.getProfile(userId).catch(() => null),
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 10)
+          .catch(() => []),
+        this.studyStreakService.getStreak(userId).catch(() => 0),
+      ]);
+      systemPrompt = this.getDefaultSystemPrompt(
+        profile,
+        flashcards,
+        streak,
+        learnerKnowledge,
+      );
+    }
     const scenarioName = scenario?.name ?? 'free conversation';
 
     const messages: {
@@ -211,13 +296,57 @@ The user's role: Someone practising casual English.
     }
   }
 
-  private getDefaultSystemPrompt(): string {
-    return `You are a friendly AI language partner helping someone practise English. Stay in character.
+  private getDefaultSystemPrompt(
+    profile: UserProfile | null,
+    flashcards: Flashcard[],
+    streak: number,
+    learnerKnowledge: LearnerKnowledgeProfile | null = null,
+  ): string {
+    const targetLanguages = profile?.target_languages?.join(', ') || 'English';
+    const interests = profile?.interests?.join(', ') || 'various topics';
+    const level =
+      learnerKnowledge?.overallProficiency?.level ||
+      profile?.proficiency_level ||
+      'beginner/intermediate';
 
+    let flashcardContext = '';
+    if (flashcards && flashcards.length > 0) {
+      const words = flashcards.map((f) => f.word_token).join(', ');
+      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation to help them practice.`;
+    }
+
+    let knowledgeContext = '';
+    if (learnerKnowledge) {
+      const strugglingItems = Array.from(
+        learnerKnowledge.knowledgeItems.values(),
+      )
+        .filter((item) => item.status === 'struggling')
+        .map((item) => item.id.replace('vocab:', ''))
+        .join(', ');
+
+      if (strugglingItems) {
+        knowledgeContext = `\n- The user has been struggling with the following concepts or vocabulary: ${strugglingItems}. Provide extra support or subtle corrections if they make mistakes related to these.`;
+      }
+    }
+
+    let streakContext = '';
+    if (streak > 3) {
+      streakContext = `\n- The user is on a ${streak}-day study streak! Acknowledge their dedication if appropriate.`;
+    }
+
+    return `You are a personalized, expert language tutor helping a learner practice ${targetLanguages}. Stay in character as a supportive and knowledgeable tutor.
+
+The user's profile:
+- Target language(s): ${targetLanguages}
+- Proficiency level: ${level}
+- Interests: ${interests}${streakContext}${flashcardContext}${knowledgeContext}
+
+Your instructions:
+- Comprehensible Input: Use natural, conversational language slightly above their ${level} level (i+1) to challenge them without overwhelming them.
+- Active Production: Ask engaging, open-ended questions related to their interests to prompt them to speak and produce language.
+- Retrieval Practice & Spaced Repetition: Deliberately reuse recently learned material (vocabulary listed above) to reinforce learning.
+- Meaningful Feedback: If the user makes a grammatical or vocabulary error, gently and naturally rephrase their sentence correctly in your response before moving on.
 - Be encouraging, warm, and supportive.
-- Ask follow-up questions.
-- Use natural, conversational English.
-- Gently model correct grammar without being a teacher.
 - Keep replies 1-3 sentences.`;
   }
 

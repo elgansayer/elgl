@@ -3,42 +3,35 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmInputImports } from '@spartan-ng/helm/input';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
   template: `
-    <section class="min-h-screen flex items-center justify-center p-4 bg-[#121212]">
-      <div class="w-full max-w-md bg-surface text-slate-100 rounded-2xl p-6 shadow-xl">
-        <h1 class="text-2xl font-bold mb-6">{{ 'auth.resetPassword.title' | t }}</h1>
+    <section class="flex min-h-screen items-center justify-center bg-surface-500 p-4">
+      <div class="w-full max-w-md rounded-2xl bg-surface p-6 text-text-primary shadow-xl">
+        <h1 class="mb-6 text-2xl font-bold">{{ 'auth.resetPassword.title' | t }}</h1>
         <form [formGroup]="resetForm" (ngSubmit)="onSubmit()" class="space-y-4">
           <div>
-            <label class="block mb-1 text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
-            <input
-              id="newPassword"
-              type="password"
-              formControlName="newPassword"
-              class="w-full p-3 bg-white/10 border border-white/20 rounded-lg"
-            />
+            <label class="mb-1 block text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
+            <input hlmInput id="newPassword" type="password" formControlName="newPassword" />
           </div>
-          <button
-            type="submit"
-            [disabled]="resetForm.invalid || submitting()"
-            class="w-full py-3 bg-primary hover:bg-primary-dark rounded-lg text-white font-semibold transition-colors"
-          >
+          <button hlmBtn type="submit" size="touch" class="w-full" [disabled]="resetForm.invalid || submitting()">
             {{ (submitting() ? 'common.pleaseWait' : 'common.submit') | t }}
           </button>
         </form>
         @if (messageKey(); as msg) {
-          <p class="mt-4 text-sm text-center" [class.text-green-400]="!isError()" [class.text-red-400]="isError()">
+          <p class="mt-4 text-center text-sm" [class.text-success]="!isError()" [class.text-danger]="isError()">
             {{ msg | t }}
           </p>
         }
         <div class="mt-4 text-center">
-          <a routerLink="/home" class="text-sm hover:underline">{{ 'auth.resetPassword.backToHome' | t }}</a>
+          <a hlmBtn variant="link" routerLink="/home">{{ 'auth.resetPassword.backToHome' | t }}</a>
         </div>
       </div>
     </section>
@@ -50,15 +43,8 @@ export class ResetPasswordComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  readonly token = toSignal(
-    this.route.queryParamMap.pipe(map((params) => params.get('token') || '')),
-    { initialValue: '' },
-  );
-
-  readonly resetForm = this.fb.nonNullable.group({
-    newPassword: ['', [Validators.required, Validators.minLength(8)]],
-  });
-
+  readonly token = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('token') || '')), { initialValue: '' });
+  readonly resetForm = this.fb.nonNullable.group({ newPassword: ['', [Validators.required, Validators.minLength(8)]] });
   readonly submitting = signal(false);
   readonly messageKey = signal<string | null>(null);
   readonly isError = signal(false);
@@ -70,7 +56,7 @@ export class ResetPasswordComponent {
     try {
       await this.authService.resetPassword(this.token(), this.resetForm.controls.newPassword.value);
       this.messageKey.set('auth.resetPassword.success');
-      this.router.navigate(['/home']);
+      await this.router.navigate(['/home']);
     } catch {
       this.isError.set(true);
       this.messageKey.set('auth.resetPassword.error');

@@ -12,11 +12,11 @@ export interface AgeRange {
   selector: 'app-age-range-slider',
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
-    <div class="flex flex-col">
-      <label class="text-sm text-on-surface-variant pb-1" for="age-range-min">
+    <div class="flex flex-col" role="group" [attr.aria-label]="'age_range' | t">
+      <span class="text-sm text-on-surface-variant pb-1" id="age-range-label">
         {{ 'age_range' | t }}
         <span class="ps-1">({{ minAge() }} – {{ maxAge() }})</span>
-      </label>
+      </span>
       <div class="relative h-8">
         <!-- min thumb -->
         <input
@@ -29,10 +29,15 @@ export interface AgeRange {
           step="1"
           class="absolute inset-0 w-full h-full z-10 appearance-none bg-transparent cursor-pointer"
           aria-label="{{ 'age_min' | t }}"
+          aria-valuemin="{{ minLimit() }}"
+          aria-valuemax="{{ maxLimit() }}"
+          aria-valuenow="{{ minAge() }}"
+          aria-valuetext="{{ minAge() }}"
           [style.zIndex]="minAge() < maxAge() ? 10 : 20"
         />
         <!-- max thumb -->
         <input
+          id="age-range-max"
           type="range"
           [min]="minLimit()"
           [max]="maxLimit()"
@@ -41,14 +46,19 @@ export interface AgeRange {
           step="1"
           class="absolute inset-0 w-full h-full z-20 appearance-none bg-transparent cursor-pointer"
           aria-label="{{ 'age_max' | t }}"
+          aria-valuemin="{{ minLimit() }}"
+          aria-valuemax="{{ maxLimit() }}"
+          aria-valuenow="{{ maxAge() }}"
+          aria-valuetext="{{ maxAge() }}"
           [style.zIndex]="maxAge() > minAge() ? 20 : 10"
         />
         <!-- visual bar -->
-        <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none">
+        <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none" aria-hidden="true">
           <div
             class="h-full bg-primary pointer-events-none"
             [style.left.%]="minPercent()"
             [style.width.%]="barWidth()"
+            aria-hidden="true"
           ></div>
         </div>
       </div>

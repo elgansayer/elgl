@@ -35,7 +35,7 @@ interface Corrector {
                 <span class="text-lg font-bold text-primary w-8">{{ i + 1 }}</span>
                 <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden">
                   @if (corrector.avatar_url; as avatar) {
-                    <img [src]="avatar" alt="" class="w-full h-full object-cover"  loading="lazy" />
+                    <img [src]="avatar" alt="" class="w-full h-full object-cover" />
                   } @else {
                     <div
                       class="w-full h-full flex items-center justify-center text-text-secondary text-sm"

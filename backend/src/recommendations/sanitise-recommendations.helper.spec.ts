@@ -1,42 +1,47 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict mock: strip ALL HTML tags (mirrors the empty ALLOWED_TAGS config)
-const mockStrictSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  return dirty
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
-};
+const { mockStrictSanitize, mockSetConfig } = vi.hoisted(() => {
+  const mockStrictSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    return dirty
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
 
-const mockSetConfig = jest.fn();
+  const mockSetConfig = vi.fn();
+  return { mockStrictSanitize, mockSetConfig };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockStrictSanitize,
       setConfig: mockSetConfig,
     })),
@@ -48,7 +53,9 @@ import { sanitiseRecommendationsData } from './sanitise-recommendations.helper';
 describe('sanitiseRecommendationsData', () => {
   it('should strip HTML tags from strings', () => {
     expect(sanitiseRecommendationsData('<b>bold</b>')).toBe('bold');
-    expect(sanitiseRecommendationsData('<script>alert("xss")</script>')).toBe('alert("xss")');
+    expect(sanitiseRecommendationsData('<script>alert("xss")</script>')).toBe(
+      'alert("xss")',
+    );
   });
 
   it('should strip javascript: protocol links', () => {
@@ -58,15 +65,15 @@ describe('sanitiseRecommendationsData', () => {
   });
 
   it('should strip event handler attributes', () => {
-    expect(sanitiseRecommendationsData('<div onclick="steal()">click</div>')).toBe(
-      'click',
-    );
+    expect(
+      sanitiseRecommendationsData('<div onclick="steal()">click</div>'),
+    ).toBe('click');
   });
 
   it('should strip img tags with onerror', () => {
-    expect(
-      sanitiseRecommendationsData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseRecommendationsData('<img src=x onerror="alert(1)">')).toBe(
+      '',
+    );
   });
 
   it('should sanitise a RecommendedUserDto shape', () => {
@@ -82,7 +89,10 @@ describe('sanitiseRecommendationsData', () => {
       correctionRatio: 0.9,
       matchTier: 'language_exchange',
     };
-    const result = sanitiseRecommendationsData(input) as Record<string, unknown>;
+    const result = sanitiseRecommendationsData(input) as Record<
+      string,
+      unknown
+    >;
     expect(result.id).toBe('alert(1)user-1');
     expect(result.displayName).toBe('Alice');
     expect(result.avatarUrl).toBe('http://img/1.png');
@@ -96,9 +106,15 @@ describe('sanitiseRecommendationsData', () => {
   it('should sanitise arrays of RecommendedUserDto', () => {
     const input = [
       { id: 'u-1', displayName: '<b>Alice</b>', sharedInterests: 3 },
-      { id: 'u-2', displayName: '<script>alert(1)</script>Bob', sharedInterests: 1 },
+      {
+        id: 'u-2',
+        displayName: '<script>alert(1)</script>Bob',
+        sharedInterests: 1,
+      },
     ];
-    const result = sanitiseRecommendationsData(input) as Array<Record<string, unknown>>;
+    const result = sanitiseRecommendationsData(input) as Array<
+      Record<string, unknown>
+    >;
     expect(result[0].displayName).toBe('Alice');
     expect(result[1].displayName).toBe('alert(1)Bob');
   });
@@ -129,7 +145,10 @@ describe('sanitiseRecommendationsData', () => {
       meta: { note: '<a href="javascript:alert(1)">click</a>' },
       extra: { tags: ['<p>safe</p>', '<img src=x onerror=alert(1)>danger'] },
     };
-    const result = sanitiseRecommendationsData(input) as Record<string, unknown>;
+    const result = sanitiseRecommendationsData(input) as Record<
+      string,
+      unknown
+    >;
     const meta = result.meta as Record<string, unknown>;
     expect(meta.note).toBe('click');
     const extra = result.extra as Record<string, unknown>;
