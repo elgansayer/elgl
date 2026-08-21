@@ -4,7 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
 import { DesktopSidebarComponent } from './desktop-sidebar.component';
 import { I18nService } from '../../services/i18n.service';
-import { UnreadCounterService } from '../../services/unread-counter.service';
+import { NavTab, UnreadCounterService } from '../../services/unread-counter.service';
 
 @Component({ template: '' })
 class EmptyRouteComponent {}
@@ -16,8 +16,18 @@ class MockI18nService {
 }
 
 class MockUnreadCounterService {
-  tabCount(): number {
-    return 0;
+  private readonly counts = new Map<NavTab, number>();
+
+  tabCount(tab: NavTab): number {
+    return this.counts.get(tab) ?? 0;
+  }
+
+  setCount(tab: NavTab, count: number): void {
+    this.counts.set(tab, count);
+  }
+
+  reset(): void {
+    this.counts.clear();
   }
 }
 
@@ -25,6 +35,7 @@ describe('DesktopSidebarComponent', () => {
   let fixture: ComponentFixture<DesktopSidebarComponent>;
   let component: DesktopSidebarComponent;
   let router: Router;
+  let unreadCounter: MockUnreadCounterService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -44,6 +55,7 @@ describe('DesktopSidebarComponent', () => {
     fixture = TestBed.createComponent(DesktopSidebarComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
+    unreadCounter = TestBed.inject(UnreadCounterService) as unknown as MockUnreadCounterService;
     fixture.detectChanges();
   });
 
@@ -96,5 +108,53 @@ describe('DesktopSidebarComponent', () => {
 
     expect(shopLink.getAttribute('aria-current')).toBe('page');
     expect(chatLink.hasAttribute('aria-current')).toBe(false);
+  });
+
+  it('should bind every primary navigation tab to its own unread counter', () => {
+    const cases: Array<{ tab: NavTab; path: string; count: number; expected: string }> = [
+      { tab: 'chat', path: '/chat', count: 1, expected: '1' },
+      { tab: 'moments', path: '/moments', count: 12, expected: '12' },
+      { tab: 'discovery', path: '/discovery', count: 23, expected: '23' },
+      { tab: 'audioRooms', path: '/audio-rooms', count: 34, expected: '34' },
+      { tab: 'profile', path: '/profile', count: 45, expected: '45' },
+    ];
+
+    for (const testCase of cases) {
+      unreadCounter.reset();
+      unreadCounter.setCount(testCase.tab, testCase.count);
+      fixture.detectChanges();
+
+      const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        `a[href="${testCase.path}"]`,
+      );
+      const badge: HTMLElement | null = link.querySelector('span.ms-auto');
+      const allBadges: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('span.ms-auto');
+
+      expect(badge?.textContent?.trim()).toBe(testCase.expected);
+      expect(allBadges.length).toBe(1);
+    }
+  });
+
+  it('should cap unread badge text at 99+ without changing the underlying count', () => {
+    unreadCounter.setCount('chat', 100);
+    fixture.detectChanges();
+
+    const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
+    const badge: HTMLElement | null = chatLink.querySelector('span.ms-auto');
+
+    expect(badge?.textContent?.trim()).toBe('99+');
+    expect(unreadCounter.tabCount('chat')).toBe(100);
+  });
+
+  it('should remove a navigation badge when the tab has no unread items', () => {
+    unreadCounter.setCount('moments', 7);
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('a[href="/moments"] span.ms-auto'),
+    ).toBeTruthy();
+
+    unreadCounter.setCount('moments', 0);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href="/moments"] span.ms-auto')).toBeNull();
   });
 });
