@@ -4,7 +4,7 @@ set -euo pipefail
 SERVICE=hellotalk-factory.service
 FACTORY=/opt/hellotalk-factory/venv/bin/hellotalk-factory
 FACTORY_PYTHON=/opt/hellotalk-factory/venv/bin/python
-FACTORY_USER=hellotalk-factory
+FACTORY_USER=dev
 HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
 CONTROL_REQUEST=/var/lib/hellotalk-factory/control_request.json
 MAX_TASK_MINUTES=${FACTORY_MAX_TASK_MINUTES:-120}

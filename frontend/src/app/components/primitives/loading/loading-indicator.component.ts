@@ -6,33 +6,23 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'status',
-    class: 'relay-loading-indicator',
+    class: 'relay-loading-indicator inline-flex items-center gap-2 min-w-0',
     '[attr.aria-label]': 'label()',
   },
   template: `
-    <span class="relay-loading-indicator__spinner" aria-hidden="true"></span>
+    <span class="relay-loading-indicator__spinner rounded-pill" aria-hidden="true"></span>
     @if (showLabel()) {
       <span class="relay-loading-indicator__label">{{ label() }}</span>
     }
   `,
   styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2, 0.5rem);
-      min-inline-size: 0;
-    }
-
     .relay-loading-indicator__spinner {
       inline-size: var(--loading-indicator-size, 1.125rem);
       block-size: var(--loading-indicator-size, 1.125rem);
       flex: 0 0 auto;
-      border: 0.14em solid
-        var(--border-muted, color-mix(in srgb, currentColor 20%, transparent));
+      border: 0.14em solid var(--border-muted, color-mix(in srgb, currentColor 20%, transparent));
       border-block-start-color: currentColor;
-      border-radius: 999px;
-      animation: relay-loading-spin var(--motion-duration-standard, 0.8s)
-        linear infinite;
+      animation: relay-loading-spin var(--motion-duration-standard, 0.8s) linear infinite;
     }
 
     .relay-loading-indicator__label {
@@ -61,6 +51,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   `,
 })
 export class LoadingIndicatorComponent {
-  readonly label = input.required<string>();
+  readonly label = input<string>('');
   readonly showLabel = input(false);
 }
