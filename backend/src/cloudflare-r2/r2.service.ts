@@ -71,9 +71,7 @@ export class R2Service {
     this.signingSecret = this.readRequiredSecret(
       'CLOUDFLARE_R2_SIGNING_SECRET',
     );
-    this.serviceToken = this.readRequiredSecret(
-      'CLOUDFLARE_R2_SERVICE_TOKEN',
-    );
+    this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
     this.uploadTtlSeconds = this.readPositiveInteger(
       'CLOUDFLARE_R2_UPLOAD_TTL_SECONDS',
       DEFAULT_UPLOAD_TTL_SECONDS,
@@ -90,9 +88,7 @@ export class R2Service {
       'CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS',
       DEFAULT_SOURCE_FETCH_TIMEOUT_MS,
     );
-    this.sourceHosts = this.readCommaSeparated(
-      'CLOUDFLARE_R2_SOURCE_HOSTS',
-    );
+    this.sourceHosts = this.readCommaSeparated('CLOUDFLARE_R2_SOURCE_HOSTS');
   }
 
   async generateUploadUrl(
@@ -135,11 +131,15 @@ export class R2Service {
   ): Promise<MultipartUploadHandle> {
     this.validateObjectKey(key);
     this.validateContentType(contentType);
-    return this.requestJson<MultipartUploadHandle>('/v1/multipart', {
-      method: 'POST',
-      headers: this.serviceJsonHeaders(),
-      body: JSON.stringify({ key, contentType }),
-    }, isMultipartUploadHandle);
+    return this.requestJson<MultipartUploadHandle>(
+      '/v1/multipart',
+      {
+        method: 'POST',
+        headers: this.serviceJsonHeaders(),
+        body: JSON.stringify({ key, contentType }),
+      },
+      isMultipartUploadHandle,
+    );
   }
 
   createMultipartPartUploadUrl(
@@ -155,13 +155,17 @@ export class R2Service {
     const path = `/v1/multipart/${encodeURIComponent(
       handle.uploadId,
     )}/parts/${partNumber}`;
-    return this.createSignedUploadUrl({
-      key: handle.key,
-      contentType: 'application/octet-stream',
-      maximumBytes,
-      uploadId: handle.uploadId,
-      partNumber,
-    }, path, { key: handle.key });
+    return this.createSignedUploadUrl(
+      {
+        key: handle.key,
+        contentType: 'application/octet-stream',
+        maximumBytes,
+        uploadId: handle.uploadId,
+        partNumber,
+      },
+      path,
+      { key: handle.key },
+    );
   }
 
   async completeMultipartUpload(
@@ -301,7 +305,11 @@ export class R2Service {
   private async downloadSource(sourceUrl: string): Promise<SourceDownload> {
     let currentUrl = this.parseAndValidateSourceUrl(sourceUrl);
 
-    for (let redirectCount = 0; redirectCount <= MAX_SOURCE_REDIRECTS; redirectCount += 1) {
+    for (
+      let redirectCount = 0;
+      redirectCount <= MAX_SOURCE_REDIRECTS;
+      redirectCount += 1
+    ) {
       const response = await fetch(currentUrl, {
         method: 'GET',
         redirect: 'manual',
@@ -421,7 +429,10 @@ export class R2Service {
   }
 
   private gatewayUrl(path: string): URL {
-    return new URL(path.replace(/^\/+/, ''), ensureTrailingSlash(this.gatewayBaseUrl));
+    return new URL(
+      path.replace(/^\/+/, ''),
+      ensureTrailingSlash(this.gatewayBaseUrl),
+    );
   }
 
   private publicUrlForKey(key: string): string {
@@ -453,6 +464,7 @@ export class R2Service {
     if (
       key.startsWith('/') ||
       key.includes('\\') ||
+      // eslint-disable-next-line no-control-regex
       /[\u0000-\u001f\u007f]/.test(key) ||
       key.split('/').some((segment) => segment === '.' || segment === '..')
     ) {
@@ -475,20 +487,36 @@ export class R2Service {
     return value.split(';', 1)[0].trim().toLowerCase();
   }
 
-  private validateUploadMaximum(value: number, configuredMaximum: number): void {
-    if (!Number.isSafeInteger(value) || value <= 0 || value > configuredMaximum) {
+  private validateUploadMaximum(
+    value: number,
+    configuredMaximum: number,
+  ): void {
+    if (
+      !Number.isSafeInteger(value) ||
+      value <= 0 ||
+      value > configuredMaximum
+    ) {
       throw new Error('R2 upload size limit is invalid');
     }
   }
 
   private validateUploadId(uploadId: string): void {
-    if (!uploadId || uploadId.length > 512 || /[\u0000-\u001f\u007f]/.test(uploadId)) {
+    if (
+      !uploadId ||
+      uploadId.length > 512 ||
+      // eslint-disable-next-line no-control-regex
+      /[\u0000-\u001f\u007f]/.test(uploadId)
+    ) {
       throw new Error('R2 multipart upload ID is invalid');
     }
   }
 
   private validatePartNumber(partNumber: number): void {
-    if (!Number.isSafeInteger(partNumber) || partNumber < 1 || partNumber > 10_000) {
+    if (
+      !Number.isSafeInteger(partNumber) ||
+      partNumber < 1 ||
+      partNumber > 10_000
+    ) {
       throw new Error('R2 multipart part number is invalid');
     }
   }
@@ -500,7 +528,11 @@ export class R2Service {
     const partNumbers = new Set<number>();
     for (const part of parts) {
       this.validatePartNumber(part.partNumber);
-      if (!part.etag || part.etag.length > 512 || partNumbers.has(part.partNumber)) {
+      if (
+        !part.etag ||
+        part.etag.length > 512 ||
+        partNumbers.has(part.partNumber)
+      ) {
         throw new Error('R2 multipart parts are invalid');
       }
       partNumbers.add(part.partNumber);
@@ -684,7 +716,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isMultipartUploadHandle(value: unknown): value is MultipartUploadHandle {
+function isMultipartUploadHandle(
+  value: unknown,
+): value is MultipartUploadHandle {
   return (
     isRecord(value) &&
     typeof value['key'] === 'string' &&

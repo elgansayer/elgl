@@ -8,7 +8,15 @@ FACTORY_ROOT=/opt/hellotalk-factory
 FACTORY_STATE=/var/lib/hellotalk-factory
 FACTORY_LOG=/var/log/hellotalk-factory
 FACTORY_CONFIG=/etc/hellotalk-factory
-FACTORY_USER=hellotalk-factory
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
+FACTORY_HOME=/home/dev
+# Optional secondary data volume. When mounted, worker image storage is
+# relocated there to keep the root disk from filling with permanent image
+# layers; see the Podman storage relocation block below.
+FACTORY_SECONDARY_VOLUME=/mnt/HC_Volume_106574422
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this bootstrap as root. It never stores or requests a sudo password.' >&2
@@ -50,7 +58,8 @@ if [ "$node_major" -lt 22 ]; then
 fi
 
 if ! id "$FACTORY_USER" >/dev/null 2>&1; then
-  useradd --system --create-home --home-dir "$FACTORY_STATE/home" --shell /usr/sbin/nologin "$FACTORY_USER"
+  echo "Missing operator user: $FACTORY_USER. Create it before running this bootstrap." >&2
+  exit 1
 fi
 if ! grep -q "^${FACTORY_USER}:" /etc/subuid; then
   usermod --add-subuids 200000-265535 --add-subgids 200000-265535 "$FACTORY_USER"
@@ -60,9 +69,32 @@ loginctl enable-linger "$FACTORY_USER"
 systemctl start "user@${factory_uid}.service"
 
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 \
-  "$FACTORY_STATE" "$FACTORY_STATE/home" "$FACTORY_STATE/profiles" \
+  "$FACTORY_STATE" "$FACTORY_STATE/profiles" \
   "$FACTORY_STATE/worktrees" "$FACTORY_STATE/recovery" \
   "$FACTORY_STATE/conversations" "$FACTORY_LOG"
+
+# Worker image builds accumulate rootless Podman graph-storage layers
+# permanently (unlike the transient build-context checkout). Relocating that
+# storage off the root disk and onto the secondary volume, when one is
+# present, keeps repeated builds from tightening root disk headroom over
+# time. Podman is left on its default root-disk location when no secondary
+# volume is mounted.
+if [ -d "$FACTORY_SECONDARY_VOLUME" ] && mountpoint -q "$FACTORY_SECONDARY_VOLUME"; then
+  podman_storage="$FACTORY_SECONDARY_VOLUME/podman-storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$podman_storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$FACTORY_HOME/.config/containers"
+  podman_storage_conf="$FACTORY_HOME/.config/containers/storage.conf"
+  if [ ! -f "$podman_storage_conf" ]; then
+    cat > "$podman_storage_conf" <<EOF
+[storage]
+driver = "overlay"
+graphroot = "$podman_storage"
+
+[storage.options]
+EOF
+    chown "$FACTORY_USER:$FACTORY_USER" "$podman_storage_conf"
+  fi
+fi
 install -d -o root -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT" "$FACTORY_CONFIG"
 
 factory_environment_created=false
@@ -88,7 +120,7 @@ fi
 
 factory_git() {
   runuser -u "$FACTORY_USER" -- env \
-    HOME="$FACTORY_STATE/home" \
+    HOME="$FACTORY_HOME" \
     PATH="/usr/local/bin:/usr/bin:/bin" \
     GH_TOKEN="$factory_github_token" \
     "$@"
@@ -124,7 +156,7 @@ for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
-sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
   'cd "$1" && npm exec -- cypress install' _ "$FACTORY_STATE/repository/frontend"
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
 rsync -a --delete \
@@ -136,7 +168,7 @@ chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
 # can be inaccessible to the service user.
 # $1 is intentionally expanded by the child shell.
 # shellcheck disable=SC2016
-sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
   'cd "$1" && exec podman build \
     --cgroup-manager=cgroupfs \
     --tag localhost/hellotalk-factory-worker:current \

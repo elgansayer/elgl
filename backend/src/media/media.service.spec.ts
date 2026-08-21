@@ -23,14 +23,15 @@ describe('MediaService', () => {
         uploadUrl: `https://gateway.example.test/upload/${key}`,
         publicUrl: `https://media.example.test/${key}`,
       })),
-      uploadBytes: vi.fn((key: string, _contentType: string, bytes: Uint8Array) =>
-        Promise.resolve({
-          key,
-          etag: 'etag',
-          size: bytes.byteLength,
-          uploadedAt: '2026-08-19T12:00:00.000Z',
-          publicUrl: `https://media.example.test/${key}`,
-        }),
+      uploadBytes: vi.fn(
+        (key: string, _contentType: string, bytes: Uint8Array) =>
+          Promise.resolve({
+            key,
+            etag: 'etag',
+            size: bytes.byteLength,
+            uploadedAt: '2026-08-19T12:00:00.000Z',
+            publicUrl: `https://media.example.test/${key}`,
+          }),
       ),
       downloadObject: vi.fn().mockResolvedValue({
         bytes: new Uint8Array([1, 2, 3]),

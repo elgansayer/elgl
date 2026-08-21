@@ -35,9 +35,8 @@ The preserved host paths are:
   hellotalk-factory-legacy-20260809
 ```
 
-These are developer-user paths. Production provider credentials and histories remain under the dedicated
-`hellotalk-factory` service home on the secondary-backed Factory state volume. Never copy one user's provider
-credentials into another user's home.
+These are developer-user paths. The daemon now runs as that same operator user (`dev`) and reads provider
+credentials directly from `/home/dev`, so there is no separate service home to keep in sync with it.
 
 ## Bounded retention policy
 
