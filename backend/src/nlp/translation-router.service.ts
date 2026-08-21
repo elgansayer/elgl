@@ -55,7 +55,8 @@ export class TranslationRouterService {
 
     const originalText = dto.text.trim();
     const detectedLanguage = (
-      dto.source_language || this.nlpService.detectLanguage(originalText).language
+      dto.source_language ||
+      this.nlpService.detectLanguage(originalText).language
     ).toLowerCase();
 
     const deepLResult = await this.tryDeepLTranslation(
@@ -273,11 +274,7 @@ export class TranslationRouterService {
       const payload: unknown = await response.json();
       const transliteratedText = this.readAzureTransliteration(payload);
       if (!transliteratedText) {
-        this.logProviderFailure(
-          'azure',
-          'transliterate',
-          'invalid-response',
-        );
+        this.logProviderFailure('azure', 'transliterate', 'invalid-response');
       }
       return transliteratedText;
     } catch (error: unknown) {
