@@ -34,8 +34,15 @@ function contextFor(
     getClass: () => controller,
     getArgs: () => [],
     getArgByIndex: () => undefined,
-    switchToRpc: () => ({ getContext: () => undefined, getData: () => undefined }),
-    switchToWs: () => ({ getClient: () => undefined, getData: () => undefined, getPattern: () => undefined }),
+    switchToRpc: () => ({
+      getContext: () => undefined,
+      getData: () => undefined,
+    }),
+    switchToWs: () => ({
+      getClient: () => undefined,
+      getData: () => undefined,
+      getPattern: () => undefined,
+    }),
     getType: () => 'http',
   } as unknown as ExecutionContext;
 }
@@ -54,7 +61,9 @@ describe('AdminMutationAuditInterceptor', () => {
     const { interceptor, audit } = interceptorWithAudit();
     const next: CallHandler = { handle: () => of({ ok: true }) };
 
-    await firstValueFrom(interceptor.intercept(contextFor('GET', '/api/admin', '/users'), next));
+    await firstValueFrom(
+      interceptor.intercept(contextFor('GET', '/api/admin', '/users'), next),
+    );
 
     expect(audit.record).not.toHaveBeenCalled();
   });
@@ -63,7 +72,9 @@ describe('AdminMutationAuditInterceptor', () => {
     const { interceptor, audit } = interceptorWithAudit();
     const next: CallHandler = { handle: () => of({ ok: true }) };
 
-    await firstValueFrom(interceptor.intercept(contextFor('POST', '/api/profile', '/me'), next));
+    await firstValueFrom(
+      interceptor.intercept(contextFor('POST', '/api/profile', '/me'), next),
+    );
 
     expect(audit.record).not.toHaveBeenCalled();
   });
@@ -73,7 +84,10 @@ describe('AdminMutationAuditInterceptor', () => {
     const next: CallHandler = { handle: () => of({ ok: true }) };
 
     const result = await firstValueFrom(
-      interceptor.intercept(contextFor('POST', '/api/admin', '/users/:id/ban'), next),
+      interceptor.intercept(
+        contextFor('POST', '/api/admin', '/users/:id/ban'),
+        next,
+      ),
     );
 
     expect(result).toEqual({ ok: true });
@@ -98,12 +112,18 @@ describe('AdminMutationAuditInterceptor', () => {
 
     await expect(
       firstValueFrom(
-        interceptor.intercept(contextFor('DELETE', '/api/admin', '/blocks/:blockId'), next),
+        interceptor.intercept(
+          contextFor('DELETE', '/api/admin', '/blocks/:blockId'),
+          next,
+        ),
       ),
     ).rejects.toThrow('mutation failed');
 
     expect(audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: 'failed', correlationId: 'request-123' }),
+      expect.objectContaining({
+        outcome: 'failed',
+        correlationId: 'request-123',
+      }),
     );
   });
 });

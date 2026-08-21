@@ -94,6 +94,7 @@ describe('VocabularyStore', () => {
   afterEach(() => {
     httpMock.verify();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('initial state', () => {
