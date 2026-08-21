@@ -6,7 +6,6 @@ import { ChatService, FavouriteRecord, ChatMessage } from '../../services/chat.s
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
-import { AppPillComponent } from '../primitives/pill/pill.component';
 
 type FavouritesTab = 'all' | 'messages' | 'corrections' | 'audio' | 'moments';
 
@@ -25,7 +24,6 @@ interface TabDefinition {
     TranslatePipe,
     AppCardComponent,
     AppChipComponent,
-    AppPillComponent,
   ],
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
