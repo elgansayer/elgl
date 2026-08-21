@@ -16,6 +16,7 @@ describe('MediaController', () => {
           provide: MediaService,
           useValue: {
             generateCoverPresignedUrl: vi.fn(),
+            generateVoiceNotePresignedUrl: vi.fn(),
             confirmCoverUpload: vi.fn(),
           },
         },
@@ -59,6 +60,35 @@ describe('MediaController', () => {
       );
 
       expect(mediaService.generateCoverPresignedUrl).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('getVoiceNotePresignedUrl', () => {
+    it('uses the authenticated user identity and dedicated service method', async () => {
+      const dto = {
+        filename: 'voice.webm',
+        contentType: 'audio/webm;codecs=opus',
+      };
+      const expectedResponse = {
+        uploadUrl: 'https://upload.url/voice',
+        mediaUrl: 'https://media.url/voice.webm',
+        objectKey: 'voice-notes/user-1/voice.webm',
+      };
+
+      (mediaService.generateVoiceNotePresignedUrl as Mock).mockResolvedValue(
+        expectedResponse,
+      );
+
+      const result = await controller.getVoiceNotePresignedUrl(
+        { user: { id: 'user-1' } },
+        dto,
+      );
+
+      expect(mediaService.generateVoiceNotePresignedUrl).toHaveBeenCalledWith(
         'user-1',
         dto,
       );

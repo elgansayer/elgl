@@ -126,6 +126,33 @@ describe('MediaService', () => {
     expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
   });
 
+  it('issues user-scoped, size-bounded direct voice-note upload URLs', async () => {
+    const result = await service.generateVoiceNotePresignedUrl('user-1', {
+      filename: 'voice.webm',
+      contentType: 'audio/webm;codecs=opus',
+    });
+
+    expect(result.objectKey).toMatch(
+      /^voice-notes\/user-1\/\d+-[a-f0-9]{16}\.webm$/,
+    );
+    expect(r2ObjectService.createUploadUrl).toHaveBeenCalledWith(
+      result.objectKey,
+      'audio/webm;codecs=opus',
+      10 * 1024 * 1024,
+    );
+  });
+
+  it('rejects unsupported direct voice-note content types before signing', async () => {
+    await expect(
+      service.generateVoiceNotePresignedUrl('user-1', {
+        filename: 'voice.html',
+        contentType: 'text/html',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(r2ObjectService.createUploadUrl).not.toHaveBeenCalled();
+  });
+
   it('downloads, compresses and overwrites a confirmed cover through the gateway', async () => {
     const result = await service.confirmCoverUpload(
       'user-1',
