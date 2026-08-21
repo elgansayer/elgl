@@ -23,7 +23,8 @@ export class CreateGroupCallDto {
   participant_ids: string[];
 
   @ApiPropertyOptional({
-    description: 'Maximum number of participants allowed in the group call room (minimum 2)',
+    description:
+      'Maximum number of participants allowed in the group call room (minimum 2)',
     example: 10,
     minimum: 2,
     default: 10,

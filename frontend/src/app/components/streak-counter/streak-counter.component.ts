@@ -5,7 +5,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-streak-counter',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './streak-counter.component.html',
 })

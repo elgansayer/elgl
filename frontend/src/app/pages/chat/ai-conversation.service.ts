@@ -3,18 +3,38 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export interface AiPartnerReply {
-  response: string;
+export interface Scenario {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface AiMessageReply {
+  reply: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AiConversationService {
   private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiUrl}/ai-conversation`;
 
-  generateReply(text: string): Promise<string> {
-    const url = `${environment.apiUrl}/chat/ai-partner`;
+  getScenarios(): Promise<Scenario[]> {
     return firstValueFrom(
-      this.http.post<AiPartnerReply>(url, { text })
-    ).then((res) => res.response);
+      this.http.get<Scenario[]>(`${this.baseUrl}/scenarios`),
+    );
+  }
+
+  sendMessage(
+    text: string,
+    scenarioId?: string,
+    conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<string> {
+    return firstValueFrom(
+      this.http.post<AiMessageReply>(`${this.baseUrl}/message`, {
+        message: text,
+        scenarioId: scenarioId ?? null,
+        conversationHistory: conversationHistory ?? [],
+      }),
+    ).then((res) => res.reply);
   }
 }

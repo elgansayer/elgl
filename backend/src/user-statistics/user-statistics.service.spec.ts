@@ -1,15 +1,16 @@
+import type { Mock } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import { UserStatisticsService } from './user-statistics.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 function createQueryBuilder(result: Record<string, unknown>): any {
   return {
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    gte: jest.fn().mockReturnThis(),
-    lte: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue(result),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lte: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue(result),
     then(resolve: (value: unknown) => void) {
       resolve(result);
     },
@@ -18,15 +19,15 @@ function createQueryBuilder(result: Record<string, unknown>): any {
 
 describe('UserStatisticsService', () => {
   let service: UserStatisticsService;
-  let mockClient: { from: jest.Mock };
-  let mockSupabase: { getClient: jest.Mock };
+  let mockClient: { from: Mock };
+  let mockSupabase: { getClient: Mock };
 
   beforeEach(() => {
     mockClient = {
-      from: jest.fn(),
+      from: vi.fn(),
     };
     mockSupabase = {
-      getClient: jest.fn().mockReturnValue(mockClient),
+      getClient: vi.fn().mockReturnValue(mockClient),
     };
     service = new UserStatisticsService(
       mockSupabase as unknown as SupabaseService,

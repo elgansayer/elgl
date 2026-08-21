@@ -1,0 +1,113 @@
+<hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+  <hlm-dialog-content
+    *hlmDialogPortal
+    [showCloseButton]="false"
+    class="fixed inset-0 z-[100] !m-0 !h-dvh !w-screen !max-w-none !rounded-none !bg-black/95 !p-0 !ring-0 backdrop-blur-sm"
+    [attr.aria-label]="
+      'lightbox.imageAlt' | t: { current: currentIndex() + 1, total: images().length }
+    "
+    (touchstart)="onTouchStart($event)"
+    (touchend)="onTouchEnd($event)"
+  >
+    <button
+      hlmBtn
+      type="button"
+      variant="ghost"
+      size="icon-touch"
+      (click)="closed.emit()"
+      [attr.aria-label]="'lightbox.close' | t"
+      class="absolute top-4 end-4 z-[110] text-white/70 hover:text-white bg-black/50 rounded-full"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor"
+        class="w-6 h-6"
+        aria-hidden="true"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <div class="relative flex h-full w-full items-center justify-center overflow-hidden">
+      @for (img of images(); track img; let i = $index) {
+        <img
+          [src]="img"
+          [class.opacity-100]="i === currentIndex()"
+          [class.opacity-0]="i !== currentIndex()"
+          [class.scale-100]="i === currentIndex()"
+          [class.scale-95]="i !== currentIndex()"
+          [class.pointer-events-none]="i !== currentIndex()"
+          class="absolute max-w-full max-h-full object-contain transition-all duration-300 ease-out select-none"
+          [alt]="'lightbox.imageAlt' | t: { current: i + 1, total: images().length }"
+          loading="lazy"
+        />
+      }
+    </div>
+
+    @if (images().length > 1) {
+      <button
+        hlmBtn
+        type="button"
+        variant="ghost"
+        size="icon-touch"
+        (click)="prev($event)"
+        [attr.aria-label]="'lightbox.prev' | t"
+        [class.invisible]="currentIndex() === 0"
+        class="absolute start-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:inline-flex z-[110]"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          class="w-6 h-6"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        </svg>
+      </button>
+
+      <button
+        hlmBtn
+        type="button"
+        variant="ghost"
+        size="icon-touch"
+        (click)="next($event)"
+        [attr.aria-label]="'lightbox.next' | t"
+        [class.invisible]="currentIndex() === images().length - 1"
+        class="absolute end-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white bg-black/50 rounded-full hidden md:inline-flex z-[110]"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          class="w-6 h-6"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </button>
+
+      <div class="absolute bottom-6 start-1/2 -translate-x-1/2 flex gap-2 z-[110]">
+        @for (img of images(); track img; let i = $index) {
+          <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            (click)="goTo(i, $event)"
+            [class.bg-white]="i === currentIndex()"
+            [class.bg-white/30]="i !== currentIndex()"
+            class="min-h-6 min-w-6 rounded-full p-0 transition-colors duration-200"
+            [attr.aria-label]="'lightbox.indicator' | t: { current: i + 1, total: images().length }"
+          ></button>
+        }
+      </div>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>

@@ -35,9 +35,7 @@ export class InterestsController {
    */
   @Get()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
-  async listInterests(
-    @Query('language') language: string,
-  ) {
+  async listInterests(@Query('language') language: string) {
     const targetLanguage = language || 'en';
     return this.interestsService.findAll(targetLanguage);
   }

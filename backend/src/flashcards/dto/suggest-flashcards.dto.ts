@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  Min,
+  Max,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SuggestFlashcardsDto {
@@ -7,6 +16,7 @@ export class SuggestFlashcardsDto {
     example: 'Je voudrais apprendre le francais avec des amis.',
   })
   @IsString()
+  @MaxLength(5000)
   message!: string;
 
   @ApiPropertyOptional({
@@ -32,4 +42,16 @@ export class SuggestFlashcardsDto {
   @IsOptional()
   @IsBoolean()
   exclude_known?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of suggestions to return (hard cap at 100)',
+    example: 20,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  max_results?: number = 20;
 }

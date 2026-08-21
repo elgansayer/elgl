@@ -24,12 +24,14 @@ export class ReadingEngineCacheService {
   /** Canonical set of invalidation rules for the entire reading engine. */
   readonly rules: ReadonlyArray<CacheInvalidationRule> = [
     {
-      description: 'Invalidate cached resources when a reading resource is mutated',
+      description:
+        'Invalidate cached resources when a reading resource is mutated',
       patterns: ['reading:resource:*'],
       triggers: [CacheInvalidationTrigger.RESOURCE_MUTATED],
     },
     {
-      description: 'Invalidate cached token breakdowns when a reading resource is mutated',
+      description:
+        'Invalidate cached token breakdowns when a reading resource is mutated',
       patterns: ['reading:token:*'],
       triggers: [CacheInvalidationTrigger.RESOURCE_MUTATED],
     },
@@ -117,22 +119,24 @@ export class ReadingEngineCacheService {
       if (raw === null) return null;
       return JSON.parse(raw) as T;
     } catch (err) {
-      this.logger.warn({ key, error: (err as Error).message }, 'Cache read failed');
+      this.logger.warn(
+        { key, error: (err as Error).message },
+        'Cache read failed',
+      );
       return null;
     }
   }
 
-  async set(
-    key: string,
-    value: unknown,
-    ttlSeconds?: number,
-  ): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     try {
       const ttl = ttlSeconds ?? this.inferTtl(key);
       await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
       this.logger.debug({ key, ttl }, 'Cache write');
     } catch (err) {
-      this.logger.error({ key, error: (err as Error).message }, 'Cache write failed');
+      this.logger.error(
+        { key, error: (err as Error).message },
+        'Cache write failed',
+      );
     }
   }
 
@@ -141,7 +145,10 @@ export class ReadingEngineCacheService {
       await this.redis.del(key);
       this.logger.debug({ key }, 'Cache key deleted');
     } catch (err) {
-      this.logger.error({ key, error: (err as Error).message }, 'Cache delete failed');
+      this.logger.error(
+        { key, error: (err as Error).message },
+        'Cache delete failed',
+      );
     }
   }
 

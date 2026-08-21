@@ -45,7 +45,9 @@ export function sanitiseRecommendationsData<T>(value: T): T {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => sanitiseRecommendationsData(item)) as unknown as T;
+    return value.map((item) =>
+      sanitiseRecommendationsData(item),
+    ) as unknown as T;
   }
 
   if (value !== null && typeof value === 'object') {

@@ -1,12 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ShopComponent } from './shop.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
+import { JoyrideModule } from 'ngx-joyride';
 
 class MockI18nService {
   translate(key: string, params?: Record<string, unknown>): string {
@@ -32,7 +33,7 @@ describe('ShopComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ShopComponent, TranslatePipe, RouterModule.forRoot([])],
+      imports: [ShopComponent, TranslatePipe, RouterModule.forRoot([]), JoyrideModule.forRoot()],
       providers: [
         { provide: I18nService, useClass: MockI18nService },
         { provide: AuthService, useClass: MockAuthService },

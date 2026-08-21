@@ -12,279 +12,507 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import {
-  ApiTags,
   ApiBearerAuth,
-  ApiOperation,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiBadRequestResponse,
-  ApiNotFoundResponse,
-  ApiUnauthorizedResponse,
-  ApiForbiddenResponse,
-  ApiConflictResponse,
-  ApiTooManyRequestsResponse,
-  ApiQuery,
-  ApiParam,
   ApiBody,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+  ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CrashReportService } from './crash-report.service';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
-import { EscrowCacheInterceptor, ESCROW_CACHE_PRIVATE_SHORT, ESCROW_CACHE_PRIVATE_NO_STORE } from './cache.interceptor';
-import { CacheControlInterceptor, CACHE_EDGE_SHORT, CACHE_NO_STORE } from '../common/cache.interceptor';
 import {
   AcknowledgeCrashReportDto,
-  CreateEscrowDto,
+  CreateEscrowHoldDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
+  CancelEscrowDto,
+  DisputeEscrowDto,
   EscrowTransactionResponse,
   CircuitBreakerStatusResponse,
 } from './dto/escrow.dto';
+import { EscrowStatus } from './interfaces/escrow-transaction.interface';
+import {
+  CacheControlInterceptor,
+  CACHE_EDGE_SHORT,
+  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
+  CACHE_TAG_ESCROW,
+} from '../common/cache.interceptor';
 
+interface AuthenticatedRequest {
+  user: { sub: string };
+}
+
+@ApiTags('Escrow Payments')
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
 @UseFilters(EscrowExceptionFilter)
 @ApiBearerAuth()
-@ApiTags('Escrow Payments')
 export class EscrowController {
   constructor(
     private readonly escrowService: EscrowService,
     private readonly crashReportService: CrashReportService,
   ) {}
 
-  /**
-   * POST /escrow/create
-   * Create a new escrow transaction, holding coins from the payer.
-   * Rate limited to 5 requests per minute.
-   * Caching: no-store. This is a mutation.
-   */
-  @Post('create')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
+  @Post('hold')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Create a new escrow transaction',
+    summary: 'Hold coins in escrow for a transaction',
     description:
-      'Locks coins from the payer and holds them in escrow until released to the payee or refunded. ' +
-      'The payer must have sufficient coin balance. Self-escrow (payer === payee) is rejected. ' +
-      'Rate limited to 5 requests per minute.',
+      'Creates an escrow hold by deducting the specified coin amount from the authenticated user (payer) and holding it in escrow. The coins are only transferred to the payee upon explicit release. The payee must be a valid user different from the payer.',
   })
+  @ApiBody({ type: CreateEscrowHoldDto })
   @ApiCreatedResponse({
-    description: 'Escrow transaction created successfully.',
+    description: 'Escrow hold created successfully',
     schema: {
       properties: {
-        id: { type: 'string', description: 'UUID of the created escrow transaction' },
-        status: { type: 'string', enum: ['held'], description: 'Escrow status (always "held" on creation)' },
-        amount_coins: { type: 'number', description: 'Number of coins held in escrow' },
-        payer_balance: { type: 'number', description: 'Remaining coin balance of the payer after deduction' },
+        id: {
+          type: 'string',
+          description: 'Unique escrow transaction ID (UUID)',
+        },
+        status: {
+          type: 'string',
+          enum: ['held'],
+          description: 'Transaction status',
+        },
+        amount_held: {
+          type: 'number',
+          description: 'Amount of coins held in escrow',
+        },
+        coins_remaining: {
+          type: 'number',
+          description: 'Payer coin balance after escrow deduction',
+        },
       },
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid request body or self-escrow attempt.' })
-  @ApiNotFoundResponse({ description: 'Payee user not found.' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
-  async create(
-    @Req() req: { user?: { id?: string } },
-    @Body() dto: CreateEscrowDto,
+  @ApiBadRequestResponse({
+    description:
+      'Invalid payload, payee same as payer, or insufficient coin balance',
+  })
+  @ApiNotFoundResponse({ description: 'Payee user not found' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to deduct coins or create escrow record',
+  })
+  async holdCoins(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateEscrowHoldDto,
   ) {
-    return this.escrowService.holdCoins(req.user!.id!, dto);
+    return this.escrowService.holdCoins(req.user.sub, dto);
   }
 
   @Post('release')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Release escrowed coins to the payee',
+    summary: 'Release held escrow coins to the payee',
     description:
-      'Transfers the held coins to the payee. Only the original payer can release the escrow. ' +
-      'The escrow must be in "held" status. Rate limited to 5 requests per minute.',
+      'Releases the held coins from an escrow transaction to the payee. Only the original payer can release the escrow. The escrow must be in "held" status. The coins are credited to the payee account.',
   })
+  @ApiBody({ type: ReleaseEscrowDto })
   @ApiOkResponse({
-    description: 'Escrow released successfully.',
+    description: 'Escrow released successfully to payee',
     schema: {
       properties: {
-        id: { type: 'string', description: 'UUID of the escrow transaction' },
-        status: { type: 'string', enum: ['released'], description: 'Escrow status' },
-        amount_coins: { type: 'number', description: 'Number of coins released' },
-        payee_balance: { type: 'number', description: 'Updated coin balance of the payee' },
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        status: {
+          type: 'string',
+          enum: ['released'],
+          description: 'Updated transaction status',
+        },
+        amount_released: {
+          type: 'number',
+          description: 'Amount of coins released to payee',
+        },
+        payee_new_balance: {
+          type: 'number',
+          description: 'Payee coin balance after credit',
+        },
       },
     },
   })
-  @ApiNotFoundResponse({ description: 'Escrow transaction not found.' })
-  @ApiForbiddenResponse({ description: 'Caller is not the payer of this escrow.' })
-  @ApiConflictResponse({ description: 'Escrow is not in "held" status.' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
-  async release(
-    @Req() req: { user?: { id?: string } },
+  @ApiBadRequestResponse({ description: 'Escrow is not in held status' })
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiForbiddenResponse({
+    description: 'Only the payer can release the escrow',
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to credit payee or update escrow status',
+  })
+  async releaseCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ReleaseEscrowDto,
   ) {
-    return this.escrowService.releaseCoins(dto.transaction_id, req.user!.id!);
+    return this.escrowService.releaseCoins(dto.transaction_id, req.user.sub);
   }
 
   @Post('refund')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Refund escrowed coins back to the payer',
+    summary: 'Refund escrow coins back to the payer',
     description:
-      'Returns the held coins to the original payer. Only the payer can initiate a refund. ' +
-      'The escrow must be in "held" status. Rate limited to 5 requests per minute.',
+      'Refunds the held coins from an escrow transaction back to the original payer. Only the original payer can request a refund. The escrow must be in "held" status. An optional reason can be provided.',
   })
+  @ApiBody({ type: RefundEscrowDto })
   @ApiOkResponse({
-    description: 'Escrow refunded successfully.',
+    description: 'Escrow refunded successfully to payer',
     schema: {
       properties: {
-        id: { type: 'string', description: 'UUID of the escrow transaction' },
-        status: { type: 'string', enum: ['refunded'], description: 'Escrow status' },
-        amount_coins: { type: 'number', description: 'Number of coins refunded' },
-        payer_balance: { type: 'number', description: 'Updated coin balance of the payer after refund' },
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        status: {
+          type: 'string',
+          enum: ['refunded'],
+          description: 'Updated transaction status',
+        },
+        amount_refunded: {
+          type: 'number',
+          description: 'Amount of coins refunded to payer',
+        },
+        payer_new_balance: {
+          type: 'number',
+          description: 'Payer coin balance after refund',
+        },
       },
     },
   })
-  @ApiNotFoundResponse({ description: 'Escrow transaction not found.' })
-  @ApiForbiddenResponse({ description: 'Caller is not the payer of this escrow.' })
-  @ApiConflictResponse({ description: 'Escrow is not in "held" status.' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
-  async refund(
-    @Req() req: { user?: { id?: string } },
+  @ApiBadRequestResponse({ description: 'Escrow is not in held status' })
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiForbiddenResponse({ description: 'Only the payer can request a refund' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  @ApiInternalServerErrorResponse({
+    description: 'Failed to refund payer or update escrow status',
+  })
+  async refundCoins(
+    @Req() req: AuthenticatedRequest,
     @Body() dto: RefundEscrowDto,
   ) {
     return this.escrowService.refundCoins(
       dto.transaction_id,
-      req.user!.id!,
+      req.user.sub,
       dto.reason,
     );
   }
 
-  /**
-   * GET /escrow/list
-   * List escrow transactions for the authenticated user.
-   * Rate limited to 20 requests per minute.
-   *
-   * Caching: private short-lived. Each user sees their own escrows and
-   * statuses can change rapidly, but a short cache reduces DB pressure
-   * during repeated reads by the frontend polling loop.
-   */
-  @Get('list')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT))
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'List escrow transactions for the authenticated user',
+    summary: 'Cancel an escrow transaction',
     description:
-      'Returns paginated escrow transactions where the user is either the payer or payee. ' +
-      'Results are ordered by creation date descending. Maximum 50 items per page. ' +
-      'Rate limited to 20 requests per minute.',
+      'Cancels a pending escrow transaction. The coins are refunded back to the payer. Only the payer can cancel the escrow. The escrow must be in "held" status.',
+  })
+  @ApiBody({ type: CancelEscrowDto })
+  @ApiOkResponse({
+    description: 'Escrow cancelled successfully',
+    schema: {
+      properties: {
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        status: {
+          type: 'string',
+          enum: ['cancelled'],
+          description: 'Updated transaction status',
+        },
+        amount_refunded: {
+          type: 'number',
+          description: 'Amount of coins refunded to payer',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'Escrow is not in held status' })
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiForbiddenResponse({ description: 'Only the payer can cancel the escrow' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async cancelEscrow(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CancelEscrowDto,
+  ) {
+    return this.escrowService.cancelEscrow(dto.transaction_id, req.user.sub);
+  }
+
+  @Post('dispute')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'File a dispute against an escrow transaction',
+    description:
+      'Files a dispute against a held escrow transaction. Either the payer or payee can initiate the dispute. The escrow must be in "held" status. The transaction status is updated to "disputed" and the dispute reason is recorded.',
+  })
+  @ApiBody({ type: DisputeEscrowDto })
+  @ApiOkResponse({
+    description: 'Dispute filed successfully',
+    schema: {
+      properties: {
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        status: {
+          type: 'string',
+          enum: ['disputed'],
+          description: 'Updated transaction status',
+        },
+        reason: {
+          type: 'string',
+          description: 'Updated reason including dispute details',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid payload or user not a participant',
+  })
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async disputeEscrow(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: DisputeEscrowDto,
+  ) {
+    return this.escrowService.disputeEscrow(
+      dto.transaction_id,
+      req.user.sub,
+      dto.reason,
+      dto.evidence,
+    );
+  }
+
+  @Get('transactions')
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [CACHE_TAG_ESCROW]),
+  )
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List escrow transactions for the current user',
+    description:
+      'Returns all escrow transactions where the authenticated user is either the payer or the payee. Results are paginated and ordered by creation date descending. Optionally filter by status.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by escrow transaction status',
+    enum: ['held', 'released', 'refunded', 'cancelled'],
+    example: 'held',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
-    description: 'Maximum number of escrows to return (1-50, default 20)',
-    example: 20,
+    description: 'Maximum number of transactions to return (default 20)',
+    example: '20',
   })
   @ApiQuery({
     name: 'offset',
     required: false,
-    description: 'Number of escrows to skip for pagination (default 0)',
-    example: 0,
+    description: 'Number of transactions to skip for pagination (default 0)',
+    example: '0',
   })
   @ApiOkResponse({
-    description: 'Paginated list of escrow transactions.',
+    description: 'Paginated list of escrow transactions',
     schema: {
-      properties: {
-        escrows: {
-          type: 'array',
-          items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+          payer_id: { type: 'string', description: 'Payer user UUID' },
+          payee_id: { type: 'string', description: 'Payee user UUID' },
+          amount_coins: {
+            type: 'number',
+            description: 'Coin amount held in escrow',
+          },
+          status: {
+            type: 'string',
+            enum: ['held', 'released', 'refunded', 'cancelled'],
+            description: 'Transaction status',
+          },
+          reason: { type: 'string', description: 'Reason for the escrow hold' },
+          metadata: {
             type: 'object',
-            properties: {
-              id: { type: 'string', description: 'UUID of the escrow transaction' },
-              payer_id: { type: 'string', description: 'UUID of the payer' },
-              payee_id: { type: 'string', description: 'UUID of the payee' },
-              amount_coins: { type: 'number', description: 'Number of coins held' },
-              status: { type: 'string', enum: ['held', 'released', 'refunded', 'disputed'], description: 'Current escrow status' },
-              description: { type: 'string', nullable: true, description: 'Optional description' },
-              reference_id: { type: 'string', nullable: true, description: 'Optional client reference ID' },
-              created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
-              updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
-              released_at: { type: 'string', format: 'date-time', nullable: true, description: 'Release timestamp (if released)' },
-              refunded_at: { type: 'string', format: 'date-time', nullable: true, description: 'Refund timestamp (if refunded)' },
-            },
+            description: 'Additional transaction metadata',
+          },
+          held_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Timestamp when escrow was held',
+          },
+          released_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Timestamp when escrow was released',
+          },
+          refunded_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Timestamp when escrow was refunded',
+          },
+          cancelled_at: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Timestamp when escrow was cancelled',
+          },
+          retry_count: {
+            type: 'number',
+            description: 'Number of retry attempts',
+          },
+          last_error: {
+            type: 'string',
+            nullable: true,
+            description: 'Last error message if any',
+          },
+          created_at: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Creation timestamp',
+          },
+          updated_at: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last update timestamp',
+          },
+          degraded: {
+            type: 'boolean',
+            description:
+              'Whether the transaction is operating in degraded mode',
+          },
+          fallback_reason: {
+            type: 'string',
+            description: 'Reason for fallback mode if applicable',
           },
         },
-        total: { type: 'number', description: 'Total count of matching escrow transactions' },
       },
     },
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
-  async list(
-    @Req() req: { user?: { id?: string } },
+  @ApiBadRequestResponse({ description: 'Invalid status filter value' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async listTransactions(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: EscrowStatus,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<EscrowTransactionResponse[]> {
     return this.escrowService.listTransactions(
-      req.user!.id!,
-      undefined,
+      req.user.sub,
+      status,
       limit ? parseInt(limit, 10) : 20,
       offset ? parseInt(offset, 10) : 0,
     );
   }
 
-  /**
-   * GET /escrow/:id
-   * Get a single escrow transaction by ID.
-   * Rate limited to 30 requests per minute.
-   *
-   * Caching: private short-lived. User-specific escrow details benefit
-   * from short-term Cloudflare edge caching while keeping freshness.
-   */
-  @Get(':id')
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT))
+  @Get('transactions/:id')
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [CACHE_TAG_ESCROW]),
+  )
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get a single escrow transaction by ID',
+    summary: 'Get an escrow transaction by ID',
     description:
-      'Returns the full escrow transaction details. The caller must be either the payer or the payee. ' +
-      'Rate limited to 30 requests per minute.',
+      'Retrieves full details of a single escrow transaction by its UUID. The authenticated user must be either the payer or the payee of the transaction.',
   })
   @ApiParam({
     name: 'id',
-    required: true,
-    description: 'UUID of the escrow transaction',
-    example: 'b7e4f1a2-c3d5-4e6f-8901-abcdef012345',
+    description: 'Escrow transaction UUID',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   })
   @ApiOkResponse({
-    description: 'Escrow transaction details.',
+    description: 'Escrow transaction details',
     schema: {
-      type: 'object',
       properties: {
-        id: { type: 'string', description: 'UUID of the escrow transaction' },
-        payer_id: { type: 'string', description: 'UUID of the payer' },
-        payee_id: { type: 'string', description: 'UUID of the payee' },
-        amount_coins: { type: 'number', description: 'Number of coins held' },
-        status: { type: 'string', enum: ['held', 'released', 'refunded', 'disputed'], description: 'Current escrow status' },
-        description: { type: 'string', nullable: true, description: 'Optional description' },
-        reference_id: { type: 'string', nullable: true, description: 'Optional client reference ID' },
-        created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
-        updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
-        released_at: { type: 'string', format: 'date-time', nullable: true, description: 'Release timestamp (if released)' },
-        refunded_at: { type: 'string', format: 'date-time', nullable: true, description: 'Refund timestamp (if refunded)' },
+        id: { type: 'string', description: 'Escrow transaction ID (UUID)' },
+        payer_id: { type: 'string', description: 'Payer user UUID' },
+        payee_id: { type: 'string', description: 'Payee user UUID' },
+        amount_coins: {
+          type: 'number',
+          description: 'Coin amount held in escrow',
+        },
+        status: {
+          type: 'string',
+          enum: ['held', 'released', 'refunded', 'cancelled'],
+          description: 'Transaction status',
+        },
+        reason: { type: 'string', description: 'Reason for the escrow hold' },
+        metadata: {
+          type: 'object',
+          description: 'Additional transaction metadata',
+        },
+        held_at: {
+          type: 'string',
+          format: 'date-time',
+          nullable: true,
+          description: 'Timestamp when escrow was held',
+        },
+        released_at: {
+          type: 'string',
+          format: 'date-time',
+          nullable: true,
+          description: 'Timestamp when escrow was released',
+        },
+        refunded_at: {
+          type: 'string',
+          format: 'date-time',
+          nullable: true,
+          description: 'Timestamp when escrow was refunded',
+        },
+        cancelled_at: {
+          type: 'string',
+          format: 'date-time',
+          nullable: true,
+          description: 'Timestamp when escrow was cancelled',
+        },
+        retry_count: {
+          type: 'number',
+          description: 'Number of retry attempts',
+        },
+        last_error: {
+          type: 'string',
+          nullable: true,
+          description: 'Last error message if any',
+        },
+        created_at: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Creation timestamp',
+        },
+        updated_at: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Last update timestamp',
+        },
+        degraded: {
+          type: 'boolean',
+          description: 'Whether the transaction is operating in degraded mode',
+        },
+        fallback_reason: {
+          type: 'string',
+          description: 'Reason for fallback mode if applicable',
+        },
       },
     },
   })
-  @ApiNotFoundResponse({ description: 'Escrow transaction not found.' })
-  @ApiForbiddenResponse({ description: 'Caller is not a participant in this escrow.' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
-  async getById(
-    @Req() req: { user?: { id?: string } },
+  @ApiNotFoundResponse({ description: 'Escrow transaction not found' })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user is not a participant in this transaction',
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+  async getTransaction(
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ): Promise<EscrowTransactionResponse> {
-    return this.escrowService.getTransaction(id, req.user!.id!);
+    return this.escrowService.getTransaction(id, req.user.sub);
   }
 
   @Get('circuit-breaker/status')
@@ -299,12 +527,32 @@ export class EscrowController {
     description: 'Circuit breaker status',
     schema: {
       properties: {
-        service: { type: 'string', example: 'escrow', description: 'Service name' },
-        isOpen: { type: 'boolean', description: 'Whether the circuit breaker is currently open (failing)' },
-        failureCount: { type: 'number', description: 'Current consecutive failure count' },
-        cooldownUntil: { type: 'number', description: 'Timestamp (ms) until circuit breaker cooldown ends' },
-        totalFailures: { type: 'number', description: 'Total failures since last reset' },
-        totalSuccesses: { type: 'number', description: 'Total successes since last reset' },
+        service: {
+          type: 'string',
+          example: 'escrow',
+          description: 'Service name',
+        },
+        isOpen: {
+          type: 'boolean',
+          description:
+            'Whether the circuit breaker is currently open (failing)',
+        },
+        failureCount: {
+          type: 'number',
+          description: 'Current consecutive failure count',
+        },
+        cooldownUntil: {
+          type: 'number',
+          description: 'Timestamp (ms) until circuit breaker cooldown ends',
+        },
+        totalFailures: {
+          type: 'number',
+          description: 'Total failures since last reset',
+        },
+        totalSuccesses: {
+          type: 'number',
+          description: 'Total successes since last reset',
+        },
       },
     },
   })
@@ -325,7 +573,11 @@ export class EscrowController {
     description: 'Circuit breaker reset successfully',
     schema: {
       properties: {
-        reset: { type: 'boolean', example: true, description: 'Confirms the circuit breaker was reset' },
+        reset: {
+          type: 'boolean',
+          example: true,
+          description: 'Confirms the circuit breaker was reset',
+        },
       },
     },
   })
@@ -371,7 +623,9 @@ export class EscrowController {
   async acknowledgeCrashReport(
     @Body() dto: AcknowledgeCrashReportDto,
   ): Promise<{ acknowledged: boolean }> {
-    const result = await this.crashReportService.acknowledgeReport(dto.report_id);
+    const result = await this.crashReportService.acknowledgeReport(
+      dto.report_id,
+    );
     return { acknowledged: result };
   }
 

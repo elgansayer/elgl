@@ -16,13 +16,13 @@
 - **Font size:** 15px body text, 11px timestamp
 - **Line height:** 1.4 (body), 1 (timestamp)
 
-### Color Scheme
+### Colour Scheme
 
 - **Own message background:** `#005C4B` (dark mode) / `#D9FDD3` (light mode)
 - **Other message background:** `#202C33` (dark mode) / `#FFFFFF` (light mode)
-- **Text color:** `#E9EDEF` (dark mode own), `#E9EDEF` (dark mode other), `#111B21` (light mode)
-- **Timestamp color:** `#8796A0` (dark mode), `#667781` (light mode)
-- **Read receipt color:** `#53BDEB` (read), `#8796A0` (delivered), `#667781` (sent)
+- **Text colour:** `#E9EDEF` (dark mode own), `#E9EDEF` (dark mode other), `#111B21` (light mode)
+- **Timestamp colour:** `#8796A0` (dark mode), `#667781` (light mode)
+- **Read receipt colour:** `#53BDEB` (read), `#8796A0` (delivered), `#667781` (sent)
 
 ### States
 
@@ -41,7 +41,7 @@
 - **Own messages:** `margin-left: auto;` aligned to right
 - **Other messages:** `margin-right: auto;` aligned to left
 - **Sender avatar (group):** 24px circle, `margin-right: 8px` (LTR) / `margin-left: 8px` (RTL)
-- **Sender name (group):** 12.8px font, `#00A884` color, `margin-bottom: 2px`
+- **Sender name (group):** 12.8px font, `#00A884` colour, `margin-bottom: 2px`
 
 ---
 
@@ -62,7 +62,7 @@
 - **Border radius:** 8px
 - **Padding:** 9px 12px
 - **Font size:** 15px
-- **Placeholder color:** `#8696A0` (dark) / `#667781` (light)
+- **Placeholder colour:** `#8696A0` (dark) / `#667781` (light)
 - **Max lines:** 5 (then scroll)
 - **Scrollbar:** Thin, `#374045` track, `#00A884` thumb
 
@@ -70,7 +70,7 @@
 
 - **Size:** 32px × 32px
 - **Icon size:** 20px × 20px
-- **Color:** `#8696A0` (default), `#00A884` (active/hover)
+- **Colour:** `#8696A0` (default), `#00A884` (active/hover)
 - **Spacing:** 4px gap between buttons
 - **Hit area:** 44px × 44px (accessibility)
 
@@ -142,7 +142,7 @@
 
 - **Size:** 32px × 32px
 - **Icon:** Paperclip (20px)
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 
 ### Menu Panel
 
@@ -157,11 +157,11 @@
 
 - **Height:** 48px each
 - **Icon size:** 24px × 24px
-- **Icon background:** 36px circle with color
+- **Icon background:** 36px circle with colour
 - **Label font:** 14px, `#E9EDEF` (dark) / `#111B21` (light)
 - **Subtitle font:** 11px, `#8696A0`
 
-### Item Colors
+### Item Colours
 
 - **Gallery:** Purple `#7F6BFF`
 - **Camera:** Green `#00A884`
@@ -192,13 +192,13 @@
 - **Height:** 32px
 - **Bar width:** 2px
 - **Bar gap:** 1px
-- **Bar color:** `#00A884` (active), `#374045` (inactive)
+- **Bar colour:** `#00A884` (active), `#374045` (inactive)
 - **Animation:** Smooth amplitude interpolation
 
 ### Timer Display
 
 - **Font:** 14px monospace (`SF Mono`, `Consolas`, `Courier New`)
-- **Color:** `#E9EDEF`
+- **Colour:** `#E9EDEF`
 - **Format:** `MM:SS`
 - **Max duration:** 60:00 (red flash at 55:00)
 
@@ -244,10 +244,10 @@
 - **Pen:** 2px, 4px, 6px, 8px thickness options
 - **Highlighter:** 12px, 16px, 20px thickness, 50% opacity
 - **Eraser:** 10px, 20px, 30px thickness
-- **Color picker:** 8 preset colors + custom (hex input)
+- **Colour picker:** 8 preset colours + custom (hex input)
 - **Undo/Redo:** 32px × 32px buttons, disabled state at 40% opacity
 
-### Color Presets
+### Colour Presets
 
 - Black `#000000`, Red `#FF3B30`, Orange `#FF9500`, Yellow `#FFCC00`
 - Green `#34C759`, Blue `#007AFF`, Purple `#AF52DE`, White `#FFFFFF`
@@ -291,7 +291,7 @@
 - **Cell size:** 100px × 120px
 - **Gift icon:** 48px × 48px (animated Lottie or static emoji)
 - **Gift name:** 12px, `#E9EDEF` (dark) / `#111B21` (light), single line truncation
-- **Coin cost:** 11px, `#FFD700` color, coin icon prefix
+- **Coin cost:** 11px, `#FFD700` colour, coin icon prefix
 
 ### Gift Categories
 
@@ -380,20 +380,20 @@
 - **Padding:** 8px 12px 8px 36px
 - **Font size:** 15px
 - **Placeholder:** "Search messages..." (dark) / "Search messages" (light)
-- **Placeholder color:** `#8696A0` (dark) / `#667781` (light)
+- **Placeholder colour:** `#8696A0` (dark) / `#667781` (light)
 
 ### Search Icon
 
 - **Position:** Absolute, left 12px
 - **Size:** 18px × 18px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 
 ### Clear Button
 
 - **Position:** Absolute, right 12px
 - **Size:** 20px × 20px
 - **Icon:** X circle filled
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Visibility:** Only when input has text
 
 ### Filter Chips
@@ -403,7 +403,7 @@
 - **Padding:** 4px 12px
 - **Font size:** 12px
 - **Background:** `#2A3942` (inactive), `#00A884` (active)
-- **Text color:** `#E9EDEF` (inactive), `#FFFFFF` (active)
+- **Text colour:** `#E9EDEF` (inactive), `#FFFFFF` (active)
 - **Spacing:** 6px gap between chips
 - **Scroll:** Horizontal scroll if overflow
 
@@ -435,7 +435,7 @@
 ### Dots Animation
 
 - **Dot size:** 6px × 6px
-- **Dot color:** `#8696A0`
+- **Dot colour:** `#8696A0`
 - **Dot spacing:** 3px
 - **Animation:** Bounce up and down with 300ms stagger
   - Dot 1: delay 0ms
@@ -447,7 +447,7 @@
 ### Text Label
 
 - **Font:** 11px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Content:** "typing..." (single user) or "2 people typing..." (multiple)
 - **Position:** Left of dots, 4px gap
 
@@ -477,7 +477,7 @@
 ### Animation
 
 - **Sent → Delivered:** Single check fades, double check fades in (200ms)
-- **Delivered → Read:** Checks turn blue with 300ms color transition
+- **Delivered → Read:** Checks turn blue with 300ms colour transition
 - **Failed:** Shake animation (100ms, 3 iterations)
 
 ### Group Chat Variant
@@ -510,7 +510,7 @@
 - **Height:** 44px
 - **Padding:** 0 16px
 - **Icon size:** 18px × 18px
-- **Icon color:** `#8696A0`
+- **Icon colour:** `#8696A0`
 - **Text font:** 14px, `#E9EDEF` (dark) / `#111B21` (light)
 - **Text spacing:** 12px between icon and text
 
@@ -544,21 +544,21 @@
 ### Sending State
 
 - **Icon:** Clock (20px × 20px)
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Position:** Bottom-right of message bubble
 - **Animation:** Rotating clock hand (2s loop)
 
 ### Failed State
 
 - **Icon:** Exclamation triangle (20px × 20px)
-- **Color:** `#FF3B30`
+- **Colour:** `#FF3B30`
 - **Position:** Bottom-right of message bubble
 - **Tap action:** Retry send
 - **Tooltip:** "Tap to retry" (11px, `#FF3B30`)
 
 ### Pending State (Voice/Media)
 
-- **Progress bar:** 2px height, `#00A884` color
+- **Progress bar:** 2px height, `#00A884` colour
 - **Position:** Bottom of media thumbnail
 - **Percentage:** Center text, 11px, `#FFFFFF`
 - **Cancel button:** X icon, 20px × 20px, top-right corner
@@ -585,7 +585,7 @@
 
 - **Size:** 24px × 24px
 - **Icon:** X (16px)
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Position:** Right-aligned, vertically centered
 
 ### Animation
@@ -612,7 +612,7 @@
 ### Date Text
 
 - **Font:** 12px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Background:** `#111B21` (dark) / `#FFFFFF` (light)
 - **Padding:** 0 12px
 - **Border radius:** 8px (background pill)
@@ -627,7 +627,7 @@
 
 ### States
 
-- **New messages indicator:** "New messages" text, `#00A884` color, 11px
+- **New messages indicator:** "New messages" text, `#00A884` colour, 11px
 - **Unread badge:** Blue dot (8px), left of text
 
 ---
@@ -651,7 +651,7 @@
 
 - **Size:** 20px × 20px
 - **Icon:** Down arrow (↓)
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 
 ### Badge (Unread Count)
 
@@ -688,7 +688,7 @@
 
 - **Size:** 32px × 32px
 - **Icon:** Arrow left (20px)
-- **Color:** `#E9EDEF` (dark) / `#111B21` (light)
+- **Colour:** `#E9EDEF` (dark) / `#111B21` (light)
 - **Hit area:** 44px × 44px
 
 ### User Avatar
@@ -714,7 +714,7 @@
 - **Size:** 32px × 32px
 - **Spacing:** 4px
 - **Icons:** Voice call (📞), Video call (📹), More options (⋮)
-- **Color:** `#8696A0` (default), `#E9EDEF` (hover)
+- **Colour:** `#8696A0` (default), `#E9EDEF` (hover)
 
 ### States
 
@@ -733,7 +733,7 @@
 - **Opacity:** 5% (dark mode), 3% (light mode)
 - **Pattern:** Diagonal lines or dots (WhatsApp-style)
 
-### Color
+### Colour
 
 - **Dark mode:** `#0B141A`
 - **Light mode:** `#EFEAE2`
@@ -768,7 +768,7 @@
 ### Add Reaction
 
 - **Button:** + icon, 18px × 18px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Opens:** Emoji picker (compact mode)
 
 ### States
@@ -876,7 +876,7 @@
 ### Timer
 
 - **Font:** 12px monospace
-- **Color:** `#E9EDEF`
+- **Colour:** `#E9EDEF`
 - **Format:** `MM:SS` (current) / `MM:SS` (total)
 - **Position:** Right of waveform
 
@@ -885,7 +885,7 @@
 - **Button:** 1x, 1.5x, 2x toggle
 - **Size:** 24px × 24px
 - **Font:** 10px bold
-- **Color:** `#8696A0` (default), `#00A884` (active)
+- **Colour:** `#8696A0` (default), `#00A884` (active)
 
 ### States
 
@@ -964,7 +964,7 @@
 
 - **Size:** 32px × 32px
 - **Icon:** Download (⬇️) or Open (↗️)
-- **Color:** `#00A884`
+- **Colour:** `#00A884`
 
 ### States
 
@@ -986,13 +986,13 @@
 ### Pin
 
 - **Size:** 24px × 32px
-- **Color:** `#FF3B30`
+- **Colour:** `#FF3B30`
 - **Position:** Center of map
 
 ### Address
 
 - **Font:** 13px
-- **Color:** `#E9EDEF` (dark) / `#111B21` (light)
+- **Colour:** `#E9EDEF` (dark) / `#111B21` (light)
 - **Padding:** 8px 12px
 - **Single line truncation**
 
@@ -1028,7 +1028,7 @@
 
 - **Size:** 32px × 32px
 - **Icon:** Person add (➕)
-- **Color:** `#00A884`
+- **Colour:** `#00A884`
 
 ### States
 
@@ -1048,7 +1048,7 @@
 ### Question
 
 - **Font:** 14px bold
-- **Color:** `#E9EDEF` (dark) / `#111B21` (light)
+- **Colour:** `#E9EDEF` (dark) / `#111B21` (light)
 - **Margin bottom:** 8px
 
 ### Options
@@ -1069,7 +1069,7 @@
 ### Vote Count
 
 - **Font:** 11px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Position:** Right of option text
 
 ### States
@@ -1092,7 +1092,7 @@
 ### Text
 
 - **Font:** 12px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Background:** `rgba(0,0,0,0.1)` (dark) / `rgba(0,0,0,0.05)` (light)
 - **Padding:** 4px 12px
 - **Border radius:** 8px
@@ -1141,13 +1141,13 @@
 ### Mute Indicator
 
 - **Icon:** Bell off (🔕), 14px × 14px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Position:** Below timestamp
 
 ### Pin Indicator
 
 - **Icon:** Pin (📌), 14px × 14px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Position:** Left of name
 
 ### States
@@ -1171,18 +1171,18 @@
 
 - **Size:** 120px × 120px
 - **Type:** SVG illustration (chat bubbles)
-- **Color:** `#00A884` (primary), `#374045` (secondary)
+- **Colour:** `#00A884` (primary), `#374045` (secondary)
 
 ### Title
 
 - **Font:** 18px bold
-- **Color:** `#E9EDEF` (dark) / `#111B21` (light)
+- **Colour:** `#E9EDEF` (dark) / `#111B21` (light)
 - **Margin bottom:** 8px
 
 ### Description
 
 - **Font:** 14px
-- **Color:** `#8696A0`
+- **Colour:** `#8696A0`
 - **Max width:** 280px
 - **Text align:** Center
 

@@ -69,7 +69,7 @@ export class CrashReportService {
         context: data.context ?? undefined,
         created_at: data.created_at,
         acknowledged: data.acknowledged ?? false,
-        resolved_at: data.resolved_at ?? null,
+        resolved_at: data.resolved_at ?? undefined,
       };
     } catch (persistError) {
       this.logger.error(

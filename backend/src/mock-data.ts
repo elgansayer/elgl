@@ -111,7 +111,7 @@ export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
   return {
     id: `fake-${i + 1}`,
     display_name: `${name}${i + 1}`,
-    native_languages: native,
+    native_languages: [native],
     target_languages: targets,
     bio_text: `Hi! I want to learn ${targets.join(', ').toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
     avatar_url: `https://i.pravatar.cc/150?u=fake-${i + 1}`,

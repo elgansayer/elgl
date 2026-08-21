@@ -36,7 +36,11 @@ export class HostDashboardController {
         roomId: { type: 'string', example: 'room_a1b2c3d4' },
         viewerCount: { type: 'number', example: 42 },
         earnedCoins: { type: 'number', example: 150 },
-        startTime: { type: 'string', format: 'date-time', example: '2026-08-07T10:30:00.000Z' },
+        startTime: {
+          type: 'string',
+          format: 'date-time',
+          example: '2026-08-07T10:30:00.000Z',
+        },
       },
     },
   })

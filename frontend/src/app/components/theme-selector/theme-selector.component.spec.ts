@@ -6,7 +6,6 @@ import { ThemeSelectorComponent } from './theme-selector.component';
 import { Theme, ThemeService } from '../../services/theme.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-// A minimal stub pipe so we do not depend on the real I18nService in tests
 @Pipe({ name: 't', standalone: true })
 class MockTranslatePipe implements PipeTransform {
   transform(key: string, _params?: Record<string, unknown>): string {
@@ -17,8 +16,6 @@ class MockTranslatePipe implements PipeTransform {
 describe('ThemeSelectorComponent', () => {
   let component: ThemeSelectorComponent;
   let fixture: ComponentFixture<ThemeSelectorComponent>;
-
-  // We inject a manually‑constructed service so tests are hermetic
   let currentTheme: ReturnType<typeof signal<Theme>>;
   let setThemeSpy: Mock;
 
@@ -34,13 +31,9 @@ describe('ThemeSelectorComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      // 1. Import the real component (this pulls in its own imports)
       imports: [ThemeSelectorComponent],
-      providers: [
-        { provide: ThemeService, useValue: themeService },
-      ],
+      providers: [{ provide: ThemeService, useValue: themeService }],
     })
-      // 2. Replace the real TranslatePipe with our standalone stub
       .overrideComponent(ThemeSelectorComponent, {
         remove: { imports: [TranslatePipe] },
         add: { imports: [MockTranslatePipe] },
@@ -80,14 +73,13 @@ describe('ThemeSelectorComponent', () => {
   });
 
   it('should apply the active style class for the current theme', () => {
-    // Simulate current theme being 'dark'
     currentTheme.set('dark');
     fixture.detectChanges();
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
-    // The second button (index 1) corresponds to "dark"
-    expect(buttons[1].classList.contains('bg-blue-100')).toBe(true);
+    expect(buttons[1].classList.contains('bg-primary/15')).toBe(true);
   });
+
   it('should have accessible ARIA attributes for theme buttons', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button');
     expect(buttons[0].getAttribute('aria-label')).toBe('theme.light');
@@ -95,10 +87,11 @@ describe('ThemeSelectorComponent', () => {
     expect(buttons[2].getAttribute('aria-label')).toBe('theme.system');
   });
 
-  it('should apply RTL-safe classes for logical properties', () => {
+  it('should use symmetric RTL-safe spacing from the owned Helm compact size', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button');
-    expect(buttons[0].classList.contains('ps-4')).toBe(true);
-    expect(buttons[1].classList.contains('pe-4')).toBe(true);
+    expect(buttons[0].classList.contains('px-2.5')).toBe(true);
+    expect(buttons[1].classList.contains('px-2.5')).toBe(true);
+    expect(buttons[0].className).not.toMatch(/\b(?:pl|pr)-/);
   });
 
   it('should use the TranslatePipe for button labels', () => {

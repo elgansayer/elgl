@@ -1,17 +1,11 @@
-import {
-  Component,
-  inject,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 
 @Component({
   selector: 'app-profile-cover-photo',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="relative w-full rounded-xl overflow-hidden bg-surface">
       @if (previewUrl(); as url) {
@@ -20,12 +14,12 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
           [src]="url"
           class="w-full h-auto"
           alt="{{ 'coverPhoto.previewAlt' | t }}"
-         loading="lazy" />
+        />
       }
       @if (!previewUrl()) {
         <label
           for="cover-file-input"
-          class="flex flex-col items-center justify-center h-48 cursor-pointer border-dashed border-2 border-slate-600 hover:border-accent transition-colors rounded-xl"
+          class="flex flex-col items-center justify-center h-48 cursor-pointer border-dashed border-2 border-surface-100 hover:border-accent transition-colors rounded-xl"
         >
           <span class="text-lg text-muted">{{ 'coverPhoto.uploadLabel' | t }}</span>
           <span class="text-sm text-muted mt-1">{{ 'coverPhoto.supportedFormats' | t }}</span>
@@ -42,6 +36,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       @if (previewUrl()) {
         <div class="flex gap-2 mt-4 justify-end">
           <button
+            hlmBtn
             type="button"
             class="btn-secondary px-4 py-2 rounded-lg"
             (click)="cancel()"
@@ -49,6 +44,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
             {{ 'coverPhoto.cancel' | t }}
           </button>
           <button
+            hlmBtn
             type="button"
             class="btn-primary px-6 py-2 rounded-lg"
             (click)="save()"

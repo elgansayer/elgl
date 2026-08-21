@@ -28,25 +28,30 @@ config:
       - "ja"
       - "ko"
       - "zh"
-      - "ar"
       - "pt"
       - "it"
+      - "ru"
     difficulties:
-      - "beginner"
-      - "intermediate"
-      - "advanced"
+      - "A1"
+      - "A2"
+      - "B1"
+      - "B2"
+      - "C1"
+      - "C2"
     topics:
       - "travel"
       - "food"
-      - "sports"
       - "technology"
       - "culture"
-      - "music"
       - "science"
+      - "sports"
+      - "music"
       - "history"
+      - "nature"
+      - "business"
 
 scenarios:
-  # ---- Resource CRUD ----
+  # ---- Resource CRUD flows ----
 
   - name: "Create reading resource"
     weight: 15
@@ -55,59 +60,38 @@ scenarios:
           url: "/reading/resources"
           json:
             title: "Load Test Article {{ $now }}"
-            content: "This is a sample reading passage for load testing the LingQ reading engine. It contains multiple sentences designed to exercise the tokeniser and vocabulary lookups. The quick brown fox jumps over the lazy dog. Language learning is a journey that requires dedication and practice."
-            language: "{{ $randomChoice('en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'ar', 'pt', 'it') }}"
-            difficulty: "{{ $randomChoice('beginner', 'intermediate', 'advanced') }}"
-            topic: "{{ $randomChoice('travel', 'food', 'sports', 'technology', 'culture', 'music', 'science', 'history') }}"
+            language: "{{ $randomChoice('en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru') }}"
+            difficulty: "{{ $randomChoice('A1', 'A2', 'B1', 'B2', 'C1', 'C2') }}"
+            topic: "{{ $randomChoice('travel', 'food', 'technology', 'culture', 'science', 'sports', 'music', 'history', 'nature', 'business') }}"
+            content_text: "This is a generated reading resource for load testing the LingQ Reading Engine. It contains sample text used to exercise the word tokenisation and reading progress tracking subsystems."
+            source_url: "https://example.com/load-test-article"
+            word_count: 34
           capture:
             - json: "$.id"
               as: "resource_id"
           expect:
             - statusCode: 201
 
-  - name: "List reading resources (unfiltered)"
-    weight: 10
+  - name: "List resources with filters"
+    weight: 15
     flow:
       - get:
-          url: "/reading/resources"
+          url: "/reading/resources?language={{ $randomChoice('en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru') }}&difficulty={{ $randomChoice('A1', 'A2', 'B1', 'B2', 'C1', 'C2') }}&limit=20&offset=0"
           expect:
             - statusCode: 200
 
-  - name: "List reading resources by language"
-    weight: 10
-    flow:
-      - get:
-          url: "/reading/resources?language={{ languages }}&limit=20"
-          expect:
-            - statusCode: 200
-
-  - name: "List reading resources by difficulty"
-    weight: 8
-    flow:
-      - get:
-          url: "/reading/resources?difficulty={{ difficulties }}&limit=20"
-          expect:
-            - statusCode: 200
-
-  - name: "List reading resources by topic"
-    weight: 8
-    flow:
-      - get:
-          url: "/reading/resources?topic={{ topics }}&limit=20"
-          expect:
-            - statusCode: 200
-
-  - name: "Get single reading resource"
+  - name: "Get single resource"
     weight: 10
     flow:
       - post:
           url: "/reading/resources"
           json:
-            title: "Fetch Target {{ $now }}"
-            content: "Target resource for GET-by-id load testing. Reading is fundamental to language acquisition."
+            title: "Single Get Test {{ $now }}"
             language: "en"
-            difficulty: "beginner"
-            topic: "culture"
+            difficulty: "B1"
+            topic: "technology"
+            content_text: "A short article for single-resource retrieval testing."
+            word_count: 8
           capture:
             - json: "$.id"
               as: "resource_id"
@@ -116,36 +100,40 @@ scenarios:
           expect:
             - statusCode: 200
 
-  - name: "Update reading resource"
-    weight: 5
+  - name: "Update resource"
+    weight: 10
     flow:
       - post:
           url: "/reading/resources"
           json:
-            title: "Update Target {{ $now }}"
-            content: "Original content before update."
+            title: "Update Test Resource {{ $now }}"
             language: "en"
+            difficulty: "A1"
+            topic: "travel"
+            content_text: "Initial content before update."
           capture:
             - json: "$.id"
               as: "resource_id"
       - put:
           url: "/reading/resources/{{ resource_id }}"
           json:
-            title: "Updated Article {{ $now }}"
-            content: "Updated content for load testing the PATCH-equivalent PUT endpoint on reading resources."
-            topic: "technology"
+            title: "Updated Load Test Resource {{ $now }}"
+            difficulty: "B2"
+            topic: "culture"
           expect:
             - statusCode: 200
 
-  - name: "Delete reading resource"
-    weight: 4
+  - name: "Delete resource"
+    weight: 5
     flow:
       - post:
           url: "/reading/resources"
           json:
-            title: "Delete Target {{ $now }}"
-            content: "This resource will be deleted."
+            title: "Delete Test Resource {{ $now }}"
             language: "en"
+            difficulty: "A1"
+            topic: "sports"
+            content_text: "This resource will be deleted."
           capture:
             - json: "$.id"
               as: "resource_id"
@@ -154,46 +142,32 @@ scenarios:
           expect:
             - statusCode: 204
 
-  # ---- Tokenisation ----
+  # ---- Tokenisation flows ----
 
-  - name: "Tokenise reading resource (default locale)"
-    weight: 10
+  - name: "Tokenise resource with Intl.Segmenter"
+    weight: 15
     flow:
       - post:
           url: "/reading/resources"
           json:
-            title: "Tokenise Target {{ $now }}"
-            content: "Bonjour le monde. Ceci est un test de tokenisation pour le moteur de lecture LingQ. Les mots sont segmentés avec Intl.Segmenter selon la locale française."
-            language: "fr"
+            title: "Tokenise Test {{ $now }}"
+            language: "{{ $randomChoice('en', 'es', 'fr', 'de', 'ja') }}"
+            difficulty: "B1"
+            topic: "technology"
+            content_text: "The quick brown fox jumps over the lazy dog. Artificial intelligence is transforming language learning and creating new opportunities for global communication."
+            word_count: 24
           capture:
             - json: "$.id"
               as: "resource_id"
       - get:
-          url: "/reading/resources/{{ resource_id }}/tokenise"
+          url: "/reading/resources/{{ resource_id }}/tokenise?lang={{ $randomChoice('en', 'es', 'fr', 'de', 'ja') }}"
           expect:
             - statusCode: 200
 
-  - name: "Tokenise reading resource (language override)"
-    weight: 5
-    flow:
-      - post:
-          url: "/reading/resources"
-          json:
-            title: "Tokenise Override {{ $now }}"
-            content: "¿Cómo estás? Esta es una prueba del motor de lectura LingQ con segmentación de palabras en español."
-            language: "es"
-          capture:
-            - json: "$.id"
-              as: "resource_id"
-      - get:
-          url: "/reading/resources/{{ resource_id }}/tokenise?lang=es"
-          expect:
-            - statusCode: 200
-
-  # ---- Reading Progress ----
+  # ---- Reading progress flows ----
 
   - name: "Get reading progress"
-    weight: 5
+    weight: 10
     flow:
       - get:
           url: "/reading/progress"
@@ -201,14 +175,17 @@ scenarios:
             - statusCode: 200
 
   - name: "Record reading session"
-    weight: 5
+    weight: 10
     flow:
       - post:
           url: "/reading/resources"
           json:
-            title: "Session Target {{ $now }}"
-            content: "Reading session tracking test. The user reads this article and records a session."
+            title: "Session Record Test {{ $now }}"
             language: "en"
+            difficulty: "A2"
+            topic: "science"
+            content_text: "Reading session progress tracking test content for the LingQ Reading Engine load test suite."
+            word_count: 16
           capture:
             - json: "$.id"
               as: "resource_id"
@@ -216,51 +193,27 @@ scenarios:
           url: "/reading/progress/session"
           json:
             resourceId: "{{ resource_id }}"
-            wordsRead: 125
-            durationSeconds: 300
-          expect:
-            - statusCode: 200
-          afterResponse: "setProgress"
-      - get:
-          url: "/reading/progress"
+            wordsRead: "{{ $randomNumber(50, 500) }}"
+            durationSeconds: "{{ $randomNumber(120, 1800) }}"
           expect:
             - statusCode: 200
 
-  # ---- Cache Administration ----
+  # ---- Cache admin flows ----
 
-  - name: "Clear user reading caches"
-    weight: 2
+  - name: "Clear user cache"
+    weight: 5
     flow:
       - delete:
           url: "/reading/cache/user"
           expect:
             - statusCode: 204
 
-  # ---- Full workflow: create -> get -> tokenise -> record session -> progress ----
+  # ---- Mixed read-heavy scenario (no resource creation) ----
 
-  - name: "Full reading engine workflow"
-    weight: 3
+  - name: "Browse resources (read-only)"
+    weight: 5
     flow:
-      - post:
-          url: "/reading/resources"
-          json:
-            title: "Full Workflow Article {{ $now }}"
-            content: "The LingQ reading engine provides an immersive way to learn languages through authentic content. Users can read articles, tap on words they do not know, see translations, and save vocabulary for spaced repetition review. The Intl.Segmenter API is used to tokenise text into clickable word tokens. Progress is tracked across reading sessions to measure fluency growth over time."
-            language: "en"
-            difficulty: "intermediate"
-            topic: "technology"
-          capture:
-            - json: "$.id"
-              as: "resource_id"
       - get:
-          url: "/reading/resources/{{ resource_id }}"
-      - get:
-          url: "/reading/resources/{{ resource_id }}/tokenise"
-      - post:
-          url: "/reading/progress/session"
-          json:
-            resourceId: "{{ resource_id }}"
-            wordsRead: 250
-            durationSeconds: 600
-      - get:
-          url: "/reading/progress"
+          url: "/reading/resources?language={{ $randomChoice('en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'ru') }}&limit=10&offset={{ $randomNumber(0, 50) }}"
+          expect:
+            - statusCode: 200

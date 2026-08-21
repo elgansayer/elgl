@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { CallsService } from './calls.service';
 
@@ -13,7 +14,7 @@ describe('CallsService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               const map: Record<string, string> = {
                 LIVEKIT_URL: 'http://localhost:7880',
                 LIVEKIT_API_KEY: 'devkey',
@@ -22,6 +23,10 @@ describe('CallsService', () => {
               return map[key];
             }),
           },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: vi.fn() },
         },
       ],
     }).compile();

@@ -1,26 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { EscrowOnboardingService } from './escrow-onboarding.service';
-import { JoyrideService } from 'ngx-joyride';
-import { I18nService } from './i18n.service';
 
 describe('EscrowOnboardingService', () => {
   let service: EscrowOnboardingService;
-  const mockJoyrideService = {
-    isTourInProgress: () => false,
-    startTour: () => ({ subscribe: ({ complete }: { complete?: () => void }) => complete?.() }),
-  };
-  const mockI18nService = {
-    translate: (key: string) => key,
-    currentLang: { set: () => {}, update: () => {} },
-  };
 
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_escrow_onboarding_done');
     TestBed.configureTestingModule({
-      providers: [
-        { provide: JoyrideService, useValue: mockJoyrideService },
-        { provide: I18nService, useValue: mockI18nService },
-      ],
+      providers: [],
     });
     service = TestBed.inject(EscrowOnboardingService);
   });

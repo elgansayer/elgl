@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import {
-  HTTP_INTERCEPTORS,
   HttpClient,
   HttpErrorResponse,
   provideHttpClient,
@@ -10,7 +9,6 @@ import {
 import {
   HttpTestingController,
   provideHttpClientTesting,
-  TestRequest,
 } from '@angular/common/http/testing';
 import { retryInterceptor } from './retry.interceptor';
 
