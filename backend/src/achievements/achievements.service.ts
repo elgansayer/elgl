@@ -154,16 +154,20 @@ export class AchievementsService implements OnModuleInit {
       return [];
     }
 
+    // ⚡ Bolt Optimization: Grouped independent database queries using Promise.all
+    // to prevent N+1 sequential roundtrips and significantly reduce latency.
+    const [earnedRows, msgCount, streakDays] = await Promise.all([
+      this.getUserAchievements(userId),
+      this.getUserMessageCount(userId),
+      this.getStudyStreakDays(userId),
+    ]);
+
     // get already earned codes
-    const earnedRows = await this.getUserAchievements(userId);
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
       const code = row.achievements?.code;
       if (code) earnedCodes.add(code);
     }
-
-    const msgCount = await this.getUserMessageCount(userId);
-    const streakDays = await this.getStudyStreakDays(userId);
 
     const thresholds: Record<string, { required: number }> = {
       first_message: { required: 1 },
