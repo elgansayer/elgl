@@ -12,6 +12,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -46,6 +47,7 @@ export class UsersController {
   ) {}
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Delete('me')
   async deleteMyAccount(
     @CurrentUser() user: User | null,
@@ -55,6 +57,7 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 2, ttl: 300000 } })
   @Delete('me/permanent')
   async permanentlyDeleteMyAccount(
     @CurrentUser() user: User | null,
@@ -65,6 +68,7 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
@@ -290,6 +294,19 @@ export class UsersController {
   @Get('interests')
   getAvailableInterests(): string[] {
     return this.usersService.getAvailableInterests();
+  }
+
+  @Get('search')
+  async searchUsers(
+    @Query('q') query: string,
+    @CurrentUser() user: User | null,
+    @Query('limit') limit: number | undefined,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    if (!user) throw new UnauthorizedException();
+    if (!query || query.trim().length === 0) return [];
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
   }
 
   @Get('me/badges')

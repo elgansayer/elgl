@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
@@ -14,14 +15,14 @@ describe('MediaController', () => {
         {
           provide: MediaService,
           useValue: {
-            generateCoverPresignedUrl: jest.fn(),
-            confirmCoverUpload: jest.fn(),
+            generateCoverPresignedUrl: vi.fn(),
+            confirmCoverUpload: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<MediaController>(MediaController);
@@ -29,7 +30,7 @@ describe('MediaController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,7 +49,7 @@ describe('MediaController', () => {
         objectKey: 'covers/user-1/test.jpg',
       };
 
-      (mediaService.generateCoverPresignedUrl as jest.Mock).mockResolvedValue(
+      (mediaService.generateCoverPresignedUrl as Mock).mockResolvedValue(
         expectedResponse,
       );
 
@@ -71,7 +72,7 @@ describe('MediaController', () => {
         coverUrl: 'https://media.url/covers/user-1/test.jpg',
       };
 
-      (mediaService.confirmCoverUpload as jest.Mock).mockResolvedValue(
+      (mediaService.confirmCoverUpload as Mock).mockResolvedValue(
         expectedResponse,
       );
 

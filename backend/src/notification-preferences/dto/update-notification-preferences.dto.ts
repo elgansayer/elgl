@@ -18,23 +18,9 @@ class CategoryPreferenceDto {
   @IsOptional()
   @IsBoolean()
   in_app?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  badges?: boolean;
 }
 
 export class UpdateNotificationPreferencesDto {
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => CategoryPreferenceDto)
-  direct_message?: CategoryPreferenceDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => CategoryPreferenceDto)
-  group_message?: CategoryPreferenceDto;
-
   @IsOptional()
   @ValidateNested()
   @Type(() => CategoryPreferenceDto)

@@ -7,77 +7,49 @@ import { SoundboardService } from '../../services/soundboard.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
-import { I18nService } from '../../services/i18n.service';
 
-class MockAudio {
-  volume = 0;
-  src: string;
-  play = vi.fn().mockResolvedValue(undefined);
-  pause = vi.fn();
-  addEventListener = vi.fn();
-  constructor(src: string) {
-    this.src = src;
-    audioInstances.push(this);
-  }
-}
-
-let audioInstances: MockAudio[] = [];
+interface UserInfo { id: string }
 
 describe('SoundboardComponent', () => {
   let component: SoundboardComponent;
   let fixture: ComponentFixture<SoundboardComponent>;
   let getSoundsMock: ReturnType<typeof vi.fn>;
   let playSoundMock: ReturnType<typeof vi.fn>;
-  let subscribeCalls: Array<{ channel: string; cb: (data: unknown) => void }>;
-  let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
+  let subscribeFn: ReturnType<typeof vi.fn>;
+  let hapticTapFn: ReturnType<typeof vi.fn>;
+  let currentUserSignal: () => UserInfo | null;
 
-  let soundboardService: SoundboardService;
-  let centrifugoService: CentrifugoService;
-  let authService: AuthService;
-  let hapticFeedback: HapticFeedbackService;
-  let i18nService: I18nService;
+  const audioElements: Array<{ src: string; volume: number; play: ReturnType<typeof vi.fn> }> = [];
 
-  beforeEach(() => {
-    audioInstances = [];
-    vi.stubGlobal('Audio', MockAudio);
+  beforeEach(async () => {
+    audioElements.length = 0;
 
-    subscribeCalls = [];
-    currentUser = signal<{ id: string } | null>(null);
+    class AudioStub {
+      volume = 0;
+      src = '';
+      play = vi.fn().mockResolvedValue(undefined);
+      pause = vi.fn();
+      addEventListener = vi.fn();
+      constructor(src: string) {
+        this.src = src;
+        audioElements.push(this);
+      }
+    }
+    vi.stubGlobal('Audio', AudioStub);
 
-    getSoundsMock = vi.fn();
+    getSoundsMock = vi.fn().mockResolvedValue({ sounds: [] });
     playSoundMock = vi.fn().mockResolvedValue(undefined);
+    subscribeFn = vi.fn();
+    hapticTapFn = vi.fn();
+    currentUserSignal = signal<UserInfo | null>(null);
 
-    soundboardService = {
-      getSounds: getSoundsMock,
-      playSound: playSoundMock,
-    } as unknown as SoundboardService;
-
-    centrifugoService = {
-      subscribe: vi.fn((channel: string, cb: (data: unknown) => void) => {
-        subscribeCalls.push({ channel, cb });
-      }),
-    } as unknown as CentrifugoService;
-
-    authService = {
-      currentUser,
-    } as unknown as AuthService;
-
-    hapticFeedback = {
-      tap: vi.fn(),
-    } as unknown as HapticFeedbackService;
-
-    i18nService = {
-      translate: vi.fn((key: string) => key),
-    } as unknown as I18nService;
-
-    TestBed.configureTestingModule({
+    await TestBed.configureTestingModule({
       imports: [SoundboardComponent],
       providers: [
-        { provide: SoundboardService, useValue: soundboardService },
-        { provide: CentrifugoService, useValue: centrifugoService },
-        { provide: AuthService, useValue: authService },
-        { provide: HapticFeedbackService, useValue: hapticFeedback },
-        { provide: I18nService, useValue: i18nService },
+        { provide: SoundboardService, useValue: { getSounds: getSoundsMock, playSound: playSoundMock } },
+        { provide: CentrifugoService, useValue: { subscribe: subscribeFn } },
+        { provide: AuthService, useValue: { currentUser: currentUserSignal } },
+        { provide: HapticFeedbackService, useValue: { tap: hapticTapFn } },
       ],
     }).compileComponents();
 
@@ -87,106 +59,84 @@ describe('SoundboardComponent', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-    subscribeCalls = [];
-    audioInstances = [];
   });
 
-  it('should create the component', () => {
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
+  function setInputsAndInit(roomId: string, hostUserId: string): void {
+    fixture.componentRef.setInput('roomId', roomId);
+    fixture.componentRef.setInput('hostUserId', hostUserId);
     fixture.detectChanges();
+  }
+
+  it('should create the component', () => {
+    setInputsAndInit('room-1', 'host-1');
     expect(component).toBeTruthy();
   });
 
   it('should allow the host user to play sounds', () => {
-    currentUser.set({ id: 'host-1' });
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
-
+    (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'host-1' });
+    setInputsAndInit('room-1', 'host-1');
     expect(component.canPlay()).toBe(true);
   });
 
   it('should forbid a non-host user from playing sounds', () => {
-    currentUser.set({ id: 'guest-9' });
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
-
+    (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'guest-9' });
+    setInputsAndInit('room-1', 'host-1');
     expect(component.canPlay()).toBe(false);
   });
 
   it('should load sound items from the backend service', async () => {
     const mockSounds: SoundItem[] = [
       { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' },
-      { id: 's2', name: 'Cheer', url: 'https://example.com/cheer.mp3', icon: '🎉' },
     ];
     getSoundsMock.mockResolvedValue({ sounds: mockSounds });
 
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
+    setInputsAndInit('room-1', 'host-1');
+    // Wait for the async loadSounds triggered by the effect
     await fixture.whenStable();
+    // Allow pending microtasks to flush
+    await new Promise((r) => setTimeout(r, 10));
 
+    expect(getSoundsMock).toHaveBeenCalled();
     expect(component.sounds()).toEqual(mockSounds);
   });
 
-  it('should call backend playSound and haptic feedback when the host taps a sound', async () => {
-    currentUser.set({ id: 'host-1' });
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
+  it('should call backend playSound when the host taps a sound', async () => {
+    (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'host-1' });
+    setInputsAndInit('room-1', 'host-1');
 
-    const sound: SoundItem = {
-      id: 's1',
-      name: 'Laugh',
-      url: 'https://example.com/laugh.mp3',
-      icon: '😂',
-    };
-
+    const sound: SoundItem = { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' };
     await component.playSound(sound);
 
     expect(playSoundMock).toHaveBeenCalledWith('room-1', 's1');
-    expect((hapticFeedback as unknown as { tap: ReturnType<typeof vi.fn> }).tap).toHaveBeenCalled();
+    expect(hapticTapFn).toHaveBeenCalled();
   });
 
-  it('should NOT call backend or haptic feedback when a non-host taps a sound', async () => {
-    currentUser.set({ id: 'guest-9' });
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
+  it('should NOT call backend playSound when a non-host taps a sound', async () => {
+    (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'guest-9' });
+    setInputsAndInit('room-1', 'host-1');
 
-    const sound: SoundItem = {
-      id: 's1',
-      name: 'Laugh',
-      url: 'https://example.com/laugh.mp3',
-      icon: '😂',
-    };
-
+    const sound: SoundItem = { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' };
     await component.playSound(sound);
 
     expect(playSoundMock).not.toHaveBeenCalled();
-    expect((hapticFeedback as unknown as { tap: ReturnType<typeof vi.fn> }).tap).not.toHaveBeenCalled();
+    expect(hapticTapFn).not.toHaveBeenCalled();
   });
 
   it('should play a remote sound when a soundboard_play Centrifugo event arrives', async () => {
-    fixture.componentRef.setInput('roomId', 'room-1');
-    fixture.componentRef.setInput('hostUserId', 'host-1');
-    fixture.detectChanges();
+    setInputsAndInit('room-1', 'host-1');
     await fixture.whenStable();
 
-    const channel = 'room_room-1';
-    const subscription = subscribeCalls.find((c) => c.channel === channel);
-    expect(subscription).toBeDefined();
+    expect(subscribeFn).toHaveBeenCalled();
+    // Extract the callback from the first subscribe call
+    const cbArgs = subscribeFn.mock.calls.find((c: unknown[]) => c[0] === 'room_room-1');
+    expect(cbArgs).toBeDefined();
 
-    const soundUrl = 'https://example.com/remote.mp3';
-    subscription?.cb({ type: 'soundboard_play', sound_url: soundUrl });
+    const callback = cbArgs![1] as (data: unknown) => void;
+    callback({ type: 'soundboard_play', sound_url: 'https://example.com/remote.mp3' });
 
-    // The component creates a new Audio element and sets volume to 0.6.
-    expect(audioInstances.length).toBe(1);
-    expect(audioInstances[0].src).toBe(soundUrl);
-    expect(audioInstances[0].volume).toBe(0.6);
-    expect(audioInstances[0].play).toHaveBeenCalled();
+    expect(audioElements.length).toBe(1);
+    expect(audioElements[0].src).toBe('https://example.com/remote.mp3');
+    expect(audioElements[0].volume).toBe(0.6);
+    expect(audioElements[0].play).toHaveBeenCalled();
   });
 });

@@ -1,42 +1,47 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict mock: strip ALL HTML tags (mirrors the empty ALLOWED_TAGS config)
-const mockStrictSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  return dirty
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
-};
+const { mockStrictSanitize, mockSetConfig } = vi.hoisted(() => {
+  const mockStrictSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    return dirty
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
 
-const mockSetConfig = jest.fn();
+  const mockSetConfig = vi.fn();
+  return { mockStrictSanitize, mockSetConfig };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockStrictSanitize,
       setConfig: mockSetConfig,
     })),

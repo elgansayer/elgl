@@ -1,3 +1,0 @@
-- [Home](Home)
-- [Features](Features)
-- [Codebase Reference](Codebase_Reference)

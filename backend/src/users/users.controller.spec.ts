@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -19,48 +20,48 @@ describe('UsersController', () => {
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn(),
-            updateProfile: jest.fn(),
-            getFollowers: jest.fn(),
-            getFollowing: jest.fn(),
-            followUser: jest.fn(),
-            unfollowUser: jest.fn(),
-            scheduleDeletion: jest.fn(),
-            cancelDeletion: jest.fn(),
-            exportUserData: jest.fn(),
-            getUserStats: jest.fn(),
-            getUserXp: jest.fn(),
-            proficiencyAssessment: jest.fn(),
-            getVisitors: jest.fn(),
-            getStatusViewers: jest.fn(),
-            getStatusViewersByStatusId: jest.fn(),
-            getDefaultStatusId: jest.fn(),
-            getAvailableHobbies: jest.fn(),
-            getAvailableInterests: jest.fn(),
-            getBadges: jest.fn(),
-            getPrivacySettings: jest.fn(),
-            getMessageFilters: jest.fn(),
-            setMessageFilters: jest.fn(),
-            updatePrivacySettings: jest.fn(),
-            getBusinessProfile: jest.fn(),
-            updateBusinessProfile: jest.fn(),
-            updateDoNotDisturbSettings: jest.fn(),
-            permanentDeleteAccount: jest.fn(),
-            getNotificationPreferences: jest.fn(),
-            updateGreetingMessage: jest.fn(),
-            updateAwayMessage: jest.fn(),
-            blockUser: jest.fn(),
-            unblockUser: jest.fn(),
-            reportUser: jest.fn(),
-            updateNotificationPreferences: jest.fn(),
+            getProfile: vi.fn(),
+            updateProfile: vi.fn(),
+            getFollowers: vi.fn(),
+            getFollowing: vi.fn(),
+            followUser: vi.fn(),
+            unfollowUser: vi.fn(),
+            scheduleDeletion: vi.fn(),
+            cancelDeletion: vi.fn(),
+            exportUserData: vi.fn(),
+            getUserStats: vi.fn(),
+            getUserXp: vi.fn(),
+            proficiencyAssessment: vi.fn(),
+            getVisitors: vi.fn(),
+            getStatusViewers: vi.fn(),
+            getStatusViewersByStatusId: vi.fn(),
+            getDefaultStatusId: vi.fn(),
+            getAvailableHobbies: vi.fn(),
+            getAvailableInterests: vi.fn(),
+            getBadges: vi.fn(),
+            getPrivacySettings: vi.fn(),
+            getMessageFilters: vi.fn(),
+            setMessageFilters: vi.fn(),
+            updatePrivacySettings: vi.fn(),
+            getBusinessProfile: vi.fn(),
+            updateBusinessProfile: vi.fn(),
+            updateDoNotDisturbSettings: vi.fn(),
+            permanentDeleteAccount: vi.fn(),
+            getNotificationPreferences: vi.fn(),
+            updateGreetingMessage: vi.fn(),
+            updateAwayMessage: vi.fn(),
+            blockUser: vi.fn(),
+            unblockUser: vi.fn(),
+            reportUser: vi.fn(),
+            updateNotificationPreferences: vi.fn(),
           },
         },
         {
           provide: MediaService,
           useValue: {
-            generatePresignedUrl: jest.fn(),
-            generateCoverPresignedUrl: jest.fn(),
-            confirmCoverUpload: jest.fn(),
+            generatePresignedUrl: vi.fn(),
+            generateCoverPresignedUrl: vi.fn(),
+            confirmCoverUpload: vi.fn(),
           },
         },
         {
@@ -75,9 +76,9 @@ describe('UsersController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(TwoFactorGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<UsersController>(UsersController);
@@ -87,7 +88,7 @@ describe('UsersController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -103,7 +104,7 @@ describe('UsersController', () => {
 
     it('should return user profile when user is provided', async () => {
       const mockProfile: any = { id: 'user-1', display_name: 'Test User' };
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
 
       const result = await controller.getMyProfile({ id: 'user-1' } as any);
       expect(result).toEqual(mockProfile);
@@ -129,10 +130,8 @@ describe('UsersController', () => {
         is_vip: true,
       };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
-      (usersService.updateProfile as jest.Mock).mockResolvedValue(
-        updatedProfile,
-      );
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+      (usersService.updateProfile as Mock).mockResolvedValue(updatedProfile);
 
       const result = await controller.updateMyProfile(mockUser, dto);
 
@@ -154,10 +153,8 @@ describe('UsersController', () => {
         display_name: 'Updated Name',
       };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
-      (usersService.updateProfile as jest.Mock).mockResolvedValue(
-        updatedProfile,
-      );
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+      (usersService.updateProfile as Mock).mockResolvedValue(updatedProfile);
 
       const result = await controller.updateMyProfile(mockUser, dto);
 
@@ -184,7 +181,7 @@ describe('UsersController', () => {
         id: 'user-1',
         greeting_message: 'Hello!',
       };
-      (usersService.updateGreetingMessage as jest.Mock).mockResolvedValue(
+      (usersService.updateGreetingMessage as Mock).mockResolvedValue(
         updatedProfile,
       );
       const result = await controller.updateGreetingMessage(
@@ -209,7 +206,7 @@ describe('UsersController', () => {
 
     it('should call updateAwayMessage with the user id and message', async () => {
       const updatedProfile: any = { id: 'user-1', away_message: 'Back soon' };
-      (usersService.updateAwayMessage as jest.Mock).mockResolvedValue(
+      (usersService.updateAwayMessage as Mock).mockResolvedValue(
         updatedProfile,
       );
       const result = await controller.updateAwayMessage(
@@ -231,7 +228,7 @@ describe('UsersController', () => {
         display_name: 'Target',
         profile_visibility: 'everyone',
       };
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
 
       const result = await controller.getUserProfile('target-user', null);
       expect(usersService.getProfile).toHaveBeenCalledWith('target-user');
@@ -244,7 +241,7 @@ describe('UsersController', () => {
         display_name: 'Target',
         profile_visibility: 'hidden',
       };
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
 
       await expect(
         controller.getUserProfile('target-user', null),
@@ -258,10 +255,10 @@ describe('UsersController', () => {
         profile_visibility: 'vips_only',
         is_vip: false,
       };
-      (usersService.getProfile as jest.Mock).mockResolvedValueOnce(
+      (usersService.getProfile as Mock).mockResolvedValueOnce(
         mockTargetProfile,
       );
-      (usersService.getProfile as jest.Mock).mockResolvedValueOnce({
+      (usersService.getProfile as Mock).mockResolvedValueOnce({
         ...mockTargetProfile,
         is_vip: false,
       });
@@ -280,10 +277,10 @@ describe('UsersController', () => {
         display_name: 'Target',
         profile_visibility: 'vips_only',
       };
-      (usersService.getProfile as jest.Mock).mockResolvedValueOnce(
+      (usersService.getProfile as Mock).mockResolvedValueOnce(
         mockTargetProfile,
       );
-      (usersService.getProfile as jest.Mock).mockResolvedValueOnce({
+      (usersService.getProfile as Mock).mockResolvedValueOnce({
         ...mockTargetProfile,
         is_vip: true,
       });
@@ -299,7 +296,7 @@ describe('UsersController', () => {
   describe('getFollowers', () => {
     it('should apply default paging and forward the viewer id', async () => {
       const mockResult = { data: [{ id: 'follower-1' }], total: 1 } as any;
-      (usersService.getFollowers as jest.Mock).mockResolvedValue(mockResult);
+      (usersService.getFollowers as Mock).mockResolvedValue(mockResult);
 
       const result = await controller.getFollowers(
         'target-user',
@@ -319,7 +316,7 @@ describe('UsersController', () => {
 
     it('should pass through explicit limit/offset and a null viewer', async () => {
       const mockResult = { data: [], total: 0 } as any;
-      (usersService.getFollowers as jest.Mock).mockResolvedValue(mockResult);
+      (usersService.getFollowers as Mock).mockResolvedValue(mockResult);
 
       await controller.getFollowers('target-user', 5, 10, null);
 
@@ -335,7 +332,7 @@ describe('UsersController', () => {
   describe('getFollowing', () => {
     it('should apply default paging and forward the viewer id', async () => {
       const mockResult = { data: [{ id: 'following-1' }], total: 1 } as any;
-      (usersService.getFollowing as jest.Mock).mockResolvedValue(mockResult);
+      (usersService.getFollowing as Mock).mockResolvedValue(mockResult);
 
       const result = await controller.getFollowing(
         'target-user',
@@ -404,7 +401,7 @@ describe('UsersController', () => {
     });
 
     it('should block the target user on behalf of the current user', async () => {
-      (usersService.blockUser as jest.Mock).mockResolvedValue({
+      (usersService.blockUser as Mock).mockResolvedValue({
         success: true,
       });
       const result = await controller.blockUser(
@@ -428,7 +425,7 @@ describe('UsersController', () => {
     });
 
     it('should unblock the target user on behalf of the current user', async () => {
-      (usersService.unblockUser as jest.Mock).mockResolvedValue({
+      (usersService.unblockUser as Mock).mockResolvedValue({
         success: true,
       });
       const result = await controller.unblockUser(
@@ -471,7 +468,7 @@ describe('UsersController', () => {
     });
 
     it('should call reportUser with the reporter id and normalised dto', async () => {
-      (usersService.reportUser as jest.Mock).mockResolvedValue({
+      (usersService.reportUser as Mock).mockResolvedValue({
         success: true,
         message: 'Report submitted',
       });
@@ -491,7 +488,7 @@ describe('UsersController', () => {
     });
 
     it('should omit optional fields when not provided', async () => {
-      (usersService.reportUser as jest.Mock).mockResolvedValue({
+      (usersService.reportUser as Mock).mockResolvedValue({
         success: true,
         message: 'Report submitted',
       });
@@ -521,9 +518,7 @@ describe('UsersController', () => {
         message: 'scheduled',
         scheduled_for_deletion_at: '2026-08-02',
       };
-      (usersService.scheduleDeletion as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (usersService.scheduleDeletion as Mock).mockResolvedValue(mockResult);
       const result = await controller.deleteMyAccount({ id: 'user-1' } as any);
       expect(usersService.scheduleDeletion).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockResult);
@@ -539,7 +534,7 @@ describe('UsersController', () => {
     });
 
     it('should call permanentDeleteAccount with the user id', async () => {
-      (usersService.permanentDeleteAccount as jest.Mock).mockResolvedValue(
+      (usersService.permanentDeleteAccount as Mock).mockResolvedValue(
         undefined,
       );
       const result = await controller.permanentlyDeleteMyAccount({
@@ -561,7 +556,7 @@ describe('UsersController', () => {
     });
 
     it('should call cancelDeletion with the user id', async () => {
-      (usersService.cancelDeletion as jest.Mock).mockResolvedValue({
+      (usersService.cancelDeletion as Mock).mockResolvedValue({
         message: 'restored',
       });
       const result = await controller.restoreMyAccount({ id: 'user-1' } as any);
@@ -580,7 +575,7 @@ describe('UsersController', () => {
 
     it('should call exportUserData with the user id', async () => {
       const mockExport = { profile: {}, moments: [] };
-      (usersService.exportUserData as jest.Mock).mockResolvedValue(mockExport);
+      (usersService.exportUserData as Mock).mockResolvedValue(mockExport);
       const result = await controller.exportMyData({ id: 'user-1' } as any);
       expect(usersService.exportUserData).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockExport);
@@ -597,7 +592,7 @@ describe('UsersController', () => {
 
     it('should return notification preferences for current user', async () => {
       const prefs = { custom_tone_url: 'https://example.com/tone.mp3' };
-      (usersService.getNotificationPreferences as jest.Mock).mockResolvedValue(
+      (usersService.getNotificationPreferences as Mock).mockResolvedValue(
         prefs,
       );
       const result = await controller.getMyNotificationPreferences({
@@ -618,7 +613,7 @@ describe('UsersController', () => {
 
     it('should return stats for current user', async () => {
       const mockStats = { id: 'user-1', coins: 10 };
-      (usersService.getUserStats as jest.Mock).mockResolvedValue(mockStats);
+      (usersService.getUserStats as Mock).mockResolvedValue(mockStats);
       const result = await controller.getMyStats({ id: 'user-1' } as any);
       expect(usersService.getUserStats).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockStats);
@@ -632,7 +627,7 @@ describe('UsersController', () => {
     });
 
     it('should return total XP', async () => {
-      (usersService.getUserXp as jest.Mock).mockResolvedValue(120);
+      (usersService.getUserXp as Mock).mockResolvedValue(120);
       const result = await controller.getMyXp({ id: 'user-1' } as any);
       expect(usersService.getUserXp).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ totalXp: 120 });
@@ -660,7 +655,7 @@ describe('UsersController', () => {
     });
 
     it('should call proficiencyAssessment and return level', async () => {
-      (usersService.proficiencyAssessment as jest.Mock).mockResolvedValue('B1');
+      (usersService.proficiencyAssessment as Mock).mockResolvedValue('B1');
       const result = await controller.assessProficiency(
         { id: 'user-1' } as any,
         80,
@@ -690,9 +685,7 @@ describe('UsersController', () => {
         mediaUrl: 'https://example.com',
         objectKey: 'key',
       };
-      (mediaService.generatePresignedUrl as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (mediaService.generatePresignedUrl as Mock).mockResolvedValue(mockResult);
       const result = await controller.getCoverPhotoPresignedUrl(
         { id: 'user-1' } as any,
         { filename: 'cover.jpg', contentType: 'image/jpeg' },
@@ -717,8 +710,8 @@ describe('UsersController', () => {
     it('should pass is_vip true when profile has is_vip', async () => {
       const mockUser = { id: 'user-1' } as any;
       const mockProfile: any = { id: 'user-1', is_vip: true };
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
-      (usersService.updateProfile as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+      (usersService.updateProfile as Mock).mockResolvedValue({
         id: 'user-1',
         cover_photo_url: 'new-url',
       });
@@ -734,8 +727,8 @@ describe('UsersController', () => {
     it('should pass is_vip false when profile lacks is_vip', async () => {
       const mockUser = { id: 'user-2' } as any;
       const mockProfile: any = { id: 'user-2' };
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
-      (usersService.updateProfile as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
+      (usersService.updateProfile as Mock).mockResolvedValue({
         id: 'user-2',
         cover_photo_url: 'new-url',
       });
@@ -776,9 +769,7 @@ describe('UsersController', () => {
         mediaUrl: 'https://example.com',
         objectKey: 'key',
       };
-      (mediaService.generatePresignedUrl as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (mediaService.generatePresignedUrl as Mock).mockResolvedValue(mockResult);
       const result = await controller.getAvatarPresignedUrl(
         { id: 'user-1' } as any,
         { filename: 'a.png', contentType: 'image/png' },
@@ -802,7 +793,7 @@ describe('UsersController', () => {
 
     it('should return visitors', async () => {
       const visitors = [{ id: 'v1', display_name: 'Visitor' }];
-      (usersService.getVisitors as jest.Mock).mockResolvedValue(visitors);
+      (usersService.getVisitors as Mock).mockResolvedValue(visitors);
       const result = await controller.getMyVisitors({ id: 'user-1' } as any);
       expect(usersService.getVisitors).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(visitors);
@@ -883,10 +874,8 @@ describe('UsersController', () => {
 
     it('should resolve the default status id and return its viewers', async () => {
       const viewers = [{ id: 'v1', display_name: 'Viewer' }];
-      (usersService.getDefaultStatusId as jest.Mock).mockResolvedValue(
-        'status-1',
-      );
-      (usersService.getStatusViewersByStatusId as jest.Mock).mockResolvedValue(
+      (usersService.getDefaultStatusId as Mock).mockResolvedValue('status-1');
+      (usersService.getStatusViewersByStatusId as Mock).mockResolvedValue(
         viewers,
       );
       const result = await controller.getMyStatusViewers({
@@ -911,7 +900,7 @@ describe('UsersController', () => {
 
     it('should return viewers for the given status id', async () => {
       const viewers = [{ id: 'v1', display_name: 'Viewer' }];
-      (usersService.getStatusViewersByStatusId as jest.Mock).mockResolvedValue(
+      (usersService.getStatusViewersByStatusId as Mock).mockResolvedValue(
         viewers,
       );
       const result = await controller.getStatusViewers(
@@ -929,7 +918,7 @@ describe('UsersController', () => {
   describe('getAvailableHobbies', () => {
     it('should return hobbies list', () => {
       const hobbies = ['reading', 'gaming'];
-      (usersService.getAvailableHobbies as jest.Mock).mockReturnValue(hobbies);
+      (usersService.getAvailableHobbies as Mock).mockReturnValue(hobbies);
       expect(controller.getAvailableHobbies()).toEqual(hobbies);
     });
   });
@@ -937,9 +926,7 @@ describe('UsersController', () => {
   describe('getAvailableInterests', () => {
     it('should return interests list', () => {
       const interests = ['tech', 'music'];
-      (usersService.getAvailableInterests as jest.Mock).mockReturnValue(
-        interests,
-      );
+      (usersService.getAvailableInterests as Mock).mockReturnValue(interests);
       expect(controller.getAvailableInterests()).toEqual(interests);
     });
   });
@@ -956,7 +943,7 @@ describe('UsersController', () => {
       const badges = [
         { id: 'badge-1', name: 'Early Bird', description: 'First day' },
       ];
-      (usersService.getBadges as jest.Mock).mockResolvedValue(badges);
+      (usersService.getBadges as Mock).mockResolvedValue(badges);
       const result = await controller.getMyBadges({ id: 'user-1' } as any);
       expect(usersService.getBadges).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(badges);
@@ -966,7 +953,7 @@ describe('UsersController', () => {
   describe('getUserStats', () => {
     it('should return stats for the given id', async () => {
       const stats = { id: 'target', coins: 5 };
-      (usersService.getUserStats as jest.Mock).mockResolvedValue(stats);
+      (usersService.getUserStats as Mock).mockResolvedValue(stats);
       const result = await controller.getUserStats('target');
       expect(usersService.getUserStats).toHaveBeenCalledWith('target');
       expect(result).toEqual(stats);
@@ -983,9 +970,7 @@ describe('UsersController', () => {
 
     it('should return privacy settings', async () => {
       const settings = { privacy_hide_age: true };
-      (usersService.getPrivacySettings as jest.Mock).mockResolvedValue(
-        settings,
-      );
+      (usersService.getPrivacySettings as Mock).mockResolvedValue(settings);
       const result = await controller.getMyPrivacySettings({
         id: 'user-1',
       } as any);
@@ -1004,7 +989,7 @@ describe('UsersController', () => {
 
     it('should return message filters', async () => {
       const filters = { age_min: 18, age_max: 99 };
-      (usersService.getMessageFilters as jest.Mock).mockResolvedValue(filters);
+      (usersService.getMessageFilters as Mock).mockResolvedValue(filters);
       const result = await controller.getMyMessageFilters({
         id: 'user-1',
       } as any);
@@ -1046,11 +1031,11 @@ describe('UsersController', () => {
 
     it('should call updatePrivacySettings with DTO and the caller VIP status', async () => {
       const dto = { incognito_visits: true };
-      (usersService.getProfile as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue({
         id: 'user-1',
         is_vip: true,
       });
-      (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
+      (usersService.updatePrivacySettings as Mock).mockResolvedValue({
         id: 'user-1',
       });
       const result = await controller.updatePrivacySettings(
@@ -1076,7 +1061,7 @@ describe('UsersController', () => {
 
     it('should return business profile', async () => {
       const profile = { business_name: 'Acme' };
-      (usersService.getBusinessProfile as jest.Mock).mockResolvedValue(profile);
+      (usersService.getBusinessProfile as Mock).mockResolvedValue(profile);
       const result = await controller.getMyBusinessProfile({
         id: 'user-1',
       } as any);
@@ -1095,7 +1080,7 @@ describe('UsersController', () => {
 
     it('should call updateBusinessProfile', async () => {
       const dto = { business_name: 'New' };
-      (usersService.updateBusinessProfile as jest.Mock).mockResolvedValue({
+      (usersService.updateBusinessProfile as Mock).mockResolvedValue({
         id: 'user-1',
         business_name: 'New',
       });
@@ -1121,7 +1106,7 @@ describe('UsersController', () => {
 
     it('should call updateDoNotDisturbSettings', async () => {
       const dto = { do_not_disturb: true };
-      (usersService.updateDoNotDisturbSettings as jest.Mock).mockResolvedValue({
+      (usersService.updateDoNotDisturbSettings as Mock).mockResolvedValue({
         id: 'user-1',
       });
       const result = await controller.setDoNotDisturb(
@@ -1147,11 +1132,11 @@ describe('UsersController', () => {
     });
 
     it('should update status visibility using the caller VIP status', async () => {
-      (usersService.getProfile as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue({
         id: 'user-1',
         is_vip: true,
       });
-      (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
+      (usersService.updatePrivacySettings as Mock).mockResolvedValue({
         id: 'user-1',
         status_visibility: 'followers',
       });
@@ -1172,10 +1157,10 @@ describe('UsersController', () => {
     });
 
     it('should fall back to false when profile is_vip is undefined', async () => {
-      (usersService.getProfile as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue({
         id: 'user-2',
       });
-      (usersService.updatePrivacySettings as jest.Mock).mockResolvedValue({
+      (usersService.updatePrivacySettings as Mock).mockResolvedValue({
         id: 'user-2',
         status_visibility: 'only_me',
       });
@@ -1204,9 +1189,9 @@ describe('UsersController', () => {
         vibration_pattern: [100, 200, 100],
       };
       const updatedProfile: any = { id: 'user-1', ...dto };
-      (
-        usersService.updateNotificationPreferences as jest.Mock
-      ).mockResolvedValue(updatedProfile);
+      (usersService.updateNotificationPreferences as Mock).mockResolvedValue(
+        updatedProfile,
+      );
       const result = await controller.updateNotificationPreferences(
         { id: 'user-1' } as any,
         dto,
@@ -1217,5 +1202,31 @@ describe('UsersController', () => {
       );
       expect(result).toEqual(updatedProfile);
     });
+  });
+
+  describe('throttle configuration for account lifecycle endpoints', () => {
+    // Metadata keys used by @nestjs/throttler for the default named throttler.
+    const throttleLimitKey = 'THROTTLER:LIMITdefault';
+    const throttleTtlKey = 'THROTTLER:TTLdefault';
+
+    const throttledEndpoints: Array<{
+      method: keyof UsersController;
+      limit: number;
+      ttl: number;
+    }> = [
+      { method: 'deleteMyAccount', limit: 3, ttl: 60000 },
+      { method: 'permanentlyDeleteMyAccount', limit: 2, ttl: 300000 },
+      { method: 'restoreMyAccount', limit: 3, ttl: 60000 },
+    ];
+
+    it.each(throttledEndpoints)(
+      'should limit $method to $limit requests per $ttl ms window',
+      ({ method, limit, ttl }) => {
+        const handler = UsersController.prototype[method];
+
+        expect(Reflect.getMetadata(throttleLimitKey, handler)).toBe(limit);
+        expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
+      },
+    );
   });
 });
