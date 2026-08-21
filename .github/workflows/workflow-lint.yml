@@ -1,0 +1,62 @@
+name: Workflow lint
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'config/systemd/**'
+      - 'scripts/audit-workflows.mjs'
+      - 'scripts/deploy-and-start-factory.sh'
+      - 'scripts/maintain-factory-host-storage.sh'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'config/systemd/**'
+      - 'scripts/audit-workflows.mjs'
+      - 'scripts/deploy-and-start-factory.sh'
+      - 'scripts/maintain-factory-host-storage.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Inventory workflow dependencies and enforce trigger policy
+        run: node scripts/audit-workflows.mjs
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: '1.7.7'
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --fail --location --silent --show-error \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" \
+            --output "${RUNNER_TEMP}/${archive}"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" actionlint
+          "${RUNNER_TEMP}/actionlint" -version
+
+      - name: Verify shellcheck runtime
+        run: shellcheck --version
+
+      - name: Validate host operation scripts
+        run: |
+          shellcheck \
+            scripts/deploy-and-start-factory.sh \
+            scripts/maintain-factory-host-storage.sh
+
+      - name: Validate workflow syntax, expressions, and shell scripts
+        run: |
+          "${RUNNER_TEMP}/actionlint" -color -pyflakes=

@@ -80,8 +80,6 @@ const PHYSICAL_MARGIN_REGEX = /\bml-\d+\b|\bmr-\d+\b/;
 const PHYSICAL_BORDER_REGEX = /\bborder-l(?!-)\b|\bborder-r(?!-)\b/;
 const PHYSICAL_TEXT_REGEX = /\btext-left\b|\btext-right\b/;
 const PHYSICAL_FLOAT_REGEX = /\bfloat-left\b|\bfloat-right\b|\bclear-left\b|\bclear-right\b/;
-const LOGICAL_PADDING_REGEX = /\bps-\d+\b|\bpe-\d+\b/;
-const LOGICAL_MARGIN_REGEX = /\bms-\d+\b|\bme-\d+\b/;
 
 const PHYSICAL_CSS_PROPERTIES = [
   /padding-left\s*:/,
@@ -123,9 +121,6 @@ function extractStylesContent(componentContent: string): string {
       .replace(/['"]/g, '')
       .split(',')
       .map((f) => f.trim());
-    const baseDir = componentContent.includes('styleUrls')
-      ? ''
-      : '';
     return filePaths
       .map((fp) => {
         // Resolve relative to component dir
