@@ -10,10 +10,10 @@
  */
 
 // ─────────────────────────────────────────
-// Admin Portal — User Management
+// Admin Portal - User Management
 // ─────────────────────────────────────────
 
-describe('Admin Portal — User Management', () => {
+describe('Admin Portal - User Management', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/admin/users?*', {
       body: {
@@ -300,10 +300,10 @@ describe('Admin Portal — User Management', () => {
 });
 
 // ─────────────────────────────────────────
-// Admin Portal — User Management Edge Cases
+// Admin Portal - User Management Edge Cases
 // ─────────────────────────────────────────
 
-describe('Admin Portal — Edge Cases', () => {
+describe('Admin Portal - Edge Cases', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/admin/users?*', {
       body: { users: [], total: 0, page: 1, pageSize: 20 },
@@ -600,10 +600,10 @@ describe('Admin Blocks Management', () => {
 });
 
 // ─────────────────────────────────────────
-// Moderation Queue — Reports & Actions
+// Moderation Queue - Reports & Actions
 // ─────────────────────────────────────────
 
-describe('Moderation Queue — Profile Reports', () => {
+describe('Moderation Queue - Profile Reports', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/moderation/items?type=profile*', {
       body: [
@@ -738,10 +738,10 @@ describe('Moderation Queue — Profile Reports', () => {
 });
 
 // ─────────────────────────────────────────
-// Moderation Queue — Moment Reports
+// Moderation Queue - Moment Reports
 // ─────────────────────────────────────────
 
-describe('Moderation Queue — Moment Reports', () => {
+describe('Moderation Queue - Moment Reports', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/moderation/items?type=moment*', {
       body: [
@@ -846,10 +846,10 @@ describe('Moderation Queue — Moment Reports', () => {
 });
 
 // ─────────────────────────────────────────
-// Moderation Queue — Edge Cases & Status Filters
+// Moderation Queue - Edge Cases & Status Filters
 // ─────────────────────────────────────────
 
-describe('Moderation Queue — Edge Cases & Filters', () => {
+describe('Moderation Queue - Edge Cases & Filters', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/moderation/items?type=profile*status=pending*', {
       body: [
@@ -997,7 +997,7 @@ describe('Moderation Queue — Edge Cases & Filters', () => {
 // Cross-Page Admin Navigation Flows
 // ─────────────────────────────────────────
 
-describe('Admin — Cross-Page Navigation', () => {
+describe('Admin - Cross-Page Navigation', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/admin/users?*', {
       body: {
@@ -1070,10 +1070,10 @@ describe('Admin — Cross-Page Navigation', () => {
 });
 
 // ─────────────────────────────────────────
-// Admin API — Batch & Combined Operations
+// Admin API - Batch & Combined Operations
 // ─────────────────────────────────────────
 
-describe('Admin — Batch Operations', () => {
+describe('Admin - Batch Operations', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
     cy.intercept('GET', '**/api/safety/report-categories', { body: [] }).as('getReportCategories');

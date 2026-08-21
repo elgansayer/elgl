@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ReadingEngineController } from './reading-engine.controller';
 import { ReadingEngineService } from './reading-engine.service';
 import { ReadingEngineCacheService } from './reading-engine-cache.service';
+import { ReadingEngineCrashReportService } from './reading-engine-crash-report.service';
 
 @Module({
   imports: [SupabaseModule],
@@ -11,6 +12,7 @@ import { ReadingEngineCacheService } from './reading-engine-cache.service';
   providers: [
     ReadingEngineService,
     ReadingEngineCacheService,
+    ReadingEngineCrashReportService,
     {
       provide: 'REDIS_CLIENT',
       useFactory: (supabaseService: SupabaseService) =>
@@ -18,6 +20,10 @@ import { ReadingEngineCacheService } from './reading-engine-cache.service';
       inject: [SupabaseService],
     },
   ],
-  exports: [ReadingEngineService, ReadingEngineCacheService],
+  exports: [
+    ReadingEngineService,
+    ReadingEngineCacheService,
+    ReadingEngineCrashReportService,
+  ],
 })
 export class ReadingEngineModule {}

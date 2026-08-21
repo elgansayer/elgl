@@ -1,0 +1,64 @@
+[Unit]
+Description=HelloTalk OpenHands Autonomous Development Factory
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=dev
+Group=dev
+WorkingDirectory=/var/lib/hellotalk-factory/repository
+EnvironmentFile=/etc/hellotalk-factory/factory.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+Environment=HOME=/home/dev
+Environment=PATH=/home/dev/.local/bin:/home/dev/.opencode/bin:/home/dev/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+# Refuse generation takeover when a competing executor is active, repository
+# access fails, or GitHub merge rules fail closed. Temporary provider exhaustion
+# is reported as a warning so durable work can recover without a restart loop.
+ExecStartPre=/opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
+ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=120
+KillSignal=SIGTERM
+UMask=0077
+PrivateTmp=true
+# Keep provider children from reading the daemon's original secret environment
+# through /proc. The explicit provider environment allowlist remains authoritative.
+ProtectProc=ptraceable
+# Rootless Podman/runc needs the host device namespace to mount /proc for
+# nested worker containers. The worker itself remains capability- and
+# network-constrained by secure_tools.py.
+PrivateDevices=false
+ProtectSystem=full
+# The service now runs as the operator's own login user (dev), reusing that
+# account's already-authenticated CLI subscriptions (claude/codex/google) in
+# place of a separate service-account credential set. Hiding /home would hide
+# the account from itself, so home protection is intentionally off here.
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelTunables=false
+ProtectKernelModules=true
+# Do not enable ProtectKernelLogs here: provider and verification sandboxes
+# require nested private proc mounts through unshare --mount-proc.
+# Rootless Podman receives only this service's delegated cgroup subtree. This is
+# required for the per-worker CPU, memory and process limits below the parent cap.
+Delegate=yes
+ProtectControlGroups=false
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
+LimitNOFILE=4096
+LimitNPROC=1024
+TasksMax=1024
+# Start reclaiming pressure before the hard OOM boundary so active jobs can
+# finish/drain instead of letting concurrent builds hit the service ceiling.
+MemoryHigh=6G
+MemoryMax=7G
+
+[Install]
+WantedBy=multi-user.target

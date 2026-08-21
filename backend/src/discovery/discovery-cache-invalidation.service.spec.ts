@@ -1,4 +1,5 @@
-/// <reference types="jest" />
+import type { Mock } from 'vitest';
+/// <reference types="vi" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -10,18 +11,18 @@ import {
 describe('DiscoveryCacheInvalidationService', () => {
   let service: DiscoveryCacheInvalidationService;
   let mockRedis: {
-    del: jest.Mock;
-    scan: jest.Mock;
-    get: jest.Mock;
-    set: jest.Mock;
+    del: Mock;
+    scan: Mock;
+    get: Mock;
+    set: Mock;
   };
 
   beforeEach(async () => {
     mockRedis = {
-      del: jest.fn().mockResolvedValue(1),
-      scan: jest.fn().mockResolvedValue(['0', []]),
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      scan: vi.fn().mockResolvedValue(['0', []]),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -30,10 +31,10 @@ describe('DiscoveryCacheInvalidationService', () => {
         {
           provide: `PinoLogger:${DiscoveryCacheInvalidationService.name}`,
           useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
@@ -49,7 +50,7 @@ describe('DiscoveryCacheInvalidationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

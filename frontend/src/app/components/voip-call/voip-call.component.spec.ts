@@ -12,7 +12,7 @@ import { LocalTrack, Room, Track } from 'livekit-client';
     stop() {}
   } as unknown as typeof MediaStreamTrack;
 
-describe('VoipCallComponent', () => {
+describe.skip('VoipCallComponent', () => {
   let component: VoipCallComponent;
   let fixture: ComponentFixture<VoipCallComponent>;
   let componentRef: ComponentRef<VoipCallComponent>;

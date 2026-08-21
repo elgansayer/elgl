@@ -13,8 +13,8 @@ import {
 import { ResourceLibraryService } from './resource-library.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 import {
   CacheControlInterceptor,
   CACHE_PRIVATE_MEDIUM,

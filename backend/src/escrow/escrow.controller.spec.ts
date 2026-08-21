@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
@@ -7,13 +8,13 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
-jest.mock('./sanitise-escrow.helper', () => ({
+vi.mock('./sanitise-escrow.helper', () => ({
   sanitiseEscrowData: <T>(value: T): T => value,
 }));
 
 describe('EscrowController', () => {
   let controller: EscrowController;
-  let mockEscrowService: Record<string, jest.Mock>;
+  let mockEscrowService: Record<string, Mock>;
 
   const mockUserId = '12345678-1234-1234-1234-123456789012';
   const mockPayeeId = '87654321-4321-4321-4321-210987654321';
@@ -25,32 +26,32 @@ describe('EscrowController', () => {
 
   beforeEach(async () => {
     mockEscrowService = {
-      holdCoins: jest.fn().mockResolvedValue({
+      holdCoins: vi.fn().mockResolvedValue({
         success: true,
         transaction_id: mockTransactionId,
         degraded: false,
       }),
-      releaseCoins: jest.fn().mockResolvedValue({
+      releaseCoins: vi.fn().mockResolvedValue({
         success: true,
         transaction_id: mockTransactionId,
         degraded: false,
       }),
-      refundCoins: jest.fn().mockResolvedValue({
+      refundCoins: vi.fn().mockResolvedValue({
         id: mockTransactionId,
         status: 'refunded',
         degraded: false,
       }),
-      cancelEscrow: jest.fn().mockResolvedValue({
+      cancelEscrow: vi.fn().mockResolvedValue({
         id: mockTransactionId,
         status: 'cancelled',
         degraded: false,
       }),
-      disputeEscrow: jest.fn().mockResolvedValue({
+      disputeEscrow: vi.fn().mockResolvedValue({
         id: mockTransactionId,
         status: 'disputed',
         degraded: false,
       }),
-      getTransaction: jest.fn().mockResolvedValue({
+      getTransaction: vi.fn().mockResolvedValue({
         id: mockTransactionId,
         payer_id: mockUserId,
         payee_id: mockPayeeId,
@@ -58,8 +59,8 @@ describe('EscrowController', () => {
         status: 'held',
         degraded: false,
       }),
-      listTransactions: jest.fn().mockResolvedValue([]),
-      getCircuitBreakerStatus: jest.fn().mockReturnValue({
+      listTransactions: vi.fn().mockResolvedValue([]),
+      getCircuitBreakerStatus: vi.fn().mockReturnValue({
         service: 'escrow',
         isOpen: false,
         failureCount: 0,
@@ -67,7 +68,7 @@ describe('EscrowController', () => {
         totalFailures: 0,
         totalSuccesses: 0,
       }),
-      resetCircuitBreaker: jest.fn(),
+      resetCircuitBreaker: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,10 +78,10 @@ describe('EscrowController', () => {
         {
           provide: CrashReportService,
           useValue: {
-            reportCrash: jest.fn(),
-            listUnresolved: jest.fn().mockResolvedValue([]),
-            acknowledgeReport: jest.fn().mockResolvedValue(true),
-            resolveReport: jest.fn().mockResolvedValue(true),
+            reportCrash: vi.fn(),
+            listUnresolved: vi.fn().mockResolvedValue([]),
+            acknowledgeReport: vi.fn().mockResolvedValue(true),
+            resolveReport: vi.fn().mockResolvedValue(true),
           },
         },
         { provide: SupabaseService, useValue: {} },
@@ -88,14 +89,14 @@ describe('EscrowController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockResolvedValue(true) })
+      .useValue({ canActivate: vi.fn().mockResolvedValue(true) })
       .compile();
 
     controller = module.get<EscrowController>(EscrowController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

@@ -9,20 +9,20 @@ export interface LegalSection {
 
 @Component({
   selector: 'app-legal-document-viewer',
-  imports: [DatePipe],
+  imports: [],
   host: {
-    class: 'block min-h-screen bg-[#121212] text-slate-200',
+    class: 'block min-h-screen bg-surface-500 text-text-secondary',
   },
   template: `
     <div class="max-w-3xl mx-auto px-4 py-8">
-      <h1 class="text-3xl font-extrabold mb-8 text-white">
+      <h1 class="text-3xl font-extrabold mb-8 text-text-primary">
         {{ title() }}
       </h1>
 
       <div class="space-y-8">
         @for (section of sections(); track section.id) {
           <section class="rounded-2xl bg-surface-100 border border-surface-200 p-5">
-            <h2 class="text-lg font-bold mb-3 text-white">
+            <h2 class="text-lg font-bold mb-3 text-text-primary">
               {{ section.heading }}
             </h2>
             <p class="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">

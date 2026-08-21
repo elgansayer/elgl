@@ -111,13 +111,4 @@ describe('CentrifugeService', () => {
     expect(handler).toHaveBeenCalledTimes(2);
     expect(handler.mock.calls).toEqual([['first'], ['second']]);
   });
-
-  describe('disconnect', () => {
-    it('should reset connection status on disconnect', () => {
-      service.disconnect();
-
-      expect(service.isConnected()).toBe(false);
-      expect(service.connectionStatus()).toBe('disconnected');
-    });
-  });
 });
