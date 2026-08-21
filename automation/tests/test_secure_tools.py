@@ -56,6 +56,36 @@ def test_secure_tool_replaces_the_frozen_executor_by_copying() -> None:
     assert "tools[0].executor =" not in source
 
 
+def test_terminal_mounts_the_workspace_at_its_real_host_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The file_editor tool reports and accepts real host paths (it edits the
+    filesystem directly, not through this container), so the terminal tool's
+    container must expose the workspace at that same absolute path rather than a
+    generic /workspace alias - otherwise a path the agent gets back from one tool
+    is one the other tool can't find. Confirmed live: an agent that created a file
+    via file_editor, then ran `ls` on that exact reported path from the terminal,
+    got "No such file or directory" and burned its whole conversation debugging a
+    nonexistent permission issue.
+    """
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        return CompletedProcess(arguments, 0, "ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.secure_tools.subprocess.run", run)
+    executor = PodmanTerminalExecutor(workspace, workspace, Path("/usr/bin/podman"), "worker")
+
+    executor(TerminalAction(command="printf ready"))
+
+    assert f"{workspace}:{workspace}:rw,Z" in calls[0]
+    assert f"--workdir={workspace}" in calls[0]
+    assert "/workspace" not in " ".join(calls[0])
+
+
 def test_terminal_keeps_nested_resource_and_security_limits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -80,6 +110,42 @@ def test_terminal_keeps_nested_resource_and_security_limits(
     assert "--security-opt=no-new-privileges" in calls[0]
     assert "--cap-drop=all" in calls[0]
     assert "--network=none" in calls[0]
+
+
+def test_terminal_worker_environment_excludes_controller_secrets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    captured_environment: dict[str, str] = {}
+    secret_names = (
+        "GITHUB_TOKEN",
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_CHAT_ID",
+        "OPENCODE_GO_API_KEY",
+        "GEMINI_API_KEY",
+    )
+    secret_values = tuple(f"controller-secret-{index}" for index in range(len(secret_names)))
+    for name, value in zip(secret_names, secret_values, strict=True):
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+
+    def run(
+        arguments: list[str], timeout: float, environment: dict[str, str]
+    ) -> CompletedProcess[str]:
+        del timeout
+        captured_environment.update(environment)
+        return CompletedProcess(arguments, 0, "ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.secure_tools._run_podman", run)
+    executor = PodmanTerminalExecutor(workspace, workspace, Path("/usr/bin/podman"), "worker")
+
+    result = executor(TerminalAction(command="printf ready"))
+
+    assert not result.is_error
+    assert set(captured_environment) == {"HOME", "PATH"}
+    assert set(secret_names).isdisjoint(captured_environment)
+    assert set(secret_values).isdisjoint(captured_environment.values())
 
 
 def test_terminal_retries_without_nested_cgroup_limits(

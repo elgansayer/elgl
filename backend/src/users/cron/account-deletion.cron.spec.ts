@@ -89,7 +89,7 @@ describe('AccountDeletionCron', () => {
         data: [{ id: 'user-1' }, { id: 'user-2' }],
         error: null,
       });
-      (usersService.permanentDeleteAccount as Mock).mockResolvedValue(
+      (usersService.permanentDeleteAccount as vi.Mock).mockResolvedValue(
         undefined,
       );
       const logSpy = vi.spyOn(

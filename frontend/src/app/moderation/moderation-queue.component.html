@@ -4,6 +4,7 @@
 
   <div class="mb-4 flex gap-2">
     <button
+      hlmBtn
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'profile'"
       [class.text-on-fill]="type() === 'profile'"
@@ -14,6 +15,7 @@
       {{ 'moderation.profiles' | t }}
     </button>
     <button
+      hlmBtn
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'moment'"
       [class.text-on-fill]="type() === 'moment'"
@@ -27,6 +29,7 @@
 
   <div class="mb-4 flex gap-2">
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="!status()"
       [class.text-on-fill]="!status()"
@@ -37,6 +40,7 @@
       {{ 'moderation.all' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'pending'"
       [class.text-on-fill]="status() === 'pending'"
@@ -47,6 +51,7 @@
       {{ 'moderation.pending' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'approved'"
       [class.text-on-fill]="status() === 'approved'"
@@ -57,6 +62,7 @@
       {{ 'moderation.approved' | t }}
     </button>
     <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="status() === 'rejected'"
       [class.text-on-fill]="status() === 'rejected'"
@@ -75,6 +81,7 @@
     >
       {{ actionError() }}
       <button
+        hlmBtn
         type="button"
         class="ms-2 underline hover:no-underline"
         (click)="actionError.set(null)"
@@ -131,6 +138,7 @@
               {{ item.reported_user.display_name || item.reported_user.name | sanitiseHtml }}
             </p>
             <button
+              hlmBtn
               class="mt-2 rounded bg-secondary text-on-fill px-3 py-1 text-sm font-bold disabled:opacity-50"
               (click)="analyse(item)"
               [disabled]="analysisLoading() || actionInProgress() === item.id"
@@ -153,6 +161,7 @@
 
           <div class="mt-4 flex gap-2">
             <button
+              hlmBtn
               class="rounded bg-success px-3 py-1 text-on-fill text-sm font-bold hover:bg-success/90 transition-colors disabled:opacity-50"
               (click)="approve(item)"
               [disabled]="actionInProgress() === item.id"
@@ -160,6 +169,7 @@
               {{ 'moderation.approve' | t }}
             </button>
             <button
+              hlmBtn
               class="rounded bg-danger px-3 py-1 text-on-fill text-sm font-bold hover:bg-danger/90 transition-colors disabled:opacity-50"
               (click)="reject(item)"
               [disabled]="actionInProgress() === item.id"

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -25,6 +26,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 @Component({
   selector: 'app-my-subscription',
   imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
@@ -80,9 +82,7 @@ export class MySubscriptionComponent {
     },
     defaultValue: EMPTY_INVOICES,
   });
-  protected readonly invoices = computed(
-    () => this.invoicesResource.value() ?? EMPTY_INVOICES,
-  );
+  protected readonly invoices = computed(() => this.invoicesResource.value() ?? EMPTY_INVOICES);
 
   private readonly plansResource = resource({
     loader: async (): Promise<SubscriptionPlan[]> => {

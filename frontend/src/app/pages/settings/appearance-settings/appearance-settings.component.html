@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.appearanceSection' | t }}</h1>
@@ -12,14 +12,12 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {{ errorMessage() }}
         </div>
       }
       @if (successMessage()) {
-        <div
-          class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
-        >
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
           {{ successMessage() | t }}
         </div>
       }
@@ -36,6 +34,7 @@
           <div class="flex gap-2">
             @for (opt of themeOptions; track opt) {
               <button
+                hlmBtn
                 (click)="setTheme(opt)"
                 class="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
                 [class.bg-primary]="currentTheme() === opt"
@@ -101,6 +100,7 @@
           <div class="flex gap-3 flex-wrap">
             @for (color of availableColors; track color) {
               <button
+                hlmBtn
                 type="button"
                 (click)="setAccentColor(color)"
                 [disabled]="!isVip()"
@@ -131,6 +131,7 @@
                   [attr.aria-label]="'settings.customColourLabel' | t"
                 />
                 <input
+                  hlmInput
                   type="text"
                   [value]="primaryAccentColor() ?? '#c65230'"
                   (input)="onCustomColorChange($event)"

@@ -33,7 +33,6 @@ def podman_run_arguments(
     resource_limits: bool = True,
     userns: str = "keep-id",
     cgroup_manager: str | None = None,
-    pid_host: bool = False,
     cgroups: str | None = None,
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
@@ -54,12 +53,20 @@ def podman_run_arguments(
         f"--userns={userns}",
         f"--user={uid}:{gid}",
         "--volume",
-        f"{workspace}:/workspace:{workspace_access},Z",
+        # Mounted at the SAME absolute path it has on the host, not a generic
+        # /workspace alias: the file_editor tool (ContainedFileEditorExecutor,
+        # below) reports and accepts real host paths, since it edits the
+        # filesystem directly rather than through this container. A mismatched
+        # alias here means every path the agent sees from file_editor is one it
+        # cannot find from the terminal tool, or vice versa - confirmed live: an
+        # agent that created a file via file_editor, then tried `ls` on that exact
+        # reported path from the terminal, got "No such file or directory" and
+        # burned its whole conversation debugging a nonexistent permission issue
+        # instead of finishing its actual task.
+        f"{workspace}:{workspace}:{workspace_access},Z",
     ]
     if cgroup_manager:
         arguments.insert(1, f"--cgroup-manager={cgroup_manager}")
-    if pid_host:
-        arguments.insert(1, "--pid=host")
     if cgroups:
         arguments.insert(1, f"--cgroups={cgroups}")
     if resource_limits:
@@ -73,7 +80,7 @@ def podman_run_arguments(
     # keep their real git-dir there rather than inside the worktree itself. Without
     # this mounted at that same absolute path, every git command the agent runs
     # inside the container - status, diff, log, rev-parse - fails outright with
-    # "fatal: not a git repository". Read-only: the agent can edit /workspace
+    # "fatal: not a git repository". Read-only: the agent can edit the worktree
     # freely, but the daemon (outside the container) owns every actual git mutation
     # (add/commit/push), so the object database and refs never need write access
     # from inside the sandbox.
@@ -85,11 +92,12 @@ def podman_run_arguments(
         "frontend/node_modules",
         "backend/node_modules",
         "e2e/node_modules",
+        "admin-portal/node_modules",
     ):
         dependency_path = repository / relative
         if dependency_path.is_dir():
-            arguments.extend(("--volume", f"{dependency_path}:/workspace/{relative}:ro,Z"))
-    arguments.extend(("--workdir=/workspace", image, "/bin/bash", "-lc", command))
+            arguments.extend(("--volume", f"{dependency_path}:{workspace}/{relative}:ro,Z"))
+    arguments.extend((f"--workdir={workspace}", image, "/bin/bash", "-lc", command))
     return arguments
 
 
@@ -176,7 +184,6 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                         resource_limits=False,
                         userns="host",
                         cgroup_manager="cgroupfs",
-                        pid_host=True,
                         cgroups="no-conmon",
                     ),
                 ]

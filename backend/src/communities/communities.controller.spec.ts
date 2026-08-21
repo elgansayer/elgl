@@ -1,6 +1,6 @@
 import { CommunitiesController } from './communities.controller';
-import { CreateCommunityDto } from './dto/create-community.dto';
-import { UpdateCommunityDto } from './dto/update-community.dto';
+import { CreateCommunityDto } from '../groups/dto/create-community.dto';
+import { UpdateCommunityDto } from '../groups/dto/update-community.dto';
 
 describe('CommunitiesController', () => {
   let controller: CommunitiesController;

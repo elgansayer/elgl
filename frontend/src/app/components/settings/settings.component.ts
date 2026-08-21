@@ -1,3 +1,7 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,9 +12,18 @@ import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
 import { I18nService } from '../../services/i18n.service';
+import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, RouterModule],
+  imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    TranslatePipe,
+    RouterModule,
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -22,6 +35,7 @@ export class SettingsComponent implements OnInit {
   private chatSettingsService = inject(ChatSettingsService);
   private linkedAccountsService = inject(LinkedAccountsService);
   private i18nService = inject(I18nService);
+  private hapticFeedbackService = inject(HapticFeedbackService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -64,6 +78,7 @@ export class SettingsComponent implements OnInit {
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
+        this.hapticFeedbackService.setEnabled(this.vibrationEnabled);
         this.interests.set(profile.interests ?? []);
         this.autoDownloadPreference.set(profile.auto_download_preference ?? 'wifi');
         if (this.autoDownloadMedia() && profile.auto_download_wifi_only === true) {
@@ -168,6 +183,7 @@ export class SettingsComponent implements OnInit {
           this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         interests: this.interests(),
       });
+      this.hapticFeedbackService.setEnabled(this.vibrationEnabled);
 
       await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
       await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());

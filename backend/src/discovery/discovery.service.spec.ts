@@ -82,6 +82,7 @@ describe('DiscoveryService', () => {
     mockRedisClient = {
       get: vi.fn().mockResolvedValue(null),
       set: mockRedisSet,
+      del: vi.fn().mockResolvedValue(1),
       pipeline: vi.fn().mockReturnValue({
         set: mockPipelineSet,
         exec: mockPipelineExec,
@@ -194,11 +195,21 @@ describe('DiscoveryService', () => {
       count: number,
     ): Array<{
       id: string;
+      display_name: string;
+      native_languages: string[];
+      target_languages: string[];
+      privacy_hide_from_search: boolean;
+      is_deletion_pending: boolean;
       correction_ratio: number;
       study_streak_days: number;
     }> =>
       Array.from({ length: count }, (_, i) => ({
         id: `u${i + 1}`,
+        display_name: `User ${i + 1}`,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
         correction_ratio: 0.6 + (count - i) * 0.005,
         study_streak_days: 10 + (count - i),
       }));

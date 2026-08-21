@@ -8,7 +8,15 @@ FACTORY_ROOT=/opt/hellotalk-factory
 FACTORY_STATE=/var/lib/hellotalk-factory
 FACTORY_LOG=/var/log/hellotalk-factory
 FACTORY_CONFIG=/etc/hellotalk-factory
-FACTORY_USER=hellotalk-factory
+# The daemon runs as the operator's own login user, reusing that account's
+# already-authenticated CLI subscriptions instead of a separate service
+# account with its own credential set.
+FACTORY_USER=dev
+FACTORY_HOME=/home/dev
+# Optional secondary data volume. When mounted, worker image storage is
+# relocated there to keep the root disk from filling with permanent image
+# layers; see the Podman storage relocation block below.
+FACTORY_SECONDARY_VOLUME=/mnt/HC_Volume_106574422
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this bootstrap as root. It never stores or requests a sudo password.' >&2
@@ -26,7 +34,8 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   build-essential ca-certificates curl git gh gnupg jq logrotate passt podman sudo \
-  python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux uidmap
+  iproute2 python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux \
+  uidmap util-linux
 
 if apt-cache show libgtk-3-0t64 >/dev/null 2>&1; then
   gtk_package=libgtk-3-0t64
@@ -49,61 +58,138 @@ if [ "$node_major" -lt 22 ]; then
 fi
 
 if ! id "$FACTORY_USER" >/dev/null 2>&1; then
-  useradd --system --create-home --home-dir "$FACTORY_STATE/home" --shell /usr/sbin/nologin "$FACTORY_USER"
+  echo "Missing operator user: $FACTORY_USER. Create it before running this bootstrap." >&2
+  exit 1
 fi
 if ! grep -q "^${FACTORY_USER}:" /etc/subuid; then
   usermod --add-subuids 200000-265535 --add-subgids 200000-265535 "$FACTORY_USER"
 fi
+factory_uid="$(id -u "$FACTORY_USER")"
+loginctl enable-linger "$FACTORY_USER"
+systemctl start "user@${factory_uid}.service"
 
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 \
-  "$FACTORY_STATE" "$FACTORY_STATE/home" "$FACTORY_STATE/profiles" \
-  "$FACTORY_STATE/worktrees" "$FACTORY_STATE/conversations" "$FACTORY_LOG"
+  "$FACTORY_STATE" "$FACTORY_STATE/profiles" \
+  "$FACTORY_STATE/worktrees" "$FACTORY_STATE/recovery" \
+  "$FACTORY_STATE/conversations" "$FACTORY_LOG"
+
+# Worker image builds accumulate rootless Podman graph-storage layers
+# permanently (unlike the transient build-context checkout). Relocating that
+# storage off the root disk and onto the secondary volume, when one is
+# present, keeps repeated builds from tightening root disk headroom over
+# time. Podman is left on its default root-disk location when no secondary
+# volume is mounted.
+if [ -d "$FACTORY_SECONDARY_VOLUME" ] && mountpoint -q "$FACTORY_SECONDARY_VOLUME"; then
+  podman_storage="$FACTORY_SECONDARY_VOLUME/podman-storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$podman_storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$FACTORY_HOME/.config/containers"
+  podman_storage_conf="$FACTORY_HOME/.config/containers/storage.conf"
+  if [ ! -f "$podman_storage_conf" ]; then
+    cat > "$podman_storage_conf" <<EOF
+[storage]
+driver = "overlay"
+graphroot = "$podman_storage"
+
+[storage.options]
+EOF
+    chown "$FACTORY_USER:$FACTORY_USER" "$podman_storage_conf"
+  fi
+fi
 install -d -o root -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT" "$FACTORY_CONFIG"
+
+factory_environment_created=false
+if [ ! -f "$FACTORY_CONFIG/factory.env" ]; then
+  install -o root -g root -m 0600 \
+    "$REPOSITORY_SOURCE/config/systemd/factory.env.example" \
+    "$FACTORY_CONFIG/factory.env"
+  factory_environment_created=true
+fi
+if [ "$factory_environment_created" = true ] && [ -r "$REPOSITORY_SOURCE/.env" ]; then
+  "$REPOSITORY_SOURCE/scripts/install-factory-env.sh" "$REPOSITORY_SOURCE/.env"
+fi
+factory_github_token="$({
+  set +u
+  # shellcheck disable=SC1090,SC1091
+  . "$FACTORY_CONFIG/factory.env"
+  printf '%s' "${GITHUB_TOKEN:-}"
+})"
+if [ -z "$factory_github_token" ]; then
+  echo "Set GITHUB_TOKEN in $FACTORY_CONFIG/factory.env before repository bootstrap." >&2
+  exit 1
+fi
+
+factory_git() {
+  runuser -u "$FACTORY_USER" -- env \
+    HOME="$FACTORY_HOME" \
+    PATH="/usr/local/bin:/usr/bin:/bin" \
+    GH_TOKEN="$factory_github_token" \
+    "$@"
+}
 
 if [ ! -d "$FACTORY_STATE/repository/.git" ]; then
   install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$FACTORY_STATE/repository"
-  sudo -u "$FACTORY_USER" git clone "$FACTORY_REPOSITORY_URL" "$FACTORY_STATE/repository"
+  factory_git git -c credential.helper='!gh auth git-credential' \
+    clone "$FACTORY_REPOSITORY_URL" "$FACTORY_STATE/repository"
 fi
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" remote set-url origin "$FACTORY_REPOSITORY_URL"
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config credential.helper '!gh auth git-credential'
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config user.name 'HelloTalk Factory'
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config user.email \
+factory_git git -C "$FACTORY_STATE/repository" remote set-url origin "$FACTORY_REPOSITORY_URL"
+factory_git git -C "$FACTORY_STATE/repository" config --unset-all credential.helper || true
+factory_git git -C "$FACTORY_STATE/repository" config --add credential.helper ''
+factory_git git -C "$FACTORY_STATE/repository" config --add credential.helper \
+  '!gh auth git-credential'
+factory_git git -C "$FACTORY_STATE/repository" config user.name 'HelloTalk Factory'
+factory_git git -C "$FACTORY_STATE/repository" config user.email \
   'hellotalk-factory@users.noreply.github.com'
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" fetch origin main
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" switch main
-sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" merge --ff-only origin/main
+factory_git git -C "$FACTORY_STATE/repository" fetch origin main
+factory_git git -C "$FACTORY_STATE/repository" switch main
+factory_git git -C "$FACTORY_STATE/repository" merge --ff-only origin/main
 
 python3 -m venv "$FACTORY_ROOT/venv-0.1.0"
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install --upgrade 'pip==25.2'
-"$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install 'uv==0.8.12'
+"$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install 'uv==0.12.5'
 VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
-  --active --frozen --no-editable --extra development --project "$REPOSITORY_SOURCE/automation"
+  --active --frozen --inexact --no-editable --extra development \
+  --project "$REPOSITORY_SOURCE/automation"
 ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
-for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/recovery"; do
+for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/repository/admin-portal"; do
   if [ -f "$directory/package-lock.json" ]; then
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
-sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
   'cd "$1" && npm exec -- cypress install' _ "$FACTORY_STATE/repository/frontend"
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
 rsync -a --delete \
   --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \
   "$REPOSITORY_SOURCE/automation/" "$FACTORY_ROOT/build-context/"
 chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
-sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" podman build \
-  --cgroup-manager=cgroupfs \
-  --tag localhost/hellotalk-factory-worker:current \
-  --file "$FACTORY_ROOT/build-context/Containerfile" "$FACTORY_ROOT/build-context"
+# Rootless Podman may inspect the inherited working directory. Enter the
+# service-owned build context before starting it because the source checkout
+# can be inaccessible to the service user.
+# $1 is intentionally expanded by the child shell.
+# shellcheck disable=SC2016
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_HOME" bash -c \
+  'cd "$1" && exec podman build \
+    --cgroup-manager=cgroupfs \
+    --tag localhost/hellotalk-factory-worker:current \
+    --file "$1/Containerfile" "$1"' _ "$FACTORY_ROOT/build-context"
 
-if [ ! -f "$FACTORY_CONFIG/factory.env" ]; then
-  install -o root -g "$FACTORY_USER" -m 0640 "$REPOSITORY_SOURCE/config/systemd/factory.env.example" "$FACTORY_CONFIG/factory.env"
+printf 'XDG_RUNTIME_DIR=/run/user/%s\n' "$factory_uid" > "$FACTORY_CONFIG/runtime.env"
+chown root:"$FACTORY_USER" "$FACTORY_CONFIG/runtime.env"
+chmod 0640 "$FACTORY_CONFIG/runtime.env"
+install -o root -g "$FACTORY_USER" -m 0640 \
+  "$REPOSITORY_SOURCE/config/factory/agents.production.json" \
+  "$FACTORY_CONFIG/agents.example.json"
+if [ ! -f "$FACTORY_CONFIG/agents.json" ]; then
+  install -o root -g "$FACTORY_USER" -m 0640 \
+    "$REPOSITORY_SOURCE/config/factory/agents.production.json" \
+    "$FACTORY_CONFIG/agents.json"
 fi
 
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory.service" /etc/systemd/system/
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.service" /etc/systemd/system/
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.timer" /etc/systemd/system/
+install -o root -g root -m 0755 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-watchdog.sh" "$FACTORY_ROOT/hellotalk-factory-watchdog.sh"
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/logrotate/hellotalk-factory" /etc/logrotate.d/
 systemctl daemon-reload
 
