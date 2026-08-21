@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <!-- Envelope base -->
+  <rect x="45" y="50" width="110" height="75" rx="11" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1.8"/>
+  <!-- Envelope flap -->
+  <path d="M45 50 L100 88 L155 50" fill="#151524" stroke="#2A2A3E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Chat bubble -->
+  <path d="M82 68C82 64.5 85 62 88.5 62H111.5C115 62 118 64.5 118 68V88C118 91.5 115 94 111.5 94H100L92 102L88 94H88.5C85 94 82 91.5 82 88V68Z" 
+        fill="#12121F" stroke="#353550" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Dots -->
+  <circle cx="93" cy="78" r="2.8" fill="#3D3D5C"/>
+  <circle cx="100" cy="78" r="2.8" fill="#2A2A44"/>
+  <circle cx="107" cy="78" r="2.8" fill="#3D3D5C"/>
+  <!-- Neon accent -->
+  <path d="M55 115 L145 115" stroke="#00E5A0" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
+  <circle cx="100" cy="115" r="2.5" fill="#00E5A0" opacity="0.5"/>
+  <!-- Sparkle top-right -->
+  <path d="M130 42L130.5 44L132 44.5L130.5 45L130 47L129.5 45L128 44.5L129.5 44Z" fill="#00E5A0" opacity="0.35"/>
+</svg>

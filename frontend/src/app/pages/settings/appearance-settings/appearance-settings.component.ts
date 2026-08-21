@@ -1,87 +1,126 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, computed, inject, signal, resource } from '@angular/core';
+import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FontScaleService } from '../../../services/font-scale.service';
-import { UserService } from '../../../services/user.service';
+import { Theme, ThemeService } from '../../../services/theme.service';
+import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
+import { FormsModule } from '@angular/forms';
+import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
+import { AppSelectComponent } from '../../../components/primitives/select/select.component';
+import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
-  templateUrl: './appearance-settings.component.html'
+  imports: [
+    HlmInput,
+    HlmButton,
+    TranslatePipe,
+    FormsModule,
+    FontScaleSliderComponent,
+    AppSelectComponent,
+    AppButtonPrimaryComponent,
+  ],
+  templateUrl: './appearance-settings.component.html',
 })
-export class AppearanceSettingsComponent implements OnInit {
-  private fontScaleService = inject(FontScaleService);
+export class AppearanceSettingsComponent {
+  readonly fontScaleService = inject(FontScaleService);
+  readonly themeService = inject(ThemeService);
   private userService = inject(UserService);
   private location = inject(Location);
-  private i18nService = inject(I18nService);
+  readonly i18nService = inject(I18nService);
 
-  readonly isLoading = signal(true);
+  readonly isSaving = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
+  readonly currentTheme = this.themeService.currentTheme;
 
-  readonly isVip = signal(false);
+  readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
+
   readonly primaryAccentColor = signal<string | null>(null);
+  readonly isVip = signal(false);
 
+  /** Relay-coherent alternatives to the default Ember accent - see DESIGN.md's token table. */
   readonly availableColors = [
-    '#4f46e5', // Indigo (default)
-    '#e11d48', // Rose
-    '#16a34a', // Green
-    '#d97706', // Amber
-    '#9333ea', // Purple
-    '#0891b2', // Cyan
+    '#C65230', // Ember (default primary)
+    '#1A8478', // Tide (secondary)
+    '#996F10', // vip gold
+    '#CC483C', // accent raspberry-ember
+    '#8B6CF0', // neon violet
+    '#2FC6D9', // neon cyan
   ];
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const profile = await this.userService.getMyProfile();
-      if (profile) {
-        this.isVip.set(Boolean(profile.is_vip));
-        this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
+  private profileResource = resource<UserProfile | null, void>({
+    loader: async () => {
+      try {
+        const profile = await this.userService.getMyProfile();
+        if (profile) {
+          this.isVip.set(Boolean(profile.is_vip));
+          const accent = profile.primary_accent_color ?? null;
+          this.primaryAccentColor.set(accent);
+          if (accent) {
+            this.themeService.setPrimaryAccentColor(accent);
+          }
+        }
+        return profile;
+      } catch {
+        this.errorMessage.set('Failed to load profile');
+        return null;
       }
-    } catch {
-      this.errorMessage.set('Failed to load profile');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+    },
+  });
 
-  onFontScaleChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      const percent = Number(target.value);
-      if (!Number.isNaN(percent)) {
-        const scale = percent / 100;
-        this.fontScaleService.setScale(scale);
-      }
-    }
+  readonly isLoading = computed(() => this.profileResource.isLoading());
+
+  setTheme(theme: Theme): void {
+    this.themeService.setTheme(theme);
   }
 
   setAccentColor(color: string): void {
-    if (this.isVip()) {
-      this.primaryAccentColor.set(color);
-    }
+    if (!this.isVip()) return;
+    this.primaryAccentColor.set(color);
+  }
+
+  onCustomColorChange(event: Event): void {
+    if (!this.isVip()) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.primaryAccentColor.set(target.value);
   }
 
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
-    this.isLoading.set(true);
+    this.isSaving.set(true);
 
     try {
+      const accent = this.primaryAccentColor();
       await this.userService.updateMyProfile({
-        primary_accent_color: this.primaryAccentColor() ?? undefined,
+        primary_accent_color: accent ?? undefined,
       });
-
-      this.successMessage.set('Settings saved successfully');
+      if (accent) {
+        this.themeService.setPrimaryAccentColor(accent);
+      }
+      this.successMessage.set('settings.saved');
     } catch {
       this.errorMessage.set('Failed to save settings');
     } finally {
-      this.isLoading.set(false);
+      this.isSaving.set(false);
     }
+  }
+
+  changeUiLanguage(lang: string): void {
+    this.i18nService.setLanguage(lang);
+  }
+
+  onLanguageValueChange(value: string): void {
+    this.i18nService.setLanguage(value);
   }
 
   goBack(): void {

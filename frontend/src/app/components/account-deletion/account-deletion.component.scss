@@ -1,3 +1,5 @@
+@reference '../../../tailwind-reference.scss';
+
 :host {
   display: block;
   max-width: 480px;
@@ -10,13 +12,13 @@
 }
 
 .btn-primary {
-  @apply bg-indigo-600 text-white hover:bg-indigo-500;
+  @apply bg-primary text-on-fill hover:opacity-90;
 }
 
 .btn-secondary {
-  @apply bg-slate-700 text-white hover:bg-slate-600;
+  @apply bg-surface-300 text-text-primary hover:bg-surface-400;
 }
 
 .btn-danger {
-  @apply bg-red-600 text-white hover:bg-red-500;
+  @apply bg-danger text-on-fill hover:opacity-90;
 }

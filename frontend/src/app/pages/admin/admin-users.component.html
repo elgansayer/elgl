@@ -1,93 +1,181 @@
 <div class="p-4">
+  <app-admin-offline-banner />
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
 
-  <div class="flex items-center mb-4 gap-2">
+  <div class="flex flex-wrap items-center mb-4 gap-2">
     <input
+      hlmInput
       type="search"
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
       placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
-      class="border border-slate-300 rounded px-3 py-2 ms-2"
+      class="border border-surface-100 rounded px-3 py-2 min-w-[12rem] flex-1"
+      [attr.aria-label]="'admin.users.searchPlaceholder' | t"
     />
-    <button
-      type="button"
-      (click)="changePage(-1)"
-      [disabled]="page() <= 1"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-    >
-      {{ 'admin.users.previous' | t }}
-    </button>
-    <span class="text-sm">
-      {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
-    </span>
-    <button
-      type="button"
-      (click)="changePage(1)"
-      [disabled]="page() >= pageTotal()"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-    >
-      {{ 'admin.users.next' | t }}
-    </button>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button
+        hlmBtn
+        type="button"
+        (click)="changePage(-1)"
+        [disabled]="page() <= 1"
+        class="btn btn-sm rounded border border-surface-100 px-3 py-1 disabled:opacity-50"
+        [attr.aria-label]="'admin.users.previous' | t"
+      >
+        {{ 'admin.users.previous' | t }}
+      </button>
+      <span class="text-sm whitespace-nowrap">
+        {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
+      </span>
+      <button
+        hlmBtn
+        type="button"
+        (click)="changePage(1)"
+        [disabled]="page() >= pageTotal()"
+        class="btn btn-sm rounded border border-surface-100 px-3 py-1 disabled:opacity-50"
+        [attr.aria-label]="'admin.users.next' | t"
+      >
+        {{ 'admin.users.next' | t }}
+      </button>
+    </div>
   </div>
 
   @if (isLoading()) {
-    <p class="text-slate-500">{{ 'admin.users.loading' | t }}</p>
-  } @else {
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+      <table class="min-w-full divide-y divide-surface-100">
+        <thead class="bg-surface-100">
           <tr>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.avatar' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.name' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.nativeLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.targetLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.vip' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.coins' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.streak' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.lastActive' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.actions' | t }}
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-slate-100">
+        <tbody class="bg-surface-200 divide-y divide-surface-100">
+          @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+            <tr>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'32px'" [width]="'32px'" [variant]="'circle'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'14px'" [width]="'80%'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'16px'" [width]="'40px'" [borderRadius]="'4px'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'14px'" [width]="'30px'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'14px'" [width]="'25px'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
+              </td>
+              <td class="px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (users().length === 0) {
+    <app-empty-state
+      icon="👥"
+      [title]="'admin.users.emptyTitle' | t"
+      [description]="'admin.users.emptyDesc' | t"
+    />
+  } @else {
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-surface-100">
+        <thead class="bg-surface-100">
+          <tr>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.avatar' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.name' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.nativeLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.targetLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.vip' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.coins' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.streak' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.lastActive' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
+              {{ 'admin.users.actions' | t }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-surface-200 divide-y divide-surface-100">
           @for (user of users(); track user.id) {
-            <tr class="hover:bg-slate-50">
+            <tr class="hover:bg-surface-100">
               <td class="px-3 py-2">
                 @if (user.avatar_url) {
                   <img
+                    loading="lazy"
                     [src]="user.avatar_url"
                     alt=""
                     class="h-8 w-8 rounded-full object-cover"
                   />
                 } @else {
-                  <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
+                  <span class="text-text-muted">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
-              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
-              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ user.display_name ?? '-' | sanitiseHtml }}</td>
               <td class="px-3 py-2">
-                <span
-                  [class.text-green-600]="user.is_vip"
-                  [class.text-slate-400]="!user.is_vip"
-                >
+                {{ user.native_languages?.join(', ') ?? '' | sanitiseHtml }}
+              </td>
+              <td class="px-3 py-2">
+                {{ user.target_languages?.join(', ') ?? '' | sanitiseHtml }}
+              </td>
+              <td class="px-3 py-2">
+                <span [class.text-vip]="user.is_vip" [class.text-text-muted]="!user.is_vip">
                   {{ user.is_vip ? ('admin.users.yes' | t) : ('admin.users.no' | t) }}
                 </span>
               </td>
@@ -96,27 +184,56 @@
               <td class="px-3 py-2">
                 {{ user.last_active_at ? (user.last_active_at | date: 'medium') : '-' }}
               </td>
-              <td class="px-3 py-2 whitespace-nowrap">
-                <button
-                  type="button"
-                  (click)="openHistory(user)"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 me-2 hover:bg-slate-100"
-                >
-                  {{ 'admin.users.loginHistory' | t }}
-                </button>
-                <button
-                  type="button"
-                  (click)="toggleVip(user)"
-                  [disabled]="isVipUpdating() === user.id"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
-                >
-                  {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
-                </button>
+              <td class="px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="openHistory(user)"
+                    class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 whitespace-nowrap"
+                    [attr.aria-label]="'admin.users.loginHistory' | t"
+                  >
+                    {{ 'admin.users.loginHistory' | t }}
+                  </button>
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="toggleVip(user)"
+                    [disabled]="isVipUpdating() === user.id || !isOnline()"
+                    class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 disabled:opacity-50 whitespace-nowrap"
+                    [attr.aria-label]="'admin.users.disableVip' | t"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{
+                      user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t)
+                    }}
+                  </button>
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="warnUser(user)"
+                    [disabled]="isWarning() !== null || !isOnline()"
+                    class="btn btn-sm rounded border border-warning text-warning px-3 py-1 hover:bg-warning/10 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{ 'admin.users.warn' | t }}
+                  </button>
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="banUser(user)"
+                    [disabled]="isBanning() !== null || !isOnline()"
+                    class="btn btn-sm rounded border border-danger text-danger px-3 py-1 hover:bg-danger/10 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{ 'admin.users.ban' | t }}
+                  </button>
+                </div>
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="9" class="px-3 py-4 text-center text-slate-400">
+              <td colspan="9" class="px-3 py-4 text-center text-text-muted">
                 {{ 'admin.users.empty' | t }}
               </td>
             </tr>
@@ -132,33 +249,33 @@
       (click)="closeHistory()"
     >
       <div
-        class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        class="bg-surface-200 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
       >
         <h3 class="text-lg font-semibold mb-4">{{ 'admin.users.loginHistoryTitle' | t }}</h3>
         @if (loginHistory().length === 0) {
-          <p class="text-slate-500">{{ 'admin.users.noHistory' | t }}</p>
+          <p class="text-text-secondary">{{ 'admin.users.noHistory' | t }}</p>
         } @else {
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
+          <table class="min-w-full divide-y divide-surface-100">
+            <thead class="bg-surface-100">
               <tr>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.historyTime' | t }}
                 </th>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.ip' | t }}
                 </th>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.userAgent' | t }}
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-100">
+            <tbody class="bg-surface-200 divide-y divide-surface-100">
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
-                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>
@@ -166,9 +283,11 @@
         }
         <div class="mt-4 text-end">
           <button
+            hlmBtn
             type="button"
             (click)="closeHistory()"
-            class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+            class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100"
+            [attr.aria-label]="'admin.users.close' | t"
           >
             {{ 'admin.users.close' | t }}
           </button>

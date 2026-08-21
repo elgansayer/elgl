@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, resource, ResourceRef, Signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { withRetry } from './http-retry';
 
 export interface ModerationItem {
   id: string;
@@ -30,12 +31,38 @@ export interface UserAnalysisResult {
   flags: string[];
 }
 
+export interface ModerationActionResponse {
+  success: boolean;
+  error?: string;
+}
+
+const FALLBACK_ITEMS: ModerationItem[] = [];
+
+const FALLBACK_ANALYSIS: UserAnalysisResult = {
+  riskScore: 0,
+  flags: [],
+};
+
+const FALLBACK_FAILED_RESPONSE: ModerationActionResponse = {
+  success: false,
+  error: 'Service temporarily unavailable',
+};
+
 @Injectable({
   providedIn: 'root',
 })
 export class ModerationService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/moderation`;
+
+  getItemsResource(
+    type: Signal<'moment' | 'profile'>,
+  ): ResourceRef<ModerationItem[] | undefined> {
+    return resource({
+      params: () => ({ type: type() }),
+      loader: ({ params }) => this.getItems(params.type),
+    });
+  }
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('auth_token') ?? '';
@@ -44,55 +71,96 @@ export class ModerationService {
     });
   }
 
-  getItems(type: 'moment' | 'profile', status?: string): Observable<ModerationItem[]> {
+  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
     const params: Record<string, string> = { type };
     if (status) {
       params['status'] = status;
     }
-    return this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
-      headers: this.getHeaders(),
-      params,
-    }).pipe(
-      map(items => items.map(item => ({ ...item, type }))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
+            headers: this.getHeaders(),
+            params,
+          }),
+        ).then((items) => items.map((item) => ({ ...item, type }))),
+      );
+    } catch {
+      return FALLBACK_ITEMS;
+    }
   }
 
-  approveItem(itemId: string, type: string): Observable<unknown> {
-    return this.http.post(
-      `${this.baseUrl}/approve`,
-      { itemId, type },
-      { headers: this.getHeaders() },
-    );
+  async approveItem(itemId: string, type: string): Promise<ModerationActionResponse> {
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/approve`,
+            { itemId, type },
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
-  rejectItem(itemId: string, type: string, reason?: string): Observable<unknown> {
+  async rejectItem(itemId: string, type: string, reason?: string): Promise<ModerationActionResponse> {
     const body: Record<string, string> = { itemId, type };
     if (reason) {
       body['reason'] = reason;
     }
-    return this.http.post(
-      `${this.baseUrl}/reject`,
-      body,
-      { headers: this.getHeaders() },
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/reject`,
+            body,
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
-  reportUser(reportedUserId: string, reasonCategory: string, description?: string): Observable<unknown> {
+  async reportUser(
+    reportedUserId: string,
+    reasonCategory: string,
+    description?: string,
+  ): Promise<ModerationActionResponse> {
     const body: Record<string, string> = { reportedUserId, reasonCategory };
     if (description) {
       body['description'] = description;
     }
-    return this.http.post(
-      `${this.baseUrl}/report`,
-      body,
-      { headers: this.getHeaders() },
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${this.baseUrl}/report`,
+            body,
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
-  getUserRiskAnalysis(userId: string): Observable<UserAnalysisResult> {
-    return this.http.get<UserAnalysisResult>(
-      `${this.baseUrl}/analyse/${userId}`,
-      { headers: this.getHeaders() },
-    );
+  async getUserRiskAnalysis(userId: string): Promise<UserAnalysisResult> {
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
+            headers: this.getHeaders(),
+          }),
+        ),
+      );
+    } catch {
+      return FALLBACK_ANALYSIS;
+    }
   }
 }

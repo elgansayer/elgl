@@ -1,16 +1,27 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
+import { AuthService } from './auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('I18nService', () => {
   let service: I18nService;
+  let mockAuthService: Partial<AuthService>;
 
   beforeEach(() => {
     localStorage.clear();
+
+    mockAuthService = {
+      getAccessToken: vi.fn().mockReturnValue('mock-token'),
+    };
+
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: mockAuthService },
+      ],
     });
     service = TestBed.inject(I18nService);
   });

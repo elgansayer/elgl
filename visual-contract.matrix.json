@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "rendering": {
+    "browser": "electron",
+    "viewportMobile": { "width": 390, "height": 844 },
+    "viewportTabletMd": { "width": 768, "height": 1024 },
+    "viewportTabletLgBoundary": { "width": 1024, "height": 900 },
+    "viewportWide": { "width": 1280, "height": 900 },
+    "animations": "disabled",
+    "network": "repository-preview-only"
+  },
+  "contracts": [
+    {
+      "designSyncId": "relay.foundation.tokens",
+      "previewPath": "frontend/design-preview/foundations/tokens.html",
+      "states": ["light", "dark", "forced-colours", "accent-override"]
+    },
+    {
+      "designSyncId": "relay.primitives.buttons",
+      "previewPath": "frontend/design-preview/components/primitives/buttons.html",
+      "states": ["light", "dark", "focus-visible", "disabled", "390px", "rtl"]
+    },
+    {
+      "designSyncId": "relay.primitives.card-inputs",
+      "previewPath": "frontend/design-preview/components/primitives/card-inputs.html",
+      "states": ["light", "dark", "focus-visible", "error", "390px", "rtl"]
+    },
+    {
+      "designSyncId": "relay.primitives.feedback-states",
+      "previewPath": "frontend/design-preview/components/primitives/feedback-states.html",
+      "states": ["light", "dark", "loading", "error", "empty", "rtl"]
+    },
+    {
+      "designSyncId": "spartan.overlays-menus",
+      "previewPath": "frontend/design-preview/components/primitives/overlays-menus.html",
+      "states": ["light", "dark", "focus-visible", "keyboard", "390px", "rtl", "400%-zoom"]
+    },
+    {
+      "designSyncId": "screen.discovery",
+      "previewPath": "frontend/design-preview/screens/discovery.html",
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
+    },
+    {
+      "designSyncId": "screen.chat",
+      "previewPath": "frontend/design-preview/screens/chat.html",
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "400%-zoom",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
+    },
+    {
+      "designSyncId": "screen.vocabulary",
+      "previewPath": "frontend/design-preview/screens/vocabulary.html",
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "400%-zoom",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
+    },
+    {
+      "designSyncId": "screen.moderation",
+      "previewPath": "frontend/design-preview/screens/moderation.html",
+      "states": [
+        "light",
+        "dark",
+        "390px",
+        "wide",
+        "rtl",
+        "tablet-768-light",
+        "tablet-768-dark",
+        "tablet-768-rtl",
+        "tablet-768-text-200",
+        "tablet-1024-light",
+        "tablet-1024-dark"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PinoLogger } from 'nestjs-pino';
 import {
   ForbiddenException,
   NotFoundException,
@@ -12,38 +13,41 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
-const mockConstructEvent = jest.fn();
-const mockCheckoutSessionCreate = jest.fn();
-const mockSubscriptionsList = jest.fn();
-const mockSubscriptionsUpdate = jest.fn();
-const mockInvoicesList = jest.fn();
-const mockBillingPortalSessionsCreate = jest.fn();
+const mockConstructEvent = vi.fn();
+const mockCheckoutSessionCreate = vi.fn();
+const mockSubscriptionsList = vi.fn();
+const mockSubscriptionsUpdate = vi.fn();
+const mockInvoicesList = vi.fn();
+const mockBillingPortalSessionsCreate = vi.fn();
 
-jest.mock('stripe', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      webhooks: {
-        constructEvent: (...args: any[]) => mockConstructEvent(...args),
-      },
-      checkout: {
-        sessions: {
-          create: mockCheckoutSessionCreate,
+vi.mock('stripe', () => {
+  return {
+    default: vi.fn().mockImplementation(function () {
+      return {
+        webhooks: {
+          constructEvent: (...args: any[]) => mockConstructEvent(...args),
         },
-      },
-      subscriptions: {
-        list: (...args: any[]) => mockSubscriptionsList(...args),
-        update: (...args: any[]) => mockSubscriptionsUpdate(...args),
-      },
-      invoices: {
-        list: (...args: any[]) => mockInvoicesList(...args),
-      },
-      billingPortal: {
-        sessions: {
-          create: (...args: any[]) => mockBillingPortalSessionsCreate(...args),
+        checkout: {
+          sessions: {
+            create: mockCheckoutSessionCreate,
+          },
         },
-      },
-    };
-  });
+        subscriptions: {
+          list: (...args: any[]) => mockSubscriptionsList(...args),
+          update: (...args: any[]) => mockSubscriptionsUpdate(...args),
+        },
+        invoices: {
+          list: (...args: any[]) => mockInvoicesList(...args),
+        },
+        billingPortal: {
+          sessions: {
+            create: (...args: any[]) =>
+              mockBillingPortalSessionsCreate(...args),
+          },
+        },
+      };
+    }),
+  };
 });
 
 describe('MonetisationService', () => {
@@ -54,26 +58,35 @@ describe('MonetisationService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     module = await Test.createTestingModule({
       providers: [
+        {
+          provide: 'PinoLogger:MonetisationService',
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+          },
+        },
         MonetisationService,
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key) => {
+            get: vi.fn((key) => {
               if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test';
               if (key === 'STRIPE_SECRET_KEY') return 'sk_test';
               return null;
@@ -83,31 +96,31 @@ describe('MonetisationService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: AppleNotificationService,
           useValue: {
-            handleNotification: jest.fn(),
+            handleNotification: vi.fn(),
           },
         },
         {
           provide: GooglePlayNotificationService,
           useValue: {
-            handleNotification: jest.fn(),
+            handleNotification: vi.fn(),
           },
         },
         {
           provide: SubscriptionPlansService,
           useValue: {
-            getPlanById: jest.fn(),
+            getPlanById: vi.fn(),
           },
         },
         {
           provide: AppleReceiptValidatorService,
           useValue: {
-            validateReceipt: jest.fn(),
+            validateReceipt: vi.fn(),
           },
         },
       ],
@@ -117,7 +130,7 @@ describe('MonetisationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -245,11 +258,9 @@ describe('MonetisationService', () => {
 
     it('should throw an error when STRIPE_WEBHOOK_SECRET is not configured', async () => {
       const configService = module.get<ConfigService>(ConfigService);
-      jest
-        .spyOn(configService, 'get')
-        .mockImplementation((key: string) =>
-          key === 'STRIPE_WEBHOOK_SECRET' ? undefined : 'sk_test',
-        );
+      vi.spyOn(configService, 'get').mockImplementation((key: string) =>
+        key === 'STRIPE_WEBHOOK_SECRET' ? undefined : 'sk_test',
+      );
 
       await expect(
         service.handleStripeWebhook(Buffer.from(''), 'sig'),
@@ -393,7 +404,7 @@ describe('MonetisationService', () => {
 
     beforeEach(() => {
       configService = module.get<ConfigService>(ConfigService);
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
+      vi.spyOn(configService, 'get').mockImplementation((key: string) => {
         if (key === 'STRIPE_MONTHLY_PRICE_ID') return 'price_monthly';
         if (key === 'STRIPE_YEARLY_PRICE_ID') return 'price_yearly';
         if (key === 'FRONTEND_URL') return 'http://localhost:4200';
@@ -407,7 +418,7 @@ describe('MonetisationService', () => {
         id: 'cs_test_abc123',
       };
 
-      (service as any).stripe.checkout.sessions.create = jest
+      (service as any).stripe.checkout.sessions.create = vi
         .fn()
         .mockResolvedValue(mockSession);
 
@@ -443,7 +454,7 @@ describe('MonetisationService', () => {
         id: 'cs_test_def456',
       };
 
-      (service as any).stripe.checkout.sessions.create = jest
+      (service as any).stripe.checkout.sessions.create = vi
         .fn()
         .mockResolvedValue(mockSession);
 
@@ -473,7 +484,7 @@ describe('MonetisationService', () => {
     });
 
     it('should throw BadRequestException when no Stripe price ID is configured', async () => {
-      jest.spyOn(configService, 'get').mockImplementation((key: string) => {
+      vi.spyOn(configService, 'get').mockImplementation((key: string) => {
         if (key === 'STRIPE_MONTHLY_PRICE_ID') return undefined;
         if (key === 'STRIPE_YEARLY_PRICE_ID') return undefined;
         return null;
@@ -489,7 +500,7 @@ describe('MonetisationService', () => {
     });
 
     it('should handle Stripe API errors gracefully', async () => {
-      (service as any).stripe.checkout.sessions.create = jest
+      (service as any).stripe.checkout.sessions.create = vi
         .fn()
         .mockRejectedValue(new Error('Stripe API error'));
 
@@ -508,11 +519,11 @@ describe('MonetisationService', () => {
         id: 'cs_test_ghi789',
       };
 
-      (service as any).stripe.checkout.sessions.create = jest
+      (service as any).stripe.checkout.sessions.create = vi
         .fn()
         .mockResolvedValue(mockSession);
 
-      const getPriceIdSpy = jest.spyOn(service as any, 'getPriceIdForPlan');
+      const getPriceIdSpy = vi.spyOn(service as any, 'getPriceIdForPlan');
 
       await service.createCheckoutSession(
         'user-1',
@@ -532,11 +543,11 @@ describe('MonetisationService', () => {
         id: 'cs_test_jkl101',
       };
 
-      (service as any).stripe.checkout.sessions.create = jest
+      (service as any).stripe.checkout.sessions.create = vi
         .fn()
         .mockResolvedValue(mockSession);
 
-      const getPriceIdSpy = jest.spyOn(service as any, 'getPriceIdForPlan');
+      const getPriceIdSpy = vi.spyOn(service as any, 'getPriceIdForPlan');
 
       await service.createCheckoutSession(
         'user-1',
@@ -555,18 +566,18 @@ describe('MonetisationService', () => {
     it('should return diagnostic logs when query succeeds', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
       const userCheckChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { is_vip: true, vip_tier: 'developer' },
           error: null,
         }),
       };
       const logsChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
           data: logs,
           error: null,
         }),
@@ -585,18 +596,18 @@ describe('MonetisationService', () => {
 
     it('should return empty array when query fails', async () => {
       const userCheckChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { is_vip: true, vip_tier: 'developer' },
           error: null,
         }),
       };
       const failingChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'failed' },
         }),
@@ -622,17 +633,17 @@ describe('MonetisationService', () => {
         created_at: '2026-01-01T00:00:00.000Z',
       };
       const userCheckChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { is_vip: true, vip_tier: 'developer' },
           error: null,
         }),
       };
       const insertChain = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: created,
           error: null,
         }),

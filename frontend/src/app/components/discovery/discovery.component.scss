@@ -1,1 +1,24 @@
 /* Discovery component styles */
+
+/* Hide default scrollbar for horizontal pill containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile touch optimisations for partner cards */
+article[role='listitem'] {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Responsive header: reduce padding-top on larger screens since desktop-sidebar takes nav space */
+@media (min-width: 1024px) {
+  .discovery-header {
+    padding-top: 1rem;
+  }
+}

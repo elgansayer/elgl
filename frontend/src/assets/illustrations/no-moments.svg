@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <!-- Photo frame -->
+  <rect x="42" y="25" width="116" height="90" rx="10" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1.8"/>
+  <!-- Inner photo area -->
+  <rect x="52" y="35" width="96" height="68" rx="5" fill="#12121F" stroke="#353550" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <!-- Mountain/landscape silhouette (empty gallery) -->
+  <path d="M52 95L72 75L88 82L108 62L130 78L148 68V103H52V95Z" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Sun/moon circle -->
+  <circle cx="85" cy="55" r="10" fill="none" stroke="#2D2D44" stroke-width="1.2"/>
+  <!-- Neon accent on frame -->
+  <rect x="42" y="25" width="116" height="90" rx="10" fill="none" stroke="#7C3AED" stroke-width="1.8" opacity="0.35"/>
+  <!-- Sparkle -->
+  <path d="M160 18L160.6 20.5L163 21L160.6 21.5L160 24L159.4 21.5L157 21L159.4 20.5Z" fill="#A78BFA" opacity="0.4"/>
+</svg>

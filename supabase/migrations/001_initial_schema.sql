@@ -12,8 +12,11 @@ CREATE TABLE IF NOT EXISTS public.users (
     bio_text TEXT,
     avatar_url TEXT,
     audio_intro_url TEXT,
+    primary_accent_color VARCHAR(7),
     location GEOGRAPHY(POINT, 4326),
     mock_location GEOGRAPHY(POINT, 4326),
+    mock_country TEXT,
+    mock_city TEXT,
     is_vip BOOLEAN NOT NULL DEFAULT false,
     vip_tier VARCHAR(50) NOT NULL DEFAULT 'free',
     coins_balance INTEGER NOT NULL DEFAULT 0,
@@ -23,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     privacy_hide_age BOOLEAN NOT NULL DEFAULT false,
     privacy_hide_location BOOLEAN NOT NULL DEFAULT false,
     privacy_hide_from_search BOOLEAN NOT NULL DEFAULT false,
+    proficiency_level VARCHAR(2) CHECK (proficiency_level IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

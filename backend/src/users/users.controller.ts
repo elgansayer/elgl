@@ -12,6 +12,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -41,6 +42,7 @@ export class UsersController {
   ) {}
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Delete('me')
   async deleteMyAccount(
     @CurrentUser() user: User | null,
@@ -50,6 +52,7 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 2, ttl: 300000 } })
   @Delete('me/permanent')
   async permanentlyDeleteMyAccount(
     @CurrentUser() user: User | null,
@@ -60,6 +63,7 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
@@ -253,6 +257,19 @@ export class UsersController {
     return this.usersService.getAvailableInterests();
   }
 
+  @Get('search')
+  async searchUsers(
+    @Query('q') query: string,
+    @CurrentUser() user: User | null,
+    @Query('limit') limit: number | undefined,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    if (!user) throw new UnauthorizedException();
+    if (!query || query.trim().length === 0) return [];
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
+  }
+
   @Get('me/badges')
   async getMyBadges(
     @CurrentUser() user: User | null,
@@ -262,8 +279,36 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
-    return this.usersService.getProfile(id);
+  async getUserProfile(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<UserProfile> {
+    const profile = await this.usersService.getProfile(id);
+
+    // Enforce profile visibility
+    if (id !== (currentUser?.id ?? '')) {
+      const profileRecord = profile as unknown as Record<string, unknown>;
+      const visibility =
+        (profileRecord.profile_visibility as string) ?? 'everyone';
+      if (visibility === 'hidden') {
+        throw new UnauthorizedException('This profile is not visible');
+      }
+      if (visibility === 'vips_only') {
+        const isRequestingVip = Boolean(
+          currentUser
+            ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
+                false)
+            : false,
+        );
+        if (!isRequestingVip) {
+          throw new UnauthorizedException(
+            'This profile is visible to VIP members only',
+          );
+        }
+      }
+    }
+
+    return profile;
   }
 
   @Get(':id/stats')
@@ -372,6 +417,7 @@ export class UsersController {
     privacy_about_info?: string;
     privacy_status?: string;
     incognito_visits?: boolean;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);

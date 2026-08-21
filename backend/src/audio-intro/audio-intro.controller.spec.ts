@@ -8,9 +8,9 @@ describe('AudioIntroController', () => {
   let controller: AudioIntroController;
 
   const mockService = {
-    getAudioIntro: jest.fn(),
-    updateAudioIntro: jest.fn(),
-    getPresignedUploadUrl: jest.fn(),
+    getAudioIntro: vi.fn(),
+    updateAudioIntro: vi.fn(),
+    getPresignedUploadUrl: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -24,14 +24,14 @@ describe('AudioIntroController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = moduleRef.get<AudioIntroController>(AudioIntroController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

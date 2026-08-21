@@ -6,5 +6,125 @@
     "daily": "Daily Study Streak",
     "day": "day",
     "days": "days"
+  },
+  "common": {
+    "loading": "Loading...",
+    "back": "Back",
+    "save": "Save",
+    "error_generic": "Something went wrong. Please try again.",
+    "reset": "Reset"
+  },
+  "settings": {
+    "linkBtn": "Link",
+    "unlinkBtn": "Unlink",
+    "linkedAccountsSection": "Linked Accounts",
+    "linkedAccounts": {
+      "title": "Linked Accounts",
+      "subtitle": "Connect your social accounts to sign in with multiple providers and keep your account secure.",
+      "active": "Connected",
+      "inactive": "Not connected",
+      "unlink": "Unlink",
+      "none": "No accounts linked yet. Connect one to get started.",
+      "linkGoogle": "Link Google",
+      "linkApple": "Link Apple",
+      "linkEmail": "Link Email",
+      "linkFacebook": "Link Facebook",
+      "linkTwitter": "Link X (Twitter)",
+      "unlinkConfirm": "Are you sure you want to unlink this account?",
+      "unlinkDisabled": "Cannot unlink your only linked account. Add another provider first.",
+      "linkSuccess": "Account linked successfully.",
+      "unlinkSuccess": "Account unlinked successfully.",
+      "linkFailed": "Failed to link account. Please try again.",
+      "unlinkFailed": "Failed to unlink account. Please try again."
+    }
+  },
+  "notification_settings": {
+    "title": "Notification Settings",
+    "subtitle": "Choose which push alerts and badge notifications you would like to receive.",
+    "toggle_header": "Push Alerts & Badges",
+    "channel": {
+      "push": "Push",
+      "badge": "Badge"
+    },
+    "category": {
+      "direct_messages": "Direct Messages",
+      "groups": "Groups",
+      "likes": "Likes",
+      "voice_rooms": "Voicerooms"
+    },
+    "saved_message": "Notification preferences saved."
+  },
+  "admin": {
+    "blocks": {
+      "title": "Block Management",
+      "loading": "Loading blocks...",
+      "empty": "No blocks found.",
+      "loadError": "Failed to load blocks.",
+      "blocker": "Blocker",
+      "blocked": "Blocked",
+      "date": "Date",
+      "actions": "Actions",
+      "unblock": "Unblock",
+      "unblockAria": "Remove block",
+      "unknown": "Unknown",
+      "previous": "Previous",
+      "next": "Next",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "paginationAria": "Block list pagination"
+    },
+    "offline": {
+      "banner": "You are offline",
+      "cachedDataAvailable": "\u2013 viewing cached data",
+      "actionsDisabled": "Moderation actions are unavailable while offline",
+      "cachedDataNote": "Cached data"
+    }
+  },
+  "discovery": {
+    "title": "Find partners",
+    "offlineBanner": "You are offline",
+    "offlineCachedData": "\u2013 viewing cached data",
+    "loadingPartners": "Searching for language partners...",
+    "noResultsTitle": "No partners match your search",
+    "noResultsDescription": "Try adjusting your filters or widening your search area to discover more language partners.",
+    "noResultsAction": "Reset Filters",
+    "searchErrorTitle": "Something went wrong",
+    "searchErrorDescription": "We couldn't load partner results. Please check your connection and try again.",
+    "searchErrorAction": "Try Again"
+  },
+  "aiConversation": {
+    "chooseScenario": "Choose a role-play scenario",
+    "chooseScenarioDesc": "Practise real-life conversations with an AI partner. Pick a scenario to get started.",
+    "typeMessage": "Type your message...",
+    "send": "Send",
+    "typing": "Writing...",
+    "backToScenarios": "Back to scenarios"
+  },
+  "moderation": {
+    "title": "Admin Moderation Dashboard",
+    "filterAria": "Moderation filter tabs",
+    "profile": "Profiles",
+    "moment": "Moments",
+    "loading": "Loading moderation queue...",
+    "error": "Failed to load moderation queue. Please try again.",
+    "reporter": "Reporter",
+    "reported_user": "Reported User",
+    "reason": "Reason",
+    "riskAnalysisAria": "Risk analysis results",
+    "riskScore": "Risk Score",
+    "flags": "Flags",
+    "noFlags": "No flags detected",
+    "reportItemAria": "Moderation report {id}",
+    "approve": "Approve",
+    "approveAria": "Approve report {id}",
+    "reject": "Reject",
+    "rejectAria": "Reject report {id}",
+    "analyse": "Analyse",
+    "analyseAria": "Analyse user {user}",
+    "dismiss": "Dismiss",
+    "empty": "No items to moderate.",
+    "offlineBanner": "You are currently offline. Showing cached data. Actions will be queued and synced when connectivity is restored.",
+    "pendingActions": "{count} pending action(s) waiting to sync.",
+    "syncNow": "Sync now",
+    "showingCachedData": "Showing cached data."
   }
 }

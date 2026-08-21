@@ -1,5 +1,7 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger } from 'nestjs-pino';
 import { AppleNotificationService } from './apple-notification.service';
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -35,9 +37,9 @@ function buildSignedPayload(
 
 describe('AppleNotificationService', () => {
   let service: AppleNotificationService;
-  let mockSupabaseClient: { from: jest.Mock };
-  let mockQueryBuilder: { upsert: jest.Mock };
-  let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
+  let mockSupabaseClient: { from: Mock };
+  let mockQueryBuilder: { upsert: Mock };
+  let monetisationService: { updateVipStatusFromWebhook: Mock };
 
   const transactionInfo: {
     originalTransactionId: string;
@@ -57,17 +59,17 @@ describe('AppleNotificationService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      upsert: jest.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
     monetisationService = {
-      updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
+      updateVipStatusFromWebhook: vi.fn().mockResolvedValue(undefined),
     };
 
     const subscriptionPlansService = {
-      getTierByProductId: jest.fn((productId: string) => {
+      getTierByProductId: vi.fn((productId: string) => {
         if (productId.includes('developer')) {
           return 'developer_20_ukp_26_usd';
         }
@@ -79,15 +81,24 @@ describe('AppleNotificationService', () => {
       providers: [
         AppleNotificationService,
         {
+          provide: 'PinoLogger:AppleNotificationService',
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+          } satisfies Partial<Record<keyof PinoLogger, Mock>>,
+        },
+        {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue(''),
+            get: vi.fn().mockReturnValue(''),
           },
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
@@ -105,11 +116,11 @@ describe('AppleNotificationService', () => {
 
     // Certificate-chain verification is exercised separately; here we trust
     // a stubbed signature check so tests focus on notification routing.
-    jest.spyOn(service as any, 'verifySignature').mockReturnValue(true);
+    vi.spyOn(service as any, 'verifySignature').mockReturnValue(true);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -125,7 +136,7 @@ describe('AppleNotificationService', () => {
   });
 
   it('should return "error" (not throw) when the JWS signature is invalid, so Apple does not retry forever', async () => {
-    jest.spyOn(service as any, 'verifySignature').mockReturnValue(false);
+    vi.spyOn(service as any, 'verifySignature').mockReturnValue(false);
     const signedPayload = buildSignedPayload(
       'SUBSCRIBED',
       undefined,

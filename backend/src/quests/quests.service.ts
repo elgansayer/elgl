@@ -123,27 +123,34 @@ export class QuestsService {
     ];
 
     const supabase = this.supabaseService.getClient();
-    for (const q of defaultQuests) {
-      const { data } = await supabase
-        .from('user_quests')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('quest_type', q.quest_type)
-        .eq('quest_key', q.quest_key)
-        .maybeSingle();
 
-      if (!data) {
-        await supabase.from('user_quests').insert({
-          user_id: userId,
-          quest_type: q.quest_type,
-          quest_key: q.quest_key,
-          progress: 0,
-          target: q.target,
-          reward_coins: q.reward_coins,
-          completed: false,
-          updated_at: new Date().toISOString(),
-        });
-      }
+    // ⚡ Bolt Optimization: Replace sequential query checks and single row inserts in ensureDefaults
+    // with a single bulk fetch using .select followed by calculating differences in memory,
+    // culminating in a single bulk .insert().
+    const { data: existingQuests } = await supabase
+      .from('user_quests')
+      .select('quest_type, quest_key')
+      .eq('user_id', userId);
+
+    const existingSet = new Set(
+      (existingQuests || []).map((q) => `${q.quest_type}:${q.quest_key}`),
+    );
+
+    const missingQuests = defaultQuests
+      .filter((q) => !existingSet.has(`${q.quest_type}:${q.quest_key}`))
+      .map((q) => ({
+        user_id: userId,
+        quest_type: q.quest_type,
+        quest_key: q.quest_key,
+        progress: 0,
+        target: q.target,
+        reward_coins: q.reward_coins,
+        completed: false,
+        updated_at: new Date().toISOString(),
+      }));
+
+    if (missingQuests.length > 0) {
+      await supabase.from('user_quests').insert(missingQuests);
     }
   }
 
@@ -162,7 +169,8 @@ export class QuestsService {
 
     if (!data || data.length === 0) return;
 
-    for (const quest of data) {
+    // ⚡ Bolt Optimization: Replace sequential await loop with Promise.allSettled mapped concurrent operations
+    const updatePromises = data.map(async (quest) => {
       const newProgress = (quest.progress ?? 0) + amount;
       const completed = newProgress >= quest.target;
       const updatePayload: {
@@ -181,6 +189,14 @@ export class QuestsService {
         .from('user_quests')
         .update(updatePayload)
         .eq('id', quest.id);
+    });
+
+    const results = await Promise.allSettled(updatePromises);
+    const failures = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failures.length > 0) {
+      throw failures[0].reason;
     }
   }
 }

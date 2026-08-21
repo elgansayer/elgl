@@ -7,7 +7,10 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
+import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
@@ -43,6 +46,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     unlockApp: ReturnType<typeof vi.fn>;
     appLocked: ReturnType<typeof signal>;
   };
+  let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockChatService = {
@@ -87,6 +91,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
       updateSrsLevel: vi.fn(),
     };
 
+    const mockTypingService = {
+      typingUsers: signal([]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      sendTyping: vi.fn(),
+    };
+
+    const mockNetworkStatusService = {
+      isOnline: signal(true),
+    };
+
+    mockTextToSpeechService = {
+      speak: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -95,7 +114,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: UserService, useValue: mockUserService },
+        { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
+        { provide: NetworkStatusService, useValue: mockNetworkStatusService },
+        { provide: TextToSpeechService, useValue: mockTextToSpeechService },
         I18nService,
       ],
     }).compileComponents();
@@ -208,42 +230,61 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(component.mentionSuggestions()).toEqual([]);
     });
 
-    it('selectMention replaces the in-progress query with the chosen display name', () => {
+    it('itemToString replaces the in-progress query with the chosen display name', () => {
       component.textInput = 'Hi @Al';
       component.onComposerInput(inputEvent('Hi @Al', 6));
 
-      component.selectMention(component.mentionSuggestions()[0]);
+      const selectedText = component.mentionItemToString(component.mentionSuggestions()[0]);
 
-      expect(component.textInput).toBe('Hi @Alice ');
+      expect(selectedText).toBe('Hi @Alice ');
+    });
+
+    it('selection clears the product mention query after Spartan chooses an option', () => {
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+      expect(component.mentionSuggestions().length).toBeGreaterThan(0);
+
+      component.onMentionSelected(component.mentionSuggestions()[0]);
+
       expect(component.mentionSuggestions()).toEqual([]);
     });
 
-    it('ArrowDown/ArrowUp move the active suggestion without sending the message', () => {
+    it('ArrowDown/ArrowUp are left to the owned Spartan autocomplete', () => {
       component.onComposerInput(inputEvent('Hi @Al', 6));
+      const downPreventDefault = vi.fn();
+      const upPreventDefault = vi.fn();
 
-      component.onComposerKeydown({ key: 'ArrowDown', preventDefault: vi.fn() } as unknown as KeyboardEvent);
-      expect(component.mentionActiveIndex()).toBe(1);
+      component.onComposerKeydown({
+        key: 'ArrowDown',
+        preventDefault: downPreventDefault,
+      } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowUp',
+        preventDefault: upPreventDefault,
+      } as unknown as KeyboardEvent);
 
-      component.onComposerKeydown({ key: 'ArrowUp', preventDefault: vi.fn() } as unknown as KeyboardEvent);
-      expect(component.mentionActiveIndex()).toBe(0);
-
+      expect(downPreventDefault).not.toHaveBeenCalled();
+      expect(upPreventDefault).not.toHaveBeenCalled();
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('Enter selects the active suggestion instead of sending when the list is open', () => {
+    it('Enter is left to Spartan when mention options are open', () => {
       component.textInput = 'Hi @Al';
       component.onComposerInput(inputEvent('Hi @Al', 6));
+      const preventDefault = vi.fn();
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({ key: 'Enter', preventDefault } as unknown as KeyboardEvent);
 
-      expect(component.textInput).toBe('Hi @Alice ');
+      expect(preventDefault).not.toHaveBeenCalled();
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
     });
 
     it('Enter sends the message when no mention list is open', () => {
       component.textInput = 'Just a message';
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'Enter',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),
@@ -310,22 +351,9 @@ describe('ChatRoomComponent (threaded replies)', () => {
     });
 
     it('speakMessage speaks the message text when speech synthesis is supported', () => {
-      const speak = vi.fn();
-      const cancel = vi.fn();
-      Object.defineProperty(window, 'speechSynthesis', {
-        configurable: true,
-        value: { speak, cancel },
-      });
-      (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance =
-        function (this: { text: string }, text: string) {
-          this.text = text;
-        };
-
       component.speakMessage(makeMessage({ text_content: 'Hello there' }));
 
-      expect(cancel).toHaveBeenCalled();
-      expect(speak).toHaveBeenCalledTimes(1);
-      expect(speak.mock.calls[0][0]).toMatchObject({ text: 'Hello there' });
+      expect(mockTextToSpeechService.speak).toHaveBeenCalledWith('m1', 'Hello there');
     });
 
     it('speakMessage does nothing for a message with no text content', () => {
@@ -347,6 +375,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(component.showCorrectionForm()).toBe(true);
       expect(component.originalText).toBe('I goed to school');
+    });
+
+    it('requestCorrection sends a correction_request message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+      const sent = makeMessage({ id: 'm2', message_type: 'correction_request' });
+      mockChatService.sendMessage.mockResolvedValueOnce(sent);
+
+      await component.requestCorrection(msg);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction_request',
+        correction_request_payload: { original_text: 'I goed to school' },
+        reply_to_id: 'm1',
+      });
     });
   });
 

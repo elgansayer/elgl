@@ -1,4 +1,5 @@
-export type LanguageLevel = 'Beginner' | 'Elementary' | 'Intermediate' | 'Upper Intermediate' | 'Advanced' | 'Native';
+export type LanguageLevel =
+  'Beginner' | 'Elementary' | 'Intermediate' | 'Upper Intermediate' | 'Advanced' | 'Native';
 export type JLPTLevel = 'N5' | 'N4' | 'N3' | 'N2' | 'N1' | 'None';
 
 export interface AccountSettings {
@@ -28,7 +29,7 @@ export interface ProfileDiscoverySettings {
 }
 
 export interface SocialPrivacySettings {
-  profileVisibility: 'Everyone' | 'Friends' | 'ServerMembers' | 'Nobody';
+  profileVisibility: 'Everyone' | 'VipsOnly' | 'Hidden';
   status: 'Online' | 'Idle' | 'Do Not Disturb' | 'Invisible';
   customStatus?: {
     emoji?: string;
@@ -72,9 +73,9 @@ export interface NotificationSettings {
 
 export interface NotificationCategories {
   communication: boolean; // DMs, mentions
-  social: boolean;        // Friend requests, likes
+  social: boolean; // Friend requests, likes
   recommendations: boolean; // Match suggestions
-  updates: boolean;       // App updates, marketing
+  updates: boolean; // App updates, marketing
 }
 
 export interface UserSettings {

@@ -1,0 +1,57 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - name: "warmup"
+      duration: 15
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 30
+      arrivalRate: 5
+      rampTo: 30
+    - name: "sustained"
+      duration: 60
+      arrivalRate: 30
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+  variables:
+    spam_messages:
+      - "Buy cheap followers now!!! Click here!!!"
+      - "Congratulations! You won a free iPhone. Claim at http://scam.example"
+      - "Hello! How are you doing today?"
+      - "Want to learn English? I can help you practice!"
+      - "FREE FREE FREE!!! Get rich quick scheme!!! Limited offer!!!"
+      - "Hi there, would you like to practice Spanish with me?"
+      - "Check out my profile for exclusive content 💋💋💋"
+
+scenarios:
+  - name: "Spam detection check"
+    weight: 70
+    flow:
+      - post:
+          url: "/spam-detection/check"
+          json:
+            content: "{{ spam_messages }}"
+          expect:
+            - statusCode: 201
+
+  - name: "Spam detection check with short text"
+    weight: 20
+    flow:
+      - post:
+          url: "/spam-detection/check"
+          json:
+            content: "Hi"
+          expect:
+            - statusCode: 201
+
+  - name: "Spam detection check with long text"
+    weight: 10
+    flow:
+      - post:
+          url: "/spam-detection/check"
+          json:
+            content: "This is a perfectly normal message that someone might send to a language exchange partner. I would love to practice my pronunciation skills with a native speaker."
+          expect:
+            - statusCode: 201

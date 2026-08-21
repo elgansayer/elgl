@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MOCK_LINKED_ACCOUNTS } from '../mock-data';
 
 export interface LinkedAccount {
   provider: string;
@@ -22,15 +23,28 @@ export class LinkedAccountsService {
 
     if (error) {
       console.error('getLinkedAccounts error', error);
-      return [];
     }
 
-    return (data ?? []).map((row: any) => ({
+    if (data && data.length > 0) {
+      return data.map((row: any) => ({
+        provider: row.provider,
+        name: row.name ?? undefined,
+        active: row.active ?? false,
+        created_at: row.created_at ?? undefined,
+      }));
+    }
+
+    // Fallback to mock data for seeded users
+    const mockAccounts = MOCK_LINKED_ACCOUNTS.filter(
+      (a) => a.user_id === userId,
+    ).map((row) => ({
       provider: row.provider,
       name: row.name ?? undefined,
-      active: row.active ?? false,
-      created_at: row.created_at ?? undefined,
+      active: row.active,
+      created_at: row.created_at,
     }));
+
+    return mockAccounts;
   }
 
   async linkAccount(

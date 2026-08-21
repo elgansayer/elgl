@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-3xl app-card app-padded h-[78vh] flex flex-col relative">
+<app-card customClass="mx-auto max-w-3xl app-padded h-[78vh] flex flex-col relative">
   <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
@@ -13,7 +13,7 @@
         <p
           class="text-xs"
           [class]="
-            centrifugeService.isConnected() ? 'text-xs text-emerald-600' : 'text-xs text-amber-600'
+            centrifugeService.isConnected() ? 'text-xs text-success' : 'text-xs text-warning'
           "
         >
           {{
@@ -26,32 +26,32 @@
     </div>
     <div class="flex items-center gap-2">
       @if (isAdmin) {
-        <button
-          (click)="showAdminPanel.set(!showAdminPanel())"
-          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+        <app-button-secondary
+          (clicked)="showAdminPanel.set(!showAdminPanel())"
+          customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+          [ariaLabel]="'chatRoom.adminBtn' | t"
         >
-          Admin
-        </button>
+          {{ 'chatRoom.adminBtn' | t }}
+        </app-button-secondary>
       }
-      <button
+      <app-button-secondary
         type="button"
-        (click)="toggleLock()"
-        class="app-button-secondary p-2 text-xs"
-        [attr.aria-label]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
+        (clicked)="toggleLock()"
+        customClass="p-2 text-xs"
+        [ariaLabel]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
         [attr.title]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
       >
         <span class="text-sm leading-none">{{ isLocked() ? '🔒' : '🔓' }}</span>
-      </button>
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="onSearch()"
-        [placeholder]="'chatRoom.searchPlaceholder' | t"
-        class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
-      />
-      <button (click)="onSearch()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
-        {{ 'chatRoom.searchBtn' | t }}
-      </button>
+      </app-button-secondary>
+      <app-button-secondary
+        type="button"
+        (clicked)="showSearchPanel.update((v) => !v)"
+        customClass="p-2 text-xs"
+        [ariaLabel]="'chatRoom.searchBtn' | t"
+        [attr.title]="'chatRoom.searchBtn' | t"
+      >
+        <span class="text-sm leading-none">🔍</span>
+      </app-button-secondary>
     </div>
   </div>
 
@@ -60,391 +60,541 @@
       <span class="text-4xl" aria-hidden="true">🔒</span>
       <p class="text-base font-bold text-text-primary">{{ 'chatRoom.lockedTitle' | t }}</p>
       <p class="text-sm text-text-secondary max-w-xs">{{ 'chatRoom.lockedMessage' | t }}</p>
-      <button (click)="unlockRoom()" class="app-button-primary ps-6 pe-6 pt-2.5 pb-2.5 text-sm">
+      <app-button-primary (clicked)="unlockRoom()" customClass="ps-6 pe-6 pt-2.5 pb-2.5 text-sm">
         {{ 'chatRoom.unlockBtn' | t }}
-      </button>
+      </app-button-primary>
     </div>
   } @else {
-
-  @if (showAdminPanel()) {
-    <div
-      class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
-    >
-      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
-      <div class="flex gap-2">
-        <input
-          type="text"
-          [(ngModel)]="newGroupName"
-          placeholder="New Group Name"
-          class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Rename
-        </button>
-      </div>
-      <div class="flex gap-2">
-        <input
-          type="text"
-          [(ngModel)]="newMemberId"
-          placeholder="User ID to Add"
-          class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Add Member
-        </button>
-      </div>
-      <div class="flex gap-2">
-        <input
-          type="text"
-          [(ngModel)]="memberToRemoveId"
-          placeholder="User ID to Remove"
-          class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
-        <button
-          (click)="removeMember()"
-          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
-        >
-          Remove Member
-        </button>
-      </div>
-    </div>
-  }
-
-  @if (partnerLanguage(); as lang) {
-    @if (messages().length <= 1) {
-      <app-cultural-tip class="mt-2.5 block" [language]="lang" />
-    }
-  }
-
-  <div
-    class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"
-  >
-    @if (isLoading()) {
-      <div class="pt-10 text-center text-sm text-text-secondary">
-        {{ 'chatRoom.loadingMessages' | t }}
-      </div>
-    }
-    @if (!isLoading() && messages().length === 0) {
-      <div class="pt-10 text-center text-sm text-text-secondary">
-        {{ 'chatRoom.noMessages' | t }}
-      </div>
-    }
-
-    @for (msg of filteredMessages(); track msg.id) {
-      @if (msg.message_type === 'system' && msg.system_event) {
-        <app-chat-system-bubble
-          [eventType]="msg.system_event?.type ?? ''"
-          [params]="msg.system_event ?? {}"
-        ></app-chat-system-bubble>
-      } @else {
-        <app-long-press-context-menu
-          [messageId]="msg.id"
-          [messageContent]="msg.text_content ?? ''"
-          [messageType]="msg.message_type"
-          [senderId]="msg.sender_id"
+    @if (showSearchPanel()) {
+      <div class="mt-2.5">
+        <app-chat-search
           [roomId]="roomId"
-          [isBlocked]="blockedUserIds().includes(msg.sender_id)"
-          (reply)="startReply(msg.id)"
-          (favourite)="bookmark(msg)"
-          (block)="onBlockToggle($event)"
-          (translate)="toggleTranslation(msg)"
-          (transliterate)="transliterateMessage(msg)"
-          (speak)="speakMessage(msg)"
-          (correct)="startCorrection(msg)"
-        >
-          <div
-            [id]="'msg-' + msg.id"
-            data-testid="chat-message"
-            [class]="
-              'chat-message flex gap-2 ' +
-              (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
-            "
+          (messageSelect)="onSearchResultSelect($event)"
+        ></app-chat-search>
+      </div>
+    }
+    @if (showAdminPanel()) {
+      <div
+        class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+      >
+        <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="newGroupName"
+            (valueChange)="newGroupName = $event"
+            [placeholder]="'chatRoom.newGroupPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-primary (clicked)="renameGroup()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
+            {{ 'chatRoom.renameBtn' | t }}
+          </app-button-primary>
+        </div>
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="newMemberId"
+            (valueChange)="newMemberId = $event"
+            [placeholder]="'chatRoom.userIdAddPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-primary (clicked)="addMember()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
+            {{ 'chatRoom.addMemberBtn' | t }}
+          </app-button-primary>
+        </div>
+        <div class="flex gap-2">
+          <app-input
+            type="text"
+            [value]="memberToRemoveId"
+            (valueChange)="memberToRemoveId = $event"
+            [placeholder]="'chatRoom.userIdRemovePlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
+          />
+          <app-button-secondary
+            (clicked)="removeMember()"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
-            <div
-              [class]="
-                'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
-                (isOwnMessage(msg)
-                  ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-white'
-                  : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
-              "
-              [class.ring-2]="highlightedMessageId() === msg.id"
-              [class.ring-amber-400]="highlightedMessageId() === msg.id"
-            >
-              <span
-                class="chat-bubble-tail"
-                [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
-                [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
-                aria-hidden="true"
-              ></span>
-              <p class="mb-1 text-[11px] opacity-70">
-                {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
-                {{ msg.created_at | date: 'shortTime' }}
-              </p>
-              @if (msg.reply_to_id) {
-                <button
-                  type="button"
-                  (click)="scrollToMessage(msg.reply_to_id!)"
-                  class="mb-1.5 block w-full rounded-lg border-s-4 border-accent-500 bg-black/10 ps-2 pe-2 pt-1 pb-1 text-start text-xs opacity-90 hover:opacity-100"
-                >
-                  <span class="block font-semibold">
-                    {{
-                      (parentMessageFor(msg)?.sender?.display_name ??
-                        msg.reply_preview?.display_name) || ('chat.unknown_user' | t)
-                    }}
-                  </span>
-                  <span class="block truncate">
-                    {{
-                      (parentMessageFor(msg)?.text_content ?? msg.reply_preview?.text_content) ||
-                        ('chatRoom.replyPreviewFallback' | t)
-                    }}
-                  </span>
-                </button>
-              }
-              @if (msg.message_type === 'text' && msg.text_content) {
-                <app-tokenised-text
-                  [text]="msg.text_content ?? ''"
-                  (wordClicked)="onWordClicked($event)"
-                ></app-tokenised-text>
-                @if (transliterations()[msg.id]) {
-                  <p class="mt-1 text-[10px] text-text-muted italic">
-                    {{ transliterations()[msg.id] }}
-                  </p>
-                }
-                @if (showTranslation()[msg.id] && translations()[msg.id]) {
-                  <p class="mt-1 text-[10px] text-primary italic">
-                    {{ translations()[msg.id] }}
-                  </p>
-                }
-              }
-              @if (msg.message_type === 'correction' && msg.correction_payload) {
-                <app-visual-diff
-                  [original]="msg.correction_payload?.original ?? ''"
-                  [corrected]="msg.correction_payload?.corrected ?? ''"
-                  [explanation]="msg.correction_payload?.explanation ?? ''"
-                ></app-visual-diff>
-              }
-              @if (msg.message_type === 'doodle' && msg.media_url) {
-                <img
-                  [src]="msg.media_url ?? ''"
-                  alt="doodle"
-                  class="max-h-52 rounded-xl border border-surface-100"
-                />
-              }
-              @if (msg.message_type === 'sticker' && msg.media_url) {
-                <img
-                  [src]="msg.media_url ?? ''"
-                  alt="sticker"
-                  class="max-h-32 w-auto object-contain drop-shadow-md"
-                />
-              }
-              @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
-                <div class="mt-2 flex items-center gap-2">
-                  <button
-                    (click)="onTranscribeVoice(msg)"
-                    [disabled]="transcribingIds().has(msg.id)"
-                    class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
-                  >
-                    {{ (transcribingIds().has(msg.id) ? 'chatRoom.transcribingBtn' : 'chatRoom.transcribeBtn') | t }}
-                  </button>
-                </div>
-                @if (transcriptions()[msg.id]; as transcript) {
-                  <div class="mt-2 rounded-lg bg-blue-500/10 border-s-2 border-blue-500 ps-2 pe-2 pt-2 pb-2">
-                    <p class="text-xs text-text-primary font-medium">{{ 'chatRoom.transcriptLabel' | t }}</p>
-                    <p class="text-sm text-text-primary mt-0.5">{{ transcript }}</p>
-                  </div>
-                }
-              }
-              <div class="mt-2 flex items-center gap-1">
-                @if (msg.message_type === 'text' && msg.text_content) {
-                  <button
-                    (click)="saveSentenceToLingq(msg)"
-                    class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
-                  >
-                    {{ 'chatRoom.saveBtn' | t }}
-                  </button>
-                }
-                <button
-                  (click)="bookmark(msg)"
-                  class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
-                >
-                  {{ 'chatRoom.favBtn' | t }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </app-long-press-context-menu>
+            {{ 'chatRoom.removeMemberBtn' | t }}
+          </app-button-secondary>
+        </div>
+      </div>
+    }
+
+    @if (partnerLanguage(); as lang) {
+      @if (messages().length <= 1) {
+        <app-cultural-tip class="mt-2.5 block" [language]="lang" />
       }
     }
 
-    @if (isTyping()) {
-      <div class="ps-2 pe-2 pt-1 pb-1 text-xs font-semibold text-text-secondary">
-        {{ 'chatRoom.someoneTyping' | t }}
-      </div>
-    }
-  </div>
-
-  @if (activeWordToken(); as token) {
-    <div>
-      <app-word-definition-modal
-        [wordToken]="token"
-        [contextSentence]="activeWordContext()"
-        (closed)="activeWordToken.set(null)"
-      ></app-word-definition-modal>
-    </div>
-  }
-
-  @if (showDoodleModal()) {
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <app-doodle-pad
-        (doodleSaved)="onDoodleSaved($event)"
-        (cancelled)="showDoodleModal.set(false)"
-      ></app-doodle-pad>
-    </div>
-  }
-  @if (showVoiceModal()) {
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <app-voice-recorder
-        (audioUploaded)="onVoiceUploaded($event)"
-        (cancelled)="showVoiceModal.set(false)"
-      ></app-voice-recorder>
-    </div>
-  }
-
-  @if (showCorrectionForm()) {
     <div
-      class="mt-2 rounded-card border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+      class="mt-2.5 flex-1 overflow-y-auto rounded-card border border-surface-100 bg-surface-300 ps-2 pe-2 pt-2 pb-2 space-y-2"
     >
-      <input
-        type="text"
-        [(ngModel)]="originalText"
-        [placeholder]="'chatRoom.originalSentence' | t"
-        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
-      <input
-        type="text"
-        [(ngModel)]="correctedText"
-        [placeholder]="'chatRoom.correctedSentence' | t"
-        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
-      <input
-        type="text"
-        [(ngModel)]="explanationText"
-        [placeholder]="'chatRoom.explanation' | t"
-        class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
-      <div class="flex gap-2">
-        <button
-          (click)="showCorrectionForm.set(false)"
-          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-        >
-          {{ 'chatRoom.cancelBtn' | t }}
-        </button>
-        <button
-          (click)="sendCorrection()"
-          class="rounded-app bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
-        >
-          {{ 'chatRoom.sendCorrection' | t }}
-        </button>
-      </div>
-    </div>
-  }
-
-  <div class="mt-3 border-t border-surface-100 pt-3 relative">
-    @if (replyingTo(); as parent) {
-      <app-reply-preview
-        class="mb-2 block"
-        [parentMessage]="parent"
-        (cancelReply)="cancelReply()"
-      ></app-reply-preview>
-    }
-    <div class="mb-2 flex items-center gap-2">
-      <button
-        (click)="showCorrectionForm.set(!showCorrectionForm())"
-        class="app-button-secondary bg-amber-500/20 text-amber-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
-        {{ 'chatRoom.correctBtn' | t }}
-      </button>
-      <button
-        (click)="showDoodleModal.set(true)"
-        class="app-button-secondary bg-blue-500/20 text-blue-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
-        {{ 'chatRoom.doodleBtn' | t }}
-      </button>
-      <button
-        (click)="showVoiceModal.set(true)"
-        class="app-button-secondary bg-red-500/20 text-red-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
-        {{ 'chatRoom.voiceBtn' | t }}
-      </button>
-      <button
-        (click)="showStickerDrawer.set(!showStickerDrawer())"
-        class="app-button-secondary bg-purple-500/20 text-purple-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
-        {{ 'chatRoom.stickerBtn' | t }}
-      </button>
-    </div>
-
-    @if (showStickerDrawer()) {
-      <div
-        class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100"
-      >
-        <app-sticker-picker
-          (selectSticker)="sendSticker($event)"
-          (close)="showStickerDrawer.set(false)"
-        ></app-sticker-picker>
-      </div>
-    }
-
-    <div class="flex items-center gap-2 relative">
-      @if (mentionSuggestions().length > 0) {
-        <div
-          id="mention-listbox"
-          role="listbox"
-          [attr.aria-label]="'chatRoom.mentionListLabel' | t"
-          class="absolute bottom-full start-0 mb-2 w-56 max-h-48 overflow-y-auto rounded-xl border border-surface-100 bg-surface-200 shadow-xl z-40"
-        >
-          @for (member of mentionSuggestions(); track member.user_id; let i = $index) {
-            <button
-              type="button"
-              role="option"
-              [id]="'mention-option-' + i"
-              [attr.aria-selected]="i === mentionActiveIndex()"
-              class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-surface-300"
-              [class.bg-surface-300]="i === mentionActiveIndex()"
-              (mousedown)="$event.preventDefault()"
-              (click)="selectMention(member)"
-            >
-              <span class="font-semibold">{{ member.user?.display_name }}</span>
-            </button>
-          }
+      @if (isLoading()) {
+        <div class="pt-10 text-center text-sm text-text-secondary">
+          {{ 'chatRoom.loadingMessages' | t }}
         </div>
       }
-      <input
-        type="text"
-        data-testid="chat-message-input"
-        [(ngModel)]="textInput"
-        (input)="onComposerInput($event)"
-        (keydown)="onComposerKeydown($event)"
-        [placeholder]="'chatRoom.typePlaceholder' | t"
-        class="app-input flex-1 pt-3 pb-3"
-        role="combobox"
-        aria-autocomplete="list"
-        aria-controls="mention-listbox"
-        [attr.aria-expanded]="mentionSuggestions().length > 0"
-        [attr.aria-activedescendant]="
-          mentionSuggestions().length > 0 ? 'mention-option-' + mentionActiveIndex() : null
-        "
-      />
-      <button
-        (click)="sendTextMessage()"
-        [attr.aria-label]="'chatRoom.sendBtn' | t"
-        data-testid="send-button"
-        class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm"
-      >
-        {{ 'chatRoom.sendBtn' | t }}
-      </button>
+      @if (!isLoading() && messages().length === 0) {
+        <div class="pt-10 text-center text-sm text-text-secondary">
+          {{ 'chatRoom.noMessages' | t }}
+        </div>
+      }
+
+      @for (msg of filteredMessages(); track msg.id) {
+        @if (msg.message_type === 'system' && msg.system_event) {
+          <app-chat-system-bubble
+            [eventType]="msg.system_event?.type ?? ''"
+            [params]="msg.system_event ?? {}"
+          ></app-chat-system-bubble>
+        } @else {
+          <app-long-press-context-menu
+            [messageId]="msg.id"
+            [messageContent]="msg.text_content ?? ''"
+            [messageType]="msg.message_type"
+            [senderId]="msg.sender_id"
+            [roomId]="roomId"
+            [isBlocked]="blockedUserIds().includes(msg.sender_id)"
+            (reply)="startReply(msg.id)"
+            (favourite)="bookmark(msg)"
+            (block)="onBlockToggle($event)"
+            (translate)="toggleTranslation(msg)"
+            (transliterate)="transliterateMessage(msg)"
+            (speak)="speakMessage(msg)"
+            (correct)="startCorrection(msg)"
+            (requestCorrection)="requestCorrection(msg)"
+          >
+            <div
+              [id]="'msg-' + msg.id"
+              [attr.data-message-id]="msg.id"
+              data-testid="chat-message"
+              [class]="
+                'chat-message flex gap-2 ' + (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
+              "
+            >
+              <div
+                [class]="
+                  'relative max-w-[80%] ps-3 pe-3 pt-2.5 pb-2.5 text-sm shadow-sm transition-colors ' +
+                  (isOwnMessage(msg)
+                    ? 'rounded-ss-2xl rounded-se-2xl rounded-es-2xl rounded-ee-none bg-primary text-on-fill'
+                    : 'rounded-ss-2xl rounded-se-2xl rounded-ee-2xl rounded-es-none border border-surface-100 bg-surface-200 text-text-primary')
+                "
+                [class.ring-2]="highlightedMessageId() === msg.id"
+                [class.ring-warning]="highlightedMessageId() === msg.id"
+              >
+                <span
+                  class="chat-bubble-tail"
+                  [class.chat-bubble-tail--sent]="isOwnMessage(msg)"
+                  [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
+                  aria-hidden="true"
+                ></span>
+                <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
+                  <span>
+                    {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
+                    {{ msg.created_at | date: 'shortTime' }}
+                  </span>
+                  @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
+                    <span class="inline-flex items-center flex-shrink-0">
+                      @if (
+                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
+                      ) {
+                        <svg
+                          class="w-3.5 h-3.5 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusSent' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'delivered') {
+                        <svg
+                          class="w-3.5 h-3.5 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusDelivered' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'read') {
+                        <svg
+                          class="w-3.5 h-3.5 text-secondary"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          [attr.aria-label]="'chatRoom.deliveryStatusRead' | t"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-secondary"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                    </span>
+                  }
+                </p>
+                @if (msg.reply_to_id) {
+                  <button
+                    hlmBtn
+                    type="button"
+                    (click)="scrollToMessage(msg.reply_to_id!)"
+                    class="mb-1.5 block w-full rounded-lg border-s-4 border-accent-500 bg-black/10 ps-2 pe-2 pt-1 pb-1 text-start text-xs opacity-90 hover:opacity-100"
+                    [attr.aria-label]="'chat.unknown_user' | t"
+                  >
+                    <span class="block font-semibold">
+                      {{
+                        (parentMessageFor(msg)?.sender?.display_name ??
+                          msg.reply_preview?.display_name) ||
+                          ('chat.unknown_user' | t)
+                      }}
+                    </span>
+                    <span class="block truncate">
+                      {{
+                        (parentMessageFor(msg)?.text_content ?? msg.reply_preview?.text_content) ||
+                          ('chatRoom.replyPreviewFallback' | t)
+                      }}
+                    </span>
+                  </button>
+                }
+                @if (msg.message_type === 'text' && msg.text_content) {
+                  <app-tokenised-text
+                    [text]="msg.text_content ?? ''"
+                    (wordClicked)="onWordClicked($event)"
+                  ></app-tokenised-text>
+                  @if (transliterations()[msg.id]) {
+                    <p class="mt-1 text-[10px] text-text-muted italic">
+                      {{ transliterations()[msg.id] }}
+                    </p>
+                  }
+                  @if (showTranslation()[msg.id] && translations()[msg.id]) {
+                    <p class="mt-1 text-[10px] text-primary italic">
+                      {{ translations()[msg.id] }}
+                    </p>
+                  }
+                  @if (msg.link_preview; as lp) {
+                    <app-link-preview-card
+                      [url]="lp.url"
+                      [title]="lp.title"
+                      [description]="lp.description"
+                      [image]="lp.image"
+                      [siteName]="lp.siteName"
+                    ></app-link-preview-card>
+                  }
+                }
+                @if (msg.message_type === 'correction' && msg.correction_payload) {
+                  <app-visual-diff
+                    [original]="msg.correction_payload?.original ?? ''"
+                    [corrected]="msg.correction_payload?.corrected ?? ''"
+                    [explanation]="msg.correction_payload?.explanation ?? ''"
+                    [showActions]="true"
+                  ></app-visual-diff>
+                }
+                @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
+                  <div>
+                    <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
+                    <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
+                  </div>
+                }
+                @if (msg.message_type === 'doodle' && msg.media_url) {
+                  <img
+                    loading="lazy"
+                    [src]="msg.media_url ?? ''"
+                    alt="doodle"
+                    class="max-h-52 rounded-xl border border-surface-100"
+                  />
+                }
+                @if (msg.message_type === 'sticker' && msg.media_url) {
+                  <img
+                    loading="lazy"
+                    [src]="msg.media_url ?? ''"
+                    alt="sticker"
+                    class="max-h-32 w-auto object-contain drop-shadow-md"
+                  />
+                }
+                @if (msg.message_type === 'voice' && msg.media_url) {
+                  <audio
+                    [attr.id]="'audio-' + msg.id"
+                    [src]="msg.media_url ?? ''"
+                    controls
+                    class="w-full min-w-52"
+                    (ended)="playNextVoiceNote(msg.id)"
+                  ></audio>
+                  <div class="mt-2 flex items-center gap-2">
+                    <button
+                      hlmBtn
+                      (click)="onTranscribeVoice(msg)"
+                      [disabled]="transcribingIds().has(msg.id)"
+                      class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
+                      [attr.aria-label]="
+                        (transcribingIds().has(msg.id)
+                          ? 'chatRoom.transcribingBtn'
+                          : 'chatRoom.transcribeBtn'
+                        ) | t
+                      "
+                    >
+                      {{
+                        (transcribingIds().has(msg.id)
+                          ? 'chatRoom.transcribingBtn'
+                          : 'chatRoom.transcribeBtn'
+                        ) | t
+                      }}
+                    </button>
+                  </div>
+                  @if (transcriptions()[msg.id]; as transcript) {
+                    <div
+                      class="mt-2 rounded-lg bg-secondary/10 border-s-2 border-secondary ps-2 pe-2 pt-2 pb-2"
+                    >
+                      <p class="text-xs text-text-primary font-medium">
+                        {{ 'chatRoom.transcriptLabel' | t }}
+                      </p>
+                      <p class="text-sm text-text-primary mt-0.5">{{ transcript }}</p>
+                    </div>
+                  }
+                }
+                <div class="mt-2 flex items-center gap-1">
+                  @if (msg.message_type === 'text' && msg.text_content) {
+                    <button
+                      hlmBtn
+                      (click)="saveSentenceToLingq(msg)"
+                      class="rounded-lg bg-warning ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-on-fill"
+                      [attr.aria-label]="'chatRoom.saveBtn' | t"
+                    >
+                      {{ 'chatRoom.saveBtn' | t }}
+                    </button>
+                  }
+                  <button
+                    hlmBtn
+                    (click)="bookmark(msg)"
+                    class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
+                    [attr.aria-label]="'chatRoom.favBtn' | t"
+                  >
+                    {{ 'chatRoom.favBtn' | t }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </app-long-press-context-menu>
+        }
+      }
+
+      <app-typing-indicator
+        class="mt-1 block"
+        [typingUsers]="typingService.typingUsers()"
+      ></app-typing-indicator>
     </div>
-  </div>
+
+    @if (activeWordToken(); as token) {
+      <div>
+        <app-word-definition-modal
+          [wordToken]="token"
+          [contextSentence]="activeWordContext()"
+          (closed)="activeWordToken.set(null)"
+        ></app-word-definition-modal>
+      </div>
+    }
+
+    @if (showDoodleModal()) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <app-doodle-pad
+          (doodleSaved)="onDoodleSaved($event)"
+          (cancelled)="showDoodleModal.set(false)"
+        ></app-doodle-pad>
+      </div>
+    }
+    @if (showVoiceModal()) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <app-voice-recorder
+          (audioUploaded)="onVoiceUploaded($event)"
+          (cancelled)="showVoiceModal.set(false)"
+        ></app-voice-recorder>
+      </div>
+    }
+
+    @if (showCorrectionForm()) {
+      <div
+        class="mt-2 rounded-card border border-warning/30 bg-warning/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
+      >
+        <app-input
+          type="text"
+          [value]="originalText"
+          (valueChange)="originalText = $event"
+          [placeholder]="'chatRoom.originalSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <app-input
+          type="text"
+          [value]="correctedText"
+          (valueChange)="correctedText = $event"
+          [placeholder]="'chatRoom.correctedSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <app-input
+          type="text"
+          [value]="explanationText"
+          (valueChange)="explanationText = $event"
+          [placeholder]="'chatRoom.explanation'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
+        />
+        <div class="flex gap-2">
+          <app-button-secondary
+            (clicked)="showCorrectionForm.set(false)"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+            [ariaLabel]="'chatRoom.cancelBtn' | t"
+          >
+            {{ 'chatRoom.cancelBtn' | t }}
+          </app-button-secondary>
+          <button
+            hlmBtn
+            (click)="sendCorrection()"
+            class="rounded-app bg-success ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-on-fill"
+            [attr.aria-label]="'chatRoom.sendCorrection' | t"
+          >
+            {{ 'chatRoom.sendCorrection' | t }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="mt-3 border-t border-surface-100 pt-3 relative">
+      @if (replyingTo(); as parent) {
+        <app-reply-preview
+          class="mb-2 block"
+          [parentMessage]="parent"
+          (cancelReply)="cancelReply()"
+        ></app-reply-preview>
+      }
+      <div class="mb-2 flex items-center gap-2">
+        <app-button-secondary
+          (clicked)="showCorrectionForm.set(!showCorrectionForm())"
+          customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.correctBtn' | t"
+        >
+          {{ 'chatRoom.correctBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showDoodleModal.set(true)"
+          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.doodleBtn' | t"
+        >
+          {{ 'chatRoom.doodleBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showVoiceModal.set(true)"
+          customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.voiceBtn' | t"
+        >
+          {{ 'chatRoom.voiceBtn' | t }}
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showStickerDrawer.set(!showStickerDrawer())"
+          customClass="bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.stickerBtn' | t"
+        >
+          {{ 'chatRoom.stickerBtn' | t }}
+        </app-button-secondary>
+      </div>
+
+      @if (showStickerDrawer()) {
+        <div
+          class="absolute bottom-full start-0 end-0 mb-2 z-40 shadow-xl rounded-t-2xl overflow-hidden border border-surface-100"
+        >
+          <app-sticker-picker
+            (selectSticker)="sendSticker($event)"
+            (close)="showStickerDrawer.set(false)"
+          ></app-sticker-picker>
+        </div>
+      }
+
+      <div class="flex items-center gap-2 relative">
+        <hlm-autocomplete-search
+          class="flex-1"
+          [(search)]="textInput"
+          [itemToString]="mentionItemToString"
+          (valueChange)="onMentionSelected($event)"
+          autoHighlight
+        >
+          <hlm-autocomplete-input
+            [showSearch]="false"
+            [placeholder]="'chatRoom.typePlaceholder' | t"
+            [ariaLabel]="'chatRoom.messageInput' | t"
+            testId="chat-message-input"
+            inputClass="app-input w-full pt-3 pb-3"
+            (inputEvent)="onComposerInput($event)"
+            (keyDown)="onComposerKeydown($event)"
+          />
+          @if (mentionSuggestions().length > 0) {
+            <hlm-autocomplete-content *hlmAutocompletePortal>
+              <div hlmAutocompleteList [attr.aria-label]="'chatRoom.mentionListLabel' | t">
+                @for (member of mentionSuggestions(); track member.user_id) {
+                  <hlm-autocomplete-item [value]="member">
+                    <span class="font-semibold">{{ member.user?.display_name }}</span>
+                  </hlm-autocomplete-item>
+                }
+              </div>
+            </hlm-autocomplete-content>
+          }
+        </hlm-autocomplete-search>
+        <app-button-primary
+          (clicked)="sendTextMessage()"
+          data-testid="send-button"
+          customClass="ps-5 pe-5 pt-3 pb-3 text-sm"
+        >
+          {{ 'chatRoom.sendBtn' | t }}
+        </app-button-primary>
+      </div>
+    </div>
   }
-</div>
+
+  <app-group-participant-drawer
+    [isOpen]="showParticipantDrawer()"
+    [participants]="groupParticipants()"
+    (closed)="showParticipantDrawer.set(false)"
+  ></app-group-participant-drawer>
+</app-card>
+
+<app-group-participant-drawer
+  [isOpen]="showParticipantDrawer()"
+  [participants]="groupParticipants()"
+  (closed)="showParticipantDrawer.set(false)"
+></app-group-participant-drawer>

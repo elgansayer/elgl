@@ -1,19 +1,32 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-cropper.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [FormsModule, CoverPhotoCropperComponent],
+  imports: [
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
+    FormsModule,
+    CoverPhotoCropperComponent,
+    TranslatePipe,
+  ],
   template: `
     <div class="max-w-2xl mx-auto p-6">
-      <h2 class="text-2xl font-bold text-white mb-6">Edit Profile</h2>
+      <h2 class="text-2xl font-bold text-text-primary mb-6">{{ 'profileEdit.title' | t }}</h2>
 
       <!-- Cover Photo Section -->
       <div class="mb-8">
-        <span class="block text-sm font-medium text-text-secondary mb-2">Cover Photo</span>
+        <span class="block text-sm font-medium text-text-secondary mb-2">{{
+          'profileEdit.coverPhoto' | t
+        }}</span>
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
             <img
@@ -41,10 +54,11 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
           }
 
           <button
+            hlmBtn
             (click)="fileInput.click()"
-            class="absolute bottom-3 end-3 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+            class="absolute bottom-3 end-3 px-4 py-2 text-sm font-medium text-on-fill bg-primary hover:bg-primary-dark rounded-lg transition-colors"
           >
-            Change Cover
+            {{ 'profileEdit.changeCover' | t }}
           </button>
           <input
             #fileInput
@@ -59,69 +73,81 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
       <!-- Other profile fields -->
       <div class="space-y-4">
         <div>
-          <label for="displayNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Display Name</label
+          <label
+            for="displayNameInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
+            >{{ 'profileEdit.displayName' | t }}</label
           >
           <input
+            hlmInput
             id="displayNameInput"
             [(ngModel)]="displayName"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
         <div>
-          <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1"
-            >Gender</label
-          >
-          <select
-            id="genderSelect"
+          <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1">{{
+            'profileEdit.gender' | t
+          }}</label>
+          <hlm-native-select
+            selectId="genderSelect"
             [(ngModel)]="gender"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+            selectClass="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="">Prefer not to say</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
+            <option value="">{{ 'profileEdit.genderNone' | t }}</option>
+            <option value="male">{{ 'profileEdit.genderMale' | t }}</option>
+            <option value="female">{{ 'profileEdit.genderFemale' | t }}</option>
+            <option value="other">{{ 'profileEdit.genderOther' | t }}</option>
+          </hlm-native-select>
         </div>
 
         <!-- Business profile fields -->
         <div>
-          <label for="businessNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Business Name</label
+          <label
+            for="businessNameInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
+            >{{ 'profileEdit.businessName' | t }}</label
           >
           <input
+            hlmInput
             id="businessNameInput"
             [(ngModel)]="businessName"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
         <div>
-          <label for="businessHoursInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Business Hours</label
+          <label
+            for="businessHoursInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
+            >{{ 'profileEdit.businessHours' | t }}</label
           >
           <input
+            hlmInput
             id="businessHoursInput"
             [(ngModel)]="businessHours"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
         <div>
-          <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Website URL</label
-          >
+          <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1">{{
+            'profileEdit.websiteUrl' | t
+          }}</label>
           <input
+            hlmInput
             id="websiteUrlInput"
             [(ngModel)]="websiteUrl"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
       </div>
 
       <button
+        hlmBtn
         (click)="saveProfile()"
-        class="mt-6 w-full py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+        class="mt-6 w-full py-3 text-on-fill bg-primary hover:bg-primary-dark rounded-lg font-medium transition-colors"
       >
-        Save Profile
+        {{ 'profileEdit.save' | t }}
       </button>
     </div>
 

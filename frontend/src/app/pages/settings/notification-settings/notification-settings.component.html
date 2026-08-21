@@ -1,53 +1,78 @@
 <div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
-  <h1 class="text-2xl font-semibold text-slate-200 mb-4">
+  <h1 class="text-2xl font-semibold text-text-primary mb-2">
     {{ 'notification_settings.title' | t }}
   </h1>
-  <p class="text-slate-400 mb-6">
+  <p class="text-text-secondary mb-6">
     {{ 'notification_settings.subtitle' | t }}
   </p>
 
-  <div class="mb-5">
-    <label class="block text-slate-300 mb-2" for="customToneUrl">
-      {{ 'notification_settings.custom_tone_label' | t }}
-    </label>
-    <input
-      id="customToneUrl"
-      type="url"
-      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
-      [attr.placeholder]="'notification_settings.custom_tone_placeholder' | t"
-      [value]="customToneUrl()"
-      (input)="onToneInput($event)"
-    />
-  </div>
+  @if (loadError()) {
+    <div class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6">
+      {{ loadError() ?? '' | t }}
+    </div>
+  }
 
-  <div class="mb-5">
-    <label class="block text-slate-300 mb-2" for="vibrationPattern">
-      {{ 'notification_settings.vibration_pattern_label' | t }}
-    </label>
-    <input
-      id="vibrationPattern"
-      type="text"
-      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
-      [attr.placeholder]="'notification_settings.vibration_pattern_placeholder' | t"
-      [value]="vibrationPatternText()"
-      (input)="onVibrationInput($event)"
-    />
-    <p class="text-xs text-slate-500 mt-1">
-      {{ 'notification_settings.vibration_pattern_hint' | t }}
-    </p>
-  </div>
+  @if (error()) {
+    <div class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6">
+      {{ error() ?? '' | t }}
+    </div>
+  }
 
-  <button
-    type="button"
-    class="w-full rounded-md bg-indigo-600 ps-4 pe-4 py-2 font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
-    [disabled]="!saveAvailable()"
-    (click)="savePreferences()"
+  <div
+    class="rounded-2xl bg-surface-200/50 border border-surface-100 overflow-hidden shadow-sm mb-6"
   >
-    {{ 'common.save' | t }}
-  </button>
+    <div class="bg-surface-200/80 px-4 py-3 border-b border-surface-100">
+      <div class="flex">
+        <div class="flex-1">
+          <span class="text-sm font-semibold text-text-primary">{{
+            'notification_settings.toggle_header' | t
+          }}</span>
+        </div>
+        @for (ch of channels; track ch) {
+          <div class="w-16 text-center">
+            <span class="text-xs font-medium text-text-secondary">{{ channelLabel(ch) | t }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    @for (cat of categories; track cat.key) {
+      <div
+        class="flex items-center px-4 py-3 border-b border-surface-100/50 last:border-b-0 hover:bg-surface-200/30 transition-colors"
+      >
+        <div class="flex-1 flex items-center gap-3">
+          <span class="text-lg" role="img" [attr.aria-label]="cat.labelKey | t">{{
+            cat.icon
+          }}</span>
+          <span class="text-sm text-text-primary">{{ cat.labelKey | t }}</span>
+        </div>
+        @for (ch of channels; track ch) {
+          <div class="w-16 flex justify-center">
+            <button
+              hlmBtn
+              type="button"
+              role="switch"
+              [attr.aria-checked]="toggleValue(cat.key, ch)"
+              [attr.aria-label]="(cat.labelKey | t) + ' ' + (channelLabel(ch) | t)"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+              [class.bg-primary]="toggleValue(cat.key, ch)"
+              [class.bg-surface-300]="!toggleValue(cat.key, ch)"
+              (click)="toggle(cat.key, ch)"
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-on-fill transition-transform"
+                [class.translate-x-6]="toggleValue(cat.key, ch)"
+                [class.translate-x-1]="!toggleValue(cat.key, ch)"
+              ></span>
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
 
   @if (saved()) {
-    <p class="mt-4 text-green-400">
+    <p class="text-sm text-success animate-pulse">
       {{ 'notification_settings.saved_message' | t }}
     </p>
   }

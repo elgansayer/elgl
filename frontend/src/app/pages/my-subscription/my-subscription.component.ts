@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -17,6 +18,7 @@ import { AppButtonPrimaryComponent } from '../../components/primitives/button-pr
 import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
+import { RestorePurchasesButtonComponent } from '../../components/restore-purchases-button/restore-purchases-button.component';
 
 const EMPTY_INVOICES: SubscriptionInvoice[] = [];
 const EMPTY_PLANS: SubscriptionPlan[] = [];
@@ -24,12 +26,14 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 @Component({
   selector: 'app-my-subscription',
   imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     AppEmptyStateComponent,
     AppPillComponent,
+    RestorePurchasesButtonComponent,
   ],
   templateUrl: './my-subscription.component.html',
 })
@@ -78,9 +82,7 @@ export class MySubscriptionComponent {
     },
     defaultValue: EMPTY_INVOICES,
   });
-  protected readonly invoices = computed(
-    () => this.invoicesResource.value() ?? EMPTY_INVOICES,
-  );
+  protected readonly invoices = computed(() => this.invoicesResource.value() ?? EMPTY_INVOICES);
 
   private readonly plansResource = resource({
     loader: async (): Promise<SubscriptionPlan[]> => {
