@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, output, resource, signal } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { TranslatePipe } from '../services/translate.pipe';
@@ -11,16 +12,17 @@ export interface InterestVocabulary {
 
 // i18n translation key used in template
 @Component({
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2">
       @for (interest of interests.value(); track interest.id) {
         <button
+          hlmBtn
           class="px-4 py-2 rounded-full border-2 transition-colors"
-          [class.bg-purple-600]="selectedIds().has(interest.id)"
-          [class.border-purple-500]="selectedIds().has(interest.id)"
-          [class.border-slate-600]="!selectedIds().has(interest.id)"
+          [class.bg-primary]="selectedIds().has(interest.id)"
+          [class.text-on-fill]="selectedIds().has(interest.id)"
+          [class.border-primary]="selectedIds().has(interest.id)"
+          [class.border-surface-100]="!selectedIds().has(interest.id)"
           (click)="toggleInterest(interest.id)"
         >
           {{ interest.name }}
@@ -28,7 +30,8 @@ export interface InterestVocabulary {
       }
     </div>
     <button
-      class="mt-4 px-6 py-2 bg-purple-700 text-white rounded-lg"
+      hlmBtn
+      class="mt-4 px-6 py-2 bg-primary text-on-fill rounded-lg"
       (click)="confirmSelection()"
     >
       {{ 'interests.save' | t }}
@@ -44,12 +47,9 @@ export class InterestsSelectComponent {
   interests = resource<InterestVocabulary[], { language: string }>({
     params: () => ({ language: this.targetLanguage() }),
     loader: async ({ params }) => {
-      const response = await fetch(
-        `${environment.apiUrl}/interests?language=${params.language}`,
-        {
-          headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
-        },
-      );
+      const response = await fetch(`${environment.apiUrl}/interests?language=${params.language}`, {
+        headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
+      });
       if (!response.ok) throw new Error('Failed to load interests');
       return response.json();
     },

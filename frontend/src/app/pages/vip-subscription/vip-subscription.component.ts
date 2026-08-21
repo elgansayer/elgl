@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -13,7 +14,13 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 
 @Component({
   selector: 'app-vip-subscription',
-  imports: [RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent, TranslatePipe],
+  imports: [
+    HlmButton,
+    RouterLink,
+    AppButtonPrimaryComponent,
+    AppGradientButtonComponent,
+    TranslatePipe,
+  ],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
-import { SupabaseService } from '../../supabase/supabase.service';
+import { AdminAuthorizationService } from '../admin-authorization.service';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -15,7 +15,7 @@ interface AuthenticatedRequest extends Request {
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly authorization: AdminAuthorizationService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -25,14 +25,10 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (error || !data?.is_admin) {
+    const capabilities = await this.authorization.getEffectiveCapabilities(
+      user.id,
+    );
+    if (capabilities.length === 0) {
       throw new ForbiddenException('Admin privileges required');
     }
 

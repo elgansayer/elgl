@@ -1,12 +1,13 @@
-import { Component, inject, effect, DestroyRef } from '@angular/core';
+import { Component, DestroyRef, effect, inject } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
 import lottie, { AnimationItem } from 'lottie-web';
+import confettiData from '../../animations/confetti.data';
+import floatData from '../../animations/float.data';
+import heartsData from '../../animations/hearts.data';
+import premiumData from '../../animations/premium.data';
+import sparkleData from '../../animations/sparkle.data';
 import { GiftAnimationService, GiftAnimationType } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import confettiData from '../../animations/confetti.data';
-import heartsData from '../../animations/hearts.data';
-import sparkleData from '../../animations/sparkle.data';
-import premiumData from '../../animations/premium.data';
-import floatData from '../../animations/float.data';
 
 const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
   confetti: confettiData,
@@ -18,41 +19,63 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
 
 @Component({
   selector: 'app-gift-animation-overlay',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (animationService.currentAnimation(); as anim) {
       <div
-        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center pointer-events-none transition-opacity duration-600"
+        class="gift-animation-overlay fixed inset-0 z-[9999] flex flex-col items-center justify-center pointer-events-none"
         [class.opacity-0]="!animationService.isVisible()"
         role="alert"
         aria-live="polite"
-        [attr.aria-label]="'gift.broadcastDesc' | t: { sender: anim.senderName, receiver: anim.receiverName, giftName: anim.giftName, cost: anim.coinValue }"
+        [attr.aria-label]="
+          'gift.broadcastDesc'
+            | t
+              : {
+                  sender: anim.senderName,
+                  receiver: anim.receiverName,
+                  giftName: anim.giftName,
+                  cost: anim.coinValue,
+                }
+        "
       >
-        <!-- Full-screen Lottie animation layer -->
-        <div class="absolute inset-0 z-0 bg-black/30" aria-hidden="true">
+        <div class="absolute inset-0 z-0 bg-surface-900/40" aria-hidden="true">
           <div id="lottie-container" class="w-full h-full"></div>
         </div>
 
-        <!-- Central gift banner -->
         <div
-          class="relative z-10 flex flex-col items-center gap-3"
-          [class.animate-zoom-in]="animationService.isVisible()"
+          class="gift-animation-banner relative z-10 flex flex-col items-center gap-3"
+          [class.gift-animation-banner-visible]="animationService.isVisible()"
         >
-          <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-4 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 max-w-[90vw]">
-            <span class="text-5xl sm:text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
+          <div
+            class="bg-gradient-to-r from-accent to-vip text-on-fill px-4 sm:px-8 py-4 sm:py-6 rounded-sheet shadow-lift border border-accent/30 flex flex-col items-center gap-2 max-w-[calc(100vw-2rem)] sm:max-w-[90vw]"
+          >
+            <span class="text-5xl sm:text-7xl" aria-hidden="true">{{ anim.giftIcon }}</span>
             <h3 class="text-lg sm:text-2xl font-black tracking-wide text-center">
               {{ 'gift.broadcastTitle' | t: { giftName: anim.giftName } }}
             </h3>
-            <p class="text-xs sm:text-sm font-extrabold text-amber-100 text-center">
-              {{ 'gift.broadcastDesc' | t: { sender: anim.senderName, receiver: anim.receiverName, giftName: anim.giftName, cost: anim.coinValue } }}
+            <p class="text-xs sm:text-sm font-extrabold text-on-fill/85 text-center">
+              {{
+                'gift.broadcastDesc'
+                  | t
+                    : {
+                        sender: anim.senderName,
+                        receiver: anim.receiverName,
+                        giftName: anim.giftName,
+                        cost: anim.coinValue,
+                      }
+              }}
             </p>
           </div>
-          <!-- Dismiss button -->
+
           <button
-            class="pointer-events-auto rounded-full bg-white/20 px-5 py-2 text-sm font-bold text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
+            hlmBtn
+            variant="secondary"
+            size="icon-touch"
+            class="pointer-events-auto shadow-card"
+            [attr.aria-label]="'common.close' | t"
             (click)="animationService.dismiss()"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
       </div>
@@ -63,20 +86,33 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
       :host {
         display: block;
       }
-      .transition-opacity.duration-600 {
-        transition: opacity 600ms ease-in-out;
+
+      .gift-animation-overlay {
+        transition: opacity var(--app-motion-slow) var(--app-ease-standard);
       }
-      .animate-zoom-in {
-        animation: zoomIn 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+      .gift-animation-banner-visible {
+        animation: gift-overlay-enter var(--app-motion-slow) var(--app-ease-standard) forwards;
       }
-      @keyframes zoomIn {
+
+      @keyframes gift-overlay-enter {
         from {
           opacity: 0;
-          transform: scale(0.5);
+          transform: scale(0.94);
         }
         to {
           opacity: 1;
           transform: scale(1);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gift-animation-overlay {
+          transition: none;
+        }
+
+        .gift-animation-banner-visible {
+          animation: none;
         }
       }
     `,
@@ -91,17 +127,31 @@ export class GiftAnimationOverlayComponent {
   constructor() {
     this.destroyRef.onDestroy(() => this.destroyLottie());
 
-    effect((onCleanup) => {
+    effect(() => {
       const anim = this.animationService.currentAnimation();
-      if (anim) {
-        const container = document.getElementById('lottie-container');
-        if (container) {
-          this.loadLottieAnimation(container, anim.animationType);
-        }
-      } else {
+      if (!anim) {
         this.destroyLottie();
+        return;
+      }
+
+      if (this.prefersReducedMotion()) {
+        this.destroyLottie();
+        return;
+      }
+
+      const container = document.getElementById('lottie-container');
+      if (container) {
+        this.loadLottieAnimation(container, anim.animationType);
       }
     });
+  }
+
+  private prefersReducedMotion(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
   }
 
   private loadLottieAnimation(container: HTMLElement, animationType: GiftAnimationType): void {
