@@ -4,15 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsFeedComponent } from './events-feed.component';
 import { Event, EventsService } from '../../services/events.service';
 
-function event(id: string): Event {
+function event(id: string, overrides: Partial<Event> = {}): Event {
   return {
     id,
     title: `Event ${id}`,
-    date_time: '2026-08-20T12:00:00.000Z',
+    date_time: '2099-08-20T12:00:00.000Z',
     host_id: 'host-1',
     is_cancelled: false,
-    created_at: '2026-08-19T12:00:00.000Z',
-    updated_at: '2026-08-19T12:00:00.000Z',
+    created_at: '2099-08-19T12:00:00.000Z',
+    updated_at: '2099-08-19T12:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -32,7 +33,12 @@ describe('EventsFeedComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [EventsFeedComponent],
-      providers: [{ provide: EventsService, useValue: { listEvents } }],
+      providers: [
+        {
+          provide: EventsService,
+          useValue: { listEvents, createEvent: vi.fn() },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EventsFeedComponent);
@@ -87,6 +93,34 @@ describe('EventsFeedComponent', () => {
     });
   });
 
+  it('inserts a newly-created matching event without reloading the feed', async () => {
+    listEvents.mockReturnValueOnce(of([event('later', { date_time: '2099-08-22T12:00:00.000Z' })]));
+    fixture.detectChanges();
+    await settle();
+
+    component.onEventCreated(
+      event('new', {
+        date_time: '2099-08-21T12:00:00.000Z',
+        language_pair: 'en-ja',
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(listEvents).toHaveBeenCalledTimes(1);
+    expect(component.events().map((item) => item.id)).toEqual(['new', 'later']);
+  });
+
+  it('does not insert a newly-created event that conflicts with the active language filter', async () => {
+    fixture.detectChanges();
+    await settle();
+    component.onLanguageChange('en-ja');
+    await settle();
+
+    component.onEventCreated(event('en-fr', { language_pair: 'en-fr' }));
+
+    expect(component.events()).toEqual([]);
+  });
+
   it('ignores stale responses after a newer filter request wins', async () => {
     const initialRequest = new Subject<Event[]>();
     const pastRequest = new Subject<Event[]>();
@@ -116,7 +150,7 @@ describe('EventsFeedComponent', () => {
       .mockReset()
       .mockReturnValueOnce(of(firstPage))
       .mockReturnValueOnce(throwError(() => new Error('temporary failure')))
-      .mockReturnValueOnce(of([event('page-2')])) ;
+      .mockReturnValueOnce(of([event('page-2')]));
 
     fixture.detectChanges();
     await settle();
