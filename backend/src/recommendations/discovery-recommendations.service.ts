@@ -11,10 +11,7 @@ const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
 
 export type RecommendationReason =
-  | 'language_exchange'
-  | 'shared_interests'
-  | 'active_recently'
-  | 'study_streak';
+  'language_exchange' | 'shared_interests' | 'active_recently' | 'study_streak';
 
 export interface DiscoveryRecommendationDto {
   id: string;
@@ -75,7 +72,9 @@ function hasOverlap(left: string[], right: string[]): boolean {
 }
 
 function getActivityRank(candidate: CandidateRow, nowMs: number): number {
-  if (candidate.privacy_hide_online_status || !candidate.last_active_at) return 0;
+  if (candidate.privacy_hide_online_status || !candidate.last_active_at) {
+    return 0;
+  }
   const lastActiveMs = Date.parse(candidate.last_active_at);
   if (!Number.isFinite(lastActiveMs)) return 0;
   const ageMs = Math.max(0, nowMs - lastActiveMs);
@@ -201,12 +200,8 @@ export class DiscoveryRecommendationsService {
     }
 
     const currentSignals: CurrentUserSignals = {
-      nativeLanguages: normaliseLanguages(
-        currentUser['native_languages'] as string[] | null,
-      ),
-      targetLanguages: normaliseLanguages(
-        currentUser['target_languages'] as string[] | null,
-      ),
+      nativeLanguages: normaliseLanguages(currentUser['native_languages']),
+      targetLanguages: normaliseLanguages(currentUser['target_languages']),
     };
 
     if (
@@ -223,14 +218,17 @@ export class DiscoveryRecommendationsService {
     // Cached profile data itself is never returned: all IDs are re-hydrated below
     // through the current privacy/deletion/block boundary before ranking.
     try {
-      const daily = await this.recommendationsService.getDailyRecommendations(userId);
+      const daily =
+        await this.recommendationsService.getDailyRecommendations(userId);
       for (const recommendation of daily.slice(0, CANDIDATE_LIMIT)) {
         if (recommendation.id && recommendation.id !== userId) {
           candidateIds.add(recommendation.id);
         }
       }
     } catch {
-      this.logger.warn('Daily recommendation seed unavailable; continuing live');
+      this.logger.warn(
+        'Daily recommendation seed unavailable; continuing live',
+      );
     }
 
     let ownTags: string[] = [];
@@ -295,7 +293,9 @@ export class DiscoveryRecommendationsService {
           if (candidateIds.size >= CANDIDATE_LIMIT) break;
         }
       } catch {
-        this.logger.warn('Language recommendation seed unavailable; continuing');
+        this.logger.warn(
+          'Language recommendation seed unavailable; continuing',
+        );
       }
     }
 
