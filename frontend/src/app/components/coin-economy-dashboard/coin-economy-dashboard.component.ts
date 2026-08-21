@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
@@ -10,7 +11,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 @Component({
   selector: 'app-coin-economy-dashboard',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, DecimalPipe, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, RouterLink, DecimalPipe, AppCardComponent],
   template: `<div class="min-h-screen bg-surface-300 text-text-primary">
     <!-- Header with Coin Balance -->
     <section
@@ -23,6 +24,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
             <p class="text-text-secondary mt-1">{{ 'coinEconomy.subtitle' | t }}</p>
           </div>
           <button
+            hlmBtn
             type="button"
             class="rounded-full bg-surface-200 border border-surface-100 px-4 py-2 text-sm font-medium hover:bg-surface-100 transition-colors"
             (click)="startTour()"
@@ -47,6 +49,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
             <button
+              hlmBtn
               type="button"
               class="rounded-full bg-vip/20 px-4 py-2 text-sm font-semibold text-vip hover:bg-vip/30 transition-colors"
               (click)="claimDailyReward()"
@@ -70,6 +73,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.buyCoins' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.buyCoinsDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -85,6 +89,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.sendGift' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.sendGiftDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/chat"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -100,6 +105,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.stickerStore' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.stickerStoreDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/sticker-store"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -115,6 +121,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.shop' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.shopDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/shop"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -130,6 +137,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.vip' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.vipDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
@@ -145,6 +153,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <h3 class="font-bold text-lg">{{ 'coinEconomy.escrowPayments' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.escrowPaymentsDesc' | t }}</p>
               <a
+                hlmBtn
                 routerLink="/escrow"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >

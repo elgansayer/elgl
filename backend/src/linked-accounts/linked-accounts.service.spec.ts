@@ -95,7 +95,7 @@ describe('LinkedAccountsService', () => {
       const order = vi
         .fn()
         .mockResolvedValue({ data: null, error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
         from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
@@ -120,7 +120,7 @@ describe('LinkedAccountsService', () => {
       const upsert = vi
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
         from: vi.fn().mockReturnValue({ upsert }),
       });
 
@@ -148,7 +148,7 @@ describe('LinkedAccountsService', () => {
       const match = vi
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
         from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 

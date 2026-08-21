@@ -49,7 +49,7 @@ Allow users to search through chat history by text content, message type, date r
 - **Result item**: Auto (min 64px)
 - **Highlight padding**: 2px
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-900`
 - **Search input background**: `bg-slate-800`
@@ -129,10 +129,10 @@ Allow users to search through chat history by text content, message type, date r
 @keyframes highlightPulse {
   0%,
   100% {
-    background-color: rgba(234, 179, 8, 0.3);
+    background-colour: rgba(234, 179, 8, 0.3);
   }
   50% {
-    background-color: rgba(234, 179, 8, 0.5);
+    background-colour: rgba(234, 179, 8, 0.5);
   }
 }
 /* Applied to search term highlights */

@@ -5,16 +5,24 @@
     [attr.aria-labelledby]="titleId"
     class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md"
   >
-    <!-- Header -->
     <div class="flex items-center justify-between p-5 border-b border-surface-100 shrink-0">
       <h2 [id]="titleId" class="text-xl font-bold text-text-primary">{{ 'report.title' | t }}</h2>
       <button
+        hlmBtn
+        variant="ghost"
+        size="icon-touch"
         type="button"
-        class="text-text-muted hover:text-text-primary transition-colors p-2 -me-2 rounded-full hover:bg-surface-100"
+        class="-me-2 rounded-full text-text-muted hover:text-text-primary"
         (click)="cancel()"
         [attr.aria-label]="'report.close' | t"
       >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -26,7 +34,6 @@
     </div>
 
     <div class="p-5 overflow-y-auto overscroll-contain">
-      <!-- Error banner -->
       @if (errorMessage()) {
         <div
           class="bg-danger/10 border border-danger/20 text-danger px-4 py-3 rounded-card mb-5 text-sm font-medium"
@@ -36,7 +43,6 @@
         </div>
       }
 
-      <!-- Category loading -->
       @if (loadingCategories()) {
         <div class="flex items-center justify-center py-12">
           <div
@@ -49,8 +55,10 @@
         <div class="text-center py-10">
           <p class="text-text-secondary mb-4">{{ 'report.load_error' | t }}</p>
           <button
+            hlmBtn
+            variant="secondary"
+            size="touch"
             type="button"
-            class="px-6 py-2.5 rounded-pill bg-surface-100 text-sm font-bold text-text-primary hover:bg-surface-50 transition-colors"
             (click)="loadCategories()"
             [attr.aria-label]="'report.retry' | t"
           >
@@ -58,12 +66,11 @@
           </button>
         </div>
       } @else {
-        <!-- Reason selection -->
         <fieldset class="mb-6">
           <legend class="block text-sm font-bold text-text-secondary mb-3 ps-1">
             {{ 'report.reason_label' | t }}
           </legend>
-          <div class="flex flex-col gap-3">
+          <hlm-radio-group class="flex flex-col gap-3" [formField]="reportForm.category">
             @for (cat of categories(); track cat.value) {
               <label
                 [class]="
@@ -73,12 +80,13 @@
                 "
                 class="flex items-start p-4 rounded-card border cursor-pointer transition-all duration-200"
               >
-                <input
-                  type="radio"
+                <hlm-radio
                   [value]="cat.value"
+                  [inputId]="'report-category-' + cat.value"
                   class="sr-only"
-                  [formField]="reportForm.category"
-                />
+                >
+                  <hlm-radio-indicator indicator />
+                </hlm-radio>
                 @if (cat.icon) {
                   <span class="text-2xl me-4 mt-0.5 opacity-90" aria-hidden="true">{{
                     cat.icon
@@ -108,15 +116,15 @@
                 </div>
               </label>
             }
-          </div>
+          </hlm-radio-group>
         </fieldset>
 
-        <!-- Description -->
         <div class="mb-6">
           <label for="reportDesc" class="block text-sm font-bold text-text-secondary mb-3 ps-1">{{
             'report.details_label' | t
           }}</label>
           <textarea
+            hlmTextarea
             id="reportDesc"
             rows="3"
             class="w-full bg-surface-300 border border-surface-100 rounded-card px-4 py-3 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-danger/50 focus:border-danger/50 resize-none text-sm transition-all"
@@ -125,35 +133,38 @@
           ></textarea>
         </div>
 
-        <!-- Block user toggle -->
         <label
           class="flex items-center gap-4 mb-2 p-4 rounded-card bg-surface-100/50 border border-surface-100 cursor-pointer hover:bg-surface-100 transition-colors"
         >
-          <div class="relative flex items-center">
-            <input type="checkbox" class="sr-only peer" [formField]="reportForm.blockUser" />
-            <div
-              class="w-11 h-6 bg-surface-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-on-fill after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-on-fill after:border-surface-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-danger"
-            ></div>
-          </div>
+          <hlm-checkbox
+            class="size-5"
+            [formField]="reportForm.blockUser"
+            [aria-label]="'report.block_user' | t"
+          />
           <span class="text-sm font-bold text-text-primary">{{ 'report.block_user' | t }}</span>
         </label>
       }
     </div>
 
-    <!-- Actions -->
     <div class="p-5 border-t border-surface-100 shrink-0 flex gap-3">
       <button
+        hlmBtn
+        variant="secondary"
+        size="touch"
         type="button"
-        class="flex-1 py-3.5 rounded-pill text-sm font-bold bg-surface-100 hover:bg-surface-50 text-text-primary transition-colors"
+        class="flex-1"
         (click)="cancel()"
         [attr.aria-label]="'report.cancel' | t"
       >
         {{ 'report.cancel' | t }}
       </button>
       <button
+        hlmBtn
+        variant="destructive-solid"
+        size="touch"
         type="button"
+        class="flex-1"
         [disabled]="!canSubmit()"
-        class="flex-1 py-3.5 rounded-pill text-sm font-bold bg-danger hover:bg-danger/90 disabled:opacity-40 disabled:hover:bg-danger text-on-fill transition-colors shadow-lift"
         (click)="submitReport()"
         [attr.aria-label]="'report.submitting' | t"
       >

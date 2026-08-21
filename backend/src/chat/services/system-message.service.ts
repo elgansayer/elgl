@@ -96,15 +96,31 @@ export class SystemMessageService {
     if (!mutualRooms || mutualRooms.length === 0) return;
 
     // Find the 1-on-1 room (exactly 2 members)
-    for (const { room_id: candidateRoomId } of mutualRooms) {
-      const { count } = await supabase
-        .from('chat_room_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('room_id', candidateRoomId);
+    const candidateRoomIds = mutualRooms.map(
+      (r: { room_id: string }) => r.room_id,
+    );
 
-      if (count === 2) {
-        await this.publishToRoom(candidateRoomId, eventType, params);
-        return;
+    // ⚡ Bolt Optimization: Replaced N+1 sequential count queries with a single batch `.in()`
+    // lookup to drastically reduce database latency when searching for 1-on-1 chat rooms.
+    const { data: allMembers } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .in('room_id', candidateRoomIds);
+
+    if (allMembers) {
+      const roomCounts = new Map<string, number>();
+      for (const member of allMembers) {
+        roomCounts.set(
+          member.room_id,
+          (roomCounts.get(member.room_id) || 0) + 1,
+        );
+      }
+
+      for (const candidateRoomId of candidateRoomIds) {
+        if (roomCounts.get(candidateRoomId) === 2) {
+          await this.publishToRoom(candidateRoomId, eventType, params);
+          return;
+        }
       }
     }
   }
