@@ -106,9 +106,7 @@ describe('MomentLikesService', () => {
 
     await expect(
       service.listMomentLikes('moment-1', 'viewer-1'),
-    ).resolves.toEqual([
-      expect.objectContaining({ id: 'visible-user' }),
-    ]);
+    ).resolves.toEqual([expect.objectContaining({ id: 'visible-user' })]);
   });
 
   it('fails closed when the viewer and Moment author are blocked', async () => {
@@ -121,7 +119,10 @@ describe('MomentLikesService', () => {
   });
 
   it('returns 404 for a missing Moment before querying its social graph', async () => {
-    momentSingle.mockResolvedValue({ data: null, error: { message: 'missing' } });
+    momentSingle.mockResolvedValue({
+      data: null,
+      error: { message: 'missing' },
+    });
 
     await expect(
       service.listMomentLikes('missing-moment', 'viewer-1'),
