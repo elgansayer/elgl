@@ -1,7 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
-  IsDefined,
   IsNumber,
   IsOptional,
   IsString,
@@ -20,8 +19,10 @@ export class SearchQueryDto {
     maximum: 90,
     example: 51.5074,
   })
-  @ValidateIf((query: SearchQueryDto) => query.latitude !== undefined || query.longitude !== undefined)
-  @IsDefined({ message: 'latitude and longitude must be supplied together' })
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -37,8 +38,10 @@ export class SearchQueryDto {
     maximum: 180,
     example: -0.1278,
   })
-  @ValidateIf((query: SearchQueryDto) => query.latitude !== undefined || query.longitude !== undefined)
-  @IsDefined({ message: 'latitude and longitude must be supplied together' })
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -49,9 +52,9 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Search radius in metres (1000 - 250000). Defaults to 50000 (50 km). Used by the PostGIS ST_DWithin RPC for proximity filtering.',
+      'Search radius in metres (1000 - 20000000). Defaults to 50000 (50 km). Used by the PostGIS ST_DWithin RPC for proximity filtering.',
     minimum: 1000,
-    maximum: 250000,
+    maximum: 20000000,
     default: 50000,
     example: 10000,
   })
@@ -61,7 +64,7 @@ export class SearchQueryDto {
   )
   @IsNumber()
   @Min(1000)
-  @Max(250000)
+  @Max(20000000)
   radius_metres?: number = 50000;
 
   @ApiPropertyOptional({
