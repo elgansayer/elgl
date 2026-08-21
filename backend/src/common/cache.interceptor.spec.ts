@@ -136,8 +136,8 @@ describe('CacheControlInterceptor', () => {
 
   describe('intercept', () => {
     function createCallContext(
-      setHeader = jest.fn(),
-      removeHeader = jest.fn(),
+      setHeader = vi.fn(),
+      removeHeader = vi.fn(),
     ): Parameters<typeof CacheControlInterceptor.prototype.intercept>[0] {
       const mockResponse = { setHeader, removeHeader };
       return {
@@ -148,7 +148,7 @@ describe('CacheControlInterceptor', () => {
     }
 
     it('should set all directive headers on success', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
       const next = { handle: () => of('body') } as Parameters<
@@ -169,7 +169,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should override to no-store on error', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
       const next = {
@@ -191,7 +191,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should handle CACHE_PRIVATE_NO_STORE directive', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE);
       const next = { handle: () => of('mutation-result') } as Parameters<
@@ -210,7 +210,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should handle CACHE_PRIVATE_MEDIUM directive for reading engine user lists', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM);
       const next = { handle: () => of([]) } as Parameters<
@@ -229,7 +229,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should set Cache-Tag header when cacheTags are provided', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
         'flashcards',
@@ -247,7 +247,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should not set Cache-Tag header when cacheTags is empty', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, []);
       const next = { handle: () => of([]) } as Parameters<
@@ -262,8 +262,8 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should remove Cache-Tag header on error', async () => {
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const context = createCallContext(setHeader, removeHeader);
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
         'flashcards',

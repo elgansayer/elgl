@@ -11,7 +11,7 @@ describe('LegalService', () => {
         LegalService,
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('2026-07-01') },
+          useValue: { get: vi.fn().mockReturnValue('2026-07-01') },
         },
       ],
     }).compile();
@@ -20,7 +20,7 @@ describe('LegalService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getTermsOfService', () => {
@@ -48,7 +48,7 @@ describe('LegalService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string) =>
+              get: vi.fn((key: string) =>
                 key === 'TOS_EFFECTIVE_DATE' ? '2026-09-01' : null,
               ),
             },
@@ -85,7 +85,7 @@ describe('LegalService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string) =>
+              get: vi.fn((key: string) =>
                 key === 'PRIVACY_EFFECTIVE_DATE' ? '2026-08-15' : null,
               ),
             },

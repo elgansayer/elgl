@@ -101,4 +101,30 @@ describe.skip('VocabularyDisplayComponent', () => {
       showErrorToastSpy.mockRestore();
     });
   });
+
+  describe('RTL logical CSS properties', () => {
+    it('should use logical padding (ps-/pe-) instead of physical (pl-/pr-)', () => {
+      const fixture = TestBed.createComponent(VocabularyDisplayComponent);
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).toContain('ps-');
+      expect(html).toContain('pe-');
+      expect(html).not.toMatch(/\b(pl-\d|pr-\d)\b/);
+    });
+
+    it('should use logical margin (ms-/me-) instead of physical (ml-/mr-)', () => {
+      const fixture = TestBed.createComponent(VocabularyDisplayComponent);
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\b(ml-\d|mr-\d)\b/);
+    });
+
+    it('should not contain text-left or text-right classes', () => {
+      const fixture = TestBed.createComponent(VocabularyDisplayComponent);
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toContain('text-left');
+      expect(html).not.toContain('text-right');
+    });
+  });
 });

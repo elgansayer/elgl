@@ -1,0 +1,658 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Discovery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .page-head {
+        max-width: 390px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      .phone {
+        width: 390px;
+        margin: 0 auto;
+        background: rgb(var(--surface-500));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        max-height: 820px;
+        overflow-y: auto;
+      }
+
+      .offline-banner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: rgb(var(--warning));
+        color: rgb(var(--on-fill));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 12px;
+      }
+
+      header.disc {
+        background: rgb(var(--surface-400));
+        border-bottom: 1px solid rgb(var(--surface-200));
+        padding: 16px 0 10px;
+      }
+      .disc-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px 12px;
+      }
+      .disc-top h1 {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+      }
+      .disc-top .bell {
+        font-size: 18px;
+      }
+
+      .scroll-row {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 0 14px;
+        margin-bottom: 10px;
+      }
+      .scroll-row::-webkit-scrollbar {
+        display: none;
+      }
+      .pill {
+        flex-shrink: 0;
+        white-space: nowrap;
+        border-radius: 999px;
+        border: 1px solid rgb(var(--surface-100));
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 12px;
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-primary));
+      }
+      .pill.on {
+        background: rgb(var(--surface-200));
+      }
+      .pill.accent-on {
+        background: rgb(var(--accent));
+        color: rgb(var(--on-fill));
+        border-color: transparent;
+      }
+      .pill.muted {
+        color: rgb(var(--text-secondary));
+        background: rgb(var(--surface-200));
+      }
+
+      .label-inline {
+        align-self: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        white-space: nowrap;
+        margin-inline-end: 4px;
+      }
+
+      .controls-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        margin-bottom: 10px;
+      }
+      .select-fake {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        font-weight: 700;
+      }
+      .select-fake .box {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 11px;
+        color: rgb(var(--text-primary));
+        font-weight: 700;
+      }
+      .vip-note {
+        font-size: 10px;
+        font-weight: 700;
+        color: rgb(var(--vip));
+        background: rgb(var(--vip) / 0.1);
+        border-radius: 6px;
+        padding: 3px 7px;
+      }
+
+      .toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 4px 14px 12px;
+      }
+      .toggle-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+      }
+      .switch {
+        width: 14px;
+        height: 14px;
+        border: 1px solid rgb(var(--surface-300));
+        border-radius: 4px;
+        background: rgb(var(--surface-200));
+        display: inline-block;
+      }
+      .switch.checked {
+        background: rgb(var(--accent));
+        border-color: rgb(var(--accent));
+      }
+
+      .banner {
+        margin: 8px 14px 14px;
+        border-radius: 12px;
+        padding: 12px 14px;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(
+          115deg,
+          rgb(var(--vip)) 0%,
+          rgb(var(--accent)) 55%,
+          rgb(var(--neon-orange)) 100%
+        );
+        color: #fff;
+      }
+      .banner h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 900;
+      }
+      .banner p {
+        margin: 2px 0 0;
+        font-size: 10px;
+        font-weight: 600;
+        opacity: 0.92;
+      }
+      .banner .view-btn {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        background: #fff;
+        color: rgb(var(--accent));
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        border-radius: 999px;
+        padding: 5px 10px;
+      }
+
+      .search-fake {
+        margin: 0 14px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+
+      .match-list {
+        display: flex;
+        flex-direction: column;
+      }
+      .match-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-top: 1px solid rgb(var(--surface-200));
+      }
+      .match-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .m-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+      }
+      .m-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+        color: rgb(var(--on-fill));
+      }
+      .m-online {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgb(var(--success));
+        border: 2px solid rgb(var(--surface-500));
+      }
+      .m-name-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 3px;
+      }
+      .m-name {
+        font-size: 14px;
+        font-weight: 900;
+        color: rgb(var(--text-primary));
+      }
+      .badge-vip {
+        border-radius: 4px;
+        background: rgb(var(--vip));
+        color: rgb(var(--on-fill));
+        font-size: 8px;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-style: italic;
+        padding: 2px 5px;
+      }
+      .badge-week {
+        border-radius: 4px;
+        background: rgb(var(--accent));
+        color: rgb(var(--on-fill));
+        font-size: 8px;
+        font-weight: 900;
+        text-transform: uppercase;
+        padding: 2px 5px;
+      }
+      .badge-mbti {
+        border-radius: 4px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-secondary));
+        font-size: 8px;
+        font-weight: 700;
+        padding: 2px 5px;
+      }
+      .fluency {
+        font-size: 10px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        margin-bottom: 3px;
+      }
+      .fluency .flag {
+        margin-right: 2px;
+      }
+      .m-bio {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+        margin-bottom: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 190px;
+      }
+      .m-status-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .m-active {
+        font-size: 9px;
+        font-weight: 700;
+        color: rgb(var(--success));
+      }
+      .m-distance {
+        font-size: 9px;
+        color: rgb(var(--text-muted));
+      }
+      .m-interests {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .m-interest {
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        font-size: 9px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        padding: 2px 7px;
+      }
+      .m-action {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--accent)));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        box-shadow: 0 4px 10px rgb(var(--primary) / 0.35);
+      }
+
+      .caption {
+        max-width: 390px;
+        margin: 18px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Discovery</h1>
+        <p>discovery.component.html - match grid, filters, VIP gating</p>
+      </div>
+      <div class="toggle" id="toggle">
+        <button id="btn-light" class="active">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="offline-banner">
+        <span aria-hidden="true">📡</span> You're offline - showing cached results
+      </div>
+
+      <header class="disc">
+        <div class="disc-top">
+          <h1>Connect</h1>
+          <span class="bell">🔔</span>
+        </div>
+
+        <div class="scroll-row">
+          <span class="pill on">Nearby</span>
+          <span class="pill">New today</span>
+          <span class="pill">Same interests</span>
+          <span class="pill">Online now</span>
+        </div>
+
+        <div class="scroll-row">
+          <span class="pill on">🇬🇧 English</span>
+          <span class="pill">🇯🇵 Japanese</span>
+          <span class="pill">🇰🇷 Korean</span>
+          <span class="pill muted">Any</span>
+        </div>
+
+        <div class="scroll-row">
+          <span class="label-inline">Interests</span>
+          <span class="pill accent-on">Any</span>
+          <span class="pill">Travel</span>
+          <span class="pill">Music</span>
+          <span class="pill">Cooking</span>
+          <span class="pill">Anime</span>
+        </div>
+
+        <div class="controls-row">
+          <div class="select-fake">Sort <span class="box">Nearby first</span></div>
+          <div class="select-fake">
+            Gender <span class="box" style="opacity: 0.5">Any</span>
+            <span class="vip-note">VIP only</span>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-item"><span class="switch checked"></span> Serious learner mode</div>
+          <div class="toggle-item"><span class="switch"></span> Voice room active</div>
+          <div class="toggle-item"><span class="switch checked"></span> Has audio intro</div>
+        </div>
+      </header>
+
+      <div class="banner">
+        <span class="view-btn">View</span>
+        <h3>Go VIP</h3>
+        <p>Unlock gender filter, distance radius &amp; more matches</p>
+      </div>
+
+      <div class="search-fake">🔍 Search by name, language or interest</div>
+
+      <div class="match-list">
+        <article class="match-card">
+          <div class="match-left">
+            <div class="m-avatar-wrap">
+              <div class="m-avatar" style="background: rgb(var(--secondary))">陈</div>
+              <span class="m-online"></span>
+            </div>
+            <div>
+              <div class="m-name-row">
+                <span class="m-name">Chén Wěi</span>
+                <span class="badge-vip">VIP</span>
+                <span class="badge-mbti">ENFP</span>
+              </div>
+              <div class="fluency">
+                <span class="flag">🇨🇳</span>Native ⇄ <span class="flag">🇬🇧</span>Learning
+              </div>
+              <p class="m-bio">Looking for a patient English partner for daily chats</p>
+              <div class="m-status-row">
+                <span class="m-active">Active now</span>
+                <span class="m-distance">2.4 km away</span>
+              </div>
+              <div class="m-interests">
+                <span class="m-interest">travel</span>
+                <span class="m-interest">badminton</span>
+                <span class="m-interest">+2</span>
+              </div>
+            </div>
+          </div>
+          <div class="m-action">👋</div>
+        </article>
+
+        <article class="match-card">
+          <div class="match-left">
+            <div class="m-avatar-wrap">
+              <div class="m-avatar" style="background: rgb(var(--primary))">S</div>
+              <span class="m-online"></span>
+            </div>
+            <div>
+              <div class="m-name-row">
+                <span class="m-name">Sofia Almeida</span>
+                <span class="badge-week">Partner of the week</span>
+              </div>
+              <div class="fluency">
+                <span class="flag">🇵🇹</span>Native ⇄ <span class="flag">🇯🇵</span>Learning
+              </div>
+              <p class="m-bio">Portuguese teacher, loves swapping voice notes</p>
+              <div class="m-status-row">
+                <span class="m-active">Active now</span>
+                <span class="m-distance">6.1 km away</span>
+              </div>
+              <div class="m-interests">
+                <span class="m-interest">music</span>
+                <span class="m-interest">cooking</span>
+              </div>
+            </div>
+          </div>
+          <div class="m-action">👋</div>
+        </article>
+
+        <article class="match-card">
+          <div class="match-left">
+            <div class="m-avatar-wrap">
+              <div class="m-avatar" style="background: rgb(var(--neon-blue))">J</div>
+            </div>
+            <div>
+              <div class="m-name-row">
+                <span class="m-name">Jonas Weber</span>
+              </div>
+              <div class="fluency">
+                <span class="flag">🇩🇪</span>Native ⇄ <span class="flag">🇬🇧</span>Learning
+              </div>
+              <p class="m-bio">Software engineer practising business English</p>
+              <div class="m-status-row">
+                <span class="m-distance">11 km away</span>
+              </div>
+              <div class="m-interests">
+                <span class="m-interest">tech</span>
+                <span class="m-interest">hiking</span>
+                <span class="m-interest">+1</span>
+              </div>
+            </div>
+          </div>
+          <div class="m-action">👋</div>
+        </article>
+      </div>
+    </div>
+
+    <p class="caption">
+      Offline banner is shown here for reference even though it's a conditional top-of-screen state
+      - real usage only renders it while the connection is actually down. Filter controls include
+      the audio-intro-only state shown above. Omitted: loading skeleton grid, empty-state illustration,
+      and the age-range / distance slider widgets (interactive range controls, better suited to a
+      future form-controls primitives page than a static screen mock).
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

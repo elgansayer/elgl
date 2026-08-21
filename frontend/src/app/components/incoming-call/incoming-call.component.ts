@@ -25,9 +25,7 @@ function isIncomingCallEvent(
   if (typeof value !== 'object' || value === null) return false;
   if (!('type' in value) || !('callInfo' in value)) return false;
   return (
-    typeof value.type === 'string' &&
-    typeof value.callInfo === 'object' &&
-    value.callInfo !== null
+    typeof value.type === 'string' && typeof value.callInfo === 'object' && value.callInfo !== null
   );
 }
 
@@ -83,8 +81,9 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               }}
             </p>
             @if (callInfo()?.e2eeKey) {
-              <p class="text-xs text-green-500 mt-2 flex items-center gap-1">
-                <span>{{ 'voip.endToEndEncryptedIcon' | t }}</span> {{ 'voip.endToEndEncrypted' | t }}
+              <p class="text-xs text-success mt-2 flex items-center gap-1">
+                <span>{{ 'voip.endToEndEncryptedIcon' | t }}</span>
+                {{ 'voip.endToEndEncrypted' | t }}
               </p>
             }
           </div>
@@ -93,7 +92,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           <div class="flex justify-center gap-4 sm:gap-6 pb-6 sm:pb-8 px-4 sm:px-6">
             <app-button-secondary
               size="lg"
-              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-red-500 !border-red-500 hover:!bg-red-600"
+              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-danger !border-danger !text-on-fill hover:!bg-danger/90"
               (clicked)="rejectCall()"
             >
               <span class="text-xl sm:text-2xl">{{ 'voip.rejectIcon' | t }}</span>
@@ -101,7 +100,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
             <app-button-primary
               size="lg"
-              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-green-500 hover:!bg-green-600"
+              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-success hover:!bg-success/90"
               (clicked)="acceptCall()"
             >
               <span class="text-xl sm:text-2xl">{{ 'voip.acceptIcon' | t }}</span>

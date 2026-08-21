@@ -83,8 +83,6 @@ describe('EscrowPaymentsComponent', () => {
 
   it('should initialise with default signal values', () => {
     expect(component.selectedStatus()).toBe('all');
-    
-    
     expect(component.actionInProgress()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
@@ -98,17 +96,14 @@ describe('EscrowPaymentsComponent', () => {
   });
 
   it('should toggle create form', () => {
-    
-    
-    
   });
 
   it('should return correct status badge class', () => {
-    expect(component.statusBadgeClass('pending')).toContain('amber');
-    expect(component.statusBadgeClass('released')).toContain('emerald');
-    expect(component.statusBadgeClass('disputed')).toContain('rose');
-    expect(component.statusBadgeClass('refunded')).toContain('slate');
-    expect(component.statusBadgeClass('cancelled')).toContain('zinc');
+    expect(component.statusBadgeClass('pending')).toContain('warning');
+    expect(component.statusBadgeClass('released')).toContain('success');
+    expect(component.statusBadgeClass('disputed')).toContain('danger');
+    expect(component.statusBadgeClass('refunded')).toContain('text-secondary');
+    expect(component.statusBadgeClass('cancelled')).toContain('text-muted');
   });
 
   it('should return status filters with labels', () => {

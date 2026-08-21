@@ -8,7 +8,7 @@ export class NotificationPreferencesService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getPreferences(userId: string): Promise<unknown> {
+  async getPreferences(userId: string): Promise<any> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -28,11 +28,11 @@ export class NotificationPreferencesService {
   async updatePreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<unknown> {
+  ): Promise<any> {
     return this.upsertPreferences(userId, dto);
   }
 
-  async resetToDefaults(userId: string): Promise<unknown> {
+  async resetToDefaults(userId: string): Promise<any> {
     const defaults = this.getDefaultPreferences(userId);
     return this.upsertPreferences(userId, defaults);
   }
@@ -40,7 +40,7 @@ export class NotificationPreferencesService {
   private async upsertPreferences(
     userId: string,
     changes: object,
-  ): Promise<unknown> {
+  ): Promise<any> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -63,8 +63,6 @@ export class NotificationPreferencesService {
     };
     return {
       user_id: userId,
-      direct_message: { ...defaultCategory },
-      group_message: { ...defaultCategory },
       new_message: { ...defaultCategory },
       call_invite: { ...defaultCategory },
       moment_like: { ...defaultCategory },

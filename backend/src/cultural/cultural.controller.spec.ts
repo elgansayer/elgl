@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CulturalController } from './cultural.controller';
@@ -14,7 +15,7 @@ describe('CulturalController', () => {
         {
           provide: CulturalService,
           useValue: {
-            getGuideForLanguage: jest.fn(),
+            getGuideForLanguage: vi.fn(),
           },
         },
       ],
@@ -29,14 +30,14 @@ describe('CulturalController', () => {
   });
 
   it('should return the guide for a known language', () => {
-    (service.getGuideForLanguage as jest.Mock).mockReturnValue('Bonjour!');
+    (service.getGuideForLanguage as Mock).mockReturnValue('Bonjour!');
     const result = controller.getGuide('fr');
     expect(service.getGuideForLanguage).toHaveBeenCalledWith('fr');
     expect(result).toEqual({ language: 'fr', guide: 'Bonjour!' });
   });
 
   it('should throw NotFoundException for an unknown language', () => {
-    (service.getGuideForLanguage as jest.Mock).mockReturnValue(undefined);
+    (service.getGuideForLanguage as Mock).mockReturnValue(undefined);
     expect(() => controller.getGuide('xx')).toThrow(NotFoundException);
   });
 });

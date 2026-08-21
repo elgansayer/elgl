@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+
 import { MediaService } from '../../services/media.service';
 
 @Pipe({ name: 't' })
@@ -62,7 +66,7 @@ describe('VoiceRecorderComponent', () => {
       ],
     })
       .overrideComponent(VoiceRecorderComponent, {
-        set: { imports: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe, AppCardComponent, AppChipComponent, AppButtonPrimaryComponent] },
       })
       .compileComponents();
 

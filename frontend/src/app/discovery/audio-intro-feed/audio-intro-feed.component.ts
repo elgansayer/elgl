@@ -1,16 +1,17 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
 import { resource } from '@angular/core';
+import { getLanguageFlag } from '../../components/primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-audio-intro-feed',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
-    @if (users.isLoading()) {
+    @if (isLoading()) {
       <div class="flex justify-center py-8">
         <span class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary"></span>
       </div>
@@ -31,6 +32,7 @@ import { resource } from '@angular/core';
             </p>
           </div>
           <button
+            hlmBtn
             (click)="togglePlay(user.id, user.audio_intro_url)"
             class="ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary"
           >
@@ -41,9 +43,8 @@ import { resource } from '@angular/core';
             }
           </button>
         </div>
-      }
-      @empty {
-        @if (!users.isLoading()) {
+      } @empty {
+        @if (!isLoading()) {
           <div class="flex flex-col items-center py-12 text-text-secondary">
             <span class="i-ph-microphone-slash text-4xl mb-2"></span>
             <p>{{ 'discovery.audioIntroFeed.noAudioIntros' | t }}</p>
@@ -57,16 +58,20 @@ export class AudioIntroFeedComponent {
   private discoveryService = inject(DiscoveryService);
   private destroyRef = inject(DestroyRef);
 
-  protected playingId = signal<string | null>(null);
+  readonly playingId = signal<string | null>(null);
   private audioPlayer: HTMLAudioElement | null = null;
 
-  users = resource({
+  private readonly usersResource = resource({
     loader: () => this.discoveryService.getAudioIntros(),
   });
 
-  protected userList = computed<UserProfile[]>(() => this.users.value() ?? []);
+  readonly users = computed<UserProfile[]>(() => this.usersResource.value() ?? []);
+  readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly emptyMessageKey = signal('discovery.audioIntroFeed.noAudioIntros');
 
-  protected togglePlay(userId: string, url: string | undefined): void {
+  readonly userList = this.users;
+
+  togglePlay(userId: string, url: string | undefined, _event?: Event): void {
     if (!url) return;
     if (this.playingId() === userId) {
       this.audioPlayer?.pause();
@@ -78,6 +83,10 @@ export class AudioIntroFeedComponent {
     this.audioPlayer.addEventListener('ended', () => this.playingId.set(null));
     this.audioPlayer.play();
     this.playingId.set(userId);
+  }
+
+  getFlag(code: string): string {
+    return getLanguageFlag(code);
   }
 
   constructor() {

@@ -1,5 +1,7 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject, ErrorHandler, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 export interface SrsErrorContext {
   component: string;
@@ -21,7 +23,12 @@ interface SrsCrashPayload {
   timestamp: string;
   url: string;
   userAgent: string;
-  stackFrames?: { fileName?: string; functionName?: string; lineNumber?: number; columnNumber?: number }[];
+  stackFrames?: {
+    fileName?: string;
+    functionName?: string;
+    lineNumber?: number;
+    columnNumber?: number;
+  }[];
 }
 
 class SrsContextError extends Error {
@@ -62,18 +69,20 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
 @Component({
   selector: 'app-srs-error-boundary',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
     } @else {
       <div class="mx-auto max-w-md space-y-4 pt-8 pb-16" role="alert">
-        <section class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4">
+        <section
+          class="rounded-sheet border border-danger/30 bg-danger/10 p-6 text-center space-y-4"
+        >
           <p class="text-4xl" aria-hidden="true">&#9888;&#65039;</p>
-          <h3 class="text-lg font-black text-rose-400">{{ 'srsErrorBoundary.title' | t }}</h3>
+          <h3 class="text-lg font-black text-danger">{{ 'srsErrorBoundary.title' | t }}</h3>
           <p class="text-sm text-text-secondary">{{ 'srsErrorBoundary.description' | t }}</p>
           @if (errorMessage()) {
-            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-rose-300 break-all">
+            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-danger break-all">
               {{ errorMessage() }}
             </p>
           }
@@ -83,15 +92,12 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
             </p>
           }
           <div class="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              (click)="resetError()"
-              class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold"
-            >
+            <app-button-primary (clicked)="resetError()" customClass="text-xs">
               {{ 'srsErrorBoundary.retryBtn' | t }}
-            </button>
+            </app-button-primary>
             @if (showReportButton()) {
               <button
+                hlmBtn
                 type="button"
                 (click)="reportCrash()"
                 class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"
@@ -101,7 +107,9 @@ function parseStackFrames(stack: string): SrsCrashPayload['stackFrames'] {
             }
           </div>
           @if (reportedMessage()) {
-            <p class="text-xs text-emerald-400 font-bold">{{ 'srsErrorBoundary.reportedMessage' | t }}</p>
+            <p class="text-xs text-success font-bold">
+              {{ 'srsErrorBoundary.reportedMessage' | t }}
+            </p>
           }
         </section>
       </div>
@@ -146,9 +154,7 @@ export class SrsErrorBoundaryComponent {
     this.errorCount.update((c) => c + 1);
     this.errorMessage.set(message ?? error.message ?? 'Unknown error in SRS component');
 
-    const enrichedError = new Error(
-      `[SRS:${this.context().component}] ${this.errorMessage()}`,
-    );
+    const enrichedError = new Error(`[SRS:${this.context().component}] ${this.errorMessage()}`);
     enrichedError.name = 'SrsError';
     if (error.stack) {
       enrichedError.stack = error.stack;
@@ -185,11 +191,7 @@ export class SrsErrorBoundaryComponent {
         timestamp: new Date().toISOString(),
       },
     };
-    const enriched = new SrsContextError(
-      error.message,
-      ctx,
-      error.stack,
-    );
+    const enriched = new SrsContextError(error.message, ctx, error.stack);
     enriched.name = error.name;
     this.errorHandler.handleError(enriched);
   }

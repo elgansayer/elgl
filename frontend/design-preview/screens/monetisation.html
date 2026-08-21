@@ -1,0 +1,882 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Monetisation &amp; VIP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .page-head {
+        max-width: 810px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      .frames {
+        max-width: 810px;
+        margin: 0 auto;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .frame-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .frame-col .frame-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .phone {
+        width: 390px;
+        background: rgb(var(--surface-300));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        max-height: 820px;
+        overflow-y: auto;
+      }
+
+      /* ---- VIP page ---- */
+      .vip-hero {
+        background: linear-gradient(
+          160deg,
+          rgb(var(--primary) / 0.2),
+          rgb(var(--surface-200)) 45%,
+          rgb(var(--surface-300))
+        );
+        padding: 30px 18px 26px;
+        text-align: center;
+      }
+      .vip-hero h1 {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0 0 8px;
+      }
+      .vip-hero p {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 16px;
+      }
+      .btn-primary {
+        border: none;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-weight: 700;
+        font-size: 13px;
+        border-radius: 999px;
+        padding: 11px 20px;
+      }
+      .btn-secondary {
+        border: 1px solid rgb(var(--surface-400));
+        background: transparent;
+        color: rgb(var(--text-primary));
+        font-weight: 700;
+        font-size: 13px;
+        border-radius: 999px;
+        padding: 11px 20px;
+      }
+      .hero-btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .plans-section {
+        padding: 24px 14px;
+      }
+      .plans-section h2 {
+        font-size: 18px;
+        font-weight: 800;
+        text-align: center;
+        margin: 0 0 4px;
+      }
+      .plans-section .sub {
+        text-align: center;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 16px;
+      }
+      .plan-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .plan-card {
+        position: relative;
+        background: rgb(var(--surface-200));
+        border-radius: 16px;
+        padding: 18px 16px;
+        text-align: center;
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+      }
+      .plan-card.popular {
+        box-shadow: 0 0 0 2px rgb(var(--primary));
+      }
+      .plan-badge {
+        position: absolute;
+        top: -11px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 10px;
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 4px 12px;
+      }
+      .plan-card h3 {
+        font-size: 15px;
+        font-weight: 800;
+        margin: 4px 0 4px;
+      }
+      .plan-price {
+        font-size: 24px;
+        font-weight: 800;
+        color: rgb(var(--primary));
+        margin: 0 0 2px;
+      }
+      .plan-billed {
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 12px;
+      }
+      .plan-features {
+        text-align: start;
+        list-style: none;
+        margin: 0 0 14px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .plan-features li {
+        display: flex;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .plan-features li::before {
+        content: '✓';
+        color: rgb(var(--primary));
+        font-weight: 700;
+      }
+      .plan-cta {
+        width: 100%;
+      }
+
+      .compare-section {
+        background: rgb(var(--surface-300));
+        padding: 20px 14px;
+      }
+      .compare-section h2 {
+        font-size: 15px;
+        font-weight: 800;
+        text-align: center;
+        margin: 0 0 12px;
+      }
+      .compare-scroll {
+        overflow-x: auto;
+      }
+      table.compare {
+        border-collapse: collapse;
+        font-size: 10px;
+        min-width: 460px;
+        width: 100%;
+      }
+      table.compare th,
+      table.compare td {
+        padding: 7px 8px;
+        border-bottom: 1px solid rgb(var(--surface-400));
+        text-align: center;
+      }
+      table.compare th:first-child,
+      table.compare td:first-child {
+        text-align: start;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+      }
+      table.compare thead th {
+        color: rgb(var(--text-secondary));
+        font-weight: 700;
+      }
+      .yes {
+        color: rgb(var(--primary));
+        font-weight: 700;
+      }
+      .no {
+        color: rgb(var(--text-muted));
+      }
+
+      .faq-section {
+        background: rgb(var(--surface-200));
+        padding: 22px 14px;
+      }
+      .faq-section h2 {
+        font-size: 15px;
+        font-weight: 800;
+        text-align: center;
+        margin: 0 0 12px;
+      }
+      .faq-item {
+        border: 1px solid rgb(var(--surface-300));
+        border-radius: 12px;
+        margin-bottom: 8px;
+        overflow: hidden;
+        background: rgb(var(--surface-50));
+      }
+      .faq-q {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 11px 13px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .faq-q .chev {
+        color: rgb(var(--primary));
+        transform: rotate(180deg);
+      }
+      .faq-a {
+        padding: 0 13px 12px;
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+      }
+
+      .cta-section {
+        background: linear-gradient(90deg, rgb(var(--primary) / 0.1), rgb(var(--primary) / 0.05));
+        padding: 26px 14px;
+        text-align: center;
+      }
+      .cta-section h2 {
+        font-size: 17px;
+        font-weight: 800;
+        margin: 0 0 6px;
+      }
+      .cta-section p {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 14px;
+      }
+
+      /* ---- Coin economy ---- */
+      .coin-hero {
+        background: linear-gradient(
+          160deg,
+          rgb(var(--vip) / 0.2),
+          rgb(var(--surface-200)) 45%,
+          rgb(var(--surface-300))
+        );
+        padding: 22px 16px 26px;
+      }
+      .coin-hero-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .coin-hero-top h1 {
+        font-size: 20px;
+        font-weight: 800;
+        margin: 0 0 2px;
+      }
+      .coin-hero-top p {
+        font-size: 11px;
+        color: rgb(var(--text-secondary));
+        margin: 0;
+      }
+      .tour-btn {
+        border: 1px solid rgb(var(--surface-100));
+        background: rgb(var(--surface-200));
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 6px 10px;
+        white-space: nowrap;
+      }
+      .balance-card {
+        border-radius: 20px;
+        background: linear-gradient(160deg, rgb(var(--vip) / 0.2), rgb(var(--vip) / 0.1));
+        border: 1px solid rgb(var(--vip) / 0.3);
+        padding: 18px;
+      }
+      .balance-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .balance-coin {
+        font-size: 34px;
+      }
+      .balance-label {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: rgb(var(--text-secondary));
+      }
+      .balance-value {
+        font-size: 26px;
+        font-weight: 800;
+        color: rgb(var(--vip));
+        margin: 2px 0 0;
+      }
+      .checkin-btn {
+        margin-top: 14px;
+        border: none;
+        background: rgb(var(--vip) / 0.2);
+        color: rgb(var(--vip));
+        font-weight: 700;
+        font-size: 12px;
+        border-radius: 999px;
+        padding: 8px 16px;
+      }
+
+      .quick-section {
+        padding: 20px 14px;
+      }
+      .quick-section h2 {
+        font-size: 15px;
+        font-weight: 800;
+        margin: 0 0 12px;
+      }
+      .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .quick-card {
+        background: rgb(var(--surface-200));
+        border-radius: 16px;
+        padding: 14px 10px;
+        text-align: center;
+        box-shadow: 0 1px 2px rgb(var(--shadow) / 0.05);
+      }
+      .quick-card .ico {
+        font-size: 26px;
+      }
+      .quick-card h3 {
+        font-size: 13px;
+        font-weight: 700;
+        margin: 6px 0 4px;
+      }
+      .quick-card p {
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 10px;
+        line-height: 1.3;
+      }
+      .quick-cta {
+        display: inline-block;
+        border-radius: 999px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 10px;
+        font-weight: 700;
+        padding: 6px 12px;
+      }
+
+      .activity-section {
+        padding: 0 14px 24px;
+      }
+      .activity-card {
+        border: 1px solid rgb(var(--surface-300));
+        background: rgb(var(--surface-50));
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .activity-card h3 {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 10px;
+      }
+      .gift-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgb(var(--surface-200));
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        margin: 0 6px 6px 0;
+      }
+      .gift-chip .cost {
+        color: rgb(var(--vip));
+        font-weight: 700;
+      }
+      .sticker-chip {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 10px;
+        font-weight: 600;
+        margin: 0 6px 6px 0;
+      }
+      .sticker-chip.owned {
+        background: rgb(var(--success) / 0.15);
+        color: rgb(var(--success));
+      }
+      .sticker-chip.locked {
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-secondary));
+      }
+      .tx-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+      }
+      .tx-row + .tx-row {
+        border-top: 1px solid rgb(var(--surface-200));
+      }
+      .tx-ico {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .tx-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .tx-main p.desc {
+        font-size: 12px;
+        font-weight: 600;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tx-main p.type {
+        font-size: 10px;
+        color: rgb(var(--text-secondary));
+        margin: 1px 0 0;
+      }
+      .tx-amt {
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .tx-amt.pos {
+        color: rgb(var(--success));
+      }
+      .tx-amt.neg {
+        color: rgb(var(--danger));
+      }
+
+      .caption {
+        max-width: 810px;
+        margin: 18px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Monetisation &amp; VIP</h1>
+        <p>vip.component.html + coin-economy-dashboard.component.html</p>
+      </div>
+      <div class="toggle" id="toggle">
+        <button id="btn-light" class="active">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="frames">
+      <div class="frame-col">
+        <span class="frame-label">VIP plans</span>
+        <div class="phone">
+          <section class="vip-hero">
+            <h1 class="display">Go further with VIP</h1>
+            <p>Unlock unlimited translation, video calls and priority matching.</p>
+            <div class="hero-btn-row">
+              <button class="btn-primary">See plans</button>
+              <button class="btn-secondary">Start free</button>
+            </div>
+          </section>
+
+          <section class="plans-section">
+            <h2>Premium plans</h2>
+            <p class="sub">Pick the plan that fits how you practise</p>
+            <div class="plan-cards">
+              <div class="plan-card">
+                <h3>Free</h3>
+                <p class="plan-price">0 UKP / $0</p>
+                <p class="plan-billed">Billed monthly</p>
+                <ul class="plan-features">
+                  <li>5 translations / day</li>
+                  <li>Standard matching</li>
+                </ul>
+                <button class="btn-secondary plan-cta">Continue free</button>
+              </div>
+              <div class="plan-card popular">
+                <span class="plan-badge">Most popular</span>
+                <h3>Consumer</h3>
+                <p class="plan-price">8 UKP / $10</p>
+                <p class="plan-billed">Billed monthly</p>
+                <ul class="plan-features">
+                  <li>Unlimited translation</li>
+                  <li>Priority matching</li>
+                  <li>No ads</li>
+                </ul>
+                <button class="btn-primary plan-cta">Subscribe</button>
+              </div>
+              <div class="plan-card">
+                <h3>Pro</h3>
+                <p class="plan-price">16 UKP / $20</p>
+                <p class="plan-billed">Billed monthly</p>
+                <ul class="plan-features">
+                  <li>Everything in Consumer</li>
+                  <li>HD video rooms</li>
+                  <li>Advanced grammar check</li>
+                </ul>
+                <button class="btn-primary plan-cta">Subscribe</button>
+              </div>
+              <div class="plan-card">
+                <h3>Developer</h3>
+                <p class="plan-price">40 UKP / $50</p>
+                <p class="plan-billed">Billed monthly</p>
+                <ul class="plan-features">
+                  <li>Everything in Pro</li>
+                  <li>API access</li>
+                  <li>Dedicated support</li>
+                </ul>
+                <button class="btn-primary plan-cta">Subscribe</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="compare-section">
+            <h2>Compare all features</h2>
+            <div class="compare-scroll">
+              <table class="compare">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Free</th>
+                    <th>Consumer</th>
+                    <th>Pro</th>
+                    <th>Developer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Unlimited translation</td>
+                    <td class="no">−</td>
+                    <td class="yes">✓</td>
+                    <td class="yes">✓</td>
+                    <td class="yes">✓</td>
+                  </tr>
+                  <tr>
+                    <td>HD video rooms</td>
+                    <td class="no">−</td>
+                    <td class="no">−</td>
+                    <td class="yes">✓</td>
+                    <td class="yes">✓</td>
+                  </tr>
+                  <tr>
+                    <td>API access</td>
+                    <td class="no">−</td>
+                    <td class="no">−</td>
+                    <td class="no">−</td>
+                    <td class="yes">✓</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="faq-section">
+            <h2>Frequently asked</h2>
+            <div class="faq-item">
+              <div class="faq-q"><span>Can I cancel anytime?</span><span class="chev">▼</span></div>
+              <div class="faq-a">
+                Yes - subscriptions renew monthly and can be cancelled from My subscription at any
+                time.
+              </div>
+            </div>
+            <div class="faq-item">
+              <div class="faq-q"><span>Do prices include tax?</span></div>
+            </div>
+          </section>
+
+          <section class="cta-section">
+            <h2>Ready to upgrade?</h2>
+            <p>Join thousands of learners practising without limits.</p>
+            <div class="hero-btn-row">
+              <button class="btn-primary">View plans</button>
+              <button class="btn-secondary">Continue free</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="frame-col">
+        <span class="frame-label">Coin economy dashboard</span>
+        <div class="phone">
+          <section class="coin-hero">
+            <div class="coin-hero-top">
+              <div>
+                <h1 class="display">Coins</h1>
+                <p>Buy, earn and spend coins across HelloTalk</p>
+              </div>
+              <button class="tour-btn">Restart tour</button>
+            </div>
+            <div class="balance-card">
+              <div class="balance-row">
+                <span class="balance-coin">🪙</span>
+                <div>
+                  <span class="balance-label">Balance</span>
+                  <p class="balance-value">3,240</p>
+                </div>
+              </div>
+              <button class="checkin-btn">Daily check-in</button>
+            </div>
+          </section>
+
+          <section class="quick-section">
+            <h2>Quick actions</h2>
+            <div class="quick-grid">
+              <div class="quick-card">
+                <div class="ico">💳</div>
+                <h3>Buy coins</h3>
+                <p>Top up your balance</p>
+                <span class="quick-cta">Buy</span>
+              </div>
+              <div class="quick-card">
+                <div class="ico">🎁</div>
+                <h3>Send gift</h3>
+                <p>Surprise a chat partner</p>
+                <span class="quick-cta">Send</span>
+              </div>
+              <div class="quick-card">
+                <div class="ico">🏷️</div>
+                <h3>Sticker store</h3>
+                <p>Browse sticker packs</p>
+                <span class="quick-cta">Browse</span>
+              </div>
+              <div class="quick-card">
+                <div class="ico">👑</div>
+                <h3>VIP</h3>
+                <p>Unlock premium perks</p>
+                <span class="quick-cta">View VIP</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="activity-section">
+            <div class="activity-card">
+              <h3>Popular gifts</h3>
+              <span class="gift-chip">🌹 Rose <span class="cost">50</span></span>
+              <span class="gift-chip">☕ Coffee <span class="cost">120</span></span>
+              <span class="gift-chip">💎 Diamond <span class="cost">800</span></span>
+            </div>
+            <div class="activity-card">
+              <h3>Your sticker packs</h3>
+              <span class="sticker-chip owned">Language Buddies ✓</span>
+              <span class="sticker-chip locked">Neon City 300 🪙</span>
+              <span class="sticker-chip owned">Study Streaks ✓</span>
+            </div>
+            <div class="activity-card">
+              <h3>Transaction history</h3>
+              <div class="tx-row">
+                <div class="tx-ico">🎁</div>
+                <div class="tx-main">
+                  <p class="desc">Gift sent to Chén Wěi</p>
+                  <p class="type">Gift sent</p>
+                </div>
+                <span class="tx-amt neg">−50 🪙</span>
+              </div>
+              <div class="tx-row">
+                <div class="tx-ico">📅</div>
+                <div class="tx-main">
+                  <p class="desc">Daily check-in reward</p>
+                  <p class="type">Daily check-in</p>
+                </div>
+                <span class="tx-amt pos">+20 🪙</span>
+              </div>
+              <div class="tx-row">
+                <div class="tx-ico">💳</div>
+                <div class="tx-main">
+                  <p class="desc">Coin pack purchase</p>
+                  <p class="type">Purchase</p>
+                </div>
+                <span class="tx-amt neg">−500 🪙</span>
+              </div>
+              <div class="tx-row">
+                <div class="tx-ico">🎁</div>
+                <div class="tx-main">
+                  <p class="desc">Gift received from Sofia Almeida</p>
+                  <p class="type">Gift received</p>
+                </div>
+                <span class="tx-amt pos">+120 🪙</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <p class="caption">
+      VIP mirrors <code>vip.component.html</code> section-for-section (hero, plan cards, feature
+      comparison table, FAQ accordion, closing CTA), collapsed to the mobile single-column layout
+      the real page falls back to below its <code>md:</code> breakpoint; the comparison table is
+      trimmed to 3 representative feature rows and the FAQ to 2 items rather than the full set. Coin
+      economy mirrors <code>coin-economy-dashboard.component.html</code>'s gold-gradient balance
+      hero (the <code>vip</code> token's flagship usage), quick-actions grid trimmed from 6 actions
+      to the 4 most representative, and the gift/sticker/transaction activity panels with a handful
+      of sample rows each. Omitted from both: the guided-tour trigger's actual overlay, and the
+      skeleton-loading states shown before data arrives.
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>
