@@ -182,7 +182,9 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_ts_moderation_actions_total');
       expect(metrics).toContain('hellotalk_ts_dating_risk_score');
       expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
-      expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
+      expect(metrics).toContain(
+        'hellotalk_ts_moderation_queue_latency_seconds',
+      );
     });
   });
 
@@ -248,7 +250,9 @@ describe('MetricsService', () => {
     });
 
     it('should set daily active readers gauge', () => {
-      expect(() => service.setReadingEngineDailyActiveReaders(128)).not.toThrow();
+      expect(() =>
+        service.setReadingEngineDailyActiveReaders(128),
+      ).not.toThrow();
     });
 
     it('should include reading engine metrics in getMetrics output', async () => {
@@ -261,13 +265,190 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_reading_engine_sessions_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_requests_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_errors_total');
-      expect(metrics).toContain('hellotalk_reading_engine_flashcard_saves_total');
-      expect(metrics).toContain('hellotalk_reading_engine_daily_active_readers');
-      expect(metrics).toContain('hellotalk_reading_engine_session_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_words_looked_up_total');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_flashcard_saves_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_daily_active_readers',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_session_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_words_looked_up_total',
+      );
       expect(metrics).toContain('hellotalk_reading_engine_words_parsed_total');
-      expect(metrics).toContain('hellotalk_reading_engine_tokenisation_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_ai_request_duration_seconds');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_tokenisation_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_ai_request_duration_seconds',
+      );
+    });
+  });
+
+  describe('Matchmaking metrics', () => {
+    it('should record matchmaking recommendations generated', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsGenerated(
+          'interest',
+          'getRecommendations',
+          10,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking recommendations per request', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsPerRequest('interest', 8),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking fallback tier used', () => {
+      expect(() =>
+        service.recordMatchmakingFallbackTierUsed(
+          'interest',
+          'language_exchange',
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking empty results', () => {
+      expect(() =>
+        service.recordMatchmakingEmptyResults('getRecommendations'),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getRecommendations',
+          'success',
+          0.35,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration (error)', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'error',
+          2.1,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking daily cache miss', () => {
+      expect(() =>
+        service.recordMatchmakingDailyCacheMiss('redis_unavailable'),
+      ).not.toThrow();
+    });
+
+    it('should set matchmaking tier success rate', () => {
+      expect(() => service.setMatchmakingTierSuccessRate(0.72)).not.toThrow();
+    });
+
+    it('should include matchmaking metrics in getMetrics output', async () => {
+      service.recordMatchmakingRecommendationsGenerated(
+        'interest',
+        'getRecommendations',
+        10,
+      );
+      service.recordMatchmakingRecommendationsPerRequest('interest', 10);
+      service.recordMatchmakingFallbackTierUsed(
+        'interest',
+        'language_exchange',
+      );
+      service.recordMatchmakingEmptyResults('getRecommendations');
+      service.recordMatchmakingRequestDuration(
+        'getRecommendations',
+        'success',
+        0.5,
+      );
+      service.recordMatchmakingDailyCacheMiss('empty_cache');
+      service.setMatchmakingTierSuccessRate(0.65);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_generated_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_per_request',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_fallback_tier_used_total',
+      );
+      expect(metrics).toContain('hellotalk_matchmaking_empty_results_total');
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_request_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_cache_misses_total',
+      );
+      expect(metrics).toContain('hellotalk_matchmaking_tier_success_rate');
+    });
+  });
+
+  describe('Escrow metrics', () => {
+    it('should record escrow created', () => {
+      expect(() => service.recordEscrowCreated(100)).not.toThrow();
+    });
+
+    it('should record escrow released', () => {
+      expect(() => service.recordEscrowReleased(50)).not.toThrow();
+    });
+
+    it('should record escrow refunded', () => {
+      expect(() => service.recordEscrowRefunded(75, 'manual')).not.toThrow();
+    });
+
+    it('should record escrow refunded with default reason', () => {
+      expect(() => service.recordEscrowRefunded(75)).not.toThrow();
+    });
+
+    it('should record escrow cancelled', () => {
+      expect(() => service.recordEscrowCancelled(30)).not.toThrow();
+    });
+
+    it('should record escrow auto-refunded', () => {
+      expect(() => service.recordEscrowAutoRefunded(200)).not.toThrow();
+    });
+
+    it('should record degraded operation', () => {
+      expect(() => service.recordEscrowDegradedOperation()).not.toThrow();
+    });
+
+    it('should set escrow degraded queue size', () => {
+      expect(() => service.setEscrowDegradedQueueSize(42)).not.toThrow();
+    });
+
+    it('should set escrow stale held count', () => {
+      expect(() => service.setEscrowStaleHeldCount(5)).not.toThrow();
+    });
+
+    it('should include escrow metrics in getMetrics output', async () => {
+      service.recordEscrowCreated(100);
+      service.recordEscrowReleased(50);
+      service.recordEscrowRefunded(25, 'manual');
+      service.recordEscrowCancelled(10);
+      service.recordEscrowAutoRefunded(30);
+      service.recordEscrowDegradedOperation();
+      service.setEscrowDegradedQueueSize(3);
+      service.setEscrowStaleHeldCount(3);
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_escrow_transactions_created_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_released_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_refunded_total');
+      expect(metrics).toContain(
+        'hellotalk_escrow_transactions_cancelled_total',
+      );
+      expect(metrics).toContain('hellotalk_escrow_total_held');
+      expect(metrics).toContain('hellotalk_escrow_total_coins_held');
+      expect(metrics).toContain('hellotalk_escrow_amount_per_transaction');
+      expect(metrics).toContain('hellotalk_escrow_stale_held_count');
+      expect(metrics).toContain('hellotalk_escrow_auto_refund_total');
+      expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
 });

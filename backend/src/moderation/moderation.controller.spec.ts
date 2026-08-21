@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationController } from './moderation.controller';
 import { ModerationService } from './moderation.service';
@@ -14,17 +15,17 @@ describe('ModerationController', () => {
         {
           provide: ModerationService,
           useValue: {
-            getItems: jest.fn(),
-            reportUser: jest.fn(),
-            approveItem: jest.fn(),
-            rejectItem: jest.fn(),
-            analyseUserForDatingBehaviour: jest.fn(),
+            getItems: vi.fn(),
+            reportUser: vi.fn(),
+            approveItem: vi.fn(),
+            rejectItem: vi.fn(),
+            analyseUserForDatingBehaviour: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<ModerationController>(ModerationController);
@@ -32,7 +33,7 @@ describe('ModerationController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -53,24 +54,28 @@ describe('ModerationController', () => {
           reportedMomentId: null,
         },
       ];
-      (moderationService.getItems as jest.Mock).mockResolvedValue(items);
+      (moderationService.getItems as Mock).mockResolvedValue(items);
 
       const result = await controller.getItems('profile', 'pending');
 
       expect(moderationService.getItems).toHaveBeenCalledWith(
         'profile',
         'pending',
+        undefined,
+        undefined,
       );
       expect(result).toEqual(items);
     });
 
     it('should call service with type only when status is undefined', async () => {
-      (moderationService.getItems as jest.Mock).mockResolvedValue([]);
+      (moderationService.getItems as Mock).mockResolvedValue([]);
 
       await controller.getItems('moment');
 
       expect(moderationService.getItems).toHaveBeenCalledWith(
         'moment',
+        undefined,
+        undefined,
         undefined,
       );
     });
@@ -79,7 +84,7 @@ describe('ModerationController', () => {
   describe('reportUser', () => {
     it('should call service reportUser with reporter id and dto', async () => {
       const dto = { reportedUserId: 'bad-user', reasonCategory: 'spam' };
-      (moderationService.reportUser as jest.Mock).mockResolvedValue({
+      (moderationService.reportUser as Mock).mockResolvedValue({
         id: 'report-1',
       });
 
@@ -99,7 +104,7 @@ describe('ModerationController', () => {
   describe('approve', () => {
     it('should call service approveItem with dto', async () => {
       const dto = { itemId: 'report-1', type: 'profile' };
-      (moderationService.approveItem as jest.Mock).mockResolvedValue({
+      (moderationService.approveItem as Mock).mockResolvedValue({
         success: true,
       });
 
@@ -113,7 +118,7 @@ describe('ModerationController', () => {
   describe('reject', () => {
     it('should call service rejectItem with dto', async () => {
       const dto = { itemId: 'report-1', type: 'moment', reason: 'violation' };
-      (moderationService.rejectItem as jest.Mock).mockResolvedValue({
+      (moderationService.rejectItem as Mock).mockResolvedValue({
         success: true,
       });
 
@@ -128,7 +133,7 @@ describe('ModerationController', () => {
     it('should call service analyseUserForDatingBehaviour with userId', async () => {
       const analysis = { riskScore: 30, flags: ['love'] };
       (
-        moderationService.analyseUserForDatingBehaviour as jest.Mock
+        moderationService.analyseUserForDatingBehaviour as Mock
       ).mockResolvedValue(analysis);
 
       const result = await controller.analyseUser('user-1');

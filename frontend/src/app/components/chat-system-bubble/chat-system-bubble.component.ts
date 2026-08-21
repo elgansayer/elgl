@@ -11,39 +11,39 @@ interface SystemEventConfig {
 const EVENT_CONFIGS: Record<string, SystemEventConfig> = {
   profileUpdated: {
     icon: '\ud83d\udc64',
-    bgClass: 'bg-blue-500/10',
-    borderClass: 'border-blue-500/30',
-    textClass: 'text-blue-400',
+    bgClass: 'bg-secondary/10',
+    borderClass: 'border-secondary/30',
+    textClass: 'text-secondary',
   },
   missedCall: {
     icon: '\ud83d\udcde',
-    bgClass: 'bg-red-500/10',
-    borderClass: 'border-red-500/30',
-    textClass: 'text-red-400',
+    bgClass: 'bg-danger/10',
+    borderClass: 'border-danger/30',
+    textClass: 'text-danger',
   },
   groupRenamed: {
     icon: '\u270f\ufe0f',
-    bgClass: 'bg-amber-500/10',
-    borderClass: 'border-amber-500/30',
-    textClass: 'text-amber-400',
+    bgClass: 'bg-warning/10',
+    borderClass: 'border-warning/30',
+    textClass: 'text-warning',
   },
   memberAdded: {
     icon: '\ud83d\udc4b',
-    bgClass: 'bg-emerald-500/10',
-    borderClass: 'border-emerald-500/30',
-    textClass: 'text-emerald-400',
+    bgClass: 'bg-success/10',
+    borderClass: 'border-success/30',
+    textClass: 'text-success',
   },
   memberRemoved: {
     icon: '\ud83d\udeaa',
-    bgClass: 'bg-slate-500/10',
-    borderClass: 'border-slate-500/30',
-    textClass: 'text-slate-400',
+    bgClass: 'bg-surface-200',
+    borderClass: 'border-surface-100',
+    textClass: 'text-text-secondary',
   },
   announcement: {
     icon: '\ud83d\udce2',
-    bgClass: 'bg-purple-500/10',
-    borderClass: 'border-purple-500/30',
-    textClass: 'text-purple-400',
+    bgClass: 'bg-accent/10',
+    borderClass: 'border-accent/30',
+    textClass: 'text-accent',
   },
 };
 
@@ -78,5 +78,3 @@ export class ChatSystemBubbleComponent {
     () => EVENT_CONFIGS[this.eventType()] ?? DEFAULT_CONFIG,
   );
 }
-
-

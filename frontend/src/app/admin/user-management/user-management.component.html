@@ -2,7 +2,34 @@
   <h1 class="text-2xl font-bold mb-6 text-start">{{ 'admin.userManagement.title' | t }}</h1>
 
   @if (isLoading()) {
-    <div class="text-start text-gray-500">{{ 'admin.userManagement.loading' | t }}</div>
+    <div class="space-y-3">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <app-card customClass="flex items-center gap-3 p-3">
+          <app-skeleton-loader height="40px" width="40px" variant="circle" />
+          <div class="flex-1 space-y-2">
+            <app-skeleton-loader height="14px" width="40%" variant="text" />
+            <app-skeleton-loader height="10px" width="25%" variant="text" />
+          </div>
+          <div class="flex gap-2">
+            <app-skeleton-loader height="28px" width="80px" borderRadius="8px" />
+          </div>
+        </app-card>
+      }
+    </div>
+  } @else if (loadError()) {
+    <app-empty-state
+      icon="⚠️"
+      [title]="'admin.userManagement.loadError' | t"
+      [description]="'admin.userManagement.loadErrorDesc' | t"
+      [actionLabel]="'common.retry' | t"
+      (actionClicked)="loadUsers()"
+    />
+  } @else if (users().length === 0) {
+    <app-empty-state
+      icon="👥"
+      [title]="'admin.userManagement.emptyTitle' | t"
+      [description]="'admin.userManagement.emptyDesc' | t"
+    />
   } @else {
     <div class="overflow-x-auto rounded-lg shadow">
       <table class="min-w-full divide-y divide-surface-100">
@@ -52,7 +79,8 @@
               <td class="px-4 py-3 text-start">
                 <div class="flex items-center gap-3">
                   <div class="flex-shrink-0 h-10 w-10">
-                    <img loading="lazy"
+                    <img
+                      loading="lazy"
                       class="h-10 w-10 rounded-full object-cover"
                       [src]="user.avatar_url || 'assets/default-avatar.png'"
                       alt=""
@@ -60,14 +88,16 @@
                   </div>
                   <div>
                     <div class="text-sm font-medium text-text-primary">
-                      {{ user.display_name || ('common.unknownUser' | t) }}
+                      {{ user.display_name || ('common.unknownUser' | t) | sanitiseHtml }}
                     </div>
-                    <div class="text-xs text-text-secondary truncate max-w-[8rem]">{{ user.id }}</div>
+                    <div class="text-xs text-text-secondary truncate max-w-[8rem]">
+                      {{ user.id }}
+                    </div>
                   </div>
                 </div>
               </td>
               <td class="px-4 py-3 text-start text-sm text-text-secondary hidden sm:table-cell">
-                {{ user.native_languages.join(', ') }}
+                {{ user.native_languages.join(', ') | sanitiseHtml }}
               </td>
               <td class="px-4 py-3 text-start text-sm text-text-secondary">
                 {{ user.coins_balance }}
@@ -78,8 +108,8 @@
               <td class="px-4 py-3 text-start">
                 <span
                   class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                  [class.bg-green-600/20]="user.is_vip"
-                  [class.text-green-600]="user.is_vip"
+                  [class.bg-vip/20]="user.is_vip"
+                  [class.text-vip]="user.is_vip"
                   [class.bg-surface-100]="!user.is_vip"
                   [class.text-text-secondary]="!user.is_vip"
                 >
@@ -88,9 +118,11 @@
               </td>
               <td class="px-4 py-3 text-end text-sm font-medium">
                 <button
+                  hlmBtn
                   (click)="toggleVip(user)"
                   class="text-primary hover:text-primary/80 transition-colors"
-                 [attr.aria-label]="'admin.userManagement.action.toggleVip' | t">
+                  [attr.aria-label]="'admin.userManagement.action.toggleVip' | t"
+                >
                   {{ 'admin.userManagement.action.toggleVip' | t }}
                 </button>
               </td>

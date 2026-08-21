@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
@@ -23,26 +24,27 @@ export interface LanguageQuestion {
 
 @Component({
   selector: 'app-language-questions',
-  imports: [TranslatePipe, UpperCasePipe],
+  imports: [HlmButton, TranslatePipe, UpperCasePipe],
   template: `
     <section class="space-y-4" role="region" aria-label="{{ 'moments.questions' | t }}">
-      <h2 class="text-lg font-bold text-gray-200">{{ 'moments.questions' | t }}</h2>
+      <h2 class="text-lg font-bold text-text-primary">{{ 'moments.questions' | t }}</h2>
       @for (q of questions(); track q.id) {
         <article class="bg-surface rounded-xl p-4 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-gray-100">{{ q.target_language | uppercase }}</span>
-            <span class="text-sm text-gray-400 ms-auto">
+            <span class="font-semibold text-text-primary">{{ q.target_language | uppercase }}</span>
+            <span class="text-sm text-text-muted ms-auto">
               @if (q.correct_answers_count !== null && q.total_answers_count !== null) {
                 {{ q.correct_answers_count }} / {{ q.total_answers_count }}
               }
             </span>
           </div>
-          <p class="text-gray-200">{{ q.question_text }}</p>
+          <p class="text-text-primary">{{ q.question_text }}</p>
           <div class="grid grid-cols-1 gap-2">
             @for (opt of q.question_options; track opt) {
               <button
+                hlmBtn
                 type="button"
-                class="text-start px-3 py-2 rounded border border-surface-hover bg-surface-alt text-gray-200 hover:bg-surface-hover transition"
+                class="text-start px-3 py-2 rounded border border-surface-hover bg-surface-alt text-text-primary hover:bg-surface-hover transition"
                 (click)="submitAnswer(q.id, opt)"
               >
                 {{ opt }}
@@ -51,7 +53,7 @@ export interface LanguageQuestion {
           </div>
         </article>
       } @empty {
-        <p class="text-gray-400">{{ 'moments.noQuestions' | t }}</p>
+        <p class="text-text-muted">{{ 'moments.noQuestions' | t }}</p>
       }
     </section>
   `,
@@ -83,7 +85,9 @@ export class LanguageQuestionsComponent {
   protected async submitAnswer(questionId: string, answer: string): Promise<void> {
     try {
       await firstValueFrom(
-        this.http.post<{ correct: boolean }>(`${this.apiUrl}/moments/${questionId}/answer`, { answer }),
+        this.http.post<{ correct: boolean }>(`${this.apiUrl}/moments/${questionId}/answer`, {
+          answer,
+        }),
       );
       await this.questionsResource.reload();
     } catch {

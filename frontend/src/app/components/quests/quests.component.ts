@@ -1,11 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { QuestStore } from '../../services/quests.store';
 
 @Component({
   selector: 'app-quests',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="p-4 bg-surface text-start" role="region" aria-label="{{ 'quests.title' | t }}">
@@ -53,10 +52,13 @@ import { QuestStore } from '../../services/quests.store';
     </div>
   `,
 })
-export class QuestsComponent implements OnInit {
+export class QuestsComponent {
   store = inject(QuestStore);
 
-  ngOnInit(): void {
-    this.store.fetchQuests();
-  }
+  // Use resource() for initial data loading instead of ngOnInit()
+  private questsResource = resource({
+    loader: async () => {
+      await this.store.fetchQuests();
+    },
+  });
 }
