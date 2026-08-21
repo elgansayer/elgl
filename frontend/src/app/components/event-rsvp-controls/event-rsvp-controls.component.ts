@@ -23,7 +23,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </button>
         </div>
       } @else {
-        <div class="flex max-w-full flex-wrap gap-2">
+        <div
+          role="group"
+          [attr.aria-label]="eventTitle"
+          class="flex max-w-full flex-wrap gap-2"
+        >
           <button
             hlmBtn
             type="button"
