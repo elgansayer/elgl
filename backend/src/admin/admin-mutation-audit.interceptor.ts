@@ -12,10 +12,9 @@ import { AdminAuditService } from './admin-audit.service';
 import { AdminCapability } from './admin-capabilities';
 import { ADMIN_CAPABILITIES_METADATA_KEY } from './decorators/require-admin-capabilities.decorator';
 
-interface AdminMutationRequest extends Request {
+type AdminMutationRequest = Request & {
   user?: { id?: string; sub?: string };
-  route?: { path?: string };
-}
+};
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -52,9 +51,15 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     const requestId = request.headers['x-request-id'];
     const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
     const routePath = request.route?.path ?? request.path;
-    const targetId = request.params?.id ?? request.params?.blockId;
-    const targetType = request.params?.blockId ? 'block' : targetId ? 'user' : 'admin-resource';
-    const action = `${method.toLowerCase()} ${request.baseUrl}${routePath}`.slice(0, 160);
+    const rawTargetId = request.params?.id ?? request.params?.blockId;
+    const targetId = Array.isArray(rawTargetId) ? rawTargetId[0] : rawTargetId;
+    const targetType = request.params?.blockId
+      ? 'block'
+      : targetId
+        ? 'user'
+        : 'admin-resource';
+    const action =
+      `${method.toLowerCase()} ${request.baseUrl}${routePath}`.slice(0, 160);
 
     const record = (outcome: 'success' | 'failed') =>
       this.audit.record({
