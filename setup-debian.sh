@@ -13,6 +13,10 @@ FACTORY_CONFIG=/etc/hellotalk-factory
 # account with its own credential set.
 FACTORY_USER=dev
 FACTORY_HOME=/home/dev
+# Optional secondary data volume. When mounted, worker image storage is
+# relocated there to keep the root disk from filling with permanent image
+# layers; see the Podman storage relocation block below.
+FACTORY_SECONDARY_VOLUME=/mnt/HC_Volume_106574422
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this bootstrap as root. It never stores or requests a sudo password.' >&2
@@ -68,6 +72,29 @@ install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 \
   "$FACTORY_STATE" "$FACTORY_STATE/profiles" \
   "$FACTORY_STATE/worktrees" "$FACTORY_STATE/recovery" \
   "$FACTORY_STATE/conversations" "$FACTORY_LOG"
+
+# Worker image builds accumulate rootless Podman graph-storage layers
+# permanently (unlike the transient build-context checkout). Relocating that
+# storage off the root disk and onto the secondary volume, when one is
+# present, keeps repeated builds from tightening root disk headroom over
+# time. Podman is left on its default root-disk location when no secondary
+# volume is mounted.
+if [ -d "$FACTORY_SECONDARY_VOLUME" ] && mountpoint -q "$FACTORY_SECONDARY_VOLUME"; then
+  podman_storage="$FACTORY_SECONDARY_VOLUME/podman-storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$podman_storage"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0755 "$FACTORY_HOME/.config/containers"
+  podman_storage_conf="$FACTORY_HOME/.config/containers/storage.conf"
+  if [ ! -f "$podman_storage_conf" ]; then
+    cat > "$podman_storage_conf" <<EOF
+[storage]
+driver = "overlay"
+graphroot = "$podman_storage"
+
+[storage.options]
+EOF
+    chown "$FACTORY_USER:$FACTORY_USER" "$podman_storage_conf"
+  fi
+fi
 install -d -o root -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT" "$FACTORY_CONFIG"
 
 factory_environment_created=false
