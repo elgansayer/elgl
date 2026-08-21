@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  BrowserGeolocationError,
-  BrowserGeolocationService,
-} from './browser-geolocation.service';
+import { BrowserGeolocationService } from './browser-geolocation.service';
 
 describe('BrowserGeolocationService', () => {
   const service = new BrowserGeolocationService();
@@ -59,7 +56,7 @@ describe('BrowserGeolocationService', () => {
     vi.stubGlobal('navigator', { geolocation: { getCurrentPosition } });
 
     await expect(service.getCurrentPosition()).rejects.toEqual(
-      expect.objectContaining<Partial<BrowserGeolocationError>>({ code: expected }),
+      expect.objectContaining({ code: expected }),
     );
   });
 
