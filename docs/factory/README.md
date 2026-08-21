@@ -288,7 +288,7 @@ sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
 sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
-Authenticate each CLI normally as `dev` — the same login you'd use interactively. Do not place provider tokens in
+Authenticate each CLI normally as `dev` - the same login you'd use interactively. Do not place provider tokens in
 `factory.env` when the adapter is configured for subscription auth. Common API-key variables are stripped from
 direct subscription-provider environments so they cannot silently switch to PAYG authentication.
 
