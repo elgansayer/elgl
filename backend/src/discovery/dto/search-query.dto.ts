@@ -1,12 +1,15 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsDefined,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
   Matches,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -18,7 +21,10 @@ export class SearchQueryDto {
     maximum: 90,
     example: 51.5074,
   })
-  @IsOptional()
+  @ValidateIf(
+    (object: SearchQueryDto) => object.latitude !== undefined || object.longitude !== undefined,
+  )
+  @IsDefined({ message: 'latitude is required when longitude is provided' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -34,7 +40,10 @@ export class SearchQueryDto {
     maximum: 180,
     example: -0.1278,
   })
-  @IsOptional()
+  @ValidateIf(
+    (object: SearchQueryDto) => object.latitude !== undefined || object.longitude !== undefined,
+  )
+  @IsDefined({ message: 'longitude is required when latitude is provided' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -45,9 +54,9 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Search radius in metres (1000 - 20000000). Defaults to 50000 (50 km). Used by the PostGIS ST_DWithin RPC for proximity filtering.',
+      'Search radius in metres (1000 - 250000). Defaults to 50000 (50 km). Nearby discovery is intentionally bounded to 250 km.',
     minimum: 1000,
-    maximum: 20000000,
+    maximum: 250000,
     default: 50000,
     example: 10000,
   })
@@ -57,7 +66,7 @@ export class SearchQueryDto {
   )
   @IsNumber()
   @Min(1000)
-  @Max(20000000)
+  @Max(250000)
   radius_metres?: number = 50000;
 
   @ApiPropertyOptional({
@@ -162,13 +171,14 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Sort order. "best_match" promotes Partner of the Week first, then by study_streak_days and correction_ratio. "online_now" sorts by last_active_at. "nearest" sorts by distance. "newest" sorts by created_at.',
+      'Sort order. "best_match" promotes Partner of the Week first, then by study_streak_days and correction_ratio. "online_now" sorts by last_active_at. "nearest" sorts by database-computed distance. "newest" sorts by created_at.',
     enum: ['best_match', 'online_now', 'nearest', 'newest'],
     default: 'best_match',
     example: 'best_match',
   })
   @IsOptional()
   @IsString()
+  @IsIn(['best_match', 'online_now', 'nearest', 'newest'])
   sort?: string;
 
   @ApiPropertyOptional({
