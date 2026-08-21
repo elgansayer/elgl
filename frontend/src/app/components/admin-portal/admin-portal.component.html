@@ -1,11 +1,16 @@
 <div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6" role="main" aria-labelledby="admin-title">
-  <app-admin-offline-banner />
   <h1 id="admin-title" class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
   <p class="text-sm text-text-secondary mb-4">{{ 'admin.subtitle' | t }}</p>
 
-  <form class="flex gap-2 mb-4" (submit)="$event.preventDefault(); runSearch()" role="search" [attr.aria-label]="'admin.searchLabel' | t">
+  <form
+    class="flex gap-2 mb-4"
+    (submit)="$event.preventDefault(); runSearch()"
+    role="search"
+    [attr.aria-label]="'admin.searchLabel' | t"
+  >
     <label class="sr-only" for="admin-user-search">{{ 'admin.searchLabel' | t }}</label>
     <input
+      hlmInput
       id="admin-user-search"
       type="search"
       class="flex-1 rounded-lg border border-surface-100 bg-surface-200 ps-3 pe-3 pt-2 pb-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -13,154 +18,201 @@
       (input)="onSearchInput($any($event.target).value)"
       [attr.placeholder]="'admin.searchPlaceholder' | t"
     />
-    <button type="submit" class="app-pill bg-primary text-white px-4" [attr.aria-label]="'admin.searchBtn' | t">
+    <button
+      hlmBtn
+      type="submit"
+      class="app-pill bg-primary text-on-fill px-4"
+      [attr.aria-label]="'admin.searchBtn' | t"
+    >
       {{ 'admin.searchBtn' | t }}
     </button>
   </form>
 
   <div aria-live="polite">
-  @if (errorMessage()) {
-    <p role="alert" class="text-rose-500 text-sm mb-4">{{ errorMessage() }}</p>
-  }
-
-  @if (isLoading()) {
-    <p class="text-text-secondary" aria-busy="true">{{ 'admin.loading' | t }}</p>
-  } @else if (users().length === 0) {
-    <p class="text-text-secondary">{{ 'admin.empty' | t }}</p>
-  } @else {
-    <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
-      <div role="rowgroup">
-      @for (user of users(); track user.id) {
-        <app-card variant="default" padding="md">
-          <div class="flex flex-wrap items-center gap-3" role="row">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden" role="cell">
-              @if (user.avatar_url) {
-                <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
-              } @else {
-                <div
-                  class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
-                  aria-hidden="true"
-                >
-                  {{ displayNameFor(user).charAt(0) }}
-                </div>
-              }
+    @if (errorMessage()) {
+      <app-empty-state
+        icon="⚠️"
+        [title]="'admin.loadError' | t"
+        [description]="'admin.loadErrorDesc' | t"
+        [actionLabel]="'common.retry' | t"
+        (actionClicked)="loadUsers()"
+      />
+    } @else if (isLoading()) {
+      <div class="space-y-3">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <app-card customClass="p-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <app-skeleton-loader [height]="'42px'" [width]="'42px'" [variant]="'circle'" />
+              <div class="flex-1 space-y-2">
+                <app-skeleton-loader [height]="'14px'" [width]="'50%'" [variant]="'text'" />
+                <app-skeleton-loader [height]="'11px'" [width]="'35%'" [variant]="'text'" />
+              </div>
+              <app-skeleton-loader [height]="'28px'" [width]="'60px'" [borderRadius]="'12px'" />
+              <app-skeleton-loader [height]="'28px'" [width]="'60px'" [borderRadius]="'12px'" />
             </div>
-
-            <div class="flex-1 min-w-[10rem]" role="cell">
-              <p class="font-semibold">{{ displayNameFor(user) | sanitiseHtml }}</p>
-              <p class="text-xs text-text-secondary">
-                {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
-              </p>
-            </div>
-
-            <div class="flex items-center gap-2" role="cell">
-              @if (user.is_admin) {
-                <app-pill colour="info" size="sm" [label]="'admin.badgeAdmin' | t" />
-              }
-              <app-pill
-                [colour]="user.is_vip ? 'success' : 'neutral'"
-                size="sm"
-                [label]="user.is_vip ? ('admin.badgeVip' | t) : ('admin.badgeFree' | t)"
-              />
-              <app-pill
-                colour="warning"
-                size="sm"
-                [label]="'admin.coinsBadge' | t: { coins: user.coins_balance }"
-              />
-            </div>
-
-            <button
-              type="button"
-              class="app-pill border border-surface-100"
-              [disabled]="vipUpdatingId() === user.id"
-              [attr.aria-label]="
-                (user.is_vip ? 'admin.revokeVipAria' : 'admin.grantVipAria')
-                  | t: { name: displayNameFor(user) }
-              "
-              (click)="toggleVip(user)"
-            >
-              {{ (user.is_vip ? 'admin.revokeVipBtn' : 'admin.grantVipBtn') | t }}
-            </button>
-
-            <button
-              type="button"
-              class="app-pill bg-amber-600 text-white border-amber-600"
-              [disabled]="moderationActingId() === user.id"
-              [attr.aria-label]="'admin.warnUserAria' | t: { name: displayNameFor(user) }"
-              (click)="handleWarn(user)"
-            >
-              {{ 'admin.warnBtn' | t }}
-            </button>
-
-            <button
-              type="button"
-              class="app-pill bg-rose-600 text-white border-rose-600"
-              [disabled]="moderationActingId() === user.id"
-              [attr.aria-label]="'admin.banUserAria' | t: { name: displayNameFor(user) }"
-              (click)="handleBan(user)"
-            >
-              {{ 'admin.banBtn' | t }}
-            </button>
-          </div>
-
-          <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">
-            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="$any($event.target).open ? 'true' : 'false'">
-              {{ 'admin.viewLoginHistory' | t }}
-            </summary>
-
-            <div class="mt-2 ps-4 border-s border-surface-100">
-              @if (loginHistoryLoadingId() === user.id) {
-                <p class="text-xs text-text-secondary" aria-busy="true">{{ 'admin.loginHistoryLoading' | t }}</p>
-              } @else if (!loginHistoryByUser()[user.id] || loginHistoryByUser()[user.id].length === 0) {
-                <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryEmpty' | t }}</p>
-              } @else {
-                <ul class="space-y-1" role="list">
-                  @for (entry of loginHistoryByUser()[user.id]; track entry.id) {
-                    <li class="text-xs text-text-secondary">
-                      {{ entry.created_at | date: 'medium' }}
-                      @if (entry.ip_address) {
-                        &middot; {{ entry.ip_address | sanitiseHtml }}
-                      }
-                      @if (entry.user_agent) {
-                        &middot; {{ entry.user_agent | sanitiseHtml }}
-                      }
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          </details>
-        </app-card>
-      }
+          </app-card>
+        }
       </div>
-    </div>
+    } @else if (users().length === 0) {
+      <app-empty-state
+        icon="👥"
+        [title]="'admin.emptyTitle' | t"
+        [description]="'admin.emptyDesc' | t"
+      />
+    } @else {
+      <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
+        <div role="rowgroup">
+          @for (user of users(); track user.id) {
+            <app-card variant="default" padding="md">
+              <div class="flex flex-wrap items-center gap-3" role="row">
+                <div
+                  class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden"
+                  role="cell"
+                >
+                  @if (user.avatar_url) {
+                    <img
+                      loading="lazy"
+                      [src]="user.avatar_url"
+                      alt=""
+                      class="w-full h-full object-cover"
+                    />
+                  } @else {
+                    <div
+                      class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
+                      aria-hidden="true"
+                    >
+                      {{ displayNameFor(user).charAt(0) }}
+                    </div>
+                  }
+                </div>
 
-    <nav
-      class="flex items-center justify-between mt-4"
-      [attr.aria-label]="'admin.paginationAria' | t"
-    >
-      <button
-        type="button"
-        class="app-pill border border-surface-100"
-        [disabled]="page() <= 1"
-        (click)="goToPage(-1)"
-        [attr.aria-label]="'admin.prevPage' | t"
+                <div class="flex-1 min-w-[10rem]" role="cell">
+                  <p class="font-semibold">{{ displayNameFor(user) }}</p>
+                  <p class="text-xs text-text-secondary">
+                    {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2" role="cell">
+                  @if (user.is_admin) {
+                    <app-pill colour="info" size="sm" [label]="'admin.badgeAdmin' | t" />
+                  }
+                  <app-pill
+                    [colour]="user.is_vip ? 'success' : 'neutral'"
+                    size="sm"
+                    [label]="user.is_vip ? ('admin.badgeVip' | t) : ('admin.badgeFree' | t)"
+                  />
+                  <app-pill
+                    colour="warning"
+                    size="sm"
+                    [label]="'admin.coinsBadge' | t: { coins: user.coins_balance }"
+                  />
+                </div>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  class="app-pill border border-surface-100"
+                  [disabled]="vipUpdatingId() === user.id"
+                  [attr.aria-label]="
+                    (user.is_vip ? 'admin.revokeVipAria' : 'admin.grantVipAria')
+                      | t: { name: displayNameFor(user) }
+                  "
+                  (click)="toggleVip(user)"
+                >
+                  {{ (user.is_vip ? 'admin.revokeVipBtn' : 'admin.grantVipBtn') | t }}
+                </button>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  class="app-pill bg-warning hover:bg-warning/90 text-on-fill border-warning"
+                  [disabled]="moderationActingId() === user.id"
+                  [attr.aria-label]="'admin.warnUserAria' | t: { name: displayNameFor(user) }"
+                  (click)="handleWarn(user)"
+                >
+                  {{ 'admin.warnBtn' | t }}
+                </button>
+
+                <button
+                  hlmBtn
+                  type="button"
+                  class="app-pill bg-danger hover:bg-danger/90 text-on-fill border-danger"
+                  [disabled]="moderationActingId() === user.id"
+                  [attr.aria-label]="'admin.banUserAria' | t: { name: displayNameFor(user) }"
+                  (click)="handleBan(user)"
+                >
+                  {{ 'admin.banBtn' | t }}
+                </button>
+
+                <details
+                  class="mt-3 w-full"
+                  (toggle)="onLoginHistoryToggle(user, $any($event.target).open)"
+                >
+                  <summary class="cursor-pointer text-sm text-primary select-none">
+                    {{ 'admin.viewLoginHistory' | t }}
+                  </summary>
+
+                  <div class="mt-2 ps-4 border-s border-surface-100">
+                    @if (loginHistoryLoadingId() === user.id) {
+                      <p class="text-xs text-text-secondary" aria-busy="true">
+                        {{ 'admin.loginHistoryLoading' | t }}
+                      </p>
+                    } @else if (
+                      !loginHistoryByUser()[user.id] || loginHistoryByUser()[user.id].length === 0
+                    ) {
+                      <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryEmpty' | t }}</p>
+                    } @else {
+                      <ul class="space-y-1" role="list">
+                        @for (entry of loginHistoryByUser()[user.id]; track entry.id) {
+                          <li class="text-xs text-text-secondary">
+                            {{ entry.created_at | date: 'medium' }}
+                            @if (entry.ip_address) {
+                              &middot; {{ entry.ip_address }}
+                            }
+                            @if (entry.user_agent) {
+                              &middot; {{ entry.user_agent }}
+                            }
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                </details>
+              </div>
+            </app-card>
+          }
+        </div>
+      </div>
+
+      <nav
+        class="flex items-center justify-between mt-4"
+        [attr.aria-label]="'admin.paginationAria' | t"
       >
-        {{ 'admin.prevPage' | t }}
-      </button>
-      <span class="text-sm text-text-secondary" role="status">
-        {{ 'admin.pageIndicator' | t: { page: page(), totalPages: totalPages() } }}
-      </span>
-      <button
-        type="button"
-        class="app-pill border border-surface-100"
-        [disabled]="page() >= totalPages()"
-        [attr.aria-label]="'admin.nextPage' | t"
-        (click)="goToPage(1)"
-      >
-        {{ 'admin.nextPage' | t }}
-      </button>
-    </nav>
-  }
+        <button
+          hlmBtn
+          type="button"
+          class="app-pill border border-surface-100"
+          [disabled]="page() <= 1"
+          (click)="goToPage(-1)"
+          [attr.aria-label]="'admin.prevPage' | t"
+        >
+          {{ 'admin.prevPage' | t }}
+        </button>
+        <span class="text-sm text-text-secondary" role="status">
+          {{ 'admin.pageIndicator' | t: { page: page(), totalPages: totalPages() } }}
+        </span>
+        <button
+          hlmBtn
+          type="button"
+          class="app-pill border border-surface-100"
+          [disabled]="page() >= totalPages()"
+          [attr.aria-label]="'admin.nextPage' | t"
+          (click)="goToPage(1)"
+        >
+          {{ 'admin.nextPage' | t }}
+        </button>
+      </nav>
+    }
   </div>
 </div>

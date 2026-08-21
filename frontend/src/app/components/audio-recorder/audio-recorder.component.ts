@@ -1,10 +1,12 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
   viewChild,
   Input,
   Output,
-  EventEmitter, OnDestroy,
+  EventEmitter,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -12,8 +14,7 @@ import { AudioIntroService } from '../../services/audio-intro.service';
 
 @Component({
   selector: 'app-audio-recorder',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   templateUrl: './audio-recorder.component.html',
   host: { class: 'block' },
 })
@@ -106,11 +107,10 @@ export class AudioRecorderComponent implements OnDestroy {
     this.uploading = true;
     this.error = '';
     try {
-      const { uploadUrl, mediaUrl } =
-        await this.audioIntroService.getPresignedUploadUrl(
-          `audio_intro_${Date.now()}.webm`,
-          blob.type,
-        );
+      const { uploadUrl, mediaUrl } = await this.audioIntroService.getPresignedUploadUrl(
+        `audio_intro_${Date.now()}.webm`,
+        blob.type,
+      );
 
       const uploadResp = await fetch(uploadUrl, {
         method: 'PUT',

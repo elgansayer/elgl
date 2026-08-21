@@ -38,7 +38,10 @@ export class DecksService {
       throw new Error(`Failed to create deck: ${msg}`);
     }
 
-    this.logger.info({ userId, deckId: response.data.id, deckName: dto.name }, 'Deck created');
+    this.logger.info(
+      { userId, deckId: response.data.id, deckName: dto.name },
+      'Deck created',
+    );
     this.metricsService.recordSrsDeckCreated();
     return response.data;
   }
@@ -137,10 +140,7 @@ export class DecksService {
     // Verify the deck belongs to the user
     const deck = await this.getDeck(userId, deckId);
     if (!deck) {
-      this.logger.warn(
-        { userId, deckId, flashcardId },
-        'Deck not found',
-      );
+      this.logger.warn({ userId, deckId, flashcardId }, 'Deck not found');
       throw new Error('Deck not found');
     }
 
@@ -166,7 +166,10 @@ export class DecksService {
 
     // Update card count
     await this.recalculateCardCount(supabase, deckId);
-    this.logger.debug({ userId, deckId, flashcardId }, 'Flashcard added to deck');
+    this.logger.debug(
+      { userId, deckId, flashcardId },
+      'Flashcard added to deck',
+    );
   }
 
   async removeFlashcardFromDeck(
@@ -178,10 +181,7 @@ export class DecksService {
 
     const deck = await this.getDeck(userId, deckId);
     if (!deck) {
-      this.logger.warn(
-        { userId, deckId, flashcardId },
-        'Deck not found',
-      );
+      this.logger.warn({ userId, deckId, flashcardId }, 'Deck not found');
       throw new Error('Deck not found');
     }
 
@@ -202,13 +202,20 @@ export class DecksService {
     }
 
     await this.recalculateCardCount(supabase, deckId);
-    this.logger.debug({ userId, deckId, flashcardId }, 'Flashcard removed from deck');
+    this.logger.debug(
+      { userId, deckId, flashcardId },
+      'Flashcard removed from deck',
+    );
   }
 
   async getDeckFlashcards(
     userId: string,
     deckId: string,
+    limit = 50,
+    offset = 0,
   ): Promise<{ id: string }[]> {
+    const safeLimit = Math.min(Math.max(1, limit), 200);
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
 
     const deck = await this.getDeck(userId, deckId);
@@ -218,6 +225,7 @@ export class DecksService {
       .from('deck_flashcards')
       .select('flashcard_id')
       .eq('deck_id', deckId)
+      .range(safeOffset, safeOffset + safeLimit - 1)
       .order('added_at', { ascending: false });
 
     if (response.error || !response.data) {

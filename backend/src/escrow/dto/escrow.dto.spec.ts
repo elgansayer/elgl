@@ -40,7 +40,7 @@ describe('Escrow DTOs', () => {
 
     it('should fail when payee_id is not a string', async () => {
       const dto = new CreateEscrowHoldDto();
-      dto.payee_id = 12345 as unknown as string;
+      dto.payee_id = 12345;
       dto.amount_coins = 50;
       dto.reason = 'Invalid payee type';
 
@@ -121,7 +121,7 @@ describe('Escrow DTOs', () => {
       dto.payee_id = '87654321-4321-4321-4321-210987654321';
       dto.amount_coins = 50;
       dto.reason = 'Bad metadata';
-      dto.metadata = 'not-an-object' as unknown as Record<string, unknown>;
+      dto.metadata = 'not-an-object';
 
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'metadata')).toBe(true);

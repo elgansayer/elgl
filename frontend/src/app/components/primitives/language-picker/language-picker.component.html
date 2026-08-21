@@ -1,77 +1,81 @@
 <div class="relative inline-block">
-  <!-- Trigger Button -->
   <button
+    hlmBtn
     type="button"
+    variant="secondary"
+    size="touch"
+    class="w-full min-w-[140px] justify-between shadow-card"
     (click)="openModal()"
-    class="flex items-center justify-between w-full min-w-[140px] px-4 py-2 rounded-xl bg-surface-200 text-text-primary text-sm font-medium border border-surface-100 hover:bg-surface-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
     aria-haspopup="dialog"
     [attr.aria-expanded]="isOpen()"
-   [attr.aria-label]="'lang.selectPlaceholder' | t">
-    <div class="flex items-center gap-2 truncate">
+    [attr.aria-label]="'lang.selectPlaceholder' | t"
+  >
+    <span class="flex items-center gap-2 truncate">
       @if (selectedLanguage()) {
         <span class="text-base leading-none">{{ selectedLanguage()?.flag }}</span>
         <span class="truncate">{{ selectedLanguage()?.name }}</span>
       } @else {
         <span class="truncate">{{ 'lang.selectPlaceholder' | t }}</span>
       }
-    </div>
-    <span class="text-xs text-text-muted ms-2">▼</span>
+    </span>
+    <span class="ms-2 text-xs text-text-muted" aria-hidden="true">▼</span>
   </button>
 
-  <!-- Modal Overlay -->
   @if (isOpen()) {
     <div
-      class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn"
+      class="animate-fadeIn fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="lang-picker-title"
     >
       <div
-        class="bg-surface-200 rounded-3xl shadow-2xl border border-surface-100 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+        class="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-sheet border border-surface-100 bg-surface-200 shadow-lift"
       >
-        <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b border-surface-100 bg-surface-300/80"
-        >
+        <div class="flex items-center justify-between border-b border-surface-100 bg-surface-300/80 px-6 py-4">
           <h3 id="lang-picker-title" class="text-lg font-bold text-text-primary">
             {{ 'lang.selectLanguage' | t }}
           </h3>
           <button
+            hlmBtn
             type="button"
+            variant="ghost"
+            size="icon-touch"
             (click)="closeModal()"
-            class="text-text-muted hover:text-slate-200 p-2 rounded-xl hover:bg-surface-100 transition-colors"
-            aria-label="Close dialog"
+            [attr.aria-label]="'common.close' | t"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
-        <!-- Search Box -->
-        <div class="px-6 py-4 border-b border-surface-100">
+        <div class="border-b border-surface-100 px-6 py-4">
           <input
+            hlmInput
             type="text"
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
             [placeholder]="'lang.searchPlaceholder' | t"
-            class="w-full px-4 py-2.5 rounded-xl bg-surface-300 border border-surface-100 text-sm font-medium text-text-primary focus:outline-none focus:ring-2 focus:ring-primary shadow-inner"
-           [attr.aria-label]="'text input'"/>
+            [attr.aria-label]="'lang.searchPlaceholder' | t"
+          />
         </div>
 
-        <!-- Language List -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-1">
+        <div class="flex-1 space-y-1 overflow-y-auto p-4">
           @for (lang of filteredLanguages(); track lang.code) {
             <button
+              hlmBtn
               type="button"
+              variant="ghost"
+              size="touch"
+              class="w-full justify-between text-start"
               (click)="selectLanguage(lang.code)"
-              class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors text-start"
               [class.bg-primary]="selectedCode() === lang.code"
               [class.bg-opacity-10]="selectedCode() === lang.code"
               [class.text-primary]="selectedCode() === lang.code"
-              [class.hover:bg-surface-300]="selectedCode() !== lang.code"
-             [attr.aria-label]="lang.name || lang.nativeName">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl leading-none">{{ lang.flag }}</span>
-                <div class="flex flex-col">
+              [attr.aria-label]="lang.name || lang.nativeName"
+              [attr.aria-pressed]="selectedCode() === lang.code"
+            >
+              <span class="flex items-center gap-3">
+                <span class="text-2xl leading-none" aria-hidden="true">{{ lang.flag }}</span>
+                <span class="flex flex-col items-start">
                   <span
                     class="text-sm font-bold"
                     [class.text-primary]="selectedCode() === lang.code"
@@ -80,21 +84,21 @@
                     {{ lang.name }}
                   </span>
                   <span
-                    class="text-xs mt-0.5"
+                    class="mt-0.5 text-xs"
                     [class.text-primary]="selectedCode() === lang.code"
                     [class.text-text-secondary]="selectedCode() !== lang.code"
                     [class.opacity-80]="selectedCode() === lang.code"
                   >
                     {{ lang.nativeName }}
                   </span>
-                </div>
-              </div>
+                </span>
+              </span>
               @if (selectedCode() === lang.code) {
-                <span class="text-primary font-bold">✓</span>
+                <span class="font-bold text-primary" aria-hidden="true">✓</span>
               }
             </button>
           } @empty {
-            <div class="px-4 py-8 text-center text-text-muted text-sm">
+            <div class="px-4 py-8 text-center text-sm text-text-muted">
               {{ 'discovery.noMatches' | t }}
             </div>
           }

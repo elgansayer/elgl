@@ -12,29 +12,7 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function runSeed() {
-  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
-  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
-
-  // Test connection
-  const { error: testErr } = await supabase.from('users').select('id').limit(1);
-  if (testErr && testErr.message.includes('fetch failed')) {
-    console.warn(
-      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
-    );
-    console.log(
-      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
-    );
-    console.log(
-      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
-    );
-    console.log(
-      '✅ Seeder validation completed successfully in local simulation mode.',
-    );
-    return;
-  }
-
-  // 1. Seed Users and Profiles
+async function seedUsersAndProfiles(supabase: any) {
   const seedUsers = [
     {
       email: 'oliver.smith@hellotalk.uk',
@@ -139,7 +117,6 @@ async function runSeed() {
     }
 
     if (userId) {
-      // Update the users table directly (no separate user_profiles table)
       await supabase
         .from('users')
         .update({
@@ -152,7 +129,6 @@ async function runSeed() {
           avatar_url: u.profile.avatar_url,
           native_languages: u.profile.native_languages?.[0],
           target_languages: u.profile.target_languages,
-
           location: supabase.rpc('st_geomfromtext' as any, {
             text: u.profile.location,
           }),
@@ -160,8 +136,9 @@ async function runSeed() {
         .eq('id', userId);
     }
   }
+}
 
-  // 2. Seed Moments
+async function seedMomentsAndAudioRooms(supabase: any) {
   const { data: usersList } = await supabase
     .from('users')
     .select('id, email')
@@ -201,7 +178,6 @@ async function runSeed() {
       });
     }
 
-    // 3. Seed Audio Rooms
     await supabase.from('audio_rooms').insert([
       {
         room_name: 'room_global_en_ja',
@@ -221,8 +197,9 @@ async function runSeed() {
       },
     ]);
   }
+}
 
-  // 4. Seed subscriptions for VIP users
+async function seedSubscriptions(supabase: any) {
   const { data: vipUsersRaw } = await supabase
     .from('users')
     .select('id, email')
@@ -261,8 +238,9 @@ async function runSeed() {
       `✅ Seeded ${subscriptionData.length} subscriptions for VIP users`,
     );
   }
+}
 
-  // 5. Seed subscription events for audit trail
+async function seedSubscriptionEvents(supabase: any) {
   type UserIdRow = { id: string };
 
   const { data: firstVipRaw } = await supabase
@@ -299,8 +277,9 @@ async function runSeed() {
 
     console.log('✅ Seeded subscription events for audit trail');
   }
+}
 
-  // 6. Seed achievements definitions
+async function seedAchievements(supabase: any) {
   const achievementsData = [
     {
       code: 'first_moment',
@@ -344,8 +323,9 @@ async function runSeed() {
   } else {
     console.log('✅ Seeded achievements definitions');
   }
+}
 
-  // 7. Seed curated learning content (articles and dialogues)
+async function seedCuratedContent(supabase: any) {
   const articlesToSeed = [
     {
       title: 'A Day in London',
@@ -417,6 +397,36 @@ async function runSeed() {
     }
   }
   console.log('✅ Seeded curated dialogues');
+}
+
+async function runSeed() {
+  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
+  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
+
+  // Test connection
+  const { error: testErr } = await supabase.from('users').select('id').limit(1);
+  if (testErr && testErr.message.includes('fetch failed')) {
+    console.warn(
+      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
+    );
+    console.log(
+      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
+    );
+    console.log(
+      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
+    );
+    console.log(
+      '✅ Seeder validation completed successfully in local simulation mode.',
+    );
+    return;
+  }
+
+  await seedUsersAndProfiles(supabase);
+  await seedMomentsAndAudioRooms(supabase);
+  await seedSubscriptions(supabase);
+  await seedSubscriptionEvents(supabase);
+  await seedAchievements(supabase);
+  await seedCuratedContent(supabase);
 
   console.log(
     '✅ Database successfully seeded with rich global users, moments, comments, LiveKit rooms, and achievements!',

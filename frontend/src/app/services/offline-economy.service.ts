@@ -1,10 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NetworkStatusService } from './network-status.service';
-import {
-  VirtualGift,
-  CoinPackage,
-  StickerPack,
-} from './economy.store';
+import { VirtualGift, CoinPackage, StickerPack } from './economy.store';
 
 const DB_NAME = 'hellotalk_economy_offline';
 const DB_VERSION = 1;
@@ -66,7 +62,9 @@ export class OfflineEconomyService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains(STORE_CATALOG)) {
           db.createObjectStore(STORE_CATALOG, { keyPath: 'id' });
         }
@@ -150,7 +148,7 @@ export class OfflineEconomyService {
     payload: Record<string, unknown>,
   ): Promise<string> {
     await this.ensureDB();
-    const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `pending_${Date.now()}_${crypto.randomUUID()}`;
     const action: PendingEconomyAction = {
       id,
       actionType,
@@ -166,7 +164,9 @@ export class OfflineEconomyService {
     await this.ensureDB();
     const all = await this.getAllFromStore<Record<string, unknown>>(STORE_STATE);
     return all
-      .filter((item) => typeof item['actionType'] === 'string' && typeof item['payload'] === 'object')
+      .filter(
+        (item) => typeof item['actionType'] === 'string' && typeof item['payload'] === 'object',
+      )
       .map((item) => item as unknown as PendingEconomyAction);
   }
 
@@ -198,7 +198,7 @@ export class OfflineEconomyService {
 
   // --- Generic IDB helpers ---
 
-  private putInStore(storeName: string, value: Record<string, unknown>): Promise<void> {
+  private putInStore(storeName: string, value: object): Promise<void> {
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);

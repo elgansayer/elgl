@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, resource, ResourceRef, Signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -54,6 +54,15 @@ const FALLBACK_FAILED_RESPONSE: ModerationActionResponse = {
 export class ModerationService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/moderation`;
+
+  getItemsResource(
+    type: Signal<'moment' | 'profile'>,
+  ): ResourceRef<ModerationItem[] | undefined> {
+    return resource({
+      params: () => ({ type: type() }),
+      loader: ({ params }) => this.getItems(params.type),
+    });
+  }
 
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('auth_token') ?? '';

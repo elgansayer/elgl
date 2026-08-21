@@ -10,7 +10,8 @@ export class ToggleVipDto {
   is_vip!: boolean;
 
   @ApiPropertyOptional({
-    description: 'VIP tier level (e.g., "gold", "platinum"). Set to "free" when is_vip is false',
+    description:
+      'VIP tier level (e.g., "gold", "platinum"). Set to "free" when is_vip is false',
     example: 'gold',
   })
   @IsOptional()

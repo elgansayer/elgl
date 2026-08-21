@@ -5,28 +5,12 @@
     <div class="space-y-3">
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <app-card customClass="flex items-center gap-3 p-3">
-          <app-skeleton-loader
-            [height]="'40px'"
-            [width]="'40px'"
-            [variant]="'circle'"
-          />
+          <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
           <div class="flex-1 space-y-2">
-            <app-skeleton-loader
-              [height]="'14px'"
-              [width]="'60%'"
-              [variant]="'text'"
-            />
-            <app-skeleton-loader
-              [height]="'10px'"
-              [width]="'40%'"
-              [variant]="'text'"
-            />
+            <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'10px'" [width]="'40%'" [variant]="'text'" />
           </div>
-          <app-skeleton-loader
-            [height]="'32px'"
-            [width]="'80px'"
-            [borderRadius]="'8px'"
-          />
+          <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
         </app-card>
       }
     </div>
@@ -46,33 +30,44 @@
     />
   } @else {
     <ul class="space-y-2">
-      @for (entry of blockedUsers(); track entry.id) {
-        <li
-          class="flex flex-wrap items-center justify-between bg-surface rounded-lg p-3 gap-3"
-        >
+      @for (user of blockedUsers(); track user.id) {
+        <li class="flex flex-wrap items-center justify-between bg-surface-200 rounded-lg p-3 gap-3">
           <div class="flex items-center gap-3">
-            @if (entry.blocked_avatar) {
+            @if (user.blocked_avatar ?? user.avatar_url) {
               <img
-                [src]="entry.blocked_avatar"
-                [alt]="entry.blocked_name ?? ''"
+                [src]="user.blocked_avatar ?? user.avatar_url"
+                [alt]="user.blocked_name ?? user.display_name ?? ''"
                 class="w-10 h-10 rounded-full object-cover"
               />
             } @else {
-              <div class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold">
-                {{ (entry.blocked_name ?? '?').charAt(0) }}
+              <div
+                class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold"
+              >
+                {{ (user.blocked_name ?? user.display_name ?? '?').charAt(0) }}
               </div>
             }
             <div>
-<p class="font-medium text-text-primary">{{ (entry.blocked_name ?? 'Unknown') | sanitiseHtml }}</p>
+              <p class="font-medium text-text-primary">
+                {{ user.blocked_name ?? user.display_name ?? '' }}
+              </p>
+              @if (user.native_language || user.target_languages?.length) {
+                <p class="text-sm text-text-secondary">
+                  {{ user.native_language ?? '' }} →
+                  @if (user.target_languages?.length) {
+                    <span> · {{ user.target_languages.join(', ') }}</span>
+                  }
+                </p>
+              }
               <p class="text-sm text-text-secondary">
-                {{ 'admin.blocks.blockedBy' | t }}: {{ (entry.blocker_name ?? 'Unknown') | sanitiseHtml }}
+                {{ 'admin.blocks.blockedAt' | t }} {{ user.created_at | date: 'short' }}
               </p>
             </div>
           </div>
           <button
-            class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
-            (click)="onUnblock(entry)"
-            [disabled]="isUnblocking(entry.id)"
+            hlmBtn
+            class="px-3 py-1.5 bg-danger text-on-fill rounded-lg text-sm hover:bg-danger/90 transition-colors disabled:opacity-50"
+            (click)="onUnblock(user)"
+            [disabled]="isUnblocking(user.id)"
             [attr.aria-label]="'admin.blocks.unblock' | t"
           >
             {{ 'admin.blocks.unblock' | t }}

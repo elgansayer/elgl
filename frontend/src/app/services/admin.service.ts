@@ -1,10 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, catchError, of, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { OfflineAdminStorageService } from './offline-admin-storage.service';
-import { withRetry } from './http-retry';
 
 export interface AdminUserSummary {
   id: string;
@@ -38,13 +36,17 @@ export interface LoginHistoryEntry {
 
 export interface AdminBlockEntry {
   id: string;
-  blocker_id: string;
-  blocked_id: string;
+  blocker_id?: string;
+  blocked_id?: string;
   blocker_name?: string | null;
   blocked_name?: string | null;
   blocker_avatar?: string | null;
   blocked_avatar?: string | null;
-  created_at: string;
+  created_at?: string;
+  display_name?: string;
+  native_language?: string;
+  target_languages?: string[];
+  avatar_url?: string;
 }
 
 export interface AdminBlocksListResult {
@@ -99,19 +101,18 @@ const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   },
 ];
 
-// GDPR-compliant mock data: IP addresses are scrubbed (last octet zeroed)
 const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
   {
     id: 'login-1',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
     created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 'login-2',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -123,7 +124,6 @@ const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
 export class AdminService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
-  private offlineStorage = inject(OfflineAdminStorageService);
   private baseUrl = `${environment.apiUrl}/admin`;
 
   private getHeaders() {
@@ -139,13 +139,11 @@ export class AdminService {
    */
   async checkAdminAccess(): Promise<boolean> {
     try {
-      await withRetry(() =>
-        firstValueFrom(
-          this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
-            headers: this.getHeaders(),
-            params: new HttpParams().set('page', '1').set('pageSize', '1'),
-          }),
-        ),
+      await firstValueFrom(
+        this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
+          headers: this.getHeaders(),
+          params: new HttpParams().set('page', '1').set('pageSize', '1'),
+        }),
       );
       return true;
     } catch {
@@ -159,87 +157,79 @@ export class AdminService {
       params = params.set('search', search);
     }
 
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
-            headers: this.getHeaders(),
-            params,
+    return firstValueFrom(
+      this.http
+        .get<AdminUserListResult>(`${this.baseUrl}/users`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({
+                users: search
+                  ? MOCK_ADMIN_USERS.filter((u) =>
+                      (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
+                    )
+                  : MOCK_ADMIN_USERS,
+                total: MOCK_ADMIN_USERS.length,
+                page,
+                pageSize,
+              });
+            }
+            return throwError(() => err);
           }),
         ),
-      );
-    } catch {
-      return {
-        users: search
-          ? MOCK_ADMIN_USERS.filter((u) =>
-              (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-            )
-          : MOCK_ADMIN_USERS,
-        total: MOCK_ADMIN_USERS.length,
-        page,
-        pageSize,
-      };
-    }
+    );
   }
 
   async setVipStatus(userId: string, isVip: boolean, vipTier?: string): Promise<AdminUserSummary> {
     // This is a mutation, so HTTP failures (e.g. a 403 from AdminGuard) must
     // propagate to the caller rather than being masked by a fake success.
-    return withRetry(() =>
-      firstValueFrom(
-        this.http.patch<AdminUserSummary>(
-          `${this.baseUrl}/users/${userId}/vip`,
-          { is_vip: isVip, vip_tier: vipTier },
-          { headers: this.getHeaders() },
-        ),
+    return firstValueFrom(
+      this.http.patch<AdminUserSummary>(
+        `${this.baseUrl}/users/${userId}/vip`,
+        { is_vip: isVip, vip_tier: vipTier },
+        { headers: this.getHeaders() },
       ),
     );
   }
 
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
-            headers: this.getHeaders(),
+    return firstValueFrom(
+      this.http
+        .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId));
+            }
+            return throwError(() => err);
           }),
         ),
-      );
-    } catch {
-      return MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId);
-    }
+    );
   }
 
   async banUser(userId: string): Promise<{ message: string }> {
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.post<{ message: string }>(
-            `${this.baseUrl}/users/${userId}/ban`,
-            {},
-            { headers: this.getHeaders() },
-          ),
-        ),
-      );
-    } catch {
-      return { message: 'Failed to ban user - service temporarily unavailable' };
-    }
+    return firstValueFrom(
+      this.http.post<{ message: string }>(
+        `${this.baseUrl}/users/${userId}/ban`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
   }
 
   async warnUser(userId: string): Promise<{ message: string }> {
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.post<{ message: string }>(
-            `${this.baseUrl}/users/${userId}/warn`,
-            {},
-            { headers: this.getHeaders() },
-          ),
-        ),
-      );
-    } catch {
-      return { message: 'Failed to warn user - service temporarily unavailable' };
-    }
+    return firstValueFrom(
+      this.http.post<{ message: string }>(
+        `${this.baseUrl}/users/${userId}/warn`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
@@ -247,32 +237,44 @@ export class AdminService {
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
 
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
-            headers: this.getHeaders(),
-            params,
+    return firstValueFrom(
+      this.http
+        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({ blocks: [], total: 0, page, pageSize });
+            }
+            return throwError(() => err);
           }),
         ),
-      );
-    } catch {
-      return { blocks: [], total: 0, page, pageSize };
-    }
+    );
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
-    try {
-      return await withRetry(() =>
-        firstValueFrom(
-          this.http.delete<{ success: boolean }>(
-            `${this.baseUrl}/blocks/${blockId}`,
-            { headers: this.getHeaders() },
-          ),
-        ),
-      );
-    } catch {
-      return { success: false };
+    return firstValueFrom(
+      this.http.delete<{ success: boolean }>(`${this.baseUrl}/blocks/${blockId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
+  async listBlockedUsers(): Promise<AdminBlockEntry[]> {
+    const result = await this.listAllBlocks(1, 100);
+    return result.blocks;
+  }
+
+  async adminUnblockUser(userId: string): Promise<{ success: boolean }> {
+    const blocks = await this.listBlockedUsers();
+    const block = blocks.find((b) => b.blocked_id === userId);
+    if (!block) {
+      throw new Error('Block not found');
     }
+    return this.removeBlock(block.id);
   }
 }
+
+export type AdminBlockedUser = AdminBlockEntry;

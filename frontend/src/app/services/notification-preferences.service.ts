@@ -6,7 +6,12 @@ import { environment } from '../../environments/environment';
 export interface PreferenceChannel {
   push: boolean;
   badge: boolean;
+  email: boolean;
+  in_app: boolean;
+  badges: boolean;
 }
+
+export type CategoryPreference = Pick<PreferenceChannel, 'push' | 'badge'>;
 
 export interface NotificationPreferences {
   userId: string;
@@ -14,13 +19,30 @@ export interface NotificationPreferences {
   groups: PreferenceChannel;
   likes: PreferenceChannel;
   voice_rooms: PreferenceChannel;
+  new_message: CategoryPreference;
+  call_invite: CategoryPreference;
+  moment_like: CategoryPreference;
+  moment_comment: CategoryPreference;
+  correction: CategoryPreference;
+  gift: CategoryPreference;
+  profile_view: CategoryPreference;
+  study_reminder: CategoryPreference;
+  friend_request: CategoryPreference;
+  audio_room_invite: CategoryPreference;
+  new_follower: CategoryPreference;
   do_not_disturb: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
   updatedAt: string;
 }
 
-export type NotificationCategory = 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
+export type NotificationCategory =
+  | 'direct_messages' | 'groups' | 'likes' | 'voice_rooms'
+  | 'new_message' | 'call_invite' | 'moment_like' | 'moment_comment'
+  | 'correction' | 'gift' | 'profile_view' | 'study_reminder'
+  | 'friend_request' | 'audio_room_invite' | 'new_follower';
 
-export type NotificationChannel = 'push' | 'badge';
+export type NotificationChannel = 'push' | 'badge' | 'email' | 'in_app' | 'badges';
 
 export interface LegacyChannelPreference {
   push: boolean;
@@ -58,10 +80,7 @@ export class NotificationPreferencesService {
 
   async updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
     const response = await firstValueFrom(
-      this.http.put<{ success: boolean; preferences: NotificationPreferences }>(
-        this.baseUrl,
-        dto,
-      ),
+      this.http.put<{ success: boolean; preferences: NotificationPreferences }>(this.baseUrl, dto),
     );
     return response.preferences;
   }
@@ -83,10 +102,22 @@ export class NotificationPreferencesService {
 
   resetToDefaults(): Promise<NotificationPreferences> {
     return this.updatePreferences({
-      direct_messages: { push: true, badge: true },
-      groups: { push: true, badge: true },
-      likes: { push: true, badge: true },
-      voice_rooms: { push: true, badge: true },
+      direct_messages: { push: true, badge: true, email: false, in_app: true, badges: false },
+      groups: { push: true, badge: true, email: false, in_app: true, badges: false },
+      likes: { push: true, badge: true, email: false, in_app: true, badges: false },
+      voice_rooms: { push: true, badge: true, email: false, in_app: true, badges: false },
+    });
+  }
+
+  toggleDoNotDisturb(
+    enabled: boolean,
+    quietHoursStart: string,
+    quietHoursEnd: string,
+  ): Promise<NotificationPreferences> {
+    return this.updatePreferences({
+      do_not_disturb: enabled,
+      quiet_hours_start: quietHoursStart,
+      quiet_hours_end: quietHoursEnd,
     });
   }
 
