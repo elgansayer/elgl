@@ -3,12 +3,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { AudioSyncReaderComponent } from './audio-sync-reader.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { LingqOnboardingService } from '../../services/lingq-onboarding.service';
 import { signal } from '@angular/core';
 
 describe('AudioSyncReaderComponent', () => {
   let component: AudioSyncReaderComponent;
   let fixture: ComponentFixture<AudioSyncReaderComponent>;
   let mockVocabStore: Partial<VocabularyStore>;
+  let mockOnboardingService: Partial<LingqOnboardingService>;
 
   beforeEach(async () => {
     mockVocabStore = {
@@ -20,9 +22,17 @@ describe('AudioSyncReaderComponent', () => {
       }),
     };
 
+    mockOnboardingService = {
+      isCompleted: () => true,
+      isTourInProgress: signal(false),
+    };
+
     await TestBed.configureTestingModule({
       imports: [AudioSyncReaderComponent, HttpClientTestingModule],
-      providers: [{ provide: VocabularyStore, useValue: mockVocabStore }],
+      providers: [
+        { provide: VocabularyStore, useValue: mockVocabStore },
+        { provide: LingqOnboardingService, useValue: mockOnboardingService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AudioSyncReaderComponent);

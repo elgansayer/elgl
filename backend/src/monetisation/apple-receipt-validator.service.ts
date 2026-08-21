@@ -67,8 +67,21 @@ export class AppleReceiptValidatorService {
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
-    this.sharedSecret =
-      this.configService.get<string>('APPLE_SHARED_SECRET') || '';
+    let secret = this.configService.get<string>('APPLE_SHARED_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
+    if (env === 'production') {
+      if (!secret || secret === 'test-apple-secret') {
+        throw new Error(
+          'APPLE_SHARED_SECRET must be configured securely in production',
+        );
+      }
+    } else {
+      if (!secret) {
+        secret = 'test-apple-secret';
+      }
+    }
+    this.sharedSecret = secret;
   }
 
   async validateReceipt(

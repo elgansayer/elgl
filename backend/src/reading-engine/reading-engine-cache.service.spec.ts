@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineCacheService } from './reading-engine-cache.service';
 import { ReadingEngineCacheNamespace } from './interfaces/cache-rules.interface';
@@ -5,18 +6,18 @@ import { ReadingEngineCacheNamespace } from './interfaces/cache-rules.interface'
 describe('ReadingEngineCacheService', () => {
   let service: ReadingEngineCacheService;
   let redis: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
-    scan: jest.Mock;
+    get: Mock;
+    set: Mock;
+    del: Mock;
+    scan: Mock;
   };
 
   beforeEach(async () => {
     redis = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-      scan: jest.fn().mockResolvedValue(['0', []]),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1),
+      scan: vi.fn().mockResolvedValue(['0', []]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,7 +30,7 @@ describe('ReadingEngineCacheService', () => {
     service = module.get(ReadingEngineCacheService);
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   /* ---- Key building ---- */
 

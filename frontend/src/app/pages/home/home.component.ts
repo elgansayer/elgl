@@ -21,18 +21,18 @@ import { StreakCelebrationOverlayComponent } from '../../components/streak-celeb
     StreakCelebrationOverlayComponent,
   ],
   template: `
-    <div class="min-h-screen bg-[#121212] text-white">
-      <header class="py-4 ps-4 pe-4 border-b border-gray-700 flex items-center justify-between">
+    <div class="min-h-screen bg-surface-500 text-text-primary">
+      <header class="py-4 ps-4 pe-4 border-b border-surface-100 flex items-center justify-between">
         <h1 class="text-xl font-bold">{{ 'home.title' | t }}</h1>
         <div class="flex items-center gap-4">
           <a
             routerLink="/leaderboard"
-            class="text-sm text-primary hover:text-primary-hover transition-colors"
+            class="text-sm text-primary hover:text-primary/80 transition-colors"
             [attr.aria-label]="'nav.leaderboard' | t"
           >
             {{ 'nav.leaderboard' | t }}
           </a>
-          <span class="text-sm text-gray-400">
+          <span class="text-sm text-text-muted">
             {{ authService.currentUser()?.email }}
           </span>
         </div>

@@ -31,14 +31,8 @@ export class EmailService {
     );
     const resetUrl = `${frontendUrl}/forgot-password?token=${token}`;
     const subject = 'Reset your HelloTalk password';
-    const text = `You have requested a password reset. Please use the following link to reset your password:
-
-${resetUrl}
-
-If you did not request this, please ignore this email.
-
-– HelloTalk Team`;
-    const html = `<p>You have requested a password reset. Please click the link below to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, please ignore this email.</p><p>– HelloTalk Team</p>`;
+    const text = `You have requested a password reset. Please use the following link to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore this email.\n\n- HelloTalk Team`;
+    const html = `<p>You have requested a password reset. Please click the link below to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, please ignore this email.</p><p>- HelloTalk Team</p>`;
 
     const fromName = this.configService.get<string>(
       'MAIL_FROM_NAME',
@@ -57,6 +51,7 @@ If you did not request this, please ignore this email.
       html,
     });
 
-    this.logger.log(`Password reset email sent to ${to}`);
+    // Do not log recipient PII or reset credentials.
+    this.logger.log('Password reset email dispatched');
   }
 }

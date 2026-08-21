@@ -5,32 +5,431 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
+  application-checks:
+    name: ${{ matrix.directory }} / ${{ matrix.check }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TRANSFER_SECRET: ci-test-transfer-secret
     strategy:
+      fail-fast: false
       matrix:
         include:
           - directory: backend
-            node-version: '20'
+            check: lint
+            command: npm run lint:check
+          - directory: backend
+            check: build
+            command: npm run build
+          - directory: backend
+            check: unit
+            command: mkdir -p test-results && npm run test:cov -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/unit.json
+          - directory: backend
+            check: e2e
+            command: mkdir -p test-results && npm run test:e2e -- --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/e2e.json
           - directory: frontend
-            node-version: '22'
+            check: static-analysis
+            command: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check
+          - directory: frontend
+            check: build
+            command: npm run build
+          - directory: frontend
+            check: unit
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+          - directory: admin-portal
+            check: lint
+            command: npm run lint:check
+          - directory: admin-portal
+            check: build
+            command: npm run build
+          - directory: admin-portal
+            check: unit
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: '22'
+          cache: npm
           cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
         working-directory: ${{ matrix.directory }}
 
-      - name: Lint
-        run: npm run lint
+      - name: Run ${{ matrix.check }}
+        id: application-check
+        run: ${{ matrix.command }}
         working-directory: ${{ matrix.directory }}
+
+      - name: Summarize application check
+        if: always()
+        env:
+          CHECK_DIRECTORY: ${{ matrix.directory }}
+          CHECK_NAME: ${{ matrix.check }}
+          CHECK_OUTCOME: ${{ steps.application-check.outcome }}
+        run: |
+          failed_checks=0
+          if [ "$CHECK_OUTCOME" != "success" ]; then
+            failed_checks=1
+          fi
+
+          report=""
+          if [ "$CHECK_DIRECTORY" = "backend" ] && { [ "$CHECK_NAME" = "unit" ] || [ "$CHECK_NAME" = "e2e" ]; }; then
+            report="backend/test-results/${CHECK_NAME}.json"
+          elif [ "$CHECK_DIRECTORY" = "frontend" ] && [ "$CHECK_NAME" = "unit" ]; then
+            report="frontend/test-results/unit.json"
+          elif [ "$CHECK_DIRECTORY" = "admin-portal" ] && [ "$CHECK_NAME" = "unit" ]; then
+            report="admin-portal/test-results/unit.json"
+          fi
+
+          failing_suites="n/a"
+          failing_tests="n/a"
+          if [ -n "$report" ] && [ -f "$report" ]; then
+            metrics=$(node - "$report" <<'NODE'
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+            const suites = report.numFailedTestSuites ?? report.numFailedTestFiles ?? 'n/a';
+            const tests = report.numFailedTests ?? 'n/a';
+            process.stdout.write(`${suites}\t${tests}`);
+          } catch {
+            process.stdout.write('n/a\tn/a');
+          }
+          NODE
+            )
+            IFS=$'\t' read -r failing_suites failing_tests <<< "$metrics"
+          fi
+
+          {
+            echo "### ${CHECK_DIRECTORY} / ${CHECK_NAME}"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Outcome | ${CHECK_OUTCOME} |"
+            echo "| Failing checks | ${failed_checks} |"
+            echo "| Failing suites | ${failing_suites} |"
+            echo "| Failing tests | ${failing_tests} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backend coverage
+        if: success() && matrix.directory == 'backend' && matrix.check == 'unit'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: backend/coverage
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failed backend test report
+        if: failure() && matrix.directory == 'backend' && (matrix.check == 'unit' || matrix.check == 'e2e')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-${{ matrix.check }}-failure-report-${{ github.sha }}
+          path: backend/test-results/${{ matrix.check }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload failed frontend unit report
+        if: failure() && matrix.directory == 'frontend' && matrix.check == 'unit'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-unit-failure-report-${{ github.sha }}
+          path: frontend/test-results/unit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload failed admin portal unit report
+        if: failure() && matrix.directory == 'admin-portal' && matrix.check == 'unit'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: admin-portal-unit-failure-report-${{ github.sha }}
+          path: admin-portal/test-results/unit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  constitution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check:constitution
+      - run: npm run check:agent-ui-governance
+      - run: npm run check:design-sync
+      - name: Enforce Spartan ownership boundaries
+        env:
+          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: npm run check:spartan-boundaries
+      - name: Enforce full-tree Spartan adoption
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          npm run check:spartan-full-tree 2>&1 | tee test-results/spartan-full-tree.txt
+      - name: Upload full-tree Spartan failure report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: spartan-full-tree-failure-${{ github.sha }}
+          path: test-results/spartan-full-tree.txt
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce component-system convergence
+        run: npm run check:component-system
+      - name: Prevent new legacy primitive adoption
+        env:
+          LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: npm run check:legacy-primitive-delta
+      - name: Enforce design-sync drift on pull requests
+        if: github.event_name == 'pull_request'
+        env:
+          DESIGN_SYNC_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: npm run check:design-sync-drift
+      - run: node scripts/check-conflict-markers.mjs
+      - name: Enforce admin audit append-only integrity
+        run: node scripts/check-admin-audit-integrity.mjs
+      - name: Enforce append-only, collision-free migration changes
+        env:
+          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: node scripts/check-migration-delta.mjs
+
+  database:
+    name: database / clean-reset
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect database-sensitive changes
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          run_database=false
+          zero_sha=0000000000000000000000000000000000000000
+
+          if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "$zero_sha" ]; then
+            run_database=true
+          elif git diff --name-only "$BASE_SHA" "$GITHUB_SHA" -- \
+            .github/workflows/ci.yml \
+            scripts/prepare-supabase-clean-replay.mjs \
+            supabase/ \
+            backend/src/supabase/ \
+            | grep -q .; then
+            run_database=true
+          fi
+
+          echo "run_database=$run_database" >> "$GITHUB_OUTPUT"
+          echo "Database verification required: $run_database"
+
+      - name: Setup Node.js for pinned Supabase CLI
+        if: steps.changes.outputs.run_database == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Initialize deterministic local Supabase configuration
+        if: steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 init --force
+
+      - name: Prepare deterministic replay of legacy migration corpus
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          mv supabase/migrations supabase/migrations-source
+          node scripts/prepare-supabase-clean-replay.mjs \
+            supabase/migrations-source \
+            supabase/migrations \
+            test-results/migration-replay-map.json
+
+      - name: Start local Supabase database
+        id: supabase-start
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            attempt_log="test-results/supabase-start-attempt-${attempt}.log"
+            echo "Supabase database start attempt ${attempt}/${max_attempts}"
+            if npx --yes supabase@2.114.0 db start 2>&1 | tee "$attempt_log" | tee -a test-results/supabase-start.log; then
+              exit 0
+            fi
+
+            if grep -Eq 'SQLSTATE|At statement:' "$attempt_log"; then
+              echo "Deterministic migration failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+              echo "Non-transient Supabase startup failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Supabase database failed to start after ${max_attempts} transient attempts."
+              exit 1
+            fi
+            npx --yes supabase@2.114.0 stop --no-backup || true
+            sleep $((attempt * 20))
+          done
+
+      - name: Upload Supabase startup failure log
+        if: failure() && steps.changes.outputs.run_database == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supabase-start-failure-${{ github.sha }}
+          path: test-results/supabase-start.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Rebuild database from zero using repository migration SQL
+        if: steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 db reset
+
+      - name: Generate schema-derived TypeScript evidence
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          npx --yes supabase@2.114.0 gen types typescript --local > test-results/database.types.ts
+          test -s test-results/database.types.ts
+          grep -q 'export type Database' test-results/database.types.ts
+
+      - name: Enforce generated Supabase type drift baseline
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          expected=$(node -p "require('./supabase/database-types.snapshot.json').sha256")
+          actual=$(sha256sum test-results/database.types.ts | awk '{print $1}')
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Generated Supabase database types drifted from the committed snapshot."
+            echo "expected=$expected"
+            echo "actual=$actual"
+            echo "Regenerate against a clean replay, review the schema change, then update supabase/database-types.snapshot.json in the same PR."
+            exit 1
+          fi
+          echo "Generated Supabase types match snapshot: $actual"
+
+      - name: Upload clean-database evidence
+        if: steps.changes.outputs.run_database == 'true' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supabase-clean-reset-evidence-${{ github.sha }}
+          path: |
+            test-results/database.types.ts
+            test-results/migration-replay-map.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop local Supabase stack
+        if: always() && steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 stop --no-backup
+
+  factory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Setup uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.12.5'
+          enable-cache: true
+          cache-dependency-glob: automation/uv.lock
+      - name: Install frozen Factory dependencies
+        run: uv sync --frozen --extra development
+        working-directory: automation
+      - run: uv run --frozen ruff format --check .
+        working-directory: automation
+      - run: uv run --frozen ruff check openhands_factory tests
+        working-directory: automation
+      - run: uv run --frozen mypy openhands_factory
+        working-directory: automation
+      - run: uv run --frozen pytest
+        working-directory: automation
+
+  required-gate:
+    name: CI / required
+    if: always()
+    needs: [application-checks, constitution, database, factory]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Summarize canonical CI groups
+        env:
+          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          DATABASE_RESULT: ${{ needs.database.result }}
+          FACTORY_RESULT: ${{ needs.factory.result }}
+        run: |
+          failed=0
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
+            if [ "$result" != "success" ]; then
+              failed=$((failed + 1))
+            fi
+          done
+
+          {
+            echo "### Canonical CI summary"
+            echo
+            echo "| Group | Result |"
+            echo "| --- | --- |"
+            echo "| application-checks | $APPLICATION_CHECKS_RESULT |"
+            echo "| constitution | $CONSTITUTION_RESULT |"
+            echo "| database | $DATABASE_RESULT |"
+            echo "| factory | $FACTORY_RESULT |"
+            echo
+            echo "Failing canonical groups: **$failed**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Require every canonical CI group to pass
+        env:
+          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          DATABASE_RESULT: ${{ needs.database.result }}
+          FACTORY_RESULT: ${{ needs.factory.result }}
+        run: |
+          failed=0
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "Canonical CI did not fully pass."
+            echo "application-checks=$APPLICATION_CHECKS_RESULT"
+            echo "constitution=$CONSTITUTION_RESULT"
+            echo "database=$DATABASE_RESULT"
+            echo "factory=$FACTORY_RESULT"
+            exit 1
+          fi
+
+          echo "All canonical CI groups passed."

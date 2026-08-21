@@ -5,7 +5,6 @@ import { QuestStore } from '../../services/quests.store';
 
 @Component({
   selector: 'app-quests',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="p-4 bg-surface text-start" role="region" aria-label="{{ 'quests.title' | t }}">

@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { LanguageIslandsService } from './language-islands.service';
 import { CreateLanguageIslandDto } from './dto/create-language-island.dto';

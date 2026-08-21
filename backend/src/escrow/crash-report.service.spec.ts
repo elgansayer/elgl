@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -8,35 +9,35 @@ type CrashReportQueryResult = {
 };
 
 type CrashReportQueryBuilder = {
-  select: jest.Mock;
-  insert: jest.Mock;
-  update: jest.Mock;
-  eq: jest.Mock;
-  is: jest.Mock;
-  order: jest.Mock;
-  limit: jest.Mock;
-  single: jest.Mock<Promise<CrashReportQueryResult>>;
+  select: Mock;
+  insert: Mock;
+  update: Mock;
+  eq: Mock;
+  is: Mock;
+  order: Mock;
+  limit: Mock;
+  single: Mock<Promise<CrashReportQueryResult>>;
 };
 
 describe('CrashReportService', () => {
   let service: CrashReportService;
-  let mockSupabaseClient: { from: jest.Mock };
+  let mockSupabaseClient: { from: Mock };
   let mockQueryBuilder: CrashReportQueryBuilder;
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      is: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -45,16 +46,16 @@ describe('CrashReportService', () => {
         {
           provide: 'PinoLogger:CrashReportService',
           useValue: {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -64,7 +65,7 @@ describe('CrashReportService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -132,7 +133,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return null when the supabase call throws', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => {
         throw new Error('Connection refused');
       });
 
@@ -145,7 +146,7 @@ describe('CrashReportService', () => {
 
   describe('listUnresolved', () => {
     it('should return unresolved crash reports', async () => {
-      mockQueryBuilder.limit = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.limit = vi.fn().mockResolvedValueOnce({
         data: [
           {
             id: 'crash-1',
@@ -172,7 +173,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return empty array when list fails', async () => {
-      mockQueryBuilder.limit = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.limit = vi.fn().mockResolvedValueOnce({
         data: null,
         error: { message: 'DB error' },
       });
@@ -182,7 +183,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return empty array on exception', async () => {
-      mockSupabaseClient.from = jest.fn().mockImplementation(() => {
+      mockSupabaseClient.from = vi.fn().mockImplementation(() => {
         throw new Error('Connection refused');
       });
 
@@ -195,7 +196,7 @@ describe('CrashReportService', () => {
 
   describe('acknowledgeReport', () => {
     it('should acknowledge a crash report', async () => {
-      mockQueryBuilder.eq = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.eq = vi.fn().mockResolvedValueOnce({
         error: null,
       });
 
@@ -204,7 +205,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return false on error', async () => {
-      mockQueryBuilder.eq = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.eq = vi.fn().mockResolvedValueOnce({
         error: { message: 'Not found' },
       });
 
@@ -213,7 +214,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return false on exception', async () => {
-      mockQueryBuilder.eq = jest.fn().mockImplementation(() => {
+      mockQueryBuilder.eq = vi.fn().mockImplementation(() => {
         throw new Error('Connection refused');
       });
 
@@ -226,7 +227,7 @@ describe('CrashReportService', () => {
 
   describe('resolveReport', () => {
     it('should resolve a crash report', async () => {
-      mockQueryBuilder.eq = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.eq = vi.fn().mockResolvedValueOnce({
         error: null,
       });
 
@@ -235,7 +236,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return false on error', async () => {
-      mockQueryBuilder.eq = jest.fn().mockResolvedValueOnce({
+      mockQueryBuilder.eq = vi.fn().mockResolvedValueOnce({
         error: { message: 'Not found' },
       });
 
@@ -244,7 +245,7 @@ describe('CrashReportService', () => {
     });
 
     it('should return false on exception', async () => {
-      mockQueryBuilder.eq = jest.fn().mockImplementation(() => {
+      mockQueryBuilder.eq = vi.fn().mockImplementation(() => {
         throw new Error('Connection refused');
       });
 

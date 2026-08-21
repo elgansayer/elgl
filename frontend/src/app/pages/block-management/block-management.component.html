@@ -1,32 +1,18 @@
 <div class="ps-4 pe-4 pt-4 pb-4">
-  <h1 class="text-2xl font-bold mb-4 text-text-primary">{{ 'safety.blockManagement.title' | t }}</h1>
+  <h1 class="text-2xl font-bold mb-4 text-text-primary">
+    {{ 'safety.blockManagement.title' | t }}
+  </h1>
 
   @if (isLoading()) {
     <div class="space-y-3" aria-busy="true" [attr.aria-label]="'common.loading' | t">
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <app-card customClass="flex items-center gap-3 p-3" aria-hidden="true">
-          <app-skeleton-loader
-            [height]="'40px'"
-            [width]="'40px'"
-            [variant]="'circle'"
-          />
+          <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
           <div class="flex-1 space-y-2">
-            <app-skeleton-loader
-              [height]="'14px'"
-              [width]="'60%'"
-              [variant]="'text'"
-            />
-            <app-skeleton-loader
-              [height]="'10px'"
-              [width]="'40%'"
-              [variant]="'text'"
-            />
+            <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'10px'" [width]="'40%'" [variant]="'text'" />
           </div>
-          <app-skeleton-loader
-            [height]="'32px'"
-            [width]="'80px'"
-            [borderRadius]="'8px'"
-          />
+          <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
         </app-card>
       }
     </div>
@@ -48,19 +34,19 @@
   } @else {
     <ul class="space-y-2" role="list" [attr.aria-label]="'safety.blockManagement.title' | t">
       @for (user of blockedUsers(); track user.id) {
-        <li
-          role="listitem"
-          class="flex items-center justify-between bg-surface rounded-lg p-3"
-        >
+        <li role="listitem" class="flex items-center justify-between bg-surface rounded-lg p-3">
           <div class="flex items-center gap-3">
             @if (user.avatar_url) {
-              <img loading="lazy"
+              <img
                 [src]="user.avatar_url"
                 [alt]="user.display_name ?? ''"
                 class="w-10 h-10 rounded-full object-cover"
               />
             } @else {
-              <div class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold" aria-hidden="true">
+              <div
+                class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold"
+                aria-hidden="true"
+              >
                 {{ (user.display_name ?? '?').charAt(0) }}
               </div>
             }
@@ -80,9 +66,13 @@
             </div>
           </div>
           <button
-            class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+            hlmBtn
+            class="px-3 py-1.5 bg-danger text-on-fill rounded-lg text-sm hover:bg-danger/90 transition-colors"
             (click)="onUnblock(user.id)"
-            [attr.aria-label]="'safety.blockManagement.unblockAria' | t: { name: user.display_name }">
+            [attr.aria-label]="
+              'safety.blockManagement.unblockAria' | t: { name: user.display_name }
+            "
+          >
             {{ 'safety.blockManagement.unblock' | t }}
           </button>
         </li>
