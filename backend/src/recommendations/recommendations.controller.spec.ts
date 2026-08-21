@@ -35,7 +35,10 @@ describe('RecommendationsController', () => {
       controllers: [RecommendationsController],
       providers: [
         { provide: RecommendationsService, useValue: mockService },
-        { provide: DiscoveryRecommendationsService, useValue: mockDiscoveryService },
+        {
+          provide: DiscoveryRecommendationsService,
+          useValue: mockDiscoveryService,
+        },
         {
           provide: MatchmakingCrashReportService,
           useValue: { reportCrash: vi.fn().mockResolvedValue({}) },
@@ -75,15 +78,18 @@ describe('RecommendationsController', () => {
           target_languages: ['en'],
           shared_interest_count: 2,
           recommendation_reasons: ['language_exchange', 'shared_interests'],
-          recommendation_score: 80,
         },
       ];
       mockDiscoveryService.getForDiscovery.mockResolvedValue(recommendations);
 
-      const result = await controller.getDiscoveryRecommendations({ user: { id: 'user-123' } });
+      const result = await controller.getDiscoveryRecommendations({
+        user: { id: 'user-123' },
+      });
 
       expect(result).toEqual(recommendations);
-      expect(mockDiscoveryService.getForDiscovery).toHaveBeenCalledWith('user-123');
+      expect(mockDiscoveryService.getForDiscovery).toHaveBeenCalledWith(
+        'user-123',
+      );
     });
   });
 
