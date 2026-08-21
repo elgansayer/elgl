@@ -1,0 +1,58 @@
+name: Spartan health
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/components.json'
+      - 'frontend/src/app/components/ui/**'
+      - 'frontend/scripts/check-spartan-health.mjs'
+      - 'docs/spartan-upgrade-runbook.md'
+      - '.github/workflows/spartan-health.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/components.json'
+      - 'frontend/src/app/components/ui/**'
+      - 'frontend/scripts/check-spartan-health.mjs'
+      - 'docs/spartan-upgrade-runbook.md'
+      - '.github/workflows/spartan-health.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spartan-health-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Verify repository Spartan configuration
+        run: npm run check:spartan-config
+      - name: Inspect Spartan project context
+        run: npm run check:spartan-info
+      - name: Run upstream Spartan healthcheck
+        run: npm run check:spartan-healthcheck
+      - name: Ensure healthcheck did not mutate tracked files
+        run: |
+          if ! git diff --exit-code -- .; then
+            echo 'Spartan healthcheck changed tracked files. Run it locally, review the migrations, and commit the intended Helm/package changes.'
+            exit 1
+          fi
