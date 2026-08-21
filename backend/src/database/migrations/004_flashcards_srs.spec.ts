@@ -5,22 +5,26 @@ import { resolve } from 'node:path';
  * Regression coverage for the canonical flashcards/SRS schema (#971).
  *
  * Supabase migrations are not executed by the NestJS unit-test runner, so this
- * suite verifies the migration contract that the flashcards service relies on.
+ * suite verifies both clean-bootstrap and already-deployed migration contracts.
  */
-const MIGRATION_PATH = resolve(
+const BASE_MIGRATION_PATH = resolve(
   __dirname,
   '../../../../supabase/migrations/004_flashcards_srs.sql',
 );
+const FORWARD_MIGRATION_PATH = resolve(
+  __dirname,
+  '../../../../supabase/migrations/20260821080200_harden_flashcards_srs_contract.sql',
+);
 
-function loadMigration(): string {
-  return readFileSync(MIGRATION_PATH, 'utf-8');
+function loadMigration(path: string): string {
+  return readFileSync(path, 'utf-8');
 }
 
 describe('migration: 004_flashcards_srs (#971)', () => {
   let sql: string;
 
   beforeAll(() => {
-    sql = loadMigration();
+    sql = loadMigration(BASE_MIGRATION_PATH);
   });
 
   describe('schema and retry safety', () => {
@@ -125,5 +129,53 @@ describe('migration: 004_flashcards_srs (#971)', () => {
         expect(statement).toContain('IF NOT EXISTS');
       }
     });
+  });
+});
+
+describe('migration: deployed flashcards convergence (#971)', () => {
+  let sql: string;
+
+  beforeAll(() => {
+    sql = loadMigration(FORWARD_MIGRATION_PATH);
+  });
+
+  it('renames legacy review/content columns only when the current names are absent', () => {
+    expect(sql).toMatch(/column_name = 'next_review_date'[\s\S]*?NOT EXISTS/);
+    expect(sql).toMatch(/column_name = 'context_sentence'[\s\S]*?NOT EXISTS/);
+    expect(sql).toMatch(
+      /column_name = 'audio_pronunciation_url'[\s\S]*?NOT EXISTS/,
+    );
+  });
+
+  it('adds every field required by current flashcard writes with IF NOT EXISTS', () => {
+    for (const column of [
+      'original_context',
+      'definition',
+      'pronunciation_url',
+      'easiness_factor',
+      'repetitions',
+      'interval_days',
+      'next_review_at',
+    ]) {
+      expect(sql).toMatch(new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
+    }
+  });
+
+  it('relaxes legacy source language/context requirements used by older schemas', () => {
+    expect(sql).toMatch(/ALTER COLUMN source_language DROP NOT NULL/);
+    expect(sql).toMatch(/ALTER COLUMN original_context DROP NOT NULL/);
+  });
+
+  it('reasserts the unique user/word upsert invariant', () => {
+    expect(sql).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS idx_flashcards_user_word_unique\s+ON public\.flashcards \(user_id, word_token\)/,
+    );
+  });
+
+  it('reasserts authenticated owner-only CRUD policies', () => {
+    expect(sql.match(/DROP POLICY IF EXISTS/g) ?? []).toHaveLength(4);
+    expect(sql.match(/CREATE POLICY/g) ?? []).toHaveLength(4);
+    expect(sql.match(/auth\.uid\(\) = user_id/g) ?? []).toHaveLength(5);
+    expect(sql).toMatch(/FOR UPDATE[\s\S]*?WITH CHECK \(auth\.uid\(\) = user_id\)/);
   });
 });
