@@ -141,6 +141,48 @@ def test_change_fingerprint_detects_additional_edits_in_an_already_dirty_tree(
     assert len({before, after_tracked_edit, after_untracked_add, after_untracked_edit}) == 4
 
 
+def test_change_fingerprint_tolerates_a_symlinked_node_modules(tmp_path: Path) -> None:
+    """prepare_worktree symlinks node_modules in from a shared cache (see the
+    node_modules symlink assertions above). A trailing-slash gitignore pattern
+    does not match a symlink pointing at a directory, only a real directory, so
+    the symlink itself shows up as a single untracked path -- and `git
+    hash-object` cannot hash it (`fatal: Unable to hash (null)`), previously
+    raising RepositorySafetyError and quarantining the task over something that
+    was never a real safety problem. This is fixed at the source too (see the
+    unslashed `node_modules` line added to .gitignore), but change_fingerprint
+    must not hard-fail on an unhashable path regardless of why one occurs.
+    """
+    repository = tmp_path / "repository"
+    repository.mkdir()
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ("git", *arguments),
+            cwd=repository,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    git("init", "--initial-branch=main")
+    git("config", "user.name", "Factory Test")
+    git("config", "user.email", "factory-test@example.invalid")
+    (repository / "tracked.txt").write_text("base\n", encoding="utf-8")
+    git("add", "tracked.txt")
+    git("commit", "-m", "test: seed repository")
+    # Deliberately do not gitignore node_modules, reproducing the exact gap:
+    # a trailing-slash-only pattern would still miss a symlink.
+    shared_cache = tmp_path / "shared-node-modules-cache"
+    shared_cache.mkdir()
+    (repository / "node_modules").symlink_to(shared_cache, target_is_directory=True)
+
+    workflow = GitWorkflow(repository, "main")
+
+    fingerprint = workflow.change_fingerprint()
+
+    assert isinstance(fingerprint, str) and fingerprint
+
+
 def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()

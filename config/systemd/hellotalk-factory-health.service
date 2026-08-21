@@ -6,11 +6,11 @@ After=hellotalk-factory.service
 Type=oneshot
 EnvironmentFile=/etc/hellotalk-factory/factory.env
 EnvironmentFile=/etc/hellotalk-factory/runtime.env
-Environment=HOME=/var/lib/hellotalk-factory/home
+Environment=HOME=/home/dev
 ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
 UMask=0077
 PrivateTmp=true
-ProtectHome=tmpfs
+ProtectHome=false
 BindPaths=/run/user
 ProtectKernelModules=true
 ProtectKernelLogs=true
