@@ -4,6 +4,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AppSelectComponent } from '../primitives/select/select.component';
+import { EventRsvpControlsComponent } from '../event-rsvp-controls/event-rsvp-controls.component';
 import { EventsService, Event } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -20,6 +21,7 @@ const PAGE_SIZE = 20;
     TranslatePipe,
     DatePipe,
     AppSelectComponent,
+    EventRsvpControlsComponent,
   ],
   template: `
     <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
@@ -88,6 +90,12 @@ const PAGE_SIZE = 20;
                 {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
+            <app-event-rsvp-controls
+              [eventId]="event.id"
+              [eventTitle]="event.title"
+              [maxParticipants]="event.max_participants"
+              [mutable]="canRsvp(event)"
+            />
           </div>
         }
       </div>
@@ -155,6 +163,10 @@ export class EventsFeedComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadEvents(true);
+  }
+
+  canRsvp(event: Event): boolean {
+    return !event.is_cancelled && Date.parse(event.date_time) > Date.now();
   }
 
   private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {
