@@ -1,43 +1,35 @@
-import {
-  Component,
-  inject,
-  signal,
-  input,
-} from '@angular/core';
+import { Component, inject, signal, input } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyErrorHandlerService } from '../../services/economy-error-handler.service';
 
 @Component({
   selector: 'app-error-boundary',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     @if (hasError()) {
-      <div class="min-h-[300px] flex flex-col items-center justify-center p-8"
-           [class.min-h-screen]="fullPage()">
-        <div class="text-center max-w-md">
-          <div class="text-5xl mb-4">🪙</div>
-          <h2 class="text-xl font-bold text-white mb-3">
+      <div
+        class="flex min-h-[300px] flex-col items-center justify-center p-8"
+        [class.min-h-screen]="fullPage()"
+      >
+        <div class="max-w-md text-center">
+          <div class="mb-4 text-5xl" aria-hidden="true">🪙</div>
+          <h2 class="mb-3 text-xl font-bold text-text-primary">
             {{ 'errorBoundary.title' | t }}
           </h2>
-          <p class="text-slate-400 mb-6 text-sm">
+          <p class="mb-6 text-sm text-text-secondary">
             {{ 'errorBoundary.message' | t }}
           </p>
-          <p class="text-slate-600 text-xs mb-6 font-mono break-all">
+          <p class="mb-6 break-all font-mono text-xs text-text-muted">
             {{ errorSummary() }}
           </p>
-          <div class="flex gap-3 justify-center">
+          <div class="flex justify-center gap-3">
             @if (showRetry()) {
-              <button
-                (click)="resetError()"
-                class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-xl transition-all duration-200 text-sm"
-              >
+              <button hlmBtn type="button" size="touch" (click)="resetError()">
                 {{ 'errorBoundary.retry' | t }}
               </button>
             }
-            <button
-              (click)="reportCrash()"
-              class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2 px-6 rounded-xl transition-all duration-200 text-sm"
-            >
+            <button hlmBtn type="button" variant="secondary" size="touch" (click)="reportCrash()">
               {{ 'errorBoundary.report' | t }}
             </button>
           </div>
@@ -67,16 +59,12 @@ export class ErrorBoundaryComponent {
 
   reportCrash(): void {
     if (this.lastError) {
-      this.economyErrorHandler.reportEconomyCrash(
-        this.lastError,
-        { boundaryContext: this.context() },
-      );
+      this.economyErrorHandler.reportEconomyCrash(this.lastError, {
+        boundaryContext: this.context(),
+      });
     }
   }
 
-  /**
-   * Called when a child component throws during change detection or rendering.
-   */
   handleBoundaryError(error: Error): void {
     this.lastError = error;
     this.hasError.set(true);

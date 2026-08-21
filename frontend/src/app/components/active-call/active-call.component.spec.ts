@@ -32,14 +32,16 @@ describe('ActiveCallComponent', () => {
     translate: (key: string) => key,
   };
 
-  async function createComponent(inputs: {
-    callerName?: string;
-    callerAvatar?: string;
-    roomName?: string;
-    callDirection?: 'incoming' | 'outgoing';
-    isMuted?: boolean;
-    isSpeakerphone?: boolean;
-  } = {}): Promise<void> {
+  async function createComponent(
+    inputs: {
+      callerName?: string;
+      callerAvatar?: string;
+      roomName?: string;
+      callDirection?: 'incoming' | 'outgoing';
+      isMuted?: boolean;
+      isSpeakerphone?: boolean;
+    } = {},
+  ): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [ActiveCallComponent],
       providers: [
@@ -150,7 +152,7 @@ describe('ActiveCallComponent', () => {
 
       const [muteButton] = fixture.nativeElement.querySelectorAll('button');
       expect(muteButton.getAttribute('aria-label')).toBe('voip.unmute');
-      expect(muteButton.classList).toContain('bg-red-800');
+      expect(muteButton.classList).toContain('bg-danger');
     });
 
     it('reflects the unmuted state in the aria-label', async () => {
@@ -158,7 +160,7 @@ describe('ActiveCallComponent', () => {
 
       const [muteButton] = fixture.nativeElement.querySelectorAll('button');
       expect(muteButton.getAttribute('aria-label')).toBe('voip.mute');
-      expect(muteButton.classList).not.toContain('bg-red-800');
+      expect(muteButton.classList).not.toContain('bg-danger');
     });
   });
 
@@ -179,7 +181,7 @@ describe('ActiveCallComponent', () => {
 
       const buttons = fixture.nativeElement.querySelectorAll('button');
       expect(buttons[1].getAttribute('aria-label')).toBe('voip.speaker_off');
-      expect(buttons[1].classList).toContain('bg-blue-800');
+      expect(buttons[1].classList).toContain('bg-secondary');
     });
 
     it('reflects the inactive speakerphone state in the aria-label', async () => {
@@ -187,7 +189,7 @@ describe('ActiveCallComponent', () => {
 
       const buttons = fixture.nativeElement.querySelectorAll('button');
       expect(buttons[1].getAttribute('aria-label')).toBe('voip.speaker_on');
-      expect(buttons[1].classList).not.toContain('bg-blue-800');
+      expect(buttons[1].classList).not.toContain('bg-secondary');
     });
   });
 

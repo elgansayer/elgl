@@ -32,7 +32,7 @@ Record, preview, and send voice messages up to 60 seconds in duration.
 - **Button size**: 44x44px (minimum touch target)
 - **Record button**: 56x56px (pulsing when recording)
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-900` (`#0f172a`)
 - **Waveform**: `bg-purple-500` (recording), `bg-slate-600` (inactive)

@@ -1,3 +1,5 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, effect, computed } from '@angular/core';
 import { Location } from '@angular/common';
 import { DataStorageService } from '../../services/data-storage.service';
@@ -6,8 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-data-storage',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmCheckbox, HlmButton, TranslatePipe],
   templateUrl: './data-storage.component.html',
 })
 export class DataStorageComponent {

@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -30,6 +31,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
+    private readonly eventEmitter: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -110,6 +112,33 @@ export class UsersService {
     profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
+  }
+
+  async searchUsers(
+    query: string,
+    currentUserId: string,
+    limit = 10,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .ilike('display_name', `${query}%`)
+      .neq('id', currentUserId)
+      .order('display_name', { ascending: true })
+      .limit(limit);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as {
+      id: string;
+      display_name: string;
+      avatar_url: string | null;
+    }[];
   }
 
   async getUserXp(userId: string): Promise<number> {
@@ -372,6 +401,7 @@ export class UsersService {
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
+      auto_play_voice_notes: false,
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       study_streak_days: 15,
@@ -386,6 +416,9 @@ export class UsersService {
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
+      auto_download_media: false,
+      auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       status_visibility: 'public',
       corrector_score: 0,
       incognito_visits: false,
@@ -413,17 +446,30 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (dto.target_languages && dto.target_languages.length > 1 && !isVip) {
       throw new BadRequestException(
-        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
       );
     }
 
     if (dto.target_languages && dto.target_languages.length > 3) {
-      throw new BadRequestException(
-        'A maximum of 3 target languages can be studied simultaneously.',
-      );
+      const currentProfile = await this.getProfile(userId);
+      const tier = currentProfile?.vip_tier ?? 'free';
+      const maxLanguages = tier === 'pro' || tier === 'developer' ? 5 : 3;
+      if (dto.target_languages.length > maxLanguages) {
+        throw new BadRequestException(
+          `A maximum of ${maxLanguages} target languages can be studied simultaneously on your current tier.`,
+        );
+      }
     }
 
-    if (dto.mock_location && !isVip) {
+    // Location spoofing is a consumer VIP benefit. A free user must not be
+    // able to set spoofed coordinates, city, country, or enable the spoofing
+    // toggle itself. Disabling the toggle (false) stays allowed for everyone.
+    const setsSpoofedLocation =
+      dto.mock_location !== undefined ||
+      dto.mock_country !== undefined ||
+      dto.mock_city !== undefined ||
+      dto.enable_location_spoofing === true;
+    if (setsSpoofedLocation && !isVip) {
       throw new BadRequestException(
         'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
       );
@@ -496,6 +542,9 @@ export class UsersService {
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
 
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
     if (dto.sound_effects_enabled !== undefined)
       updatePayload.sound_effects_enabled = dto.sound_effects_enabled;
 
@@ -510,6 +559,18 @@ export class UsersService {
 
     if (dto.serious_learner_mode !== undefined)
       updatePayload.serious_learner_mode = dto.serious_learner_mode;
+
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
+    if (dto.auto_download_media !== undefined)
+      updatePayload.auto_download_media = dto.auto_download_media;
+
+    if (dto.auto_download_wifi_only !== undefined)
+      updatePayload.auto_download_wifi_only = dto.auto_download_wifi_only;
+
+    if (dto.auto_download_preference !== undefined)
+      updatePayload.auto_download_preference = dto.auto_download_preference;
 
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
@@ -541,8 +602,69 @@ export class UsersService {
         `Supabase update failed, falling back to mock: ${updateError.message}`,
       );
     }
+
+    // Invalidate matchmaking caches when profile fields that affect
+    // discovery / recommendations / partner-of-week are mutated.
+    this.invalidateMatchmakingCachesAfterUpdate(userId, dto);
+
     const profile = await this.getProfile(userId);
+
+    // Fire-and-forget: emit profile.updated event for system bubble broadcasting
+    this.eventEmitter.emit('profile.updated', { userId });
+
     return { ...profile, ...updatePayload };
+  }
+
+  /**
+   * Invalidate Redis matchmaking caches when profile fields that drive
+   * discovery, recommendations, or Partner of the Week eligibility are
+   * mutated.
+   */
+  private invalidateMatchmakingCachesAfterUpdate(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): void {
+    const affectsMatchmaking =
+      dto.native_languages !== undefined ||
+      dto.target_languages !== undefined ||
+      dto.proficiency_level !== undefined ||
+      dto.privacy_hide_from_search !== undefined ||
+      dto.serious_learner_mode !== undefined ||
+      dto.interests !== undefined;
+
+    const affectsPartnerOfWeek =
+      affectsMatchmaking ||
+      dto.study_streak_days !== undefined ||
+      dto.correction_ratio !== undefined;
+
+    if (!affectsMatchmaking && !affectsPartnerOfWeek) return;
+
+    void (async () => {
+      try {
+        const redis = this.supabaseService.getRedisClient();
+        const keys: string[] = [];
+
+        if (affectsMatchmaking) {
+          keys.push(
+            `daily_recommendations:${userId}`,
+            `recommendations:daily:${userId}`,
+          );
+        }
+
+        if (affectsPartnerOfWeek) {
+          keys.push('partner_of_week_ids');
+        }
+
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } catch (err: unknown) {
+        // Non-critical cache invalidation; log and continue.
+        Logger.warn(
+          `Failed to invalidate matchmaking caches after profile update for ${userId}: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      }
+    })();
   }
 
   async updateNotificationPreferences(
@@ -1152,7 +1274,6 @@ export class UsersService {
         | 'moment_comments'
         | 'moment_likes'
         | 'flashcards'
-        | 'decks'
         | 'chat_messages'
         | 'favourites'
         | 'profile_visits'
@@ -1176,7 +1297,6 @@ export class UsersService {
       { table: 'moment_comments', column: 'author_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
-      { table: 'decks', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },
       { table: 'favourites', column: 'user_id' },
       { table: 'profile_visits', column: 'visitor_id' },

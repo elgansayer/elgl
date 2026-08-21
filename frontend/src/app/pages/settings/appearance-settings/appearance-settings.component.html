@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.appearanceSection' | t }}</h1>
@@ -12,12 +12,12 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {{ errorMessage() }}
         </div>
       }
       @if (successMessage()) {
-        <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
           {{ successMessage() | t }}
         </div>
       }
@@ -27,11 +27,14 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.themeLabel' | t }}
         </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4">
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
+        >
           <p class="text-xs text-text-secondary mb-4">{{ 'settings.themeDescription' | t }}</p>
           <div class="flex gap-2">
             @for (opt of themeOptions; track opt) {
               <button
+                hlmBtn
                 (click)="setTheme(opt)"
                 class="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
                 [class.bg-primary]="currentTheme() === opt"
@@ -39,7 +42,8 @@
                 [class.shadow-lg]="currentTheme() === opt"
                 [class.bg-surface-200]="currentTheme() !== opt"
                 [class.text-text-primary]="currentTheme() !== opt"
-               [attr.aria-label]="('theme.' + opt) | t">
+                [attr.aria-label]="'theme.' + opt | t"
+              >
                 @if (opt === 'light') {
                   <span class="me-1.5">☀️</span>
                 } @else if (opt === 'dark') {
@@ -47,7 +51,7 @@
                 } @else {
                   <span class="me-1.5">💻</span>
                 }
-                {{ ('theme.' + opt) | t }}
+                {{ 'theme.' + opt | t }}
               </button>
             }
           </div>
@@ -77,7 +81,9 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.accentColor' | t }}
         </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm ps-4 pe-4 pt-4 pb-4 space-y-4">
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm ps-4 pe-4 pt-4 pb-4 space-y-4"
+        >
           <div class="flex justify-between items-center">
             <div>
               <span class="text-sm font-medium text-text-primary block">{{
@@ -86,7 +92,7 @@
               <span class="text-xs text-text-secondary">{{ 'settings.accentColorDesc' | t }}</span>
             </div>
             @if (!isVip()) {
-              <span class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md">{{
+              <span class="text-xs font-bold text-vip bg-vip/10 px-2 py-1 rounded-md">{{
                 'settings.vipRequired' | t
               }}</span>
             }
@@ -94,6 +100,7 @@
           <div class="flex gap-3 flex-wrap">
             @for (color of availableColors; track color) {
               <button
+                hlmBtn
                 type="button"
                 (click)="setAccentColor(color)"
                 [disabled]="!isVip()"
@@ -111,23 +118,25 @@
 
           @if (isVip()) {
             <div class="pt-3 border-t border-surface-200">
-              <label class="text-xs text-text-secondary block mb-2">{{
+              <label for="customAccentColour" class="text-xs text-text-secondary block mb-2">{{
                 'settings.customColourLabel' | t
               }}</label>
               <div class="flex items-center gap-3">
                 <input
+                  id="customAccentColour"
                   type="color"
-                  [value]="primaryAccentColor()"
+                  [value]="primaryAccentColor() ?? '#c65230'"
                   (input)="onCustomColorChange($event)"
                   class="w-10 h-10 rounded-lg border-2 border-surface-300 cursor-pointer bg-transparent"
                   [attr.aria-label]="'settings.customColourLabel' | t"
                 />
                 <input
+                  hlmInput
                   type="text"
-                  [value]="primaryAccentColor()"
+                  [value]="primaryAccentColor() ?? '#c65230'"
                   (input)="onCustomColorChange($event)"
                   maxlength="7"
-                  placeholder="#4f46e5"
+                  placeholder="#c65230"
                   class="flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                   [attr.aria-label]="'settings.customColourPlaceholder' | t"
                 />
@@ -142,35 +151,38 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.languageSection' | t }}
         </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4">
-          <p class="text-xs text-text-secondary mb-3">{{ 'settings.languageChangeDescription' | t }}</p>
-          <select
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
+        >
+          <p class="text-xs text-text-secondary mb-3">
+            {{ 'settings.languageChangeDescription' | t }}
+          </p>
+          <app-select
             [value]="i18nService.currentLang()"
-            (change)="onLanguageSelect($event)"
-            class="w-full bg-surface-200 border border-surface-300 rounded-lg px-3 py-2.5 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-           [attr.aria-label]="'Select'">
+            [ariaLabel]="'settings.languageSelectAriaLabel'"
+            (valueChange)="onLanguageValueChange($event)"
+          >
             @for (lang of i18nService.availableLanguages; track lang.code) {
-              <option [value]="lang.code">
-                {{ lang.flag }} {{ lang.nativeName }}
-              </option>
+              <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
             }
-          </select>
+          </app-select>
         </div>
       </section>
 
       <!-- Save Button -->
       <div class="pt-4">
-        <button
-          (click)="saveSettings()"
+        <app-button-primary
+          (clicked)="saveSettings()"
           [disabled]="isSaving()"
-          class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
-         [attr.aria-label]="'common.loading' | t">
+          customClass="w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+          [attr.aria-label]="'common.loading' | t"
+        >
           @if (isSaving()) {
             {{ 'common.loading' | t }}
           } @else {
             {{ 'settings.saveBtn' | t }}
           }
-        </button>
+        </app-button-primary>
       </div>
     }
   </main>

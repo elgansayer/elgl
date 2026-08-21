@@ -1,10 +1,22 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  computed,
+  OnDestroy,
+} from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
 
 export interface TokenSegmentSpan {
   segment: string;
@@ -16,7 +28,13 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [TranslatePipe, WordDefinitionModalComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    WordDefinitionModalComponent,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './audio-sync-reader.component.html',
   styleUrls: ['./audio-sync-reader.component.scss'],
 })
@@ -36,6 +54,17 @@ export class AudioSyncReaderComponent implements OnDestroy {
   readonly activeTokenIndex = signal<number>(-1);
   readonly isPlaying = signal<boolean>(false);
   readonly selectedToken = signal<{ token: string; context: string } | null>(null);
+
+  readonly activeToken = computed<TokenSegmentSpan | null>(() => {
+    const idx = this.activeTokenIndex();
+    const allTokens = this.tokens();
+    if (idx < 0 || idx >= allTokens.length) return null;
+    return allTokens[idx];
+  });
+
+  readonly wordLikeTokenCount = computed<number>(() => {
+    return this.tokens().filter((t) => t.isWordLike).length;
+  });
 
   private audioElement: HTMLAudioElement | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;

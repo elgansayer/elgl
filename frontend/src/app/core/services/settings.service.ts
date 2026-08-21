@@ -119,7 +119,7 @@ export class SettingsService {
             },
           },
           social: {
-            profileVisibility: 'everyone', // 'everyone' | 'vips_only' | 'hidden'
+                profileVisibility: 'Everyone', // 'Everyone' | 'VipsOnly' | 'Hidden'
             status: 'Online',
             customStatus: {
               emoji: '🌸',
