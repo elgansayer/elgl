@@ -1,13 +1,23 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
 import { MediaService } from '../../services/media.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-voice-recorder',
-  imports: [TranslatePipe],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })

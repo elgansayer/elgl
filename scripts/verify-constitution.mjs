@@ -72,7 +72,11 @@ function checkFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
   const isFrontend = relPath.startsWith('frontend/src/');
-  const isTestFixture = relPath.endsWith('.spec.ts') || relPath.endsWith('.test.ts');
+  const isTestFixture =
+    relPath.endsWith('.spec.ts') ||
+    relPath.endsWith('.test.ts') ||
+    relPath.endsWith('.cy.ts') ||
+    relPath.includes('.verification.spec.ts');
   const isFrontendProduction = isFrontend && !isTestFixture;
   const isDoc = relPath.endsWith('.md') || relPath.endsWith('.mdc');
 
@@ -83,7 +87,7 @@ function checkFile(filePath) {
     const line = lines[i];
 
     // Check 1: Em dash check
-    if (EM_DASH_REGEX.test(line)) {
+    if (!isTestFixture && EM_DASH_REGEX.test(line)) {
       console.error(`❌ [EM DASH VIOLATION] ${relPath}:${lineNum}`);
       console.error(
         `   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,

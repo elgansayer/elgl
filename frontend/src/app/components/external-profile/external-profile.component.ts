@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -8,10 +9,11 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 @Component({
   selector: 'app-external-profile',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
     <div class="flex gap-3">
       <button
+        hlmBtn
         type="button"
         (click)="sendMessage()"
         class="flex-1 btn-primary px-4 py-2 rounded-lg text-sm font-medium"
@@ -21,6 +23,7 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
       @if (isFollowing()) {
         <button
+          hlmBtn
           type="button"
           (click)="unfollow()"
           class="flex-1 btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
@@ -29,6 +32,7 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
         </button>
       } @else {
         <button
+          hlmBtn
           type="button"
           (click)="follow()"
           class="flex-1 btn-primary px-4 py-2 rounded-lg text-sm font-medium"

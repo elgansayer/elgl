@@ -81,10 +81,9 @@ describe('AdminBlocksComponent', () => {
 
   const createUser = (overrides: Partial<AdminBlockedUser> = {}): AdminBlockedUser => ({
     id: 'user-1',
-    blocker_id: 'admin-1',
-    blocked_id: 'user-1',
-    blocked_name: 'John Doe',
-    created_at: new Date().toISOString(),
+    display_name: 'John Doe',
+    native_language: 'English',
+    target_languages: ['French', 'Spanish'],
     ...overrides,
   });
 
@@ -151,7 +150,7 @@ describe('AdminBlocksComponent', () => {
   it('renders a list item for each blocked user', async () => {
     listBlockedUsersSpy.mockResolvedValue([
       createUser({ id: 'user-a' }),
-      createUser({ id: 'user-b', blocked_name: 'Jane' }),
+      createUser({ id: 'user-b', display_name: 'Jane' }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -161,24 +160,26 @@ describe('AdminBlocksComponent', () => {
     expect(items.length).toBe(2);
   });
 
-  it('displays blocked_name and created_at info for each blocked user', async () => {
+  it('displays display_name and language info for each blocked user', async () => {
     listBlockedUsersSpy.mockResolvedValue([
-      createUser({ id: 'user-a', blocked_name: 'Alice' }),
+      createUser({ id: 'user-a', display_name: 'Alice', native_language: 'Korean', target_languages: ['English'] }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.querySelector('li p.text-sm')?.textContent ?? '';
-    expect(text).toBeTruthy();
+    expect(text).toContain('Korean');
+    expect(text).toContain('\u2192');
+    expect(text).toContain('English');
 
     const name = fixture.nativeElement.querySelector('li p.font-medium')?.textContent ?? '';
     expect(name).toContain('Alice');
   });
 
-  it('renders avatar image when blocked_avatar is present', async () => {
+  it('renders avatar image when avatar_url is present', async () => {
     listBlockedUsersSpy.mockResolvedValue([
-      createUser({ id: 'user-x', blocked_avatar: 'https://example.com/pic.png' }),
+      createUser({ id: 'user-x', avatar_url: 'https://example.com/pic.png' }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -189,9 +190,9 @@ describe('AdminBlocksComponent', () => {
     expect(img.getAttribute('src')).toBe('https://example.com/pic.png');
   });
 
-  it('renders fallback avatar circle when blocked_avatar is absent', async () => {
+  it('renders fallback avatar circle when avatar_url is absent', async () => {
     listBlockedUsersSpy.mockResolvedValue([
-      createUser({ id: 'user-nopic', blocked_avatar: undefined }),
+      createUser({ id: 'user-nopic', avatar_url: undefined }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();

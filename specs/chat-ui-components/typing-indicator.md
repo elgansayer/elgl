@@ -23,7 +23,7 @@ Show when other users in the chat are currently typing a message.
 - **Dots**: 6x6px each, 4px gap
 - **Text**: 13px
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: Transparent (inherits from chat background)
 - **Dots**: `bg-purple-400`
