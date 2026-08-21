@@ -72,7 +72,7 @@ ng build
 
 ## 5. Testing
 
-- **Unit Tests**: Run `ng test` to execute unit tests via the configured test runner (e.g., Karma or Vitest).
+- **Unit Tests**: Run `ng test` to execute unit tests via the configured test runner (Vitest).
 - **End-to-End (E2E)**: Run `ng e2e`. If no E2E framework is configured, the CLI will prompt to install one (Cypress, Playwright, Puppeteer, etc.).
 
 ## 6. Deployment

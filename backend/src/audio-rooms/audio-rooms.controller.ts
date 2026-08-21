@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -27,6 +28,7 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  DismissRaisedHandDto,
   InviteCoHostDto,
   RaiseHandDto,
   RemoveCoHostDto,
@@ -81,7 +83,11 @@ interface AuthUser {
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class AudioRoomsController {
-  constructor(private readonly audioRoomsService: AudioRoomsService) {}
+  constructor(
+    private readonly audioRoomsService: AudioRoomsService,
+    @InjectPinoLogger(AudioRoomsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
@@ -215,11 +221,15 @@ export class AudioRoomsController {
     @Query('type') partyType?: string,
     @Query('topic') topic?: string,
     @Query('level') level?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ): Promise<AudioRoomRecord[]> {
     return await this.audioRoomsService.listActiveRooms(
       partyType,
       topic,
       level,
+      limit ? parseInt(limit, 10) : 50,
+      offset ? parseInt(offset, 10) : 0,
     );
   }
 
@@ -552,6 +562,15 @@ export class AudioRoomsController {
     return await this.audioRoomsService.muteSpeaker(user.id, dto);
   }
 
+  @Post('kick-speaker')
+  async kickSpeaker(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.kickSpeaker(user.id, dto);
+  }
+
   @Post('demote-speaker')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
@@ -570,6 +589,16 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.demoteSpeaker(user.id, dto);
+  }
+
+  @Post('dismiss-raised-hand')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async dismissRaisedHand(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DismissRaisedHandDto,
+  ): Promise<void> {
+    if (!user) return;
+    return await this.audioRoomsService.dismissRaisedHand(user.id, dto);
   }
 
   @Post('invite-co-host')

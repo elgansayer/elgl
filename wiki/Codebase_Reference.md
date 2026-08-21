@@ -72,6 +72,45 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/interests/interests.module.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/escrow/escrow.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/circuit-breaker.service.ts`
+- Methods: `getBreaker`, `isAvailable`, `recordSuccess`, `recordFailure`, `getState`, `reset`, `getAllStates`
+
+### `backend/src/escrow/escrow.service.ts`
+- Methods: `getBackoffDelay`, `toResponse`, `holdCoins`, `releaseCoins`, `refundCoins`, `cancelEscrow`, `disputeEscrow`, `getTransaction`, `listTransactions`, `invalidateEscrowCaches`, `processDegradedQueue`, `processStaleEscrows`, `getCircuitBreakerStatus`, `resetCircuitBreaker`
+
+### `backend/src/escrow/escrow-exception.filter.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/cache.interceptor.ts`
+- Methods: `intercept`
+
+### `backend/src/escrow/escrow-queue.worker.ts`
+- Methods: `onModuleInit`, `onModuleDestroy`, `start`, `stop`
+
+### `backend/src/escrow/crash-report.service.ts`
+- Methods: `reportCrash`, `listUnresolved`, `acknowledgeReport`, `resolveReport`
+
+### `backend/src/escrow/escrow.controller.ts`
+- Methods: `getCircuitBreakerStatus`, `resetCircuitBreaker`, `listCrashReports`
+
+### `backend/src/escrow/sanitise-escrow.helper.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/interfaces/crash-report.interface.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/interfaces/escrow-transaction.interface.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/interfaces/escrow.interface.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/escrow/dto/escrow.dto.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/cultural-insights/cultural-insights.module.ts`
 - *(No methods found or interface/type definition)*
 
@@ -225,6 +264,27 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/groups/dto/add-group-to-community.dto.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/common/http-retry.helper.ts`
+- Methods: `while`
+
+### `backend/src/common/cache.interceptor.ts`
+- Methods: `intercept`
+
+### `backend/src/common/retry.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/common/logger/logger.module.ts`
+- Methods: `level`, `req`, `res`
+
+### `backend/src/common/retry/retry.service.ts`
+- Methods: `isRetryableError`, `calculateDelay`, `extractRetryAfter`, `sleep`
+
+### `backend/src/common/retry/retry.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/common/retry/exponential-backoff.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/common/pipes/sanitise-html.pipe.ts`
 - Methods: `transform`, `isPlainObject`, `sanitiseValue`
 
@@ -244,13 +304,16 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `getScenarios`
 
 ### `backend/src/ai-conversation/ai-conversation.service.ts`
-- Methods: `getScenarios`, `generateReply`
+- Methods: `checkDailyAiRateLimit`, `generateReply`, `getDefaultSystemPrompt`, `getFallbackReply`
 
 ### `backend/src/ai-conversation/ai-conversation.module.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/safety/safety.module.ts`
 - *(No methods found or interface/type definition)*
+
+### `backend/src/safety/safety-cache-invalidation.service.ts`
+- Methods: `getRedis`, `invalidateTrustAndSafetyCaches`, `invalidateUserPairCaches`, `invalidateUserCaches`
 
 ### `backend/src/safety/safety.service.ts`
 - Methods: `getCategories`, `reportUser`, `blockUser`, `unblockUser`, `isBlocked`, `getBlockedUserIds`, `getBlockerUserIds`, `getBlockedAndBlockerIds`, `getBlockedUserDetails`
@@ -324,10 +387,25 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/recommendations/recommendations.controller.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/recommendations/matchmaking-exception.filter.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/recommendations/recommendations.service.ts`
-- Methods: `calculateDailyRecommendations`, `getRecommendations`
+- Methods: `calculateDailyRecommendations`, `getDailyRecommendations`, `getRecommendations`, `getRecommendationsWithFallback`, `recommendationsFromMock`, `purgeRecommendationsCache`
+
+### `backend/src/recommendations/matchmaking-crash-report.service.ts`
+- Methods: `reportCrash`, `listUnresolved`, `acknowledgeReport`, `resolveReport`, `getStats`
+
+### `backend/src/recommendations/sanitise-recommendations.helper.ts`
+- *(No methods found or interface/type definition)*
 
 ### `backend/src/recommendations/recommendations.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/recommendations/recommendations-rate-limiter.guard.ts`
+- Methods: `canActivate`
+
+### `backend/src/recommendations/dto/recommendations-response.dto.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/location/location.module.ts`
@@ -345,11 +423,20 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/economy/apple-notification.service.ts`
 - Methods: `handleNotification`, `verifyAndDecodeJWS`, `extractTransactionInfo`, `handleSubscribed`, `handleRenewalStatusChange`, `handleRenewalPreferenceChange`, `handleFailedRenewal`, `handleExpired`, `handleRefund`, `handleRevoke`, `handlePriceIncrease`, `handleRefundDeclined`, `handleConsumptionRequest`, `handleRenewalExtension`, `updateSubscriptionStatus`, `updateAutoRenewStatus`, `updateRenewalProduct`, `notifyUserAboutFailedRenewal`, `revokeCoinsForRefund`, `revokeSubscriptionBenefits`, `notifyUserAboutPriceIncrease`, `provideConsumptionData`, `extendSubscription`
 
+### `backend/src/economy/coin-economy-health.service.ts`
+- Methods: `markFeatureDegraded`, `clearFeatureDegradation`, `isFeatureDegraded`, `getDegradedFeatures`, `getHealthSnapshot`, `getCachedSnapshot`
+
+### `backend/src/economy/economy-rate-limiter.guard.ts`
+- Methods: `canActivate`
+
 ### `backend/src/economy/economy.service.ts`
-- Methods: `getCatalog`, `getDefaultGiftCatalog`, `getPackages`, `createCheckoutSession`, `getBalance`, `claimDailyCheckIn`, `verifyPurchaseReceipt`, `purchaseCoins`, `parseAndroidReceiptToken`, `extractStripeSessionId`, `getCoinPackageByProductId`, `sendGift`, `unlockStickerPack`, `getStickerPacks`, `getDefaultStickerPacks`
+- Methods: `getCatalog`, `getDefaultGiftCatalog`, `getPackages`, `createCheckoutSession`, `getBalance`, `claimDailyCheckIn`, `verifyPurchaseReceipt`, `purchaseCoins`, `parseAndroidReceiptToken`, `extractStripeSessionId`, `getCoinPackageByProductId`, `sendGift`, `unlockStickerPack`, `getStickerPacks`, `getTransactionHistory`, `invalidateUserEconomyCaches`, `getDefaultStickerPacks`
+
+### `backend/src/economy/sanitise-economy.helper.ts`
+- *(No methods found or interface/type definition)*
 
 ### `backend/src/economy/cache.interceptor.ts`
-- Methods: `intercept`
+- *(No methods found or interface/type definition)*
 
 ### `backend/src/economy/google-play-notification.service.ts`
 - Methods: `handleNotification`, `updateSubscriptionStatus`, `updateSubscriptionPrice`, `updateSubscriptionDeferredDate`, `revokeSubscriptionBenefits`
@@ -357,8 +444,11 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/economy/economy.module.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/economy/economy-exception.filter.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/economy/economy.controller.ts`
-- Methods: `getCatalog`, `getPackages`
+- Methods: `getCatalog`, `getPackages`, `getHealth`
 
 ### `backend/src/economy/interfaces/subscription.interface.ts`
 - *(No methods found or interface/type definition)*
@@ -420,6 +510,12 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/cultural/cultural.controller.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/privacy/data-scrubbing.service.ts`
+- Methods: `scrubIpAddress`, `scrubLoginHistory`, `scrubReceiptToken`, `scrubCoinPurchaseRecords`, `scrubGiftTransactionRecords`, `scrubEconomyRecord`, `scrubEscrowRecord`, `scrubDisplayName`, `scrubAvatarUrl`, `scrubUserProfileForAdmin`, `scrubRecommendationRecords`, `scrubCrashReport`, `scrubCrashReportRecords`, `scrubReadingResourceForAdmin`, `scrubReadingResourceRecords`, `scrubReadingProgressForAdmin`, `scrubReadingProgressRecords`, `scrubTranslationCacheForAdmin`, `scrubTranslationCacheRecords`
+
+### `backend/src/privacy/data-retention.service.ts`
+- Methods: `purgeLoginHistory`, `purgeOldReports`, `purgeInactiveReadingProgress`, `finaliseAccountDeletions`
+
 ### `backend/src/privacy/privacy.service.ts`
 - Methods: `requestArchive`, `deleteAccount`, `cancelDeletion`
 
@@ -465,6 +561,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/notifications/interfaces/notification.interface.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/notifications/dto/notification.dto.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/notifications/dto/update-notification-preferences.dto.ts`
 - *(No methods found or interface/type definition)*
 
@@ -473,6 +572,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `backend/src/notifications/listeners/profile-view-notification.listener.ts`
 - Methods: `handleProfileVisit`
+
+### `backend/src/notifications/listeners/like-notification.listener.ts`
+- Methods: `handleLike`
 
 ### `backend/src/notifications/listeners/chat-notification.listener.ts`
 - Methods: `handleChatMessage`
@@ -483,6 +585,15 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/notifications/listeners/chat-mention-notification.listener.ts`
 - Methods: `handleChatMention`
 
+### `backend/src/notifications/listeners/comment-mention-notification.listener.ts`
+- Methods: `handleCommentMention`
+
+### `backend/src/notifications/listeners/follow-notification.listener.ts`
+- Methods: `handleFollow`
+
+### `backend/src/notifications/listeners/system-notification.listener.ts`
+- Methods: `handleSystemAlert`
+
 ### `backend/src/notifications/events/notification.events.ts`
 - *(No methods found or interface/type definition)*
 
@@ -490,7 +601,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/admin/admin.service.ts`
-- Methods: `listUsers`, `setVipStatus`, `getLoginHistory`, `banUser`, `warnUser`
+- Methods: `getRedis`, `listUsers`, `setVipStatus`, `getLoginHistory`, `banUser`, `warnUser`, `listAllBlocks`, `listReports`, `removeBlock`
 
 ### `backend/src/admin/admin.controller.ts`
 - *(No methods found or interface/type definition)*
@@ -571,7 +682,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/users/users.service.ts`
-- Methods: `proficiencyAssessment`, `getProfile`, `getUserXp`, `getVisitors`, `getStatusViewersByStatusId`, `getDefaultStatusId`, `followUser`, `unfollowUser`, `likeProfile`, `unlikeProfile`, `touchLastActiveAt`, `getNotificationPreferences`, `updateDoNotDisturbSettings`, `getMockProfile`, `updateProfile`, `updateNotificationPreferences`, `updateGreetingMessage`, `updateAwayMessage`, `scheduleDeletion`, `cancelDeletion`, `blockUser`, `unblockUser`, `reportUser`, `exportUserData`, `getPrivacySettings`, `getBusinessProfile`, `updateBusinessProfile`, `awardCoins`, `getMessageFilters`, `setMessageFilters`, `getFollowers`, `getFollowing`, `generateDeviceLink`, `updatePrivacySettings`, `getAvailableHobbies`, `getAvailableInterests`, `getBadges`, `shareContact`, `permanentDeleteAccount`
+- Methods: `proficiencyAssessment`, `getProfile`, `searchUsers`, `getUserXp`, `getVisitors`, `getStatusViewersByStatusId`, `getDefaultStatusId`, `followUser`, `unfollowUser`, `likeProfile`, `unlikeProfile`, `touchLastActiveAt`, `getNotificationPreferences`, `updateDoNotDisturbSettings`, `getMockProfile`, `updateProfile`, `updateNotificationPreferences`, `updateGreetingMessage`, `updateAwayMessage`, `scheduleDeletion`, `cancelDeletion`, `blockUser`, `unblockUser`, `reportUser`, `exportUserData`, `getPrivacySettings`, `getBusinessProfile`, `updateBusinessProfile`, `awardCoins`, `getMessageFilters`, `setMessageFilters`, `getFollowers`, `getFollowing`, `generateDeviceLink`, `updatePrivacySettings`, `getAvailableHobbies`, `getAvailableInterests`, `getBadges`, `shareContact`, `permanentDeleteAccount`
 
 ### `backend/src/users/constants.ts`
 - *(No methods found or interface/type definition)*
@@ -630,6 +741,18 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/streak/streak.service.ts`
 - Methods: `resetStreaksForInactiveUsers`, `resetStreaksForTesting`, `handleStreakResetCron`
 
+### `backend/src/livekit/livekit.controller.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/livekit/livekit.service.ts`
+- Methods: `generateToken`, `buildIceServers`
+
+### `backend/src/livekit/livekit.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/livekit/dto/livekit-token.dto.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/pronunciation/pronunciation.module.ts`
 - *(No methods found or interface/type definition)*
 
@@ -656,6 +779,12 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `backend/src/milestones/dto/create-milestone.dto.ts`
 - *(No methods found or interface/type definition)*
+
+### `backend/src/cloudflare/cloudflare.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/cloudflare/cache.service.ts`
+- Methods: `purgeByCacheTags`
 
 ### `backend/src/ankii-integration/ankii-integration.service.ts`
 - *(No methods found or interface/type definition)*
@@ -718,10 +847,10 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/chat/centrifugo.service.ts`
-- Methods: `onModuleInit`, `checkConnectionRateLimit`, `parseLimit`, `generateConnectionToken`, `signJwt`, `publish`, `publishTranslated`
+- Methods: `onModuleInit`, `checkConnectionRateLimit`, `getRateWindowSec`, `parseLimit`, `generateConnectionToken`, `signJwt`, `publish`, `publishTranslated`
 
 ### `backend/src/chat/chat.service.ts`
-- Methods: `generateConnectionToken`, `getRooms`, `sendMessage`, `getMessages`, `addFavourite`, `getFavourites`, `deleteFavourite`, `getSuggestedReplies`, `parseSuggestedReplies`, `createGroup`, `renameGroup`, `addGroupMembers`, `removeGroupMember`, `getGroupMembers`, `lockChat`, `unlockChat`, `getLockedChats`, `shareContact`, `setWallpaper`, `getWallpaper`, `replyToStatusUpdate`, `translateMessage`, `llmProxy`, `correctMessage`, `fixMessage`, `deleteMessage`, `updateMessageStatus`, `viewMessageMedia`, `exportChatHistory`, `addLabel`, `removeLabel`, `getUserLabels`, `getRoomsByLabel`, `getRoomGreeting`, `generateAiReply`
+- Methods: `generateConnectionToken`, `getRooms`, `sendMessage`, `getMessages`, `addFavourite`, `searchAllMessages`, `getFavourites`, `deleteFavourite`, `getSuggestedReplies`, `parseSuggestedReplies`, `createGroup`, `renameGroup`, `addGroupMembers`, `removeGroupMember`, `getGroupMembers`, `lockChat`, `unlockChat`, `getLockedChats`, `shareContact`, `setWallpaper`, `getWallpaper`, `replyToStatusUpdate`, `translateMessage`, `llmProxy`, `correctMessage`, `fixMessage`, `deleteMessage`, `updateMessageStatus`, `viewMessageMedia`, `exportChatHistory`, `addLabel`, `removeLabel`, `getUserLabels`, `getRoomsByLabel`, `getRoomGreeting`, `generateAiReply`
 
 ### `backend/src/chat/chat-backup.service.ts`
 - Methods: `exportChannel`, `importChannel`
@@ -873,12 +1002,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/calls/dto/initiate-call.dto.ts`
 - *(No methods found or interface/type definition)*
 
-### `backend/src/ai/ai.controller.ts`
-- Methods: `getScenarios`
-
-### `backend/src/ai/ai.service.ts`
-- Methods: `getConversationAnalysisReport`, `getScenarios`, `handleMessage`
-
 ### `backend/src/cloudflare-r2/r2.service.ts`
 - Methods: `generateUploadUrl`, `uploadFromUrl`
 
@@ -928,7 +1051,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/quiz/quiz.service.ts`
-- Methods: `getQuestions`, `submitResults`
+- Methods: `getQuestions`, `evaluateResults`, `submitResults`
 
 ### `backend/src/quests/quests.module.ts`
 - *(No methods found or interface/type definition)*
@@ -976,12 +1099,15 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `getCatalog`, `getItem`, `decrementStock`
 
 ### `backend/src/shopping/cart.service.ts`
-- Methods: `getCart`, `addItem`, `removeItem`, `checkout`
+- Methods: `onModuleInit`, `onModuleDestroy`, `touchCart`, `getCart`, `addItem`, `removeItem`, `checkout`
 
 ### `backend/src/shopping/shopping.controller.ts`
 - Methods: `getCatalog`
 
 ### `backend/src/shopping/cart.controller.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/shopping/sanitise-shopping.helper.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/shopping/shopping.module.ts`
@@ -1014,20 +1140,50 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/two-factor/two-factor.guard.ts`
 - Methods: `canActivate`, `extractRequest`, `isRequestWithUser`
 
+### `backend/src/reading-engine/reading-engine.controller.ts`
+- Methods: `getUserId`
+
+### `backend/src/reading-engine/reading-engine.service.ts`
+- Methods: `createResource`, `updateResource`, `getResource`, `listResources`, `deleteResource`, `tokenise`, `getProgress`, `recordSession`, `getCachedTranslation`, `cacheTranslation`, `clearUserCaches`, `toResource`
+
+### `backend/src/reading-engine/reading-engine.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/reading-engine/reading-engine-cache.service.ts`
+- Methods: `buildKey`, `buildUserPattern`, `set`, `delete`, `deletePattern`, `handleResourceMutated`, `handleFlashcardMutated`, `handleReadingCompleted`, `handleTranslationRequested`, `handleUserDataCleared`, `inferTtl`
+
+### `backend/src/reading-engine/interfaces/cache-rules.interface.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/reading-engine/interfaces/reading.interface.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/reading-engine/dto/update-reading-resource.dto.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/reading-engine/dto/create-reading-resource.dto.ts`
+- *(No methods found or interface/type definition)*
+
 ### `backend/src/video-calls/video-calls.service.ts`
 - Methods: `createRoom`, `joinRoom`
 
 ### `backend/src/video-calls/video-calls.module.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/video-calls/video-calls-cache-invalidation.service.ts`
+- Methods: `getRedis`, `invalidateRoomCaches`, `invalidateParticipantCaches`, `invalidateRecordingCaches`, `invalidateAllVideoClassroomCaches`, `handleRoomMutated`, `handleParticipantMutated`, `handleRecordingMutated`
+
+### `backend/src/video-calls/video-calls-degradation.service.ts`
+- Methods: `getBreaker`, `isAvailable`, `recordSuccess`, `recordFailure`, `cacheToken`, `getCachedToken`, `recordDegradationEvent`, `getRecentDegradationEvents`, `resetAllBreakers`, `getAllBreakerStates`
+
 ### `backend/src/video-calls/video-calls.controller.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `health`
 
 ### `backend/src/llm-proxy/llm-proxy.module.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/llm-proxy/llm-proxy.service.ts`
-- Methods: `proxyMessage`
+- Methods: `proxyMessage`, `chatCompletion`
 
 ### `backend/src/communities/communities.module.ts`
 - *(No methods found or interface/type definition)*
@@ -1069,9 +1225,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/database/migrations/20260730000001-create-quick-polls.ts`
-- *(No methods found or interface/type definition)*
-
-### `backend/src/pronunciation-scoring/pronunciation-scoring.service.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/decks/decks.controller.ts`
@@ -1129,7 +1282,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `findOne`
 
 ### `backend/src/word-of-the-day/word-of-the-day.service.ts`
-- Methods: `getTodayWord`
+- Methods: `getTodayWord`, `getDayOfYear`
 
 ### `backend/src/word-of-the-day/word-of-the-day.module.ts`
 - *(No methods found or interface/type definition)*
@@ -1140,8 +1293,11 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/nlp/nlp.module.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/nlp/nlp-rate-limiter.guard.ts`
+- Methods: `canActivate`
+
 ### `backend/src/nlp/nlp.service.ts`
-- Methods: `detectLanguage`, `checkRateLimit`, `translate`, `grammarCheck`, `explainGrammar`, `pronunciationScore`, `transcribeAudio`, `simplify`, `translateUi`, `translateBio`, `translateAndCorrect`, `transcribeVoiceOnly`, `transcribeVoice`, `generateSessionSummary`
+- Methods: `detectLanguage`, `checkRateLimit`, `translate`, `grammarCheck`, `explainGrammar`, `while`, `pronunciationScore`, `transcribeAudio`, `simplify`, `translateUi`, `translateBio`, `translateAndCorrect`, `transcribeVoiceOnly`, `transcribeVoice`, `generateSessionSummary`
 
 ### `backend/src/nlp/interfaces/nlp-results.interface.ts`
 - *(No methods found or interface/type definition)*
@@ -1180,13 +1336,19 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/flashcards/flashcards.service.ts`
-- Methods: `createOrUpdateFlashcard`, `updateSrsLevel`, `applySm2Algorithm`, `getFlashcards`, `getDueReviews`
+- Methods: `getHealthStatus`, `isConnectivityError`, `createOrUpdateFlashcard`, `updateSrsLevel`, `applySm2Algorithm`, `getFlashcards`, `getDueReviews`, `markSuccessfulSync`, `createDegradedFlashcard`, `recordReviewMetrics`, `getCachedFlashcards`, `getCachedDueReviews`
 
 ### `backend/src/flashcards/suggest-flashcards.controller.ts`
 - *(No methods found or interface/type definition)*
 
-### `backend/src/flashcards/flashcards.controller.ts`
+### `backend/src/flashcards/srs-rate-limiter.guard.ts`
+- Methods: `canActivate`
+
+### `backend/src/flashcards/sanitise-flashcard.helper.ts`
 - *(No methods found or interface/type definition)*
+
+### `backend/src/flashcards/flashcards.controller.ts`
+- Methods: `getHealth`
 
 ### `backend/src/flashcards/interfaces/flashcard.interface.ts`
 - *(No methods found or interface/type definition)*
@@ -1198,7 +1360,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/audio-rooms/audio-rooms.service.ts`
-- Methods: `archiveRecording`, `onModuleInit`, `createRoom`, `createLanguageParty`, `createPrivateRoom`, `generateToken`, `listActiveRooms`, `getRoom`, `getStage`, `reorderSpeakers`, `clearStage`, `raiseHand`, `approveSpeaker`, `muteSpeaker`, `demoteSpeaker`, `inviteCoHost`, `removeCoHost`, `sendCaption`, `broadcastAICaption`, `archiveRoom`, `getDistinctTopics`, `getDistinctLevels`, `getInvitedPrivateRooms`, `getActiveHostIds`, `createPoll`, `submitVote`, `getPollResults`, `addNote`, `getNotes`, `deleteNote`, `getTranscript`, `isAuthorizedInRoom`, `sendReaction`, `getCallLogs`, `getExclusiveEmojis`, `getSoundboardSounds`, `playSound`, `tipHost`
+- Methods: `archiveRecording`, `onModuleInit`, `createRoom`, `createLanguageParty`, `createPrivateRoom`, `generateToken`, `listActiveRooms`, `getRoom`, `getStage`, `reorderSpeakers`, `clearStage`, `raiseHand`, `approveSpeaker`, `muteSpeaker`, `demoteSpeaker`, `inviteCoHost`, `removeCoHost`, `sendCaption`, `broadcastAICaption`, `archiveRoom`, `getDistinctTopics`, `getDistinctLevels`, `getInvitedPrivateRooms`, `getActiveHostIds`, `createPoll`, `submitVote`, `getPollResults`, `addNote`, `getNotes`, `deleteNote`, `getTranscript`, `isAuthorizedInRoom`, `sendReaction`, `getCallLogs`, `getExclusiveEmojis`, `getSoundboardSounds`, `playSound`, `tipHost`, `invalidateAudioRoomCache`
 
 ### `backend/src/audio-rooms/transcript-egress.service.ts`
 - Methods: `startEgress`, `stopEgress`, `generateTranscriptFromAudioUrl`, `while`
@@ -1290,6 +1452,30 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/resource-library/dto/create-resource.dto.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/metrics/metrics.interceptor.ts`
+- Methods: `intercept`
+
+### `backend/src/metrics/recommendations-metrics.aggregator.ts`
+- Methods: `collectMatchmakingStats`
+
+### `backend/src/metrics/srs-metrics.aggregator.ts`
+- Methods: `collectSrsStats`
+
+### `backend/src/metrics/escrow-metrics.aggregator.ts`
+- Methods: `collectEscrowStats`
+
+### `backend/src/metrics/metrics.controller.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/metrics/metrics.module.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/metrics/ts-metrics.aggregator.ts`
+- Methods: `collectTsStats`
+
+### `backend/src/metrics/metrics.service.ts`
+- Methods: `recordHttpRequest`, `incrementActiveConnections`, `decrementActiveConnections`, `recordSrsFlashcardCreated`, `recordSrsReviewCompleted`, `setSrsDueCards`, `setSrsAverageEasinessFactor`, `setSrsReviewSuccessRate`, `setSrsCardsPerLevel`, `setSrsCardsStuck`, `setSrsDecksTotal`, `recordSrsDeckCreated`, `recordTsReportSubmitted`, `recordTsBlockCreated`, `recordTsBlockRemoved`, `setTsPendingReports`, `setTsActiveBlocksTotal`, `recordTsModerationAction`, `recordTsDatingRiskScore`, `recordReadingEngineSession`, `recordReadingEngineWordsParsed`, `recordReadingEngineTokenisationDuration`, `recordReadingEngineAiRequest`, `recordReadingEngineAiRequestDuration`, `recordReadingEngineAiError`, `recordReadingEngineFlashcardSave`, `recordReadingEngineSessionDuration`, `recordReadingEngineWordLookup`, `setReadingEngineDailyActiveReaders`, `recordCoinPurchase`, `recordCoinPurchaseError`, `recordCoinFraudAttempt`, `setCoinBalanceTotal`, `setCoinHighBalanceUsers`, `recordDailyCheckInClaim`, `recordGiftSent`, `recordStickerPurchase`, `observeCoinTransactionLatency`, `recordMatchmakingRecommendationsGenerated`, `recordMatchmakingRecommendationsPerRequest`, `recordMatchmakingFallbackTierUsed`, `recordMatchmakingEmptyResults`, `recordMatchmakingRequestDuration`, `recordMatchmakingDailyCacheMiss`, `setMatchmakingTierSuccessRate`, `recordEscrowCreated`, `recordEscrowReleased`, `recordEscrowRefunded`, `recordEscrowCancelled`, `recordEscrowAutoRefunded`, `recordEscrowDegradedOperation`, `setEscrowDegradedQueueSize`, `setEscrowStaleHeldCount`, `recordAdminBanAction`, `recordAdminWarnAction`, `recordAdminVipToggle`, `recordAdminBlockRemoval`, `recordAdminReportResolution`, `recordAdminApiError`, `observeAdminApiLatency`, `setAdminPendingReports`, `setAdminActiveBlocks`, `recordAdminLoginHistoryRequest`, `recordVideoClassroomCreated`, `recordVideoClassroomCreationFailed`, `recordVideoClassroomJoined`, `recordVideoClassroomJoinFailed`, `setVideoClassroomsActiveRooms`, `recordVideoClassroomTokenGenerationDuration`, `recordVideoClassroomRoomDuration`, `setVideoClassroomParticipantMax`, `getRegister`, `getMetrics`
+
 ### `backend/src/moderation/moderation.service.ts`
 - Methods: `getItems`, `reportUser`, `approveItem`, `rejectItem`, `analyseUserForDatingBehaviour`
 
@@ -1317,16 +1503,37 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `backend/src/notification-preferences/dto/update-notification-preferences.dto.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/discovery/discovery-cache-invalidation.service.ts`
+- Methods: `getRedis`, `handlePartnerOfWeekUpdated`, `handleDailyRecommendationsUpdated`, `handleUserProfileUpdated`, `handleUserVipUpdated`, `handleUserLocationUpdated`, `handleUserMetricsUpdated`, `handleNewUserOnboarded`, `handleUserDiscoveryCleared`, `deleteKey`, `deleteByPattern`, `buildUserCacheKey`
+
+### `backend/src/discovery/sanitise-discovery.helper.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/discovery/cache.interceptor.ts`
+- Methods: `intercept`
+
 ### `backend/src/discovery/discovery.service.ts`
-- Methods: `calculatePartnerOfWeek`, `calculateDailyRecommendations`, `getPartnerOfWeekIds`, `searchPartners`, `getAudioIntros`, `getRecentNativeSpeakers`, `getSpotlightUsers`, `findByLanguagePair`, `getMockDiscoveryData`, `applyAdvancedFilters`, `sortUsers`, `searchByCountryCity`, `parseStringArray`
+- Methods: `calculatePartnerOfWeek`, `calculateDailyRecommendations`, `getPartnerOfWeekIds`, `searchPartners`, `searchPartnersWithDegradation`, `getAudioIntros`, `getRecentNativeSpeakers`, `getSpotlightUsers`, `findByLanguagePair`, `getMockDiscoveryData`, `applyAdvancedFilters`, `sortUsers`, `searchByCountryCity`, `parseStringArray`
 
 ### `backend/src/discovery/discovery.module.ts`
 - *(No methods found or interface/type definition)*
 
+### `backend/src/discovery/discovery-degradation.service.ts`
+- Methods: `getBreaker`, `isAvailable`, `recordSuccess`, `recordFailure`, `recordDegradationEvent`, `getRecentDegradationEvents`, `resetAllBreakers`, `getAllBreakerStates`
+
+### `backend/src/discovery/discovery-rate-limiter.guard.ts`
+- Methods: `canActivate`
+
 ### `backend/src/discovery/discovery.controller.ts`
-- Methods: `getPartnerOfWeek`
+- Methods: `getPartnerOfWeek`, `getDegradationStatus`
+
+### `backend/src/discovery/interfaces/cache-rules.interface.ts`
+- *(No methods found or interface/type definition)*
 
 ### `backend/src/discovery/dto/search-query.dto.ts`
+- *(No methods found or interface/type definition)*
+
+### `backend/src/discovery/dto/discovery-profile.dto.ts`
 - *(No methods found or interface/type definition)*
 
 ### `backend/src/discovery/dto/language-pair-query.dto.ts`
@@ -1420,6 +1627,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/version.constants.ts`
 - *(No methods found or interface/type definition)*
 
+### `frontend/src/app/models/settings.model.ts`
+- *(No methods found or interface/type definition)*
+
 ### `frontend/src/app/models/faq.model.ts`
 - *(No methods found or interface/type definition)*
 
@@ -1430,7 +1640,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `sendMessage`, `onInput`, `scrollToBottom`
 
 ### `frontend/src/app/ai-conversation/ai-conversation.component.ts`
-- Methods: `startScenario`, `send`
+- Methods: `startScenario`, `backToScenarios`, `send`, `buildConversationHistory`
 
 ### `frontend/src/app/achievements/achievements.component.ts`
 - Methods: `progressPercent`
@@ -1465,23 +1675,29 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/proficiency.service.ts`
 - Methods: `assess`, `setLanguagePreferences`
 
+### `frontend/src/app/services/srs-onboarding-tour.service.ts`
+- Methods: `loadTourCompletionState`, `startTour`, `closeTour`, `resetTour`, `markTourCompleted`
+
 ### `frontend/src/app/services/chat.service.ts`
-- Methods: `getLabels`, `addLabel`, `removeLabel`, `assignLabelToRoom`, `removeLabelFromRoom`, `addBlockedUser`, `removeBlockedUser`, `getBlockedUsers`, `getHeaders`, `sendMessage`, `syncOfflineMessages`, `getMessages`, `getRooms`, `replyToStatusUpdate`, `lockChat`, `unlockChat`, `getLockedRoomIds`, `addFavourite`, `reportMessage`, `getFavourites`, `removeFavourite`, `loadBlockedUsers`, `isBlocked`, `correctMessage`, `fixMessage`, `createGroup`, `renameGroup`, `addGroupMembers`, `removeGroupMember`, `getGroupMembers`, `getRoomMembers`, `translateText`, `transcribeVoice`, `getSuggestedReplies`, `getConversationStarters`, `translateVoiceroomText`, `exportChatHistory`, `downloadChatHistory`, `setChatWallpaper`, `getChatWallpaper`, `deleteMessage`, `deleteMessageForEveryone`, `forwardMessage`, `markMessageStatus`
+- Methods: `getLabels`, `addLabel`, `removeLabel`, `assignLabelToRoom`, `removeLabelFromRoom`, `addBlockedUser`, `removeBlockedUser`, `getBlockedUsers`, `getHeaders`, `sendMessage`, `syncOfflineMessages`, `getMessages`, `getRooms`, `replyToStatusUpdate`, `lockChat`, `unlockChat`, `getLockedRoomIds`, `addFavourite`, `reportMessage`, `searchMessages`, `getFavourites`, `removeFavourite`, `loadBlockedUsers`, `isBlocked`, `correctMessage`, `fixMessage`, `createGroup`, `renameGroup`, `addGroupMembers`, `removeGroupMember`, `getGroupMembers`, `getRoomMembers`, `translateText`, `transcribeVoice`, `getSuggestedReplies`, `getConversationStarters`, `translateVoiceroomText`, `exportChatHistory`, `downloadChatHistory`, `setChatWallpaper`, `getChatWallpaper`, `deleteMessage`, `deleteMessageForEveryone`, `forwardMessage`, `markMessageStatus`
 
 ### `frontend/src/app/services/video-call.service.ts`
 - Methods: `startCall`, `acceptCall`, `endCall`, `toggleMute`, `toggleVideo`, `switchCamera`, `setupRoomListeners`, `handleRemoteParticipantTracks`, `startDurationTimer`, `stopDurationTimer`
 
 ### `frontend/src/app/services/media.service.ts`
-- Methods: `uploadAvatar`, `markMediaAsViewed`, `clearMediaCache`
+- Methods: `uploadAvatar`, `uploadVoiceNote`, `markMediaAsViewed`, `clearMediaCache`
 
 ### `frontend/src/app/services/onboarding.service.ts`
-- Methods: `setNativeLanguage`, `toggleTargetLanguage`, `setDisplayName`, `nextStep`, `prevStep`, `finish`, `completeOnboarding`
+- Methods: `setNativeLanguage`, `toggleTargetLanguage`, `setDisplayName`, `setQuizResult`, `nextStep`, `prevStep`, `finish`, `completeOnboarding`
 
 ### `frontend/src/app/services/moderation.service.ts`
-- Methods: `getHeaders`, `getItems`, `approveItem`, `rejectItem`, `reportUser`, `getUserRiskAnalysis`
+- Methods: `getItemsResource`, `getHeaders`, `getItems`, `approveItem`, `rejectItem`, `reportUser`, `getUserRiskAnalysis`
 
 ### `frontend/src/app/services/chat-backup.service.ts`
 - Methods: `exportChannel`, `importChannel`
+
+### `frontend/src/app/services/srs-circuit-breaker.service.ts`
+- Methods: `getBreaker`, `isAvailable`, `recordSuccess`, `recordFailure`, `getState`, `reset`
 
 ### `frontend/src/app/services/linked-accounts.service.ts`
 - Methods: `getLinkedAccounts`, `linkAccount`, `unlinkAccount`
@@ -1490,10 +1706,13 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `trigger`, `tap`, `success`
 
 ### `frontend/src/app/services/livekit.service.ts`
-- Methods: `createRoom`, `getToken`, `getLiveKitUrl`, `joinRoom`, `publishTracks`, `toggleMute`, `toggleSpeakerphone`, `toggleScreenShare`, `leaveRoom`
+- Methods: `createRoom`, `getToken`, `startRoom`, `getLiveKitUrl`, `joinRoom`, `publishTracks`, `toggleMute`, `toggleSpeakerphone`, `toggleScreenShare`, `leaveRoom`
 
 ### `frontend/src/app/services/transliteration.service.ts`
 - Methods: `transliterate`, `toRomaji`, `toPinyin`
+
+### `frontend/src/app/services/matchmaking-onboarding.service.ts`
+- Methods: `startTour`, `closeTour`, `markComplete`, `isCompleted`, `reset`
 
 ### `frontend/src/app/services/confirm.service.ts`
 - Methods: `confirm`, `dismiss`
@@ -1502,19 +1721,31 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `enable`, `verify`, `disable`, `checkStatus`
 
 ### `frontend/src/app/services/gdpr.service.ts`
-- Methods: `requestArchive`, `deleteAccount`
+- Methods: `requestArchive`, `deleteAccount`, `cancelDeletion`
 
 ### `frontend/src/app/services/supabase.service.ts`
 - Methods: `getRecentlyJoinedNativeSpeakers`, `linkAccount`, `unlinkAccount`, `getLinkedAccounts`, `getDailyStreak`, `updateDailyStreak`, `getClient`, `getUserAudioIntro`, `getEarnedBadges`, `upgrade`, `saveContentOffline`, `getOfflineContent`, `getAllOfflineContent`, `deleteOfflineContent`, `clearOfflineCache`, `deleteOldMedia`, `uploadFile`, `uploadAvatar`, `listFiles`, `deleteFile`, `getStatusViewers`
 
 ### `frontend/src/app/services/unread-counter.service.ts`
-- Methods: `setChatUnread`, `setNotificationUnread`, `incrementChatUnread`, `decrementChatUnread`, `incrementNotificationUnread`, `decrementNotificationUnread`, `updateAppBadge`
+- Methods: `set`, `increment`, `decrement`, `resetAll`, `setChatUnread`, `setNotificationUnread`, `incrementChatUnread`, `decrementChatUnread`, `incrementNotificationUnread`, `decrementNotificationUnread`, `signalFor`, `updateAppBadge`
 
 ### `frontend/src/app/services/audio-rooms.store.ts`
-- Methods: `isRoomEvent`, `findRemoteVideoTrack`, `getHeaders`, `loadActiveRooms`, `loadRoomsByLanguage`, `createRoom`, `joinRoom`, `unpublishLocalCamera`, `onTrackSubscribed`, `onTrackUnsubscribed`, `raiseHand`, `approveSpeaker`, `demoteSpeaker`, `muteSpeaker`, `inviteCoHost`, `removeCoHost`, `sendCaption`, `broadcastAICaption`, `sendRoomChatMessage`, `archiveRoom`, `leaveRoom`
+- Methods: `isHostTipPayload`, `isRoomEvent`, `findRemoteVideoTrack`, `getHeaders`, `loadActiveRooms`, `loadRoomsByLanguage`, `createRoom`, `createPrivateParty`, `loadPrivateRooms`, `joinRoom`, `unpublishLocalCamera`, `onTrackSubscribed`, `onTrackUnsubscribed`, `raiseHand`, `approveSpeaker`, `demoteSpeaker`, `dismissRaisedHand`, `muteSpeaker`, `unmuteSpeaker`, `kickSpeaker`, `inviteCoHost`, `removeCoHost`, `sendCaption`, `broadcastAICaption`, `tipHost`, `tipAnimationForAmount`, `tipIconForAmount`, `sendRoomChatMessage`, `archiveRoom`, `leaveRoom`
 
 ### `frontend/src/app/services/blocked-users.service.ts`
 - Methods: `getHeaders`, `loadBlockedUsers`, `unblockUser`
+
+### `frontend/src/app/services/economy-error-handler.service.ts`
+- Methods: `getHeaders`, `reportEconomyCrash`
+
+### `frontend/src/app/services/video-classroom-onboarding.service.ts`
+- Methods: `startMarketplaceTour`, `startRoomTour`, `markComplete`, `isCompleted`, `reset`
+
+### `frontend/src/app/services/draft.service.ts`
+- Methods: `isAvailable`, `getUserPrefix`, `chatKey`, `chatV2Key`, `momentKey`, `saveChatDraft`, `loadChatDraft`, `clearChatDraft`, `saveChatDraftV2`, `loadChatDraftV2`, `clearChatDraftV2`, `saveMomentDraft`, `loadMomentDraft`, `clearMomentDraft`
+
+### `frontend/src/app/services/escrow-offline.service.ts`
+- Methods: `initDB`, `isAvailable`, `cacheEscrows`, `getCachedEscrow`, `getCachedEscrows`, `clearEscrowCache`, `enqueueOperation`, `getPendingOperations`, `removeOperation`, `clearOperationQueue`
 
 ### `frontend/src/app/services/suggest-flashcards.service.ts`
 - Methods: `suggestFromMessage`
@@ -1535,13 +1766,13 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `compressImage`
 
 ### `frontend/src/app/services/centrifuge.service.ts`
-- Methods: `connect`, `unsubscribe`, `publish`, `disconnect`
+- Methods: `calculateBackoffDelay`, `getRetryAfterMs`, `scheduleReconnect`, `connect`, `unsubscribe`, `publish`, `disconnect`
 
 ### `frontend/src/app/services/help-centre.service.ts`
 - Methods: `getArticles`, `getCategories`
 
 ### `frontend/src/app/services/flashcard.service.ts`
-- Methods: `createFlashcard`
+- Methods: `checkDegradedHeader`, `getHealth`, `createFlashcard`, `updateSrsLevel`, `getFlashcards`, `getDueReviews`, `syncOfflineReviews`
 
 ### `frontend/src/app/services/upload.service.ts`
 - Methods: `uploadAvatar`
@@ -1559,13 +1790,16 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `requestPermissionAndGetToken`, `persistFcmToken`
 
 ### `frontend/src/app/services/user.service.ts`
-- Methods: `getHeaders`, `enableLocationSpoofing`, `getMyProfile`, `getUserProfile`, `followUser`, `unfollowUser`, `getFollowers`, `getFollowing`, `likeProfile`, `updateCustomAvatar`, `updateAboutStatus`, `updateMyProfile`, `setDefaultTranslationLanguage`, `updateNativeLanguages`, `updateTargetLanguages`, `getMyVisitors`, `getProfileVisitors`, `recordVisit`, `getPresignedUploadUrl`, `getPresignedCoverPhotoUrl`, `getPresignedAvatarUrl`, `uploadAvatar`, `updateCoverPhotoUrl`, `uploadCoverPhoto`, `downloadMyData`, `rateCorrector`, `getLinkedAccounts`, `getMyPrivacySettings`, `linkAccount`, `unlinkAccount`, `getMilestoneForStreak`, `getStudyStreak`, `getAvailableHobbies`, `getAvailableInterests`, `queryUsersByLanguagePairs`, `getMyBadges`, `assessProficiency`, `getOverviewStats`, `getMyXpTotal`, `updatePrivacySettings`, `getBusinessProfile`, `updateBusinessProfile`, `blockUser`, `unblockUser`, `reportUser`, `subscribeToFcmTopic`, `unsubscribeFromFcmTopic`, `deleteMyAccount`, `restoreMyAccount`, `getMessageFilters`, `setMessageFilters`, `setDoNotDisturbSchedule`, `getLastActiveFormatted`
+- Methods: `getHeaders`, `enableLocationSpoofing`, `getMyProfile`, `getUserProfile`, `followUser`, `unfollowUser`, `getFollowers`, `getFollowing`, `likeProfile`, `updateCustomAvatar`, `updateAboutStatus`, `updateMyProfile`, `setDefaultTranslationLanguage`, `updateNativeLanguages`, `updateTargetLanguages`, `getMyVisitors`, `getProfileVisitors`, `recordVisit`, `getPresignedUploadUrl`, `getPresignedCoverPhotoUrl`, `getPresignedAvatarUrl`, `uploadAvatar`, `updateCoverPhotoUrl`, `uploadCoverPhoto`, `downloadMyData`, `rateCorrector`, `getLinkedAccounts`, `getMyPrivacySettings`, `linkAccount`, `unlinkAccount`, `getMilestoneForStreak`, `getStudyStreak`, `getAvailableHobbies`, `getAvailableInterests`, `searchUsers`, `queryUsersByLanguagePairs`, `getMyBadges`, `assessProficiency`, `getOverviewStats`, `getMyXpTotal`, `updatePrivacySettings`, `getBusinessProfile`, `updateBusinessProfile`, `blockUser`, `unblockUser`, `reportUser`, `subscribeToFcmTopic`, `unsubscribeFromFcmTopic`, `deleteMyAccount`, `restoreMyAccount`, `getMessageFilters`, `setMessageFilters`, `setDoNotDisturbSchedule`, `getLastActiveFormatted`
+
+### `frontend/src/app/services/escrow.service.ts`
+- Methods: `listEscrows`, `createEscrow`, `releaseEscrow`, `refundEscrow`, `disputeEscrow`, `getEscrow`, `listUserEscrows`, `syncOfflineOperations`
 
 ### `frontend/src/app/services/subscription-plans.service.ts`
 - Methods: `getAllPlans`, `getPlanById`, `getHighlightedBenefits`, `getShowcasePlans`
 
 ### `frontend/src/app/services/vocabulary.store.ts`
-- Methods: `getHeaders`, `loadAllFlashcards`, `loadDueReviews`, `getWordStatus`, `saveWord`, `updateSrsLevel`, `translateWordOrSentence`, `checkGrammar`, `scorePronunciation`, `triggerHapticFeedback`
+- Methods: `sanitiseFlashcard`, `getHeaders`, `loadAllFlashcards`, `loadDueReviews`, `getWordStatus`, `saveWord`, `updateSrsLevel`, `estimateNewLevel`, `syncOfflineReviews`, `translateWordOrSentence`, `checkGrammar`, `scorePronunciation`, `reportSrsError`, `triggerHapticFeedback`
 
 ### `frontend/src/app/services/mock-data.ts`
 - *(No methods found or interface/type definition)*
@@ -1594,6 +1828,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/host-dashboard.service.ts`
 - Methods: `getDashboardStats`
 
+### `frontend/src/app/services/coin-economy-onboarding.service.ts`
+- Methods: `markComplete`, `isCompleted`, `reset`
+
 ### `frontend/src/app/services/offline-queue.service.ts`
 - Methods: `initDB`, `isIndexedDBAvailable`, `enqueueMessage`, `getQueuedMessages`, `removeMessage`, `clearQueue`
 
@@ -1606,8 +1843,14 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/study-buddy.service.ts`
 - Methods: `requestBuddy`, `getMatches`, `getIncomingRequests`, `acceptRequest`, `declineRequest`
 
+### `frontend/src/app/services/escrow-onboarding.service.ts`
+- Methods: `startTour`, `markComplete`, `resetTour`, `isCompleted`
+
 ### `frontend/src/app/services/safety.service.ts`
-- Methods: `persistMutedWords`, `addMutedWord`, `removeMutedWord`, `isMutedWord`, `clearMutedWords`, `filterMomentsByMutedWords`, `loadBlockedUsers`, `isUserBlockedCached`, `setBlockedUserLocal`, `reportUser`, `reportUserAsync`, `blockUser`, `blockUserAsync`, `unblockUser`, `unblockUserAsync`, `getBlockedIds`, `getBlockedIdsAsync`, `setSilenceUnknownCallers`, `getSilenceUnknownCallers`, `getReportCategories`, `getCategories`, `getStaticReportCategories`, `getBlockedUserIds`, `getBlockerUserIds`, `getBlockedAndBlockerIds`, `isBlocked`
+- Methods: `persistMutedWords`, `addMutedWord`, `removeMutedWord`, `isMutedWord`, `clearMutedWords`, `loadBlockedUsers`, `isUserBlockedCached`, `setBlockedUserLocal`, `reportUser`, `reportUserAsync`, `blockUser`, `blockUserAsync`, `unblockUser`, `unblockUserAsync`, `getBlockedIds`, `getBlockedIdsAsync`, `setSilenceUnknownCallers`, `getSilenceUnknownCallers`, `getReportCategories`, `getCategories`, `getStaticReportCategories`, `getBlockedUserIds`, `getBlockerUserIds`, `getBlockedAndBlockerIds`, `isBlocked`
+
+### `frontend/src/app/services/http-retry.ts`
+- *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/services/version.service.ts`
 - Methods: `getVersion`
@@ -1628,16 +1871,16 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `loadBiometricLockPreference`, `arrayBufferToBase64Url`, `base64UrlToArrayBuffer`, `isBiometricSupported`, `lockApp`, `unlockApp`, `enableBiometricLock`, `disableBiometricLock`, `toAppUser`, `updateAuthState`, `signInWithEmail`, `signUpWithEmail`, `signInWithGoogle`, `signInWithApple`, `signOut`, `enableTwoFactor`, `verifyTwoFactor`, `disableTwoFactor`, `checkTwoFactorStatus`, `getAccessToken`, `getBearerHeaders`, `isTwoFactorEnabled`, `signInWithTwoFactor`, `generateDeviceLink`, `consumeDeviceLink`, `swapDeviceLink`, `requestPasswordReset`, `resetPassword`, `changePassword`
 
 ### `frontend/src/app/services/flashcard-context-menu.directive.ts`
-- Methods: `onContextMenu`, `onTouchStart`, `showOverlay`, `removeOverlay`
+- Methods: `onContextMenu`, `onTouchStart`, `showOverlay`, `removeOverlay`, `reportError`
 
 ### `frontend/src/app/services/error-handler.service.ts`
-- Methods: `handleError`, `reportError`
+- Methods: `handleError`, `reportError`, `reportStringError`, `reportHttpError`, `reportUnknown`, `sendPayload`
 
 ### `frontend/src/app/services/text-to-speech.service.ts`
 - Methods: `isSpeaking`, `speak`, `stop`, `toggle`, `clearIfCurrent`
 
 ### `frontend/src/app/services/chat-settings.service.ts`
-- Methods: `loadSettings`, `updateSetting`, `setLocal`
+- Methods: `loadSettings`, `updateSetting`, `resetToDefaults`, `setLocal`
 
 ### `frontend/src/app/services/block.service.ts`
 - Methods: `loadBlockedUsers`, `blockUser`, `unblockUser`
@@ -1655,16 +1898,22 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `getQuickReplies`, `createQuickReply`
 
 ### `frontend/src/app/services/economy.store.ts`
-- Methods: `getHeaders`, `loadInitialData`, `claimDailyCheckIn`, `loadCoinPackages`, `buyCoins`, `confirmCoinPurchase`, `sendGift`, `upgradeVip`, `loadDeveloperAnalytics`, `loadDiagnosticLogs`, `createDiagnosticLog`, `generateApiKey`, `reportUser`, `blockUser`, `triggerGiftAnimation`, `sanitiseAnimationType`, `isAnimationType`, `triggerPublicGiftAnimation`, `loadStickerPacks`, `unlockStickerPack`, `mapDiagnosticLog`
+- Methods: `getHeaders`, `loadInitialData`, `getDefaultCatalog`, `getDefaultCoinPackages`, `claimDailyCheckIn`, `loadCoinPackages`, `checkEconomyHealth`, `buyCoins`, `confirmCoinPurchase`, `sendGift`, `upgradeVip`, `loadDeveloperAnalytics`, `loadDiagnosticLogs`, `createDiagnosticLog`, `generateApiKey`, `reportUser`, `blockUser`, `triggerGiftAnimation`, `sanitiseAnimationType`, `isAnimationType`, `triggerPublicGiftAnimation`, `loadTransactionHistory`, `loadStickerPacks`, `unlockStickerPack`, `mapDiagnosticLog`
 
 ### `frontend/src/app/services/cultural-guide.service.ts`
 - Methods: `fetchGuide`
 
+### `frontend/src/app/services/offline-economy.service.ts`
+- Methods: `syncOnlineStatus`, `initDB`, `cacheBalance`, `getCachedBalance`, `cacheCatalog`, `getCachedCatalog`, `cacheCoinPackages`, `getCachedCoinPackages`, `cacheStickerPacks`, `getCachedStickerPacks`, `enqueuePendingAction`, `getPendingActions`, `removePendingAction`, `clearPendingActions`, `clearAll`, `putInStore`, `deleteFromStore`, `clearStore`
+
 ### `frontend/src/app/services/audio-intro.service.ts`
 - Methods: `getHeaders`, `getPresignedUploadUrl`, `uploadAudioBlob`, `updateAudioIntro`, `getAudioIntro`
 
+### `frontend/src/app/services/offline-reading-engine.service.ts`
+- Methods: `initDB`, `isAvailable`, `cacheArticles`, `getCachedArticles`, `getCachedArticle`, `clearAll`, `clearArticles`
+
 ### `frontend/src/app/services/admin.service.ts`
-- Methods: `getHeaders`, `checkAdminAccess`, `listUsers`, `setVipStatus`, `getLoginHistory`, `banUser`, `warnUser`
+- Methods: `getHeaders`, `checkAdminAccess`, `listUsers`, `setVipStatus`, `getLoginHistory`, `banUser`, `warnUser`, `listAllBlocks`, `removeBlock`, `listBlockedUsers`, `adminUnblockUser`
 
 ### `frontend/src/app/services/livekit-e2ee.worker.ts`
 - *(No methods found or interface/type definition)*
@@ -1678,20 +1927,35 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/hobby-tags.service.ts`
 - Methods: `getAllTags`, `createGlobalTag`, `getMyTags`, `addMyTag`, `removeMyTag`, `updateProficiency`, `getVocabulary`
 
+### `frontend/src/app/services/matchmaking-algorithm.service.ts`
+- Methods: `scoreAndRank`, `applyOfflineFilters`, `getMatchReasonLabel`, `passesOfflineFilters`, `recordMatchmakingError`, `scorePartner`, `scoreLanguageComplementarity`, `scoreSharedInterests`, `scoreActivityStreak`, `scoreSeriousLearner`
+
 ### `frontend/src/app/services/events.service.ts`
-- Methods: `listEvents`, `createGroupChat`, `getGroupChat`, `updateGroupChat`, `deleteGroupChat`, `addLabelToChat`, `removeLabelFromChat`, `getEvent`, `createEvent`, `shareContact`, `getCategories`, `getMyEvents`
+- Methods: `listEvents`, `createGroupChat`, `getGroupChat`, `updateGroupChat`, `deleteGroupChat`, `addLabelToChat`, `removeLabelFromChat`, `getEvent`, `createEvent`, `shareContact`, `getCategories`, `getMyEvents`, `getRsvp`, `rsvp`, `removeRsvp`
 
 ### `frontend/src/app/services/data-storage.service.ts`
-- Methods: `clearLocalCache`, `toggleCellularAutoDownload`
+- Methods: `clearLocalCache`, `estimateCacheSize`, `toggleCellularAutoDownload`
+
+### `frontend/src/app/services/srs-offline.service.ts`
+- Methods: `initDB`, `isAvailable`, `cacheFlashcards`, `getCachedFlashcards`, `cacheDueReviews`, `getCachedDueReviews`, `queueSrsReview`, `putInStore`, `deleteFromStore`, `clearStore`
 
 ### `frontend/src/app/services/language-islands.service.ts`
 - Methods: `listIslands`, `getIsland`, `createIsland`, `updateIsland`, `deleteIsland`, `joinIsland`, `leaveIsland`, `getMyIslands`
 
+### `frontend/src/app/services/crash-report.service.ts`
+- Methods: `initDB`, `isIndexedDBAvailable`, `reportCrash`, `getAllCrashesRaw`, `syncPendingCrashes`, `getUnsyncedCrashes`, `markCrashSynced`, `getCrashHistory`, `clearAllCrashes`
+
 ### `frontend/src/app/services/fcm.service.ts`
 - Methods: `registerToken`, `unregisterToken`, `requestPermission`, `persistFcmToken`
 
+### `frontend/src/app/services/offline-admin-storage.service.ts`
+- Methods: `initDB`, `isAvailable`, `cacheUsers`, `getCachedUsers`, `cacheBlocks`, `getCachedBlocks`, `cacheLoginHistory`, `getCachedLoginHistory`, `cacheModerationItems`, `getCachedModerationItems`, `clearAll`, `usersKey`, `blocksKey`
+
+### `frontend/src/app/services/offline-discovery-cache.service.ts`
+- Methods: `initDB`, `isAvailable`, `cachePartner`, `cachePartners`, `getCachedPartner`, `getAllCachedPartners`, `cacheSearchResults`, `getCachedSearchResults`, `buildFiltersKey`, `clearAll`, `evictStaleEntries`
+
 ### `frontend/src/app/services/notification-preferences.service.ts`
-- Methods: `getPreferences`, `updatePreferences`, `updateCustomizationPreferences`, `getCustomizationPreferences`, `resetToDefaults`, `toggleCategoryChannel`, `toggleDoNotDisturb`
+- Methods: `getPreferences`, `updatePreferences`, `toggleCategoryChannel`, `resetToDefaults`, `getLegacyPreferences`, `updateLegacyPreferences`, `updateCustomizationPreferences`, `getCustomizationPreferences`
 
 ### `frontend/src/app/services/hobby-tags.store.ts`
 - Methods: `loadAllTags`, `loadUserTags`, `addTag`, `removeTag`, `updateProficiency`, `loadVocabulary`
@@ -1708,11 +1972,26 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/app-lock.service.ts`
 - Methods: `isBiometricSupported`, `enableBiometricLock`, `disableBiometricLock`, `unlock`, `lockNow`, `arrayBufferToBase64Url`, `base64UrlToArrayBuffer`
 
+### `frontend/src/app/services/discovery-onboarding.service.ts`
+- Methods: `startTour`, `markComplete`, `hasCompletedTour`, `isCompleted`, `resetTour`
+
 ### `frontend/src/app/services/deep-link.service.ts`
-- Methods: `registerRuntimeListener`, `processInitialDeepLink`, `handleDeepLink`, `toInternalPath`, `ngOnDestroy`
+- Methods: `registerRuntimeListener`, `processInitialDeepLink`, `handleDeepLink`, `toInternalPath`
+
+### `frontend/src/app/services/sw-update.service.ts`
+- Methods: `initialise`, `checkForUpdate`, `activateUpdate`
+
+### `frontend/src/app/services/offline-reading.service.ts`
+- Methods: `syncOnlineStatus`, `initDB`, `isAvailable`, `cacheArticles`, `getCachedArticles`, `recordReadingHistory`, `getReadingHistory`, `clearAll`, `putInStore`, `getAllFromStore`, `deleteFromStore`, `clearStore`
 
 ### `frontend/src/app/services/groups.service.ts`
 - Methods: `createGroup`, `restrictSendMessages`, `restrictEditInfo`, `renameGroup`, `getMyGroups`, `addMember`, `removeMember`, `generateInviteCode`, `generateInviteLink`, `getInviteInfo`, `joinGroupByCode`, `sendAnnouncement`, `getAnnouncements`, `createAnnouncementGroup`, `broadcastMessage`
+
+### `frontend/src/app/services/chat-cache.service.ts`
+- Methods: `initDB`, `isAvailable`, `cacheMessages`, `getCachedMessages`, `invalidateMessages`, `appendCachedMessage`, `cacheRooms`, `getCachedRooms`, `invalidateRooms`, `cacheFavourites`, `getCachedFavourites`, `invalidateFavourites`, `evictStaleEntries`
+
+### `frontend/src/app/services/html-sanitisation.service.ts`
+- Methods: `sanitiseText`, `sanitiseUrl`
 
 ### `frontend/src/app/services/typing.service.ts`
 - Methods: `connect`, `disconnect`, `sendTyping`, `isTypingPayload`, `handleTypingEvent`, `removeUser`, `clearAllTimers`
@@ -1725,6 +2004,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `frontend/src/app/services/location.service.ts`
 - Methods: `getCurrentLocation`, `shareCurrentLocation`, `startLiveShare`, `updateLiveLocation`, `stopLiveShare`, `getLiveLocation`
+
+### `frontend/src/app/services/offline-video-classroom.service.ts`
+- Methods: `syncOnlineStatus`, `initDB`, `isAvailable`, `cacheClassroomListing`, `getCachedClassroomListing`, `cacheRoomDetail`, `getCachedRoomDetail`, `evictStaleEntries`, `purgeStaleInStore`, `clearAll`, `getAllFromStore`
 
 ### `frontend/src/app/services/toast.service.ts`
 - *(No methods found or interface/type definition)*
@@ -1741,6 +2023,12 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/services/network-status.service.ts`
 - *(No methods found or interface/type definition)*
 
+### `frontend/src/app/services/video-classroom-error-handler.service.ts`
+- Methods: `getHeaders`, `reportVideoClassroomCrash`
+
+### `frontend/src/app/services/tour.service.ts`
+- Methods: `startEconomyTour`
+
 ### `frontend/src/app/services/media-upload.service.ts`
 - *(No methods found or interface/type definition)*
 
@@ -1751,7 +2039,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `getHeaders`, `loadFeed`, `createMoment`, `toggleLike`, `loadComments`, `addComment`, `togglePin`
 
 ### `frontend/src/app/services/gift-animation.service.ts`
-- Methods: `playAnimation`, `dismiss`, `cancelParticles`, `cleanup`, `clearTimer`
+- Methods: `playAnimation`, `dismiss`, `cancelParticles`, `cleanup`
 
 ### `frontend/src/app/services/i18n.service.ts`
 - Methods: `initLanguageFromStorage`, `applyDocumentRtlAndLocale`, `setLanguage`, `translate`
@@ -1783,8 +2071,20 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/guards/admin.guard.ts`
 - *(No methods found or interface/type definition)*
 
+### `frontend/src/app/pipes/sanitise-html.pipe.ts`
+- Methods: `transform`
+
 ### `frontend/src/app/directives/focus-trap.directive.ts`
 - Methods: `trapFocus`, `restoreFocus`, `getFocusableElements`
+
+### `frontend/src/app/directives/admin-error-catcher.directive.ts`
+- Methods: `onChildError`
+
+### `frontend/src/app/interceptors/http-retry.interceptor.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/interceptors/retry.interceptor.ts`
+- *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/core/auth.service.ts`
 - Methods: `signIn`, `resumeSession`
@@ -1793,9 +2093,24 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/core/services/settings.service.ts`
-- Methods: `loadSettings`, `updatePrivacySettings`
+- Methods: `loadSettings`, `updatePrivacySettings`, `updateProfileSettings`, `updateAccountSettings`
 
 ### `frontend/src/app/animations/route.animations.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/animations/premium.data.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/animations/sparkle.data.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/animations/float.data.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/animations/confetti.data.ts`
+- *(No methods found or interface/type definition)*
+
+### `frontend/src/app/animations/hearts.data.ts`
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/audio-rooms/audio-room.component.ts`
@@ -1820,7 +2135,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `playRingtone`, `playFallbackBeep`, `stopRingtone`, `onAccept`, `onDecline`
 
 ### `frontend/src/app/components/chat-room/chat-room.component.ts`
-- Methods: `isChatEventPayload`, `unlockRoom`, `toggleLock`, `resolvePartnerLanguage`, `loadRoomDetails`, `isOwnMessage`, `loadBlockedUsers`, `ngOnDestroy`, `loadMessages`, `setupRealTime`, `onWordClicked`, `onComposerInput`, `onComposerKeydown`, `selectMention`, `sendTextMessage`, `sendCorrection`, `onDoodleSaved`, `onVoiceUploaded`, `sendSticker`, `bookmark`, `startCorrection`, `onBlockToggle`, `saveSentenceToLingq`, `transliterateMessage`, `speakMessage`, `toggleTranslation`, `onTranscribeVoice`, `onSearch`, `toggleParticipantDrawer`, `loadParticipants`, `handleHeaderAction`, `sendCorrectionFromInput`, `scrollToMessage`, `parentMessageFor`, `startReply`, `cancelReply`, `openDoodlePreview`, `renameGroup`, `addMember`, `removeMember`, `playNextVoiceNote`
+- Methods: `isChatEventPayload`, `unlockRoom`, `toggleLock`, `resolvePartnerLanguage`, `loadRoomDetails`, `isOwnMessage`, `loadBlockedUsers`, `ngOnDestroy`, `saveChatDrafts`, `restoreDraft`, `clearChatDrafts`, `loadMessages`, `setupRealTime`, `onWordClicked`, `onComposerInput`, `onComposerKeydown`, `selectMention`, `sendTextMessage`, `sendCorrection`, `requestCorrection`, `onDoodleSaved`, `onVoiceUploaded`, `sendSticker`, `bookmark`, `startCorrection`, `onBlockToggle`, `saveSentenceToLingq`, `transliterateMessage`, `speakMessage`, `toggleTranslation`, `onTranscribeVoice`, `onSearch`, `onSearchResultSelect`, `toggleParticipantDrawer`, `loadParticipants`, `handleHeaderAction`, `sendCorrectionFromInput`, `scrollToMessage`, `parentMessageFor`, `startReply`, `cancelReply`, `openDoodlePreview`, `renameGroup`, `addMember`, `removeMember`, `playNextVoiceNote`
 
 ### `frontend/src/app/components/account-deletion/account-deletion.component.ts`
 - Methods: `requestDeletion`, `restoreAccount`, `exportData`
@@ -1852,6 +2167,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/room-chat/room-chat.component.ts`
 - Methods: `send`, `sendSubtitle`, `broadcastAICaption`
 
+### `frontend/src/app/components/error-boundary/error-boundary.component.ts`
+- Methods: `resetError`, `reportCrash`, `handleBoundaryError`
+
 ### `frontend/src/app/components/events-feed/events-feed.component.ts`
 - Methods: `ngOnInit`, `onStatusChange`, `onLanguageChange`, `loadMore`
 
@@ -1876,6 +2194,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/voip-active-call/voip-active-call.component.ts`
 - Methods: `toggleMute`, `toggleSpeaker`, `formattedDuration`
 
+### `frontend/src/app/components/tip-host-modal/tip-host-modal.component.ts`
+- Methods: `selectAmount`, `onCustomAmountChange`, `onBackdropClick`, `confirmSend`
+
 ### `frontend/src/app/components/video-call/video-call.component.ts`
 - Methods: `ngOnInit`, `ngOnDestroy`, `onTrackSubscribed`, `onTrackUnsubscribed`, `onLocalTrackPublished`, `onLocalTrackUnpublished`, `onParticipantDisconnected`, `onDisconnected`, `toggleAudio`, `toggleVideo`, `toggleScreenShare`, `endCall`, `togglePip`, `cleanup`
 
@@ -1883,7 +2204,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onImageError`
 
 ### `frontend/src/app/components/events-calendar/events-calendar.component.ts`
-- Methods: `previousMonth`, `nextMonth`
+- Methods: `isToday`, `formatEventTime`, `selectDate`, `previousMonth`, `nextMonth`
 
 ### `frontend/src/app/components/notification-customization/notification-customization.component.ts`
 - Methods: `onToneChange`, `onVibrationChange`, `save`
@@ -1895,7 +2216,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onFileSelected`, `onSaveCroppedCover`, `saveProfile`
 
 ### `frontend/src/app/components/age-range-slider/age-range-slider.component.ts`
-- Methods: `onMinChange`, `onMaxChange`
+- Methods: `emitRange`, `onMinChange`, `onMaxChange`
 
 ### `frontend/src/app/components/chat-message/chat-message.component.ts`
 - Methods: `isOwnMessage`, `playVoice`, `fetchTranscription`, `simplifyText`, `onCopy`, `onFavourite`, `onBlockToggle`, `onReport`
@@ -1910,7 +2231,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `handleBan`, `handleWarn`
 
 ### `frontend/src/app/components/moments-feed/moments-feed.component.ts`
-- Methods: `onTargetLanguageSelected`, `getLanguageDisplayName`, `getLanguageFlag`, `getTargetLanguageTitle`, `setFilter`, `addTempImageUrl`, `removeMedia`, `onVoiceUploaded`, `submitMoment`, `onWordClicked`, `toggleInlineTranslation`, `saveMomentSentenceToLingq`, `toggleComments`, `startReply`, `cancelReply`, `submitComment`, `isMomentLong`, `getMomentDisplayText`, `toggleMomentExpansion`, `openGhostCorrection`, `quoteTextToComment`, `onCorrectionModalSubmitted`, `copyMomentText`, `openLikedBy`, `closeLikedBy`
+- Methods: `addMutedWord`, `removeMutedWord`, `onTargetLanguageSelected`, `getLanguageDisplayName`, `getLanguageFlag`, `getTargetLanguageTitle`, `setFilter`, `addTempImageUrl`, `removeMedia`, `onVoiceUploaded`, `submitMoment`, `onWordClicked`, `toggleInlineTranslation`, `saveMomentSentenceToLingq`, `toggleComments`, `startReply`, `cancelReply`, `submitComment`, `isMomentLong`, `getMomentDisplayText`, `toggleMomentExpansion`, `onCommentInput`, `onCommentKeydown`, `selectMention`, `openGhostCorrection`, `quoteTextToComment`, `onCorrectionModalSubmitted`, `copyMomentText`, `openLikedBy`, `closeLikedBy`, `openLightbox`, `closeLightbox`, `saveMomentDraft`, `restoreMomentDraft`
 
 ### `frontend/src/app/components/subscription-success/subscription-success.component.ts`
 - Methods: `goToDashboard`
@@ -1931,19 +2252,22 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onTitleChange`, `onDatetimeChange`, `onLocationChange`, `onDescriptionChange`, `submit`
 
 ### `frontend/src/app/components/settings/settings.component.ts`
-- Methods: `ngOnInit`, `linkAccount`, `unlinkAccount`, `isLinked`, `providerIcon`, `getLinkedAccount`, `goBack`, `goToMySubscription`, `toggleInterest`, `removeInterest`, `toggleSoundEffects`, `toggleVibration`, `updateAutoDownloadMode`, `saveSettings`, `clearCache`, `deleteOldMedia`, `downloadData`, `openVersionCheck`
+- Methods: `ngOnInit`, `goBack`, `goToMySubscription`, `toggleInterest`, `removeInterest`, `toggleGenderFilter`, `toggleLanguageFilter`, `toggleSoundEffects`, `toggleVibration`, `updateAutoDownloadMode`, `saveSettings`, `clearCache`, `deleteOldMedia`, `downloadData`, `openVersionCheck`
+
+### `frontend/src/app/components/private-party-create-modal/private-party-create-modal.component.ts`
+- Methods: `ngOnInit`, `getFriendById`, `toggleFriend`, `closeModal`, `submit`, `resetForm`
 
 ### `frontend/src/app/components/daily-learning-tip/daily-learning-tip.component.ts`
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/components/admin-portal/admin-portal.component.ts`
-- Methods: `ngOnInit`, `loadUsers`, `onSearchInput`, `runSearch`, `goToPage`, `toggleVip`, `onLoginHistoryToggle`, `displayNameFor`, `handleWarn`, `handleBan`
+- Methods: `loadUsers`, `onSearchInput`, `runSearch`, `goToPage`, `toggleVip`, `onLoginHistoryToggle`, `displayNameFor`, `handleWarn`, `handleBan`
 
 ### `frontend/src/app/components/topic-following/topic-following.ts`
 - Methods: `toggleFollow`
 
 ### `frontend/src/app/components/word-definition-modal/word-definition-modal.component.ts`
-- Methods: `ngOnInit`, `fetchDefinition`, `playAudio`, `setLevel`, `close`
+- Methods: `handleRetry`, `fetchDefinition`, `playAudio`, `setLevel`, `close`, `handleError`
 
 ### `frontend/src/app/components/subscription-cancel/subscription-cancel.component.ts`
 - Methods: `goBack`
@@ -1961,7 +2285,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `togglePlay`, `onTimeUpdate`, `onLoadedMetadata`, `onEnded`, `onSeek`, `formatTime`, `extractPeaks`, `generateFallbackPeaks`
 
 ### `frontend/src/app/components/classrooms-marketplace/classrooms-marketplace.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `ngOnInit`, `loadRooms`, `subscribeToUpdates`, `selectLanguage`, `createClassroom`, `joinRoom`, `getHeaders`, `startOnboardingTour`
 
 ### `frontend/src/app/components/coins-cancel/coins-cancel.component.ts`
 - Methods: `goBack`
@@ -1969,17 +2293,23 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/virtual-gift-modal/virtual-gift-modal.component.ts`
 - Methods: `ensureDataLoaded`, `toggleCoinPackages`, `buyCoins`, `selectGift`, `confirmSend`
 
+### `frontend/src/app/components/admin-error-boundary/admin-error-boundary.component.ts`
+- Methods: `handleError`, `retry`, `goHome`, `toggleDetails`, `buildCrashContext`
+
 ### `frontend/src/app/components/language-parties/language-parties.component.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `openCreateModal`, `closeCreateModal`, `onCreateParty`, `joinParty`, `clearFilters`
+
+### `frontend/src/app/components/language-parties/language-party-create-modal.component.ts`
+- Methods: `closeModal`, `submit`, `resetForm`
 
 ### `frontend/src/app/components/text-to-speech/text-to-speech.component.ts`
 - Methods: `toggleSpeech`
 
 ### `frontend/src/app/components/onboarding/onboarding-wizard.component.ts`
-- Methods: `onNativeLanguageChange`, `onDisplayNameInput`, `handleNext`
+- Methods: `onNativeLanguageChange`, `onDisplayNameInput`, `onQuizComplete`, `handleNext`
 
 ### `frontend/src/app/components/profile-discovery-card/profile-discovery-card.component.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `toggleTranslation`
 
 ### `frontend/src/app/components/lesson-manager/lesson-manager.component.ts`
 - Methods: `refresh`, `startCreate`, `startEdit`, `cancelEdit`, `save`, `delete`, `getFile`, `onCoverFileSelected`, `onAudioFileSelected`
@@ -1988,10 +2318,10 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onExport`, `onFileSelected`
 
 ### `frontend/src/app/components/split-screen-video/split-screen-video.component.ts`
-- Methods: `onInviteClick`
+- Methods: `onInviteClick`, `onRetryClick`
 
 ### `frontend/src/app/components/flashcard-deck/flashcard-deck.component.ts`
-- Methods: `loadDecks`, `toggleCreateForm`, `createDeck`, `openDeckDetail`, `loadDeckDetail`, `addCardToDeck`, `removeCardFromDeck`, `deleteDeckById`, `startDeckReview`, `toggleEditForm`, `saveDeckEdits`
+- Methods: `sanitiseDeck`, `handleRetry`, `reportDeckError`, `loadDecks`, `toggleCreateForm`, `createDeck`, `openDeckDetail`, `loadDeckDetail`, `addCardToDeck`, `removeCardFromDeck`, `deleteDeckById`, `startDeckReview`, `toggleEditForm`, `saveDeckEdits`
 
 ### `frontend/src/app/components/chat-system-bubble/chat-system-bubble.component.ts`
 - *(No methods found or interface/type definition)*
@@ -2000,10 +2330,10 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `startRecording`, `stopRecording`, `sendForAnalysis`
 
 ### `frontend/src/app/components/live-chat-overlay/live-chat-overlay.component.ts`
-- Methods: `ngOnInit`, `toggle`, `sendMessage`, `onInput`, `onKeydown`, `addMessage`, `scrollToBottom`
+- Methods: `ngOnInit`, `addMessage`, `scrollToBottom`
 
 ### `frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts`
-- Methods: `onTouchStart`, `onTouchEnd`, `onTouchCancel`, `onMouseDown`, `onMouseUp`, `onMouseCancel`, `startTimer`, `cancelTimer`, `closeMenu`, `doReply`, `doCopy`, `doFavourite`, `doReport`, `doTranslate`, `doTransliterate`, `doSpeak`, `doCorrect`, `doBlockToggle`
+- Methods: `onTouchStart`, `onTouchEnd`, `onTouchCancel`, `onMouseDown`, `onMouseUp`, `onMouseCancel`, `startTimer`, `cancelTimer`, `closeMenu`, `doReply`, `doCopy`, `doFavourite`, `doReport`, `doTranslate`, `doTransliterate`, `doSpeak`, `doCorrect`, `doRequestCorrection`, `doBlockToggle`
 
 ### `frontend/src/app/components/long-press-context-menu/index.ts`
 - *(No methods found or interface/type definition)*
@@ -2027,13 +2357,13 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onUpgradeClick`
 
 ### `frontend/src/app/components/vocabulary-display/vocabulary-display.component.ts`
-- Methods: `refreshVocabulary`, `getTagIcon`, `addToFlashcards`
+- Methods: `handleRetry`, `refreshVocabulary`, `getTagIcon`, `addToFlashcards`, `handleError`
 
 ### `frontend/src/app/components/emoji-picker/emoji-picker.component.ts`
 - Methods: `selectEmoji`
 
 ### `frontend/src/app/components/forced-update-modal/forced-update-modal.component.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `ngOnInit`, `ngOnDestroy`, `onDocumentClick`, `preventScroll`, `blockEvent`, `onKeydown`
 
 ### `frontend/src/app/components/incoming-call/incoming-call.component.ts`
 - Methods: `playRingtone`, `playFallbackRingtone`, `stopRingtone`, `acceptCall`, `rejectCall`, `ngOnDestroy`
@@ -2042,7 +2372,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `searchUsers`, `addMember`, `removeMember`, `createGroup`
 
 ### `frontend/src/app/components/gift-animation-overlay/gift-animation-overlay.component.ts`
-- Methods: `starPoints`
+- Methods: `loadLottieAnimation`, `destroyLottie`
 
 ### `frontend/src/app/components/sticker-store/sticker-store.component.ts`
 - Methods: `getPackIllustration`, `getPackColour`, `purchasePack`
@@ -2051,16 +2381,19 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `ngOnInit`, `loadProfile`, `loadVisitors`, `checkMilestone`, `sanitizePrivacyVisibility`, `toggleEdit`, `onVisibilityChange`, `onIncognitoVisitsChange`, `onAvatarFileSelected`, `onCustomAvatarFileSelected`, `onAvatarClick`, `saveProfile`, `onAudioIntroSaved`, `blockProfile`, `unblockProfile`, `reportUser`, `onCoverUploaded`, `getLanguageName`, `getLanguageFlagIcon`, `addNativeLanguage`, `removeNativeLanguage`, `addTargetLanguage`, `removeTargetLanguage`, `addCatalogItem`, `removeCatalogItem`, `updateCatalogItem`
 
 ### `frontend/src/app/components/chat-view/chat-view.component.ts`
-- Methods: `ngOnInit`, `onMessageBlocked`, `sendTextMessage`
+- Methods: `ngOnInit`, `onMessageTextChange`, `onMessageBlocked`, `sendTextMessage`
 
 ### `frontend/src/app/components/profile-interests/profile-interests.component.ts`
 - Methods: `toggle`
+
+### `frontend/src/app/components/coin-economy-dashboard/coin-economy-dashboard.component.ts`
+- Methods: `ngAfterViewInit`, `getTransactionTypeLabel`, `maybeStartTour`, `claimDailyReward`, `startTour`
 
 ### `frontend/src/app/components/liked-by-modal/liked-by-modal.component.ts`
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/components/developer-dashboard/developer-dashboard.component.ts`
-- Methods: `ngOnInit`, `setTab`, `upgrade`, `generateKey`, `runPostGisSearch`, `toggleCentrifugo`, `simulateRedisTimelineFanout`, `simulateStageHandRaise`, `simulateStageDemote`, `toggleRecordingArchive`
+- Methods: `setTab`, `upgrade`, `generateKey`, `runPostGisSearch`, `toggleCentrifugo`, `simulateRedisTimelineFanout`, `simulateStageHandRaise`, `simulateStageDemote`, `toggleRecordingArchive`
 
 ### `frontend/src/app/components/moderation-queue/moderation-queue.component.ts`
 - Methods: `setTab`, `approveItem`, `rejectItem`, `refreshItems`, `itemsForTab`
@@ -2093,28 +2426,28 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `addOption`, `removeOption`, `submit`
 
 ### `frontend/src/app/components/audio-room/audio-room.component.ts`
-- Methods: `ngOnInit`, `selectLanguageGroup`, `toggleViewMode`, `selectExclusiveEmoji`, `createRoom`, `join`, `leave`, `raiseHand`, `approve`, `handleApproveSpeaker`, `demote`, `mute`, `kick`, `archive`, `openPollForm`, `closePollForm`, `submitPollForm`, `sendExclusiveReaction`, `viewPollResults`, `voteInPoll`
+- Methods: `ngOnInit`, `selectLanguageGroup`, `toggleViewMode`, `selectExclusiveEmoji`, `createRoom`, `createPrivateParty`, `join`, `leave`, `raiseHand`, `approve`, `handleApproveSpeaker`, `demote`, `mute`, `kick`, `archive`, `openPollForm`, `closePollForm`, `submitPollForm`, `sendExclusiveReaction`, `viewPollResults`, `voteInPoll`
 
 ### `frontend/src/app/components/quests/quests.component.ts`
-- Methods: `ngOnInit`
+- *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/components/video-room/video-room.component.ts`
-- Methods: `attach`, `selectCoHost`, `removeCoHost`
+- Methods: `attach`, `selectCoHost`, `removeCoHost`, `startOnboardingTour`
 
 ### `frontend/src/app/components/gdpr/gdpr.component.ts`
-- Methods: `requestArchive`, `deleteAccount`
+- Methods: `goBack`, `requestArchive`, `deleteAccount`, `cancelDeletion`
 
 ### `frontend/src/app/components/hobby-tags/hobby-tags.component.ts`
 - Methods: `isTagAdded`, `addTag`, `removeTag`, `createGlobalTag`, `updateProficiency`, `getTagName`, `getCurrentProficiency`, `getProficiencyLabel`
 
 ### `frontend/src/app/components/suggest-flashcards/suggest-flashcards.component.ts`
-- Methods: `manualSuggest`
+- Methods: `handleRetry`, `manualSuggest`, `handleError`
 
 ### `frontend/src/app/components/external-profile/external-profile.component.ts`
 - Methods: `follow`, `unfollow`, `sendMessage`
 
 ### `frontend/src/app/components/trust-safety-modal/trust-safety-modal.component.ts`
-- Methods: `submitReport`, `confirmBlock`
+- Methods: `focusInitialElement`, `switchTab`, `onTabKeydown`, `onKeydown`, `submitReport`, `confirmBlock`
 
 ### `frontend/src/app/components/avatar-upload/avatar-upload.component.ts`
 - Methods: `onFileSelected`, `onImageLoad`, `onImageMouseDown`, `onImageMouseMove`, `onImageMouseUp`, `confirmCrop`
@@ -2122,14 +2455,14 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/audio-recorder/audio-recorder.component.ts`
 - Methods: `startRecording`, `stopRecording`, `discardRecording`, `uploadRecording`, `stopTimer`, `ngOnDestroy`
 
-### `frontend/src/app/components/linked-accounts/linked-accounts.ts`
-- *(No methods found or interface/type definition)*
-
 ### `frontend/src/app/components/device-transfer/device-transfer.component.ts`
 - Methods: `copyLink`
 
 ### `frontend/src/app/components/audio-stage/audio-stage.ts`
 - *(No methods found or interface/type definition)*
+
+### `frontend/src/app/components/srs-error-boundary/srs-error-boundary.component.ts`
+- Methods: `captureError`, `resetError`, `reportCrash`, `reportErrorInternal`
 
 ### `frontend/src/app/components/study-buddy/study-buddy.component.ts`
 - Methods: `requestBuddy`, `accept`, `decline`
@@ -2141,7 +2474,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `loginWith`
 
 ### `frontend/src/app/components/chat-search/chat-search.component.ts`
-- Methods: `onSearch`
+- Methods: `onSearch`, `selectMessage`
 
 ### `frontend/src/app/components/device-lock/device-lock.component.ts`
 - Methods: `unlock`
@@ -2155,6 +2488,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/group-participant-drawer/group-participant-drawer.component.ts`
 - Methods: `close`
 
+### `frontend/src/app/components/reading-engine/reading-engine.component.ts`
+- Methods: `setTab`, `onTabKeydown`, `selectArticle`, `backToList`, `setFilter`, `setTopicFilter`, `clearFilters`, `retryLoad`, `loadReadingHistory`, `formatReadDate`
+
 ### `frontend/src/app/components/study-streak-widget/study-streak-widget.component.ts`
 - Methods: `checkIn`
 
@@ -2162,16 +2498,19 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `addItem`, `removeItem`, `updateCatalogItem`, `onBusinessNameInput`, `onBusinessHoursInput`, `onWebsiteInput`, `onCatalogNameInput`, `onCatalogDescriptionInput`, `onCatalogPriceInput`, `onCatalogImageInput`, `save`
 
 ### `frontend/src/app/components/user-detail/user-detail.component.ts`
-- Methods: `goBack`, `loadProfile`, `toggleFollow`, `toggleLike`, `playAudioIntro`
+- Methods: `goBack`, `loadProfile`, `toggleTranslation`, `toggleFollow`, `toggleLike`, `playAudioIntro`
 
 ### `frontend/src/app/components/font-scale-slider/font-scale-slider.component.ts`
 - Methods: `onInput`
+
+### `frontend/src/app/components/admin-offline-banner/admin-offline-banner.component.ts`
+- *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/components/communities/communities.component.ts`
 - Methods: `create`, `delete`
 
 ### `frontend/src/app/components/admin-actions/admin-actions.component.ts`
-- Methods: `ngOnInit`, `ban`, `warn`
+- Methods: `ban`, `warn`
 
 ### `frontend/src/app/components/cultural-tip/cultural-tip.component.ts`
 - *(No methods found or interface/type definition)*
@@ -2186,10 +2525,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `ngOnDestroy`, `startAnimation`, `dismiss`, `cancelPendingWork`
 
 ### `frontend/src/app/components/notifications-inbox/notifications-inbox.component.ts`
-- Methods: `ngOnInit`, `goBack`, `setTab`, `loadNotifications`, `markAllAsRead`, `onNotificationClick`, `getBadgeIcon`, `getNotificationMessageKey`
-
-### `frontend/src/app/components/update-modal/update-modal.component.ts`
-- Methods: `onDocumentClick`, `preventScroll`, `blockEvent`, `handleUpdate`
+- Methods: `goBack`, `setTab`, `markAllAsRead`, `onNotificationClick`, `getBadgeIcon`, `getNotificationMessageKey`
 
 ### `frontend/src/app/components/leaderboard/leaderboard.component.ts`
 - *(No methods found or interface/type definition)*
@@ -2198,13 +2534,13 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `getPlanCardClass`, `getDisplayPrice`, `onSelectPlan`
 
 ### `frontend/src/app/components/word-of-the-day/word-of-the-day.component.ts`
-- *(No methods found or interface/type definition)*
+- Methods: `getFallbackWord`
 
 ### `frontend/src/app/components/audio-sync-reader/audio-sync-reader.component.ts`
 - Methods: `parseTokens`, `togglePlay`, `playHtml5Audio`, `playSpeechSynthesis`, `stopPlayback`, `isTokenActive`, `getWordClass`, `onTokenClick`, `ngOnDestroy`
 
 ### `frontend/src/app/components/lightbox/lightbox.component.ts`
-- Methods: `ngOnInit`, `handleKeyDown`, `next`, `prev`, `goTo`, `onTouchStart`, `onTouchEnd`, `handleSwipe`
+- Methods: `handleKeyDown`, `next`, `prev`, `goTo`, `onTouchStart`, `onTouchEnd`
 
 ### `frontend/src/app/components/message-reaction-bar/message-reaction-bar.component.ts`
 - Methods: `getReactionEntries`, `toggleReaction`
@@ -2284,6 +2620,9 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/primitives/gradient-button/gradient-button.component.ts`
 - Methods: `onClick`
 
+### `frontend/src/app/components/primitives/lottie-player/lottie-player.component.ts`
+- Methods: `getAnimation`, `loadAnimation`, `destroyAnimation`
+
 ### `frontend/src/app/components/app-language-selector/app-language-selector.component.ts`
 - Methods: `toggleModal`, `closeModal`, `selectLanguage`
 
@@ -2303,7 +2642,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `filterByType`, `approve`, `reject`, `analyseUserProfile`
 
 ### `frontend/src/app/components/vocabulary-dashboard/vocabulary-dashboard.component.ts`
-- Methods: `flipCard`, `grade`, `restart`
+- Methods: `handleRetry`, `flipCard`, `grade`, `restart`, `handleComponentError`
 
 ### `frontend/src/app/components/vocabulary-dashboard/vocab-mock-data.ts`
 - *(No methods found or interface/type definition)*
@@ -2315,10 +2654,7 @@ This document contains an exhaustive list of files and methods in the codebase.
 - Methods: `onImageCropped`, `onLoadImageFailed`, `save`
 
 ### `frontend/src/app/components/notification-preferences/notification-preferences.component.ts`
-- Methods: `categoryPref`, `channelEnabled`, `categoryLabel`, `channelLabel`, `toggle`, `toggleDnd`, `updateQuietStart`, `updateQuietEnd`, `reset`, `save`
-
-### `frontend/src/app/components/appearance-settings/appearance-settings.component.ts`
-- Methods: `setTheme`, `onLanguageChange`
+- Methods: `categoryPref`, `channelEnabled`, `categoryLabel`, `channelLabel`, `toggle`, `toggleDnd`, `reset`, `save`
 
 ### `frontend/src/app/components/diagnostic-quiz/diagnostic-quiz.component.ts`
 - Methods: `reloadQuestions`, `selectOption`, `next`, `previous`
@@ -2326,35 +2662,41 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/components/password-policy-reset/password-policy-reset.component.ts`
 - Methods: `onCurrentPasswordChange`, `onNewPasswordChange`, `onConfirmPasswordChange`, `resetPassword`
 
+### `frontend/src/app/components/discovery/discovery-skeleton-card.component.ts`
+- *(No methods found or interface/type definition)*
+
 ### `frontend/src/app/components/discovery/discovery.component.ts`
-- Methods: `setSort`, `onAgeRangeChanged`, `onDistanceChanged`, `onFilterSelect`, `setLanguage`, `setGender`, `ngOnInit`, `searchPartners`, `toggleVoiceRoomActive`, `toggleSeriousLearnerMode`, `formatDistanceHelper`, `toggleAudioIntro`, `stopAudioIntro`, `getActiveStatus`, `ngOnDestroy`, `onGlobalSearch`, `resetFilters`
+- Methods: `setSort`, `onAgeRangeChanged`, `onDistanceChanged`, `onFilterSelect`, `setLanguage`, `setGender`, `ngOnInit`, `searchPartners`, `scheduleSearch`, `retrySearch`, `toggleVoiceRoomActive`, `toggleSeriousLearnerMode`, `formatDistanceHelper`, `toggleAudioIntro`, `stopAudioIntro`, `getActiveStatus`, `ngOnDestroy`, `onGlobalSearch`, `resetFilters`, `startMatchmakingTour`, `isMatchmakingTourActive`, `closeMatchmakingTour`
+
+### `frontend/src/app/components/discovery/discovery-map-error-boundary.component.ts`
+- Methods: `captureError`, `resetError`, `reportCrash`
 
 ### `frontend/src/app/components/discovery/global-search/global-search.component.ts`
 - Methods: `applyFilters`
 
+### `frontend/src/app/components/video-classroom-error-boundary/video-classroom-error-boundary.component.ts`
+- Methods: `captureError`, `resetError`, `reportCrash`, `reportErrorInternal`
+
 ### `frontend/src/app/components/favourites/favourites.component.ts`
 - Methods: `loadFavourites`, `setTab`, `deleteFavourite`, `toggleAudio`, `stopAudio`, `isChatMessage`, `getPayloadMessage`
 
+### `frontend/src/app/components/escrow-payments/escrow-payments.component.ts`
+- Methods: `handleRelease`, `handleRefund`, `handleDispute`, `handleSync`, `startOnboardingTour`, `setStatusFilter`, `statusBadgeClass`, `goBack`, `maybeStartTour`
+
 ### `frontend/src/app/components/shop/shop.component.ts`
 - Methods: `addToCart`
-
-### `frontend/src/app/components/image-lightbox/image-lightbox.component.ts`
-- Methods: `ngOnInit`, `ngOnDestroy`, `handleKeyDown`, `next`, `prev`, `close`, `onTouchStart`, `onTouchEnd`, `handleSwipe`
 
 ### `frontend/src/app/components/study-streak-counter/study-streak-counter.component.ts`
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/components/groups-discovery/groups-discovery.component.ts`
-- Methods: `fetchGroups`, `joinGroup`
+- Methods: `joinGroup`
 
 ### `frontend/src/app/components/flashcard-review/flashcard-review.component.ts`
-- Methods: `flipCard`, `gradeReview`, `restart`, `playAudio`, `computeNewLevel`
+- Methods: `handleRetry`, `flipCard`, `gradeReview`, `restart`, `playAudio`, `computeNewLevel`
 
 ### `frontend/src/app/components/profile-cover-photo/profile-cover-photo.component.ts`
 - Methods: `onFileSelected`, `cancel`
-
-### `frontend/src/app/moderation/moderation.service.ts`
-- Methods: `getItemsResource`, `getItems`, `reportUser`, `approveItem`, `rejectItem`, `analyseUser`
 
 ### `frontend/src/app/moderation/moderation-dashboard.component.ts`
 - Methods: `approve`, `reject`, `analyse`
@@ -2363,10 +2705,13 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/moderation/moderation-queue.component.ts`
-- Methods: `setType`, `setStatus`, `approve`, `reject`, `analyse`
+- Methods: `setType`, `setStatus`, `approve`, `reject`, `analyse`, `reportCrash`
+
+### `frontend/src/app/features/settings/components/profile-settings/profile-settings.component.ts`
+- Methods: `ngOnInit`, `while`, `addTargetLanguage`, `removeTargetLanguage`, `onDistanceChange`, `persist`
 
 ### `frontend/src/app/features/settings/components/privacy-settings/privacy-settings.component.ts`
-- Methods: `save`
+- Methods: `setVisibility`, `toggleAllowDm`, `setImageFilter`, `persist`
 
 ### `frontend/src/app/discovery/audio-intro-feed/audio-intro-feed.component.ts`
 - Methods: `togglePlay`
@@ -2377,26 +2722,38 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/pages/help-centre/help-centre.component.ts`
 - Methods: `updateSearch`, `updateCategory`, `nextPage`, `prevPage`
 
+### `frontend/src/app/pages/escrow/escrow.component.ts`
+- Methods: `getStatusCount`, `startOnboardingTour`, `onFilterChange`, `reload`, `goBack`
+
 ### `frontend/src/app/pages/chat-settings/chat-settings.component.ts`
-- Methods: `ngOnInit`, `toggleAutoTranslate`, `toggleReadReceipts`, `toggleEnterToSend`
+- Methods: `toggleAutoTranslate`, `toggleReadReceipts`, `toggleEnterToSend`, `resetToDefaults`
 
 ### `frontend/src/app/pages/support-centre/support-centre.component.ts`
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/pages/language-settings/language-settings.component.ts`
-- Methods: `selectLang`, `goBack`
+- Methods: `setTargetSearchQuery`, `setNativeSearchQuery`, `selectUiLang`, `getFlagForCode`, `getLanguageName`, `toggleTargetPicker`, `toggleNativePicker`, `addTargetLanguage`, `removeTargetLanguage`, `addNativeLanguage`, `removeNativeLanguage`, `saveChanges`, `discardChanges`, `goBack`
 
 ### `frontend/src/app/pages/settings/backup-restore.component.ts`
 - Methods: `onRoomChange`, `exportChat`, `onFileSelected`, `importChat`
 
+### `frontend/src/app/pages/settings/account/account.component.ts`
+- Methods: `ngOnInit`, `passwordMatchValidator`, `updateTwoFactorSetting`, `changePassword`, `terminateSession`
+
 ### `frontend/src/app/pages/settings/linked-accounts/linked-accounts.component.ts`
 - Methods: `isLinked`, `getLinkedAccount`, `canUnlink`, `link`, `unlink`, `goBack`
+
+### `frontend/src/app/pages/settings/message-filter-settings/message-filter-settings.component.ts`
+- Methods: `ngOnInit`, `toggleLanguage`, `toggleGender`, `saveFilters`, `getLanguageName`, `goBack`
+
+### `frontend/src/app/pages/settings/privacy-settings/privacy-settings.component.ts`
+- Methods: `saveSettings`, `requestArchive`, `downloadMyData`, `goBack`
 
 ### `frontend/src/app/pages/settings/appearance-settings/appearance-settings.component.ts`
 - Methods: `setTheme`, `setAccentColor`, `onCustomColorChange`, `saveSettings`, `changeUiLanguage`, `onLanguageSelect`, `goBack`
 
 ### `frontend/src/app/pages/settings/notification-settings/notification-settings.component.ts`
-- Methods: `onToneInput`, `onVibrationInput`, `savePreferences`
+- Methods: `toggleValue`, `channelLabel`, `toggle`
 
 ### `frontend/src/app/pages/subscription/subscription-page.component.ts`
 - Methods: `loadPlans`, `subscribe`
@@ -2416,8 +2773,14 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/pages/my-subscription/my-subscription.component.ts`
 - Methods: `formatDate`, `reload`, `goBack`
 
+### `frontend/src/app/pages/admin/admin-blocks.component.ts`
+- Methods: `retry`, `changePage`, `removeBlock`, `reportCrash`
+
 ### `frontend/src/app/pages/admin/admin-users.component.ts`
-- Methods: `onSearchInput`, `changePage`, `toggleVip`, `openHistory`, `closeHistory`
+- Methods: `onSearchInput`, `changePage`, `toggleVip`, `openHistory`, `closeHistory`, `banUser`, `warnUser`, `reportCrash`
+
+### `frontend/src/app/pages/admin/blocks/admin-blocks.component.ts`
+- Methods: `isUnblocking`, `onUnblock`, `onRetry`, `reportCrash`
 
 ### `frontend/src/app/pages/call-logs/call-logs.component.ts`
 - Methods: `onFilterChange`
@@ -2429,16 +2792,22 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/pages/chat/ai-conversation.service.ts`
-- Methods: `generateReply`
+- Methods: `getScenarios`, `sendMessage`
 
 ### `frontend/src/app/pages/chat/chat-page.component.ts`
-- Methods: `ngOnInit`, `selectRoom`, `exportChat`, `sendMessage`, `openCorrection`, `cancelCorrection`, `openFix`, `cancelFix`, `submitFix`, `submitCorrection`, `requestCorrection`, `viewMedia`, `replyToStatus`, `startAiPartner`, `closeAiPartner`, `sendAiMessage`
+- Methods: `ngOnInit`, `selectRoom`, `handleCentrifugoEvent`, `exportChat`, `sendMessage`, `openCorrection`, `cancelCorrection`, `openFix`, `cancelFix`, `submitFix`, `submitCorrection`, `requestCorrection`, `viewMedia`, `replyToStatus`, `startAiPartner`, `closeAiPartner`, `selectAiScenario`, `sendAiMessage`
 
 ### `frontend/src/app/pages/vip-subscription/vip-subscription.component.ts`
 - Methods: `loadPlans`, `getPriceDisplay`, `getPlanIcon`, `getFeatureCategories`, `scrollToPlans`, `onSubscribe`
 
 ### `frontend/src/app/pages/communities/communities.component.ts`
 - Methods: `createCommunity`, `selectCommunity`
+
+### `frontend/src/app/pages/message-filter-settings/message-filter-settings.component.ts`
+- Methods: `ngOnInit`, `toggleGender`, `toggleNativeLanguage`, `clearAgeFilters`, `clearAllFilters`, `coerceNumber`
+
+### `frontend/src/app/pages/escrow-detail/escrow-detail.component.ts`
+- Methods: `formatDate`, `reload`, `goBack`
 
 ### `frontend/src/app/pages/vip/vip.component.ts`
 - Methods: `scrollToPlans`, `onStartFree`, `onContinueFree`, `onSubscribe`, `toggleFaq`
@@ -2447,10 +2816,10 @@ This document contains an exhaustive list of files and methods in the codebase.
 - *(No methods found or interface/type definition)*
 
 ### `frontend/src/app/pages/data-storage/data-storage.component.ts`
-- Methods: `clearCache`, `deleteOldMedia`, `toggleCellular`
+- Methods: `computeCacheSize`, `clearCache`, `deleteOldMedia`, `toggleCellular`, `goBack`
 
 ### `frontend/src/app/pages/voiceroom-preview/voiceroom-preview.component.ts`
-- Methods: `applyRoomData`
+- Methods: `applyMeta`
 
 ### `frontend/src/app/pages/language-islands/language-islands.component.ts`
 - *(No methods found or interface/type definition)*

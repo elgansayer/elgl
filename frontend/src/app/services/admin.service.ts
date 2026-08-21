@@ -36,13 +36,17 @@ export interface LoginHistoryEntry {
 
 export interface AdminBlockEntry {
   id: string;
-  blocker_id: string;
-  blocked_id: string;
+  blocker_id?: string;
+  blocked_id?: string;
   blocker_name?: string | null;
   blocked_name?: string | null;
   blocker_avatar?: string | null;
   blocked_avatar?: string | null;
-  created_at: string;
+  created_at?: string;
+  display_name?: string;
+  native_language?: string;
+  target_languages?: string[];
+  avatar_url?: string;
 }
 
 export interface AdminBlocksListResult {
@@ -97,19 +101,18 @@ const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   },
 ];
 
-// GDPR-compliant mock data: IP addresses are scrubbed (last octet zeroed)
 const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
   {
     id: 'login-1',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
     created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 'login-2',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },

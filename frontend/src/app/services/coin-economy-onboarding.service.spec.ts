@@ -1,8 +1,20 @@
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { CoinEconomyOnboardingService } from './coin-economy-onboarding.service';
 
 describe('CoinEconomyOnboardingService', () => {
   let service: CoinEconomyOnboardingService;
+
+  let store: Record<string, string> = {};
+  beforeAll(() => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store[key] || null,
+      setItem: (key: string, value: string) => store[key] = value,
+      removeItem: (key: string) => delete store[key],
+      clear: () => store = {}
+    });
+  });
+
 
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_coin_economy_onboarding_done');

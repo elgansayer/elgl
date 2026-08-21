@@ -19,7 +19,7 @@ const reportDir = resolve(__dirname, '..', 'report-user-modal');
  *  2. Logical inline-start/end spacing (ps-, pe-, ms-, me-) where appropriate
  *  3. Block-axis border/spacing stays block-axis (border-t/border-b/pb/pt)
  *  4. All user-facing strings use TranslatePipe
- *  5. RTL pseudo-element positioning uses logical properties (start/end)
+ *  5. Interaction-heavy controls delegate semantics to owned Spartan primitives
  */
 
 interface ComponentInfo {
@@ -57,24 +57,16 @@ function extractTemplate(component: ComponentInfo): string {
 
 /** Physical direction patterns that must never appear in Trust & Safety UI. */
 const PHYSICAL_DIRECTION_PATTERNS: ReadonlyArray<RegExp> = [
-  /\bpl-\d/,       // padding-left
-  /\bpr-\d/,       // padding-right
-  /\bml-\d/,       // margin-left
-  /\bmr-\d/,       // margin-right
-  /\bleft-[0-9]/,  // left-N
+  /\bpl-\d/, // padding-left
+  /\bpr-\d/, // padding-right
+  /\bml-\d/, // margin-left
+  /\bmr-\d/, // margin-right
+  /\bleft-[0-9]/, // left-N
   /\bright-[0-9]/, // right-N
-  /\bborder-l\b/,  // border-left
-  /\bborder-r\b/,  // border-right
+  /\bborder-l\b/, // border-left
+  /\bborder-r\b/, // border-right
   /\btext-left\b/,
   /\btext-right\b/,
-];
-
-/** Logical CSS properties that the Trust & Safety architecture should use. */
-const LOGICAL_PROPERTY_CHECKS: ReadonlyArray<string> = [
-  'ps-',  // padding-inline-start
-  'pe-',  // padding-inline-end
-  'ms-',  // margin-inline-start
-  'me-',  // margin-inline-end
 ];
 
 describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
@@ -165,12 +157,11 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
         expect(template).toContain('-me-2');
       });
 
-      it('should use rtl:peer-checked:after:-translate-x-full for RTL toggle support', () => {
-        expect(template).toContain('rtl:peer-checked:after:-translate-x-full');
-      });
-
-      it('should use after:start-[2px] for logical pseudo-element positioning', () => {
-        expect(template).toContain('after:start-[2px]');
+      it('should delegate the block-user toggle to the owned Spartan checkbox', () => {
+        expect(template).toContain('<hlm-checkbox');
+        expect(template).toContain('[formField]="reportForm.blockUser"');
+        expect(template).not.toContain('rtl:peer-checked:after:-translate-x-full');
+        expect(template).not.toContain('after:start-[2px]');
       });
     });
 
@@ -196,15 +187,27 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
   describe('i18n coverage (all user-facing strings use TranslatePipe)', () => {
     describe('TrustSafetyModal', () => {
       let template: string;
-      beforeAll(() => { template = templates.get('TrustSafetyModal')!; });
+      beforeAll(() => {
+        template = templates.get('TrustSafetyModal')!;
+      });
 
       it('should use TranslatePipe for all safety.* keys', () => {
         const requiredKeys = [
-          'safety.title', 'safety.subtitle', 'safety.closeBtn',
-          'safety.tabReport', 'safety.tabBlock',
-          'safety.reasonLabel', 'safety.detailsLabel', 'safety.detailsPlaceholder',
-          'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
-          'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
+          'safety.title',
+          'safety.subtitle',
+          'safety.closeBtn',
+          'safety.tabReport',
+          'safety.tabBlock',
+          'safety.reasonLabel',
+          'safety.detailsLabel',
+          'safety.detailsPlaceholder',
+          'safety.blockWarning',
+          'safety.blockList1',
+          'safety.blockList2',
+          'safety.blockList3',
+          'safety.cancelBtn',
+          'safety.submitReportBtn',
+          'safety.confirmBlockBtn',
         ];
         for (const key of requiredKeys) {
           expect(template).toContain(`'${key}'`);
@@ -214,14 +217,23 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
 
     describe('ReportUserModal', () => {
       let template: string;
-      beforeAll(() => { template = templates.get('ReportUserModal')!; });
+      beforeAll(() => {
+        template = templates.get('ReportUserModal')!;
+      });
 
       it('should use TranslatePipe for all report.* keys', () => {
         const requiredKeys = [
-          'report.title', 'report.close', 'report.reason_label',
-          'report.details_label', 'report.details_placeholder',
-          'report.block_user', 'report.cancel', 'report.submit',
-          'report.submitting', 'report.load_error', 'report.retry',
+          'report.title',
+          'report.close',
+          'report.reason_label',
+          'report.details_label',
+          'report.details_placeholder',
+          'report.block_user',
+          'report.cancel',
+          'report.submit',
+          'report.submitting',
+          'report.load_error',
+          'report.retry',
         ];
         for (const key of requiredKeys) {
           expect(template).toContain(`'${key}'`);
@@ -231,7 +243,9 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
 
     describe('ReportButton', () => {
       let template: string;
-      beforeAll(() => { template = templates.get('ReportButton')!; });
+      beforeAll(() => {
+        template = templates.get('ReportButton')!;
+      });
 
       it('should use TranslatePipe for report.button_label', () => {
         expect(template).toContain("'report.button_label' | t");
@@ -246,19 +260,30 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
   describe('Hardcoded English string ban (aggregate)', () => {
     it('should not hardcode Trust & Safety UI strings in any component', () => {
       const bannedStrings = [
-        'Submit report', 'Confirm block', 'Report or block',
-        'Trust and safety moderation', 'Report user', 'Block this user',
-        'Select violation category', 'Additional context', 'Cancel',
-        'Select a reason', 'Additional details', 'Flag',
-        'Harassment / Bullying', 'Spam / Commercial Advertising',
-        'Inappropriate / Offensive Language', 'Suspicious Link / Scam',
-        'Other Violation', 'What happens when you block',
+        'Submit report',
+        'Confirm block',
+        'Report or block',
+        'Trust and safety moderation',
+        'Report user',
+        'Block this user',
+        'Select violation category',
+        'Additional context',
+        'Cancel',
+        'Select a reason',
+        'Additional details',
+        'Flag',
+        'Harassment / Bullying',
+        'Spam / Commercial Advertising',
+        'Inappropriate / Offensive Language',
+        'Suspicious Link / Scam',
+        'Other Violation',
+        'What happens when you block',
       ];
 
       for (const component of TRUST_SAFETY_COMPONENTS) {
         const template = templates.get(component.name)!;
         for (const banned of bannedStrings) {
-          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')));
+          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
         }
       }
     });
