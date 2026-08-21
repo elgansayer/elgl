@@ -14,12 +14,11 @@ import { ChatService } from './chat.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
-import { GroupsService } from './groups.service';
 import { SystemMessageService } from './services/system-message.service';
 import { ChatSettingsController } from './chat-settings.controller';
 import { ChatSettingsService } from './chat-settings.service';
-import { ChatBackupController } from './chat-backup.controller';
-import { ChatBackupService } from './chat-backup.service';
+import { ChatBackupController } from '../chat-backup/chat-backup.controller';
+import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
@@ -48,7 +47,6 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmProxyService,
     ChatService,
     ConversationStarterService,
-    GroupsService,
     SystemMessageService,
     ChatSettingsService,
     ChatBackupService,
@@ -62,7 +60,6 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmProxyService,
     ChatService,
     ConversationStarterService,
-    GroupsService,
     SystemMessageService,
     ChatSettingsService,
   ],

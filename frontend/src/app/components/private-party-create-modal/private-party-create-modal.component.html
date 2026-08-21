@@ -6,6 +6,7 @@
     <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
       <h2 class="text-xl font-bold text-text-primary">{{ 'privateParty.modalTitle' | t }}</h2>
       <button
+        hlmBtn
         (click)="closeModal()"
         class="text-text-secondary hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
         [attr.aria-label]="'audioRoom.cancelBtn' | t"
@@ -24,6 +25,7 @@
           {{ 'audioRoom.roomTitleLabel' | t }}
         </label>
         <input
+          hlmInput
           id="partyTitle"
           type="text"
           [(ngModel)]="title"
@@ -38,17 +40,18 @@
         <label for="langPair" class="text-sm font-medium text-text-secondary">
           {{ 'audioRoom.languagePairLabel' | t }}
         </label>
-        <select
-          id="langPair"
+        <hlm-native-select
+          selectId="langPair"
           [(ngModel)]="languagePair"
           class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
+          selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
         >
           @for (option of languagePairOptions(); track option.value) {
             <option [value]="option.value">
               {{ option.labelKey | t }}
             </option>
           }
-        </select>
+        </hlm-native-select>
       </div>
 
       <!-- Topic Select -->
@@ -56,17 +59,18 @@
         <label for="topicTag" class="text-sm font-medium text-text-secondary">
           {{ 'audioRoom.topicLabel' | t }}
         </label>
-        <select
-          id="topicTag"
+        <hlm-native-select
+          selectId="topicTag"
           [(ngModel)]="topicTag"
           class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
+          selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
         >
           @for (option of topicOptions(); track option.value) {
             <option [value]="option.value">
               {{ option.labelKey | t }}
             </option>
           }
-        </select>
+        </hlm-native-select>
       </div>
 
       <!-- Video Stream Toggle -->
@@ -74,9 +78,8 @@
         for="isVideoStream"
         class="flex items-center gap-3 text-sm font-medium text-text-secondary"
       >
-        <input
-          id="isVideoStream"
-          type="checkbox"
+        <hlm-checkbox
+          inputId="isVideoStream"
           [(ngModel)]="isVideoStream"
           class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-accent focus:ring-accent"
         />
@@ -100,6 +103,7 @@
                 >
                   {{ friend.display_name || friend.id }}
                   <button
+                    hlmBtn
                     type="button"
                     (click)="toggleFriend(friendId)"
                     class="ms-1 text-accent hover:text-accent/70"
@@ -115,6 +119,7 @@
 
         <!-- Friend search -->
         <input
+          hlmInput
           type="text"
           [(ngModel)]="friendSearchQuery"
           [placeholder]="'privateParty.searchFriendsPlaceholder' | t"
@@ -134,8 +139,7 @@
               <label
                 class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-surface-100 transition-colors border-b border-surface-100 last:border-b-0"
               >
-                <input
-                  type="checkbox"
+                <hlm-checkbox
                   [checked]="selectedFriendIds().includes(friend.id)"
                   (change)="toggleFriend(friend.id)"
                   class="h-4 w-4 rounded border-surface-100 bg-surface-200 text-accent focus:ring-accent"
@@ -153,12 +157,14 @@
     <!-- Footer -->
     <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-300/50">
       <button
+        hlmBtn
         (click)="closeModal()"
         class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
       >
         {{ 'audioRoom.cancelBtn' | t }}
       </button>
       <button
+        hlmBtn
         (click)="submit()"
         [disabled]="!isValid()"
         class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20"

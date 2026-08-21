@@ -67,7 +67,7 @@ describe('AppPillComponent', () => {
     expect(pillElement.classList.contains('items-center')).toBe(true);
     expect(pillElement.classList.contains('justify-center')).toBe(true);
     expect(pillElement.classList.contains('font-extrabold')).toBe(true);
-    expect(pillElement.classList.contains('rounded-full')).toBe(true);
+    expect(pillElement.classList.contains('rounded-pill')).toBe(true);
   });
 
   it('should apply success colour (token-driven, not i18n-smuggled) and md logical size classes', () => {

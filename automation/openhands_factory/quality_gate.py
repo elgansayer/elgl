@@ -74,15 +74,39 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
     skipped_test_patterns = [
         re.compile(r"\b(?:describe|it|test)\.skip\s*\("),
         re.compile(r"\b(?:xit|xdescribe)\s*\("),
-        re.compile(r"\bcy\.skip\s*\(") ,
+        re.compile(r"\bcy\.skip\s*\("),
         re.compile(r"@pytest\.mark\.skip(?:if)?\b"),
         re.compile(r"pytest\.skip\s*\("),
     ]
+
+    credential_patterns = [
+        re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
+        re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+        re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+        re.compile(r"\bAIza[0-9A-Za-z_-]{30,}\b"),
+        re.compile(r"BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY"),
+    ]
+    credential_roots = {
+        ".claude",
+        ".codex",
+        ".gemini",
+        ".openhands",
+    }
 
     for line in diff_output.splitlines():
         if line.startswith("+++ b/"):
             current_file = Path(line[6:])
             added_line = 0
+            if current_file.parts and current_file.parts[0] in credential_roots:
+                findings.append(
+                    QualityFinding(
+                        code="credential-artifact",
+                        path=current_file,
+                        line=None,
+                        summary="Provider credential artefact must not enter the repository",
+                        evidence=str(current_file),
+                    )
+                )
             continue
 
         if line.startswith("@@"):
@@ -95,6 +119,19 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
             added_text = line[1:]
 
             if current_file:
+                for pattern in credential_patterns:
+                    if pattern.search(added_text):
+                        findings.append(
+                            QualityFinding(
+                                code="credential-leak",
+                                path=current_file,
+                                line=added_line,
+                                summary="High-confidence credential material detected",
+                                evidence="[redacted credential pattern]",
+                            )
+                        )
+                        break
+
                 # Skipped tests block
                 for p in skipped_test_patterns:
                     if p.search(added_text):

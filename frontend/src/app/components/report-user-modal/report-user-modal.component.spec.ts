@@ -47,12 +47,11 @@ describe('ReportUserModalComponent', () => {
       expect(templateContent).toContain('-me-2');
     });
 
-    it('should use logical pseudo-element positioning (after:start)', () => {
-      expect(templateContent).toContain('after:start-[2px]');
-    });
-
-    it('should support RTL toggle switch translation', () => {
-      expect(templateContent).toContain('rtl:peer-checked:after:-translate-x-full');
+    it('should delegate the block-user control to the owned Spartan checkbox', () => {
+      expect(templateContent).toContain('<hlm-checkbox');
+      expect(templateContent).toContain('[formField]="reportForm.blockUser"');
+      expect(templateContent).not.toContain('after:start-[2px]');
+      expect(templateContent).not.toContain('rtl:peer-checked:after:-translate-x-full');
     });
 
     it('should use block axis border utilities (RTL safe)', () => {
@@ -96,6 +95,20 @@ describe('ReportUserModalComponent', () => {
       expect(templateContent).not.toContain('cdkTrapFocus');
     });
 
+    it('should delegate every native button to the owned Spartan Helm button directive', () => {
+      const openingButtons = templateContent.match(/<button\b[\s\S]*?>/g) ?? [];
+      expect(openingButtons.length).toBeGreaterThan(0);
+      for (const openingButton of openingButtons) {
+        expect(openingButton).toContain('hlmBtn');
+      }
+    });
+
+    it('should use touch-safe Spartan sizes for report dialog actions', () => {
+      expect(templateContent).toContain('size="icon-touch"');
+      expect(templateContent.match(/size="touch"/g)?.length).toBe(3);
+      expect(templateContent).toContain('variant="destructive-solid"');
+    });
+
     it('should use Relay design tokens instead of hardcoded slate/red Tailwind colours', () => {
       const legacyColours = [
         /\bslate-\d/,
@@ -108,7 +121,7 @@ describe('ReportUserModalComponent', () => {
         expect(templateContent).not.toMatch(pattern);
       }
       expect(templateContent).toContain('bg-danger');
-      expect(templateContent).toContain('text-on-fill');
+      expect(templateContent).toContain('variant="destructive-solid"');
     });
   });
 

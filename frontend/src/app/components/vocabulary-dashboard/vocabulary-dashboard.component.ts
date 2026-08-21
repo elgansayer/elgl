@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
@@ -6,12 +7,13 @@ import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from '../srs-error-boundary/srs-error-boundary.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+  imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent, A11yClickableDirective],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -26,7 +28,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
           <span class="text-sm text-text-secondary">{{
             'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
           }}</span>
-          <button type="button" (click)="restart()" class="btn-secondary text-sm">
+          <button hlmBtn type="button" (click)="restart()" class="btn-secondary text-sm">
             {{ 'vocabulary.restart' | t }}
           </button>
         </div>
@@ -34,7 +36,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
         @if (isComplete()) {
           <div class="mt-12 rounded-2xl border border-surface-100 bg-surface-800 p-8 text-center">
             <p class="text-lg font-medium text-text-primary">📚 {{ 'vocabulary.noDue' | t }}</p>
-            <button type="button" (click)="restart()" class="mt-4 btn-secondary">
+            <button hlmBtn type="button" (click)="restart()" class="mt-4 btn-secondary">
               {{ 'vocabulary.restart' | t }}
             </button>
           </div>
@@ -45,9 +47,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 class="flashcard"
                 [class.is-flipped]="isFlipped()"
                 (click)="flipCard()"
-                (keyup.enter)="flipCard()"
-                (keyup.space)="flipCard()"
-                role="button"
+                appA11yClickable
                 tabindex="0"
                 [attr.aria-pressed]="isFlipped()"
               >
@@ -70,13 +70,28 @@ type ReviewGrade = 'again' | 'good' | 'known';
               </div>
 
               <div class="mt-6 flex items-center justify-center gap-3">
-                <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('again')"
+                  class="btn-grade btn-grade-again"
+                >
                   {{ 'vocabulary.againBtn' | t }}
                 </button>
-                <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('good')"
+                  class="btn-grade btn-grade-good"
+                >
                   {{ 'vocabulary.goodBtn' | t }}
                 </button>
-                <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="grade('known')"
+                  class="btn-grade btn-grade-known"
+                >
                   {{ 'vocabulary.knownBtn' | t }}
                 </button>
               </div>

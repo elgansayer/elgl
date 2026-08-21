@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { GroupsService, GroupRecord } from '../groups/groups.service';
-import { CreateCommunityDto } from './dto/create-community.dto';
-import { UpdateCommunityDto } from './dto/update-community.dto';
+import { CreateCommunityDto } from '../groups/dto/create-community.dto';
+import { UpdateCommunityDto } from '../groups/dto/update-community.dto';
 
 export interface CommunityRecord {
   id: string;

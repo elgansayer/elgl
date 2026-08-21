@@ -10,7 +10,7 @@ import { toastsSignal } from '../../../services/toast.service';
     >
       @for (toast of toastsSignal(); track toast.id) {
         <div
-          class="px-4 py-2 rounded-full shadow-lg font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"
+          class="px-4 py-2 rounded-card shadow-lift font-bold text-sm pointer-events-auto transition-all duration-base ease-app animate-slide-down border border-surface-100"
           [class.bg-surface-200]="toast.type === 'info'"
           [class.text-text-primary]="toast.type === 'info'"
           [class.bg-danger]="toast.type === 'error'"
@@ -35,7 +35,12 @@ import { toastsSignal } from '../../../services/toast.service';
         }
       }
       .animate-slide-down {
-        animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: slide-down var(--app-motion-base) var(--app-ease-standard) forwards;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-slide-down {
+          animation: none;
+        }
       }
     `,
   ],

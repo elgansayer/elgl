@@ -1,0 +1,104 @@
+import { Routes } from '@angular/router';
+
+export const settingsRoutes: Routes = [
+  {
+    path: 'settings',
+    loadComponent: () =>
+      import('../components/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'settings/account',
+    loadComponent: () =>
+      import('../pages/settings/account/account.component').then((m) => m.AccountSettingsComponent),
+    title: 'Account Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification',
+    loadComponent: () =>
+      import('../pages/settings/notification-settings/notification-settings.component').then(
+        (m) => m.NotificationSettingsComponent,
+      ),
+    title: 'Notification Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification-customization',
+    loadComponent: () =>
+      import('../components/notification-customization/notification-customization.component').then(
+        (m) => m.NotificationCustomizationComponent,
+      ),
+    title: 'Notification Customisation - HelloTalk',
+  },
+  {
+    path: 'settings/message-filters',
+    loadComponent: () =>
+      import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
+        (m) => m.MessageFilterSettingsComponent,
+      ),
+    title: 'Message Filters - HelloTalk',
+  },
+  {
+    path: 'settings/appearance',
+    loadComponent: () =>
+      import('../pages/settings/appearance-settings/appearance-settings.component').then(
+        (m) => m.AppearanceSettingsComponent,
+      ),
+    title: 'Appearance - HelloTalk',
+  },
+  {
+    path: 'settings/privacy',
+    loadComponent: () =>
+      import('../pages/settings/privacy-settings/privacy-settings.component').then(
+        (m) => m.PrivacySettingsComponent,
+      ),
+    title: 'Privacy Settings - HelloTalk',
+  },
+  {
+    path: 'settings/backup-restore',
+    loadComponent: () =>
+      import('../pages/settings/backup-restore.component').then((m) => m.BackupRestoreComponent),
+    title: 'Chat Backup & Restore - HelloTalk',
+  },
+  {
+    path: 'settings/linked-accounts',
+    loadComponent: () =>
+      import('../pages/settings/linked-accounts/linked-accounts.component').then(
+        (m) => m.LinkedAccountsComponent,
+      ),
+    title: 'Linked Accounts - HelloTalk',
+  },
+  {
+    path: 'data-storage',
+    loadComponent: () =>
+      import('../pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
+    title: 'Data & Storage - HelloTalk',
+  },
+  {
+    path: 'device-transfer',
+    loadComponent: () =>
+      import('../components/device-transfer/device-transfer.component').then(
+        (m) => m.DeviceTransferComponent,
+      ),
+    title: 'Device Transfer - HelloTalk',
+  },
+  {
+    path: 'gdpr',
+    loadComponent: () => import('../components/gdpr/gdpr.component').then((m) => m.GdprComponent),
+    title: 'Personal Data - HelloTalk',
+  },
+  {
+    path: 'account/deletion',
+    loadComponent: () =>
+      import('../components/account-deletion/account-deletion.component').then(
+        (m) => m.AccountDeletionComponent,
+      ),
+    title: 'Account Deletion - HelloTalk',
+  },
+  {
+    path: 'version',
+    loadComponent: () =>
+      import('../components/version-check/version-check.component').then(
+        (m) => m.VersionCheckComponent,
+      ),
+    title: 'App Version - HelloTalk',
+  },
+];
