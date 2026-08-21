@@ -77,19 +77,25 @@
           <!-- Item type badge -->
           <div class="mt-2">
             @if (fav.item_type === 'audio' || fav.item_payload?.message_type === 'voice') {
-              <app-pill colour="primary" size="sm">
+              <span
+                class="inline-flex items-center rounded-pill bg-primary px-2 py-0.5 text-xs font-extrabold text-on-fill"
+              >
                 {{ 'favourites.voiceNote' | t }}
-              </app-pill>
+              </span>
             }
             @if (fav.item_type === 'moment') {
-              <app-pill colour="info" size="sm">
+              <span
+                class="inline-flex items-center rounded-pill bg-secondary px-2 py-0.5 text-xs font-extrabold text-on-fill"
+              >
                 {{ 'favourites.momentCard' | t }}
-              </app-pill>
+              </span>
             }
             @if (fav.item_type === 'correction' || fav.item_payload?.message_type === 'correction') {
-              <app-pill colour="warning" size="sm">
+              <span
+                class="inline-flex items-center rounded-pill bg-warning px-2 py-0.5 text-xs font-extrabold text-on-fill"
+              >
                 {{ 'favourites.chipCorrections' | t }}
-              </app-pill>
+              </span>
             }
           </div>
 
