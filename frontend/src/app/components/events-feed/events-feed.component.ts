@@ -40,6 +40,7 @@ const PAGE_SIZE = 20;
           />
           <button
             #createEventClose
+            hlmBtn
             hlmDialogClose
             type="button"
             tabindex="-1"
