@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -6,7 +7,7 @@ import { UserService, VisitorLog, UserProfile } from '../../services/user.servic
 
 @Component({
   selector: 'app-visitor-logs',
-  imports: [DatePipe, RouterLink, TranslatePipe],
+  imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
   templateUrl: './visitor-logs.component.html',
   styleUrls: ['./visitor-logs.component.scss'],
 })
@@ -25,9 +26,7 @@ export class VisitorLogsComponent {
     () => this.visitors().filter((v) => v.is_blurred).length,
   );
   readonly filteredVisitors = computed(() =>
-    this.hideBlurred()
-      ? this.visitors().filter((v) => !v.is_blurred)
-      : this.visitors(),
+    this.hideBlurred() ? this.visitors().filter((v) => !v.is_blurred) : this.visitors(),
   );
 
   constructor() {

@@ -69,7 +69,7 @@ export class NotificationPreferencesController {
       'audio_room_invite',
       'new_follower',
     ];
-    const allowedChannels = ['push', 'email', 'in_app'];
+    const allowedChannels = ['push', 'email', 'in_app', 'badges'];
     if (!allowedCategories.includes(category)) {
       throw new BadRequestException(`Invalid category: ${category}`);
     }

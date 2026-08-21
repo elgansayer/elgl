@@ -1,19 +1,28 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
+  @if (versionCheckService.isDeprecated()) {
+    <app-forced-update-modal [storeUrl]="'https://yourapp.com/update'" />
+  }
+  <app-no-network-banner />
   @if (authService.appLocked()) {
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
       (click)="authService.unlockApp()"
       (keyup.enter)="authService.unlockApp()"
       tabindex="0"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'app_lock.title' | t"
     >
       <div class="text-center text-white">
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
         <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
         <button
-          class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500"
+          hlmBtn
+          class="rounded-pill bg-primary text-on-fill px-8 py-3 text-sm font-semibold shadow-xl hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-fill focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
           (click)="authService.unlockApp()"
+          [attr.aria-label]="'app_lock.unlock_btn' | t"
         >
           {{ 'app_lock.unlock_btn' | t }}
         </button>
@@ -21,12 +30,53 @@
     </div>
   }
   <!-- Top Bar with Theme Selector -->
-  <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
+  <div
+    class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100"
+  >
     <app-app-language-selector />
     <div class="flex items-center gap-2">
+      <!-- Coins balance with joyride step -->
+      <div
+        class="flex items-center gap-1 bg-vip/15 rounded-pill px-3 py-1.5 border border-vip/30"
+        joyrideStep="tourCoinsBalance"
+        [title]="'tour.stepCoinsBalance.title' | t"
+        [text]="'tour.stepCoinsBalance.text' | t: { coins: economyStore.coinsBalance() }"
+        stepPosition="bottom"
+      >
+        <span class="text-sm leading-none" aria-hidden="true">🪙</span>
+        <span class="text-xs font-bold text-vip">{{ economyStore.coinsBalance() }}</span>
+      </div>
+      <a
+        routerLink="/shop"
+        class="hidden sm:flex items-center gap-1 bg-primary/15 rounded-pill px-3 py-1.5 border border-primary/30 hover:bg-primary/25 transition-colors"
+        joyrideStep="tourCoinsBuy"
+        [title]="'tour.stepCoinsBuy.title' | t"
+        [text]="'tour.stepCoinsBuy.text' | t"
+        stepPosition="bottom"
+        [attr.aria-label]="'nav.buyCoins' | t"
+      >
+        <span class="text-sm leading-none" aria-hidden="true">➕</span>
+        <span class="text-xs font-bold text-primary">{{ 'nav.buyCoins' | t }}</span>
+      </a>
+      <a
+        routerLink="/notifications"
+        class="relative p-2 rounded-full hover:bg-surface-100 transition-colors"
+        [attr.aria-label]="'nav.notifications' | t"
+        [attr.title]="'nav.notifications' | t"
+      >
+        <span class="text-xl leading-none">🔔</span>
+        @if (unreadCounter.totalUnread() > 0) {
+          <span
+            class="absolute -top-0.5 -end-0.5 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+          >
+            {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+          </span>
+        }
+      </a>
       <button
+        hlmBtn
         type="button"
-        class="p-2 rounded-full hover:bg-surface-100 transition-colors"
+        class="p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         (click)="startProductTour()"
         [attr.aria-label]="'nav.guided_tour' | t"
         [attr.title]="'nav.guided_tour' | t"
@@ -35,14 +85,25 @@
       </button>
       @if (biometricControlsVisible()) {
         <button
+          hlmBtn
           type="button"
-          class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50"
+          class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
           (click)="toggleBiometricLock()"
           [disabled]="biometricBusy()"
-          [attr.aria-label]="authService.biometricLockEnabled() ? ('app_lock.disable_biometric' | t) : ('app_lock.enable_biometric' | t)"
-          [attr.title]="authService.biometricLockEnabled() ? ('app_lock.disable_biometric' | t) : ('app_lock.enable_biometric' | t)"
+          [attr.aria-label]="
+            authService.biometricLockEnabled()
+              ? ('app_lock.disable_biometric' | t)
+              : ('app_lock.enable_biometric' | t)
+          "
+          [attr.title]="
+            authService.biometricLockEnabled()
+              ? ('app_lock.disable_biometric' | t)
+              : ('app_lock.enable_biometric' | t)
+          "
         >
-          <span class="text-xl leading-none">{{ authService.biometricLockEnabled() ? '🔒' : '🔓' }}</span>
+          <span class="text-xl leading-none">{{
+            authService.biometricLockEnabled() ? '🔒' : '🔓'
+          }}</span>
         </button>
       }
       <app-theme-selector />
@@ -50,64 +111,49 @@
     </div>
   </div>
   <app-toast />
-  <!-- Global Animated Virtual Gift Broadcast Overlay -->
-  @if (economyStore.activeGiftAnimation(); as overlay) {
-    <div
-      class="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-center"
-    >
-      @if (overlay.gift.animationUrl) {
-        <img
-          [src]="overlay.gift.animationUrl"
-          class="w-full h-full absolute inset-0 object-contain z-[-1] animate-pulse"
-          alt="Gift Animation"
-        />
-      }
-      <div
-        class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 transform scale-125 z-10 animate-bounce"
-      >
-        <span class="text-6xl animate-pulse">{{ overlay.gift.icon }}</span>
-        <h3 class="text-2xl font-black tracking-wide">
-          {{ 'gift.broadcastTitle' | t: { giftName: overlay.gift.name } }}
-        </h3>
-        <p class="text-sm font-extrabold text-amber-100">
-          {{
-            'gift.broadcastDesc'
-              | t
-                : {
-                    sender: overlay.sender_name,
-                    receiver: overlay.receiver_name,
-                    giftName: overlay.gift.name,
-                    cost: overlay.gift.cost_coins,
-                  }
-          }}
-        </p>
-      </div>
-    </div>
-  }
+  <!-- Global Full-Screen SVG Gift Animation Broadcast Overlay -->
+  <app-gift-animation-overlay />
 
-  <!-- Main Content Area (padding-bottom to account for bottom nav) -->
-  <main class="flex-1 pb-[72px] lg:pb-0">
-    <div [@routeAnimations]="prepareRoute()">
-      <router-outlet />
-    </div>
-  </main>
+  <!-- Skip-to-content link for keyboard users -->
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[9999] focus:bg-primary focus:text-on-fill focus:px-4 focus:py-2 focus:rounded-pill focus:font-bold focus:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+  >
+    {{ 'a11y.skipToContent' | t }}
+  </a>
+
+  <!-- Desktop + Main Content Wrapper -->
+  <div class="flex flex-1">
+    <!-- Desktop Sidebar Navigation -->
+    <app-desktop-sidebar />
+
+    <!-- Main Content Area (padding-bottom to account for bottom nav) -->
+    <main id="main-content" class="flex-1 pb-[72px] lg:pb-0">
+      <div>
+        <router-outlet />
+      </div>
+    </main>
+  </div>
 
   <!-- Mobile Bottom Navigation Bar -->
-  <nav class="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-surface-200 border-t border-surface-100 pb-safe">
+  <nav
+    class="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-surface-200 border-t border-surface-100 pb-safe"
+  >
     <div class="flex justify-around items-center h-[60px]">
       <a
         routerLink="/chat"
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.helloTalk' | t"
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @if (unreadCounter.totalUnread() > 0) {
+          @if (unreadCounter.tabCount('chat') > 0) {
             <span
-              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+              class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+              {{ unreadCounter.tabCount('chat') > 99 ? '99+' : unreadCounter.tabCount('chat') }}
             </span>
           }
         </div>
@@ -117,36 +163,88 @@
       <a
         routerLink="/moments"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.moments' | t"
       >
-        <span class="text-2xl leading-none">⭕</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">⭕</span>
+          @if (unreadCounter.tabCount('moments') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{
+                unreadCounter.tabCount('moments') > 99 ? '99+' : unreadCounter.tabCount('moments')
+              }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
       </a>
 
       <a
         routerLink="/discovery"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.connect' | t"
       >
-        <span class="text-2xl leading-none">🌍</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">🌍</span>
+          @if (unreadCounter.tabCount('discovery') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{
+                unreadCounter.tabCount('discovery') > 99
+                  ? '99+'
+                  : unreadCounter.tabCount('discovery')
+              }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
       </a>
 
       <a
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.liveRooms' | t"
       >
-        <span class="text-2xl leading-none">🎙️</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">🎙️</span>
+          @if (unreadCounter.tabCount('audioRooms') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{
+                unreadCounter.tabCount('audioRooms') > 99
+                  ? '99+'
+                  : unreadCounter.tabCount('audioRooms')
+              }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
       </a>
 
       <a
         routerLink="/profile"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.profile' | t"
       >
-        <span class="text-2xl leading-none">👤</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">👤</span>
+          @if (unreadCounter.tabCount('profile') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{
+                unreadCounter.tabCount('profile') > 99 ? '99+' : unreadCounter.tabCount('profile')
+              }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>
       </a>
     </div>

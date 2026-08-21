@@ -33,7 +33,7 @@ Provide quick access to media attachment options: camera, photo library, documen
 - **Icon size**: 32x32px
 - **Padding**: 16px
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-800` (`#1e293b`)
 - **Border**: `border border-slate-700`
@@ -52,7 +52,7 @@ Provide quick access to media attachment options: camera, photo library, documen
 
 - Item background: `bg-slate-600`
 - Scale: `scale(1.05)`
-- Icon color brightens
+- Icon colour brightens
 
 ### Disabled
 
@@ -88,7 +88,7 @@ Provide quick access to media attachment options: camera, photo library, documen
 ```css
 transition:
   transform 150ms ease,
-  background-color 150ms ease;
+  background-colour 150ms ease;
 ```
 
 ## Accessibility

@@ -19,9 +19,13 @@ export class BlockedUsersService {
   private readonly apiUrl = environment.apiUrl || '';
 
   private readonly blockedUsersSignal = signal<BlockedUserResponse[]>([]);
+  private readonly loadingSignal = signal<boolean>(true);
+  private readonly errorSignal = signal<string | null>(null);
 
   /** Read-only signal of the current blocked users list. */
   readonly blockedUsers = this.blockedUsersSignal.asReadonly();
+  readonly isLoading = this.loadingSignal.asReadonly();
+  readonly error = this.errorSignal.asReadonly();
 
   constructor() {
     this.loadBlockedUsers();
@@ -34,6 +38,8 @@ export class BlockedUsersService {
 
   /** Fetches the full list of blocked user details from the backend and updates the signal. */
   async loadBlockedUsers(): Promise<void> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
     try {
       const users: BlockedUserResponse[] = await firstValueFrom(
         this.http.get<BlockedUserResponse[]>(`${this.apiUrl}/blocks`, {
@@ -43,6 +49,9 @@ export class BlockedUsersService {
       this.blockedUsersSignal.set(users ?? []);
     } catch {
       this.blockedUsersSignal.set([]);
+      this.errorSignal.set('Failed to load blocked users');
+    } finally {
+      this.loadingSignal.set(false);
     }
   }
 

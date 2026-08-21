@@ -37,4 +37,12 @@ export class PrivacyController {
       message: 'Account deletion initiated. You have 30 days to cancel.',
     };
   }
+
+  @Post('cancel-deletion')
+  @HttpCode(HttpStatus.OK)
+  async cancelDeletion(@Req() req: Request) {
+    const userId = (req as any).user?.id ?? '';
+    await this.privacyService.cancelDeletion(userId);
+    return { message: 'Account deletion cancelled successfully.' };
+  }
 }

@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
-import { UserService } from '../../services/user.service';
-import { AudioCompressionService } from '../../services/audio-compression.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+
+import { MediaService } from '../../services/media.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -11,14 +14,8 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-class MockUserService {
-  getPresignedUploadUrl = vi
-    .fn()
-    .mockResolvedValue({ uploadUrl: 'http://mock-upload-url', mediaUrl: 'media-url' });
-}
-
-class MockAudioCompressionService {
-  compressAudio = vi.fn().mockImplementation((blob: Blob) => Promise.resolve(blob));
+class MockMediaService {
+  uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.ogg' });
 }
 
 class MockedMediaRecorder {
@@ -41,6 +38,7 @@ describe('VoiceRecorderComponent', () => {
   let component: VoiceRecorderComponent;
   let fixture: ComponentFixture<VoiceRecorderComponent>;
   let stopTrack: ReturnType<typeof vi.fn>;
+  let mediaService: MockMediaService;
 
   beforeEach(async () => {
     stopTrack = vi.fn();
@@ -64,17 +62,17 @@ describe('VoiceRecorderComponent', () => {
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
       providers: [
-        { provide: UserService, useClass: MockUserService },
-        { provide: AudioCompressionService, useClass: MockAudioCompressionService },
+        { provide: MediaService, useClass: MockMediaService },
       ],
     })
       .overrideComponent(VoiceRecorderComponent, {
-        set: { imports: [MockTranslatePipe] },
+        set: { imports: [MockTranslatePipe, AppCardComponent, AppChipComponent, AppButtonPrimaryComponent] },
       })
       .compileComponents();
 
     fixture = TestBed.createComponent(VoiceRecorderComponent);
     component = fixture.componentInstance;
+    mediaService = TestBed.inject(MediaService) as unknown as MockMediaService;
     fixture.detectChanges();
   });
 
@@ -117,5 +115,18 @@ describe('VoiceRecorderComponent', () => {
     } finally {
       revokeSpy.mockRestore();
     }
+  });
+
+  it('should upload voice note via media service and emit result URL', async () => {
+    await component.startRecording();
+    component.stopRecording();
+
+    const emitted: string[] = [];
+    component.audioUploaded.subscribe((url: string) => emitted.push(url));
+
+    await component.uploadAndSend();
+
+    expect(mediaService.uploadVoiceNote).toHaveBeenCalled();
+    expect(emitted).toEqual(['https://media.url/voice.ogg']);
   });
 });

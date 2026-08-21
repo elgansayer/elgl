@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { MonetisationController } from './monetisation.controller';
@@ -19,33 +20,34 @@ describe('MonetisationController', () => {
         {
           provide: MonetisationService,
           useValue: {
-            handleStripeWebhook: jest.fn(),
-            handleAppleNotification: jest.fn(),
-            handleGoogleNotification: jest.fn(),
-            generateApiKey: jest.fn(),
-            getDeveloperAnalytics: jest.fn(),
-            getDiagnosticLogs: jest.fn(),
-            createDiagnosticLog: jest.fn(),
-            createCheckoutSession: jest.fn(),
-            getSubscriptionDetails: jest.fn(),
-            cancelSubscription: jest.fn(),
-            resumeSubscription: jest.fn(),
-            listInvoices: jest.fn(),
-            createBillingPortalSession: jest.fn(),
+            handleStripeWebhook: vi.fn(),
+            handleAppleNotification: vi.fn(),
+            handleGoogleNotification: vi.fn(),
+            generateApiKey: vi.fn(),
+            getDeveloperAnalytics: vi.fn(),
+            getDiagnosticLogs: vi.fn(),
+            createDiagnosticLog: vi.fn(),
+            createCheckoutSession: vi.fn(),
+            restorePurchases: vi.fn(),
+            getSubscriptionDetails: vi.fn(),
+            cancelSubscription: vi.fn(),
+            resumeSubscription: vi.fn(),
+            listInvoices: vi.fn(),
+            createBillingPortalSession: vi.fn(),
           },
         },
         {
           provide: AppleReceiptValidatorService,
           useValue: {
-            validateReceipt: jest.fn(),
+            validateReceipt: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(VipGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<MonetisationController>(MonetisationController);
@@ -56,7 +58,7 @@ describe('MonetisationController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -72,7 +74,7 @@ describe('MonetisationController', () => {
 
     it('should pass webhook DTO to service and return result', async () => {
       const response = { received: true, status: 'processed' };
-      (monetisationService.handleStripeWebhook as jest.Mock).mockResolvedValue(
+      (monetisationService.handleStripeWebhook as Mock).mockResolvedValue(
         response,
       );
       const rawBody = Buffer.from('test');
@@ -92,9 +94,9 @@ describe('MonetisationController', () => {
     it('should pass webhook payload to service', async () => {
       const payload = { notificationType: 'test' };
       const response = { received: true, status: 'processed' };
-      (
-        monetisationService.handleAppleNotification as jest.Mock
-      ).mockResolvedValue(response);
+      (monetisationService.handleAppleNotification as Mock).mockResolvedValue(
+        response,
+      );
 
       const result = await controller.handleAppleWebhook(payload);
       expect(monetisationService.handleAppleNotification).toHaveBeenCalledWith(
@@ -108,9 +110,9 @@ describe('MonetisationController', () => {
     it('should pass webhook payload to service', async () => {
       const payload = { version: '1.0' };
       const response = { received: true, status: 'processed' };
-      (
-        monetisationService.handleGoogleNotification as jest.Mock
-      ).mockResolvedValue(response);
+      (monetisationService.handleGoogleNotification as Mock).mockResolvedValue(
+        response,
+      );
 
       const result = await controller.handleGoogleWebhook(payload);
       expect(monetisationService.handleGoogleNotification).toHaveBeenCalledWith(
@@ -133,9 +135,7 @@ describe('MonetisationController', () => {
         tier: 'developer',
         rate_limit_rpm: 600,
       };
-      (monetisationService.generateApiKey as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (monetisationService.generateApiKey as Mock).mockResolvedValue(response);
 
       const result = await controller.generateApiKey({ id: 'user-1' } as any);
       expect(monetisationService.generateApiKey).toHaveBeenCalledWith('user-1');
@@ -158,9 +158,9 @@ describe('MonetisationController', () => {
         avg_latency_ms: 18,
         pricing_info: 'Developer Tier',
       };
-      (
-        monetisationService.getDeveloperAnalytics as jest.Mock
-      ).mockResolvedValue(response);
+      (monetisationService.getDeveloperAnalytics as Mock).mockResolvedValue(
+        response,
+      );
 
       const result = await controller.getAnalytics({ id: 'user-1' } as any);
       expect(monetisationService.getDeveloperAnalytics).toHaveBeenCalledWith(
@@ -179,9 +179,7 @@ describe('MonetisationController', () => {
 
     it('should return logs from service when user is provided', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
-      (monetisationService.getDiagnosticLogs as jest.Mock).mockResolvedValue(
-        logs,
-      );
+      (monetisationService.getDiagnosticLogs as Mock).mockResolvedValue(logs);
 
       const result = await controller.getDiagnosticLogs({
         id: 'user-1',
@@ -207,9 +205,7 @@ describe('MonetisationController', () => {
         message: 'ok',
       };
       const log = { id: 'log-2', ...dto };
-      (monetisationService.createDiagnosticLog as jest.Mock).mockResolvedValue(
-        log,
-      );
+      (monetisationService.createDiagnosticLog as Mock).mockResolvedValue(log);
 
       const result = await controller.createDiagnosticLog(
         { id: 'user-1' } as any,
@@ -243,9 +239,9 @@ describe('MonetisationController', () => {
         sessionUrl: 'https://checkout.stripe.com/session_123',
         sessionId: 'cs_test_abc123',
       };
-      (
-        monetisationService.createCheckoutSession as jest.Mock
-      ).mockResolvedValue(mockResponse);
+      (monetisationService.createCheckoutSession as Mock).mockResolvedValue(
+        mockResponse,
+      );
 
       const result = await controller.createCheckoutSession(
         { id: 'user-1' } as any,
@@ -269,9 +265,9 @@ describe('MonetisationController', () => {
         sessionUrl: 'https://checkout.stripe.com/session_456',
         sessionId: 'cs_test_def456',
       };
-      (
-        monetisationService.createCheckoutSession as jest.Mock
-      ).mockResolvedValue(mockResponse);
+      (monetisationService.createCheckoutSession as Mock).mockResolvedValue(
+        mockResponse,
+      );
 
       const result = await controller.createCheckoutSession(
         { id: 'user-1' } as any,
@@ -289,9 +285,9 @@ describe('MonetisationController', () => {
     it('should propagate service errors', async () => {
       const dto = { planId: 'invalid_plan', interval: 'month' as const };
       const error = new Error('Plan not found');
-      (
-        monetisationService.createCheckoutSession as jest.Mock
-      ).mockRejectedValue(error);
+      (monetisationService.createCheckoutSession as Mock).mockRejectedValue(
+        error,
+      );
 
       await expect(
         controller.createCheckoutSession({ id: 'user-1' } as any, dto),
@@ -314,9 +310,9 @@ describe('MonetisationController', () => {
         exclude_old_transactions: true,
       };
       const response = { valid: true };
-      (
-        appleReceiptValidatorService.validateReceipt as jest.Mock
-      ).mockResolvedValue(response);
+      (appleReceiptValidatorService.validateReceipt as Mock).mockResolvedValue(
+        response,
+      );
 
       const result = await controller.validateAppleReceipt(
         { id: 'user-1' } as any,
@@ -345,9 +341,9 @@ describe('MonetisationController', () => {
         email: 'user@example.com',
         billing: null,
       };
-      (
-        monetisationService.getSubscriptionDetails as jest.Mock
-      ).mockResolvedValue(response);
+      (monetisationService.getSubscriptionDetails as Mock).mockResolvedValue(
+        response,
+      );
 
       const result = await controller.getSubscription({ id: 'user-1' } as any);
       expect(monetisationService.getSubscriptionDetails).toHaveBeenCalledWith(
@@ -366,7 +362,7 @@ describe('MonetisationController', () => {
 
     it('should call service.cancelSubscription when user is provided', async () => {
       const response = { message: 'cancelled' };
-      (monetisationService.cancelSubscription as jest.Mock).mockResolvedValue(
+      (monetisationService.cancelSubscription as Mock).mockResolvedValue(
         response,
       );
 
@@ -389,7 +385,7 @@ describe('MonetisationController', () => {
 
     it('should call service.resumeSubscription when user is provided', async () => {
       const response = { message: 'resumed' };
-      (monetisationService.resumeSubscription as jest.Mock).mockResolvedValue(
+      (monetisationService.resumeSubscription as Mock).mockResolvedValue(
         response,
       );
 
@@ -422,9 +418,7 @@ describe('MonetisationController', () => {
           hostedInvoiceUrl: null,
         },
       ];
-      (monetisationService.listInvoices as jest.Mock).mockResolvedValue(
-        response,
-      );
+      (monetisationService.listInvoices as Mock).mockResolvedValue(response);
 
       const result = await controller.getInvoices({ id: 'user-1' } as any);
       expect(monetisationService.listInvoices).toHaveBeenCalledWith('user-1');
@@ -444,7 +438,7 @@ describe('MonetisationController', () => {
     it('should call service.createBillingPortalSession when user is provided', async () => {
       const response = { url: 'https://billing.stripe.com/session/test' };
       (
-        monetisationService.createBillingPortalSession as jest.Mock
+        monetisationService.createBillingPortalSession as Mock
       ).mockResolvedValue(response);
 
       const result = await controller.createBillingPortalSession({
@@ -453,6 +447,116 @@ describe('MonetisationController', () => {
       expect(
         monetisationService.createBillingPortalSession,
       ).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('restorePurchases', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.restorePurchases(null, {
+        platform: 'ios',
+      });
+      expect(result).toBeNull();
+      expect(monetisationService.restorePurchases).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for invalid platform', async () => {
+      await expect(
+        controller.restorePurchases({ id: 'user-1' } as any, {
+          platform: 'windows',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should default to stripe when platform is empty', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: '' },
+      );
+
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should default to stripe when platform is not provided', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        {},
+      );
+
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept ios platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'ios', receipt_data: 'test-receipt' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'ios',
+        'test-receipt',
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept android platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'android', receipt_data: 'test-token' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'android',
+        'test-token',
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept stripe platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'stripe' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
       expect(result).toEqual(response);
     });
   });

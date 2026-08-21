@@ -17,4 +17,10 @@ export class GdprService {
       this.http.post('/api/privacy/delete-account', { confirm_delete: confirmDelete }),
     );
   }
+
+  async cancelDeletion(): Promise<void> {
+    await lastValueFrom(
+      this.http.post('/api/privacy/cancel-deletion', {}),
+    );
+  }
 }

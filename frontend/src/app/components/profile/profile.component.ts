@@ -1,18 +1,37 @@
-import {Component, inject, signal, viewChild, computed, OnInit} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {RouterLink} from '@angular/router';
-import {TranslatePipe} from '../../services/translate.pipe';
-import {NgxSkeletonLoaderComponent} from 'ngx-skeleton-loader';
-import {I18nService} from '../../services/i18n.service';
-import {UserService, UserProfile, VisitorLog, BusinessCatalogItem} from '../../services/user.service';
-import {CoverPhotoUploaderComponent} from '../cover-photo-uploader/cover-photo-uploader.component';
-import {HobbyTagsComponent} from '../hobby-tags/hobby-tags.component';
-import {LanguagePickerComponent, getLanguageFlag} from '../primitives/language-picker/language-picker.component';
-import {CelebrationOverlayComponent} from '../celebration-overlay/celebration-overlay.component';
-import {SafetyService} from '../../services/safety.service';
-import {showToast} from '../../services/toast.service';
-import {AchievementsComponent} from '../../achievements/achievements.component';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
+import { I18nService } from '../../services/i18n.service';
+import {
+  UserService,
+  UserProfile,
+  VisitorLog,
+  BusinessCatalogItem,
+} from '../../services/user.service';
+import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
+import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
+import {
+  LanguagePickerComponent,
+  getLanguageFlag,
+} from '../primitives/language-picker/language-picker.component';
+import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
+import { SafetyService } from '../../services/safety.service';
+import { showToast } from '../../services/toast.service';
+import { AchievementsComponent } from '../../achievements/achievements.component';
+import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppInputComponent } from '../primitives/input/input.component';
+import { AppTextareaComponent } from '../primitives/textarea/textarea.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
@@ -23,6 +42,10 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 @Component({
   selector: 'app-profile',
   imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -33,6 +56,13 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
     LanguagePickerComponent,
     CelebrationOverlayComponent,
     AchievementsComponent,
+    AudioIntroRecorderComponent,
+    AppCardComponent,
+    AppChipComponent,
+    AppInputComponent,
+    AppTextareaComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
@@ -291,10 +321,9 @@ export class ProfileComponent implements OnInit {
     }
   }
 
-  playAudioIntro(url: string | undefined): void {
-    if (!url) return;
-    const audio = new Audio(url);
-    audio.play();
+  onAudioIntroSaved(mediaUrl: string): void {
+    this.profile.update((p) => (p ? { ...p, audio_intro_url: mediaUrl } : p));
+    showToast(this.i18n.translate('profile.audioIntroSaved'), 'success', 3000);
   }
 
   async blockProfile(): Promise<void> {

@@ -31,35 +31,18 @@ describe('VersionService', () => {
     expect(service).toBeTruthy();
   });
 
-<<<<<<< HEAD
-  it('should fetch version info via getVersion()', () => {
-    const mockVersionInfo: VersionInfo = {
-      current: '1.0.0',
-      latest: '1.1.0',
-      updateUrl: 'https://example.com/update',
-    };
-
-    service.getVersion().subscribe((version) => {
-      expect(version).toEqual(mockVersionInfo);
-=======
   it('should fetch version info via GET request', () => {
     const mockVersion: VersionInfo = {
       current: '1.0.0',
       latest: '1.1.0',
-      updateUrl: 'https://example.com/update'
-    };
+      updateUrl: 'https://example.com/update',    };
 
     service.getVersion().subscribe((version) => {
       expect(version).toEqual(mockVersion);
->>>>>>> origin/main
     });
 
     const req = httpMock.expectOne(`${environment.apiUrl}/version`);
     expect(req.request.method).toBe('GET');
-<<<<<<< HEAD
-    req.flush(mockVersionInfo);
-=======
     req.flush(mockVersion);
->>>>>>> origin/main
   });
 });

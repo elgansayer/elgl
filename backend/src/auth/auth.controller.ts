@@ -7,6 +7,7 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { TransferService } from '../transfer/transfer.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
@@ -24,6 +25,7 @@ export class AuthController {
   ) {}
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('change-password')
   async changePassword(
     @Req() req: RequestWithUser,
@@ -35,6 +37,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('two-factor/enable')
   async enableTwoFactor(
     @Req() req: RequestWithUser,
@@ -44,6 +47,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('two-factor/verify')
   async verifyTwoFactor(
     @Req() req: RequestWithUser,
@@ -61,6 +65,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('two-factor/disable')
   async disableTwoFactor(
     @Req() req: RequestWithUser,
@@ -82,6 +87,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/generate')
   async generateTransferLink(
     @Req() req: RequestWithUser,
@@ -93,6 +99,7 @@ export class AuthController {
     return { url };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/consume')
   async consumeTransferLink(
     @Body('token') token: string,
@@ -104,6 +111,7 @@ export class AuthController {
     return { swapToken };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/swap')
   async swapTransferLink(@Body('swapToken') swapToken: string): Promise<{
     access_token: string;

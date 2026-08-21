@@ -19,6 +19,7 @@ import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { ChatLlmService } from '../chat/chat-llm.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -30,6 +31,7 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  DismissRaisedHandDto,
   InviteCoHostDto,
   RaiseHandDto,
   RemoveCoHostDto,
@@ -37,6 +39,7 @@ import {
 } from './dto/audio-room.dto';
 import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import { TipHostDto } from './dto/tip-host.dto';
+import { RoomPreviewDto } from './dto/room-preview.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -119,6 +122,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
+    private readonly chatLlmService: ChatLlmService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -159,19 +163,41 @@ export class AudioRoomsService implements OnModuleInit {
     const recordingUrl = dto.recording_url;
     const r2Key = `audio-rooms/${room.room_name}/recording.webm`;
 
+    let r2RecordingUrl: string;
     try {
-      await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
+      r2RecordingUrl = await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
       this.logger.error('Failed to upload recording to R2', error);
-      throw new Error('Failed to upload recording to R2');
+      throw new Error('Failed to upload recording to R2', { cause: error });
     }
 
-    // Update the room record with the R2 URL
-    const r2RecordingUrl = `https://r2.hellotalk.mock/${r2Key}`;
+    // Store the URL confirmed by the Cloudflare R2 gateway.
     await supabase
       .from('audio_rooms')
       .update({ recording_url: r2RecordingUrl, is_active: false })
       .eq('id', room.id);
+
+    // Generate transcript from audio recording for session summary
+    const transcriptText =
+      await this.transcriptEgress.generateTranscriptFromAudioUrl(
+        r2RecordingUrl,
+      );
+
+    // Generate AI-powered session summary
+    const sessionSummary = await this.generateAiSessionSummary(transcriptText);
+
+    if (sessionSummary.summary || sessionSummary.vocabulary.length > 0) {
+      await supabase.from('audio_room_transcripts').upsert(
+        {
+          room_id: room.id,
+          recording_url: r2RecordingUrl,
+          transcript_text: transcriptText,
+          session_summary: sessionSummary.summary,
+          vocabulary_list: sessionSummary.vocabulary,
+        },
+        { onConflict: 'room_id' },
+      );
+    }
 
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'room_archived',
@@ -544,6 +570,8 @@ export class AudioRoomsService implements OnModuleInit {
     partyType?: string,
     topic?: string,
     level?: string,
+    limit = 50,
+    offset = 0,
   ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
@@ -563,7 +591,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const response = await query
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     const data = response.data as AudioRoomRow[] | null;
     if (!data || data.length === 0) return [];
@@ -607,6 +635,45 @@ export class AudioRoomsService implements OnModuleInit {
         display_name: profile?.display_name ?? 'Room Host',
         avatar_url: profile?.avatar_url ?? null,
       },
+    };
+  }
+
+  /**
+   * Returns a safe, public subset of room metadata for the SSR-rendered
+   * Voiceroom preview page. Only non-sensitive fields are exposed and
+   * private or missing rooms are treated as not found so their existence
+   * is not leaked to unauthenticated visitors.
+   */
+  async getRoomPreview(roomId: string): Promise<RoomPreviewDto> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Audio room not found');
+    const row = response.data as AudioRoomRow;
+    if (row.is_private) {
+      throw new NotFoundException('Audio room not found');
+    }
+    const profile = row.host_id
+      ? await this.usersService.getProfile(row.host_id)
+      : undefined;
+    return {
+      id: row.id,
+      room_name: row.room_name,
+      title: row.title,
+      language_pair: row.language_pair,
+      topic_tag: row.topic_tag,
+      level: row.level,
+      listeners_count: row.listeners_count,
+      is_active: row.is_active,
+      host: profile
+        ? {
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+          }
+        : null,
     };
   }
 
@@ -802,6 +869,9 @@ export class AudioRoomsService implements OnModuleInit {
     if (room.host_id !== hostId) {
       throw new ForbiddenException('Only the host can mute a speaker.');
     }
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot be muted.');
+    }
 
     // Notify user via Centrifugo to mute their microphone locally
     void this.centrifugoService.publish(`room_${room.id}`, {
@@ -851,6 +921,68 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return this.getRoom(room.id);
+  }
+
+  async kickSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+    if (room.host_id !== hostId)
+      throw new ForbiddenException(
+        'Only the host can kick a speaker off stage.',
+      );
+    if (room.host_id === dto.target_user_id)
+      throw new ForbiddenException('The host cannot kick themselves.');
+    const update: { speakers: string[]; co_host_id?: null } = {
+      speakers: room.speakers.filter((id) => id !== dto.target_user_id),
+    };
+    if (room.co_host_id === dto.target_user_id) update.co_host_id = null;
+    await supabase.from('audio_rooms').update(update).eq('id', room.id);
+    if (room.co_host_id === dto.target_user_id) {
+      void this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+      });
+    }
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'force_kick',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+    return this.getRoom(room.id);
+  }
+
+  async dismissRaisedHand(
+    hostId: string,
+    dto: DismissRaisedHandDto,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+    if (room.host_id !== hostId)
+      throw new ForbiddenException('Only the host can dismiss raised hands.');
+    await supabase
+      .from('audio_rooms')
+      .update({
+        raised_hands: room.raised_hands.filter(
+          (id) => id !== dto.target_user_id,
+        ),
+      })
+      .eq('id', room.id);
   }
 
   async inviteCoHost(
@@ -913,9 +1045,10 @@ export class AudioRoomsService implements OnModuleInit {
 
     // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
     await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_invited',
+      type: 'co_host_changed',
       target_user_id: dto.target_user_id,
       room_id: room.id,
+      previous_co_host_id: previousCoHostId,
     });
 
     return this.getRoom(room.id);
@@ -965,6 +1098,7 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const profile = await this.usersService.getProfile(userId);
     const speakerName = profile?.display_name ?? 'Speaker';
+    const sanitisedContent = (dto.text_content ?? '').slice(0, 500);
 
     const response = await supabase
       .from('audio_room_captions')
@@ -972,7 +1106,7 @@ export class AudioRoomsService implements OnModuleInit {
         room_id: dto.room_id,
         speaker_id: userId,
         speaker_name: speakerName,
-        text_content: dto.text_content,
+        text_content: sanitisedContent,
       })
       .select()
       .single();
@@ -1044,14 +1178,12 @@ export class AudioRoomsService implements OnModuleInit {
       room.room_name,
     );
 
-    const recordingUrl =
-      egressRecordingUrl ||
-      dto.recording_url ||
-      `https://r2.hellotalk.mock/archive/${room.room_name}.webm`;
+    const recordingUrl = egressRecordingUrl || dto.recording_url || null;
 
-    // Generate full transcript using speech‑to‑text (implemented via LiveKit egress or external STT)
-    let transcriptText =
-      this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl);
+    // Generate a transcript only when an authoritative recording exists.
+    let transcriptText = recordingUrl
+      ? await this.transcriptEgress.generateTranscriptFromAudioUrl(recordingUrl)
+      : '';
 
     if (!transcriptText) {
       // fallback: build transcript from sent captions if egress not available
@@ -1071,7 +1203,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
-      ? this.nlpService.generateSessionSummary(transcriptText)
+      ? await this.generateAiSessionSummary(transcriptText)
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
@@ -1179,14 +1311,16 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('audio_rooms')
-      .select('host_id')
+      .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
       this.logger.warn('Could not fetch active host IDs', error);
       return [];
     }
-    const rows = data as Array<{ host_id: string }>;
-    return [...new Set(rows.map((r) => r.host_id))];
+    const rows = data as Array<{ host_id: string; is_private?: boolean }>;
+    // Only return hosts of public active rooms
+    const publicHosts = rows.filter((r) => !r.is_private).map((r) => r.host_id);
+    return [...new Set(publicHosts)];
   }
 
   /**
@@ -1360,20 +1494,24 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
-    return noteRow;
+    return { ...noteRow, author_name: noteRow.author_name ?? 'Unknown' };
   }
 
-  async getNotes(roomId: string): Promise<VoiceRoomNote[]> {
+  async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_room_notes')
       .select('*')
       .eq('room_id', roomId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
-    return response.data ?? [];
+    return (response.data ?? []).map((note) => ({
+      ...note,
+      author_name: note.author_name ?? 'Unknown',
+    }));
   }
 
   async deleteNote(noteId: string, userId: string): Promise<void> {
@@ -1693,11 +1831,19 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
+    const senderUser = senderResponse.data as {
+      display_name?: string | null;
+    } | null;
+    const senderName = senderUser?.display_name || 'Someone';
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'host_tip',
       tip: {
+        tip_id: tipRow.id,
         amount_coins: amount,
         sender_user_id: userId,
+        sender_name: senderName,
+        receiver_user_id: room.host_id,
       },
     });
 
@@ -1707,5 +1853,64 @@ export class AudioRoomsService implements OnModuleInit {
       receiver_id: room.host_id,
       receiver_new_balance: newReceiverBalance,
     };
+  }
+
+  /**
+   * Generates an AI-powered session summary listing key topics and vocabulary discussed.
+   * Uses the configured LLM for intelligent summarisation, falling back to the NLP
+   * heuristic if the LLM is unavailable.
+   */
+  private async generateAiSessionSummary(
+    transcriptText: string | null,
+  ): Promise<{ summary: string; vocabulary: string[] }> {
+    if (!transcriptText || transcriptText.trim().length === 0) {
+      return { summary: '', vocabulary: [] };
+    }
+
+    const prompt = `Please analyse the following transcript of a language exchange audio room session. 
+
+Provide a concise summary of the key topics discussed (2-4 bullet points) and a list of 5-10 key vocabulary words or phrases that were important in the conversation. 
+
+Format your response as a JSON object with exactly two fields:
+- "summary": a string containing bullet-point topics separated by newlines
+- "vocabulary": an array of strings, each being a key word or phrase
+
+Transcript:
+${transcriptText.substring(0, 4000)}`;
+
+    try {
+      const llmResponse = await this.chatLlmService.chatCompletion(
+        [
+          {
+            role: 'system',
+            content:
+              'You are a language learning assistant. Analyse conversation transcripts and extract key topics and vocabulary into the requested JSON format. Respond ONLY with valid JSON.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        { temperature: 0.3, maxTokens: 1024 },
+      );
+
+      // Try to parse JSON from LLM response
+      const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          summary?: string;
+          vocabulary?: string[];
+        };
+        return {
+          summary: parsed.summary ?? '',
+          vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
+        };
+      }
+    } catch (error) {
+      this.logger.warn(
+        'AI session summary generation failed, falling back to NLP heuristic',
+        error,
+      );
+    }
+
+    // Fallback to NLP heuristic
+    return this.nlpService.generateSessionSummary(transcriptText);
   }
 }

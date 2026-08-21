@@ -154,6 +154,10 @@ export class UpdateProfileDto {
   privacy_hide_from_search?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  matchmaking_consent?: boolean;
+
+  @IsOptional()
   @IsString()
   @MaxLength(20)
   gender?: string;
@@ -206,7 +210,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
-  profile_visibility?: string;
+  @Matches(/^(everyone|vips_only|hidden)$/, {
+    message: 'profile_visibility must be one of: everyone, vips_only, hidden',
+  })
+  profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
 
   @IsOptional()
   @IsString()
@@ -267,6 +274,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsBoolean()
+  auto_play_voice_notes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   sound_effects_enabled?: boolean;
 
   @IsOptional()
@@ -284,4 +295,27 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   serious_learner_mode?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
+  auto_download_media?: boolean;
+
+  @IsOptional()
+  study_streak_days?: number;
+
+  @IsOptional()
+  correction_ratio?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_download_wifi_only?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(wifi|cellular)$/, {
+    message: 'auto_download_preference must be one of: wifi, cellular',
+  })
+  auto_download_preference?: 'wifi' | 'cellular';
 }

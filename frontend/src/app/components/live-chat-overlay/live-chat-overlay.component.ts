@@ -1,16 +1,18 @@
 import {
   Component,
   ElementRef,
+  DestroyRef,
+  Injector,
+  afterNextRender,
   inject,
   input,
   signal,
   viewChild,
-  OnDestroy,
   OnInit,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface LiveMessage {
   id: string;
@@ -28,23 +30,32 @@ interface CentrifugoMessageData {
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [CommonModule],
+  imports: [TranslatePipe],
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
-      class="absolute bottom-0 start-0 w-full h-72 p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
+      class="absolute bottom-0 start-0 w-full h-48 sm:h-60 md:h-72 p-3 sm:p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
+      role="complementary"
+      [attr.aria-label]="'liveChat.overlayAria' | t"
     >
       <!-- Scrollable message list with top-fade mask -->
       <div
         #scrollContainer
-        class="overflow-y-auto flex flex-col gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
+        class="overflow-y-auto flex flex-col gap-2 sm:gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
+        role="log"
+        aria-live="polite"
+        [attr.aria-label]="'liveChat.overlayAria' | t"
       >
         @for (msg of messages(); track msg.id) {
           <div
-            class="flex flex-col bg-black/40 rounded-xl p-2.5 max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
+            class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
           >
-            <span class="text-white/70 text-xs font-semibold mb-0.5">{{ msg.senderName }}</span>
-            <span class="text-white text-sm leading-snug break-words">{{ msg.text }}</span>
+            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
+              msg.senderName
+            }}</span>
+            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
+              msg.text
+            }}</span>
           </div>
         }
       </div>
@@ -52,7 +63,6 @@ interface CentrifugoMessageData {
   `,
   styles: [
     `
-      /* Hide scrollbar for clean overlay look */
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
       }
@@ -60,14 +70,10 @@ interface CentrifugoMessageData {
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-
-      /* Fade out messages at the top of the container */
       .mask-image-fade-top {
         mask-image: linear-gradient(to bottom, transparent, black 25%);
         -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%);
       }
-
-      /* Smooth entry animation for new comments */
       @keyframes fadeInSlideUp {
         from {
           opacity: 0;
@@ -84,23 +90,28 @@ interface CentrifugoMessageData {
     `,
   ],
 })
-export class LiveChatOverlayComponent implements OnInit, OnDestroy {
-  roomId = input.required<string>();
+export class LiveChatOverlayComponent implements OnInit {
+  roomId = input<string>('');
 
-  private centrifugo = inject(CentrifugoService);
-  private i18n = inject(I18nService);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
+  centrifugo = inject(CentrifugoService);
+  i18n = inject(I18nService);
+  destroyRef = inject(DestroyRef);
+  private injector = inject(Injector);
+
   messages = signal<LiveMessage[]>([]);
-  private channelName = '';
-  private subscription: unknown = null;
+  channelName = '';
+  subscription: unknown = null;
 
+  // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
-    this.channelName = `room_${this.roomId()}`;
+    const id = this.roomId();
+    if (!id) return;
 
-    // Subscribe directly to the channel and listen for publications
+    this.channelName = `room_${id}`;
+
     this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      // Type guard to verify the payload shape
       const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
         if (typeof value !== 'object' || value === null) return false;
         if (!('type' in value) || !('content' in value)) return false;
@@ -111,13 +122,11 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
 
       if (!isCentrifugoMessageData(data)) return;
 
-      // data is now narrowed to CentrifugoMessageData
       const event = data;
 
-      // Handle text payloads as defined in SPEC.md
       if (event.type === 'text') {
         this.addMessage({
-          id: event.id || Math.random().toString(36).substring(2),
+          id: event.id || crypto.randomUUID(),
           senderName: event.senderName || this.i18n.translate('common.user'),
           text: event.content,
           timestamp: Date.now(),
@@ -126,10 +135,18 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
     });
   }
 
-  private addMessage(msg: LiveMessage) {
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.channelName) {
+        this.centrifugo.unsubscribe(this.channelName);
+      }
+    });
+  }
+
+  addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
-      // Cap at 50 messages to maintain 60 FPS rendering performance (SPEC.md requirement)
+      // Cap at 50 messages to maintain 60 FPS rendering performance
       if (newMsgs.length > 50) {
         newMsgs.shift();
       }
@@ -138,22 +155,18 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
-  private scrollToBottom() {
-    // Small delay to allow Angular to render the new DOM node before scrolling
-    setTimeout(() => {
-      const el = this.scrollContainer()?.nativeElement;
-      if (el) {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    }, 50);
-  }
-
-  ngOnDestroy() {
-    if (this.channelName) {
-      this.centrifugo.unsubscribe(this.channelName);
-    }
+  scrollToBottom() {
+    afterNextRender(
+      () => {
+        const el = this.scrollContainer()?.nativeElement;
+        if (el) {
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 }

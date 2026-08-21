@@ -1,7 +1,21 @@
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  Req,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { InterestsService } from './interests.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PUBLIC_SHORT,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache.interceptor';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -15,14 +29,22 @@ interface AuthenticatedRequest extends Request {
 export class InterestsController {
   constructor(private readonly interestsService: InterestsService) {}
 
+  /**
+   * Interest catalogue is public, reference data that changes rarely.
+   * Long-lived CDN cache reduces DB pressure for listing interests.
+   */
   @Get()
-  async listInterests(@Req() req: AuthenticatedRequest) {
-    const rawLang = req.query?.language;
-    const targetLanguage = typeof rawLang === 'string' ? rawLang : 'en';
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
+  async listInterests(@Query('language') language: string) {
+    const targetLanguage = language || 'en';
     return this.interestsService.findAll(targetLanguage);
   }
 
+  /**
+   * Interest selection: mutation that triggers flashcard generation.
+   */
   @Post('select')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async selectInterests(
     @Body('interestIds') interestIds: string[],
     @Req() req: AuthenticatedRequest,

@@ -1,23 +1,21 @@
 <div class="mx-auto max-w-5xl space-y-4">
-  <section
-    class="rounded-sheet border border-indigo-300 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 p-6 text-white shadow-lift"
-  >
+  <section class="rounded-sheet bg-primary p-6 text-on-fill shadow-lift">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="space-y-2">
         <div class="flex flex-wrap items-center gap-2">
           <span
-            class="rounded-full bg-indigo-600 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide"
+            class="rounded-full bg-on-fill/15 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide"
             >{{ 'developer.bannerTier' | t }}</span
           >
           @if (store.developerStats()?.tier === 'developer') {
             <span
-              class="rounded-full bg-emerald-500 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black"
+              class="rounded-full bg-success text-on-fill ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black"
               >{{ 'developer.bannerActive' | t }}</span
             >
           }
         </div>
         <h2 class="text-2xl font-black">{{ 'developer.bannerTitle' | t }}</h2>
-        <p class="text-sm text-indigo-100/85 max-w-2xl">
+        <p class="text-sm text-on-fill/85 max-w-2xl">
           {{ 'developer.bannerSubtitle' | t }}
         </p>
       </div>
@@ -25,16 +23,20 @@
       <div class="flex flex-col gap-2">
         @if (store.developerStats()?.tier !== 'developer') {
           <button
+            hlmBtn
             (click)="upgrade('developer')"
-            class="rounded-app bg-amber-500 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-amber-950"
+            class="rounded-app bg-warning ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-on-fill"
+            [attr.aria-label]="'developer.upgradeDevBtn' | t"
           >
             {{ 'developer.upgradeDevBtn' | t }}
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
           <button
+            hlmBtn
             (click)="upgrade('consumer')"
-            class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-primary"
+            class="rounded-app border border-on-fill/30 bg-on-fill/15 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-on-fill"
+            [attr.aria-label]="'developer.upgradeConsumerBtn' | t"
           >
             {{ 'developer.upgradeConsumerBtn' | t }}
           </button>
@@ -46,42 +48,50 @@
   <!-- Interactive Sandbox Navigation Tabs -->
   <nav class="flex flex-wrap gap-2 border-b border-surface-100 pb-2">
     <button
+      hlmBtn
       (click)="setTab('overview')"
-      [class.bg-surface-800]="activeTab() === 'overview'"
-      [class.text-white]="activeTab() === 'overview'"
+      [class.bg-primary]="activeTab() === 'overview'"
+      [class.text-on-fill]="activeTab() === 'overview'"
       [class.bg-surface-100]="activeTab() !== 'overview'"
       [class.text-text-primary]="activeTab() !== 'overview'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
+      [attr.aria-label]="'developer.tabOverview' | t"
     >
       {{ 'developer.tabOverview' | t }}
     </button>
     <button
+      hlmBtn
       (click)="setTab('postgis')"
-      [class.bg-surface-800]="activeTab() === 'postgis'"
-      [class.text-white]="activeTab() === 'postgis'"
+      [class.bg-primary]="activeTab() === 'postgis'"
+      [class.text-on-fill]="activeTab() === 'postgis'"
       [class.bg-surface-100]="activeTab() !== 'postgis'"
       [class.text-text-primary]="activeTab() !== 'postgis'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
+      [attr.aria-label]="'developer.tabPostgis' | t"
     >
       {{ 'developer.tabPostgis' | t }}
     </button>
     <button
+      hlmBtn
       (click)="setTab('centrifugo')"
-      [class.bg-surface-800]="activeTab() === 'centrifugo'"
-      [class.text-white]="activeTab() === 'centrifugo'"
+      [class.bg-primary]="activeTab() === 'centrifugo'"
+      [class.text-on-fill]="activeTab() === 'centrifugo'"
       [class.bg-surface-100]="activeTab() !== 'centrifugo'"
       [class.text-text-primary]="activeTab() !== 'centrifugo'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
+      [attr.aria-label]="'developer.tabCentrifugo' | t"
     >
       {{ 'developer.tabCentrifugo' | t }}
     </button>
     <button
+      hlmBtn
       (click)="setTab('livekit')"
-      [class.bg-surface-800]="activeTab() === 'livekit'"
-      [class.text-white]="activeTab() === 'livekit'"
+      [class.bg-primary]="activeTab() === 'livekit'"
+      [class.text-on-fill]="activeTab() === 'livekit'"
       [class.bg-surface-100]="activeTab() !== 'livekit'"
       [class.text-text-primary]="activeTab() !== 'livekit'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
+      [attr.aria-label]="'developer.tabLivekit' | t"
     >
       {{ 'developer.tabLivekit' | t }}
     </button>
@@ -90,7 +100,7 @@
   <!-- TAB 1: Telemetry Overview -->
   @if (activeTab() === 'overview') {
     <div class="space-y-4">
-      <section class="app-card app-padded space-y-4">
+      <app-card customClass="app-padded space-y-4">
         <div
           class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3"
         >
@@ -100,12 +110,13 @@
             </h3>
             <p class="app-muted">{{ 'developer.apiKeySubtitle' | t }}</p>
           </div>
-          <button
-            (click)="generateKey()"
-            class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs"
+          <app-button-primary
+            (clicked)="generateKey()"
+            customClass="ps-4 pe-4 pt-2.5 pb-2.5 text-xs"
+            [attr.aria-label]="'developer.generateBtn' | t"
           >
             {{ 'developer.generateBtn' | t }}
-          </button>
+          </app-button-primary>
         </div>
 
         @if (store.developerStats()?.api_key; as key) {
@@ -116,24 +127,24 @@
               <p class="app-muted font-bold uppercase">{{ 'developer.activeKeyLabel' | t }}</p>
               <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
-            <span class="app-chip bg-emerald-500/20 text-emerald-400">{{
+            <app-chip customClass="bg-success/20 text-success">{{
               'developer.activeRpm' | t
-            }}</span>
+            }}</app-chip>
           </div>
         } @else {
           <div class="app-empty-state">{{ 'developer.noKey' | t }}</div>
         }
-      </section>
+      </app-card>
 
       <section class="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <article class="app-card app-padded space-y-1">
+        <app-card customClass="app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statCallsLabel' | t }}</p>
           <p class="text-3xl font-black text-text-primary">
             {{ store.developerStats()?.total_api_calls_today || 0 }}
           </p>
           <p class="text-[11px] text-text-secondary">{{ 'developer.statCallsSub' | t }}</p>
-        </article>
-        <article class="app-card app-padded space-y-1">
+        </app-card>
+        <app-card customClass="app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statRateLabel' | t }}</p>
           <p class="text-3xl font-black text-primary">
             {{
@@ -145,21 +156,21 @@
           <p class="text-[11px] text-text-secondary">
             {{ 'developer.statRateSub' | t: { tier: (store.developerStats()?.tier | uppercase) } }}
           </p>
-        </article>
-        <article class="app-card app-padded space-y-1">
+        </app-card>
+        <app-card customClass="app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statLatencyLabel' | t }}</p>
-          <p class="text-3xl font-black text-emerald-400">
+          <p class="text-3xl font-black text-success">
             {{ store.developerStats()?.avg_latency_ms || 18 }} ms
           </p>
           <p class="text-[11px] text-text-secondary">{{ 'developer.statLatencySub' | t }}</p>
-        </article>
+        </app-card>
       </section>
     </div>
   }
 
   <!-- TAB 2: PostGIS Spatial Sandbox -->
   @if (activeTab() === 'postgis') {
-    <section class="app-card app-padded space-y-4">
+    <app-card customClass="app-padded space-y-4">
       <div class="border-b border-surface-100 pb-3">
         <h3 class="text-base font-black text-text-primary">{{ 'developer.postgisTitle' | t }}</h3>
         <p class="app-muted">{{ 'developer.postgisSubtitle' | t }}</p>
@@ -167,30 +178,35 @@
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">{{ 'developer.latLabel' | t }}</label>
-          <input
+          <label for="developer-lat-input" class="text-xs font-bold text-text-primary">{{
+            'developer.latLabel' | t
+          }}</label>
+          <app-input
+            inputId="developer-lat-input"
             type="number"
-            step="0.0001"
-            [ngModel]="searchLatitude()"
-            (ngModelChange)="searchLatitude.set($event)"
-            class="app-input w-full text-sm"
+            [value]="searchLatitude().toString()"
+            (valueChange)="searchLatitude.set(+$event)"
+            customClass="w-full text-sm"
           />
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">{{ 'developer.lngLabel' | t }}</label>
-          <input
+          <label for="developer-lng-input" class="text-xs font-bold text-text-primary">{{
+            'developer.lngLabel' | t
+          }}</label>
+          <app-input
+            inputId="developer-lng-input"
             type="number"
-            step="0.0001"
-            [ngModel]="searchLongitude()"
-            (ngModelChange)="searchLongitude.set($event)"
-            class="app-input w-full text-sm"
+            [value]="searchLongitude().toString()"
+            (valueChange)="searchLongitude.set(+$event)"
+            customClass="w-full text-sm"
           />
         </div>
         <div class="space-y-1">
-          <label class="text-xs font-bold text-text-primary">{{
+          <label for="developer-radius-input" class="text-xs font-bold text-text-primary">{{
             'developer.radiusLabel' | t: { radius: searchRadiusMetres() }
           }}</label>
           <input
+            id="developer-radius-input"
             type="range"
             min="1000"
             max="50000"
@@ -204,21 +220,21 @@
 
       <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
         <label class="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer">
-          <input
-            type="checkbox"
+          <hlm-checkbox
             [ngModel]="spoofVipLocation()"
             (ngModelChange)="spoofVipLocation.set($event)"
             class="rounded border-surface-100 text-primary focus:ring-primary"
           />
           <span>{{ 'developer.spoofCheckbox' | t }}</span>
         </label>
-        <button
-          (click)="runPostGisSearch()"
+        <app-button-primary
+          (clicked)="runPostGisSearch()"
           [disabled]="isSearching()"
-          class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs"
+          customClass="ps-5 pe-5 pt-2 pb-2 text-xs"
+          [attr.aria-label]="'developer.executingBtn' | t"
         >
           {{ isSearching() ? ('developer.executingBtn' | t) : ('developer.executeBtn' | t) }}
-        </button>
+        </app-button-primary>
       </div>
 
       @if (discoveryResults().length > 0) {
@@ -235,9 +251,9 @@
                   <p class="text-sm font-black text-text-primary">
                     {{ partner.display_name }}
                     @if (partner.is_vip) {
-                      <span class="app-chip bg-amber-500/20 text-amber-400">{{
+                      <app-chip customClass="bg-vip/20 text-vip">{{
                         'discovery.vipBadge' | t
-                      }}</span>
+                      }}</app-chip>
                     }
                   </p>
                   <p class="text-xs text-text-secondary">
@@ -245,7 +261,7 @@
                     {{ 'profile.targetLabel' | t }}: {{ partner.target_languages?.join(', ') }}
                   </p>
                 </div>
-                <span class="text-xs font-bold text-emerald-400">{{
+                <span class="text-xs font-bold text-success">{{
                   partner.distance_metres
                     ? ('developer.distanceAway' | t: { distance: partner.distance_metres })
                     : ('developer.nearPoint' | t)
@@ -257,12 +273,12 @@
       } @else {
         <div class="app-empty-state pt-4">{{ 'developer.noResults' | t }}</div>
       }
-    </section>
+    </app-card>
   }
 
   <!-- TAB 3: Centrifugo & Redis Fan-Out -->
   @if (activeTab() === 'centrifugo') {
-    <section class="app-card app-padded space-y-4">
+    <app-card customClass="app-padded space-y-4">
       <div
         class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3"
       >
@@ -273,10 +289,9 @@
           <p class="app-muted">{{ 'developer.centrifugoSubtitle' | t }}</p>
         </div>
         <div class="flex items-center gap-2">
-          <span
-            class="app-chip"
-            [class.bg-emerald-500/20]="centrifugeService.isConnected()"
-            [class.text-emerald-400]="centrifugeService.isConnected()"
+          <app-chip
+            [class.bg-success/20]="centrifugeService.isConnected()"
+            [class.text-success]="centrifugeService.isConnected()"
             [class.bg-surface-100]="!centrifugeService.isConnected()"
             [class.text-text-primary]="!centrifugeService.isConnected()"
           >
@@ -284,17 +299,18 @@
               'developer.statusPrefix'
                 | t: { status: (centrifugeService.connectionStatus() | uppercase) }
             }}
-          </span>
-          <button
-            (click)="toggleCentrifugo()"
-            class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
+          </app-chip>
+          <app-button-secondary
+            (clicked)="toggleCentrifugo()"
+            customClass="ps-4 pe-4 pt-2 pb-2 text-xs"
+            [ariaLabel]="'developer.disconnectBtn' | t"
           >
             {{
               centrifugeService.isConnected()
                 ? ('developer.disconnectBtn' | t)
                 : ('developer.connectBtn' | t)
             }}
-          </button>
+          </app-button-secondary>
         </div>
       </div>
 
@@ -305,19 +321,20 @@
         <p class="text-xs text-text-secondary">
           {{ 'developer.redisDesc' | t }}
         </p>
-        <button
-          (click)="simulateRedisTimelineFanout()"
-          class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
+        <app-button-primary
+          (clicked)="simulateRedisTimelineFanout()"
+          customClass="ps-4 pe-4 pt-2 pb-2 text-xs"
+          [attr.aria-label]="'developer.triggerRedisBtn' | t"
         >
           {{ 'developer.triggerRedisBtn' | t }}
-        </button>
+        </app-button-primary>
       </div>
-    </section>
+    </app-card>
   }
 
   <!-- TAB 4: LiveKit Stage Simulator -->
   @if (activeTab() === 'livekit') {
-    <section class="app-card app-padded space-y-4">
+    <app-card customClass="app-padded space-y-4">
       <div class="border-b border-surface-100 pb-3">
         <h3 class="text-base font-black text-text-primary">{{ 'developer.livekitTitle' | t }}</h3>
         <p class="app-muted">{{ 'developer.livekitSubtitle' | t }}</p>
@@ -329,15 +346,15 @@
             <span class="text-xs font-black uppercase text-text-primary">{{
               'developer.simRoleLabel' | t
             }}</span>
-            <span class="app-chip bg-indigo-500/20 text-indigo-400 font-bold uppercase">{{
+            <app-chip customClass="bg-primary/20 text-primary font-bold uppercase">{{
               simulatedStageRole()
-            }}</span>
+            }}</app-chip>
           </div>
           <p class="text-xs text-text-secondary">
             {{ 'developer.permLabel' | t }}
             <strong
-              [class.text-emerald-600]="simulatedCanPublish()"
-              [class.text-amber-600]="!simulatedCanPublish()"
+              [class.text-success]="simulatedCanPublish()"
+              [class.text-warning]="!simulatedCanPublish()"
               >{{
                 simulatedCanPublish()
                   ? ('developer.permGranted' | t)
@@ -347,19 +364,21 @@
           </p>
           <div class="flex flex-wrap gap-2 pt-2">
             @if (!simulatedCanPublish()) {
-              <button
-                (click)="simulateStageHandRaise()"
-                class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
+              <app-button-primary
+                (clicked)="simulateStageHandRaise()"
+                customClass="ps-4 pe-4 pt-2 pb-2 text-xs"
+                [attr.aria-label]="'developer.simApproveBtn' | t"
               >
                 {{ 'developer.simApproveBtn' | t }}
-              </button>
+              </app-button-primary>
             } @else {
-              <button
-                (click)="simulateStageDemote()"
-                class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
+              <app-button-secondary
+                (clicked)="simulateStageDemote()"
+                customClass="ps-4 pe-4 pt-2 pb-2 text-xs"
+                [ariaLabel]="'developer.simDemoteBtn' | t"
               >
                 {{ 'developer.simDemoteBtn' | t }}
-              </button>
+              </app-button-secondary>
             }
           </div>
         </div>
@@ -369,10 +388,9 @@
             <span class="text-xs font-black uppercase text-text-primary">{{
               'developer.recordingTitle' | t
             }}</span>
-            <span
-              class="app-chip"
-              [class.bg-emerald-500/20]="isRecordingActive()"
-              [class.text-emerald-400]="isRecordingActive()"
+            <app-chip
+              [class.bg-success/20]="isRecordingActive()"
+              [class.text-success]="isRecordingActive()"
               [class.bg-surface-100]="!isRecordingActive()"
               [class.text-text-primary]="!isRecordingActive()"
             >
@@ -381,18 +399,20 @@
                   ? ('developer.recordingActive' | t)
                   : ('developer.recordingIdle' | t)
               }}
-            </span>
+            </app-chip>
           </div>
           <p class="text-xs text-text-secondary">
             {{ 'developer.recordingDesc' | t }}
           </p>
           <button
+            hlmBtn
             (click)="toggleRecordingArchive()"
-            [class.bg-red-600]="!isRecordingActive()"
-            [class.text-white]="!isRecordingActive()"
+            [class.bg-danger]="!isRecordingActive()"
+            [class.text-on-fill]="!isRecordingActive()"
             [class.bg-surface-200]="isRecordingActive()"
-            [class.text-white]="isRecordingActive()"
+            [class.text-text-primary]="isRecordingActive()"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
+            [attr.aria-label]="'developer.stopRecordingBtn' | t"
           >
             {{
               isRecordingActive()
@@ -402,15 +422,15 @@
           </button>
         </div>
       </div>
-    </section>
+    </app-card>
   }
 
   <!-- Live Diagnostic Stream Log Console -->
-  <section
-    class="app-card app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100"
+  <app-card
+    customClass="app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100"
   >
     <div class="flex items-center justify-between border-b border-surface-100 pb-2">
-      <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">
+      <h4 class="text-xs font-black uppercase tracking-wider text-primary">
         {{ 'developer.logsTitle' | t }}
       </h4>
       <span class="text-[11px] text-text-muted">{{
@@ -426,26 +446,26 @@
           <span class="text-text-muted shrink-0">[{{ log.timestamp }}]</span>
           <span
             class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0"
-            [class.bg-indigo-900]="log.category === 'POSTGIS'"
-            [class.text-indigo-200]="log.category === 'POSTGIS'"
-            [class.bg-emerald-900]="log.category === 'CENTRIFUGO'"
-            [class.text-emerald-200]="log.category === 'CENTRIFUGO'"
-            [class.bg-amber-900]="log.category === 'REDIS'"
-            [class.text-amber-200]="log.category === 'REDIS'"
-            [class.bg-purple-900]="log.category === 'LIVEKIT'"
-            [class.text-purple-200]="log.category === 'LIVEKIT'"
+            [class.bg-primary/20]="log.category === 'POSTGIS'"
+            [class.text-primary]="log.category === 'POSTGIS'"
+            [class.bg-success/20]="log.category === 'CENTRIFUGO'"
+            [class.text-success]="log.category === 'CENTRIFUGO'"
+            [class.bg-warning/20]="log.category === 'REDIS'"
+            [class.text-warning]="log.category === 'REDIS'"
+            [class.bg-secondary/20]="log.category === 'LIVEKIT'"
+            [class.text-secondary]="log.category === 'LIVEKIT'"
           >
             {{ log.category }}
           </span>
           <span
-            class="text-slate-200 break-words"
-            [class.text-emerald-400]="log.status === 'success'"
-            [class.text-amber-400]="log.status === 'warn'"
+            class="text-text-primary break-words"
+            [class.text-success]="log.status === 'success'"
+            [class.text-warning]="log.status === 'warn'"
           >
             {{ log.message }}
           </span>
         </div>
       }
     </div>
-  </section>
+  </app-card>
 </div>
