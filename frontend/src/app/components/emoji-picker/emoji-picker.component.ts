@@ -1,6 +1,7 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, output, signal } from '@angular/core';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
+import { Component, computed, output, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 
@@ -1406,7 +1407,7 @@ const EMOJI_CATEGORIES = [
 
 @Component({
   selector: 'app-emoji-picker',
-  imports: [HlmInput, HlmButton, FormsModule],
+  imports: [HlmInput, HlmButton, FormsModule, ...HlmRadioGroupImports],
   template: `
     <div
       class="bg-surface-200 border border-surface-100 rounded-xl shadow-2xl w-72 max-h-80 overflow-hidden"
@@ -1422,22 +1423,34 @@ const EMOJI_CATEGORIES = [
         />
       </div>
 
-      <!-- Category tabs -->
-      <div class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide">
+      <!-- Category selection -->
+      <hlm-radio-group
+        class="flex overflow-x-auto gap-1 p-2 border-b border-surface-100 scrollbar-hide"
+        name="emojiCategory"
+        [value]="selectedCategory()"
+        (valueChange)="selectCategory($event)"
+        aria-label="Emoji category"
+      >
         @for (cat of categories; track cat.name) {
-          <button
-            hlmBtn
-            (click)="selectedCategory.set(cat.name)"
-            [class]="
-              selectedCategory() === cat.name
-                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
-                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-300'
-            "
+          <label
+            class="relative cursor-pointer px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors focus-within:ring-2 focus-within:ring-primary"
+            [class.bg-primary]="selectedCategory() === cat.name"
+            [class.text-on-fill]="selectedCategory() === cat.name"
+            [class.bg-surface-100]="selectedCategory() !== cat.name"
+            [class.text-text-secondary]="selectedCategory() !== cat.name"
+            [class.hover:bg-surface-300]="selectedCategory() !== cat.name"
           >
-            {{ cat.name }}
-          </button>
+            <hlm-radio
+              class="sr-only"
+              [value]="cat.name"
+              [inputId]="'emoji-category-' + cat.name.toLowerCase()"
+            >
+              <hlm-radio-indicator indicator />
+            </hlm-radio>
+            <span>{{ cat.name }}</span>
+          </label>
         }
-      </div>
+      </hlm-radio-group>
 
       <!-- Emoji grid -->
       <div class="overflow-y-auto max-h-48 p-2">
@@ -1445,6 +1458,7 @@ const EMOJI_CATEGORIES = [
           @for (emoji of filteredEmojis(); track emoji) {
             <button
               hlmBtn
+              type="button"
               (click)="selectEmoji(emoji)"
               class="w-8 h-8 flex items-center justify-center text-lg hover:bg-surface-100 rounded transition-colors"
               [attr.aria-label]="'Emoji ' + emoji"
@@ -1474,17 +1488,23 @@ const EMOJI_CATEGORIES = [
 export class EmojiPickerComponent {
   emojiSelect = output<string>();
 
-  categories = EMOJI_CATEGORIES;
-  selectedCategory = signal('Smileys');
-  searchQuery = signal('');
+  readonly categories = EMOJI_CATEGORIES;
+  readonly selectedCategory = signal('Smileys');
+  readonly searchQuery = signal('');
 
-  readonly filteredEmojis = () => {
+  readonly filteredEmojis = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const cat = this.categories.find((c) => c.name === this.selectedCategory());
     if (!cat) return [];
     if (!query) return cat.emojis;
     return cat.emojis.filter((e) => e.includes(query));
-  };
+  });
+
+  selectCategory(category: string | null | undefined): void {
+    if (typeof category === 'string' && this.categories.some((candidate) => candidate.name === category)) {
+      this.selectedCategory.set(category);
+    }
+  }
 
   selectEmoji(emoji: string): void {
     this.emojiSelect.emit(emoji);
