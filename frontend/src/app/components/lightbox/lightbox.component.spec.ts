@@ -14,7 +14,8 @@ describe('LightboxComponent', () => {
       if (key === 'lightbox.close') return 'Close lightbox';
       if (key === 'lightbox.prev') return 'Previous image';
       if (key === 'lightbox.next') return 'Next image';
-      if (key === 'lightbox.imageAlt') return `Image ${params?.['current']} of ${params?.['total']}`;
+      if (key === 'lightbox.imageAlt')
+        return `Image ${params?.['current']} of ${params?.['total']}`;
       if (key === 'lightbox.indicator') return `Go to image ${params?.['current']}`;
       return key;
     }),
@@ -45,7 +46,12 @@ describe('LightboxComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should converge currentIndex to initialIndex via effect', () => {
+  it('keeps the Spartan dialog open while the lightbox is mounted', () => {
+    setup(['a']);
+    expect(component.dialogState()).toBe('open');
+  });
+
+  it('should converge currentIndex to initialIndex via linked signal', () => {
     setup(['a', 'b', 'c'], 2);
     expect(component.currentIndex()).toBe(2);
   });
@@ -85,13 +91,22 @@ describe('LightboxComponent', () => {
     expect(component.currentIndex()).toBe(2);
   });
 
-  it('should emit closed on Escape key', () => {
+  it('emits closed when the Spartan dialog lifecycle closes', () => {
     setup(['a']);
     let closed = false;
     component.closed.subscribe(() => (closed = true));
 
-    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+    component.onDialogStateChanged('closed');
     expect(closed).toBe(true);
+  });
+
+  it('does not emit closed while the Spartan dialog remains open', () => {
+    setup(['a']);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+
+    component.onDialogStateChanged('open');
+    expect(closed).toBe(false);
   });
 
   it('should increase currentIndex on ArrowRight', () => {
@@ -104,6 +119,17 @@ describe('LightboxComponent', () => {
     setup(['a', 'b', 'c'], 1);
     component.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
     expect(component.currentIndex()).toBe(0);
+  });
+
+  it('leaves Escape dismissal to the Spartan dialog lifecycle', () => {
+    setup(['a', 'b'], 0);
+    let closed = false;
+    component.closed.subscribe(() => (closed = true));
+
+    component.handleKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(component.currentIndex()).toBe(0);
+    expect(closed).toBe(false);
   });
 
   it('should handle swipe left to go next', () => {

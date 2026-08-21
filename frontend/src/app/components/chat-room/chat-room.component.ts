@@ -1,7 +1,8 @@
+import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
@@ -11,6 +12,7 @@ import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
 import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
@@ -24,15 +26,23 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
-import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import {
+  GroupParticipantDrawerComponent,
+  GroupParticipant,
+} from '../group-participant-drawer/group-participant-drawer.component';
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { DraftService } from '../../services/draft.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppInputComponent } from '../primitives/input/input.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-chat-room',
   imports: [
+    HlmButton,
+    ...HlmAutocompleteImports,
     CommonModule,
-    FormsModule,
     TranslatePipe,
     TypingIndicatorComponent,
     VisualDiffComponent,
@@ -48,6 +58,10 @@ import { DraftService } from '../../services/draft.service';
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
     ChatSearchComponent,
+    AppCardComponent,
+    AppInputComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -63,6 +77,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly translationCache = inject(TranslationCacheService);
 
   id = input.required<string>();
 
@@ -90,6 +105,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
@@ -109,30 +125,18 @@ export class ChatRoomComponent implements OnDestroy {
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
   });
 
-  // The message currently being replied to, shown as a preview above the composer.
   readonly replyingTo = signal<ChatMessage | null>(null);
   readonly highlightedMessageId = signal<string | null>(null);
-
-  // Transliteration state: message id -> romaji/pinyin string
   readonly transliterations = signal<Record<string, string>>({});
-
-  // Translation state: message id -> translated string
   readonly translations = signal<Record<string, string>>({});
-  // Toggle state: message id -> boolean
   readonly showTranslation = signal<Record<string, boolean>>({});
-
-  // Voice transcription state: message id -> transcribed text
   readonly transcriptions = signal<Record<string, string>>({});
-  // Set of message ids currently being transcribed
   readonly transcribingIds = signal<Set<string>>(new Set());
-
-  // Selected word token for LingQ definition modal
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
 
-  // @mention autocomplete state for the message composer
+  // @mention filtering stays product-specific. Keyboard/listbox ownership lives in Spartan.
   readonly mentionQuery = signal<string | null>(null);
-  readonly mentionActiveIndex = signal(0);
   readonly mentionSuggestions = computed<GroupMember[]>(() => {
     const query = this.mentionQuery();
     if (query === null) return [];
@@ -149,38 +153,41 @@ export class ChatRoomComponent implements OnDestroy {
   private mentionRangeStart = 0;
   private mentionRangeEnd = 0;
 
+  readonly mentionItemToString = (value: unknown): string => {
+    if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
+    const member = value as GroupMember;
+    const displayName = member.user?.display_name;
+    if (!displayName) return this.textInput;
+    return (
+      this.textInput.slice(0, this.mentionRangeStart) +
+      `@${displayName} ` +
+      this.textInput.slice(this.mentionRangeEnd)
+    );
+  };
+
   roomId = '';
   roomDetails: ChatRoom | null = null;
   searchQuery = '';
   showSearchPanel = signal(false);
   textInput = '';
 
-  // Admin fields
   newGroupName = '';
   newMemberId = '';
   memberToRemoveId = '';
 
-  // Correction fields
   originalText = '';
   correctedText = '';
   explanationText = '';
 
   private subscription: { unsubscribe: () => void } | null = null;
 
-  private isChatEventPayload(
-    value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
-    return (
-      !!value &&
-      typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
-    );
+  private isChatEventPayload(value: unknown): value is { message?: ChatMessage; typing?: boolean } {
+    return !!value && typeof value === 'object' && ('message' in value || 'typing' in value);
   }
 
   private async initializeRoom(): Promise<void> {
     await this.loadRoomDetails();
     if (this.isLocked()) {
-      // Hide the conversation until the user unlocks it (see toggleLock/unlockRoom).
       this.pendingUnlock.set(true);
       return;
     }
@@ -194,9 +201,18 @@ export class ChatRoomComponent implements OnDestroy {
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
+    await this.loadAutoPlayPreference();
   }
 
-  /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
+  private async loadAutoPlayPreference(): Promise<void> {
+    try {
+      const profile = await this.userService.getMyProfile();
+      this.autoPlayVoiceNotes.set(Boolean(profile?.auto_play_voice_notes));
+    } catch {
+      // keep default false
+    }
+  }
+
   async unlockRoom(): Promise<void> {
     await this.authService.unlockApp();
     if (!this.authService.appLocked()) {
@@ -225,7 +241,6 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  /** Looks up the chat partner's native language so a short cultural etiquette tip can be shown. */
   async resolvePartnerLanguage(): Promise<void> {
     const currentUserId = this.authService.currentUser()?.id;
     if (!currentUserId) return;
@@ -288,9 +303,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   private restoreDraft(): void {
     const simpleDraft = this.draftService.loadChatDraft(this.roomId);
-    if (simpleDraft) {
-      this.textInput = simpleDraft;
-    }
+    if (simpleDraft) this.textInput = simpleDraft;
 
     const v2Draft = this.draftService.loadChatDraftV2(this.roomId);
     if (v2Draft) {
@@ -298,9 +311,7 @@ export class ChatRoomComponent implements OnDestroy {
       if (v2Draft.originalText) this.originalText = v2Draft.originalText;
       if (v2Draft.correctedText) this.correctedText = v2Draft.correctedText;
       if (v2Draft.explanationText) this.explanationText = v2Draft.explanationText;
-      if (v2Draft.replyToId) {
-        this._restoredReplyToId = v2Draft.replyToId;
-      }
+      if (v2Draft.replyToId) this._restoredReplyToId = v2Draft.replyToId;
     }
   }
 
@@ -316,12 +327,9 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
-      // Restore reply-to target from the persisted draft once messages are available
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
-        if (target) {
-          this.replyingTo.set(target);
-        }
+        if (target) this.replyingTo.set(target);
         this._restoredReplyToId = null;
       }
     } catch (e) {
@@ -345,7 +353,6 @@ export class ChatRoomComponent implements OnDestroy {
         setTimeout(() => this.isTyping.set(false), 3000);
       }
     });
-
     this.typingService.connect(this.roomId);
   }
 
@@ -354,7 +361,6 @@ export class ChatRoomComponent implements OnDestroy {
     this.activeWordContext.set(event.context);
   }
 
-  /** Detects an in-progress "@name" trigger before the cursor and updates mention suggestions. */
   onComposerInput(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
@@ -365,7 +371,6 @@ export class ChatRoomComponent implements OnDestroy {
       this.mentionRangeStart = match.index;
       this.mentionRangeEnd = cursor;
       this.mentionQuery.set(match[1]);
-      this.mentionActiveIndex.set(0);
     } else {
       this.mentionQuery.set(null);
     }
@@ -374,44 +379,15 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
-    const suggestions = this.mentionSuggestions();
-    if (suggestions.length > 0) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        this.mentionActiveIndex.update((i) => Math.min(i + 1, suggestions.length - 1));
-        return;
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        this.mentionActiveIndex.update((i) => Math.max(i - 1, 0));
-        return;
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        this.selectMention(suggestions[this.mentionActiveIndex()]);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        this.mentionQuery.set(null);
-        return;
-      }
-    }
-    if (event.key === 'Enter') {
+    // Spartan owns ArrowUp/ArrowDown/Escape/selection while the autocomplete is open.
+    if (event.key === 'Enter' && this.mentionSuggestions().length === 0) {
       event.preventDefault();
       this.sendTextMessage();
     }
   }
 
-  /** Replaces the in-progress "@query" with the chosen participant's display name. */
-  selectMention(member: GroupMember | undefined): void {
-    const displayName = member?.user?.display_name;
-    if (!displayName) return;
-    const mentionText = `@${displayName} `;
-    this.textInput =
-      this.textInput.slice(0, this.mentionRangeStart) +
-      mentionText +
-      this.textInput.slice(this.mentionRangeEnd);
+  onMentionSelected(member: unknown): void {
+    if (!member) return;
     this.mentionQuery.set(null);
     this.saveChatDrafts();
   }
@@ -420,10 +396,8 @@ export class ChatRoomComponent implements OnDestroy {
     if (!this.textInput.trim()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
-    this.textInput = '';
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
-    this.clearChatDrafts();
 
     try {
       const sent = await this.chatService.sendMessage({
@@ -432,11 +406,13 @@ export class ChatRoomComponent implements OnDestroy {
         text_content: text,
         reply_to_id: replyToId,
       });
-      // Add locally if not duplicate
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
+      this.textInput = '';
+      this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
+      this.draftService.saveChatDraft(this.roomId, text);
     }
   }
 
@@ -469,9 +445,7 @@ export class ChatRoomComponent implements OnDestroy {
       const sent = await this.chatService.sendMessage({
         room_id: this.roomId,
         message_type: 'correction_request',
-        correction_request_payload: {
-          original_text: msg.text_content,
-        },
+        correction_request_payload: { original_text: msg.text_content },
         reply_to_id: msg.id,
       });
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
@@ -604,13 +578,18 @@ export class ChatRoomComponent implements OnDestroy {
       return;
     }
 
+    const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
+    const cached = this.translationCache.get(msg.text_content, targetLang);
+    if (cached) {
+      this.translations.update((prev) => ({ ...prev, [msg.id]: cached }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
+      return;
+    }
+
     try {
-      const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
       const res = await this.chatService.translateText(msg.text_content, targetLang);
-      this.translations.update((prev) => ({
-        ...prev,
-        [msg.id]: res.translated_text,
-      }));
+      this.translationCache.set(msg.text_content, targetLang, res.translated_text);
+      this.translations.update((prev) => ({ ...prev, [msg.id]: res.translated_text }));
       this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
     } catch (e) {
       console.error('Failed to translate message:', e);
@@ -619,9 +598,7 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async onTranscribeVoice(msg: ChatMessage): Promise<void> {
-    if (!msg.media_url) return;
-    if (this.transcriptions()[msg.id]) return; // Already transcribed
-
+    if (!msg.media_url || this.transcriptions()[msg.id]) return;
     this.transcribingIds.update((s) => {
       const next = new Set(s);
       next.add(msg.id);
@@ -652,9 +629,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearchResultSelect(message: ChatMessage): void {
     this.showSearchPanel.set(false);
-    if (message.room_id === this.roomId) {
-      this.scrollToMessage(message.id);
-    }
+    if (message.room_id === this.roomId) this.scrollToMessage(message.id);
   }
 
   async toggleParticipantDrawer(): Promise<void> {
@@ -676,19 +651,15 @@ export class ChatRoomComponent implements OnDestroy {
   handleHeaderAction(actionId: string): void {
     switch (actionId) {
       case 'view_profile':
-        // Navigate to user profile
         break;
       case 'view_participants':
         void this.toggleParticipantDrawer();
         break;
       case 'clear_chat':
-        // Clear chat history
         break;
       case 'block_user':
-        // Block user
         break;
       case 'report_user':
-        // Report user
         break;
     }
   }
@@ -719,9 +690,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   startReply(messageId: string): void {
     const parent = this.messages().find((m) => m.id === messageId);
-    if (parent) {
-      this.replyingTo.set(parent);
-    }
+    if (parent) this.replyingTo.set(parent);
   }
 
   cancelReply(): void {
@@ -732,14 +701,11 @@ export class ChatRoomComponent implements OnDestroy {
     window.open(url, '_blank');
   }
 
-  // Admin Actions
   async renameGroup(): Promise<void> {
     if (!this.newGroupName.trim()) return;
     try {
       await this.chatService.renameGroup(this.roomId, this.newGroupName.trim());
-      if (this.roomDetails) {
-        this.roomDetails.title = this.newGroupName.trim();
-      }
+      if (this.roomDetails) this.roomDetails.title = this.newGroupName.trim();
       this.newGroupName = '';
       showToast('Group renamed successfully');
     } catch (e) {
@@ -754,9 +720,7 @@ export class ChatRoomComponent implements OnDestroy {
       await this.chatService.addGroupMembers(this.roomId, [this.newMemberId.trim()]);
       this.newMemberId = '';
       showToast('Member added successfully');
-      if (this.showParticipantDrawer()) {
-        await this.loadParticipants();
-      }
+      if (this.showParticipantDrawer()) await this.loadParticipants();
     } catch (e) {
       console.error('Failed to add member:', e);
       showToast('Failed to add member');
@@ -769,9 +733,7 @@ export class ChatRoomComponent implements OnDestroy {
       await this.chatService.removeGroupMember(this.roomId, this.memberToRemoveId.trim());
       this.memberToRemoveId = '';
       showToast('Member removed successfully');
-      if (this.showParticipantDrawer()) {
-        await this.loadParticipants();
-      }
+      if (this.showParticipantDrawer()) await this.loadParticipants();
     } catch (e) {
       console.error('Failed to remove member:', e);
       showToast('Failed to remove member');
@@ -779,26 +741,20 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async playNextVoiceNote(currentMessageId: string): Promise<void> {
-    try {
-      const profile = await this.userService.getMyProfile();
-      if (!profile || !profile.auto_play_voice_notes) return;
+    if (!this.autoPlayVoiceNotes()) return;
+    const msgs = this.messages();
+    const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
+    if (currentIndex === -1) return;
 
-      const msgs = this.messages();
-      const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
-      if (currentIndex === -1) return;
-
-      for (let i = currentIndex + 1; i < msgs.length; i++) {
-        const nextMsg = msgs[i];
-        if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
-          const audioElement = document.getElementById(`audio-${nextMsg.id}`);
-          if (audioElement instanceof HTMLAudioElement) {
-            audioElement.play().catch((e) => console.error('Auto-play failed:', e));
-          }
-          break;
+    for (let i = currentIndex + 1; i < msgs.length; i++) {
+      const nextMsg = msgs[i];
+      if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
+        const audioElement = document.getElementById(`audio-${nextMsg.id}`);
+        if (audioElement instanceof HTMLAudioElement) {
+          audioElement.play().catch(() => {});
         }
+        break;
       }
-    } catch (e) {
-      console.error('Failed to auto-play next voice note:', e);
     }
   }
 }

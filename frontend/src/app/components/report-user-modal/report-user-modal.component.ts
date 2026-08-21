@@ -1,6 +1,10 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
-import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { SafetyService, ReportCategory, ReportUserDto } from '../../services/safety.service';
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -14,7 +18,15 @@ interface ReportFormModel {
 
 @Component({
   selector: 'app-report-user-modal',
-  imports: [FormField, TranslatePipe, CdkTrapFocus],
+  imports: [
+    HlmCheckbox,
+    HlmTextarea,
+    FormField,
+    TranslatePipe,
+    ...HlmRadioGroupImports,
+    ...HlmButtonImports,
+    ...HlmDialogImports,
+  ],
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent {
@@ -25,6 +37,7 @@ export class ReportUserModalComponent {
   private readonly i18n = inject(I18nService);
 
   readonly isOpen = signal(false);
+  readonly dialogState = computed<HlmDialogState>(() => (this.isOpen() ? 'open' : 'closed'));
   readonly titleId = 'report-user-modal-title';
 
   private readonly reportUserId = signal('');
@@ -88,6 +101,18 @@ export class ReportUserModalComponent {
     this.modalClosed.emit();
   }
 
+  /** The Helm dialog reports every state transition, including ones this component
+   * triggered itself via cancel()/submitReport() - only react to a 'closed'
+   * that WE didn't already cause (backdrop click, Escape, or the primitive's
+   * own close button), guarded by isOpen() so a self-triggered close is a
+   * harmless no-op here rather than a double emit. */
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.isOpen()) {
+      this.isOpen.set(false);
+      this.modalClosed.emit();
+    }
+  }
+
   async submitReport(): Promise<void> {
     if (!this.canSubmit()) {
       return;
@@ -110,7 +135,6 @@ export class ReportUserModalComponent {
       showToast(this.i18n.translate('report.toast_success'), 'success');
 
       if (model.blockUser) {
-        // Fire-and-forget: a block failure shouldn't prevent the report from closing out.
         this.safetyService
           .blockUserAsync(this.reportUserId())
           .catch((err) => console.error('Failed to block user after report:', err));

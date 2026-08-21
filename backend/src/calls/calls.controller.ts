@@ -8,6 +8,7 @@ import {
   Request,
   UseInterceptors,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
@@ -37,7 +38,11 @@ interface RequestWithUser {
 @Controller('calls')
 @ApiBearerAuth()
 export class CallsController {
-  constructor(private readonly callsService: CallsService) {}
+  constructor(
+    private readonly callsService: CallsService,
+    @InjectPinoLogger(CallsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('initiate')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))

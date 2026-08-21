@@ -561,7 +561,11 @@ export class UserService {
     return firstValueFrom(
       this.http
         .get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of([]))),
+        .pipe(
+          catchError(() =>
+            of(['technology', 'art', 'music', 'travel', 'food', 'sports']),
+          ),
+        ),
     );
   }
 
@@ -692,7 +696,11 @@ export class UserService {
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
       this.http
-        .post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
+        .post<void>(
+          `${environment.apiUrl}/safety/block`,
+          { blocked_id: userId },
+          { headers: this.getHeaders() },
+        )
         .pipe(catchError(() => of(undefined))),
     );
   }
@@ -700,7 +708,11 @@ export class UserService {
   async unblockUser(userId: string): Promise<void> {
     return firstValueFrom(
       this.http
-        .delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
+        .post<void>(
+          `${environment.apiUrl}/safety/unblock`,
+          { blocked_id: userId },
+          { headers: this.getHeaders() },
+        )
         .pipe(catchError(() => of(undefined))),
     );
   }
@@ -714,7 +726,7 @@ export class UserService {
     return firstValueFrom(
       this.http
         .post<void>(
-          `${this.baseUrl}/report`,
+          `${environment.apiUrl}/safety/report`,
           {
             reported_id: reportedUserId,
             reason_category: reasonCategory,

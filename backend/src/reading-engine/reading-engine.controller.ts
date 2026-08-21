@@ -21,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReadingEngineService } from './reading-engine.service';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';

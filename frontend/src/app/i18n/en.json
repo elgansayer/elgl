@@ -99,5 +99,32 @@
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
   },
-  "moderation": {}
+  "moderation": {
+    "title": "Admin Moderation Dashboard",
+    "filterAria": "Moderation filter tabs",
+    "profile": "Profiles",
+    "moment": "Moments",
+    "loading": "Loading moderation queue...",
+    "error": "Failed to load moderation queue. Please try again.",
+    "reporter": "Reporter",
+    "reported_user": "Reported User",
+    "reason": "Reason",
+    "riskAnalysisAria": "Risk analysis results",
+    "riskScore": "Risk Score",
+    "flags": "Flags",
+    "noFlags": "No flags detected",
+    "reportItemAria": "Moderation report {id}",
+    "approve": "Approve",
+    "approveAria": "Approve report {id}",
+    "reject": "Reject",
+    "rejectAria": "Reject report {id}",
+    "analyse": "Analyse",
+    "analyseAria": "Analyse user {user}",
+    "dismiss": "Dismiss",
+    "empty": "No items to moderate.",
+    "offlineBanner": "You are currently offline. Showing cached data. Actions will be queued and synced when connectivity is restored.",
+    "pendingActions": "{count} pending action(s) waiting to sync.",
+    "syncNow": "Sync now",
+    "showingCachedData": "Showing cached data."
+  }
 }
