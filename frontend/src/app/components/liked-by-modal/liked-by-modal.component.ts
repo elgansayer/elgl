@@ -14,10 +14,8 @@ import {
   HlmDialogImports,
   type HlmDialogState,
 } from '@spartan-ng/helm/dialog';
-import {
-  MomentLikeUser,
-  MomentsStore,
-} from '../../services/moments.store';
+import { MomentsStore } from '../../services/moments.store';
+import type { MomentLikeUser } from '../../services/moments.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -138,7 +136,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   @if (isLoadingMore()) {
                     {{ 'common.loading' | t }}
                   } @else {
-                    {{ 'events.loadMore' | t }}
+                    {{ 'events.load_more' | t }}
                   }
                 </button>
               </div>
