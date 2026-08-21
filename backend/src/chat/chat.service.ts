@@ -87,7 +87,9 @@ export class ChatService {
       const token = await this.centrifugoService.signJwt(payload);
       return token;
     } catch (error) {
-      throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
+      throw new Error(`Failed to generate Centrifugo token: ${error.message}`, {
+        cause: error,
+      });
     }
   }
 
@@ -1848,30 +1850,42 @@ export class ChatService {
 
     const forwardedMessages: ChatMessage[] = [];
 
-    for (const targetRoomId of roomIds) {
-      // Verify the user is a member of the target room
-      const { data: targetMembership } = await supabase
-        .from('chat_room_members')
-        .select('user_id')
-        .eq('room_id', targetRoomId)
-        .eq('user_id', userId)
-        .single();
+    // Filter out the room the message is already in
+    const targetRoomIds = [...new Set(roomIds)].filter(
+      (id) => id !== originalMsg.room_id,
+    );
 
-      if (!targetMembership) {
-        continue; // Skip rooms the user doesn't belong to
+    // ⚡ Bolt Optimization: Replaced sequential database queries inside a for...of loop with
+    // a single bulk query to fetch user memberships for all target rooms.
+    const { data: targetMemberships } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .in('room_id', targetRoomIds)
+      .eq('user_id', userId);
+
+    const validMembershipRoomIds = new Set(
+      (targetMemberships || []).map((m) => m.room_id),
+    );
+
+    // ⚡ Bolt Optimization: Replaced sequential database queries inside a for...of loop with
+    // a single bulk query to fetch all members of the target rooms.
+    // Expected impact: Eliminates O(N) database queries scaling with the number of rooms.
+    const { data: allTargetMembers } = await supabase
+      .from('chat_room_members')
+      .select('room_id, user_id')
+      .in('room_id', Array.from(validMembershipRoomIds))
+      .neq('user_id', userId);
+
+    const membersByRoom = new Map<string, { user_id: string }[]>();
+    for (const member of allTargetMembers || []) {
+      if (!membersByRoom.has(member.room_id)) {
+        membersByRoom.set(member.room_id, []);
       }
+      membersByRoom.get(member.room_id)!.push({ user_id: member.user_id });
+    }
 
-      // Prevent forwarding a message to its own room
-      if (targetRoomId === originalMsg.room_id) {
-        continue;
-      }
-
-      // Check if the user is blocked by any member of the target room
-      const { data: targetRoomMembers } = await supabase
-        .from('chat_room_members')
-        .select('user_id')
-        .eq('room_id', targetRoomId)
-        .neq('user_id', userId);
+    for (const targetRoomId of validMembershipRoomIds) {
+      const targetRoomMembers = membersByRoom.get(targetRoomId) || [];
 
       let blocked = false;
       if (targetRoomMembers && targetRoomMembers.length > 0) {
@@ -1879,7 +1893,7 @@ export class ChatService {
         // Promise.all batch map to drastically reduce network latency during fan-out block checks.
         // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
         const blockedIdArrays = await Promise.all(
-          (targetRoomMembers as { user_id: string }[]).map((member) =>
+          targetRoomMembers.map((member) =>
             this.safetyService.getBlockedAndBlockerIds(member.user_id),
           ),
         );

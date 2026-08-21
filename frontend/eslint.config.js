@@ -79,6 +79,15 @@ export default tseslint.config(
           controlComponents: ['hlm-checkbox', 'hlm-radio', 'hlm-native-select'],
         },
       ],
+      // appA11yClickable's host bindings add the keydown.enter/keydown.space
+      // handlers this rule looks for, but they live on the directive's own
+      // metadata, invisible to the template AST this rule inspects.
+      '@angular-eslint/template/click-events-have-key-events': [
+        'error',
+        {
+          ignoreWithDirectives: ['appA11yClickable'],
+        },
+      ],
     },
   },
 );
