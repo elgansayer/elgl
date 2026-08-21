@@ -20,15 +20,17 @@ export class CentrifugeService {
   private authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private subscriptions = new Map<string, Subscription>();
+  private subscriptionHandlers = new Map<string, (data: unknown) => void>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private intentionallyDisconnected = false;
 
   readonly isConnected = signal<boolean>(false);
   readonly connectionStatus = signal<string>('disconnected');
 
   /**
    * Calculates exponential backoff delay with jitter.
-   * Uses the formula: min(cap, base * 2^attempt) with ±25% jitter.
+   * Uses the formula: min(cap, base * 2^attempt) with +/-25% jitter.
    */
   private calculateBackoffDelay(): number {
     const exponentialDelay = Math.min(
@@ -43,10 +45,7 @@ export class CentrifugeService {
    * Reads the `Retry-After` header from an HTTP response, falling back to our
    * exponential backoff when the header is absent or unparseable.
    */
-  private getRetryAfterMs(
-    response: HttpResponseBase,
-    fallbackMs: number,
-  ): number {
+  private getRetryAfterMs(response: HttpResponseBase, fallbackMs: number): number {
     const raw = response.headers.get('Retry-After');
     if (!raw) return fallbackMs;
     const seconds = parseInt(raw, 10);
@@ -56,9 +55,11 @@ export class CentrifugeService {
     return fallbackMs;
   }
 
-  private scheduleReconnect(
-    overrideDelayMs?: number,
-  ): void {
+  private scheduleReconnect(overrideDelayMs?: number): void {
+    if (this.intentionallyDisconnected) {
+      return;
+    }
+
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.connectionStatus.set('error: max reconnection attempts reached');
       console.error('Max Centrifugo reconnection attempts reached. Giving up.');
@@ -81,6 +82,37 @@ export class CentrifugeService {
     }, delay);
   }
 
+  private clearActiveSubscriptions(): void {
+    for (const subscription of this.subscriptions.values()) {
+      subscription.unsubscribe();
+    }
+    this.subscriptions.clear();
+  }
+
+  private createSubscription(
+    channel: string,
+    onMessage: (data: unknown) => void,
+  ): Subscription | null {
+    if (!this.centrifuge) {
+      return null;
+    }
+
+    const subscription = this.centrifuge.newSubscription(channel);
+    subscription.on('publication', (ctx) => {
+      onMessage(ctx.data);
+    });
+    subscription.subscribe();
+    this.subscriptions.set(channel, subscription);
+    return subscription;
+  }
+
+  private restoreSubscriptions(): void {
+    this.clearActiveSubscriptions();
+    for (const [channel, onMessage] of this.subscriptionHandlers.entries()) {
+      this.createSubscription(channel, onMessage);
+    }
+  }
+
   async connect(): Promise<void> {
     if (
       this.centrifuge &&
@@ -89,6 +121,14 @@ export class CentrifugeService {
       return;
     }
 
+    const accessToken = this.authService.getAccessToken();
+    if (!accessToken) {
+      this.isConnected.set(false);
+      this.connectionStatus.set('disconnected');
+      return;
+    }
+
+    this.intentionallyDisconnected = false;
     this.connectionStatus.set('connecting');
     try {
       const tokenResponse = await firstValueFrom(
@@ -96,52 +136,61 @@ export class CentrifugeService {
           `${environment.apiUrl}/chat/token`,
           {},
           {
-            headers: { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
             observe: 'response',
           },
         ),
       );
 
       if (!tokenResponse?.body?.token) {
+        this.isConnected.set(false);
         this.connectionStatus.set('error: rate limited or missing token');
         this.scheduleReconnect();
         return;
       }
 
-      this.centrifuge = new Centrifuge(environment.centrifugoUrl, {
+      const previousClient = this.centrifuge;
+      const client = new Centrifuge(environment.centrifugoUrl, {
         token: tokenResponse.body.token,
       });
+      this.centrifuge = client;
 
-      this.centrifuge.on('connected', () => {
+      client.on('connected', () => {
+        if (this.centrifuge !== client) return;
         this.reconnectAttempts = 0;
         this.isConnected.set(true);
         this.connectionStatus.set('connected');
       });
 
-      this.centrifuge.on('disconnected', (ctx) => {
+      client.on('disconnected', (ctx) => {
+        if (this.centrifuge !== client) return;
         this.isConnected.set(false);
         this.connectionStatus.set('disconnected');
-        // Automatically reconnect on unexpected disconnects
-        if (!ctx?.reason || ctx.reason === 'connect error' || ctx.reason === 'disconnect') {
+        if (
+          !this.intentionallyDisconnected &&
+          (!ctx?.reason || ctx.reason === 'connect error' || ctx.reason === 'disconnect')
+        ) {
           this.scheduleReconnect();
         }
       });
 
-      this.centrifuge.on('error', (ctx) => {
-        console.error('Centrifugo error:', ctx);
+      client.on('error', () => {
+        if (this.centrifuge !== client) return;
+        console.error('Centrifugo connection error.');
         this.connectionStatus.set('error');
       });
 
-      this.centrifuge.connect();
-    } catch (e) {
-      // Check for 429 Too Many Requests from rate-limited token endpoint
-      if (e instanceof HttpErrorResponse && e.status === 429) {
+      this.restoreSubscriptions();
+      previousClient?.disconnect();
+      client.connect();
+    } catch (error) {
+      this.isConnected.set(false);
+      if (error instanceof HttpErrorResponse && error.status === 429) {
         this.connectionStatus.set('error: rate limited');
-        // Use the Retry-After header provided by the backend
-        const retryMs = this.getRetryAfterMs(e, this.calculateBackoffDelay());
+        const retryMs = this.getRetryAfterMs(error, this.calculateBackoffDelay());
         this.scheduleReconnect(retryMs);
       } else {
-        console.error('Failed to initialize Centrifugo:', e);
+        console.error('Failed to initialise Centrifugo connection.');
         this.connectionStatus.set('error');
         this.scheduleReconnect();
       }
@@ -149,60 +198,61 @@ export class CentrifugeService {
   }
 
   subscribe(channel: string, onMessage: (data: unknown) => void): Subscription | null {
-    if (!this.centrifuge) return null;
-    let sub = this.subscriptions.get(channel);
-    if (!sub) {
-      sub = this.centrifuge.newSubscription(channel);
-      this.subscriptions.set(channel, sub);
-      sub.subscribe();
+    this.subscriptionHandlers.set(channel, onMessage);
+
+    const existing = this.subscriptions.get(channel);
+    if (existing) {
+      existing.removeAllListeners('publication');
+      existing.on('publication', (ctx) => {
+        onMessage(ctx.data);
+      });
+      return existing;
     }
-    // Reusing an existing subscription would otherwise stack another
-    // 'publication' listener on top of any previous one, leaking closures
-    // and delivering each message to every stale handler.
-    sub.removeAllListeners('publication');
-    sub.on('publication', (ctx) => {
-      onMessage(ctx.data);
-    });
-    return sub;
+
+    return this.createSubscription(channel, onMessage);
   }
 
   unsubscribe(channel: string): void {
-    const sub = this.subscriptions.get(channel);
-    if (sub) {
-      sub.unsubscribe();
+    this.subscriptionHandlers.delete(channel);
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
+      subscription.unsubscribe();
       this.subscriptions.delete(channel);
     }
   }
 
   async publish(channel: string, data: unknown): Promise<void> {
-    const sub = this.subscriptions.get(channel);
-    if (sub) {
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
       try {
-        await sub.publish(data);
-      } catch (e) {
-        console.error('Centrifuge subscription publish error:', e);
+        await subscription.publish(data);
+      } catch {
+        console.error('Centrifugo subscription publish failed.');
       }
     } else if (this.centrifuge) {
       try {
-        // The Centrifuge client has a native publish method on the instance.
         await this.centrifuge.publish(channel, data);
-      } catch (e) {
-        console.error('Centrifuge publish error:', e);
+      } catch {
+        console.error('Centrifugo publish failed.');
       }
     }
   }
 
   disconnect(): void {
+    this.intentionallyDisconnected = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
     this.reconnectAttempts = 0;
-    if (this.centrifuge) {
-      this.centrifuge.disconnect();
-      this.centrifuge = null;
-      this.isConnected.set(false);
-      this.connectionStatus.set('disconnected');
-    }
+
+    const client = this.centrifuge;
+    this.centrifuge = null;
+    this.clearActiveSubscriptions();
+    this.subscriptionHandlers.clear();
+    client?.disconnect();
+
+    this.isConnected.set(false);
+    this.connectionStatus.set('disconnected');
   }
 }
