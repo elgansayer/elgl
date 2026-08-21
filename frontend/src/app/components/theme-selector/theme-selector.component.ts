@@ -1,53 +1,45 @@
 import { Component, inject } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ThemeService, Theme } from '../../services/theme.service';
 
 @Component({
   selector: 'app-theme-selector',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div
       role="radiogroup"
       [attr.aria-label]="'theme.label' | t"
-      class="flex items-center gap-2 p-2 bg-surface-300 rounded-xl shadow-sm border border-surface-200"
+      class="flex items-center gap-2 rounded-xl border border-surface-200 bg-surface-300 p-2 shadow-sm"
     >
-      <button
-        (click)="setTheme('light')"
-        [attr.aria-pressed]="currentTheme() === 'light'"
-        [attr.aria-label]="'theme.light' | t"
-        [class.bg-primary/15]="currentTheme() === 'light'"
-        [class.text-primary]="currentTheme() === 'light'"
-        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-text-secondary hover:bg-surface-200 transition-colors"
-      >
-        {{ 'theme.light' | t }}
-      </button>
-      <button
-        (click)="setTheme('dark')"
-        [attr.aria-pressed]="currentTheme() === 'dark'"
-        [attr.aria-label]="'theme.dark' | t"
-        [class.bg-primary/15]="currentTheme() === 'dark'"
-        [class.text-primary]="currentTheme() === 'dark'"
-        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-text-secondary hover:bg-surface-200 transition-colors"
-      >
-        {{ 'theme.dark' | t }}
-      </button>
-      <button
-        (click)="setTheme('system')"
-        [attr.aria-pressed]="currentTheme() === 'system'"
-        [attr.aria-label]="'theme.system' | t"
-        [class.bg-primary/15]="currentTheme() === 'system'"
-        [class.text-primary]="currentTheme() === 'system'"
-        class="ps-4 pe-4 py-2 text-sm font-medium rounded-lg text-text-secondary hover:bg-surface-200 transition-colors"
-      >
-        {{ 'theme.system' | t }}
-      </button>
+      @for (theme of themes; track theme.value) {
+        <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          role="radio"
+          [attr.aria-checked]="currentTheme() === theme.value"
+          [attr.aria-label]="theme.label | t"
+          [class.bg-primary/15]="currentTheme() === theme.value"
+          [class.text-primary]="currentTheme() === theme.value"
+          (click)="setTheme(theme.value)"
+        >
+          {{ theme.label | t }}
+        </button>
+      }
     </div>
   `,
 })
 export class ThemeSelectorComponent {
   private themeService = inject(ThemeService);
 
-  currentTheme = this.themeService.currentTheme;
+  readonly currentTheme = this.themeService.currentTheme;
+  readonly themes: ReadonlyArray<{ value: Theme; label: string }> = [
+    { value: 'light', label: 'theme.light' },
+    { value: 'dark', label: 'theme.dark' },
+    { value: 'system', label: 'theme.system' },
+  ];
 
   setTheme(theme: Theme): void {
     this.themeService.setTheme(theme);

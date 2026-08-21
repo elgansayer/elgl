@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { CacheControlInterceptor } from '../common/cache.interceptor';
 
@@ -56,6 +57,8 @@ describe('AdminController', () => {
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(AdminGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(AdminCapabilityGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 

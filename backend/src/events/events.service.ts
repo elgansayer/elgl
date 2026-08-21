@@ -118,11 +118,22 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         rsvpsByEventId.set(rsvp.event_id, users);
       }
 
-      for (const event of typedEvents) {
-        const userIds = rsvpsByEventId.get(event.id);
-        if (!userIds) continue;
+      // ⚡ Bolt: Replaced sequential `for...of` loop with concurrent `Promise.allSettled`.
+      // Executing `sendRemindersBatch` concurrently mitigates N+1 database/network latency overheads.
+      const reminderResults = await Promise.allSettled(
+        typedEvents.map((event) => {
+          const userIds = rsvpsByEventId.get(event.id);
+          if (!userIds) return Promise.resolve();
+          return this.sendRemindersBatch(event.id, event.title, userIds);
+        }),
+      );
 
-        await this.sendRemindersBatch(event.id, event.title, userIds);
+      const failedReminders = reminderResults.filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
+      );
+      if (failedReminders.length > 0) {
+        throw failedReminders[0].reason;
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);

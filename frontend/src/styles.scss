@@ -264,7 +264,7 @@ legacy comma-separated value (silently drops the whole declaration). */
   }
 
   .app-button-primary {
-    @apply rounded-pill bg-gradient-to-r from-primary to-primary-light text-white font-bold shadow-sm transition-all duration-base ease-app hover:shadow-lift hover:opacity-90;
+    @apply rounded-pill bg-gradient-to-r from-primary to-primary-light text-on-fill font-bold shadow-sm transition-all duration-base ease-app hover:shadow-lift hover:opacity-90;
   }
 
   .app-button-secondary {

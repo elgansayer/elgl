@@ -1,4 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { Component, inject, signal } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GdprService } from '../../services/gdpr.service';
 import { I18nService } from '../../services/i18n.service';
@@ -6,32 +8,42 @@ import { I18nService } from '../../services/i18n.service';
 @Component({
   selector: 'app-gdpr',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmCheckbox, TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="app-screen bg-surface-50">
       <header class="app-header">
-        <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-          <span class="text-xl">&larr;</span>
+        <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="icon-touch"
+          (click)="goBack()"
+          [attr.aria-label]="'common.back' | t"
+        >
+          <span class="text-xl" aria-hidden="true">&larr;</span>
         </button>
         <h1 class="app-header-title">{{ 'gdpr.title' | t }}</h1>
         <div class="w-10"></div>
       </header>
 
-      <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
+      <main class="mx-auto max-w-lg space-y-6 ps-4 pe-4 pt-4 pb-4">
         <p class="text-sm text-text-secondary">{{ 'gdpr.description' | t }}</p>
 
         <section class="space-y-4">
-          <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.archiveSection' | t }}
           </h2>
           <div
-            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
           >
             <p class="text-xs text-text-secondary">{{ 'gdpr.archiveInfo' | t }}</p>
             <button
+              hlmBtn
+              type="button"
+              size="touch"
+              class="w-full"
               (click)="requestArchive()"
               [disabled]="loading()"
-              class="w-full bg-primary text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
               [attr.aria-label]="'gdpr.requestArchiveBtn' | t"
             >
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
@@ -46,26 +58,29 @@ import { I18nService } from '../../services/i18n.service';
         </section>
 
         <section class="space-y-4">
-          <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
             {{ 'gdpr.deleteSection' | t }}
           </h2>
           <div
-            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+            class="space-y-3 overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 p-4 shadow-sm"
           >
             <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+            <label class="flex cursor-pointer items-center gap-2">
+              <hlm-checkbox
                 [checked]="confirmDelete()"
                 (change)="confirmDelete.set(!confirmDelete())"
-                class="h-5 w-5 rounded border-surface-300 text-danger focus:ring-danger/30"
+                class="h-5 w-5 rounded border-surface-300 text-danger"
               />
               <span class="text-sm text-text-primary">{{ 'gdpr.deleteConfirmLabel' | t }}</span>
             </label>
             <button
+              hlmBtn
+              type="button"
+              variant="destructive-solid"
+              size="touch"
+              class="w-full"
               (click)="deleteAccount()"
               [disabled]="!confirmDelete() || deleting()"
-              class="w-full bg-danger text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
               [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
             >
               {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
@@ -81,15 +96,19 @@ import { I18nService } from '../../services/i18n.service';
 
         @if (isPendingDeletion()) {
           <section class="space-y-4">
-            <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
               {{ 'gdpr.cancelDeletionSection' | t }}
             </h2>
-            <div class="rounded-2xl bg-warning/10 border border-warning/30 shadow-sm p-4 space-y-3">
+            <div class="space-y-3 rounded-2xl border border-warning/30 bg-warning/10 p-4 shadow-sm">
               <p class="text-xs text-warning">{{ 'gdpr.cancelDeletionInfo' | t }}</p>
               <button
+                hlmBtn
+                type="button"
+                variant="secondary"
+                size="touch"
+                class="w-full border-warning/30 text-warning"
                 (click)="cancelDeletion()"
                 [disabled]="cancelling()"
-                class="w-full bg-warning text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
                 [attr.aria-label]="'gdpr.cancelDeletionBtn' | t"
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}

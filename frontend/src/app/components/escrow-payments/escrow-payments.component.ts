@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
 import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -22,7 +23,7 @@ type StatusFilter = 'all' | EscrowStatus;
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [FormsModule, DatePipe, TranslatePipe],
+  imports: [HlmButton, FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
 export class EscrowPaymentsComponent {

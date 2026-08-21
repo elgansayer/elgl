@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import time
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 
 from openhands_factory.exceptions import RepositorySafetyError
@@ -26,6 +28,31 @@ from openhands_factory.repository_guard import (
 # the single operation that needs them - so a lock collision means the operation
 # was never attempted, not that it partially ran; retrying is safe.
 _LOCK_CONTENTION_MARKERS = ("could not lock", "unable to create", "already exists")
+_GIT_ENVIRONMENT_ALLOWLIST = {
+    "GIT_SSH_COMMAND",
+    "HOME",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "LANG",
+    "LC_ALL",
+    "NO_PROXY",
+    "PATH",
+    "SSH_AUTH_SOCK",
+    "SSL_CERT_DIR",
+    "SSL_CERT_FILE",
+    "XDG_CONFIG_HOME",
+}
+
+
+def _authenticated_git_environment(token: str) -> dict[str, str]:
+    environment = {key: os.environ[key] for key in _GIT_ENVIRONMENT_ALLOWLIST if key in os.environ}
+    environment.setdefault("HOME", str(Path.home()))
+    environment.setdefault("PATH", "/usr/local/bin:/usr/bin:/bin")
+    environment.setdefault("LANG", "C.UTF-8")
+    # The configured gh credential helper reads this only in the short-lived Git
+    # process. Providers and repository verification never inherit it.
+    environment["GH_TOKEN"] = token
+    return environment
 
 
 def _is_lock_contention(stderr: str) -> bool:
@@ -57,13 +84,21 @@ class GitWorkflow:
         self,
         repository: Path,
         base_branch: str,
-        runner: ProcessRunner = run_process,
+        runner: ProcessRunner | None = None,
         *,
         external_branch: str | None = None,
+        github_token: str | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
-        self.runner = runner
+        self.runner: ProcessRunner
+        if runner is None and github_token is not None:
+            self.runner = partial(
+                run_process,
+                environment=_authenticated_git_environment(github_token),
+            )
+        else:
+            self.runner = runner or run_process
         # Set only for a job independently reviewing a pull request it did not create.
         # Allows push() to target that pull request's own branch instead of a fresh
         # factory/* one. See ensure_push_target for why this is safe.
@@ -87,6 +122,7 @@ class GitWorkflow:
         does not own the naming of - it exists to review and, if necessary, repair
         someone else's pull request in place.
         """
+        ensure_push_target(branch, self.base_branch, extra_allowed=branch)
         fetch = _run_with_lock_retry(
             self.runner, ("git", "fetch", "origin", branch), self.repository
         )
@@ -119,6 +155,7 @@ class GitWorkflow:
             Path("frontend/node_modules"),
             Path("backend/node_modules"),
             Path("e2e/node_modules"),
+            Path("admin-portal/node_modules"),
         ):
             source = self.repository / relative
             destination = worktree / relative
@@ -179,6 +216,67 @@ class GitWorkflow:
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not inspect worktree: {result.stderr}")
         return bool(result.stdout.strip())
+
+    def change_fingerprint(self) -> str:
+        """Return a content-sensitive identity for every uncommitted change.
+
+        Repair phases often start with an already-dirty implementation. A plain
+        ``git status`` check cannot prove that a repair provider added anything.
+        This fingerprint covers tracked paths, modes, deletions and every
+        untracked file without loading file contents into the Factory process.
+        """
+        raw = self.runner(
+            ("git", "diff", "--raw", "--no-renames", "-z", "HEAD", "--"),
+            self.repository,
+        )
+        if raw.returncode != 0:
+            raise RepositorySafetyError(f"Could not fingerprint changes: {raw.stderr}")
+        tracked = self.runner(
+            ("git", "diff", "--name-only", "--no-renames", "-z", "HEAD", "--"),
+            self.repository,
+        )
+        if tracked.returncode != 0:
+            raise RepositorySafetyError(f"Could not fingerprint changes: {tracked.stderr}")
+        untracked = self.runner(
+            ("git", "ls-files", "--others", "--exclude-standard", "-z"),
+            self.repository,
+        )
+        if untracked.returncode != 0:
+            raise RepositorySafetyError(f"Could not fingerprint changes: {untracked.stderr}")
+
+        digest = hashlib.sha256()
+        digest.update(raw.stdout.encode("utf-8"))
+        paths = {
+            path for path in (*tracked.stdout.split("\0"), *untracked.stdout.split("\0")) if path
+        }
+        for relative in sorted(paths):
+            digest.update(relative.encode("utf-8"))
+            absolute = self.repository / relative
+            if not os.path.lexists(absolute):
+                digest.update(b"<deleted>")
+                continue
+            stat = os.lstat(absolute)
+            digest.update(str(stat.st_mode).encode("ascii"))
+            object_hash = self.runner(
+                ("git", "hash-object", "--no-filters", "--", relative),
+                self.repository,
+            )
+            if object_hash.returncode != 0:
+                # git hash-object only hashes blobs; it cannot hash a directory, and
+                # some filesystems/git versions can report an entire untracked
+                # directory (rather than each file within it) as a single changed
+                # path, or an unusual entry (a broken symlink, socket, device file)
+                # that git otherwise declines to hash. The fingerprint's job is
+                # change detection, not exact content identity, so fall back to
+                # size/mtime rather than letting one unusual path hard-fail the
+                # whole task and force a quarantine over something that was never
+                # a real safety problem.
+                digest.update(b"<unhashable>")
+                digest.update(str(stat.st_size).encode("ascii"))
+                digest.update(str(stat.st_mtime_ns).encode("ascii"))
+                continue
+            digest.update(object_hash.stdout.strip().encode("ascii"))
+        return digest.hexdigest()
 
     def push(self, branch: str) -> None:
         ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)

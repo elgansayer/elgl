@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -9,7 +10,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
 @Component({
   selector: 'app-sticker-store',
-  imports: [TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent],
+  imports: [HlmButton, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent],
   template: `<div class="min-h-screen bg-surface-500">
     <!-- Header -->
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
@@ -29,6 +30,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       <div class="flex gap-2" role="group" [attr.aria-label]="'sticker.filterLabel' | t">
         @for (pill of categoryPills(); track pill.id) {
           <button
+            hlmBtn
             type="button"
             class="rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
             [class.bg-primary]="selectedCategory() === pill.id"
@@ -123,6 +125,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                 </div>
               } @else {
                 <button
+                  hlmBtn
                   type="button"
                   class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-vip to-accent py-2 text-sm font-semibold text-on-fill transition-all disabled:opacity-50"
                   [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"

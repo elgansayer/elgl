@@ -5,6 +5,7 @@ import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { FlashcardsModule } from '../flashcards/flashcards.module';
 import { StudyStreakModule } from '../study-streak/study-streak.module';
+import { LearnerKnowledgeModule } from '../learner-knowledge/learner-knowledge.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { StudyStreakModule } from '../study-streak/study-streak.module';
     UsersModule,
     FlashcardsModule,
     StudyStreakModule,
+    LearnerKnowledgeModule,
   ],
   controllers: [AiConversationController],
   providers: [AiConversationService],

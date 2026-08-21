@@ -1,10 +1,11 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 
 @Component({
   selector: 'app-profile-cover-photo',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="relative w-full rounded-xl overflow-hidden bg-surface">
       @if (previewUrl(); as url) {
@@ -34,10 +35,16 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       />
       @if (previewUrl()) {
         <div class="flex gap-2 mt-4 justify-end">
-          <button type="button" class="btn-secondary px-4 py-2 rounded-lg" (click)="cancel()">
+          <button
+            hlmBtn
+            type="button"
+            class="btn-secondary px-4 py-2 rounded-lg"
+            (click)="cancel()"
+          >
             {{ 'coverPhoto.cancel' | t }}
           </button>
           <button
+            hlmBtn
             type="button"
             class="btn-primary px-6 py-2 rounded-lg"
             (click)="save()"

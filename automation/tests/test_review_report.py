@@ -18,6 +18,13 @@ def test_extract_acceptance_criteria() -> None:
     assert criteria == ["User can login", "User can logout", "Admin can delete"]
 
 
+@pytest.mark.parametrize("heading", ("# Acceptance criteria", "### Acceptance Criteria:"))
+def test_extract_acceptance_criteria_accepts_standard_heading_levels(heading: str) -> None:
+    body = f"{heading}\n- First requirement\n## Next section\n- Not a criterion"
+
+    assert extract_acceptance_criteria(body) == ["First requirement"]
+
+
 def test_validate_review_report_success(tmp_path: Path) -> None:
     report = {
         "approved": True,
@@ -36,6 +43,13 @@ def test_validate_review_report_success(tmp_path: Path) -> None:
 
 def test_validate_review_report_missing_file(tmp_path: Path) -> None:
     with pytest.raises(FactoryError, match="missing"):
+        validate_review_report(tmp_path, "")
+
+
+def test_validate_review_report_requires_a_json_object(tmp_path: Path) -> None:
+    (tmp_path / ".factory-review.json").write_text("[]", encoding="utf-8")
+
+    with pytest.raises(FactoryError, match="must be a JSON object"):
         validate_review_report(tmp_path, "")
 
 
@@ -74,9 +88,7 @@ def test_validate_review_report_blocking_findings(tmp_path: Path) -> None:
         "approved": True,
         "summary": "LGTM",
         "acceptance_criteria": [],
-        "blocking_findings": [
-            {"severity": "blocking", "summary": "Problem", "evidence": ["file"]}
-        ],
+        "blocking_findings": [{"severity": "blocking", "summary": "Problem", "evidence": ["file"]}],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
 
@@ -96,4 +108,6 @@ def test_validate_review_report_not_approved(tmp_path: Path) -> None:
     with pytest.raises(FactoryError, match="not approved"):
         validate_review_report(tmp_path, "")
 
+    result = validate_review_report(tmp_path, "", require_approval=False)
 
+    assert result.approved is False

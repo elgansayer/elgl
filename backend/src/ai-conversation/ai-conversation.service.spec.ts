@@ -5,6 +5,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { StudyStreakService } from '../study-streak/study-streak.service';
+import { LearnerKnowledgeService } from '../learner-knowledge/learner-knowledge.service';
 
 describe('AiConversationService', () => {
   let service: AiConversationService;
@@ -16,6 +17,7 @@ describe('AiConversationService', () => {
   let usersService: { getProfile: vi.Mock };
   let flashcardsService: { getFlashcards: vi.Mock };
   let studyStreakService: { getStreak: vi.Mock };
+  let learnerKnowledgeService: { getProfile: vi.Mock };
   let redisMock: {
     incr: Mock;
     expire: Mock;
@@ -33,7 +35,11 @@ describe('AiConversationService', () => {
       getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
     usersService = {
-      getProfile: vi.fn().mockResolvedValue({ target_languages: ['Spanish'], interests: ['travel'], proficiency_level: 'intermediate' }),
+      getProfile: vi.fn().mockResolvedValue({
+        target_languages: ['Spanish'],
+        interests: ['travel'],
+        proficiency_level: 'intermediate',
+      }),
     };
     flashcardsService = {
       getFlashcards: vi.fn().mockResolvedValue([{ word_token: 'hola' }]),
@@ -42,12 +48,22 @@ describe('AiConversationService', () => {
       getStreak: vi.fn().mockResolvedValue(5),
     };
 
+    learnerKnowledgeService = {
+      getProfile: vi.fn().mockResolvedValue({
+        overallProficiency: { level: 'B2' },
+        knowledgeItems: new Map([
+          ['vocab:gato', { id: 'vocab:gato', status: 'struggling' }],
+        ]),
+      }),
+    };
+
     service = new AiConversationService(
       llmProxy as unknown as LlmProxyService,
       supabaseService as unknown as SupabaseService,
       usersService as unknown as UsersService,
       flashcardsService as unknown as FlashcardsService,
       studyStreakService as unknown as StudyStreakService,
+      learnerKnowledgeService as unknown as LearnerKnowledgeService,
     );
   });
 
@@ -163,7 +179,11 @@ describe('AiConversationService', () => {
         'Would you like a latte or cappuccino?',
       );
 
-      const reply = await service.generateReply('user-123', 'Hi', 'ordering-coffee');
+      const reply = await service.generateReply(
+        'user-123',
+        'Hi',
+        'ordering-coffee',
+      );
 
       expect(llmProxy.chatCompletion).toHaveBeenCalledTimes(1);
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
@@ -182,7 +202,12 @@ describe('AiConversationService', () => {
         { role: 'assistant' as const, content: 'Hi there!' },
       ];
 
-      await service.generateReply('user-123', 'I am doing well', 'small-talk', history);
+      await service.generateReply(
+        'user-123',
+        'I am doing well',
+        'small-talk',
+        history,
+      );
 
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
       expect(messages).toHaveLength(4); // system + 2 history + 1 user
@@ -197,13 +222,19 @@ describe('AiConversationService', () => {
 
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
       expect(messages[0].role).toBe('system');
-      expect(messages[0].content).toContain('You are a personalized, expert language tutor');
+      expect(messages[0].content).toContain(
+        'You are a personalized, expert language tutor',
+      );
     });
 
     it('should fallback to local replies when LLM fails', async () => {
       llmProxy.chatCompletion.mockRejectedValue(new Error('API down'));
 
-      const reply = await service.generateReply('user-123', 'Hi there!', 'ordering-coffee');
+      const reply = await service.generateReply(
+        'user-123',
+        'Hi there!',
+        'ordering-coffee',
+      );
 
       expect(reply).toBeTruthy();
       expect(typeof reply).toBe('string');
@@ -212,7 +243,11 @@ describe('AiConversationService', () => {
     it('should fallback to local replies when LLM returns empty string', async () => {
       llmProxy.chatCompletion.mockResolvedValue('');
 
-      const reply = await service.generateReply('user-123', 'Hello', 'job-interview');
+      const reply = await service.generateReply(
+        'user-123',
+        'Hello',
+        'job-interview',
+      );
 
       expect(reply).toBeTruthy();
       expect(typeof reply).toBe('string');

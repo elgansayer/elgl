@@ -230,42 +230,61 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(component.mentionSuggestions()).toEqual([]);
     });
 
-    it('selectMention replaces the in-progress query with the chosen display name', () => {
+    it('itemToString replaces the in-progress query with the chosen display name', () => {
       component.textInput = 'Hi @Al';
       component.onComposerInput(inputEvent('Hi @Al', 6));
 
-      component.selectMention(component.mentionSuggestions()[0]);
+      const selectedText = component.mentionItemToString(component.mentionSuggestions()[0]);
 
-      expect(component.textInput).toBe('Hi @Alice ');
+      expect(selectedText).toBe('Hi @Alice ');
+    });
+
+    it('selection clears the product mention query after Spartan chooses an option', () => {
+      component.onComposerInput(inputEvent('Hi @Al', 6));
+      expect(component.mentionSuggestions().length).toBeGreaterThan(0);
+
+      component.onMentionSelected(component.mentionSuggestions()[0]);
+
       expect(component.mentionSuggestions()).toEqual([]);
     });
 
-    it('ArrowDown/ArrowUp move the active suggestion without sending the message', () => {
+    it('ArrowDown/ArrowUp are left to the owned Spartan autocomplete', () => {
       component.onComposerInput(inputEvent('Hi @Al', 6));
+      const downPreventDefault = vi.fn();
+      const upPreventDefault = vi.fn();
 
-      component.onComposerKeydown({ key: 'ArrowDown', preventDefault: vi.fn() } as unknown as KeyboardEvent);
-      expect(component.mentionActiveIndex()).toBe(1);
+      component.onComposerKeydown({
+        key: 'ArrowDown',
+        preventDefault: downPreventDefault,
+      } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowUp',
+        preventDefault: upPreventDefault,
+      } as unknown as KeyboardEvent);
 
-      component.onComposerKeydown({ key: 'ArrowUp', preventDefault: vi.fn() } as unknown as KeyboardEvent);
-      expect(component.mentionActiveIndex()).toBe(0);
-
+      expect(downPreventDefault).not.toHaveBeenCalled();
+      expect(upPreventDefault).not.toHaveBeenCalled();
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('Enter selects the active suggestion instead of sending when the list is open', () => {
+    it('Enter is left to Spartan when mention options are open', () => {
       component.textInput = 'Hi @Al';
       component.onComposerInput(inputEvent('Hi @Al', 6));
+      const preventDefault = vi.fn();
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({ key: 'Enter', preventDefault } as unknown as KeyboardEvent);
 
-      expect(component.textInput).toBe('Hi @Alice ');
+      expect(preventDefault).not.toHaveBeenCalled();
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
     });
 
     it('Enter sends the message when no mention list is open', () => {
       component.textInput = 'Just a message';
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'Enter',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),
