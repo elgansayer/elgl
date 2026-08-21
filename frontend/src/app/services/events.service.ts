@@ -25,7 +25,7 @@ export type EventVenueType = 'audio_room' | 'zoom' | 'in_person';
 
 export interface CreateEventRequest {
   title: string;
-  description?: string;
+  description: string;
   category?: string;
   date_time: string;
   venue_type: EventVenueType;
