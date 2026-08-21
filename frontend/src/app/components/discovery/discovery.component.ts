@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -36,6 +39,7 @@ import { DistanceSliderComponent } from '../distance-slider/distance-slider.comp
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
 import { DiscoveryMapErrorBoundaryComponent } from './discovery-map-error-boundary.component';
+import { DiscoveryErrorBoundaryComponent } from '../discovery-error-boundary/discovery-error-boundary.component';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
@@ -44,6 +48,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 @Component({
   selector: 'app-discovery',
   imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmButton,
     FormsModule,
     TranslatePipe,
     ScrollablePillsComponent,
@@ -57,6 +64,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
     DiscoveryMapErrorBoundaryComponent,
+    DiscoveryErrorBoundaryComponent,
     SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
@@ -104,12 +112,39 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedTargetLanguage = signal<string>('');
   readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
+  readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
+
+  readonly commonInterestTags: readonly string[] = [
+    'sports',
+    'music',
+    'travel',
+    'photography',
+    'gaming',
+    'cooking',
+    'reading',
+    'movies',
+    'fitness',
+    'art',
+    'technology',
+    'nature',
+  ];
+  readonly showAllInterests = signal(false);
+  readonly visibleInterestTags = computed(() =>
+    this.showAllInterests() ? this.commonInterestTags : this.commonInterestTags.slice(0, 6),
+  );
+  readonly errorBoundaryContext = computed(() => ({
+    component: 'discovery',
+    targetLanguage: this.selectedTargetLanguage(),
+    partnerCount: this.partners().length,
+    sortMode: this.selectedSort(),
+    radiusKm: this.selectedDistanceKm(),
+  }));
 
   /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
   private readonly searchTrigger$ = new Subject<void>();
@@ -143,6 +178,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMax = signal<number>(100);
 
   readonly voiceRoomActive = signal<boolean>(false);
+  readonly hasAudioIntroOnly = signal<boolean>(false);
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -157,6 +193,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   setSort(sort: string): void {
     this.selectedSort.set(sort);
     void this.searchPartners();
+  }
+
+  onSortChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setSort(select.value);
+    }
+  }
+
+  onGenderChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setGender(select.value);
+    }
   }
 
   onAgeRangeChanged(range: AgeRange): void {
@@ -192,6 +242,15 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   setGender(gender: string) {
     this.selectedGender.set(gender);
     void this.searchPartners();
+  }
+
+  setInterest(interest: string): void {
+    this.selectedInterests.set(this.selectedInterests() === interest ? '' : interest);
+    void this.searchPartners();
+  }
+
+  toggleShowAllInterests(): void {
+    this.showAllInterests.update((value) => !value);
   }
 
   async ngOnInit(): Promise<void> {
@@ -265,6 +324,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           available_time_end: this.availableTimeEnd() || undefined,
           sort: this.selectedSort(),
           voice_room_active: this.voiceRoomActive() || undefined,
+          has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
+          interests: this.selectedInterests() || undefined,
         },
         signal,
       );
@@ -414,6 +475,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     native_languages?: string;
     target_language?: string;
     proficiency_level?: string;
+    has_audio_intro?: boolean;
   }): void {
     if (filters.native_languages !== undefined) {
       this.selectedNativeLanguage.set(filters.native_languages);
@@ -423,6 +485,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
     if (filters.proficiency_level !== undefined) {
       this.selectedProficiencyLevel.set(filters.proficiency_level);
+    }
+    if (filters.has_audio_intro !== undefined) {
+      this.hasAudioIntroOnly.set(filters.has_audio_intro);
     }
     void this.searchPartners();
   }
@@ -441,6 +506,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
+    this.hasAudioIntroOnly.set(false);
+    this.selectedInterests.set('');
+    this.showAllInterests.set(false);
     void this.searchPartners();
   }
 

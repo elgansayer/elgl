@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
@@ -11,10 +12,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('StudyBuddiesRateLimiterGuard', () => {
   let guard: StudyBuddiesRateLimiterGuard;
-  let redisMock: { incr: jest.Mock; expire: jest.Mock; ttl: jest.Mock };
-  let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient'>>;
-  let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
-  let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let redisMock: { incr: Mock; expire: Mock; ttl: Mock };
+  let supabaseService: Mocked<Pick<SupabaseService, 'getRedisClient'>>;
+  let reflector: Mocked<Pick<Reflector, 'get'>>;
+  let logger: Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -28,8 +29,8 @@ describe('StudyBuddiesRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
-        getNext: jest.fn(),
+        getResponse: vi.fn(),
+        getNext: vi.fn(),
       }),
       getType: () => 'http',
     } as unknown as ExecutionContext;
@@ -37,22 +38,22 @@ describe('StudyBuddiesRateLimiterGuard', () => {
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      ttl: jest.fn().mockResolvedValue(60),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      ttl: vi.fn().mockResolvedValue(60),
     };
 
     supabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
 
     reflector = {
-      get: jest.fn().mockReturnValue(undefined),
+      get: vi.fn().mockReturnValue(undefined),
     };
 
     logger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     guard = new StudyBuddiesRateLimiterGuard(
@@ -68,7 +69,6 @@ describe('StudyBuddiesRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('allows the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = function () {};
       class TestController {}
       const ctx = createMockExecutionContext('user-1', handler, TestController);
@@ -80,17 +80,20 @@ describe('StudyBuddiesRateLimiterGuard', () => {
 
   describe('when the user is not authenticated', () => {
     it('allows the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = function () {};
       class TestController {}
 
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === MATCHMAKING_RATE_LIMIT_KEY)
           return { maxRequests: 5, windowSeconds: 60 };
         return undefined;
       });
 
-      const ctx = createMockExecutionContext(undefined, handler, TestController);
+      const ctx = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(ctx);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -103,12 +106,11 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async function () {};
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === MATCHMAKING_RATE_LIMIT_KEY) return options;
         return undefined;
       });
@@ -146,7 +148,8 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       await expect(guard.canActivate(ctx)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(ctx)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        message: 'Too many matchmaking requests. Please wait before trying again.',
+        message:
+          'Too many matchmaking requests. Please wait before trying again.',
       });
     });
 
@@ -189,12 +192,11 @@ describe('StudyBuddiesRateLimiterGuard', () => {
   });
 
   describe('Redis error handling', () => {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async function () {};
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === MATCHMAKING_RATE_LIMIT_KEY)
           return { maxRequests: 5, windowSeconds: 60 };
         return undefined;
@@ -225,18 +227,13 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,
         'testMethod',
       );
-      MatchmakingRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      MatchmakingRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         MATCHMAKING_RATE_LIMIT_KEY,

@@ -1,35 +1,35 @@
 <div
-  class="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#121212] ps-3 pe-3 sm:ps-4 sm:pe-4 pt-10 sm:pt-12 pb-6 sm:pb-8"
+  class="fixed inset-0 z-50 flex flex-col items-center justify-between bg-surface-900 text-white ps-3 pe-3 sm:ps-4 sm:pe-4 pt-10 sm:pt-12 pb-6 sm:pb-8"
 >
   <!-- Top section: caller info -->
   <div class="flex flex-col items-center">
     @if (callerAvatar()) {
-      <img loading="lazy"
+      <img
         [src]="callerAvatar()"
         alt=""
         class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover mb-3 sm:mb-4"
       />
     }
     <h2 class="text-lg sm:text-xl font-semibold text-white mb-1">{{ callerName() }}</h2>
-    <p class="text-xs sm:text-sm text-gray-400">{{ 'voip.connecting' | t }}</p>
+    <p class="text-xs sm:text-sm text-white/60">{{ 'voip.connecting' | t }}</p>
   </div>
 
   <!-- Bottom controls -->
   <div class="flex items-center justify-center gap-x-4 sm:gap-x-8 w-full flex-wrap gap-y-4">
-
     <!-- Mute / Unmute button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-gray-800 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
+        hlmBtn
+        class="flex flex-col items-center bg-white/20 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleMute()"
-        [class.bg-red-800]="isMuted()"
+        [class.bg-danger]="isMuted()"
         [attr.aria-label]="(isMuted() ? 'voip.unmute' : 'voip.mute') | t"
       >
         <span class="text-white text-xl sm:text-2xl">
           {{ isMuted() ? '🔇' : '🎤' }}
         </span>
       </button>
-      <span class="text-[10px] sm:text-xs text-gray-300 mt-1.5 sm:mt-2">
+      <span class="text-[10px] sm:text-xs text-white/60 mt-1.5 sm:mt-2">
         {{ (isMuted() ? 'voip.unmute' : 'voip.mute') | t }}
       </span>
     </div>
@@ -37,16 +37,17 @@
     <!-- Speakerphone button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-gray-800 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
+        hlmBtn
+        class="flex flex-col items-center bg-white/20 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleSpeaker()"
-        [class.bg-blue-800]="isSpeakerphone()"
+        [class.bg-secondary]="isSpeakerphone()"
         [attr.aria-label]="(isSpeakerphone() ? 'voip.speaker_off' : 'voip.speaker_on') | t"
       >
         <span class="text-white text-xl sm:text-2xl">
           {{ isSpeakerphone() ? '🔊' : '🔉' }}
         </span>
       </button>
-      <span class="text-[10px] sm:text-xs text-gray-300 mt-1.5 sm:mt-2">
+      <span class="text-[10px] sm:text-xs text-white/60 mt-1.5 sm:mt-2">
         {{ (isSpeakerphone() ? 'voip.speaker_off' : 'voip.speaker_on') | t }}
       </span>
     </div>
@@ -54,14 +55,16 @@
     <!-- End call button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-red-700 hover:bg-red-600 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
+        hlmBtn
+        class="flex flex-col items-center bg-danger hover:bg-danger/90 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onEndCall()"
         [attr.aria-label]="'voip.endCall' | t"
       >
         <span class="text-white text-xl sm:text-2xl">📞</span>
       </button>
-      <span class="text-[10px] sm:text-xs text-gray-300 mt-1.5 sm:mt-2">{{ 'voip.endCall' | t }}</span>
+      <span class="text-[10px] sm:text-xs text-white/60 mt-1.5 sm:mt-2">{{
+        'voip.endCall' | t
+      }}</span>
     </div>
-
   </div>
 </div>

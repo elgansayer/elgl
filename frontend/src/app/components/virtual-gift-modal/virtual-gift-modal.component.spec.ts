@@ -29,11 +29,13 @@ class MockI18nService {
   }
 }
 
-function createMockStore(overrides: Partial<{
-  coinsBalance: number;
-  catalog: VirtualGift[];
-  coinPackages: CoinPackage[];
-}> = {}) {
+function createMockStore(
+  overrides: Partial<{
+    coinsBalance: number;
+    catalog: VirtualGift[];
+    coinPackages: CoinPackage[];
+  }> = {},
+) {
   return {
     coinsBalance: signal(overrides.coinsBalance ?? 50),
     catalog: signal(overrides.catalog ?? MOCK_CATALOG),
@@ -123,7 +125,7 @@ describe.skip('VirtualGiftModalComponent', () => {
   });
 
   it('should toggle coin packages view', () => {
-    const buyBtn = fixture.nativeElement.querySelector('.bg-amber-500');
+    const buyBtn = fixture.nativeElement.querySelector('.bg-vip');
     buyBtn.click();
     fixture.detectChanges();
 

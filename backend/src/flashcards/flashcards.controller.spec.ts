@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
 import { User } from '@supabase/supabase-js';
@@ -42,22 +43,22 @@ function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
 
 function mockResponse(): Partial<Response> {
   return {
-    header: jest.fn(),
+    header: vi.fn(),
   };
 }
 
 describe('FlashcardsController', () => {
   let controller: FlashcardsController;
-  let flashcardsService: jest.Mocked<Partial<FlashcardsService>>;
+  let flashcardsService: Mocked<Partial<FlashcardsService>>;
 
   beforeEach(async () => {
     flashcardsService = {
-      getHealthStatus: jest.fn(),
-      createOrUpdateFlashcard: jest.fn(),
-      updateSrsLevel: jest.fn(),
-      getFlashcards: jest.fn(),
-      getDueReviews: jest.fn(),
-      purgeSrsCache: jest.fn(),
+      getHealthStatus: vi.fn(),
+      createOrUpdateFlashcard: vi.fn(),
+      updateSrsLevel: vi.fn(),
+      getFlashcards: vi.fn(),
+      getDueReviews: vi.fn(),
+      purgeSrsCache: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -70,16 +71,16 @@ describe('FlashcardsController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(SrsRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<FlashcardsController>(FlashcardsController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -95,7 +96,7 @@ describe('FlashcardsController', () => {
         lastSuccessfulSync: null,
         cacheStats: { cachedFlashcardCount: 0, pendingSyncCount: 0 },
       };
-      flashcardsService.getHealthStatus = jest.fn().mockReturnValue(health);
+      flashcardsService.getHealthStatus = vi.fn().mockReturnValue(health);
 
       const result = controller.getHealth();
       expect(result).toEqual(health);
@@ -123,7 +124,7 @@ describe('FlashcardsController', () => {
         word_token: 'bonjour',
         translation: 'hello',
       });
-      flashcardsService.createOrUpdateFlashcard = jest
+      flashcardsService.createOrUpdateFlashcard = vi
         .fn()
         .mockResolvedValue(card);
 
@@ -147,7 +148,7 @@ describe('FlashcardsController', () => {
         translation: 'test',
       };
       const degradedCard = mockFlashcard({ degraded: true });
-      flashcardsService.createOrUpdateFlashcard = jest
+      flashcardsService.createOrUpdateFlashcard = vi
         .fn()
         .mockResolvedValue(degradedCard);
 
@@ -168,7 +169,7 @@ describe('FlashcardsController', () => {
     it('should call service updateSrsLevel when user is provided', async () => {
       const dto: UpdateSrsDto = { quality: 4 };
       const card = mockFlashcard({ id: 'card-1', srs_level: 2 });
-      flashcardsService.updateSrsLevel = jest.fn().mockResolvedValue(card);
+      flashcardsService.updateSrsLevel = vi.fn().mockResolvedValue(card);
 
       const res = mockResponse();
       const result = await controller.updateSrs(
@@ -188,7 +189,7 @@ describe('FlashcardsController', () => {
     it('should set X-SRS-Degraded header when result is degraded', async () => {
       const dto: UpdateSrsDto = { quality: 3 };
       const degradedCard = mockFlashcard({ id: 'card-1', degraded: true });
-      flashcardsService.updateSrsLevel = jest
+      flashcardsService.updateSrsLevel = vi
         .fn()
         .mockResolvedValue(degradedCard);
 
@@ -208,7 +209,7 @@ describe('FlashcardsController', () => {
 
     it('should call service getFlashcards with query params', async () => {
       const cards: Flashcard[] = [mockFlashcard()];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getFlashcards = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
       const query: QueryFlashcardsDto = { level: 3, limit: 50, offset: 0 };
@@ -231,7 +232,7 @@ describe('FlashcardsController', () => {
         mockFlashcard({ id: 'ok' }),
         mockFlashcard({ id: 'degraded-one', degraded: true }),
       ];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getFlashcards = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
       const query: QueryFlashcardsDto = { limit: 50, offset: 0 };
@@ -250,7 +251,7 @@ describe('FlashcardsController', () => {
 
     it('should call service getDueReviews with query params', async () => {
       const cards: Flashcard[] = [mockFlashcard({ id: 'card-due' })];
-      flashcardsService.getDueReviews = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getDueReviews = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
       const query: QueryDueReviewsDto = { limit: 20, offset: 0 };
