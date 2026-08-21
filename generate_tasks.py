@@ -140,7 +140,7 @@ for title, body in tasks_to_create.items():
     print(f"Creating issue: {title}")
     try:
         subprocess.run(
-            ["gh", "issue", "create", "--title", title, "--body", body, "--label", "swarm-active"],
+            ["gh", "issue", "create", "--title", title, "--body", body, "--label", "factory-active"],
             check=True
         )
     except Exception as e:

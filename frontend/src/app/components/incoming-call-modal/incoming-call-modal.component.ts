@@ -82,7 +82,8 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           <!-- Action Buttons -->
           <div class="flex justify-center gap-4 sm:gap-6">
             <!-- Decline Button -->
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="onDecline()"
               class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.decline' | t"
@@ -110,7 +111,8 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             </button>
 
             <!-- Accept Button -->
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="onAccept()"
               class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.accept' | t"

@@ -23,7 +23,8 @@ import { FormsModule } from '@angular/forms';
         }
       </div>
       <div class="border-t p-4">
-        <input hlmInput
+        <input
+          hlmInput
           type="text"
           [ngModel]="newMessageText"
           (ngModelChange)="onMessageTextChange($event)"

@@ -8,7 +8,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-report-button',
   imports: [HlmButton, TranslatePipe],
   template: `
-    <button hlmBtn
+    <button
+      hlmBtn
       type="button"
       (click)="openReportModal()"
       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg

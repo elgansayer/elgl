@@ -17,7 +17,14 @@ interface TabDefinition {
 
 @Component({
   selector: 'app-favourites',
-  imports: [HlmButton, CommonModule, VisualDiffComponent, TranslatePipe, AppCardComponent, AppChipComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    VisualDiffComponent,
+    TranslatePipe,
+    AppCardComponent,
+    AppChipComponent,
+  ],
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
 })

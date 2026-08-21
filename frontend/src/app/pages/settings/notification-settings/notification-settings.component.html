@@ -48,7 +48,8 @@
         </div>
         @for (ch of channels; track ch) {
           <div class="w-16 flex justify-center">
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               role="switch"
               [attr.aria-checked]="toggleValue(cat.key, ch)"

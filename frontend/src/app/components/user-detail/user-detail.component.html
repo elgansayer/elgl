@@ -3,7 +3,8 @@
     class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
   >
     <div class="flex items-center gap-4">
-      <button hlmBtn
+      <button
+        hlmBtn
         aria-label="Go back"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
@@ -49,7 +50,8 @@
             <app-report-button [userId]="profile()!.id" />
           }
 
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="toggleLike()"
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
             [class.text-neon-pink]="isLiked()"
@@ -59,7 +61,8 @@
             {{ isLiked() ? '❤️' : '🤍' }}
           </button>
 
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="toggleFollow()"
             class="h-10 px-6 rounded-full font-bold transition-colors"
             [class.bg-neon-blue]="!isFollowing()"
@@ -122,18 +125,33 @@
           {{ displayBio || ('discovery.partnerBioFallback' | t) }}
         </p>
         @if (profile()?.bio_text) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="mt-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+            [disabled]="isTranslating()"
+            [attr.aria-busy]="isTranslating() ? 'true' : null"
+            [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
             (click)="toggleTranslation()"
           >
             {{ translationLabelKey | t }}
           </button>
+          @if (translationErrorKey()) {
+            <p
+              [id]="translationStatusId()"
+              class="mt-2 text-xs text-danger"
+              role="status"
+              aria-live="polite"
+            >
+              {{ translationErrorKey() | t }}
+            </p>
+          }
         }
 
         @if (profile()?.audio_intro_url) {
           <div class="mt-4 pt-4 border-t border-surface-100">
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="playAudioIntro(profile()?.audio_intro_url)"
               class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
               [attr.aria-label]="'profile.playAudioIntro' | t"

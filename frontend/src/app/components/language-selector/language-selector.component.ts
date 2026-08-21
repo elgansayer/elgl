@@ -18,7 +18,7 @@ export class LanguageSelectorComponent {
 
   readonly currentLanguage = computed<LanguageInfo>(() => {
     const code = this.currentLang();
-    const match = this.i18n.availableLanguages.find(l => l.code === code);
+    const match = this.i18n.availableLanguages.find((l) => l.code === code);
     if (match) return match;
     return { code, name: code, nativeName: code, flag: '🌐', isRtl: false };
   });
@@ -27,14 +27,14 @@ export class LanguageSelectorComponent {
     const query = this.searchQuery().trim().toLowerCase();
     const langs = this.i18n.availableLanguages;
     if (!query) return langs;
-    return langs.filter(lang => {
+    return langs.filter((lang) => {
       const haystack = `${lang.name} ${lang.nativeName} ${lang.code}`.toLowerCase();
       return haystack.includes(query);
     });
   });
 
   toggle(): void {
-    this.isOpen.update(open => !open);
+    this.isOpen.update((open) => !open);
   }
 
   selectLanguage(code: string): void {

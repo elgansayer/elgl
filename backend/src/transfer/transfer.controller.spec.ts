@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransferController } from './transfer.controller';
 import { TransferService } from './transfer.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('TransferController', () => {
   let controller: TransferController;

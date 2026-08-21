@@ -37,14 +37,14 @@ async function bootstrap() {
   );
 
   const frontendUrl = process.env.FRONTEND_URL;
-  if (process.env.NODE_ENV === 'production' && !frontendUrl) {
+  if (!frontendUrl) {
     throw new Error(
-      'FRONTEND_URL must be configured in production for secure CORS',
+      'FRONTEND_URL must be configured in all environments for secure CORS',
     );
   }
 
   app.enableCors({
-    origin: frontendUrl || 'http://localhost:4200',
+    origin: frontendUrl,
     credentials: true,
   });
   app.useGlobalPipes(

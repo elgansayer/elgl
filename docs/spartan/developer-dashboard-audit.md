@@ -43,33 +43,33 @@ The component has no component-owned navigation after it is loaded. The consumer
 
 ## Existing primitive inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Action |
-| --- | --- | --- | --- | --- |
-| Tier banner surface | Semantic Relay token utilities | Store plus template | Relay / feature composition | Preserve |
-| Developer upgrade action | `<button hlmBtn>` | Feature orchestration plus `EconomyStore` | Spartan Helm Button plus feature action | Preserve primitive; add pending protection if required |
-| Consumer upgrade action | `<button hlmBtn>` | Feature orchestration plus `EconomyStore` | Spartan Helm Button plus feature action | Preserve primitive; add pending protection if required |
-| Sandbox navigation | Four `<button hlmBtn>` controls with `activeTab` checks | Component signal | Spartan Tabs behaviour plus Relay styling | Migrate semantics and keyboard behaviour |
-| Overview card surfaces | `app-card` | Relay | Relay | Preserve |
-| Generate API key action | `app-button-primary` | Feature plus `EconomyStore` | Relay button wrapper plus feature action | Preserve |
-| API-key status | `<code>`, `app-chip`, empty-state utility | Store | Native text plus Relay presentation | Preserve; review sensitive-value exposure |
-| Telemetry statistics | `app-card` and semantic token utilities | Store | Relay | Preserve |
-| Latitude input | `app-input` with native label | Component signal | Relay Input wrapper | Preserve |
-| Longitude input | `app-input` with native label | Component signal | Relay Input wrapper | Preserve |
-| Radius control | Native `input[type=range]` | Component signal | Native range unless approved Slider capability is verified | Preserve semantics; do not invent a new dependency |
-| VIP location spoof control | `hlm-checkbox` inside native label | Component signal | Spartan Helm Checkbox plus feature state | Preserve |
-| Execute PostGIS search | `app-button-primary` | Component plus `DiscoveryService` | Relay button wrapper plus feature action | Preserve; fix state-dependent accessible name |
-| Search results | Native repeated content, `app-chip`, Relay token utilities | Component signal | Relay / feature composition | Preserve |
-| Search empty state | `app-empty-state` utility | Component signal | Relay empty-state presentation | Preserve but distinguish untouched from searched-empty |
-| Centrifugo status | `app-chip` | `CentrifugeService` | Relay chip | Preserve |
-| Centrifugo connect/disconnect | `app-button-secondary` | `CentrifugeService` | Relay button wrapper plus service action | Preserve; fix state-dependent accessible name |
-| Redis fan-out simulation | `app-button-primary` | Feature action plus diagnostic store | Relay button wrapper plus feature action | Preserve |
-| LiveKit role status | Text plus Relay token utilities | Component signals | Relay / feature composition | Preserve |
-| Raise-hand simulation | `app-button-primary` | Component signals | Relay button wrapper plus feature action | Preserve |
-| Demote simulation | `app-button-secondary` | Component signals | Relay button wrapper plus feature action | Preserve |
-| Recording status | `app-chip` | Component signal | Relay chip | Preserve |
-| Recording toggle | `app-button-primary` | Component signal plus diagnostic store | Relay button wrapper plus feature action | Preserve; fix state-dependent accessible name |
-| Diagnostic log list | Native repeated content plus Relay token utilities | `EconomyStore` | Relay / feature composition | Preserve |
-| Diagnostic empty state | `app-empty-state` utility | `EconomyStore` | Relay empty-state presentation | Preserve |
+| Element / behaviour           | Current implementation                                     | State owner                               | Target owner                                               | Action                                                 |
+| ----------------------------- | ---------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------ |
+| Tier banner surface           | Semantic Relay token utilities                             | Store plus template                       | Relay / feature composition                                | Preserve                                               |
+| Developer upgrade action      | `<button hlmBtn>`                                          | Feature orchestration plus `EconomyStore` | Spartan Helm Button plus feature action                    | Preserve primitive; add pending protection if required |
+| Consumer upgrade action       | `<button hlmBtn>`                                          | Feature orchestration plus `EconomyStore` | Spartan Helm Button plus feature action                    | Preserve primitive; add pending protection if required |
+| Sandbox navigation            | Four `<button hlmBtn>` controls with `activeTab` checks    | Component signal                          | Spartan Tabs behaviour plus Relay styling                  | Migrate semantics and keyboard behaviour               |
+| Overview card surfaces        | `app-card`                                                 | Relay                                     | Relay                                                      | Preserve                                               |
+| Generate API key action       | `app-button-primary`                                       | Feature plus `EconomyStore`               | Relay button wrapper plus feature action                   | Preserve                                               |
+| API-key status                | `<code>`, `app-chip`, empty-state utility                  | Store                                     | Native text plus Relay presentation                        | Preserve; review sensitive-value exposure              |
+| Telemetry statistics          | `app-card` and semantic token utilities                    | Store                                     | Relay                                                      | Preserve                                               |
+| Latitude input                | `app-input` with native label                              | Component signal                          | Relay Input wrapper                                        | Preserve                                               |
+| Longitude input               | `app-input` with native label                              | Component signal                          | Relay Input wrapper                                        | Preserve                                               |
+| Radius control                | Native `input[type=range]`                                 | Component signal                          | Native range unless approved Slider capability is verified | Preserve semantics; do not invent a new dependency     |
+| VIP location spoof control    | `hlm-checkbox` inside native label                         | Component signal                          | Spartan Helm Checkbox plus feature state                   | Preserve                                               |
+| Execute PostGIS search        | `app-button-primary`                                       | Component plus `DiscoveryService`         | Relay button wrapper plus feature action                   | Preserve; fix state-dependent accessible name          |
+| Search results                | Native repeated content, `app-chip`, Relay token utilities | Component signal                          | Relay / feature composition                                | Preserve                                               |
+| Search empty state            | `app-empty-state` utility                                  | Component signal                          | Relay empty-state presentation                             | Preserve but distinguish untouched from searched-empty |
+| Centrifugo status             | `app-chip`                                                 | `CentrifugeService`                       | Relay chip                                                 | Preserve                                               |
+| Centrifugo connect/disconnect | `app-button-secondary`                                     | `CentrifugeService`                       | Relay button wrapper plus service action                   | Preserve; fix state-dependent accessible name          |
+| Redis fan-out simulation      | `app-button-primary`                                       | Feature action plus diagnostic store      | Relay button wrapper plus feature action                   | Preserve                                               |
+| LiveKit role status           | Text plus Relay token utilities                            | Component signals                         | Relay / feature composition                                | Preserve                                               |
+| Raise-hand simulation         | `app-button-primary`                                       | Component signals                         | Relay button wrapper plus feature action                   | Preserve                                               |
+| Demote simulation             | `app-button-secondary`                                     | Component signals                         | Relay button wrapper plus feature action                   | Preserve                                               |
+| Recording status              | `app-chip`                                                 | Component signal                          | Relay chip                                                 | Preserve                                               |
+| Recording toggle              | `app-button-primary`                                       | Component signal plus diagnostic store    | Relay button wrapper plus feature action                   | Preserve; fix state-dependent accessible name          |
+| Diagnostic log list           | Native repeated content plus Relay token utilities         | `EconomyStore`                            | Relay / feature composition                                | Preserve                                               |
+| Diagnostic empty state        | `app-empty-state` utility                                  | `EconomyStore`                            | Relay empty-state presentation                             | Preserve                                               |
 
 ## Spartan ownership decision
 
@@ -294,17 +294,17 @@ A visual-preview change is required only if the shared mapped visual contract ch
 
 ## Side-effect and contract map
 
-| Action | Current side effect | Contract to preserve |
-| --- | --- | --- |
-| Upgrade developer | Diagnostic log, then `EconomyStore.upgradeVip('developer')` | Verified checkout hand-off; no optimistic VIP mutation |
-| Upgrade consumer | Diagnostic log, then `EconomyStore.upgradeVip('consumer')` | Same checkout boundary |
-| Generate key | `EconomyStore.generateApiKey()`, then success log | Store remains API-key owner |
-| Execute PostGIS | Diagnostic log, `DiscoveryService.findPartners(params)`, results signal, success/warn log | Existing request shape and error boundary |
-| Toggle Centrifugo | `connect()` or `disconnect()`, then diagnostic log | `CentrifugeService` remains connection owner |
-| Simulate Redis fan-out | Diagnostic log only | Keep local simulation semantics |
-| Raise hand | Local role/publish signals, diagnostic log | Keep simulation local |
-| Demote | Local role/publish signals, diagnostic log | Keep simulation local |
-| Toggle recording | Local recording signal, diagnostic log | Keep simulation local |
+| Action                 | Current side effect                                                                       | Contract to preserve                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Upgrade developer      | Diagnostic log, then `EconomyStore.upgradeVip('developer')`                               | Verified checkout hand-off; no optimistic VIP mutation |
+| Upgrade consumer       | Diagnostic log, then `EconomyStore.upgradeVip('consumer')`                                | Same checkout boundary                                 |
+| Generate key           | `EconomyStore.generateApiKey()`, then success log                                         | Store remains API-key owner                            |
+| Execute PostGIS        | Diagnostic log, `DiscoveryService.findPartners(params)`, results signal, success/warn log | Existing request shape and error boundary              |
+| Toggle Centrifugo      | `connect()` or `disconnect()`, then diagnostic log                                        | `CentrifugeService` remains connection owner           |
+| Simulate Redis fan-out | Diagnostic log only                                                                       | Keep local simulation semantics                        |
+| Raise hand             | Local role/publish signals, diagnostic log                                                | Keep simulation local                                  |
+| Demote                 | Local role/publish signals, diagnostic log                                                | Keep simulation local                                  |
+| Toggle recording       | Local recording signal, diagnostic log                                                    | Keep simulation local                                  |
 
 There are no component-owned Router calls, dialogs, external navigation links or product analytics events to preserve.
 

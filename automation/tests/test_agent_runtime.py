@@ -708,7 +708,7 @@ def test_unclassified_provider_failure_is_normalised_and_falls_back(tmp_path: Pa
     assert job.provider_history[0]["failure_classification"] == "invalid_agent_output"
 
 
-def test_phase_policy_keeps_emergency_provider_last_and_rotates_repairs() -> None:
+def test_phase_policy_rotates_a_just_failed_provider_to_the_end() -> None:
     config = AgentsConfig()
     config.providers["opencode"].enabled = True
     job = Job(Task("42", "Policy", "", "github-issue", 0))
@@ -731,7 +731,7 @@ def test_phase_policy_keeps_emergency_provider_last_and_rotates_repairs() -> Non
     )
 
     assert candidates[0] == "claude"
-    assert candidates[-2:] == ["codex", "openhands"]
+    assert candidates[-2:] == ["pi", "codex"]
 
 
 def test_review_exclusion_prefers_independent_provider(tmp_path: Path) -> None:
@@ -793,9 +793,40 @@ def test_router_records_phase_metrics_for_fallback(tmp_path: Path) -> None:
     assert isinstance(providers, list)
     by_provider = {entry["provider"]: entry for entry in providers}
     assert by_provider["first"]["rate_limits"] == 1
+    assert by_provider["first"]["failure_counts"] == {"provider_rate_limit": 1}
     assert by_provider["first"]["phase"] == "implementation"
     assert by_provider["second"]["successes"] == 1
     assert by_provider["second"]["fallbacks"] == 1
+    assert by_provider["second"]["failure_counts"] == {}
+
+
+def test_metrics_restore_legacy_records_without_failure_counts(tmp_path: Path) -> None:
+    path = tmp_path / "metrics.json"
+    path.write_text(
+        json.dumps(
+            {
+                "providers": [
+                    {
+                        "provider": "codex",
+                        "model": "legacy-model",
+                        "phase": "implementation",
+                        "calls": 3,
+                        "successes": 1,
+                        "failures": 2,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    providers = MetricsStore(path).snapshot()["providers"]
+
+    assert isinstance(providers, list)
+    assert providers[0]["calls"] == 3
+    assert providers[0]["successes"] == 1
+    assert providers[0]["failures"] == 2
+    assert providers[0]["failure_counts"] == {}
 
 
 def test_capacity_store_discards_malformed_and_expired_entries(tmp_path: Path) -> None:

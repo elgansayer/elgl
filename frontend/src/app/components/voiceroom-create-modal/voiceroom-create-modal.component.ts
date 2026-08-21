@@ -116,11 +116,7 @@ interface SelectOption {
             for="isVideoStream"
             class="flex items-center gap-3 text-sm font-medium text-text-secondary"
           >
-            <hlm-checkbox
-              inputId="isVideoStream"
-              [(ngModel)]="isVideoStream"
-              class="h-4 w-4"
-            />
+            <hlm-checkbox inputId="isVideoStream" [(ngModel)]="isVideoStream" class="h-4 w-4" />
             {{ 'audioRoom.videoStreamLabel' | t }}
           </label>
         </div>

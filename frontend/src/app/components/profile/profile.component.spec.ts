@@ -44,7 +44,9 @@ describe('ProfileComponent', () => {
     mockUserService = {
       getMyProfile: vi.fn().mockResolvedValue(makeProfile()),
       getMyVisitors: vi.fn().mockResolvedValue([]),
-      updateMyProfile: vi.fn().mockImplementation((partial) => Promise.resolve(makeProfile(partial))),
+      updateMyProfile: vi
+        .fn()
+        .mockImplementation((partial) => Promise.resolve(makeProfile(partial))),
       updatePrivacySettings: vi.fn().mockResolvedValue(makeProfile()),
     };
 

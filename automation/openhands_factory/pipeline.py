@@ -119,6 +119,7 @@ class FactoryPipeline:
             GoogleAgentProvider,
             OpenCodeProvider,
             OpenHandsProvider,
+            PiProvider,
         )
         from openhands_factory.agents.base import AgentProvider
         from openhands_factory.provider_capacity import (
@@ -139,6 +140,7 @@ class FactoryPipeline:
         google = config.agents.providers["google"]
         opencode = config.agents.providers["opencode"]
         openhands = config.agents.providers["openhands"]
+        pi = config.agents.providers["pi"]
 
         providers: list[AgentProvider] = [
             ClaudeCodeProvider(
@@ -190,6 +192,17 @@ class FactoryPipeline:
                 self.conversations,
                 openhands_runtime_config,
                 enabled=openhands.enabled,
+            ),
+            PiProvider(
+                enabled=pi.enabled,
+                command=pi.command,
+                wrapper_command=pi.wrapper_command,
+                model=pi.model,
+                phase_models=pi.phase_models,
+                extra_args=pi.extra_args,
+                max_turns=pi.max_turns,
+                credential_paths=pi.credential_paths,
+                runtime_paths=pi.runtime_paths,
             ),
         ]
         provider_limits = {
@@ -244,6 +257,7 @@ class FactoryPipeline:
             metrics_store=MetricsStore(config.state_dir / "metrics.json"),
         )
         self.labels_ready = False
+        self.active_label_reconciliation_pending = True
         self.verification_slots = verification_slots
 
     def _workflow(
@@ -264,7 +278,10 @@ class FactoryPipeline:
     def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
         if not self.labels_ready:
             self.github.ensure_factory_labels()
+            self._reconcile_quarantine_labels()
             self.labels_ready = True
+        if self.active_label_reconciliation_pending:
+            self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
@@ -316,6 +333,64 @@ class FactoryPipeline:
             retired_jobs.append(job)
         self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
+
+    def _reconcile_quarantine_labels(self) -> None:
+        """Clear GitHub quarantine labels no longer backed by durable state.
+
+        Bounded recovery changes a due job back to ``DISCOVERED`` before the next
+        GitHub refresh. Discovery deliberately excludes ``factory-quarantined`` and
+        ``needs-human``, so an interrupted or older recovery can otherwise hide the
+        job forever. Durable state is authoritative. Label cleanup is idempotent and
+        intentionally silent because routine circuit recovery is control-plane noise.
+        """
+
+        durable_quarantined = {
+            int(task_id)
+            for task_id, job in self.jobs.load().items()
+            if task_id.isdigit() and job.state is JobState.QUARANTINED
+        }
+        labelled_quarantined = set(self.github.list_quarantined_issues())
+        stale_labels = sorted(labelled_quarantined - durable_quarantined)
+        if not stale_labels:
+            return
+        cleared = self.github.requeue_quarantined_issues(stale_labels, announce=False)
+        LOGGER.warning(
+            "Reconciled stale Factory quarantine labels for tasks: %s",
+            ",".join(str(issue) for issue in cleared),
+        )
+
+    def request_label_reconciliation(self) -> None:
+        """Request one control-label reconciliation before the next discovery read."""
+
+        self.labels_ready = False
+        self.active_label_reconciliation_pending = True
+
+    def _reconcile_active_labels(self, protected_task_ids: set[str]) -> None:
+        """Repair one bounded batch of stale Factory ownership markers."""
+
+        jobs = self.jobs.load()
+        protected_numeric = {int(task_id) for task_id in protected_task_ids if task_id.isdigit()}
+        durable_active = protected_numeric | {
+            int(task_id)
+            for task_id, job in jobs.items()
+            if task_id.isdigit()
+            and job.task.source == "github-issue"
+            and (job.state not in {JobState.DISCOVERED, JobState.DONE, JobState.QUARANTINED})
+        }
+        labelled_active = set(self.github.list_active_issues())
+        stale_labels = sorted(labelled_active - durable_active)
+        batch = stale_labels[: self.config.label_reconciliation_batch_size]
+        if not batch:
+            self.active_label_reconciliation_pending = False
+            return
+
+        released = self.github.release_active_issues(batch)
+        self.active_label_reconciliation_pending = len(stale_labels) > len(released)
+        LOGGER.warning(
+            "Reconciled %d stale Factory ownership labels; %d remain in the current snapshot",
+            len(released),
+            max(len(stale_labels) - len(released), 0),
+        )
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
@@ -855,7 +930,9 @@ class FactoryPipeline:
                     "OpenHands factory confirmed that GitHub merged this pull request.",
                 )
             if job.task.source == "github-issue":
-                self.github.close_issue(int(job.task.identifier))
+                issue = int(job.task.identifier)
+                self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
+                self.github.close_issue(issue)
             self._workflow(self.config.repository).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE

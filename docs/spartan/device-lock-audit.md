@@ -35,21 +35,21 @@ The component has no inputs or outputs and owns no persistent state of its own.
 
 ## Existing implementation inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Audit action |
-| --- | --- | --- | --- | --- |
-| Page shell | `div` with centered flex layout | Feature surface | Relay / app composition | Keep layout role, retoken visual roles |
-| Heading | translated `h1` | Feature content | Native semantics + Relay typography | Keep |
-| Supporting copy | translated `p` | Feature content | Native semantics + Relay text role | Keep, replace white alpha styling |
-| Unlock control | native `button` + `hlmBtn` + `size="touch"` | Spartan Button | Spartan Helm Button | Keep |
-| Unlock activation | `(click)="unlock()"` | Feature component | Feature behaviour | Keep |
-| Biometric assertion | `AppLockService.unlock()` | AppLockService | Service boundary | Keep outside UI primitives |
-| Successful redirect | `router.navigate(['/home'])` | Feature component | Angular Router / route contract | Preserve |
-| Failed or cancelled unlock | no visible state change | AppLockService returns `false` | Feature feedback composition | Gap to address deliberately |
-| Page background | `bg-surface-900` | Feature styling | Relay semantic surface | Replace dark-only assumption |
-| Primary text | `text-white` | Feature styling | Relay semantic text token | Replace |
-| Secondary text | `text-white/60` | Feature styling | Relay semantic text token | Replace |
-| Width constraint | `max-w-sm` | Feature layout | Relay / app composition | Keep if validated at zoom |
-| Text alignment | `text-center` | Feature layout | Relay / app composition | Keep, direction-neutral |
+| Element / behaviour        | Current implementation                      | State owner                    | Target owner                        | Audit action                           |
+| -------------------------- | ------------------------------------------- | ------------------------------ | ----------------------------------- | -------------------------------------- |
+| Page shell                 | `div` with centered flex layout             | Feature surface                | Relay / app composition             | Keep layout role, retoken visual roles |
+| Heading                    | translated `h1`                             | Feature content                | Native semantics + Relay typography | Keep                                   |
+| Supporting copy            | translated `p`                              | Feature content                | Native semantics + Relay text role  | Keep, replace white alpha styling      |
+| Unlock control             | native `button` + `hlmBtn` + `size="touch"` | Spartan Button                 | Spartan Helm Button                 | Keep                                   |
+| Unlock activation          | `(click)="unlock()"`                        | Feature component              | Feature behaviour                   | Keep                                   |
+| Biometric assertion        | `AppLockService.unlock()`                   | AppLockService                 | Service boundary                    | Keep outside UI primitives             |
+| Successful redirect        | `router.navigate(['/home'])`                | Feature component              | Angular Router / route contract     | Preserve                               |
+| Failed or cancelled unlock | no visible state change                     | AppLockService returns `false` | Feature feedback composition        | Gap to address deliberately            |
+| Page background            | `bg-surface-900`                            | Feature styling                | Relay semantic surface              | Replace dark-only assumption           |
+| Primary text               | `text-white`                                | Feature styling                | Relay semantic text token           | Replace                                |
+| Secondary text             | `text-white/60`                             | Feature styling                | Relay semantic text token           | Replace                                |
+| Width constraint           | `max-w-sm`                                  | Feature layout                 | Relay / app composition             | Keep if validated at zoom              |
+| Text alignment             | `text-center`                               | Feature layout                 | Relay / app composition             | Keep, direction-neutral                |
 
 ## Spartan ownership
 
@@ -84,16 +84,16 @@ A follow-up visual conversion should prefer the repository's semantic surface an
 
 The visible component currently exposes only two meaningful interaction outcomes, while `AppLockService` contains the underlying lock state.
 
-| State | Trigger | Current user-visible result | Required ownership |
-| --- | --- | --- | --- |
-| Locked idle | `/lock` route renders | Title, message and Unlock button visible | Feature + Relay |
-| Unlock attempt in progress | user activates Unlock | No distinct busy state | Feature should own UI feedback if introduced |
-| Unlock succeeds | `AppLockService.unlock()` resolves `true` | navigate to `/home` | Service + Router |
-| Unlock fails | WebAuthn assertion fails or errors | remains on page with no feedback | Feature feedback gap |
-| Unlock cancelled | platform authenticator flow is cancelled | service returns `false`; no feedback | Feature feedback gap |
-| Unlock times out | WebAuthn request errors/times out | service returns `false`; no feedback | Feature feedback gap |
-| Biometric lock already disabled | service detects disabled state | service returns `true`; navigate to `/home` | Existing service contract |
-| Stored credential missing | service clears stale lock settings | service returns `true`; navigate to `/home` | Existing recovery contract |
+| State                           | Trigger                                   | Current user-visible result                 | Required ownership                           |
+| ------------------------------- | ----------------------------------------- | ------------------------------------------- | -------------------------------------------- |
+| Locked idle                     | `/lock` route renders                     | Title, message and Unlock button visible    | Feature + Relay                              |
+| Unlock attempt in progress      | user activates Unlock                     | No distinct busy state                      | Feature should own UI feedback if introduced |
+| Unlock succeeds                 | `AppLockService.unlock()` resolves `true` | navigate to `/home`                         | Service + Router                             |
+| Unlock fails                    | WebAuthn assertion fails or errors        | remains on page with no feedback            | Feature feedback gap                         |
+| Unlock cancelled                | platform authenticator flow is cancelled  | service returns `false`; no feedback        | Feature feedback gap                         |
+| Unlock times out                | WebAuthn request errors/times out         | service returns `false`; no feedback        | Feature feedback gap                         |
+| Biometric lock already disabled | service detects disabled state            | service returns `true`; navigate to `/home` | Existing service contract                    |
+| Stored credential missing       | service clears stale lock settings        | service returns `true`; navigate to `/home` | Existing recovery contract                   |
 
 ### Busy-state contract
 

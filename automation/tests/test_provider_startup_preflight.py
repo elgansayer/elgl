@@ -24,6 +24,7 @@ def test_online_doctor_warns_when_optional_openai_subscription_smoke_fails(
 
     assert subscription.passed
     assert subscription.warning
+    assert "separate from Codex CLI" in subscription.detail
     assert "subscription unavailable" in subscription.detail
 
 

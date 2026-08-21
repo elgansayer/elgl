@@ -33,6 +33,7 @@ def test_doctor_reports_legacy_openhands_compatibility_mode(
     assert checks["agent-routing"].detail == "OpenHands compatibility mode"
     assert checks["agent:openhands"].passed
     assert "transport=openhands-sdk" in checks["agent:openhands"].detail
+    assert "credential-source=opencode-go-api" in checks["agent:openhands"].detail
 
     for name in ("claude", "codex", "google", "opencode"):
         assert checks[f"agent:{name}"].passed

@@ -24,7 +24,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="titleInput">
               {{ 'events.title' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="titleInput"
               formControlName="title"
               type="text"
@@ -39,7 +40,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="dateTimeInput">
               {{ 'events.dateTime' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="dateTimeInput"
               formControlName="date_time"
               type="datetime-local"
@@ -56,7 +58,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <hlm-native-select
               selectId="langPairInput"
               formControlName="language_pair"
-              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm" selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="">
                 {{ 'events.noLanguagePair' | t }}
@@ -82,7 +85,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <hlm-native-select
               selectId="categoryInput"
               formControlName="category"
-              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm" selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="audio_room">
                 {{ 'events.categoryAudioRoom' | t }}
@@ -104,7 +108,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="locationInput">
               {{ 'events.where' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="locationInput"
               formControlName="location"
               type="text"
@@ -118,7 +123,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="maxParticipantsInput">
               {{ 'events.maxParticipants' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="maxParticipantsInput"
               formControlName="max_participants"
               type="number"
@@ -134,7 +140,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="descriptionInput">
               {{ 'events.description' | t }}
             </label>
-            <textarea hlmTextarea
+            <textarea
+              hlmTextarea
               id="descriptionInput"
               formControlName="description"
               rows="3"
@@ -145,14 +152,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
           <!-- Action buttons -->
           <div class="flex justify-end gap-3">
-            <button hlmBtn
+            <button
+              hlmBtn
               type="button"
               (click)="dismiss.emit()"
               class="rounded-lg bg-surface-400 text-text-primary px-4 py-2 text-sm"
             >
               {{ 'events.cancel' | t }}
             </button>
-            <button hlmBtn
+            <button
+              hlmBtn
               type="submit"
               [disabled]="eventForm.invalid"
               class="rounded-lg bg-accent text-on-fill px-4 py-2 text-sm font-semibold disabled:opacity-50"

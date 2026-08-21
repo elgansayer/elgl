@@ -15,7 +15,8 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-subscription-plans',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     RestorePurchasesButtonComponent,
@@ -35,7 +36,8 @@ import { environment } from '../../../environments/environment';
 
         <div class="flex justify-center mb-8 sm:mb-10">
           <div class="bg-surface-200 rounded-full p-1 inline-flex items-center">
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="billingInterval.set('month')"
               [class]="
                 billingInterval() === 'month'
@@ -46,7 +48,8 @@ import { environment } from '../../../environments/environment';
             >
               {{ 'subscription.plans.monthly' | t }}
             </button>
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="billingInterval.set('year')"
               [class]="
                 billingInterval() === 'year'

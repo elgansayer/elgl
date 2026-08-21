@@ -39,6 +39,16 @@ def pull_request_job(
     return Job(task, state)
 
 
+def factory_pull_request_job(
+    identifier: str,
+    state: JobState = JobState.REVIEWING,
+) -> Job:
+    factory_job = job(identifier, priority=5, state=state)
+    factory_job.pull_request = int(identifier) + 1000
+    factory_job.branch = f"factory/change-{identifier}"
+    return factory_job
+
+
 def test_select_batch_fills_parallel_capacity_by_priority() -> None:
     jobs = {
         "12": job("12", 10),
@@ -77,6 +87,28 @@ def test_select_batch_prioritises_review_with_one_worker() -> None:
     assert [item.task.identifier for item in selected] == ["7348"]
 
 
+def test_select_batch_prioritises_factory_created_pull_request_work() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "594": factory_pull_request_job("594", JobState.QUALITY_REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2)
+
+    assert [item.task.identifier for item in selected] == ["594", "10"]
+
+
+def test_select_batch_prioritises_pr_draft_before_new_implementation() -> None:
+    jobs = {
+        "10": job("10", 0),
+        "594": job("594", 5, JobState.PR_DRAFT),
+    }
+
+    selected = select_batch(jobs, 1)
+
+    assert [item.task.identifier for item in selected] == ["594"]
+
+
 def test_select_batch_admits_only_one_pull_request_lane() -> None:
     jobs = {
         "10": job("10", 5),
@@ -93,6 +125,43 @@ def test_select_batch_respects_zero_capacity() -> None:
     selected = select_batch({"7348": pull_request_job("7348")}, 0)
 
     assert selected == []
+
+
+def test_select_batch_admits_multiple_pull_requests_when_lane_widened() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7348", "10"]
+
+
+def test_select_batch_widened_lane_still_respects_already_active_review_jobs() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "7346": pull_request_job("7346", priority=0, state=JobState.REVIEWING),
+        "7347": pull_request_job("7347", priority=0),
+        "7348": pull_request_job("7348", priority=0),
+    }
+
+    selected = select_batch(jobs, 3, {"7346"}, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "10"]
+
+
+def test_select_batch_prefers_review_jobs_closer_to_merge() -> None:
+    jobs = {
+        "7346": pull_request_job("7346", state=JobState.PR_DRAFT),
+        "7347": pull_request_job("7347", state=JobState.READY_TO_MERGE),
+        "7348": pull_request_job("7348", state=JobState.REPAIRING),
+    }
+
+    selected = select_batch(jobs, 2, review_lane_max_concurrent=2)
+
+    assert [item.task.identifier for item in selected] == ["7347", "7348"]
 
 
 def test_select_batch_does_not_reserve_a_second_review_slot() -> None:
@@ -116,6 +185,18 @@ def test_select_batch_skips_other_pull_requests_while_review_is_active() -> None
     }
 
     selected = select_batch(jobs, 2, {"7347"})
+
+    assert [item.task.identifier for item in selected] == ["10"]
+
+
+def test_select_batch_treats_active_factory_created_pr_as_review_lane() -> None:
+    jobs = {
+        "10": job("10", 5),
+        "594": factory_pull_request_job("594"),
+        "7346": pull_request_job("7346", priority=0),
+    }
+
+    selected = select_batch(jobs, 2, {"594"})
 
     assert [item.task.identifier for item in selected] == ["10"]
 

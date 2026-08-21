@@ -51,18 +51,19 @@ class OpenHandsProvider(AgentProvider):
                 checked_at=datetime.now(UTC),
                 detail="OpenHands health configuration was not supplied",
             )
-        usable = openai_credentials_available(config) or (
-            config.opencode_api_key is not None and config.opencode_model is not None
-        )
+        openai_usable = openai_credentials_available(config)
+        opencode_usable = config.opencode_api_key is not None and config.opencode_model is not None
+        usable = openai_usable or opencode_usable
+        detail = "OpenHands has no authenticated subscription or configured API fallback"
+        if openai_usable:
+            detail = "OpenHands OpenAI OAuth is configured"
+        elif opencode_usable:
+            detail = "OpenHands OpenCode Go API emergency fallback is configured"
         return ProviderHealth(
             provider=self.name,
             status=ProviderStatus.HEALTHY if usable else ProviderStatus.AUTH_REQUIRED,
             checked_at=datetime.now(UTC),
-            detail=(
-                "OpenHands subscription or API fallback is configured"
-                if usable
-                else "OpenHands has no authenticated subscription or configured API fallback"
-            ),
+            detail=detail,
         )
 
     def supports(self, phase: AgentPhase) -> bool:

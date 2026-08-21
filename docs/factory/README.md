@@ -14,7 +14,7 @@ host proves all of the following:
 
 - the dedicated checkout is clean and fast-forwarded to `origin/main`;
 - `hellotalk-factory.service` and `hellotalk-factory-health.timer` are active;
-- every enabled subscription CLI is installed and authenticated as `hellotalk-factory`;
+- every enabled subscription CLI is installed and authenticated as the daemon's operating-system user (`dev`);
 - trusted intake is enabled for this public repository, with every automatic actor explicitly listed;
 - `hellotalk-factory providers check` reports at least one usable provider before an activation canary;
 - `hellotalk-factory doctor --online` passes;
@@ -30,8 +30,8 @@ host proves all of the following:
 - non-paid diagnostics prove configuration, fallback, circuit, structured-output, and stale-SHA behaviour;
 - one deliberately small issue completes issue, implementation, review, CI, merge, and closure end to end.
 
-Do not infer authentication from a developer login. systemd uses `HOME=/var/lib/hellotalk-factory/home`, so each
-CLI session must exist and be readable in that service home.
+The daemon runs as the operator's own login user (`dev`) and systemd sets `HOME=/home/dev`, so it reuses that
+account's already-authenticated CLI sessions directly. There is no separate service-account home to keep in sync.
 
 Temporary exhaustion of every provider does not stop an already configured daemon. `providers check` reports
 `agent-usable` as a warning, the durable queue remains online, and jobs wait for the earliest provider recovery.
@@ -125,6 +125,22 @@ Provider exhaustion does not consume a task attempt. The job remains in its curr
 set from provider cooldown or capacity. Repository, test, task, and policy failures do not trigger blind provider
 rotation. Persisted failure classes and deterministic jittered backoff remain authoritative across restart.
 
+### New-issue admission cadence
+
+Production admits one newly discovered GitHub issue per hour through:
+
+```text
+FACTORY_NEW_ISSUE_INTERVAL_SECONDS=3600
+FACTORY_NEW_ISSUES_PER_INTERVAL=1
+```
+
+This is a durable admission gate, not the daemon polling interval. The admission record survives daemon restarts
+and prevents startup bursts. It applies only while an issue is in `DISCOVERED`; implementation, security review,
+verification, quality repair, PR creation, independent review, CI repair, merge polling, and incoming pull-request
+review continue whenever worker capacity is available. Setting the interval to `0` restores unlimited historical
+admission behaviour. Do not use `FACTORY_COOLDOWN_SECONDS=3600` for this purpose: that value controls source and
+health refresh cadence and would not reliably enforce one newly admitted issue per hour.
+
 All `jobs.json` read-modify-write operations use a cross-process lock, so daemon, doctor, watchdog, and operator
 commands cannot overwrite sibling transitions. Provider provenance is retained as the latest 500 attempts per
 job, preventing one difficult task from growing durable state without bound.
@@ -215,6 +231,33 @@ worker image, verifies systemd, starts the daemon, and runs online diagnostics. 
 credentials are not replaced or printed. It records whether the daemon and watchdog were active before the
 maintenance window. If dependency installation, image construction, or a later deployment step fails, the exit
 trap restores those previously active units so a failed upgrade does not silently leave the Factory down.
+The Python refresh preserves the pinned `uv` bootstrap tool as an intentional extraneous package. If an older
+exact sync removed it, deployment restores the pinned version before continuing and proves it remains executable
+after the refresh. This keeps both startup doctor and isolated repository verification recoverable.
+
+For repeated deployments whose package manifests and worker inputs have not changed, use the verified fast path:
+
+```bash
+sudo scripts/deploy-and-start-factory.sh --use-existing-credentials --fast
+```
+
+Both modes run the startup doctor with the same `HOME` and `PATH` as the systemd service. This is required for
+subscription CLIs installed beneath the operator account and for the deployed `uv` executable. A bare
+`sudo -u dev ... doctor` can inherit sudo's restricted path and falsely report that authenticated providers are
+not installed.
+
+Fast deployment still fetches and fast-forwards `main`, repairs canonical host configuration, refreshes the frozen
+Python environment, installs current systemd files, runs startup preflight, and verifies the live daemon. It skips
+a Node dependency tree only when the package manifests, lockfile, Node/npm toolchain, and npm hidden lock all match
+a deployment-owned fingerprint. Installed package manifests and executable links are also included, so a
+partially removed dependency tree is a cache miss. It skips the worker build only when all tracked `automation/`
+inputs and the rootless Podman image ID match. Cache misses automatically run the normal phase. The first fast
+deployment after installing this feature has no trusted fingerprints, so it performs a full refresh and warms
+the cache.
+
+Deployments are serialised with `/run/lock/hellotalk-factory-deploy.lock`. Maintenance stops and drains both the
+watchdog timer and any active watchdog invocation before stopping the daemon, preventing a watchdog restart from
+overlapping dependency or image replacement.
 
 Because deployment deliberately preserves the operator policy, compare it with the newly deployed model and
 adapter example after every upgrade, then merge reviewed changes explicitly:
@@ -232,25 +275,26 @@ workflow ownership changes.
 
 ## Subscription authentication
 
-Use the service-user environment for every check:
+The daemon runs as the operator's own login user (`dev`), so it reuses that account's normal, already-authenticated
+CLI sessions directly instead of maintaining a separate service-account credential set. Use this environment for
+every check:
 
 ```bash
-FACTORY_HOME=/var/lib/hellotalk-factory/home
-FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
-sudo -u hellotalk-factory env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
+FACTORY_HOME=/home/dev
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" claude auth status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" codex login status
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" opencode auth list
+sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" agy models
 ```
 
-Authenticate each CLI manually once as `hellotalk-factory`. Do not copy another user's home or fixed credential
-directories. Do not place provider tokens in `factory.env` when the adapter is configured for subscription auth.
-Common API-key variables are stripped from direct subscription-provider environments so they cannot silently
-switch to PAYG authentication.
+Authenticate each CLI normally as `dev` - the same login you'd use interactively. Do not place provider tokens in
+`factory.env` when the adapter is configured for subscription auth. Common API-key variables are stripped from
+direct subscription-provider environments so they cannot silently switch to PAYG authentication.
 
 In particular, do not put `OPENCODE_GO_API_KEY` in the repository `.env`. Use `opencode auth login --provider
-opencode-go` as the service user. `auth list` and `models opencode-go` do not prove remaining balance, so classify
-an `insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
+opencode-go` as `dev`. `auth list` and `models opencode-go` do not prove remaining balance, so classify an
+`insufficient balance` canary as quota exhaustion rather than repeating login. Disable the OpenHands operator
 provider when no separate SDK credential exists.
 
 Google Antigravity remains disabled until `agy models`, doctor, and one harmless headless service-user canary all
@@ -274,9 +318,10 @@ sudo scripts/maintain-factory-host-storage.sh
 - `providers check` is the bounded, read-only systemd preflight. It reports enabled state, executable and
   authentication health, transport, selected model, current-generation concurrency, cooldown, aggregate provider
   usability, competing executors, authenticated repository access, and the layered GitHub merge policy. An
-  optional OpenAI OAuth failure is a warning when another configured provider is usable. Detached unrestricted
-  provider processes remain fail-closed competing executors. A provider attached to an operator TTY is treated as
-  an interactive session rather than a second autonomous control plane.
+  optional OpenHands SDK OpenAI OAuth failure is a warning when another configured provider is usable. That OAuth
+  profile is separate from Codex CLI's ChatGPT subscription login. Detached unrestricted provider processes
+  remain fail-closed competing executors. A provider attached to an operator TTY is treated as an interactive
+  session rather than a second autonomous control plane.
 - `doctor --online` checks architecture ownership, state, root and Factory-volume disk reserves, daemon heartbeat,
   rootless worker isolation,
   provider and verification namespaces, providers, absence of persistent service-home GitHub credentials, the
@@ -290,7 +335,7 @@ sudo scripts/maintain-factory-host-storage.sh
   concurrent worker transitions.
 - Isolated verification takes its tool path from the running Factory virtual environment's `sys.prefix`. This
   keeps the pinned `uv` executable available after privilege reduction without exposing host or provider paths.
-- `metrics` prints provider, model, and phase outcomes without transcripts or credentials.
+- `metrics` prints provider, model, phase, and typed failure outcomes without transcripts or credentials.
 - `dashboard show` renders the sanitised GitHub control-panel body without network access.
 - `dashboard sync` creates or refreshes one `factory-status` and `factory-skip` issue, then accepts only exact
   pause, resume, status, or restart comments from the separate `FACTORY_CONTROL_GITHUB_ACTORS` allowlist.
@@ -310,11 +355,11 @@ Repeat harmless version, auth, and model probes after every CLI upgrade.
 ## Rootless Podman checks
 
 The Factory service delegates only its own cgroup beneath the systemd resource cap. A healthy installation needs
-a real systemd user session for `hellotalk-factory`:
+a real systemd user session for `dev`:
 
 ```bash
-sudo loginctl enable-linger hellotalk-factory
-id -u hellotalk-factory
+sudo loginctl enable-linger dev
+id -u dev
 ```
 
 `XDG_RUNTIME_DIR` in the unit must match `/run/user/<uid>`. If nested cgroup controller flags are unavailable,
@@ -325,18 +370,27 @@ blocked.
 
 ## Operator recovery
 
-Run recovery commands as the service user from the installed virtual environment:
+Run recovery commands as the operator user with the same environment used by systemd. Defining this helper in the
+current root shell prevents sudo's secure path from hiding authenticated provider executables:
 
 ```bash
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory dashboard sync --force
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
-sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory backlog requeue-quarantined
+FACTORY_HOME=/home/dev
+FACTORY_PATH="$FACTORY_HOME/.local/bin:$FACTORY_HOME/.opencode/bin:$FACTORY_HOME/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+factory_cli() {
+  sudo -u dev env -i HOME="$FACTORY_HOME" PATH="$FACTORY_PATH" \
+    /opt/hellotalk-factory/venv/bin/hellotalk-factory "$@"
+}
+factory_cli doctor --online
+factory_cli providers check
+factory_cli status
+factory_cli metrics
+factory_cli dashboard sync --force
+factory_cli reconcile
+factory_cli pause
+factory_cli resume
+factory_cli backlog requeue-quarantined
+factory_cli backlog requeue-quarantined --issue 1234
+factory_cli backlog requeue-quarantined --issue 1234 --announce
 ```
 
 If every provider is unavailable, do not delete the job, circuit, lease, or `jobs.json`. Fix service-user auth or
@@ -350,10 +404,20 @@ operator hold.
 
 Provider-side exhaustion remains automatic: it does not increment task attempts or trigger quarantine. When the
 same task-side failure reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory stores a recoverable quarantine and
-adds `factory-quarantined` plus `needs-human` once. Pause the daemon, resolve the deterministic cause, run
-`backlog requeue-quarantined`, then resume. The command reconciles the union of durable quarantine state and
-GitHub labels, so rerunning it safely completes a partially interrupted reset. Historical quarantine entries
-without the current reason marker are migrated into normal retry flow.
+adds `factory-quarantined` plus `needs-human` once. A due circuit re-enters discovery automatically after the
+bounded recovery window. Before discovery, Factory silently clears GitHub quarantine labels that are no longer
+backed by durable quarantine state at startup and whenever a bounded circuit is released, so a partial recovery
+cannot hide the job without adding a high-volume query to every scheduler refresh. To retry sooner, pause the daemon,
+resolve the deterministic cause, run `backlog requeue-quarantined`, then resume. Use repeatable `--issue` options
+for a targeted reset. Recovery is quiet by default; add `--announce` only when a lifecycle comment is useful. The
+command reconciles the union of durable quarantine state and GitHub labels, so rerunning it safely completes a
+partially interrupted reset. Historical quarantine entries without the current reason marker are migrated into
+normal retry flow. Successful merge completion removes `factory-active` before closing the source issue. Existing
+historical `factory-active` and retired `swarm-active` drift is cleaned in batches of
+`FACTORY_LABEL_RECONCILIATION_BATCH_SIZE` per scheduler refresh. Durable active jobs and currently protected
+workers retain ownership. Released issues always regain `factory-ready` because `factory-active` also carried
+trusted-intake authority. The configured batch is validated between 1 and 100. This avoids an unbounded startup
+mutation or GitHub comment burst while converging automatically.
 
 Never restore the old swarm or create a parallel one-off resolver to bypass a red diagnostic.
 

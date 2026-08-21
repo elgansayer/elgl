@@ -44,7 +44,7 @@ export class AppSelectComponent {
   readonly disabled = input<boolean>(false);
   readonly label = input<string>('');
   readonly ariaLabel = input<string>('');
-  readonly selectId = input<string>('app-select-' + Math.random().toString(36).substring(2, 9));
+  readonly selectId = input<string>('app-select-' + crypto.randomUUID());
   readonly customClass = input<string>('');
 
   readonly valueChange = output<string>();

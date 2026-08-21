@@ -22,7 +22,8 @@
 
       <div class="flex flex-col gap-2">
         @if (store.developerStats()?.tier !== 'developer') {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="upgrade('developer')"
             class="rounded-app bg-warning ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-on-fill"
             [attr.aria-label]="'developer.upgradeDevBtn' | t"
@@ -31,7 +32,8 @@
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="upgrade('consumer')"
             class="rounded-app border border-on-fill/30 bg-on-fill/15 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-on-fill"
             [attr.aria-label]="'developer.upgradeConsumerBtn' | t"
@@ -45,7 +47,8 @@
 
   <!-- Interactive Sandbox Navigation Tabs -->
   <nav class="flex flex-wrap gap-2 border-b border-surface-100 pb-2">
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="setTab('overview')"
       [class.bg-primary]="activeTab() === 'overview'"
       [class.text-on-fill]="activeTab() === 'overview'"
@@ -56,7 +59,8 @@
     >
       {{ 'developer.tabOverview' | t }}
     </button>
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="setTab('postgis')"
       [class.bg-primary]="activeTab() === 'postgis'"
       [class.text-on-fill]="activeTab() === 'postgis'"
@@ -67,7 +71,8 @@
     >
       {{ 'developer.tabPostgis' | t }}
     </button>
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="setTab('centrifugo')"
       [class.bg-primary]="activeTab() === 'centrifugo'"
       [class.text-on-fill]="activeTab() === 'centrifugo'"
@@ -78,7 +83,8 @@
     >
       {{ 'developer.tabCentrifugo' | t }}
     </button>
-    <button hlmBtn
+    <button
+      hlmBtn
       (click)="setTab('livekit')"
       [class.bg-primary]="activeTab() === 'livekit'"
       [class.text-on-fill]="activeTab() === 'livekit'"
@@ -398,7 +404,8 @@
           <p class="text-xs text-text-secondary">
             {{ 'developer.recordingDesc' | t }}
           </p>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="toggleRecordingArchive()"
             [class.bg-danger]="!isRecordingActive()"
             [class.text-on-fill]="!isRecordingActive()"

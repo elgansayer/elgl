@@ -14,16 +14,16 @@ conditionals in `FactoryPipeline`.
 
 The production policy reviewed on 2026-08-17 is:
 
-| Phase | Candidate order |
-| --- | --- |
-| Planning | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Architecture | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Implementation | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Phase           | Candidate order                                      |
+| --------------- | ---------------------------------------------------- |
+| Planning        | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Architecture    | Claude, Codex, Google, OpenCode, OpenHands emergency |
+| Implementation  | Claude, Codex, Google, OpenCode, OpenHands emergency |
 | Security review | Claude, Codex, Google, OpenCode, OpenHands emergency |
-| Quality repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| Code review | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| CI repair | Codex, Claude, Google, OpenCode, OpenHands emergency |
-| General action | OpenCode, Google, Codex, Claude, OpenHands emergency |
+| Quality repair  | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| Code review     | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| CI repair       | Codex, Claude, Google, OpenCode, OpenHands emergency |
+| General action  | OpenCode, Google, Codex, Claude, OpenHands emergency |
 
 Disabled, unhealthy, cooling down, unsupported, and busy providers are skipped. Google and OpenCode health
 checks also require every configured phase model to appear in the authenticated account catalogue. Emergency
@@ -32,13 +32,13 @@ subscriptions start instead of waiting for the preferred provider's slot.
 
 ## Model policy as of 2026-08-17
 
-| Provider | Coding default | Reasoning and review override | Policy |
-| --- | --- | --- | --- |
-| Claude Code | `fable` | `fable` | Current most capable generally available Claude coding model and stable CLI alias |
-| Codex CLI | `gpt-5.6-sol` | `gpt-5.6-sol`, `max` effort | Current OpenAI flagship for complex production and coding work |
-| Google agent | `gemini-3.1-pro-high` | same, `high` effort | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue |
-| OpenCode Go | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
-| OpenHands | `gpt-5.6-sol` | same | Emergency compatibility provider only |
+| Provider     | Coding default        | Reasoning and review override                                                                                               | Policy                                                                                                                                                       |
+| ------------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code  | `fable`               | `fable`                                                                                                                     | Current most capable generally available Claude coding model and stable CLI alias                                                                            |
+| Codex CLI    | `gpt-5.6-sol`         | `gpt-5.6-sol`, `max` effort                                                                                                 | Current OpenAI flagship for complex production and coding work                                                                                               |
+| Google agent | `gemini-3.1-pro-high` | same, `high` effort                                                                                                         | Strongest Google-native Pro reasoning tier exposed by the verified Antigravity catalogue                                                                     |
+| OpenCode Go  | `opencode-go/kimi-k3` | `opencode-go/qwen3.8-max` for planning, architecture, security, and review; `opencode-go/kimi-k2.7-code` for general action | Quality-first current catalogue choice for long-horizon coding, a diverse reasoning model for review, and a higher-capacity coding model for mechanical work |
+| OpenHands    | `gpt-5.6-sol`         | same                                                                                                                        | Emergency compatibility provider only                                                                                                                        |
 
 Primary references:
 
@@ -105,21 +105,21 @@ The candidate list is finite and each provider attempt is bounded. There is no i
 
 ## Failure semantics
 
-| Failure | Same-provider retry | Next-provider fallback | Circuit impact |
-| --- | --- | --- | --- |
-| Provider unavailable | no | yes | unavailable cooldown |
-| Authentication required | no | yes | auth cooldown |
-| Rate limit | no | yes | short or reported cooldown |
-| Quota exhausted | no | yes | longer cooldown |
-| Timeout | once by default | yes | timeout cooldown |
-| Transport error | once by default | yes | transport cooldown |
-| Agent crash | once by default | yes | crash cooldown |
-| Invalid structured output | once after clearing stale output | yes | short cooldown |
-| Task failure | no | no | Factory task retry/repair |
-| Test failure | no | no | verification or repair flow |
-| Repository failure | no | no | repository recovery flow |
-| Policy failure | no | no | fail closed |
-| Internal Factory failure | no | no | operator-visible Factory failure |
+| Failure                   | Same-provider retry              | Next-provider fallback | Circuit impact                   |
+| ------------------------- | -------------------------------- | ---------------------- | -------------------------------- |
+| Provider unavailable      | no                               | yes                    | unavailable cooldown             |
+| Authentication required   | no                               | yes                    | auth cooldown                    |
+| Rate limit                | no                               | yes                    | short or reported cooldown       |
+| Quota exhausted           | no                               | yes                    | longer cooldown                  |
+| Timeout                   | once by default                  | yes                    | timeout cooldown                 |
+| Transport error           | once by default                  | yes                    | transport cooldown               |
+| Agent crash               | once by default                  | yes                    | crash cooldown                   |
+| Invalid structured output | once after clearing stale output | yes                    | short cooldown                   |
+| Task failure              | no                               | no                     | Factory task retry/repair        |
+| Test failure              | no                               | no                     | verification or repair flow      |
+| Repository failure        | no                               | no                     | repository recovery flow         |
+| Policy failure            | no                               | no                     | fail closed                      |
+| Internal Factory failure  | no                               | no                     | operator-visible Factory failure |
 
 Provider errors are classified from real process exit status plus bounded, redacted diagnostics. The router does
 not use `except Exception: next provider` as policy. Unexpected adapter crashes become `AGENT_CRASH`; unexpected
@@ -129,8 +129,10 @@ When every candidate fails for a provider-side reason, the router raises `Provid
 keeps the current phase, schedules the earliest bounded retry, and does not increment the task-attempt counter.
 Task, test, repository, policy, and internal failures return to the durable Factory retry or repair path. If the
 same task-side failure fingerprint reaches `FACTORY_MAX_CONSECUTIVE_FAILURES`, Factory opens a recoverable
-quarantine rather than looping forever. Run `hellotalk-factory backlog requeue-quarantined` after fixing the
-underlying cause.
+quarantine rather than looping forever. The bounded recovery window releases the circuit automatically and
+reconciles stale GitHub quarantine labels before discovery. Run
+`hellotalk-factory backlog requeue-quarantined --issue NUMBER` after fixing the underlying cause when an earlier
+retry is appropriate. Add `--announce` only when an issue comment is warranted.
 
 ## Circuit breakers and health
 

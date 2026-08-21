@@ -16,7 +16,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <!-- Header -->
         <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
           <h2 class="text-xl font-bold text-text-primary">{{ 'approveSpeaker.modalTitle' | t }}</h2>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
             aria-label="Close"
@@ -51,13 +52,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="approved.emit(requestId)"
                     class="rounded-lg bg-success hover:bg-success/90 px-4 py-2 text-sm font-bold text-on-fill transition-colors"
                   >
                     {{ 'approveSpeaker.approveAction' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="declined.emit(requestId)"
                     class="rounded-lg bg-surface-100 hover:bg-surface-50 px-4 py-2 text-sm font-bold text-text-secondary transition-colors"
                   >
@@ -71,7 +74,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <!-- Footer -->
         <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-100/50">
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="closed.emit()"
             class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
           >

@@ -7,6 +7,7 @@ Every explicit bullet under an `Acceptance criteria` Markdown heading in the iss
 Write the required structured JSON report to `.factory-review.json` in the root of the worktree. Do not commit this file.
 
 The JSON report must strictly follow this schema:
+
 ```json
 {
   "approved": true,

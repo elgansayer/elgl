@@ -16,6 +16,19 @@ def _is_metrics_payload(value: object) -> bool:
     return isinstance(value, dict) and isinstance(value.get("providers"), list)
 
 
+def _restore_failure_counts(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        kind: count
+        for kind, count in value.items()
+        if isinstance(kind, str)
+        and isinstance(count, int)
+        and not isinstance(count, bool)
+        and count >= 0
+    }
+
+
 class MetricsStore:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -65,6 +78,7 @@ class MetricsStore:
                     capacity_waited_calls=int(item.get("capacity_waited_calls", 0)),
                     estimated_cost_usd=float(item.get("estimated_cost_usd", 0)),
                     unknown_cost_calls=int(item.get("unknown_cost_calls", 0)),
+                    failure_counts=_restore_failure_counts(item.get("failure_counts")),
                 )
             except (TypeError, ValueError):
                 continue
@@ -99,6 +113,7 @@ class MetricsStore:
         duration_seconds: float = 0,
         capacity_wait_seconds: float = 0,
         estimated_cost_usd: float | None = None,
+        failure_kind: str | None = None,
     ) -> None:
         provider_name = self._provider_name(provider)
         with self.lock:
@@ -123,6 +138,8 @@ class MetricsStore:
                 usage.unknown_cost_calls += 1
             else:
                 usage.estimated_cost_usd += estimated_cost_usd
+            if not successful and failure_kind:
+                usage.failure_counts[failure_kind] = usage.failure_counts.get(failure_kind, 0) + 1
             atomic_write_json(
                 self.path,
                 self._snapshot(usage_by_key),

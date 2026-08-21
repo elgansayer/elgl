@@ -18,7 +18,8 @@ import { CrashReportService } from '../services/crash-report.service';
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     DatePipe,
     TranslatePipe,
     SanitiseHtmlPipe,

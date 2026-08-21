@@ -53,18 +53,18 @@ issues and PRs        | one host lock and UUID |
 
 ## Runtime boundaries
 
-| Boundary | Behaviour |
-| --- | --- |
-| Factory controller | Dedicated `hellotalk-factory` user, one host lock, durable generation UUID |
-| Direct CLI adapter | Argument-vector subprocess, private user/mount/PID/proc namespaces, non-interactive stdin, bounded output and timeout |
+| Boundary               | Behaviour                                                                                                                                                                                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Factory controller     | Runs as the operator's own login user (`dev`), one host lock, durable generation UUID                                                                                                                                                                      |
+| Direct CLI adapter     | Argument-vector subprocess, private user/mount/PID/proc namespaces, non-interactive stdin, bounded output and timeout                                                                                                                                      |
 | Direct CLI environment | Current worktree, read-only base repository, provider-specific credential paths, read-only runtime paths, and minimal environment; other sessions, Factory state, logs, runtime sockets, host temp, proxy credentials, API keys, and daemon secrets hidden |
-| Direct CLI health | Disposable empty working directory, provider-specific session paths, bounded no-generation probe, removed after use |
-| Verification | Private user/mount/PID/proc/network namespaces, fresh home and private temporary filesystems, read-only deployed Factory tree, no provider sessions or Factory state |
-| OpenHands adapter | Existing SDK runner behind the same `AgentProvider` protocol; no GitHub, Telegram, or legacy Gemini credentials in child configuration |
-| OpenHands terminal | Rootless Podman, no network, no capabilities, bounded resources, worktree mount only |
-| OpenHands file editor | Resolved paths must remain inside the task worktree |
-| Git operations | Factory-owned host code, protected-base push rejection, reset credential-helper chain, root-managed GitHub token scoped only to Git children |
-| GitHub operations | Typed client with bounded retries and no provider transcript publication |
+| Direct CLI health      | Disposable empty working directory, provider-specific session paths, bounded no-generation probe, removed after use                                                                                                                                        |
+| Verification           | Private user/mount/PID/proc/network namespaces, fresh home and private temporary filesystems, read-only deployed Factory tree, no provider sessions or Factory state                                                                                       |
+| OpenHands adapter      | Existing SDK runner behind the same `AgentProvider` protocol; no GitHub, Telegram, or legacy Gemini credentials in child configuration                                                                                                                     |
+| OpenHands terminal     | Rootless Podman, no network, no capabilities, bounded resources, worktree mount only                                                                                                                                                                       |
+| OpenHands file editor  | Resolved paths must remain inside the task worktree                                                                                                                                                                                                        |
+| Git operations         | Factory-owned host code, protected-base push rejection, reset credential-helper chain, root-managed GitHub token scoped only to Git children                                                                                                               |
+| GitHub operations      | Typed client with bounded retries and no provider transcript publication                                                                                                                                                                                   |
 
 Direct subscription CLIs require provider network access and access to the shared service-user authentication
 cache. Their own tool sandbox is therefore part of the current trust boundary even though host process, state,
@@ -73,23 +73,23 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 
 ## Core modules
 
-| Module | Ownership |
-| --- | --- |
-| `daemon.py` | Single-owner daemon, scheduling, abandoned-attempt recovery, pause, and graceful shutdown |
-| `pipeline.py` | One bounded state transition and all repository safety gates |
-| `agents/base.py` | Typed phases, requests, results, health, failure classes, and provider protocol |
-| `agents/router.py` | Eligibility, bounded retry, fallback, diversity, capacity, provenance, and metrics |
-| `agents/policy.py` | Configured phase order, emergency tier, and repair rotation |
-| `agents/process.py` | Child process groups, output bounds, timeout, TERM, and forced KILL |
-| `agents/health.py` | Durable circuit breakers and atomic half-open admission |
-| `provider_capacity.py` | Generation-aware cross-process provider leases |
-| `conversation_runner.py` | OpenHands SDK compatibility transport and inner-provider attribution |
-| `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority |
-| `git_workflow.py` | Worktree, branch, commit, push, and recovery archive safety |
-| `review_report.py` | Authoritative `.factory-review.json` schema and acceptance validation |
-| `architect_report.py` | Authoritative `.factory-architect.json` schema |
-| `doctor.py` | Read-only runtime, isolation, GitHub, provider, state, and capacity diagnostics |
-| `control_panel.py` | Sanitised GitHub status projection and fixed trusted-actor controls |
+| Module                       | Ownership                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `daemon.py`                  | Single-owner daemon, scheduling, abandoned-attempt recovery, pause, and graceful shutdown |
+| `pipeline.py`                | One bounded state transition and all repository safety gates                              |
+| `agents/base.py`             | Typed phases, requests, results, health, failure classes, and provider protocol           |
+| `agents/router.py`           | Eligibility, bounded retry, fallback, diversity, capacity, provenance, and metrics        |
+| `agents/policy.py`           | Configured phase order, emergency tier, and repair rotation                               |
+| `agents/process.py`          | Child process groups, output bounds, timeout, TERM, and forced KILL                       |
+| `agents/health.py`           | Durable circuit breakers and atomic half-open admission                                   |
+| `provider_capacity.py`       | Generation-aware cross-process provider leases                                            |
+| `conversation_runner.py`     | OpenHands SDK compatibility transport and inner-provider attribution                      |
+| `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority                     |
+| `git_workflow.py`            | Worktree, branch, commit, push, and recovery archive safety                               |
+| `review_report.py`           | Authoritative `.factory-review.json` schema and acceptance validation                     |
+| `architect_report.py`        | Authoritative `.factory-architect.json` schema                                            |
+| `doctor.py`                  | Read-only runtime, isolation, GitHub, provider, state, and capacity diagnostics           |
+| `control_panel.py`           | Sanitised GitHub status projection and fixed trusted-actor controls                       |
 
 ## Durable state and recovery
 
@@ -100,7 +100,7 @@ last-known-good backup:
   provenance entries per job;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
-- `metrics.json`: provider, model, phase, result, duration, fallback, quota, and timeout counters;
+- `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
 - `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
 - `control.json`: pause state;
@@ -108,6 +108,10 @@ last-known-good backup:
 - `control_request.json`: optional mode-0600, single-use watchdog restart request;
 - `architect_state.json`: architect completion and retry data;
 - `provider-attribution.json`: detailed OpenHands inner-provider attribution.
+
+Typed metric failure counters are an additive state expansion. New readers treat an absent or malformed counter
+map as empty, while older readers ignore the added field, so mixed-version startup and rollback preserve the
+existing call, success, failure, quota, fallback, duration, and timeout counters.
 
 A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
@@ -120,8 +124,16 @@ A repeated identical task-side failure opens a durable, recoverable quarantine a
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
 `factory-quarantined` plus `needs-human` once. Provider auth, quota, rate-limit, availability, timeout, transport,
 crash, malformed-output, and busy-capacity exhaustion never consume a task attempt or open this task circuit.
-`backlog requeue-quarantined` resets both durable state and GitHub labels after the cause is resolved. Historical
-quarantine entries without the new reason marker are migrated back into normal retry flow.
+After the bounded window, automatic recovery preserves failure evidence, returns the job to discovery, and
+requests a startup-equivalent reconciliation that silently removes GitHub quarantine labels no longer backed by
+durable state. `backlog requeue-quarantined`
+provides an earlier operator-selected reset, with repeatable `--issue` targeting and optional `--announce`
+comments. Historical quarantine entries without the new reason marker are migrated back into normal retry flow.
+Successful issue completion removes the Factory ownership label before closing the issue, preventing new stale
+`factory-active` markers from accumulating after merge. Startup also compares open ownership labels with durable
+active jobs and protected workers, including retired `swarm-active` markers. It releases only a configured bounded
+batch per refresh, restoring the ready label to preserve admission and posting no comments, until historical drift
+reaches zero.
 
 ## GitHub operator panel
 
@@ -192,7 +204,13 @@ names, and narrow manual actor, not status publisher identity.
 
 Factory code is deployed only from a clean, fast-forwarded `origin/main`. Task changes still use branches and pull
 requests. Deployment refreshes the frozen Python environment, Node dependency trees, Cypress, worker image, and
-systemd files while preserving the operator-owned `agents.json`.
+systemd files while preserving the operator-owned `agents.json`. The optional `--fast` mode may reuse Node trees
+and the worker image only through deployment-owned fingerprints that bind lockfiles, toolchains, installed npm
+state, tracked worker inputs, and the rootless image ID. It never skips Git synchronisation, host repair, Python
+synchronisation, systemd installation, startup preflight, online doctor, or service verification.
+
+The startup preflight deliberately mirrors the service unit's `HOME` and `PATH`, so a deploy cannot reject valid
+service-user CLI installations merely because root or sudo has a narrower interactive path.
 
 Any change to provider order, authentication, transport, retry authority, worktree confinement, review
 independence, or merge authority must update these architecture documents and executable regression tests in the

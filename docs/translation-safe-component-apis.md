@@ -28,9 +28,7 @@ Do not hardcode a second English accessibility label while translating the visib
 
 ```html
 <!-- prohibited -->
-<button hlmBtn type="button" aria-label="Save profile">
-  {{ 'profile.save' | t }}
-</button>
+<button hlmBtn type="button" aria-label="Save profile">{{ 'profile.save' | t }}</button>
 ```
 
 ### 2. Primitives receive semantic values, not translation-service dependencies
@@ -45,10 +43,7 @@ readonly description = input<string>();
 ```
 
 ```html
-<app-empty-state
-  [title]="'search.emptyTitle' | t"
-  [description]="'search.emptyDescription' | t"
-/>
+<app-empty-state [title]="'search.emptyTitle' | t" [description]="'search.emptyDescription' | t" />
 ```
 
 This keeps the primitive reusable in tests, Storybook/design previews, admin surfaces, and future rendering contexts without coupling it to one translation namespace.
@@ -103,7 +98,7 @@ Preferred:
 Avoid:
 
 ```ts
-`${this.i18n.translate('review.current')} ${current} / ${total}`
+`${this.i18n.translate('review.current')} ${current} / ${total}`;
 ```
 
 Named parameters let each locale control word order, punctuation, and grammar.
@@ -147,9 +142,7 @@ Before:
 After:
 
 ```html
-<button hlmBtn type="button" [attr.aria-label]="'common.save' | t">
-  {{ 'common.save' | t }}
-</button>
+<button hlmBtn type="button" [attr.aria-label]="'common.save' | t">{{ 'common.save' | t }}</button>
 ```
 
 The migration changes ownership of interaction/styling, not ownership of product copy.

@@ -405,6 +405,7 @@ class AgentRouter:
             timed_out=(failure is not None and failure.kind is AgentFailureKind.PROVIDER_TIMEOUT),
             duration_seconds=duration,
             capacity_wait_seconds=capacity_wait_seconds,
+            failure_kind=failure.kind.value if failure is not None else None,
         )
 
     def _release_capacity(self, provider: str, owner: str) -> None:

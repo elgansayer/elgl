@@ -132,28 +132,28 @@ class AgentsRoutingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     planning: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     architecture: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     implementation: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     security_review: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "pi"]
     )
     quality_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     code_review: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     ci_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "pi"]
     )
     general_action: list[str] = Field(
-        default_factory=lambda: ["opencode", "google", "codex", "claude", "openhands"]
+        default_factory=lambda: ["opencode", "google", "codex", "claude", "pi"]
     )
     skip_busy_providers: bool = True
     same_provider_retries: int = 1
@@ -179,6 +179,16 @@ class AgentsConfig(BaseModel):
                 model="fable",
                 credential_paths=[".claude", ".claude.json"],
                 runtime_paths=[".local/bin", ".local/share/claude", ".npm-global"],
+                phase_models={
+                    "planning": "opus",
+                    "architecture": "opus",
+                    "security_review": "opus",
+                    "implementation": "sonnet",
+                    "quality_repair": "haiku",
+                    "code_review": "haiku",
+                    "ci_repair": "haiku",
+                    "general_action": "fable",
+                },
             ),
             "codex": ProviderConfig(
                 enabled=True,
@@ -189,35 +199,62 @@ class AgentsConfig(BaseModel):
                 runtime_paths=[".local/bin", ".npm-global"],
             ),
             "google": ProviderConfig(
-                enabled=False,
+                enabled=True,
                 command="agy",
                 cli_variant="antigravity",
                 auth_mode="subscription",
                 model="gemini-3.1-pro-high",
                 credential_paths=[".gemini"],
                 runtime_paths=[".local/bin", ".npm-global"],
-            ),
-            "opencode": ProviderConfig(
-                enabled=False,
-                command="opencode",
-                auth_mode="subscription",
-                model="opencode-go/kimi-k3",
-                credential_paths=[".config/opencode", ".local/share/opencode"],
-                runtime_paths=[".local/bin", ".npm-global", ".opencode"],
                 phase_models={
-                    "planning": "opencode-go/qwen3.8-max",
-                    "architecture": "opencode-go/qwen3.8-max",
-                    "security_review": "opencode-go/qwen3.8-max",
-                    "code_review": "opencode-go/qwen3.8-max",
-                    "general_action": "opencode-go/kimi-k2.7-code",
+                    "planning": "gemini-3.1-pro-high",
+                    "architecture": "gemini-3.1-pro-high",
+                    "security_review": "gemini-3.1-pro-high",
+                    "implementation": "gemini-3.1-pro-high",
+                    "quality_repair": "gemini-3.7-flash-low",
+                    "code_review": "gemini-3.7-flash-low",
+                    "ci_repair": "gemini-3.7-flash-low",
+                    "general_action": "gemini-3.7-flash-low",
                 },
             ),
-            "openhands": ProviderConfig(
+            "opencode": ProviderConfig(
                 enabled=True,
+                command="opencode",
+                auth_mode="subscription",
+                # opencode-go/deepseek-v4-flash is the fast tier of the
+                # opencode-go catalog (verified via `opencode models`) - used
+                # uniformly rather than split by phase.
+                model="opencode-go/deepseek-v4-flash",
+                credential_paths=[".config/opencode", ".local/share/opencode"],
+                runtime_paths=[".local/bin", ".npm-global", ".opencode"],
+            ),
+            "openhands": ProviderConfig(
+                enabled=False,
                 emergency_only=True,
                 auth_mode="api",
                 transport="openhands-sdk",
                 model="gpt-5.6-sol",
+            ),
+            "pi": ProviderConfig(
+                enabled=True,
+                command="pi",
+                auth_mode="subscription",
+                model="github-copilot/claude-sonnet-5",
+                credential_paths=[".pi"],
+                # pi's native installer places its executable in .local/bin as a
+                # symlink into .local/lib/node_modules; both must be mounted or
+                # the sandboxed process cannot resolve the symlink target.
+                runtime_paths=[".local/bin", ".local/lib"],
+                phase_models={
+                    "planning": "github-copilot/claude-opus-5",
+                    "architecture": "github-copilot/claude-opus-5",
+                    "security_review": "github-copilot/claude-opus-5",
+                    "implementation": "github-copilot/claude-sonnet-5",
+                    "quality_repair": "github-copilot/claude-haiku-4.5",
+                    "code_review": "github-copilot/claude-haiku-4.5",
+                    "ci_repair": "github-copilot/claude-haiku-4.5",
+                    "general_action": "github-copilot/claude-haiku-4.5",
+                },
             ),
         }
     )
@@ -262,6 +299,10 @@ class AgentsConfig(BaseModel):
                     "credential_paths": [".config/opencode", ".local/share/opencode"],
                     "runtime_paths": [".local/bin", ".npm-global", ".opencode"],
                 },
+                "pi": {
+                    "credential_paths": [".pi"],
+                    "runtime_paths": [".local/bin", ".local/lib"],
+                },
             }.get(str(name), {})
             for key, default in defaults.items():
                 normalised_provider.setdefault(key, default)
@@ -272,15 +313,28 @@ class AgentsConfig(BaseModel):
 
     @classmethod
     def legacy_openhands_only(cls) -> AgentsConfig:
-        config = cls(routing_enabled=False)
-        for name, provider in config.providers.items():
-            provider.enabled = name == "openhands"
-        config.providers["openhands"].emergency_only = False
+        # openhands now defaults to disabled (config.py's production default has
+        # no working credential for it), so it must be constructed pre-enabled
+        # here rather than enabled after the fact: routing_enabled=False requires
+        # openhands to already be enabled at validation time, which runs during
+        # construction, before any post-construction mutation could take effect.
+        config = cls(
+            routing_enabled=False,
+            providers={
+                "openhands": ProviderConfig(
+                    enabled=True,
+                    emergency_only=False,
+                    auth_mode="api",
+                    transport="openhands-sdk",
+                    model="gpt-5.6-sol",
+                ),
+            },
+        )
         return config
 
     @model_validator(mode="after")
     def validate_provider_names(self) -> AgentsConfig:
-        supported = {"claude", "codex", "google", "opencode", "openhands"}
+        supported = {"claude", "codex", "google", "opencode", "openhands", "pi"}
         declared_unknown = sorted(set(self.providers) - supported)
         if declared_unknown:
             raise ValueError(f"Unknown agent provider(s): {', '.join(declared_unknown)}")
@@ -364,6 +418,12 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    # Zero preserves the historical unlimited admission behaviour. Production can
+    # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
+    # allowing in-flight implementation, review, CI repair, and PR work to continue.
+    new_issue_interval_seconds: int = 0
+    new_issues_per_interval: int = 1
+    label_reconciliation_batch_size: int = 25
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     provider_slot_wait_seconds: int = 30
@@ -372,6 +432,17 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
+    # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
+    # failures) is a bounded cooldown, not a dead end: a fully autonomous
+    # deployment with no operator triage step needs a task to come back and
+    # try again on its own on a short horizon, not sit inert for a day.
+    # Durable failure counters, the fingerprint, and last_error are preserved
+    # across this recovery, so a genuinely broken task simply re-quarantines
+    # after its next few attempts rather than tight-looping.
+    quarantine_recovery_minutes: int = 30
+    review_lane_first: bool = True
+    review_reserve_provider_slot: bool = True
+    review_lane_max_concurrent: int = 1
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_trusted_intake: bool = False
@@ -399,16 +470,33 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
         "gemini_max_concurrent_conversations",
         "provider_slot_wait_seconds",
         "architect_max_new_issues",
+        "review_lane_max_concurrent",
+        "quarantine_recovery_minutes",
     )
     @classmethod
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("new_issue_interval_seconds")
+    @classmethod
+    def non_negative_issue_interval(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("new issue interval cannot be negative")
+        return value
+
+    @field_validator("label_reconciliation_batch_size")
+    @classmethod
+    def bounded_label_reconciliation_batch(cls, value: int) -> int:
+        if not 1 <= value <= 100:
+            raise ValueError("label reconciliation batch size must be between 1 and 100")
         return value
 
     @model_validator(mode="after")
@@ -538,6 +626,11 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
+                new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
+                label_reconciliation_batch_size=int(
+                    env.get("FACTORY_LABEL_RECONCILIATION_BATCH_SIZE", "25")
+                ),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
@@ -546,6 +639,12 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
+                quarantine_recovery_minutes=int(
+                    env.get("FACTORY_QUARANTINE_RECOVERY_MINUTES", "30")
+                ),
+                review_lane_first=boolean("FACTORY_REVIEW_LANE_FIRST", True),
+                review_reserve_provider_slot=boolean("FACTORY_REVIEW_RESERVE_PROVIDER_SLOT", True),
+                review_lane_max_concurrent=int(env.get("FACTORY_REVIEW_LANE_MAX_CONCURRENT", "1")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=github_repository,
                 require_trusted_intake=boolean("FACTORY_REQUIRE_TRUSTED_INTAKE", False),

@@ -47,7 +47,8 @@
               </div>
             </div>
             @if (isLinked(provider.id)) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="unlink(provider.id)"
                 class="text-xs font-semibold text-danger hover:text-danger/80 transition-colors disabled:opacity-40"
                 [disabled]="loading() || !canUnlink(provider.id)"

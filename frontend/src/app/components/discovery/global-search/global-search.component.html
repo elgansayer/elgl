@@ -64,6 +64,17 @@
     </hlm-native-select>
   </div>
 
+  <div class="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-200 p-3">
+    <hlm-checkbox
+      inputId="global-hasAudioIntro"
+      [checked]="hasAudioIntro()"
+      (change)="toggleHasAudioIntro()"
+    />
+    <label for="global-hasAudioIntro" class="text-xs sm:text-sm font-medium text-text-primary">
+      {{ 'audioIntro.title' | t }}
+    </label>
+  </div>
+
   <button
     hlmBtn
     (click)="applyFilters()"

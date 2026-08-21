@@ -14,7 +14,8 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
 @Component({
   selector: 'app-escrow-detail',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppEmptyStateComponent,
@@ -26,7 +27,8 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
   template: `
     <div class="app-screen app-padded pb-10">
       <header class="flex items-center gap-3 pt-2">
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           (click)="goBack()"
           [attr.aria-label]="'common.back' | t"

@@ -26,7 +26,11 @@ export class NotificationSettingsComponent {
   private readonly i18n = inject(I18nService);
 
   readonly categories: CategoryToggle[] = [
-    { key: 'direct_messages', labelKey: 'notification_settings.category.direct_messages', icon: '💬' },
+    {
+      key: 'direct_messages',
+      labelKey: 'notification_settings.category.direct_messages',
+      icon: '💬',
+    },
     { key: 'groups', labelKey: 'notification_settings.category.groups', icon: '👥' },
     { key: 'likes', labelKey: 'notification_settings.category.likes', icon: '❤️' },
     { key: 'voice_rooms', labelKey: 'notification_settings.category.voice_rooms', icon: '🎤' },

@@ -517,14 +517,56 @@ class GitHubClient:
         )
         return sorted(int(item["number"]) for item in json.loads(output))
 
-    def requeue_quarantined_issues(self, issues: list[int] | None = None) -> list[int]:
+    def list_active_issues(self, limit: int = 10_000) -> list[int]:
+        """List open issues carrying a current or retired ownership marker."""
+
+        active: set[int] = set()
+        for label in ("factory-active", "swarm-active"):
+            output = self._run(
+                (
+                    "gh",
+                    "issue",
+                    "list",
+                    "--repo",
+                    self.repository,
+                    "--state",
+                    "open",
+                    "--label",
+                    label,
+                    "--limit",
+                    str(limit),
+                    "--json",
+                    "number",
+                )
+            )
+            active.update(int(item["number"]) for item in json.loads(output))
+        return sorted(active)
+
+    def release_active_issues(self, issues: list[int]) -> list[int]:
+        """Release stale ownership without removing the issue from trusted intake."""
+
+        released: list[int] = []
+        for issue in sorted(set(issues)):
+            self.remove_issue_labels(issue, ("factory-active", "swarm-active"))
+            # factory-active is an admission label as well as an ownership marker.
+            # Preserve that admission explicitly when releasing stale ownership,
+            # even when labelled intake is not globally mandatory.
+            self.add_issue_labels(issue, (self.ready_label,))
+            released.append(issue)
+        return released
+
+    def requeue_quarantined_issues(
+        self,
+        issues: list[int] | None = None,
+        *,
+        announce: bool = True,
+    ) -> list[int]:
         """Clear a resolved-cause quarantine so an issue is eligible for a clean retry.
 
         Quarantine is a circuit breaker: it exists so a genuinely broken task cannot
-        loop forever, not to permanently withhold work. Once the operator has fixed the
-        systemic cause (a bug, a stale collision with another pipeline), the affected
-        issues need to be moved back into the pool by hand, since only a human can judge
-        that the cause is actually resolved.
+        loop forever, not to permanently withhold work. Automatic bounded recovery uses
+        this operation without comments after its cooldown. Operators can also use it
+        for an earlier targeted reset after fixing a known systemic cause.
         """
         requeued: list[int] = []
         for issue in sorted(set(issues if issues is not None else self.list_quarantined_issues())):
@@ -534,12 +576,13 @@ class GitHubClient:
             )
             if self.require_ready_label:
                 self.add_issue_labels(issue, (self.ready_label,))
-            self.add_comment(
-                issue,
-                "Clearing the quarantine labels on this issue after an operator "
-                "confirmed the underlying cause is resolved. It is eligible for a "
-                "clean retry.",
-            )
+            if announce:
+                self.add_comment(
+                    issue,
+                    "Clearing the quarantine labels on this issue after an operator "
+                    "confirmed the underlying cause is resolved. It is eligible for a "
+                    "clean retry.",
+                )
             requeued.append(issue)
         return requeued
 

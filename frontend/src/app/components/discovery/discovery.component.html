@@ -50,7 +50,8 @@
       <!-- Language Selection Pills -->
       <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
         @for (lang of myTargetLangs(); track lang.code) {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="setLanguage(lang.code)"
             [class.bg-surface-200]="selectedTargetLanguage() === lang.code"
             [class.bg-surface-300]="selectedTargetLanguage() !== lang.code"
@@ -62,7 +63,8 @@
             <span aria-hidden="true">{{ lang.flag }}</span> {{ lang.labelKey | t }}
           </button>
         }
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="setLanguage('')"
           class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap"
           role="radio"
@@ -85,7 +87,8 @@
           class="self-center text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap"
           >{{ 'discovery.filterInterests' | t }}</span
         >
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="setInterest('')"
           [class.bg-accent-500]="selectedInterests() === ''"
           [class.text-on-fill]="selectedInterests() === ''"
@@ -99,7 +102,8 @@
           {{ 'discovery.interestAny' | t }}
         </button>
         @for (tag of visibleInterestTags(); track tag) {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="setInterest(tag)"
             [class.bg-accent-500]="selectedInterests() === tag"
             [class.text-on-fill]="selectedInterests() === tag"
@@ -114,7 +118,8 @@
           </button>
         }
         @if (commonInterestTags.length > 6) {
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="toggleShowAllInterests()"
             class="px-3 py-1.5 rounded-full bg-surface-200 text-text-secondary text-xs font-medium border border-surface-100 whitespace-nowrap hover:bg-surface-100 transition-colors"
           >
@@ -138,7 +143,8 @@
           </label>
           <hlm-native-select
             selectId="sortBySelect"
-            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer" selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
+            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
+            selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
             [value]="selectedSort()"
             (change)="setSort($any($event.target).value)"
           >
@@ -158,7 +164,8 @@
           </label>
           <hlm-native-select
             selectId="genderSelect"
-            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             [value]="selectedGender()"
             [disabled]="!isVip()"
             [aria-describedby]="!isVip() ? 'genderVipNote' : null"
@@ -290,14 +297,16 @@
             </p>
           </div>
           <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <button hlmBtn
+            <button
+              hlmBtn
               [attr.aria-label]="'common.close' | t"
               (click)="showBanner.set(false)"
               class="text-white/60 hover:text-white absolute top-0 end-0 sm:-top-2 sm:-end-2 p-1"
             >
               <span aria-hidden="true">✕</span>
             </button>
-            <button hlmBtn
+            <button
+              hlmBtn
               [routerLink]="['/vip']"
               class="bg-white text-accent px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider hover:opacity-90 transition-colors shadow-md"
               [attr.aria-label]="'discovery.bannerView' | t"
@@ -424,7 +433,8 @@
                         >
                       }
                       @if (partner.audio_intro_url) {
-                        <button hlmBtn
+                        <button
+                          hlmBtn
                           type="button"
                           (click)="toggleAudioIntro(partner.id, partner.audio_intro_url, $event)"
                           [attr.aria-pressed]="playingPartnerId() === partner.id"

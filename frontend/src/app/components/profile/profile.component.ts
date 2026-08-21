@@ -41,7 +41,11 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 
 @Component({
   selector: 'app-profile',
-  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, 
+  imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmInput,
+    HlmButton,
     CommonModule,
     FormsModule,
     RouterLink,

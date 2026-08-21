@@ -275,7 +275,8 @@
                   }
                 </p>
                 @if (msg.reply_to_id) {
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="scrollToMessage(msg.reply_to_id!)"
                     class="mb-1.5 block w-full rounded-lg border-s-4 border-accent-500 bg-black/10 ps-2 pe-2 pt-1 pb-1 text-start text-xs opacity-90 hover:opacity-100"
@@ -326,6 +327,7 @@
                     [original]="msg.correction_payload?.original ?? ''"
                     [corrected]="msg.correction_payload?.corrected ?? ''"
                     [explanation]="msg.correction_payload?.explanation ?? ''"
+                    [showActions]="true"
                   ></app-visual-diff>
                 }
                 @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
@@ -359,7 +361,8 @@
                     (ended)="playNextVoiceNote(msg.id)"
                   ></audio>
                   <div class="mt-2 flex items-center gap-2">
-                    <button hlmBtn
+                    <button
+                      hlmBtn
                       (click)="onTranscribeVoice(msg)"
                       [disabled]="transcribingIds().has(msg.id)"
                       class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
@@ -391,7 +394,8 @@
                 }
                 <div class="mt-2 flex items-center gap-1">
                   @if (msg.message_type === 'text' && msg.text_content) {
-                    <button hlmBtn
+                    <button
+                      hlmBtn
                       (click)="saveSentenceToLingq(msg)"
                       class="rounded-lg bg-warning ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-on-fill"
                       [attr.aria-label]="'chatRoom.saveBtn' | t"
@@ -399,7 +403,8 @@
                       {{ 'chatRoom.saveBtn' | t }}
                     </button>
                   }
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="bookmark(msg)"
                     class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
                     [attr.aria-label]="'chatRoom.favBtn' | t"
@@ -479,7 +484,8 @@
           >
             {{ 'chatRoom.cancelBtn' | t }}
           </app-button-secondary>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="sendCorrection()"
             class="rounded-app bg-success ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-on-fill"
             [attr.aria-label]="'chatRoom.sendCorrection' | t"

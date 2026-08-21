@@ -9,7 +9,8 @@ import { environment } from '../../../environments/environment';
   selector: 'app-moment-translate',
   imports: [HlmButton, TranslatePipe],
   template: `
-    <button hlmBtn
+    <button
+      hlmBtn
       type="button"
       (click)="toggle()"
       class="inline-flex items-center gap-1 ps-2 pe-2 py-0.5 rounded-full text-sm text-text-muted hover:text-accent transition-colors"

@@ -103,7 +103,8 @@ function parseStackFrames(stack: string): VideoClassroomCrashPayload['stackFrame
               {{ 'videoClassroomErrorBoundary.retryBtn' | t }}
             </app-button-primary>
             @if (showReportButton()) {
-              <button hlmBtn
+              <button
+                hlmBtn
                 type="button"
                 (click)="reportCrash()"
                 class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"

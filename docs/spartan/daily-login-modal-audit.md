@@ -37,22 +37,22 @@ The built-in dialog close button is intentionally disabled with `[showCloseButto
 
 ## Existing implementation inventory
 
-| Element / behaviour | Current implementation | State owner | Target owner | Action |
-| --- | --- | --- | --- | --- |
-| Modal overlay and panel | `hlm-dialog`, `hlm-dialog-content`, `*hlmDialogPortal` | Spartan Dialog | Spartan Brain + Helm Dialog | Keep |
-| Controlled open state | `computed<HlmDialogState>(() => open() ? 'open' : 'closed')` | Parent input + component adapter | App composition feeding Spartan Dialog | Keep controlled contract |
-| Dialog-originated dismiss | `(stateChanged)="onDialogStateChanged($event)"` | Spartan Dialog | Spartan Dialog + component output adapter | Keep and regression-test |
-| CTA | `<button hlmBtn size="touch">` | Spartan Button | Spartan Helm Button | Keep |
-| CTA activation | `(click)="closed.emit()"` | Component output | App composition | Keep |
-| Dialog title | semantic `h3` with generated ID | Native semantics + Dialog association | Native semantics / Spartan Dialog | Keep; review ID generation |
-| Dialog labelling | `[attr.aria-labelledby]="dialogTitleId"` | Component | Spartan Dialog composition | Keep |
-| Reward/body copy | translated paragraph | App content | Relay/app composition | Keep |
-| Body live region | `aria-live="polite"` | Native accessibility | App accessibility policy | Preserve unless product intent changes |
-| CTA accessible name | translated CTA plus translated reward body | Component | App accessibility policy | Preserve during migration; evaluate redundancy separately |
-| Gift graphic | literal `🎁`, `aria-hidden="true"` | App presentation | Relay/app composition | Keep decorative |
-| Surface/layout classes | Tailwind utilities + semantic surface/text classes | Relay/app composition | Relay | Keep token ownership |
-| Responsive width | `w-full max-w-sm`, `max-h-[90vh]`, scrolling | Relay/app composition | Relay | Keep |
-| Rounded/border/shadow treatment | Tailwind + semantic surface classes | Relay/app composition | Relay | Keep |
+| Element / behaviour             | Current implementation                                       | State owner                           | Target owner                              | Action                                                    |
+| ------------------------------- | ------------------------------------------------------------ | ------------------------------------- | ----------------------------------------- | --------------------------------------------------------- |
+| Modal overlay and panel         | `hlm-dialog`, `hlm-dialog-content`, `*hlmDialogPortal`       | Spartan Dialog                        | Spartan Brain + Helm Dialog               | Keep                                                      |
+| Controlled open state           | `computed<HlmDialogState>(() => open() ? 'open' : 'closed')` | Parent input + component adapter      | App composition feeding Spartan Dialog    | Keep controlled contract                                  |
+| Dialog-originated dismiss       | `(stateChanged)="onDialogStateChanged($event)"`              | Spartan Dialog                        | Spartan Dialog + component output adapter | Keep and regression-test                                  |
+| CTA                             | `<button hlmBtn size="touch">`                               | Spartan Button                        | Spartan Helm Button                       | Keep                                                      |
+| CTA activation                  | `(click)="closed.emit()"`                                    | Component output                      | App composition                           | Keep                                                      |
+| Dialog title                    | semantic `h3` with generated ID                              | Native semantics + Dialog association | Native semantics / Spartan Dialog         | Keep; review ID generation                                |
+| Dialog labelling                | `[attr.aria-labelledby]="dialogTitleId"`                     | Component                             | Spartan Dialog composition                | Keep                                                      |
+| Reward/body copy                | translated paragraph                                         | App content                           | Relay/app composition                     | Keep                                                      |
+| Body live region                | `aria-live="polite"`                                         | Native accessibility                  | App accessibility policy                  | Preserve unless product intent changes                    |
+| CTA accessible name             | translated CTA plus translated reward body                   | Component                             | App accessibility policy                  | Preserve during migration; evaluate redundancy separately |
+| Gift graphic                    | literal `🎁`, `aria-hidden="true"`                           | App presentation                      | Relay/app composition                     | Keep decorative                                           |
+| Surface/layout classes          | Tailwind utilities + semantic surface/text classes           | Relay/app composition                 | Relay                                     | Keep token ownership                                      |
+| Responsive width                | `w-full max-w-sm`, `max-h-[90vh]`, scrolling                 | Relay/app composition                 | Relay                                     | Keep                                                      |
+| Rounded/border/shadow treatment | Tailwind + semantic surface classes                          | Relay/app composition                 | Relay                                     | Keep                                                      |
 
 ## Spartan ownership
 
@@ -84,13 +84,13 @@ The migration must not introduce local hardcoded product colours for any of thes
 
 The component has a deliberately small state space.
 
-| State | `open()` | Dialog state | User-visible result | Allowed action |
-| --- | --- | --- | --- | --- |
-| Parent-hidden | `false` | `closed` | No active dialog | None |
-| Open | `true` | `open` | Reward modal visible | Activate CTA or use a Dialog-supported dismiss path |
-| Close requested by CTA | still parent-owned | unchanged until parent responds | CTA emits `closed` | Parent is expected to set `open` false / remove component |
-| Close requested by Dialog | `true` when event arrives | `closed` event | Component emits `closed` | Parent is expected to synchronize its open state |
-| Parent closes | `false` | `closed` | Dialog closes | None |
+| State                     | `open()`                  | Dialog state                    | User-visible result      | Allowed action                                            |
+| ------------------------- | ------------------------- | ------------------------------- | ------------------------ | --------------------------------------------------------- |
+| Parent-hidden             | `false`                   | `closed`                        | No active dialog         | None                                                      |
+| Open                      | `true`                    | `open`                          | Reward modal visible     | Activate CTA or use a Dialog-supported dismiss path       |
+| Close requested by CTA    | still parent-owned        | unchanged until parent responds | CTA emits `closed`       | Parent is expected to set `open` false / remove component |
+| Close requested by Dialog | `true` when event arrives | `closed` event                  | Component emits `closed` | Parent is expected to synchronize its open state          |
+| Parent closes             | `false`                   | `closed`                        | Dialog closes            | None                                                      |
 
 There is no loading, success, failure, retry, disabled or optimistic mutation state inside this component.
 

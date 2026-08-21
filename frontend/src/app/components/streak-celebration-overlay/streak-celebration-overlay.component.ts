@@ -33,7 +33,8 @@ const CONFETTI_COLOURS = ['#ff0084', '#ff8c00', '#ffe600', '#00e5ff', '#9d00ff',
             <p class="text-lg text-white/80 mb-6">
               {{ 'streak.celebration.subtitle' | t: { days: milestoneDays() } }}
             </p>
-            <button hlmBtn
+            <button
+              hlmBtn
               class="px-8 py-3 rounded-full bg-gradient-to-r from-neon-violet to-neon-pink text-on-fill font-semibold"
               (click)="dismiss()"
             >

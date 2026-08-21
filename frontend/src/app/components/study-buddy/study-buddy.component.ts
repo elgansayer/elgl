@@ -41,14 +41,16 @@ import {
                   }}</span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="accept(req.id)"
                     class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md"
                   >
                     {{ 'studyBuddy.acceptBtn' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="decline(req.id)"
                     class="px-3 py-1 text-sm text-danger hover:text-danger/80"
@@ -76,7 +78,8 @@ import {
                 />
                 <span class="text-text-primary">{{ user.display_name }}</span>
               </div>
-              <button hlmBtn
+              <button
+                hlmBtn
                 type="button"
                 [disabled]="requestedIds().has(user.id)"
                 (click)="requestBuddy(user.id)"

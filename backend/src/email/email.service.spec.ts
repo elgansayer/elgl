@@ -1,8 +1,6 @@
 import type { Mock } from 'vitest';
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { EmailService } from './email.service';
-import * as nodemailer from 'nodemailer';
 
 vi.mock('nodemailer', () => ({
   createTransport: vi.fn().mockReturnValue({
@@ -24,15 +22,14 @@ describe('EmailService (unit)', () => {
       get: vi.fn((key: string, fallback: string) => fallback),
     };
 
-    vi.doMock('nodemailer', () => ({
-      createTransport: vi.fn().mockReturnValue(transporter),
-    }));
-
     service = new (EmailService as Record<string, never>)(
       configService,
     ) as EmailService;
-    // Override the transporter with our mock
     (service as any).transporter = transporter;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -89,6 +86,22 @@ describe('EmailService (unit)', () => {
       expect(mailOptions.from).toBe(
         '"HelloTalk Support" <support@hellotalk.app>',
       );
+    });
+
+    it('does not log the recipient email address or reset token', async () => {
+      const logSpy = vi
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+
+      await service.sendPasswordResetEmail(
+        'private-user@example.com',
+        'secret-reset-token',
+      );
+
+      expect(logSpy).toHaveBeenCalledWith('Password reset email dispatched');
+      const loggedText = logSpy.mock.calls.flat().join(' ');
+      expect(loggedText).not.toContain('private-user@example.com');
+      expect(loggedText).not.toContain('secret-reset-token');
     });
   });
 });

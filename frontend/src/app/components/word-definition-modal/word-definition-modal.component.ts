@@ -44,7 +44,8 @@ import {
                   <h3 class="text-xl font-black text-text-primary">{{ wordToken() }}</h3>
                   <p class="text-sm font-bold text-success">{{ result.translated_text }}</p>
                 </div>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   (click)="close()"
                   class="rounded-app p-1.5 text-text-muted hover:bg-surface-200 hover:text-text-primary"
                   [attr.aria-label]="'wordModal.closeAriaLabel' | t"
@@ -64,7 +65,8 @@ import {
                 <p class="text-sm text-text-secondary">{{ result.definition }}</p>
               }
               @if (result.pronunciation_url) {
-                <button hlmBtn
+                <button
+                  hlmBtn
                   (click)="playAudio()"
                   class="rounded-app border border-surface-100 px-3 py-1.5 text-xs font-bold text-text-secondary hover:bg-surface-200"
                 >
@@ -76,21 +78,24 @@ import {
                   {{ 'wordModal.srsLabel' | t }}
                 </p>
                 <div class="flex gap-2">
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="setLevel(0)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-danger/20 py-2 text-xs font-bold text-danger hover:bg-danger/30 disabled:opacity-50"
                   >
                     {{ 'wordModal.resetBtn' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="setLevel(1)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-warning/20 py-2 text-xs font-bold text-warning hover:bg-warning/30 disabled:opacity-50"
                   >
                     {{ 'wordModal.learningBtn' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="setLevel(4)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-success/20 py-2 text-xs font-bold text-success hover:bg-success/30 disabled:opacity-50"

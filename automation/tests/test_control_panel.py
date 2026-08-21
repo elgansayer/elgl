@@ -112,7 +112,13 @@ def write_running_state(factory_config: FactoryConfig, now: datetime) -> None:
                     "failures": 1,
                     "fallbacks": 1,
                     "rate_limits": 0,
+                    "authentication_failures": 2,
+                    "quota_failures": 3,
                     "timeouts": 1,
+                    "failure_counts": {
+                        "test_failure": 1,
+                        "untrusted|value": 999,
+                    },
                 }
             ]
         },
@@ -148,6 +154,9 @@ def test_status_snapshot_and_markdown_are_sanitised(tmp_path: Path) -> None:
     assert "[#1842](https://github.com/owner/repo/issues/1842)" in markdown
     assert "attacker.invalid" not in markdown
     assert "not-a-real-token" not in markdown
+    assert "test_failure=1" in markdown
+    assert "| openhands | 4 | 3 | 1 | 1 | 0 | 2 | 3 | 1 | test_failure=1 |" in markdown
+    assert "untrusted" not in markdown
     assert "/factory restart" in markdown
 
 

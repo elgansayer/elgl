@@ -21,7 +21,8 @@ import { ChatMessage } from '../../services/chat.service';
         } @else {
           <span class="font-semibold text-sm">{{ 'chat.unknown_user' | t }}</span>
         }
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="cancelReply.emit()"
           class="ms-auto text-sm text-text-muted hover:text-text-primary transition-colors"
         >

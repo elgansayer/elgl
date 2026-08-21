@@ -190,20 +190,18 @@ function setupGlobalObserver(platformId: Object): void {
 
             // Update base classes to include any externally added classes
             const currentClasses = toClassList(element.className);
-            const allSourceClasses = new Set<string>();
-
-            // Collect all classes from all sources
-            for (const source of manager.sources.values()) {
-              for (const className of source.classes) {
-                allSourceClasses.add(className);
-              }
-            }
-
             // Any classes not from sources become new base classes
             manager.baseClasses.clear();
 
             for (const className of currentClasses) {
-              if (!allSourceClasses.has(className)) {
+              let isSourceClass = false;
+              for (const source of manager.sources.values()) {
+                if (source.classes.has(className)) {
+                  isSourceClass = true;
+                  break;
+                }
+              }
+              if (!isSourceClass) {
                 manager.baseClasses.add(className);
               }
             }
@@ -233,16 +231,17 @@ function updateElement(manager: ElementClassManager): void {
     // Get current classes on element (may include SSR classes)
     const currentClasses = toClassList(manager.element.className);
 
-    // Get all classes that will be applied by sources
-    const allSourceClasses = new Set<string>();
-    for (const source of manager.sources.values()) {
-      source.classes.forEach((className) => allSourceClasses.add(className));
-    }
-
     // Only consider classes as "base" if they're not produced by any source
     // This prevents SSR-rendered classes from being preserved as base classes
     currentClasses.forEach((className) => {
-      if (!allSourceClasses.has(className)) {
+      let isSourceClass = false;
+      for (const source of manager.sources.values()) {
+        if (source.classes.has(className)) {
+          isSourceClass = true;
+          break;
+        }
+      }
+      if (!isSourceClass) {
         manager.baseClasses.add(className);
       }
     });

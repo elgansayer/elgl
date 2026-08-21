@@ -124,6 +124,23 @@ describe('ChatPageComponent', () => {
       expect(component.selectedRoom()).toEqual(room);
       expect(component.messages()).toEqual(messages);
     });
+
+    it('should select a room from the keyboard with Space', () => {
+      component.rooms.set([room]);
+      fixture.detectChanges();
+      const selectRoom = vi.spyOn(component, 'selectRoom').mockResolvedValue();
+      const roomAction = fixture.nativeElement.querySelector('div[role="button"]');
+      const event = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      roomAction.dispatchEvent(event);
+
+      expect(selectRoom).toHaveBeenCalledWith(room);
+      expect(event.defaultPrevented).toBe(true);
+    });
   });
 
   describe('sending a message', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { EventsCalendarComponent } from './events-calendar.component';
 import { EventsService } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
@@ -11,8 +12,8 @@ import { Pipe } from '@angular/core';
 @Pipe({ standalone: true, name: 't' })
 class MockTranslatePipe implements PipeTransform {
   transform(key: string, params?: Record<string, unknown>): string {
-    if (params) {
-      return key.replace(/\{\{(\w+)\}\}/g, (_: string, p: string) => String(params[p] ?? ''));
+    if (params?.['date']) {
+      return `${key}: ${String(params['date'])}`;
     }
     return key;
   }
@@ -29,15 +30,7 @@ describe('EventsCalendarComponent', () => {
 
   beforeEach(async () => {
     mockEventsService = {
-      getMyEvents: vi.fn().mockReturnValue({
-        toPromise: vi.fn(),
-        subscribe: vi.fn(),
-        pipe: vi.fn(),
-        source: undefined,
-        operator: undefined,
-        lift: vi.fn(),
-        forEach: vi.fn(),
-      }),
+      getMyEvents: vi.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({
@@ -105,6 +98,12 @@ describe('EventsCalendarComponent', () => {
     expect(typeof formatted).toBe('string');
   });
 
+  it('should format calendar dates with full localised context', () => {
+    const formatted = component.formatCalendarDate(15);
+    expect(formatted).toContain('15');
+    expect(formatted).toContain(String(component.monthStart().getFullYear()));
+  });
+
   it('should clear selected day when changing months', () => {
     component.selectDate(10);
     expect(component.selectedDay()).toBe(10);
@@ -121,6 +120,63 @@ describe('EventsCalendarComponent', () => {
     for (const name of names) {
       expect(typeof name).toBe('string');
       expect(name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('should use native buttons for selectable dates without hand-rolled button semantics', () => {
+    const dateButtons = fixture.nativeElement.querySelectorAll(
+      'button[aria-pressed]',
+    ) as NodeListOf<HTMLButtonElement>;
+    expect(dateButtons.length).toBeGreaterThanOrEqual(28);
+    expect(fixture.nativeElement.querySelector('[role="button"]')).toBeNull();
+
+    for (const button of Array.from(dateButtons)) {
+      expect(button.type).toBe('button');
+      expect(button.hasAttribute('tabindex')).toBe(false);
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+    }
+  });
+
+  it('should render empty calendar cells as non-interactive content', () => {
+    const emptyCells = fixture.nativeElement.querySelectorAll(
+      '.grid-cols-7 > div[aria-hidden="true"]',
+    ) as NodeListOf<HTMLDivElement>;
+    expect(emptyCells.length).toBeGreaterThan(0);
+    for (const cell of Array.from(emptyCells)) {
+      expect(cell.getAttribute('role')).toBeNull();
+      expect(cell.hasAttribute('tabindex')).toBe(false);
+    }
+  });
+
+  it('should expose selected date state through aria-pressed', () => {
+    const dateButtons = fixture.nativeElement.querySelectorAll(
+      'button[aria-pressed]',
+    ) as NodeListOf<HTMLButtonElement>;
+    const day15 = Array.from(dateButtons).find((button) => button.textContent?.trim() === '15');
+
+    expect(day15).toBeDefined();
+    day15?.click();
+    fixture.detectChanges();
+
+    expect(component.selectedDay()).toBe(15);
+    expect(day15?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('should expose today independently from selected state', () => {
+    const todayButton = fixture.nativeElement.querySelector(
+      'button[aria-current="date"]',
+    ) as HTMLButtonElement | null;
+    expect(todayButton).not.toBeNull();
+    expect(todayButton?.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('should keep month navigation on explicit Spartan buttons', () => {
+    const buttons = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
+    const monthButtons = Array.from(buttons).slice(0, 2);
+    expect(monthButtons).toHaveLength(2);
+    for (const button of monthButtons) {
+      expect(button.type).toBe('button');
+      expect(button.getAttribute('data-slot')).toBe('button');
     }
   });
 });

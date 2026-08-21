@@ -18,7 +18,7 @@ export class AccountDeletionComponent {
 
   async requestDeletion(): Promise<void> {
     const confirm = window.confirm(
-      'Are you sure you want to delete your account? This action can be undone within 30 days.'
+      'Are you sure you want to delete your account? This action can be undone within 30 days.',
     );
     if (!confirm) return;
 

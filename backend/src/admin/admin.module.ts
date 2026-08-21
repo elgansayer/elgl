@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LessonsModule } from '../lessons/lessons.module';
 import { PrivacyModule } from '../privacy/privacy.module';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -8,6 +9,7 @@ import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminController } from './admin.controller';
 import { AdminLoginHistoryQueryService } from './admin-login-history-query.service';
 import { AdminModerationQueryService } from './admin-moderation-query.service';
+import { AdminMutationAuditInterceptor } from './admin-mutation-audit.interceptor';
 import { AdminOperationalEventsV1Controller } from './admin-operational-events-v1.controller';
 import { AdminOperationalEventsService } from './admin-operational-events.service';
 import { AdminRoleAssignmentsService } from './admin-role-assignments.service';
@@ -42,6 +44,11 @@ import { AdminGuard } from './guards/admin.guard';
     AdminUserDetailService,
     AdminGuard,
     AdminCapabilityGuard,
+    AdminMutationAuditInterceptor,
+    {
+      provide: APP_INTERCEPTOR,
+      useExisting: AdminMutationAuditInterceptor,
+    },
   ],
   exports: [
     AdminAuthorizationService,

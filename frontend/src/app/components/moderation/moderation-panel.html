@@ -4,7 +4,8 @@
   </h2>
 
   <div class="mb-4 flex gap-2" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
-    <button hlmBtn
+    <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       role="tab"
       [attr.aria-selected]="currentFilter() === 'moment'"
@@ -17,7 +18,8 @@
     >
       {{ 'moderation.moment' | t }}
     </button>
-    <button hlmBtn
+    <button
+      hlmBtn
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       role="tab"
       [attr.aria-selected]="currentFilter() === 'profile'"
@@ -88,21 +90,24 @@
                 </p>
               </div>
               <div class="flex gap-2">
-                <button hlmBtn
+                <button
+                  hlmBtn
                   class="bg-success px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-success/90 transition-colors"
                   (click)="approve(item)"
                   [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }"
                 >
                   {{ 'moderation.approve' | t }}
                 </button>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   class="bg-danger px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-danger/90 transition-colors"
                   (click)="reject(item)"
                   [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }"
                 >
                   {{ 'moderation.reject' | t }}
                 </button>
-                <button hlmBtn
+                <button
+                  hlmBtn
                   class="bg-warning px-3 py-1.5 rounded-lg text-xs font-bold text-on-fill hover:bg-warning/90 transition-colors disabled:opacity-50"
                   (click)="analyseUserProfile(item.reported_user?.id ?? '')"
                   [disabled]="analysing()"

@@ -1,7 +1,14 @@
 <div class="p-4">
   <h2 class="text-xl font-bold mb-4">{{ 'admin.lessons.title' | t }}</h2>
 
-  <button hlmBtn class="btn btn-primary mb-4" (click)="startCreate()" [attr.aria-label]="'admin.lessons.create' | t">{{ 'admin.lessons.create' | t }}</button>
+  <button
+    hlmBtn
+    class="btn btn-primary mb-4"
+    (click)="startCreate()"
+    [attr.aria-label]="'admin.lessons.create' | t"
+  >
+    {{ 'admin.lessons.create' | t }}
+  </button>
 
   @if (lessons().length) {
     <table class="table-auto w-full border-collapse">
@@ -20,8 +27,22 @@
             <td class="border p-2">{{ lesson.language_code }}</td>
             <td class="border p-2">{{ lesson.difficulty_level ?? '-' }}</td>
             <td class="border p-2">
-              <button hlmBtn class="btn btn-sm" (click)="startEdit(lesson)" [attr.aria-label]="'admin.lessons.edit' | t">{{ 'admin.lessons.edit' | t }}</button>
-              <button hlmBtn class="btn btn-danger btn-sm ms-2" (click)="delete(lesson)" [attr.aria-label]="'admin.lessons.delete' | t">{{ 'admin.lessons.delete' | t }}</button>
+              <button
+                hlmBtn
+                class="btn btn-sm"
+                (click)="startEdit(lesson)"
+                [attr.aria-label]="'admin.lessons.edit' | t"
+              >
+                {{ 'admin.lessons.edit' | t }}
+              </button>
+              <button
+                hlmBtn
+                class="btn btn-danger btn-sm ms-2"
+                (click)="delete(lesson)"
+                [attr.aria-label]="'admin.lessons.delete' | t"
+              >
+                {{ 'admin.lessons.delete' | t }}
+              </button>
             </td>
           </tr>
         }
@@ -34,7 +55,7 @@
       <h3>{{ (isNew() ? 'admin.lessons.create_lesson' : 'admin.lessons.edit_lesson') | t }}</h3>
       <div class="mb-2">
         <label>{{ 'admin.lessons.title' | t }}</label>
-        <input hlmInput [(ngModel)]="form.title" class="input"  [attr.aria-label]="'text input'"/>
+        <input hlmInput [(ngModel)]="form.title" class="input" [attr.aria-label]="'text input'" />
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.description' | t }}</label>
@@ -42,7 +63,12 @@
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.language' | t }}</label>
-        <input hlmInput [(ngModel)]="form.language_code" class="input"  [attr.aria-label]="'text input'"/>
+        <input
+          hlmInput
+          [(ngModel)]="form.language_code"
+          class="input"
+          [attr.aria-label]="'text input'"
+        />
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.difficulty' | t }}</label>
@@ -51,20 +77,44 @@
       <div class="mb-2">
         <label>{{ 'admin.lessons.cover_image' | t }}</label>
         <div class="flex items-center gap-2">
-          <input type="file" class="hidden" (change)="onCoverFileSelected($event)" #coverFileInput />
-          <button hlmBtn type="button" class="btn btn-secondary" (click)="coverFileInput.click()" [attr.aria-label]="'admin.lessons.upload_cover' | t">
+          <input
+            type="file"
+            class="hidden"
+            (change)="onCoverFileSelected($event)"
+            #coverFileInput
+          />
+          <button
+            hlmBtn
+            type="button"
+            class="btn btn-secondary"
+            (click)="coverFileInput.click()"
+            [attr.aria-label]="'admin.lessons.upload_cover' | t"
+          >
             {{ 'admin.lessons.upload_cover' | t }}
           </button>
           @if (form.cover_image_url) {
-            <span class="text-sm truncate" [title]="form.cover_image_url">{{ form.cover_image_url }}</span>
+            <span class="text-sm truncate" [title]="form.cover_image_url">{{
+              form.cover_image_url
+            }}</span>
           }
         </div>
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.audio' | t }}</label>
         <div class="flex items-center gap-2">
-          <input type="file" class="hidden" (change)="onAudioFileSelected($event)" #audioFileInput />
-          <button hlmBtn type="button" class="btn btn-secondary" (click)="audioFileInput.click()" [attr.aria-label]="'admin.lessons.upload_audio' | t">
+          <input
+            type="file"
+            class="hidden"
+            (change)="onAudioFileSelected($event)"
+            #audioFileInput
+          />
+          <button
+            hlmBtn
+            type="button"
+            class="btn btn-secondary"
+            (click)="audioFileInput.click()"
+            [attr.aria-label]="'admin.lessons.upload_audio' | t"
+          >
             {{ 'admin.lessons.upload_audio' | t }}
           </button>
           @if (form.audio_url) {
@@ -74,10 +124,29 @@
       </div>
       <div class="mb-2">
         <label>{{ 'admin.lessons.content' | t }}</label>
-        <textarea hlmTextarea [(ngModel)]="form.content_json" class="input font-mono h-24"></textarea>
+        <textarea
+          hlmTextarea
+          [(ngModel)]="form.content_json"
+          class="input font-mono h-24"
+        ></textarea>
       </div>
-      <button hlmBtn class="btn btn-primary" (click)="save()" [disabled]="isSaving() || isUploading()" [attr.aria-label]="'admin.lessons.save' | t">{{ 'admin.lessons.save' | t }}</button>
-      <button hlmBtn class="btn btn-secondary ms-2" (click)="cancelEdit()" [attr.aria-label]="'admin.lessons.cancel' | t">{{ 'admin.lessons.cancel' | t }}</button>
+      <button
+        hlmBtn
+        class="btn btn-primary"
+        (click)="save()"
+        [disabled]="isSaving() || isUploading()"
+        [attr.aria-label]="'admin.lessons.save' | t"
+      >
+        {{ 'admin.lessons.save' | t }}
+      </button>
+      <button
+        hlmBtn
+        class="btn btn-secondary ms-2"
+        (click)="cancelEdit()"
+        [attr.aria-label]="'admin.lessons.cancel' | t"
+      >
+        {{ 'admin.lessons.cancel' | t }}
+      </button>
     </div>
   }
 </div>
