@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -207,20 +209,41 @@ export class DecksController {
   @ApiOperation({
     summary: 'List flashcards in a deck',
     description:
-      'Returns all flashcard IDs currently associated with this deck.',
+      'Returns paginated flashcard IDs currently associated with this deck. Hard cap of 200 per page.',
   })
   @ApiParam({
     name: 'id',
     description: 'UUID of the deck',
     example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max items per page (1-200, default 50)',
+    example: 50,
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of items to skip (default 0)',
+    example: 0,
+  })
   @ApiResponse({ status: 200, description: 'Array of flashcard IDs.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getDeckFlashcards(
     @CurrentUser() user: User | null,
     @Param('id') deckId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ): Promise<{ id: string }[]> {
     if (!user) return [];
-    return await this.decksService.getDeckFlashcards(user.id, deckId);
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : 50;
+    const offsetNum = offset !== undefined ? parseInt(offset, 10) : 0;
+    return await this.decksService.getDeckFlashcards(
+      user.id,
+      deckId,
+      limitNum,
+      offsetNum,
+    );
   }
 }

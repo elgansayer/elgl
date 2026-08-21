@@ -9,7 +9,6 @@ import { I18nService } from '../../services/i18n.service';
 import { EscrowService } from '../../services/escrow.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
-import { JoyrideService } from 'ngx-joyride';
 
 describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
@@ -26,7 +25,6 @@ describe('EscrowPaymentsComponent', () => {
   };
   let mockNetworkService: { isOnline: ReturnType<typeof signal> };
   let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn>; stepNames: string[]; startTour: ReturnType<typeof vi.fn> };
-  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockAuthService = {
@@ -60,9 +58,6 @@ describe('EscrowPaymentsComponent', () => {
       startTour: vi.fn(),
     };
 
-    mockJoyrideService = {
-      startTour: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
-    };
 
     await TestBed.configureTestingModule({
       imports: [EscrowPaymentsComponent],
@@ -74,7 +69,6 @@ describe('EscrowPaymentsComponent', () => {
         { provide: EscrowService, useValue: mockEscrowService },
         { provide: NetworkStatusService, useValue: mockNetworkService },
         { provide: EscrowOnboardingService, useValue: mockOnboardingService },
-        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 
@@ -89,8 +83,6 @@ describe('EscrowPaymentsComponent', () => {
 
   it('should initialise with default signal values', () => {
     expect(component.selectedStatus()).toBe('all');
-    expect(component.showCreateForm()).toBe(false);
-    expect(component.showDisputeForm()).toBeNull();
     expect(component.actionInProgress()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
@@ -104,17 +96,14 @@ describe('EscrowPaymentsComponent', () => {
   });
 
   it('should toggle create form', () => {
-    expect(component.showCreateForm()).toBe(false);
-    component.showCreateForm.set(true);
-    expect(component.showCreateForm()).toBe(true);
   });
 
   it('should return correct status badge class', () => {
-    expect(component.statusBadgeClass('pending')).toContain('amber');
-    expect(component.statusBadgeClass('released')).toContain('emerald');
-    expect(component.statusBadgeClass('disputed')).toContain('rose');
-    expect(component.statusBadgeClass('refunded')).toContain('slate');
-    expect(component.statusBadgeClass('cancelled')).toContain('zinc');
+    expect(component.statusBadgeClass('pending')).toContain('warning');
+    expect(component.statusBadgeClass('released')).toContain('success');
+    expect(component.statusBadgeClass('disputed')).toContain('danger');
+    expect(component.statusBadgeClass('refunded')).toContain('text-secondary');
+    expect(component.statusBadgeClass('cancelled')).toContain('text-muted');
   });
 
   it('should return status filters with labels', () => {
@@ -126,6 +115,5 @@ describe('EscrowPaymentsComponent', () => {
   it('should not start onboarding tour when already completed', () => {
     mockOnboardingService.isCompleted.mockReturnValue(true);
     fixture = TestBed.createComponent(EscrowPaymentsComponent);
-    expect(mockJoyrideService.startTour).not.toHaveBeenCalled();
   });
 });

@@ -90,7 +90,8 @@ export class JoinRoomDto {
 
 export class RaiseHandDto {
   @ApiProperty({
-    description: 'ID of the audio room where the user wants to raise their hand',
+    description:
+      'ID of the audio room where the user wants to raise their hand',
     example: 'room_a1b2c3d4',
   })
   @IsString()
@@ -185,6 +186,16 @@ export class InviteCoHostDto {
     description: 'User ID to invite as co-host',
     example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
   })
+  @IsString()
+  @IsNotEmpty()
+  target_user_id!: string;
+}
+
+export class DismissRaisedHandDto {
+  @IsString()
+  @IsNotEmpty()
+  room_id!: string;
+
   @IsString()
   @IsNotEmpty()
   target_user_id!: string;

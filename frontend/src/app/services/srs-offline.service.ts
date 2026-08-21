@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import type { Flashcard } from './vocabulary.store';
 
 interface QueuedReviewPayload {
   flashcardId: string;
@@ -9,6 +10,8 @@ interface QueuedReviewPayload {
 
 const DB_NAME = 'hellotalk_srs_offline';
 const DB_VERSION = 1;
+/** Maximum number of queued reviews to load in one batch during sync. */
+const SYNC_BATCH_SIZE = 25;
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +21,7 @@ export class SrsOfflineService {
   private initPromise: Promise<void> | null = null;
 
   readonly pendingSyncCount = signal(0);
+  readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
@@ -38,8 +42,8 @@ export class SrsOfflineService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!target || typeof target !== 'object' || !('result' in target)) return;
-        const db = target.result as IDBDatabase;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains('flashcards')) {
           db.createObjectStore('flashcards', { keyPath: 'id' });
         }
@@ -63,37 +67,46 @@ export class SrsOfflineService {
     return typeof window !== 'undefined' && !!window.indexedDB;
   }
 
-  /** Cache flashcards locally for offline access */
-  async cacheFlashcards(list: unknown[]): Promise<void> {
+  /** Cache flashcards locally for offline access (bulk write). */
+  async cacheFlashcards(list: Flashcard[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     await this.clearStore(db, 'flashcards');
-    const store = db.transaction('flashcards', 'readwrite').objectStore('flashcards');
-    for (const item of list) {
-      await this.putInStore(store, item as Record<string, unknown>);
-    }
+    if (list.length === 0) return;
+    const tx = db.transaction('flashcards', 'readwrite');
+    const store = tx.objectStore('flashcards');
+    // Bulk put using Promise.all instead of sequential awaits.
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
   }
 
   /** Retrieve cached flashcards when offline */
-  async getCachedFlashcards(): Promise<unknown[]> {
+  async getCachedFlashcards(): Promise<Flashcard[]> {
     if (!this.isAvailable()) return [];
     const db = await this.ensureDB();
     return this.getAllFromStore(db, 'flashcards');
   }
 
-  /** Cache due reviews for offline access */
-  async cacheDueReviews(list: unknown[]): Promise<void> {
+  /** Cache due reviews for offline access (bulk write). */
+  async cacheDueReviews(list: Flashcard[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     await this.clearStore(db, 'due_reviews');
-    const store = db.transaction('due_reviews', 'readwrite').objectStore('due_reviews');
-    for (const item of list) {
-      await this.putInStore(store, item as Record<string, unknown>);
-    }
+    if (list.length === 0) return;
+    const tx = db.transaction('due_reviews', 'readwrite');
+    const store = tx.objectStore('due_reviews');
+    await Promise.all(
+      list.map((item) =>
+        this.putInStore(store, item as unknown as Record<string, unknown>),
+      ),
+    );
   }
 
   /** Retrieve cached due reviews when offline */
-  async getCachedDueReviews(): Promise<unknown[]> {
+  async getCachedDueReviews(): Promise<Flashcard[]> {
     if (!this.isAvailable()) return [];
     const db = await this.ensureDB();
     return this.getAllFromStore(db, 'due_reviews');
@@ -103,7 +116,7 @@ export class SrsOfflineService {
   async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
-    const id = `srs_review_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `srs_review_${Date.now()}_${crypto.randomUUID()}`;
     const payload: QueuedReviewPayload & { id: string } = {
       id,
       flashcardId,
@@ -116,7 +129,7 @@ export class SrsOfflineService {
     await this.refreshPendingCount();
   }
 
-  /** Sync queued offline reviews to the backend */
+  /** Sync queued offline reviews to the backend in batches to avoid memory pressure. */
   async syncQueuedReviews(
     syncCallback: (queued: QueuedReviewPayload) => Promise<void>,
   ): Promise<{ synced: number; failed: number }> {
@@ -128,14 +141,23 @@ export class SrsOfflineService {
     let synced = 0;
     let failed = 0;
 
-    for (const item of items) {
-      const queued = item as unknown as QueuedReviewPayload & { id: string };
-      try {
-        await syncCallback(queued);
-        await this.deleteFromStore(db, 'sync_queue', queued.id);
-        synced++;
-      } catch {
-        failed++;
+    // Process in batches to avoid holding all items in memory during sync.
+    for (let batchStart = 0; batchStart < items.length; batchStart += SYNC_BATCH_SIZE) {
+      const batch = items.slice(batchStart, batchStart + SYNC_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
+          const queued = item as unknown as QueuedReviewPayload & { id: string };
+          await syncCallback(queued);
+          await this.deleteFromStore(db, 'sync_queue', queued.id);
+        }),
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          synced++;
+        } else {
+          failed++;
+        }
       }
     }
 
@@ -163,7 +185,7 @@ export class SrsOfflineService {
     });
   }
 
-  private getAllFromStore(db: IDBDatabase, storeName: string): Promise<unknown[]> {
+  private getAllFromStore<T = unknown>(db: IDBDatabase, storeName: string): Promise<T[]> {
     return new Promise((resolve, reject) => {
       const store = db.transaction(storeName, 'readonly').objectStore(storeName);
       const req = store.getAll();

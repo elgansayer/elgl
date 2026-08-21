@@ -1,36 +1,46 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn().mockReturnValue({}),
-        createTextNode: jest.fn().mockReturnValue({}),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn().mockReturnValue({}),
+          createTextNode: vi.fn().mockReturnValue({}),
+        },
+        Node: {
+          TEXT_NODE: 3,
+        },
       },
-      Node: {
-        TEXT_NODE: 3,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict DOMPurify mock that strips ALL HTML tags
-const mockSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return '';
-  return dirty.replace(/<[^>]*>/g, '');
-};
+const { mockSanitize } = vi.hoisted(() => {
+  const mockSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return '';
+    return dirty.replace(/<[^>]*>/g, '');
+  };
+  return { mockSanitize };
+});
 
-jest.mock('dompurify', () => {
-  return jest.fn().mockImplementation(() => ({
-    sanitize: mockSanitize,
-    setConfig: jest.fn(),
-  }));
+vi.mock('dompurify', () => {
+  return {
+    __esModule: true,
+    default: vi.fn().mockImplementation(() => ({
+      sanitize: mockSanitize,
+      setConfig: vi.fn(),
+    })),
+  };
 });
 
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 describe('sanitiseDiscoveryData', () => {
   it('should strip script tags from strings', () => {
-    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe('alert("xss")');
+    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe(
+      'alert("xss")',
+    );
   });
 
   it('should strip all HTML tags and return plain text', () => {
@@ -39,7 +49,9 @@ describe('sanitiseDiscoveryData', () => {
   });
 
   it('should strip tags from complex HTML', () => {
-    expect(sanitiseDiscoveryData('<p>Hello <b>world</b></p>')).toBe('Hello world');
+    expect(sanitiseDiscoveryData('<p>Hello <b>world</b></p>')).toBe(
+      'Hello world',
+    );
   });
 
   it('should preserve plain text unchanged', () => {

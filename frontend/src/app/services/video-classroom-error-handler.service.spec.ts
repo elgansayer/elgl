@@ -165,7 +165,7 @@ describe('VideoClassroomErrorHandlerService', () => {
 
     const req = httpTesting.expectOne(API_ERROR_URL);
     const body = req.request.body as Record<string, unknown>;
-    expect(body['metadata']['roomId']).toBe('room-429-exhausted');
+    expect((body['metadata'] as Record<string, unknown>)['roomId']).toBe('room-429-exhausted');
     req.flush({ status: 'logged' });
   });
 
@@ -190,7 +190,7 @@ describe('VideoClassroomErrorHandlerService', () => {
 
     const req = httpTesting.expectOne(API_ERROR_URL);
     const body = req.request.body as Record<string, unknown>;
-    expect(body['metadata']['roomId']).toBe('room-500');
+    expect((body['metadata'] as Record<string, unknown>)['roomId']).toBe('room-500');
     req.flush({ status: 'logged' });
   });
 });

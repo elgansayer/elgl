@@ -129,8 +129,127 @@ export function scrubCoinPurchasesForArchive(
   }
   return records.map((r) => {
     if (r !== null && typeof r === 'object') {
-      return scrubCoinPurchaseForArchive(r);
+      const scrubbed = scrubCoinPurchaseForArchive(r);
+      return scrubbed ?? r;
     }
     return r;
-  }) as Record<string, unknown>[];
+  });
+}
+// ---------------------------------------------------------------------------
+// GDPR data scrubbing helpers for Escrow Transactions
+// ---------------------------------------------------------------------------
+
+/**
+ * Fields in an escrow_transactions row that may contain user-authored
+ * free-text and must be scrubbed before export.
+ */
+const ESCROW_SCRUB_FIELDS = new Set(['description', 'reference_id']);
+
+/**
+ * Maximum length of free-text fields preserved in GDPR archive exports.
+ * Truncation prevents oversized exports when users have written lengthy
+ * descriptions.
+ */
+const ESCROW_MAX_TEXT_LENGTH = 500;
+
+/**
+ * Scrub a free-text escrow field for GDPR archive export.
+ *
+ * Rules:
+ * - null / undefined / empty string are returned as-is.
+ * - The value is truncated to ESCROW_MAX_TEXT_LENGTH characters.
+ * - Any remaining HTML markup is stripped via the strict sanitizer.
+ * - If the result is empty after sanitisation, [REDACTED] is returned
+ *   so the user knows data existed but was scrubbed.
+ */
+function scrubEscrowTextField(value: string | null | undefined): string | null {
+  if (value == null || value === '') {
+    return value as null;
+  }
+
+  let cleaned = value.slice(0, ESCROW_MAX_TEXT_LENGTH);
+
+  // Strip any HTML that may have been injected into a description field
+  cleaned = strictPurify.sanitize(cleaned);
+
+  if (cleaned === '') {
+    return '[REDACTED]';
+  }
+
+  return cleaned;
+}
+
+const ANONYMISED_USER_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Scrub a single escrow_transactions record for GDPR archive export.
+ *
+ * The payer_id and payee_id are replaced with an anonymised placeholder
+ * when the user only appears as a counterparty. The caller is responsible
+ * for restoring the requesting user's own ID so they can identify their role.
+ * Free-text fields (description, reference_id) are scrubbed via
+ * scrubEscrowTextField.
+ */
+export function scrubEscrowTransactionForArchive(
+  record: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined {
+  if (record == null) {
+    return record;
+  }
+
+  const scrubbed: Record<string, unknown> = { ...record };
+
+  // Anonymise counterparty IDs
+  scrubbed['payer_id'] = ANONYMISED_USER_PLACEHOLDER;
+  scrubbed['payee_id'] = ANONYMISED_USER_PLACEHOLDER;
+
+  for (const key of Object.keys(scrubbed)) {
+    if (ESCROW_SCRUB_FIELDS.has(key)) {
+      const fieldValue = scrubbed[key];
+      scrubbed[key] = scrubEscrowTextField(
+        typeof fieldValue === 'string' ? fieldValue : null,
+      );
+    }
+  }
+
+  return scrubbed;
+}
+
+/**
+ * Scrub an array of escrow_transactions records for GDPR archive export.
+ *
+ * Each element is processed through scrubEscrowTransactionForArchive.
+ * The requesting user's own ID is restored in each record so they can
+ * identify whether they were the payer or payee.
+ *
+ * @param records   Raw escrow rows from the database.
+ * @param userId    The ID of the user requesting the archive.
+ */
+export function scrubEscrowTransactionsForArchive(
+  records: unknown[] | null | undefined,
+  userId: string,
+): Record<string, unknown>[] {
+  if (records == null || !Array.isArray(records)) {
+    return [];
+  }
+
+  return records.map((record) => {
+    if (record !== null && typeof record === 'object') {
+      const scrubbed = scrubEscrowTransactionForArchive(
+        record as Record<string, unknown>,
+      ) as Record<string, unknown>;
+
+      // Restore the requesting user's own ID so they can identify their role
+      const rec = record as Record<string, unknown>;
+      if (rec['payer_id'] === userId) {
+        scrubbed['payer_id'] = userId;
+      }
+      if (rec['payee_id'] === userId) {
+        scrubbed['payee_id'] = userId;
+      }
+
+      return scrubbed;
+    }
+    return record as Record<string, unknown>;
+  });
 }

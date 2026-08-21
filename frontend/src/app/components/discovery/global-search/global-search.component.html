@@ -1,65 +1,84 @@
-<div class="flex flex-col gap-4 p-4 bg-surface rounded-xl shadow-sm border border-surface-100" role="search" [attr.aria-label]="'discovery.global_search_title' | t">
-  <h2 class="text-lg font-bold text-text-primary" id="global-search-title">
+<div
+  class="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 bg-surface-400 rounded-xl shadow-sm border border-surface-100"
+  role="search"
+  [attr.aria-label]="'discovery.global_search_title' | t"
+>
+  <h2 class="text-base sm:text-lg font-bold text-text-primary">
     {{ 'discovery.global_search_title' | t }}
   </h2>
 
   <!-- Native Language Dropdown -->
   <div class="flex flex-col gap-1.5">
-    <label for="global-nativeLanguages" class="text-sm font-medium text-text-primary">
+    <label for="global-nativeLanguages" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.native_languages' | t }}
     </label>
-    <select
-      id="global-nativeLanguages"
+    <hlm-native-select
+      selectId="global-nativeLanguages"
       [value]="nativeLanguages()"
-      (change)="nativeLanguages.set($any($event.target).value)"
-      class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
+      (valueChange)="nativeLanguages.set($event ?? '')"
+      class="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
+      selectClass="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
     >
       <option value="">{{ 'discovery.any_language' | t }}</option>
       @for (lang of availableLanguages(); track lang.code) {
         <option [value]="lang.code">{{ lang.flag }} {{ lang.translatedName }}</option>
       }
-    </select>
+    </hlm-native-select>
   </div>
 
   <!-- Target Language Dropdown -->
   <div class="flex flex-col gap-1.5">
-    <label for="global-targetLanguage" class="text-sm font-medium text-text-primary">
+    <label for="global-targetLanguage" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.target_language' | t }}
     </label>
-    <select
-      id="global-targetLanguage"
+    <hlm-native-select
+      selectId="global-targetLanguage"
       [value]="targetLanguage()"
-      (change)="targetLanguage.set($any($event.target).value)"
-      class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
+      (valueChange)="targetLanguage.set($event ?? '')"
+      class="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
+      selectClass="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
     >
       <option value="">{{ 'discovery.any_language' | t }}</option>
       @for (lang of availableLanguages(); track lang.code) {
         <option [value]="lang.code">{{ lang.flag }} {{ lang.translatedName }}</option>
       }
-    </select>
+    </hlm-native-select>
   </div>
 
   <!-- Level Dropdown -->
   <div class="flex flex-col gap-1.5">
-    <label for="global-proficiencyLevel" class="text-sm font-medium text-text-primary">
+    <label for="global-proficiencyLevel" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.proficiency_level' | t }}
     </label>
-    <select
-      id="global-proficiencyLevel"
+    <hlm-native-select
+      selectId="global-proficiencyLevel"
       [value]="level()"
-      (change)="level.set($any($event.target).value)"
-      class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
+      (valueChange)="level.set($event ?? '')"
+      class="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
+      selectClass="w-full p-2 sm:p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary text-sm focus:ring-2 focus:ring-accent-400 outline-none appearance-none"
     >
       <option value="">{{ 'discovery.any_level' | t }}</option>
       @for (lvl of levels; track lvl.value) {
         <option [value]="lvl.value">{{ lvl.key | t }}</option>
       }
-    </select>
+    </hlm-native-select>
+  </div>
+
+  <div class="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-200 p-3">
+    <hlm-checkbox
+      inputId="global-hasAudioIntro"
+      [checked]="hasAudioIntro()"
+      (change)="toggleHasAudioIntro()"
+    />
+    <label for="global-hasAudioIntro" class="text-xs sm:text-sm font-medium text-text-primary">
+      {{ 'audioIntro.title' | t }}
+    </label>
   </div>
 
   <button
+    hlmBtn
     (click)="applyFilters()"
-    class="mt-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors focus:ring-2 focus:ring-accent-500 focus:ring-offset-2"
+    class="mt-2 w-full py-2.5 sm:py-3 px-4 bg-accent-500 hover:bg-accent-400 text-white font-bold rounded-xl transition-colors text-sm sm:text-base active:scale-[0.98] touch-manipulation"
     [attr.aria-label]="'discovery.search_button' | t"
   >
     {{ 'discovery.search_button' | t }}

@@ -1,14 +1,23 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AdminUserQueryDto {
   @ApiPropertyOptional({
-    description: 'Search string to filter users by display name (case-insensitive ILIKE)',
+    description:
+      'Search string to filter users by display name (case-insensitive ILIKE)',
     example: 'john',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   search?: string;
 
   @ApiPropertyOptional({

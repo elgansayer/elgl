@@ -153,7 +153,9 @@ export class DiscoveryCacheInvalidationService {
       `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
     );
     if (total > 0) {
-      this.logger.info(`Invalidated ${total} daily recommendation cache key(s)`);
+      this.logger.info(
+        `Invalidated ${total} daily recommendation cache key(s)`,
+      );
     }
   }
 

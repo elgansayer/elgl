@@ -7,7 +7,6 @@ import {
   CACHE_PRIVATE_SHORT,
   CACHE_PRIVATE_MEDIUM,
   CACHE_PRIVATE_NO_STORE,
-  CACHE_EDGE_SHORT,
   CACHE_EDGE_MEDIUM,
   CACHE_EDGE_VERY_SHORT,
   CACHE_NO_STORE,
@@ -18,6 +17,8 @@ import {
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
   CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
   CACHE_TAG_CALLS,
   CACHE_TAG_ESCROW,
 } from './cache.interceptor';
@@ -90,7 +91,9 @@ describe('CacheControlInterceptor', () => {
       expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('max-age=30');
       expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('s-maxage=60');
       expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=60');
+      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=60',
+      );
       expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=60',
       );
@@ -99,9 +102,13 @@ describe('CacheControlInterceptor', () => {
     it('CACHE_EDGE_VERY_SHORT should have edge-only very short cache with browser revalidation', () => {
       expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('private');
       expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain(
+        'must-revalidate',
+      );
       expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=30');
+      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=30',
+      );
       expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=15',
       );
@@ -120,6 +127,8 @@ describe('CacheControlInterceptor', () => {
       expect(CACHE_TAG_AUDIO_ROOMS).toBe('audio-rooms');
       expect(CACHE_TAG_AUDIO_ROOM_STAGE).toBe('audio-rooms:stage');
       expect(CACHE_TAG_AUDIO_ROOM_POLLS).toBe('audio-rooms:polls');
+      expect(CACHE_TAG_AUDIO_ROOM_TRANSCRIPT).toBe('audio-rooms:transcript');
+      expect(CACHE_TAG_AUDIO_ROOM_NOTES).toBe('audio-rooms:notes');
       expect(CACHE_TAG_CALLS).toBe('calls');
       expect(CACHE_TAG_ESCROW).toBe('escrow');
     });
@@ -127,8 +136,8 @@ describe('CacheControlInterceptor', () => {
 
   describe('intercept', () => {
     function createCallContext(
-      setHeader = jest.fn(),
-      removeHeader = jest.fn(),
+      setHeader = vi.fn(),
+      removeHeader = vi.fn(),
     ): Parameters<typeof CacheControlInterceptor.prototype.intercept>[0] {
       const mockResponse = { setHeader, removeHeader };
       return {
@@ -139,7 +148,7 @@ describe('CacheControlInterceptor', () => {
     }
 
     it('should set all directive headers on success', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
       const next = { handle: () => of('body') } as Parameters<
@@ -160,7 +169,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should override to no-store on error', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
       const next = {
@@ -182,7 +191,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should handle CACHE_PRIVATE_NO_STORE directive', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE);
       const next = { handle: () => of('mutation-result') } as Parameters<
@@ -201,7 +210,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should handle CACHE_PRIVATE_MEDIUM directive for reading engine user lists', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM);
       const next = { handle: () => of([]) } as Parameters<
@@ -220,12 +229,12 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should set Cache-Tag header when cacheTags are provided', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
-      const interceptor = new CacheControlInterceptor(
-        CACHE_EDGE_MEDIUM,
-        ['flashcards', 'flashcards:due'],
-      );
+      const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+        'flashcards',
+        'flashcards:due',
+      ]);
       const next = { handle: () => of([]) } as Parameters<
         typeof interceptor.intercept
       >[1];
@@ -238,7 +247,7 @@ describe('CacheControlInterceptor', () => {
     });
 
     it('should not set Cache-Tag header when cacheTags is empty', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, []);
       const next = { handle: () => of([]) } as Parameters<
@@ -246,17 +255,19 @@ describe('CacheControlInterceptor', () => {
       >[1];
 
       await lastValueFrom(interceptor.intercept(context, next));
-      expect(setHeader).not.toHaveBeenCalledWith('Cache-Tag', expect.anything());
+      expect(setHeader).not.toHaveBeenCalledWith(
+        'Cache-Tag',
+        expect.anything(),
+      );
     });
 
     it('should remove Cache-Tag header on error', async () => {
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const context = createCallContext(setHeader, removeHeader);
-      const interceptor = new CacheControlInterceptor(
-        CACHE_EDGE_MEDIUM,
-        ['flashcards'],
-      );
+      const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+        'flashcards',
+      ]);
       const next = {
         handle: () => throwError(() => new Error('db error')),
       } as Parameters<typeof interceptor.intercept>[1];

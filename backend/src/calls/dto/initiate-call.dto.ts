@@ -11,7 +11,8 @@ export class InitiateCallDto {
   callee_id!: string;
 
   @ApiPropertyOptional({
-    description: 'Whether the call should be a video call (true) or audio-only (false)',
+    description:
+      'Whether the call should be a video call (true) or audio-only (false)',
     example: true,
     default: true,
   })

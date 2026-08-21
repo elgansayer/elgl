@@ -9,7 +9,7 @@ import {
   Post,
   Put,
   Query,
-  UseFilters,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -21,20 +21,32 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReadingEngineService } from './reading-engine.service';
-import { ReadingEngineExceptionFilter } from './reading-engine-exception.filter';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
-import { ReadingResource, ReadingProgress, ReadingTokenBreakdown } from './interfaces/reading.interface';
+import {
+  ReadingResource,
+  ReadingProgress,
+  ReadingTokenBreakdown,
+} from './interfaces/reading.interface';
+import { Request } from 'express';
+
+interface AuthenticatedRequest extends Request {
+  user: { id: string; sub?: string };
+}
 
 @ApiTags('LingQ Reading Engine')
 @Controller('reading')
 @UseGuards(SupabaseAuthGuard)
-@UseFilters(ReadingEngineExceptionFilter)
 @ApiBearerAuth()
 export class ReadingEngineController {
   constructor(private readonly readingService: ReadingEngineService) {}
+
+  /** Extract the authenticated user id from the request. */
+  private getUserId(req: AuthenticatedRequest): string {
+    return req.user?.id ?? req.user?.sub ?? 'anonymous';
+  }
 
   /* ---- Resources ---- */
 
@@ -44,8 +56,9 @@ export class ReadingEngineController {
   @ApiResponse({ status: 201, description: 'Resource created.' })
   async createResource(
     @Body() dto: CreateReadingResourceDto,
+    @Req() req: AuthenticatedRequest,
   ): Promise<ReadingResource> {
-    return this.readingService.createResource('system', dto);
+    return this.readingService.createResource(this.getUserId(req), dto);
   }
 
   @Get('resources')
@@ -63,7 +76,13 @@ export class ReadingEngineController {
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ): Promise<ReadingResource[]> {
-    return this.readingService.listResources({ language, difficulty, topic, limit, offset });
+    return this.readingService.listResources({
+      language,
+      difficulty,
+      topic,
+      limit,
+      offset,
+    });
   }
 
   @Get('resources/:id')
@@ -101,30 +120,41 @@ export class ReadingEngineController {
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'Tokenise a reading resource using Intl.Segmenter' })
   @ApiParam({ name: 'id', description: 'Resource UUID' })
-  @ApiQuery({ name: 'lang', required: false, description: 'ISO 639-1 language override' })
+  @ApiQuery({
+    name: 'lang',
+    required: false,
+    description: 'ISO 639-1 language override',
+  })
   async tokenise(
     @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
     @Query('lang') lang?: string,
   ): Promise<ReadingTokenBreakdown> {
-    return this.readingService.tokenise('user', id, lang);
+    return this.readingService.tokenise(this.getUserId(req), id, lang);
   }
 
   /* ---- Progress ---- */
 
   @Get('progress')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @ApiOperation({ summary: 'Get current reading progress for authenticated user' })
-  async getProgress(): Promise<ReadingProgress> {
-    return this.readingService.getProgress('user');
+  @ApiOperation({
+    summary: 'Get current reading progress for authenticated user',
+  })
+  async getProgress(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ReadingProgress> {
+    return this.readingService.getProgress(this.getUserId(req));
   }
 
   @Post('progress/session')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Record a completed reading session' })
   async recordSession(
-    @Body() body: { resourceId: string; wordsRead: number; durationSeconds: number },
+    @Body()
+    body: { resourceId: string; wordsRead: number; durationSeconds: number },
+    @Req() req: AuthenticatedRequest,
   ): Promise<ReadingProgress> {
-    return this.readingService.recordSession('user', body);
+    return this.readingService.recordSession(this.getUserId(req), body);
   }
 
   /* ---- Cache Admin ---- */
@@ -132,8 +162,10 @@ export class ReadingEngineController {
   @Delete('cache/user')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Clear all reading-engine caches for the authenticated user' })
-  async clearUserCache(): Promise<void> {
-    await this.readingService.clearUserCaches('user');
+  @ApiOperation({
+    summary: 'Clear all reading-engine caches for the authenticated user',
+  })
+  async clearUserCache(@Req() req: AuthenticatedRequest): Promise<void> {
+    await this.readingService.clearUserCaches(this.getUserId(req));
   }
 }

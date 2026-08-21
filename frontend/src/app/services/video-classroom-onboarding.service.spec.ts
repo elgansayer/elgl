@@ -1,26 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { JoyrideService } from 'ngx-joyride';
-import { of } from 'rxjs';
 import { VideoClassroomOnboardingService } from './video-classroom-onboarding.service';
 
 describe('VideoClassroomOnboardingService', () => {
   let service: VideoClassroomOnboardingService;
 
-  const mockJoyrideService = {
-    startTour: vi.fn().mockReturnValue(of(undefined)),
-    closeTour: vi.fn(),
-    isTourInProgress: vi.fn().mockReturnValue(false),
-  };
-
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_video_classroom_onboarding_done');
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: JoyrideService, useValue: mockJoyrideService },
-      ],
-    });
+    TestBed.configureTestingModule({});
     service = TestBed.inject(VideoClassroomOnboardingService);
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -83,35 +70,13 @@ describe('VideoClassroomOnboardingService', () => {
     expect(window.localStorage.getItem('hellotalk_video_classroom_onboarding_done')).toBeNull();
   });
 
-  it('should call joyrideService.startTour when startMarketplaceTour is called', () => {
-    mockJoyrideService.isTourInProgress.mockReturnValue(false);
+  it('should mark complete when startMarketplaceTour is called', () => {
     service.startMarketplaceTour();
-    expect(mockJoyrideService.startTour).toHaveBeenCalledWith(
-      expect.objectContaining({
-        steps: service.marketplaceStepNames,
-        themeColor: '#a855f7',
-        showCounter: true,
-        showPrevButton: true,
-      }),
-    );
+    expect(service.isCompleted()).toBe(true);
   });
 
-  it('should call joyrideService.startTour when startRoomTour is called', () => {
-    mockJoyrideService.isTourInProgress.mockReturnValue(false);
+  it('should mark complete when startRoomTour is called', () => {
     service.startRoomTour();
-    expect(mockJoyrideService.startTour).toHaveBeenCalledWith(
-      expect.objectContaining({
-        steps: service.roomStepNames,
-        themeColor: '#a855f7',
-        showCounter: true,
-        showPrevButton: true,
-      }),
-    );
-  });
-
-  it('should not call startTour if already in progress', () => {
-    mockJoyrideService.isTourInProgress.mockReturnValue(true);
-    service.startMarketplaceTour();
-    expect(mockJoyrideService.startTour).not.toHaveBeenCalled();
+    expect(service.isCompleted()).toBe(true);
   });
 });

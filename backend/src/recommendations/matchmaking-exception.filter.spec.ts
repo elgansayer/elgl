@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
@@ -6,16 +7,16 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 
 describe('MatchmakingExceptionFilter', () => {
   let filter: MatchmakingExceptionFilter;
-  let mockCrashReportService: { reportCrash: jest.Mock };
-  let mockCircuitBreakerService: { isAvailable: jest.Mock };
+  let mockCrashReportService: { reportCrash: Mock };
+  let mockCircuitBreakerService: { isAvailable: Mock };
 
   beforeEach(async () => {
     mockCrashReportService = {
-      reportCrash: jest.fn().mockResolvedValue({}),
+      reportCrash: vi.fn().mockResolvedValue({}),
     };
 
     mockCircuitBreakerService = {
-      isAvailable: jest.fn().mockReturnValue(true),
+      isAvailable: vi.fn().mockReturnValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -36,7 +37,7 @@ describe('MatchmakingExceptionFilter', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -47,8 +48,8 @@ describe('MatchmakingExceptionFilter', () => {
     user?: { id: string },
     body?: Record<string, unknown>,
   ) {
-    const json = jest.fn();
-    const status = jest.fn().mockReturnValue({ json });
+    const json = vi.fn();
+    const status = vi.fn().mockReturnValue({ json });
     const req = {
       method: 'GET',
       url: '/recommendations/for-you',

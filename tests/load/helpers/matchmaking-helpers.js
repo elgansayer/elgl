@@ -1,63 +1,51 @@
 /**
- * Artillery helper functions for Matchmaking / Discovery load testing.
+ * Artillery helper functions for Matchmaking Algorithm load testing.
  *
  * Provides custom utility hooks and data generators for the
  * matchmaking.load.yml test suite.
- *
- * Exercised endpoints:
- *   GET /discovery/partners            - core partner search with filters
- *   GET /discovery/partner-of-week     - cached weekly partner list
- *   GET /discovery/audio-intros        - audio-intro discovery
- *   GET /discovery/recent-native-speakers - recently joined natives
- *   GET /discovery/spotlight           - spotlight users
- *   GET /discovery/language-pair       - language pair matching
- *   GET /discovery/search-by-location  - location-based search
  */
-
-/**
- * Generate a random ISO 639-1 language code for dynamic test data.
- */
-function randomLanguageCode() {
-  const codes = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'ar', 'pt', 'it'];
-  return codes[Math.floor(Math.random() * codes.length)];
-}
-
-/**
- * Generate a random coordinate pair representing a plausible global position.
- */
-function randomCoordinates() {
-  const lat = (Math.random() * 170 - 85).toFixed(6);
-  const lon = (Math.random() * 350 - 175).toFixed(6);
-  return { latitude: lat, longitude: lon };
-}
 
 /**
  * Called before each request in a scenario flow.
  * Injects a correlation ID for tracing load-test requests in server logs.
  */
-function beforeRequest(requestParams, _context, _events, next) {
+function beforeRequest(requestParams, context, events, next) {
   if (requestParams.headers) {
     requestParams.headers['X-Load-Test-Id'] =
-      `matchmaking-load-${Date.now()}`;
+      context.vars.loadTestId || `matchmaking-load-${Date.now()}`;
   }
   return next();
 }
 
 /**
- * Called after each response. Logs non-200 status codes for triage.
+ * Called after each response. Logs the match tier if present for debugging
+ * degraded recommendations during load testing.
  */
-function afterResponse(_requestParams, response, _context, _events, next) {
-  if (response.statusCode !== 200) {
-    console.error(
-      `[matchmaking-load] Non-OK response: ${response.statusCode} on ${_requestParams.url}`
-    );
+function afterResponse(requestParams, response, context, events, next) {
+  if (response.body) {
+    try {
+      const body =
+        typeof response.body === 'string'
+          ? JSON.parse(response.body)
+          : response.body;
+      if (Array.isArray(body) && body.length > 0) {
+        const tier = body[0].matchTier;
+        if (tier && tier !== 'interest') {
+          events.emit(
+            'counter',
+            `matchmaking.tier.${tier}`,
+            1,
+          );
+        }
+      }
+    } catch {
+      // Non-JSON response; skip tier tracking
+    }
   }
   return next();
 }
 
 module.exports = {
-  randomLanguageCode,
-  randomCoordinates,
   beforeRequest,
   afterResponse,
 };

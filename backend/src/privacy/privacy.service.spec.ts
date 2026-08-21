@@ -8,14 +8,14 @@ import { DeleteAccountDto } from './dto/delete-account.dto';
 
 // Mock the sanitise-economy helper to avoid loading jsdom/dompurify ESM
 // dependencies that the privacy spec does not need.
-jest.mock('../economy/sanitise-economy.helper', () => ({
-  sanitiseEconomyData: jest.fn((value: unknown) => value),
-  scrubReceiptToken: jest.fn((token: string | null | undefined) => {
+vi.mock('../economy/sanitise-economy.helper', () => ({
+  sanitiseEconomyData: vi.fn((value: unknown) => value),
+  scrubReceiptToken: vi.fn((token: string | null | undefined) => {
     if (token == null || token === '') return token as null;
     if (token.length < 8) return '[REDACTED-SHORT-TOKEN]';
     return '***...' + token.slice(-4);
   }),
-  scrubCoinPurchaseForArchive: jest.fn(
+  scrubCoinPurchaseForArchive: vi.fn(
     (
       record: Record<string, unknown> | null | undefined,
     ): Record<string, unknown> | null | undefined => {
@@ -33,7 +33,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       return scrubbed;
     },
   ),
-  scrubCoinPurchasesForArchive: jest.fn(
+  scrubCoinPurchasesForArchive: vi.fn(
     (records: unknown[] | null | undefined): unknown[] | null | undefined => {
       if (records == null || !Array.isArray(records)) return records;
       return records.map((record) => {
@@ -55,36 +55,91 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       });
     },
   ),
+  scrubEscrowTransactionForArchive: vi.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
+      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
+      if (typeof scrubbed['description'] === 'string') {
+        scrubbed['description'] = null;
+      }
+      if (typeof scrubbed['reference_id'] === 'string') {
+        scrubbed['reference_id'] = null;
+      }
+      return scrubbed;
+    },
+  ),
+  scrubEscrowTransactionsForArchive: vi.fn(
+    (
+      records: unknown[] | null | undefined,
+      userId: string,
+    ): Record<string, unknown>[] => {
+      if (records == null || !Array.isArray(records)) return [];
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          scrubbed['payer_id'] =
+            r['payer_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['payee_id'] =
+            r['payee_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['description'] = null;
+          scrubbed['reference_id'] = null;
+          return scrubbed;
+        }
+        return record as Record<string, unknown>;
+      });
+    },
+  ),
 }));
 
 describe('PrivacyService', () => {
   let service: PrivacyService;
-  const mockFrom = jest.fn();
-  const mockSelect = jest.fn();
-  const mockEq = jest.fn();
-  const mockOrder = jest.fn();
-  const mockInsert = jest.fn();
-  const mockUpdate = jest.fn();
-  const mockUpload = jest.fn();
-  const mockGetPublicUrl = jest.fn();
+  const mockFrom = vi.fn();
+  const mockSelect = vi.fn();
+  const mockEq = vi.fn();
+  const mockOrder = vi.fn();
+  const mockInsert = vi.fn();
+  const mockUpdate = vi.fn();
+  const mockUpload = vi.fn();
+  const mockGetPublicUrl = vi.fn();
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const mockSupabaseClient = {
       from: mockFrom,
       storage: {
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           upload: mockUpload,
           getPublicUrl: mockGetPublicUrl,
         }),
       },
     };
 
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      update: mockUpdate,
+    mockFrom.mockImplementation((table: string) => {
+      const defaultChain = {
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+        in: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      };
+
+      return {
+        select: vi.fn().mockReturnValue(defaultChain),
+        insert: mockInsert,
+        update: mockUpdate,
+      };
     });
 
     mockInsert.mockReturnValue({ eq: mockEq });
@@ -98,36 +153,36 @@ describe('PrivacyService', () => {
       // Return empty data for economy tables we don't need to test in detail
       if (table === 'coin_purchases') {
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
         };
       }
       if (table === 'gift_transactions') {
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
         };
       }
       if (table === 'escrow_transactions') {
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
         };
       }
       if (table === 'user_sticker_packs') {
         return {
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           }),
         };
@@ -145,16 +200,16 @@ describe('PrivacyService', () => {
       eq: mockEq,
       order: mockOrder,
       // For deck_flashcards .in() call
-      in: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      in: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
       }),
     });
     mockEq.mockReturnValue({
-      single: jest.fn().mockResolvedValue({ data: {}, error: null }),
+      single: vi.fn().mockResolvedValue({ data: {}, error: null }),
       order: mockOrder,
     });
     mockOrder.mockReturnValue({
-      eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -166,16 +221,16 @@ describe('PrivacyService', () => {
         },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn() },
+          useValue: { get: vi.fn() },
         },
         {
           provide: SafetyCacheInvalidationService,
           useValue: {
-            invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
-            invalidateTrustAndSafetyCaches: jest
+            invalidateUserCaches: vi.fn().mockResolvedValue(undefined),
+            invalidateTrustAndSafetyCaches: vi
               .fn()
               .mockResolvedValue(undefined),
-            invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
+            invalidateUserPairCaches: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -232,7 +287,7 @@ describe('PrivacyService', () => {
       const dto: DeleteAccountDto = { confirm_delete: true };
       const updateError = { message: 'DB error' };
       mockUpdate.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: updateError }),
+        eq: vi.fn().mockResolvedValue({ error: updateError }),
       });
 
       await expect(service.deleteAccount('user-1', dto)).rejects.toThrow(
@@ -243,7 +298,7 @@ describe('PrivacyService', () => {
 
   describe('cancelDeletion', () => {
     it('should clear deletion fields', async () => {
-      const mockEqCancel = jest.fn().mockResolvedValue({ error: null });
+      const mockEqCancel = vi.fn().mockResolvedValue({ error: null });
       mockUpdate.mockReturnValue({ eq: mockEqCancel });
 
       await service.cancelDeletion('user-1');
@@ -258,7 +313,7 @@ describe('PrivacyService', () => {
     });
 
     it('should throw BadRequestException on error', async () => {
-      const mockEqCancel = jest
+      const mockEqCancel = vi
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
       mockUpdate.mockReturnValue({ eq: mockEqCancel });
@@ -271,23 +326,12 @@ describe('PrivacyService', () => {
 
   describe('requestArchive', () => {
     it('should handle archive creation', async () => {
-      // Set up mock chains for collectUserData
-      // Each data fetch returns empty data
-      mockSelect.mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-          order: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        }),
-      });
-
       mockUpload.mockResolvedValue({ error: null });
       mockGetPublicUrl.mockReturnValue({
         data: { publicUrl: 'https://example.com/archive.json' },
       });
       mockInsert.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
       await service.requestArchive('user-1', {
@@ -302,29 +346,21 @@ describe('PrivacyService', () => {
     it('should include escrow transactions in the archive', async () => {
       // Override escrow_transactions mock to return data
       mockFrom.mockImplementation((table: string) => {
-        if (table === 'coin_purchases') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'gift_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+        const defaultChain = {
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+
         if (table === 'escrow_transactions') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: [
                     {
                       id: 'esc_1',
@@ -340,19 +376,13 @@ describe('PrivacyService', () => {
                 }),
               }),
             }),
+            insert: mockInsert,
+            update: mockUpdate,
           };
         }
-        if (table === 'user_sticker_packs') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+
         return {
-          select: mockSelect,
+          select: vi.fn().mockReturnValue(defaultChain),
           insert: mockInsert,
           update: mockUpdate,
         };
@@ -363,7 +393,7 @@ describe('PrivacyService', () => {
         data: { publicUrl: 'https://example.com/archive.json' },
       });
       mockInsert.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
       await service.requestArchive('user-1', {
@@ -393,11 +423,21 @@ describe('PrivacyService', () => {
     it('should include scrubbed coin purchases in the archive', async () => {
       // Override the coin_purchases mock to return sensitive data
       mockFrom.mockImplementation((table: string) => {
+        const defaultChain = {
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+
         if (table === 'coin_purchases') {
           return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({
                   data: [
                     {
                       id: 'cp_1',
@@ -412,37 +452,13 @@ describe('PrivacyService', () => {
                 }),
               }),
             }),
+            insert: mockInsert,
+            update: mockUpdate,
           };
         }
-        if (table === 'gift_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'escrow_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'user_sticker_packs') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+
         return {
-          select: mockSelect,
+          select: vi.fn().mockReturnValue(defaultChain),
           insert: mockInsert,
           update: mockUpdate,
         };
@@ -453,7 +469,7 @@ describe('PrivacyService', () => {
         data: { publicUrl: 'https://example.com/archive.json' },
       });
       mockInsert.mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
       // The upload call contains the JSON blob. We can inspect mockUpload to
@@ -484,15 +500,6 @@ describe('PrivacyService', () => {
     });
 
     it('should throw BadRequestException on upload error', async () => {
-      mockSelect.mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-          order: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        }),
-      });
-
       mockUpload.mockResolvedValue({ error: { message: 'Upload failed' } });
 
       await expect(

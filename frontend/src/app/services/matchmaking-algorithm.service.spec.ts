@@ -2,12 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { MatchmakingAlgorithmService } from './matchmaking-algorithm.service';
+import { CrashReportService } from './crash-report.service';
 import { I18nService } from './i18n.service';
 import { UserProfile } from './user.service';
 
 function makeUser(overrides: Partial<UserProfile> = {}): UserProfile {
   return {
-    id: `user-${Math.random().toString(36).slice(2, 8)}`,
+    id: `user-${crypto.randomUUID()}`,
     display_name: 'Test User',
     native_languages: ['en'],
     target_languages: ['ja'],
@@ -40,6 +41,14 @@ describe('MatchmakingAlgorithmService', () => {
       providers: [
         MatchmakingAlgorithmService,
         {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: (): Promise<void> => Promise.resolve(),
+            lastCrash: () => null,
+            pendingCrashCount: () => 0,
+          },
+        },
+        {
           provide: I18nService,
           useValue: {
             translate: (key: string) => key,
@@ -59,7 +68,6 @@ describe('MatchmakingAlgorithmService', () => {
         target_languages: ['ja'],
       });
 
-      // Perfect complement: partner native=ja (user target) AND partner learning=en (user native)
       const best = makeUser({
         id: 'best',
         native_languages: ['ja'],
@@ -69,7 +77,6 @@ describe('MatchmakingAlgorithmService', () => {
         learning_goals: 'conversation,vocabulary',
       });
 
-      // Partial: partner native=ja but not learning en
       const medium = makeUser({
         id: 'medium',
         native_languages: ['ja'],
@@ -79,7 +86,6 @@ describe('MatchmakingAlgorithmService', () => {
         learning_goals: 'conversation',
       });
 
-      // No complement
       const worst = makeUser({
         id: 'worst',
         native_languages: ['fr'],
@@ -91,11 +97,12 @@ describe('MatchmakingAlgorithmService', () => {
 
       const results = service.scoreAndRank(current, [worst, best, medium]);
 
-      expect(results).toHaveLength(3);
-      expect(results[0].partner.id).toBe('best');
-      expect(results[2].partner.id).toBe('worst');
-      expect(results[0].totalScore).toBeGreaterThan(results[1].totalScore);
-      expect(results[1].totalScore).toBeGreaterThanOrEqual(results[2].totalScore);
+      expect(results.data).toHaveLength(3);
+      expect(results.degraded).toBe(false);
+      expect(results.data[0].partner.id).toBe('best');
+      expect(results.data[2].partner.id).toBe('worst');
+      expect(results.data[0].totalScore).toBeGreaterThan(results.data[1].totalScore);
+      expect(results.data[1].totalScore).toBeGreaterThanOrEqual(results.data[2].totalScore);
     });
 
     it('should cap totalScore at 100', () => {
@@ -114,12 +121,13 @@ describe('MatchmakingAlgorithmService', () => {
       });
 
       const results = service.scoreAndRank(current, [perfect]);
-      expect(results[0].totalScore).toBeLessThanOrEqual(100);
+      expect(results.data[0].totalScore).toBeLessThanOrEqual(100);
     });
 
-    it('should return empty array for no candidates', () => {
+    it('should return empty data array and degraded=false for no candidates', () => {
       const results = service.scoreAndRank(makeUser(), []);
-      expect(results).toEqual([]);
+      expect(results.data).toEqual([]);
+      expect(results.degraded).toBe(false);
     });
 
     it('should handle users with no target languages gracefully', () => {
@@ -127,8 +135,8 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ native_languages: ['ja'], target_languages: ['en'] });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results).toHaveLength(1);
-      expect(results[0].breakdown.languageComplementarity).toBeGreaterThan(0);
+      expect(results.data).toHaveLength(1);
+      expect(results.data[0].breakdown.languageComplementarity).toBeGreaterThan(0);
     });
   });
 
@@ -138,7 +146,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ native_languages: ['ja'], target_languages: ['en'] });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.languageComplementarity).toBe(40);
+      expect(results.data[0].breakdown.languageComplementarity).toBe(40);
     });
 
     it('should give half marks when partner teaches but does not learn', () => {
@@ -146,7 +154,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ native_languages: ['ja'], target_languages: ['de'] });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.languageComplementarity).toBe(20);
+      expect(results.data[0].breakdown.languageComplementarity).toBe(20);
     });
 
     it('should give zero for unrelated language pairs', () => {
@@ -154,7 +162,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ native_languages: ['fr'], target_languages: ['de'] });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.languageComplementarity).toBe(0);
+      expect(results.data[0].breakdown.languageComplementarity).toBe(0);
     });
   });
 
@@ -164,7 +172,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ learning_goals: 'conversation,grammar' });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.sharedInterests).toBeCloseTo(20, 1);
+      expect(results.data[0].breakdown.sharedInterests).toBeCloseTo(20, 1);
     });
 
     it('should give zero when no learning goals set', () => {
@@ -172,7 +180,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ learning_goals: 'conversation' });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.sharedInterests).toBe(0);
+      expect(results.data[0].breakdown.sharedInterests).toBe(0);
     });
   });
 
@@ -183,7 +191,7 @@ describe('MatchmakingAlgorithmService', () => {
       const highStreak = makeUser({ id: 'high', study_streak_days: 200 });
 
       const results = service.scoreAndRank(current, [lowStreak, highStreak]);
-      expect(results[0].partner.id).toBe('high');
+      expect(results.data[0].partner.id).toBe('high');
     });
 
     it('should give zero for zero streak', () => {
@@ -191,7 +199,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ study_streak_days: 0 });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.activityStreak).toBe(0);
+      expect(results.data[0].breakdown.activityStreak).toBe(0);
     });
   });
 
@@ -201,7 +209,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ is_serious_learner: true });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.seriousLearnerBonus).toBe(10);
+      expect(results.data[0].breakdown.seriousLearnerBonus).toBe(10);
     });
 
     it('should give extra bonus when both are serious learners', () => {
@@ -209,7 +217,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ is_serious_learner: true });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.seriousLearnerBonus).toBe(12.5);
+      expect(results.data[0].breakdown.seriousLearnerBonus).toBe(12.5);
     });
 
     it('should give zero for non-serious learners', () => {
@@ -217,7 +225,7 @@ describe('MatchmakingAlgorithmService', () => {
       const partner = makeUser({ is_serious_learner: false });
 
       const results = service.scoreAndRank(current, [partner]);
-      expect(results[0].breakdown.seriousLearnerBonus).toBe(0);
+      expect(results.data[0].breakdown.seriousLearnerBonus).toBe(0);
     });
   });
 
@@ -229,9 +237,10 @@ describe('MatchmakingAlgorithmService', () => {
         makeUser({ id: 'not-serious', is_serious_learner: false }),
       ]);
 
-      const filtered = service.applyOfflineFilters(scored, { serious_learner_only: true });
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].partner.id).toBe('serious');
+      const filtered = service.applyOfflineFilters(scored.data, { serious_learner_only: true });
+      expect(filtered.data).toHaveLength(1);
+      expect(filtered.degraded).toBe(false);
+      expect(filtered.data[0].partner.id).toBe('serious');
     });
 
     it('should filter by gender', () => {
@@ -241,9 +250,9 @@ describe('MatchmakingAlgorithmService', () => {
         makeUser({ id: 'female', gender: 'female' }),
       ]);
 
-      const filtered = service.applyOfflineFilters(scored, { gender: 'female' });
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].partner.id).toBe('female');
+      const filtered = service.applyOfflineFilters(scored.data, { gender: 'female' });
+      expect(filtered.data).toHaveLength(1);
+      expect(filtered.data[0].partner.id).toBe('female');
     });
 
     it('should filter by age range', () => {
@@ -254,9 +263,9 @@ describe('MatchmakingAlgorithmService', () => {
         makeUser({ id: 'old', age: 65 }),
       ]);
 
-      const filtered = service.applyOfflineFilters(scored, { age_min: 20, age_max: 50 });
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].partner.id).toBe('mid');
+      const filtered = service.applyOfflineFilters(scored.data, { age_min: 20, age_max: 50 });
+      expect(filtered.data).toHaveLength(1);
+      expect(filtered.data[0].partner.id).toBe('mid');
     });
 
     it('should keep partners with unknown age when filtering', () => {
@@ -265,20 +274,71 @@ describe('MatchmakingAlgorithmService', () => {
         makeUser({ id: 'unknown-age', age: undefined }),
       ]);
 
-      const filtered = service.applyOfflineFilters(scored, { age_min: 20, age_max: 50 });
-      expect(filtered).toHaveLength(1);
+      const filtered = service.applyOfflineFilters(scored.data, { age_min: 20, age_max: 50 });
+      expect(filtered.data).toHaveLength(1);
     });
 
     it('should filter by availability', () => {
       const current = makeUser();
       const scored = service.scoreAndRank(current, [
-        makeUser({ id: 'morning', availability_morning: true, availability_afternoon: false, availability_evening: false }),
-        makeUser({ id: 'evening', availability_morning: false, availability_afternoon: false, availability_evening: true }),
+        makeUser({
+          id: 'morning',
+          availability_morning: true,
+          availability_afternoon: false,
+          availability_evening: false,
+        }),
+        makeUser({
+          id: 'evening',
+          availability_morning: false,
+          availability_afternoon: false,
+          availability_evening: true,
+        }),
       ]);
 
-      const filtered = service.applyOfflineFilters(scored, { availability_morning: true });
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].partner.id).toBe('morning');
+      const filtered = service.applyOfflineFilters(scored.data, { availability_morning: true });
+      expect(filtered.data).toHaveLength(1);
+      expect(filtered.data[0].partner.id).toBe('morning');
+    });
+  });
+
+  describe('applyOfflineFilters - error boundary', () => {
+    it('should return empty data and degraded=false for empty input', () => {
+      const result = service.applyOfflineFilters([], {});
+      expect(result.data).toEqual([]);
+      expect(result.degraded).toBe(false);
+    });
+
+    it('should handle undefined input gracefully', () => {
+      const result = service.applyOfflineFilters(undefined as unknown as never[], {});
+      expect(result.data).toEqual([]);
+      expect(result.degraded).toBe(false);
+    });
+  });
+
+  describe('scoreAndRank - error boundary', () => {
+    it('should handle null candidates gracefully', () => {
+      const result = service.scoreAndRank(makeUser(), null as unknown as never[]);
+      expect(result.data).toEqual([]);
+      expect(result.degraded).toBe(false);
+    });
+
+    it('should mark degraded when partner scoring throws', () => {
+      const current = makeUser({ native_languages: ['en'], target_languages: ['ja'] });
+      const goodPartner = makeUser({ native_languages: ['ja'], target_languages: ['en'] });
+      // Partner with getter that throws to simulate a truly malformed object
+      const badPartner = makeUser({ native_languages: ['fr'], target_languages: ['de'] });
+      Object.defineProperty(badPartner, 'learning_goals', {
+        get() {
+          throw new Error('Corrupt IndexedDB entry');
+        },
+        configurable: true,
+      });
+
+      const result = service.scoreAndRank(current, [badPartner, goodPartner]);
+      expect(result.data.length).toBeGreaterThan(0);
+      expect(result.data.length).toBe(1);
+      expect(result.degraded).toBe(true);
+      expect(service.lastErrorMap.has('scoreAndRank:partner')).toBe(true);
     });
   });
 
@@ -287,7 +347,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 85,
-        breakdown: { languageComplementarity: 40, sharedInterests: 0, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 40,
+          sharedInterests: 0,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -298,7 +363,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 60,
-        breakdown: { languageComplementarity: 10, sharedInterests: 25, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 10,
+          sharedInterests: 25,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -309,7 +379,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 30,
-        breakdown: { languageComplementarity: 5, sharedInterests: 0, activityStreak: 5, seriousLearnerBonus: 10 },
+        breakdown: {
+          languageComplementarity: 5,
+          sharedInterests: 0,
+          activityStreak: 5,
+          seriousLearnerBonus: 10,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -320,10 +395,22 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 5,
-        breakdown: { languageComplementarity: 0, sharedInterests: 0, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 0,
+          sharedInterests: 0,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
+      expect(label).toBe('matchmaking.reasonGeneral');
+    });
+
+    it('should return general label when label computation throws', () => {
+      const badScore = null as unknown as never;
+
+      const label = service.getMatchReasonLabel(badScore);
       expect(label).toBe('matchmaking.reasonGeneral');
     });
   });

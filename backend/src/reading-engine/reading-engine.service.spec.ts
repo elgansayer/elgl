@@ -1,24 +1,27 @@
-// Mock jsdom and dompurify to avoid ESM import failures in Jest
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+import type { Mock, MockInstance } from 'vitest';
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty
@@ -29,7 +32,7 @@ jest.mock('dompurify', () => ({
         .replace(/&quot;/g, '"')
         .replace(/&#x27;/g, "'");
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -46,7 +49,7 @@ import { ReadingEngineCacheService } from './reading-engine-cache.service';
 
 /** Builds a chainable mock that mimics the Supabase query builder pattern. */
 function makeBuilder(response: unknown) {
-  const builder: Record<string, jest.Mock> = {};
+  const builder: Record<string, Mock> = {};
   const methods = [
     'from',
     'insert',
@@ -61,7 +64,7 @@ function makeBuilder(response: unknown) {
     'rpc',
   ];
   for (const method of methods) {
-    builder[method] = jest.fn().mockReturnValue(builder);
+    builder[method] = vi.fn().mockReturnValue(builder);
   }
   builder.then = (
     resolve: (value: unknown) => void,
@@ -73,23 +76,23 @@ function makeBuilder(response: unknown) {
 describe('ReadingEngineService', () => {
   let service: ReadingEngineService;
   let mockDb: Record<string, ReturnType<typeof makeBuilder>>;
-  let mockCacheService: { get: jest.Mock; set: jest.Mock };
-  let mockEventEmitter: { emit: jest.Mock };
-  let _errorSpy: jest.SpyInstance;
+  let mockCacheService: { get: Mock; set: Mock };
+  let mockEventEmitter: { emit: Mock };
+  let _errorSpy: MockInstance;
 
   beforeEach(async () => {
-    _errorSpy = jest
+    _errorSpy = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
 
     mockDb = {};
     mockCacheService = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue(undefined),
-      buildKey: jest.fn(
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      buildKey: vi.fn(
         (opts: {
           namespace: string;
           userId: string;
@@ -103,16 +106,16 @@ describe('ReadingEngineService', () => {
         },
       ),
     };
-    mockEventEmitter = { emit: jest.fn() };
+    mockEventEmitter = { emit: vi.fn() };
 
     const mockSupabaseClient = {
-      from: jest.fn((table: string) => {
+      from: vi.fn((table: string) => {
         if (!mockDb[table]) {
           mockDb[table] = makeBuilder({ data: null, error: null });
         }
         return mockDb[table];
       }),
-      rpc: jest.fn((_fn: string, _params: unknown) => {
+      rpc: vi.fn((_fn: string, _params: unknown) => {
         // handled inline via mockDb entries or direct rpc reactions
         return Promise.resolve({ data: null, error: null });
       }),
@@ -124,7 +127,7 @@ describe('ReadingEngineService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         { provide: ReadingEngineCacheService, useValue: mockCacheService },
@@ -135,7 +138,7 @@ describe('ReadingEngineService', () => {
     service = module.get<ReadingEngineService>(ReadingEngineService);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   /* ------------------------------------------------------------------ */
   /*  createResource                                                    */
@@ -253,7 +256,7 @@ describe('ReadingEngineService', () => {
       });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const origInsert = builder.insert;
-      builder.insert = jest.fn((payload: unknown) => {
+      builder.insert = vi.fn((payload: unknown) => {
         insertPayload = payload;
         return builder;
       });
@@ -476,13 +479,13 @@ describe('ReadingEngineService', () => {
       expect(builder.eq).toHaveBeenCalledWith('topic', 'science');
     });
 
-    it('applies limit and offset together', async () => {
+    it('applies limit and offset together using range', async () => {
       const builder = makeBuilder({ data: rows, error: null });
       mockDb['reading_resources'] = builder;
 
       await service.listResources({ limit: 10, offset: 5 });
 
-      expect(builder.limit).toHaveBeenCalledWith(10);
+      // When offset is provided, range is used instead of limit
       expect(builder.range).toHaveBeenCalledWith(5, 14);
     });
 
@@ -717,9 +720,9 @@ describe('ReadingEngineService', () => {
 
   describe('recordSession', () => {
     it('calls the upsert_reading_progress RPC and emits event', async () => {
-      (service as any).supabaseService.getClient = jest.fn().mockReturnValue({
-        rpc: jest.fn().mockResolvedValue({ data: {}, error: null }),
-        from: jest.fn().mockReturnValue(
+      (service as any).supabaseService.getClient = vi.fn().mockReturnValue({
+        rpc: vi.fn().mockResolvedValue({ data: {}, error: null }),
+        from: vi.fn().mockReturnValue(
           makeBuilder({
             data: {
               user_id: 'u1',
@@ -748,8 +751,8 @@ describe('ReadingEngineService', () => {
     });
 
     it('throws on RPC error', async () => {
-      (service as any).supabaseService.getClient = jest.fn().mockReturnValue({
-        rpc: jest
+      (service as any).supabaseService.getClient = vi.fn().mockReturnValue({
+        rpc: vi
           .fn()
           .mockResolvedValue({ data: null, error: { message: 'rpc error' } }),
       });
@@ -773,9 +776,9 @@ describe('ReadingEngineService', () => {
         updated_at: '',
         last_read_at: '',
       };
-      (service as any).supabaseService.getClient = jest.fn().mockReturnValue({
-        rpc: jest.fn().mockResolvedValue({ data: {}, error: null }),
-        from: jest
+      (service as any).supabaseService.getClient = vi.fn().mockReturnValue({
+        rpc: vi.fn().mockResolvedValue({ data: {}, error: null }),
+        from: vi
           .fn()
           .mockReturnValue(makeBuilder({ data: progressRow, error: null })),
       });

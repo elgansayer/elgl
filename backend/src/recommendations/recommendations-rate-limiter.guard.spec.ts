@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
@@ -12,11 +13,19 @@ import { ExecutionContext } from '@nestjs/common';
 
 describe('RecommendationsRateLimiterGuard', () => {
   let guard: RecommendationsRateLimiterGuard;
-  let redisMock: { incr: jest.Mock; expire: jest.Mock; ttl: jest.Mock; get: jest.Mock; set: jest.Mock };
-  let supabaseClientMock: { from: jest.Mock };
-  let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient' | 'getClient'>>;
-  let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
-  let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let redisMock: {
+    incr: Mock;
+    expire: Mock;
+    ttl: Mock;
+    get: Mock;
+    set: Mock;
+  };
+  let supabaseClientMock: { from: Mock };
+  let supabaseService: Mocked<
+    Pick<SupabaseService, 'getRedisClient' | 'getClient'>
+  >;
+  let reflector: Mocked<Pick<Reflector, 'get'>>;
+  let logger: Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -30,8 +39,8 @@ describe('RecommendationsRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
-        getNext: jest.fn(),
+        getResponse: vi.fn(),
+        getNext: vi.fn(),
       }),
       getType: () => 'http',
     } as unknown as ExecutionContext;
@@ -39,35 +48,35 @@ describe('RecommendationsRateLimiterGuard', () => {
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      ttl: jest.fn().mockResolvedValue(60),
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      ttl: vi.fn().mockResolvedValue(60),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     supabaseClientMock = {
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),
         }),
       }),
     };
 
     supabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
-      getClient: jest.fn().mockReturnValue(supabaseClientMock),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
+      getClient: vi.fn().mockReturnValue(supabaseClientMock),
     };
 
     reflector = {
-      get: jest.fn().mockReturnValue(undefined),
+      get: vi.fn().mockReturnValue(undefined),
     };
 
     logger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     guard = new RecommendationsRateLimiterGuard(
@@ -83,9 +92,15 @@ describe('RecommendationsRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('should allow the request through', async () => {
-      const handler = () => { /* empty */ };
+      const handler = () => {
+        /* empty */
+      };
       class TestController {}
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -99,11 +114,13 @@ describe('RecommendationsRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    const handler = async () => { /* empty */ };
+    const handler = () => {
+      /* empty */
+    };
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === RECOMMENDATIONS_RATE_LIMIT_KEY) return options;
         return undefined;
       });
@@ -112,7 +129,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     it('should allow request when count is within free limit', async () => {
       redisMock.incr.mockResolvedValue(25);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -120,7 +141,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     it('should set TTL on first request in the window', async () => {
       redisMock.incr.mockResolvedValue(1);
 
-      const context = createMockExecutionContext('user-2', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-2',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).toHaveBeenCalledWith(
@@ -132,7 +157,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     it('should not set TTL on subsequent requests', async () => {
       redisMock.incr.mockResolvedValue(4);
 
-      const context = createMockExecutionContext('user-3', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-3',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).not.toHaveBeenCalled();
@@ -141,7 +170,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     it('should block free user when free limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(31);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
@@ -152,7 +185,11 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(50);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -161,14 +198,22 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(121);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
     });
 
     it('should log warning when rate limit is exceeded', async () => {
       redisMock.incr.mockResolvedValue(35);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch {
@@ -187,7 +232,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     });
 
     it('should allow request if user is not authenticated', async () => {
-      const context = createMockExecutionContext(undefined, handler, TestController);
+      const context = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -196,7 +245,11 @@ describe('RecommendationsRateLimiterGuard', () => {
     it('should allow request and log error if Redis is unavailable', async () => {
       redisMock.incr.mockRejectedValue(new Error('Redis connection error'));
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(logger.error).toHaveBeenCalledWith(
@@ -212,7 +265,11 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(50);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(supabaseClientMock.from).not.toHaveBeenCalled();
@@ -222,9 +279,9 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(5);
       redisMock.get.mockResolvedValue(null); // cache miss
       supabaseClientMock.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
               data: { is_vip: true },
               error: null,
             }),
@@ -232,7 +289,11 @@ describe('RecommendationsRateLimiterGuard', () => {
         }),
       });
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.set).toHaveBeenCalledWith(
@@ -247,14 +308,18 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(31); // exceeds free limit
       redisMock.get.mockResolvedValue(null);
       supabaseClientMock.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockRejectedValue(new Error('DB down')),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockRejectedValue(new Error('DB down')),
           }),
         }),
       });
 
-      const context = createMockExecutionContext('user-db-down', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-db-down',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
     });
 
@@ -262,11 +327,18 @@ describe('RecommendationsRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(31);
       redisMock.ttl.mockResolvedValue(45);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch (err: unknown) {
-        const response = (err as HttpException).getResponse() as Record<string, unknown>;
+        const response = (err as HttpException).getResponse() as Record<
+          string,
+          unknown
+        >;
         expect(response['retryAfter']).toBe(60);
       }
     });
@@ -281,7 +353,9 @@ describe('RecommendationsRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        testMethod() { /* empty */ }
+        testMethod() {
+          /* empty */
+        }
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,

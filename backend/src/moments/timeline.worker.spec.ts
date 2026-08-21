@@ -10,17 +10,24 @@ describe('TimelineWorker', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
+    };
+
+    const mockPipeline = {
+      lpush: vi.fn().mockReturnThis(),
+      ltrim: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue([]),
     };
 
     mockRedisClient = {
-      lpush: jest.fn().mockResolvedValue(1),
-      ltrim: jest.fn().mockResolvedValue('OK'),
+      lpush: vi.fn().mockResolvedValue(1),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      pipeline: vi.fn().mockReturnValue(mockPipeline),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -29,8 +36,8 @@ describe('TimelineWorker', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -40,7 +47,7 @@ describe('TimelineWorker', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -58,7 +65,7 @@ describe('TimelineWorker', () => {
         error: null,
       });
 
-      const logSpy = jest
+      const logSpy = vi
         .spyOn((worker as any).logger, 'log')
         .mockImplementation(() => {});
 
@@ -71,26 +78,29 @@ describe('TimelineWorker', () => {
         'author-1',
       );
 
+      const mockPipeline = mockRedisClient.pipeline();
+
       // follower-1, follower-2, author-1 -> 3 total pushes
-      expect(mockRedisClient.lpush).toHaveBeenCalledTimes(3);
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledTimes(3);
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:follower-2',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:author-1',
         'moment-100',
       );
-      expect(mockRedisClient.ltrim).toHaveBeenCalledTimes(3);
-      expect(mockRedisClient.ltrim).toHaveBeenCalledWith(
+      expect(mockPipeline.ltrim).toHaveBeenCalledTimes(3);
+      expect(mockPipeline.ltrim).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         0,
         499,
       );
+      expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
 
       expect(logSpy).toHaveBeenCalledWith(
         'Fanned out moment moment-100 to 3 followers via Redis queue.',
@@ -111,7 +121,7 @@ describe('TimelineWorker', () => {
 
     it('should catch error during execution and log error', async () => {
       mockQueryBuilder.eq.mockRejectedValue(new Error('Redis crash'));
-      const errorSpy = jest
+      const errorSpy = vi
         .spyOn((worker as any).logger, 'error')
         .mockImplementation(() => {});
 

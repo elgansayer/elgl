@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
 import {
   ReadingEngineErrorBoundaryComponent,
   ReadingEngineErrorContext,

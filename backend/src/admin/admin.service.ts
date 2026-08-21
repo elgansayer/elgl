@@ -192,7 +192,11 @@ export class AdminService {
     }
 
     this.metrics.recordAdminVipToggle('success');
-    this.metrics.observeAdminApiLatency('users', 'setVipStatus', (Date.now() - start) / 1000);
+    this.metrics.observeAdminApiLatency(
+      'users',
+      'setVipStatus',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateLoginHistoryCache(userId);
@@ -273,7 +277,11 @@ export class AdminService {
     }
 
     this.metrics.recordAdminBanAction('success');
-    this.metrics.observeAdminApiLatency('ban', 'banUser', (Date.now() - start) / 1000);
+    this.metrics.observeAdminApiLatency(
+      'ban',
+      'banUser',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateBlocksListCaches();
@@ -298,7 +306,11 @@ export class AdminService {
     }
 
     this.metrics.recordAdminWarnAction('success');
-    this.metrics.observeAdminApiLatency('warn', 'warnUser', (Date.now() - start) / 1000);
+    this.metrics.observeAdminApiLatency(
+      'warn',
+      'warnUser',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateReportsListCaches();
@@ -488,7 +500,11 @@ export class AdminService {
     }
 
     this.metrics.recordAdminBlockRemoval('success');
-    this.metrics.observeAdminApiLatency('blocks', 'removeBlock', (Date.now() - start) / 1000);
+    this.metrics.observeAdminApiLatency(
+      'blocks',
+      'removeBlock',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateBlocksListCaches();
 

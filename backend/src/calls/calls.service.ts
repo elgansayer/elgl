@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { randomUUID as uuidv4 } from 'crypto';
@@ -8,7 +9,7 @@ import * as crypto from 'crypto';
 export class CallsService {
   private livekitHost: string;
 
-  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey, calleeToken }))
+  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey, calleeToken, callerId }))
   private readonly activeCalls: Map<
     string,
     Map<
@@ -21,6 +22,7 @@ export class CallsService {
         isGroup: boolean;
         calleeToken: string | null;
         isVideo: boolean;
+        callerId: string | null;
       }
     >
   > = new Map();
@@ -34,10 +36,14 @@ export class CallsService {
       calleeToken: string;
       e2eeKey: string;
       isVideo: boolean;
+      callerId: string;
     }>
   > = new Map();
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
     this.livekitHost =
       this.configService.get<string>('LIVEKIT_URL') || 'http://localhost:7880';
   }
@@ -54,6 +60,7 @@ export class CallsService {
       isGroup: boolean;
       calleeToken: string | null;
       isVideo: boolean;
+      callerId: string | null;
     }
   > {
     if (!this.activeCalls.has(userId)) {
@@ -70,6 +77,7 @@ export class CallsService {
     isGroup: boolean = false,
     calleeToken: string | null = null,
     isVideo: boolean = true,
+    callerId: string | null = null,
   ): void {
     const userCalls = this.ensureUser(userId);
     userCalls.set(roomName, {
@@ -80,6 +88,7 @@ export class CallsService {
       isGroup,
       calleeToken,
       isVideo,
+      callerId,
     });
   }
 
@@ -160,6 +169,35 @@ export class CallsService {
     if (!userCalls || !userCalls.has(roomName)) {
       throw new BadRequestException('Call not found');
     }
+    const callInfo = userCalls.get(roomName)!;
+
+    // When a caller hangs up before the callee answered, emit a missed-call event.
+    // callInfo.callerId stores the calleeId for calls initiated by this user.
+    if (callInfo.callerId) {
+      const calleeId = callInfo.callerId;
+
+      // Clean up any waiting entry for this call
+      const waitingList = this.waitingCalls.get(calleeId);
+      if (waitingList) {
+        const waitingIdx = waitingList.findIndex(
+          (w) => w.roomName === roomName,
+        );
+        if (waitingIdx !== -1) {
+          waitingList.splice(waitingIdx, 1);
+          if (waitingList.length === 0) {
+            this.waitingCalls.delete(calleeId);
+          }
+        }
+      }
+
+      // Emit missed call event for notification system to broadcast
+      this.eventEmitter.emit('call.missed', {
+        callerId: userId,
+        calleeId,
+        isVideo: callInfo.isVideo,
+      });
+    }
+
     userCalls.delete(roomName);
     if (userCalls.size === 0) {
       this.activeCalls.delete(userId);
@@ -339,6 +377,7 @@ export class CallsService {
         false,
         null,
         isVideo,
+        calleeId,
       );
 
       const waitingEntry = {
@@ -346,6 +385,7 @@ export class CallsService {
         calleeToken,
         e2eeKey,
         isVideo,
+        callerId,
       };
       if (!this.waitingCalls.has(calleeId)) {
         this.waitingCalls.set(calleeId, []);
@@ -373,6 +413,7 @@ export class CallsService {
       false,
       null,
       isVideo,
+      calleeId,
     );
     this.registerParticipant(
       calleeId,
@@ -382,6 +423,7 @@ export class CallsService {
       false,
       null,
       isVideo,
+      callerId,
     );
 
     return {
