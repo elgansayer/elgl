@@ -874,6 +874,20 @@
         <label>Input <input value="Spartan-owned input" /></label>
         <label>Textarea <textarea>Relay content</textarea></label>
       </section>
+      <section aria-labelledby="mutation-controls-title">
+        <h2 id="mutation-controls-title">Mutation controls</h2>
+        <p>Feature forms keep native submit semantics while Spartan-owned fields and actions expose labelled, disabled and busy states during asynchronous mutations.</p>
+        <form aria-busy="true">
+          <div class="row">
+            <label>Community name <input value="Language Exchange" disabled /></label>
+            <label>Description <input value="Weekly practice" disabled /></label>
+            <button type="submit" disabled>Create community</button>
+          </div>
+        </form>
+        <ul aria-busy="true">
+          <li>Language Exchange <button type="button" aria-label="Delete Language Exchange" disabled>Delete</button></li>
+        </ul>
+      </section>
       <section>
         <h2>Dialog ownership</h2>
         <p>

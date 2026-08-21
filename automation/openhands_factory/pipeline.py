@@ -119,6 +119,7 @@ class FactoryPipeline:
             GoogleAgentProvider,
             OpenCodeProvider,
             OpenHandsProvider,
+            PiProvider,
         )
         from openhands_factory.agents.base import AgentProvider
         from openhands_factory.provider_capacity import (
@@ -139,6 +140,7 @@ class FactoryPipeline:
         google = config.agents.providers["google"]
         opencode = config.agents.providers["opencode"]
         openhands = config.agents.providers["openhands"]
+        pi = config.agents.providers["pi"]
 
         providers: list[AgentProvider] = [
             ClaudeCodeProvider(
@@ -190,6 +192,17 @@ class FactoryPipeline:
                 self.conversations,
                 openhands_runtime_config,
                 enabled=openhands.enabled,
+            ),
+            PiProvider(
+                enabled=pi.enabled,
+                command=pi.command,
+                wrapper_command=pi.wrapper_command,
+                model=pi.model,
+                phase_models=pi.phase_models,
+                extra_args=pi.extra_args,
+                max_turns=pi.max_turns,
+                credential_paths=pi.credential_paths,
+                runtime_paths=pi.runtime_paths,
             ),
         ]
         provider_limits = {

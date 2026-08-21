@@ -106,6 +106,9 @@
 
 **Learning:** In the backend `data-retention.service.ts`, finalizing user account deletions (`finaliseAccountDeletions`) looped sequentially through `usersToDelete` executing `wipeUserData` and a table update. Simply changing this to an unbounded `Promise.allSettled` is dangerous and can exhaust database connections when processing dozens of concurrent users.
 **Action:** When optimizing long-running cron jobs or batch loops across multiple records, replace sequential iterations with a bounded concurrent approach. Use a `for` loop with `slice(i, i + chunkSize)` (e.g. chunk size 10) and wrap the execution in `Promise.allSettled`. This safely provides concurrent execution benefits without breaking connection pool limits. Ensure the mapped functions catch errors and explicitly narrow return unions (e.g., `success: true as const`) to satisfy TypeScript.
+## 2026-08-17 - Recommendation Service Bottleneck (O(n^2) nested maps)
+**Learning:** Nested loops where the inner loop does array operations like `filter` and `map` followed by `JSON.stringify` can cause severe performance issues with large datasets.
+**Action:** Pre-process inner-loop data structure outside loop. If generating JSON subsets where an item needs to be excluded, map and stringify elements just once, and string-manipulate the full string using `.replace` instead of re-evaluating arrays.
 
 ## 2026-08-17 - [Optimize Sequential Updates and Creation via Bulk Operations]
 
@@ -116,3 +119,13 @@
 
 **Learning:** In the backend `metrics` aggregators, sequentially awaiting queries inside a loop significantly degraded aggregation performance.
 **Action:** When updating or querying multiple rows based on an array or iterable, use `.map` combined with `Promise.all` to convert a series of N sequential network calls into 1 concurrent block. This will significantly speed up metric aggregations and other loops across the application.
+
+## 2026-08-19 - [Optimize Fan-Out Chat Forwarding via Bulk Array Querying]
+
+**Learning:** In the backend `chat.service.ts`, forwarding a single message to multiple chat rooms (fan-out forwarding) initially verified target memberships and checked room blocklists iteratively using `await` inside a `for...of` loop over `roomIds`. This resulted in N separate sequential `chat_room_members` queries per target room, compounding database roundtrip delays when forwarding to many contacts.
+**Action:** Replace single iterative `.eq('room_id')` checks inside loops with a single bulk array lookup via `.in('room_id', validRoomIds)`. Load the results into an in-memory Map structure before iterating the valid target IDs for payload generation. This successfully transforms O(N) sequential queries into an O(1) bulk fetch, reducing network overhead significantly.
+
+## 2026-08-20 - [Optimize Lifetime Counts Query via Promise.all]
+
+**Learning:** In the backend `moments.service.ts`, `getLifetimeCounts` sequentially queried three independent counts (`moments`, `moment_comments`, and `translations`). In an isolated benchmark simulating network delay, fetching these sequentially took ~160ms, whereas fetching them concurrently via `Promise.all` reduced the execution time to ~50ms.
+**Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.

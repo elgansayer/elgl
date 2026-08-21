@@ -294,7 +294,10 @@ export class MediaService {
     allowedTypes: readonly string[],
     message: string,
   ): void {
-    const normalisedContentType = contentType.split(';', 1)[0].trim().toLowerCase();
+    const normalisedContentType = contentType
+      .split(';', 1)[0]
+      .trim()
+      .toLowerCase();
     if (!allowedTypes.includes(normalisedContentType)) {
       throw new BadRequestException(message);
     }
