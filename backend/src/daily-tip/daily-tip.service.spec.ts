@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DailyTipService } from './daily-tip.service';
@@ -12,28 +13,28 @@ interface MockQueryResult {
 
 describe('DailyTipService', () => {
   let service: DailyTipService;
-  let llmProxyService: { proxyMessage: jest.Mock };
-  let eventEmitter: { emit: jest.Mock };
+  let llmProxyService: { proxyMessage: Mock };
+  let eventEmitter: { emit: Mock };
   let singleResult: MockQueryResult;
   let selectResult: MockQueryResult;
   let mockQueryBuilder: {
-    select: jest.Mock;
-    eq: jest.Mock;
-    single: jest.Mock;
-    then: jest.Mock;
+    select: Mock;
+    eq: Mock;
+    single: Mock;
+    then: Mock;
   };
 
   beforeEach(async () => {
-    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     singleResult = { data: null, error: null };
     selectResult = { data: [], error: null };
 
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockImplementation(() => Promise.resolve(singleResult)),
-      then: jest
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockImplementation(() => Promise.resolve(singleResult)),
+      then: vi
         .fn()
         .mockImplementation((resolve: (value: MockQueryResult) => void) => {
           resolve(selectResult);
@@ -42,16 +43,16 @@ describe('DailyTipService', () => {
     };
 
     const mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     llmProxyService = {
-      proxyMessage: jest
+      proxyMessage: vi
         .fn()
         .mockResolvedValue({ response: 'Practise a little every day.' }),
     };
 
-    eventEmitter = { emit: jest.fn() };
+    eventEmitter = { emit: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,7 +60,7 @@ describe('DailyTipService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         { provide: LlmProxyService, useValue: llmProxyService },
@@ -71,7 +72,7 @@ describe('DailyTipService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

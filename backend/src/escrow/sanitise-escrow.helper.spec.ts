@@ -1,50 +1,55 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: {
+          SHOW_ELEMENT: 1,
+          SHOW_TEXT: 4,
+        },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: {
-        SHOW_ELEMENT: 1,
-        SHOW_TEXT: 4,
-      },
-    },
-  })),
+    };
+  }),
 }));
 
 // Strict DOMPurify mock that strips ALL HTML tags
-const mockSanitize = (dirty: string): string => {
-  if (typeof dirty !== 'string') return dirty;
-  // Remove script/style elements and their content entirely (DOMPurify strips them)
-  let result = dirty
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
-  // Strip all remaining HTML tags
-  result = result.replace(/<[^>]*>/g, '');
-  // Decode common HTML entities
-  result = result
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'");
-  return result;
-};
+const { mockSanitize } = vi.hoisted(() => {
+  const mockSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    // Remove script/style elements and their content entirely (DOMPurify strips them)
+    let result = dirty
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+    // Strip all remaining HTML tags
+    result = result.replace(/<[^>]*>/g, '');
+    // Decode common HTML entities
+    result = result
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'");
+    return result;
+  };
+  return { mockSanitize };
+});
 
-jest.mock('dompurify', () => {
+vi.mock('dompurify', () => {
   return {
     __esModule: true,
-    default: jest.fn(() => ({
+    default: vi.fn(() => ({
       sanitize: mockSanitize,
-      setConfig: jest.fn(),
+      setConfig: vi.fn(),
     })),
   };
 });
@@ -59,15 +64,20 @@ describe('sanitiseEscrowData', () => {
   });
 
   it('should sanitise strings in arrays', () => {
-    expect(sanitiseEscrowData(['<b>test</b>', 'safe'])).toEqual(['test', 'safe']);
+    expect(sanitiseEscrowData(['<b>test</b>', 'safe'])).toEqual([
+      'test',
+      'safe',
+    ]);
   });
 
   it('should sanitise strings in plain objects', () => {
-    expect(sanitiseEscrowData({
-      id: 'escrow-1',
-      reason: '<script>alert("xss")</script>',
-      status: 'held',
-    })).toEqual({
+    expect(
+      sanitiseEscrowData({
+        id: 'escrow-1',
+        reason: '<script>alert("xss")</script>',
+        status: 'held',
+      }),
+    ).toEqual({
       id: 'escrow-1',
       reason: '',
       status: 'held',
@@ -75,9 +85,11 @@ describe('sanitiseEscrowData', () => {
   });
 
   it('should recurse into nested objects', () => {
-    expect(sanitiseEscrowData({
-      metadata: { note: '<a href="javascript:alert(1)">click</a>' },
-    })).toEqual({
+    expect(
+      sanitiseEscrowData({
+        metadata: { note: '<a href="javascript:alert(1)">click</a>' },
+      }),
+    ).toEqual({
       metadata: { note: 'click' },
     });
   });

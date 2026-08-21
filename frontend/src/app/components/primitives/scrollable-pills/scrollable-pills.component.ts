@@ -1,20 +1,32 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   selector: 'app-scrollable-pills',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [...HlmButtonImports],
   template: `
-    <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500">
+    <div
+      class="hide-scrollbar flex gap-2 overflow-x-auto bg-surface-500 px-4 py-2"
+      role="radiogroup"
+      [attr.aria-label]="ariaLabel() || null"
+    >
       @for (pill of pills(); track pill.id) {
         <button
+          hlmBtn
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="whitespace-nowrap rounded-full"
           (click)="pillPicked.emit(pill.id)"
-          class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
-          [class.bg-purple-600]="selected() === pill.id"
-          [class.text-white]="selected() === pill.id"
+          [class.bg-primary]="selected() === pill.id"
+          [class.text-on-fill]="selected() === pill.id"
           [class.bg-surface-300]="selected() !== pill.id"
           [class.text-text-secondary]="selected() !== pill.id"
           [class.border]="selected() !== pill.id"
           [class.border-surface-200]="selected() !== pill.id"
+          role="radio"
+          [attr.aria-checked]="selected() === pill.id"
+          [attr.aria-label]="pill.label"
         >
           {{ pill.label }}
         </button>
@@ -34,8 +46,8 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
   ],
 })
 export class ScrollablePillsComponent {
-  pills = input.required<{ id: string; label: string }[]>();
-  selected = input.required<string>();
-  // Renamed to avoid collision with native DOM events (e.g. 'select')
-  pillPicked = output<string>();
+  readonly pills = input.required<{ id: string; label: string }[]>();
+  readonly selected = input.required<string>();
+  readonly ariaLabel = input<string>('');
+  readonly pillPicked = output<string>();
 }

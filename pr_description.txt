@@ -1,5 +1,0 @@
-🧪 [Add ThemeService tests]
-
-🎯 **What:** I added missing unit tests for `ThemeService` (`frontend/src/app/services/theme.service.spec.ts`) by correctly mocking `localStorage`, `window.matchMedia`, and DOM manipulations to allow testing without side-effects in a headless environment.
-📊 **Coverage:** I successfully covered edge and happy paths for `initTheme`, `setTheme`, `applyTheme`, and the system preference fallback. Tests cover fallback logic on invalid localStorage data, reaction to explicit theme setting, and system theme alterations via effects.
-✨ **Result:** Test coverage for the theme service logic increases from 0% to nearly 100%, improving stability against future refactoring while mitigating FOUC bugs silently reappearing.

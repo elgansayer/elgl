@@ -56,11 +56,12 @@
         "/api/discovery/**",
         "/api/moments/feed**",
         "/api/users/profile/**",
-        "/api/languages/**"
+        "/api/languages/**",
+        "/api/escrow/**"
       ],
       "cacheConfig": {
         "strategy": "performance",
-        "maxSize": 100,
+        "maxSize": 150,
         "maxAge": "1h",
         "timeout": "5s"
       }
@@ -118,6 +119,35 @@
         "maxAge": "24h",
         "timeout": "5s"
       }
+    },
+    {
+      "name": "api-reading-engine",
+      "urls": [
+        "/api/curated-content/**",
+        "/api/flashcards/suggest**",
+        "/api/word-of-the-day",
+        "/api/lessons/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 80,
+        "maxAge": "12h",
+        "timeout": "5s"
+      }
+    },
+    {
+      "name": "api-reading-engine-freshness",
+      "urls": [
+        "/api/flashcards/**",
+        "/api/decks/**",
+        "/api/resource-library/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 60,
+        "maxAge": "5m",
+        "timeout": "3s"
+      }
     }
   ],
   "navigationUrls": [
@@ -127,7 +157,8 @@
     "/chat/**",
     "/profile/**",
     "/settings/**",
-    "/admin/**"
+    "/admin/**",
+    "/escrow"
   ],
   "navigationRequestStrategy": "performance"
 }

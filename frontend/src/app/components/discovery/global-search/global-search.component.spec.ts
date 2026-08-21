@@ -27,6 +27,7 @@ describe('GlobalSearchComponent', () => {
           'discovery.any_language': 'Any language',
           'discovery.any_level': 'Any level',
           'discovery.search_button': 'Search Partners',
+          'audioIntro.title': 'Audio Introduction',
           'levels.a1': 'A1 - Beginner',
           'levels.a2': 'A2 - Elementary',
           'levels.b1': 'B1 - Intermediate',
@@ -59,7 +60,7 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('should render the title', () => {
-    const title = fixture.nativeElement.querySelector('h3');
+    const title = fixture.nativeElement.querySelector('h2');
     expect(title.textContent.trim()).toBe('Global Search');
   });
 
@@ -69,8 +70,13 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('should render the search button', () => {
-    const button = fixture.nativeElement.querySelector('button');
+    const button = fixture.nativeElement.querySelector('button[hlmBtn]');
     expect(button.textContent.trim()).toBe('Search Partners');
+  });
+
+  it('should have aria-label on search button', () => {
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[hlmBtn]');
+    expect(button.getAttribute('aria-label')).toBe('Search Partners');
   });
 
   it('should emit search filters on applyFilters', () => {
@@ -80,16 +86,22 @@ describe('GlobalSearchComponent', () => {
     component.nativeLanguages.set('es');
     component.targetLanguage.set('fr');
     component.level.set('b1');
+    component.hasAudioIntro.set(true);
     fixture.detectChanges();
 
     component.applyFilters();
 
     expect(emitted).toEqual([
-      { native_languages: 'es', target_language: 'fr', proficiency_level: 'b1' },
+      {
+        native_languages: 'es',
+        target_language: 'fr',
+        proficiency_level: 'b1',
+        has_audio_intro: true,
+      },
     ]);
   });
 
-  it('should emit undefined for unset filters', () => {
+  it('should emit false for the audio intro filter when it is not selected', () => {
     const emitted: unknown[] = [];
     component.searchFilters.subscribe((f) => emitted.push(f));
 
@@ -100,8 +112,36 @@ describe('GlobalSearchComponent', () => {
         native_languages: undefined,
         target_language: undefined,
         proficiency_level: undefined,
+        has_audio_intro: false,
       },
     ]);
+  });
+
+  it('should apply the audio intro filter immediately when toggled', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((f) => emitted.push(f));
+
+    component.toggleHasAudioIntro();
+
+    expect(component.hasAudioIntro()).toBe(true);
+    expect(emitted).toEqual([
+      {
+        native_languages: undefined,
+        target_language: undefined,
+        proficiency_level: undefined,
+        has_audio_intro: true,
+      },
+    ]);
+  });
+
+  it('should render an associated audio intro checkbox label', () => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#global-hasAudioIntro');
+    const label: HTMLLabelElement = fixture.nativeElement.querySelector(
+      'label[for="global-hasAudioIntro"]',
+    );
+
+    expect(input).toBeTruthy();
+    expect(label.textContent?.trim()).toBe('Audio Introduction');
   });
 
   it('should populate availableLanguages with translated names', () => {
@@ -117,19 +157,12 @@ describe('GlobalSearchComponent', () => {
 
   it('should have six proficiency levels', () => {
     expect(component.levels.length).toBe(6);
-    expect(component.levels.map((l) => l.value)).toEqual([
-      'a1',
-      'a2',
-      'b1',
-      'b2',
-      'c1',
-      'c2',
-    ]);
+    expect(component.levels.map((l) => l.value)).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
   });
 
   it('should react to select changes', () => {
     const nativeSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#nativeLanguages');
+      fixture.nativeElement.querySelector('#global-nativeLanguages');
 
     nativeSelect.value = 'de';
     nativeSelect.dispatchEvent(new Event('change'));
@@ -138,7 +171,7 @@ describe('GlobalSearchComponent', () => {
     expect(component.nativeLanguages()).toBe('de');
 
     const targetSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#targetLanguage');
+      fixture.nativeElement.querySelector('#global-targetLanguage');
 
     targetSelect.value = 'fr';
     targetSelect.dispatchEvent(new Event('change'));
@@ -146,8 +179,9 @@ describe('GlobalSearchComponent', () => {
 
     expect(component.targetLanguage()).toBe('fr');
 
-    const levelSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#proficiencyLevel');
+    const levelSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '#global-proficiencyLevel',
+    );
 
     levelSelect.value = 'c1';
     levelSelect.dispatchEvent(new Event('change'));

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { MilestonesService } from './milestones.service';
@@ -19,15 +20,15 @@ type MockResult = {
 };
 
 type QueryChainMock = {
-  select: jest.Mock;
-  from: jest.Mock;
-  eq: jest.Mock;
-  order: jest.Mock;
-  insert: jest.Mock;
-  update: jest.Mock;
-  delete: jest.Mock;
-  single: jest.Mock;
-  maybeSingle: jest.Mock;
+  select: Mock;
+  from: Mock;
+  eq: Mock;
+  order: Mock;
+  insert: Mock;
+  update: Mock;
+  delete: Mock;
+  single: Mock;
+  maybeSingle: Mock;
   _setResolveData: (data: MockResult) => void;
   then: (resolve: (value: MockResult) => void) => undefined;
 };
@@ -46,7 +47,7 @@ const createQueryChain = (): QueryChainMock => {
     'maybeSingle',
   ] as const;
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   });
 
   let resolveData: MockResult | null = null;
@@ -75,17 +76,17 @@ const sampleRow: MilestoneRow = {
 
 describe('MilestonesService', () => {
   let service: MilestonesService;
-  let supabaseMock: { from: jest.Mock };
+  let supabaseMock: { from: Mock };
 
   beforeEach(async () => {
-    supabaseMock = { from: jest.fn(() => createQueryChain()) };
+    supabaseMock = { from: vi.fn(() => createQueryChain()) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MilestonesService,
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(supabaseMock) },
+          useValue: { getClient: vi.fn().mockReturnValue(supabaseMock) },
         },
       ],
     }).compile();
