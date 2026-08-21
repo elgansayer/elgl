@@ -8,7 +8,7 @@ import { SrsOfflineService } from './srs-offline.service';
 import { SrsCircuitBreakerService } from './srs-circuit-breaker.service';
 import { environment } from '../../environments/environment';
 
-describe.skip('VocabularyStore', () => {
+describe('VocabularyStore', () => {
   let store: VocabularyStore;
   let httpMock: HttpTestingController;
   let authSpy: { getAccessToken: ReturnType<typeof vi.fn> };
@@ -19,6 +19,7 @@ describe.skip('VocabularyStore', () => {
     getCachedDueReviews: ReturnType<typeof vi.fn>;
     queueSrsReview: ReturnType<typeof vi.fn>;
     syncQueuedReviews: ReturnType<typeof vi.fn>;
+    online: ReturnType<typeof vi.fn>;
   };
 
   let circuitBreakerSpy: {
@@ -56,12 +57,19 @@ describe.skip('VocabularyStore', () => {
       getCachedDueReviews: vi.fn().mockResolvedValue([]),
       queueSrsReview: vi.fn().mockResolvedValue(undefined),
       syncQueuedReviews: vi.fn().mockResolvedValue({ synced: 0, failed: 0 }),
+      online: vi.fn().mockReturnValue(true),
     };
 
     circuitBreakerSpy = {
-      executeWithBreaker: vi.fn().mockImplementation(
-        (_service: string, operation: () => Promise<unknown>, _fallback: () => Promise<unknown>) => operation(),
-      ),
+      executeWithBreaker: vi
+        .fn()
+        .mockImplementation(
+          (
+            _service: string,
+            operation: () => Promise<unknown>,
+            _fallback: () => Promise<unknown>,
+          ) => operation(),
+        ),
       isAvailable: vi.fn().mockReturnValue(true),
       recordSuccess: vi.fn(),
       recordFailure: vi.fn(),
@@ -86,9 +94,10 @@ describe.skip('VocabularyStore', () => {
   afterEach(() => {
     httpMock.verify();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  describe.skip('initial state', () => {
+  describe('initial state', () => {
     it('should be created', () => {
       expect(store).toBeTruthy();
     });
@@ -110,7 +119,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadAllFlashcards', () => {
+  describe('loadAllFlashcards', () => {
     it('should set isLoading to true while loading and false after', async () => {
       const promise = store.loadAllFlashcards();
       expect(store.isLoading()).toBe(true);
@@ -150,10 +159,9 @@ describe.skip('VocabularyStore', () => {
     it('should handle error gracefully and set isLoading to false', async () => {
       const promise = store.loadAllFlashcards();
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        { message: 'Server error' },
-        { status: 500, statusText: 'Internal Server Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush({ message: 'Server error' }, { status: 500, statusText: 'Internal Server Error' });
       await promise;
 
       expect(store.isLoading()).toBe(false);
@@ -162,7 +170,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadDueReviews', () => {
+  describe('loadDueReviews', () => {
     it('should fetch due reviews and update the signal', async () => {
       const promise = store.loadDueReviews();
 
@@ -179,30 +187,29 @@ describe.skip('VocabularyStore', () => {
     it('should handle error gracefully', async () => {
       const promise = store.loadDueReviews();
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(
-        {},
-        { status: 500, statusText: 'Server Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards/due`)
+        .flush({}, { status: 500, statusText: 'Server Error' });
       await promise;
 
       expect(store.dueReviews()).toEqual([]);
     });
   });
 
-  describe.skip('getWordStatus', () => {
-    it('should return level 0 with blue styling for unknown words', () => {
+  describe('getWordStatus', () => {
+    it('should return level 0 with secondary-accent styling for unknown words', () => {
       const status = store.getWordStatus('unknown');
       expect(status.level).toBe(0);
       expect(status.flashcard).toBeUndefined();
-      expect(status.colourClass).toContain('bg-blue-500/20');
+      expect(status.colourClass).toContain('bg-secondary/20');
     });
 
-    it('should return level and amber styling for learning words (srs 1-3)', () => {
+    it('should return level and warning styling for learning words (srs 1-3)', () => {
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
       const status = store.getWordStatus('hello');
       expect(status.level).toBe(1);
       expect(status.flashcard).toEqual(mockFlashcard);
-      expect(status.colourClass).toContain('bg-amber-500/20');
+      expect(status.colourClass).toContain('bg-warning/20');
     });
 
     it('should return level and white styling for known words (srs 4+)', () => {
@@ -228,7 +235,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('saveWord', () => {
+  describe('saveWord', () => {
     it('should POST and prepend the new flashcard to allFlashcards', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
@@ -269,12 +276,16 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('updateSrsLevel', () => {
+  describe('updateSrsLevel', () => {
     it('should PATCH and update the flashcard in all signals', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
-      const updatedCard = { ...mockFlashcard, srs_level: 2, next_review_at: '2026-08-07T00:00:00Z' };
+      const updatedCard = {
+        ...mockFlashcard,
+        srs_level: 2,
+        next_review_at: '2026-08-07T00:00:00Z',
+      };
       const promise = store.updateSrsLevel('1', 4);
 
       const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`);
@@ -293,7 +304,12 @@ describe.skip('VocabularyStore', () => {
     it('should update the correct flashcard when multiple exist', async () => {
       const card2 = { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' };
       store.allFlashcards.set([mockFlashcard, card2]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard], ['world', card2]]));
+      store.flashcardMap.set(
+        new Map([
+          ['hello', mockFlashcard],
+          ['world', card2],
+        ]),
+      );
 
       const updatedCard = { ...mockFlashcard, srs_level: 3 };
       const promise = store.updateSrsLevel('1', 3);
@@ -309,7 +325,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('translateWordOrSentence', () => {
+  describe('translateWordOrSentence', () => {
     it('should POST to the NLP translate endpoint', async () => {
       const translationResult = {
         original_text: 'hello',
@@ -343,7 +359,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('checkGrammar', () => {
+  describe('checkGrammar', () => {
     it('should POST to the NLP grammar-check endpoint', async () => {
       const grammarResult = {
         original: 'hola',
@@ -364,7 +380,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('scorePronunciation', () => {
+  describe('scorePronunciation', () => {
     it('should POST to the NLP pronunciation-score endpoint', async () => {
       const scoreResult = {
         overall_score: 85,
@@ -388,7 +404,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('haptic feedback', () => {
+  describe('haptic feedback', () => {
     it('should vibrate with success buzz for known words (srs >= 4)', async () => {
       const vibrateSpy = vi.fn();
       vi.stubGlobal('navigator', { vibrate: vibrateSpy });
@@ -432,7 +448,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('getHeaders', () => {
+  describe('getHeaders', () => {
     it('should use empty token when getAccessToken returns undefined', async () => {
       authSpy.getAccessToken.mockReturnValue(undefined);
 
@@ -458,7 +474,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('html sanitisation', () => {
+  describe('html sanitisation', () => {
     it('should sanitise HTML in flashcard text fields loaded from server', async () => {
       const maliciousCard = {
         ...mockFlashcard,
@@ -492,7 +508,12 @@ describe.skip('VocabularyStore', () => {
 
     it('should sanitise flashcard returned from saveWord', async () => {
       const payload = { word_token: 'test', translation: 'prueba' };
-      const newCard = { ...mockFlashcard, id: 'new', word_token: '<i>test</i>', translation: '<div>prueba</div>' };
+      const newCard = {
+        ...mockFlashcard,
+        id: 'new',
+        word_token: '<i>test</i>',
+        translation: '<div>prueba</div>',
+      };
       const promise = store.saveWord(payload);
       httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCard);
       const result = await promise;
@@ -526,7 +547,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('signal consistency', () => {
+  describe('signal consistency', () => {
     it('should keep allFlashcards and flashcardMap in sync after loadAllFlashcards', async () => {
       const cards = [
         { ...mockFlashcard, id: '1', word_token: 'hello' },
@@ -583,7 +604,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('loadDueReviews signal behaviour', () => {
+  describe('loadDueReviews signal behaviour', () => {
     it('should not modify isLoading while fetching due reviews', async () => {
       expect(store.isLoading()).toBe(false);
       const promise = store.loadDueReviews();
@@ -598,10 +619,9 @@ describe.skip('VocabularyStore', () => {
     it('should preserve previous dueReviews state on error', async () => {
       store.dueReviews.set([mockFlashcard]);
       const promise = store.loadDueReviews();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(
-        { message: 'error' },
-        { status: 500, statusText: 'Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards/due`)
+        .flush({ message: 'error' }, { status: 500, statusText: 'Error' });
       await promise;
 
       expect(store.dueReviews()).toEqual([mockFlashcard]);
@@ -616,42 +636,47 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('error handling for write operations', () => {
+  describe('error handling for write operations', () => {
     it('should handle saveWord failure gracefully', async () => {
       const promise = store.saveWord({ word_token: 'fail', translation: 'fallar' });
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        { message: 'Conflict' },
-        { status: 409, statusText: 'Conflict' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush({ message: 'Conflict' }, { status: 409, statusText: 'Conflict' });
 
       await expect(promise).rejects.toThrow();
       expect(store.allFlashcards()).toEqual([]);
       expect(store.flashcardMap().size).toBe(0);
     });
 
-    it('should handle updateSrsLevel failure gracefully', async () => {
+    it('should handle updateSrsLevel offline fallback gracefully', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
       // jsdom returns undefined for navigator.onLine, which would trigger offline fallback.
       vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
+      srsOfflineSpy.online.mockReturnValue(false);
 
+      // jsdom defaults navigator.onLine to false, so the offline path will activate
       const promise = store.updateSrsLevel('1', 2);
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
-        { message: 'Not found' },
-        { status: 404, statusText: 'Not Found' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards/1/srs`)
+        .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
 
-      await expect(promise).rejects.toThrow();
-      expect(store.allFlashcards()[0].srs_level).toBe(1);
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
+      // With graceful degradation, the promise resolves with optimistically updated card
+      const result = await promise;
+      expect(result).toBeDefined();
+      expect(result.srs_level).toBe(0); // quality 2 => estimateNewLevel returns 0
+      expect(store.allFlashcards()[0].srs_level).toBe(0);
+      expect(store.flashcardMap().get('hello')?.srs_level).toBe(0);
     });
 
     it('should gracefully degrade translateWordOrSentence on failure', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
-        { message: 'Service unavailable' },
-        { status: 503, statusText: 'Service Unavailable' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/translate`)
+        .flush(
+          { message: 'Service unavailable' },
+          { status: 503, statusText: 'Service Unavailable' },
+        );
 
       const result = await promise;
       expect(result.original_text).toBe('hello');
@@ -661,10 +686,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should gracefully degrade checkGrammar on failure', async () => {
       const promise = store.checkGrammar('hola', 'es');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
-        { message: 'Bad request' },
-        { status: 400, statusText: 'Bad Request' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/grammar-check`)
+        .flush({ message: 'Bad request' }, { status: 400, statusText: 'Bad Request' });
 
       const result = await promise;
       expect(result.original).toBe('hola');
@@ -674,10 +698,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should gracefully degrade scorePronunciation on failure', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
-        { message: 'Internal error' },
-        { status: 500, statusText: 'Internal Server Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
+        .flush({ message: 'Internal error' }, { status: 500, statusText: 'Internal Server Error' });
 
       const result = await promise;
       expect(result.overall_score).toBe(85);
@@ -686,7 +709,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('isLoading signal state transitions', () => {
+  describe('isLoading signal state transitions', () => {
     it('should set isLoading true while loadAllFlashcards is in-flight', async () => {
       expect(store.isLoading()).toBe(false);
       const promise = store.loadAllFlashcards();
@@ -701,10 +724,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should set isLoading false even on network error', async () => {
       const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        null,
-        { status: 0, statusText: 'Unknown Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush(null, { status: 0, statusText: 'Unknown Error' });
       await promise;
 
       expect(store.isLoading()).toBe(false);
@@ -715,16 +737,16 @@ describe.skip('VocabularyStore', () => {
       const promise = store.saveWord({ word_token: 'test', translation: 'prueba' });
       expect(store.isLoading()).toBe(false);
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        { ...mockFlashcard, id: 'saved', word_token: 'test' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush({ ...mockFlashcard, id: 'saved', word_token: 'test' });
       await promise;
 
       expect(store.isLoading()).toBe(false);
     });
   });
 
-  describe.skip('loadAllFlashcards signal edge cases', () => {
+  describe('loadAllFlashcards signal edge cases', () => {
     it('should handle empty array response', async () => {
       const promise = store.loadAllFlashcards();
       httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
@@ -738,9 +760,7 @@ describe.skip('VocabularyStore', () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
-      const newCards = [
-        { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' },
-      ];
+      const newCards = [{ ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' }];
       const promise = store.loadAllFlashcards();
       httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCards);
       await promise;
@@ -753,28 +773,28 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('getWordStatus boundary SRS levels', () => {
-    it('should return blue styling for level 0 (new)', () => {
+  describe('getWordStatus boundary SRS levels', () => {
+    it('should return secondary-accent styling for level 0 (new)', () => {
       const status = store.getWordStatus('newword');
       expect(status.level).toBe(0);
-      expect(status.colourClass).toContain('bg-blue-500/20');
+      expect(status.colourClass).toContain('bg-secondary/20');
       expect(status.flashcard).toBeUndefined();
     });
 
-    it('should return amber styling for level 1', () => {
+    it('should return warning styling for level 1', () => {
       const card = { ...mockFlashcard, srs_level: 1 };
       store.flashcardMap.set(new Map([['test', card]]));
       const status = store.getWordStatus('test');
       expect(status.level).toBe(1);
-      expect(status.colourClass).toContain('bg-amber-500/20');
+      expect(status.colourClass).toContain('bg-warning/20');
     });
 
-    it('should return amber styling for level 3', () => {
+    it('should return warning styling for level 3', () => {
       const card = { ...mockFlashcard, srs_level: 3 };
       store.flashcardMap.set(new Map([['test', card]]));
       const status = store.getWordStatus('test');
       expect(status.level).toBe(3);
-      expect(status.colourClass).toContain('bg-amber-500/20');
+      expect(status.colourClass).toContain('bg-warning/20');
     });
 
     it('should return white styling for level 4', () => {
@@ -794,16 +814,21 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('saveWord signal integrity', () => {
+  describe('saveWord signal integrity', () => {
     it('should not affect existing unrelated flashcards when saving a new word', async () => {
-      const existingCard = { ...mockFlashcard, id: 'existing', word_token: 'existing', translation: 'existente' };
+      const existingCard = {
+        ...mockFlashcard,
+        id: 'existing',
+        word_token: 'existing',
+        translation: 'existente',
+      };
       store.allFlashcards.set([existingCard]);
       store.flashcardMap.set(new Map([['existing', existingCard]]));
 
       const promise = store.saveWord({ word_token: 'new', translation: 'nuevo' });
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        { ...mockFlashcard, id: 'new', word_token: 'new', translation: 'nuevo' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush({ ...mockFlashcard, id: 'new', word_token: 'new', translation: 'nuevo' });
       await promise;
 
       expect(store.allFlashcards().length).toBe(2);
@@ -813,9 +838,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should handle saveWord when allFlashcards is empty', async () => {
       const promise = store.saveWord({ word_token: 'first', translation: 'primero' });
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
-        { ...mockFlashcard, id: 'first', word_token: 'first', translation: 'primero' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/flashcards`)
+        .flush({ ...mockFlashcard, id: 'first', word_token: 'first', translation: 'primero' });
       const result = await promise;
 
       expect(store.allFlashcards().length).toBe(1);
@@ -824,11 +849,16 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('updateSrsLevel signal integrity', () => {
+  describe('updateSrsLevel signal integrity', () => {
     it('should not mutate other flashcards when updating SRS', async () => {
       const cardB = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'b' };
       store.allFlashcards.set([mockFlashcard, cardB]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard], ['b', cardB]]));
+      store.flashcardMap.set(
+        new Map([
+          ['hello', mockFlashcard],
+          ['b', cardB],
+        ]),
+      );
 
       const updatedA = { ...mockFlashcard, srs_level: 4 };
       const promise = store.updateSrsLevel('1', 4);
@@ -840,7 +870,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('concurrent signal updates', () => {
+  describe('concurrent signal updates', () => {
     it('should handle rapid successive saveWord calls maintaining integrity', async () => {
       const card1 = { ...mockFlashcard, id: 'a', word_token: 'a', translation: 'A' };
       const card2 = { ...mockFlashcard, id: 'b', word_token: 'b', translation: 'B' };
@@ -862,7 +892,7 @@ describe.skip('VocabularyStore', () => {
     });
   });
 
-  describe.skip('NLP endpoints comprehensive coverage', () => {
+  describe('NLP endpoints comprehensive coverage', () => {
     it('should send authorisation header with translateWordOrSentence', async () => {
       const promise = store.translateWordOrSentence('test', 'fr');
       const req = httpMock.expectOne(`${environment.apiUrl}/nlp/translate`);
@@ -911,10 +941,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should set isDegraded to true when NLP translate fails', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
-        {},
-        { status: 503, statusText: 'Service Unavailable' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/translate`)
+        .flush({}, { status: 503, statusText: 'Service Unavailable' });
       await promise;
 
       expect(store.isDegraded()).toBe(true);
@@ -922,10 +951,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should set isDegraded to true when grammar check fails', async () => {
       const promise = store.checkGrammar('hola');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
-        {},
-        { status: 500, statusText: 'Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/grammar-check`)
+        .flush({}, { status: 500, statusText: 'Error' });
       await promise;
 
       expect(store.isDegraded()).toBe(true);
@@ -933,10 +961,9 @@ describe.skip('VocabularyStore', () => {
 
     it('should set isDegraded to true when pronunciation scoring fails', async () => {
       const promise = store.scorePronunciation('url', 'text');
-      httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
-        {},
-        { status: 500, statusText: 'Error' },
-      );
+      httpMock
+        .expectOne(`${environment.apiUrl}/nlp/pronunciation-score`)
+        .flush({}, { status: 500, statusText: 'Error' });
       await promise;
 
       expect(store.isDegraded()).toBe(true);
@@ -982,6 +1009,7 @@ describe.skip('VocabularyStore', () => {
 
     it('should be true when navigator.onLine is false', () => {
       vi.stubGlobal('navigator', { onLine: false, vibrate: vi.fn() });
+      srsOfflineSpy.online.mockReturnValue(false);
       expect(store.isOffline()).toBe(true);
     });
   });

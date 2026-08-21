@@ -18,6 +18,7 @@ import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { EconomyStore } from './economy.store';
+import { AudioRoomDegradationService } from './audio-room-degradation.service';
 
 export interface AudioRoomRecord {
   id: string;
@@ -107,6 +108,7 @@ export class AudioRoomsStore {
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private economyStore = inject(EconomyStore);
+  private degradationService = inject(AudioRoomDegradationService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -130,6 +132,17 @@ export class AudioRoomsStore {
   readonly audienceCount = signal<number>(0);
   readonly privateRooms = signal<AudioRoomRecord[]>([]);
   readonly isLoadingPrivate = signal<boolean>(false);
+
+  // Degradation-aware state - reactive bindings to degradation service
+  readonly isLiveKitDegraded = this.degradationService.isLiveKitDegraded;
+  readonly isCentrifugoDegraded = this.degradationService.isCentrifugoDegraded;
+  readonly isSupabaseDegraded = this.degradationService.isSupabaseDegraded;
+  readonly isFullyOperational = this.degradationService.isFullyOperational;
+  readonly degradationSummary = this.degradationService.degradationSummary;
+
+  readonly isOperatingInDegradedMode = computed(() => {
+    return !this.degradationService.isFullyOperational() && this.isConnectedToLiveKit();
+  });
 
   // Split-screen co-host video state
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -309,6 +322,9 @@ export class AudioRoomsStore {
     this.captions.set([]);
     this.roomMessages.set([]);
 
+    // Start monitoring service health for degradation indicators
+    this.degradationService.startMonitoring();
+
     // Load stage info for full speaker/listener details
     void this.fetchStage(room.id);
 
@@ -347,8 +363,12 @@ export class AudioRoomsStore {
             await this.publishLocalCamera();
           }
         } catch (lkError) {
-          console.warn('LiveKit SFU connection error (using mock audio stage):', lkError);
+          console.warn('LiveKit SFU connection error (voice-only fallback active):', lkError);
+          // Degraded mode: connected but without real-time audio
+          // Show a non-blocking toast so the user knows audio/video features are limited
           this.isConnectedToLiveKit.set(true);
+          void this.degradationService.refreshHealth();
+          showToast(this.i18n.translate('audioRoom.degradedAudioToast'));
         }
       } else {
         // Mock connection simulation
@@ -963,6 +983,9 @@ export class AudioRoomsStore {
   }
 
   leaveRoom(): void {
+    // Stop health monitoring when leaving the audio room context
+    this.degradationService.stopMonitoring();
+
     if (this.livekitRoom) {
       if (this.onTrackSubscribedBound) {
         this.livekitRoom.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
 import { Location } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -22,7 +23,7 @@ type StatusFilter = 'all' | EscrowStatus;
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [FormsModule, DatePipe, TranslatePipe],
+  imports: [HlmButton, FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
 export class EscrowPaymentsComponent {
@@ -153,15 +154,15 @@ export class EscrowPaymentsComponent {
   statusBadgeClass(status: EscrowStatus): string {
     switch (status) {
       case 'pending':
-        return 'bg-amber-500/20 text-amber-400';
+        return 'bg-warning/20 text-warning';
       case 'released':
-        return 'bg-emerald-500/20 text-emerald-400';
+        return 'bg-success/20 text-success';
       case 'disputed':
-        return 'bg-rose-500/20 text-rose-400';
+        return 'bg-danger/20 text-danger';
       case 'refunded':
-        return 'bg-slate-500/20 text-slate-400';
+        return 'bg-surface-300 text-text-secondary';
       case 'cancelled':
-        return 'bg-zinc-500/20 text-zinc-400';
+        return 'bg-surface-100 text-text-muted';
       default:
         return 'bg-surface-200 text-text-secondary';
     }

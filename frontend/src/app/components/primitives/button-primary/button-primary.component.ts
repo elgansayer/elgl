@@ -1,13 +1,25 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
+import { HlmButton, HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-button-primary',
+  imports: [...HlmButtonImports],
   template: `
     <button
+      hlmBtn
+      variant="default"
+      [size]="helmSize()"
       [type]="type()"
       [disabled]="disabled()"
-      [class]="buttonClasses()"
       (click)="onClick($event)"
     >
       <ng-content />
@@ -22,37 +34,22 @@ export class AppButtonPrimaryComponent {
   readonly disabled = input<boolean>(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   readonly customClass = input<string>('');
-
   readonly clicked = output<MouseEvent>();
 
-  readonly buttonClasses = computed(() => {
-    const base =
-      'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
-
-    let sizeClass = '';
-    switch (this.size()) {
-      case 'sm':
-        sizeClass = 'ps-3 pe-3 pt-1.5 pb-1.5 text-xs';
-        break;
-      case 'md':
-        sizeClass = 'ps-4 pe-4 pt-2.5 pb-2.5 text-sm';
-        break;
-      case 'lg':
-        sizeClass = 'ps-6 pe-6 pt-3.5 pb-3.5 text-base';
-        break;
-    }
-
-    const stateClass = this.disabled()
-      ? 'bg-surface-200 text-text-secondary cursor-not-allowed shadow-none'
-      : 'bg-primary text-white hover:bg-primary/90 shadow-sm hover:shadow-md cursor-pointer';
-
-    const extra = this.customClass();
-    return `${base} ${sizeClass} ${stateClass}${extra ? ' ' + extra : ''}`.trim();
+  readonly helmSize = computed(() => {
+    const size = this.size();
+    return size === 'md' ? 'touch' : size;
   });
 
+  private readonly helmButton = viewChild(HlmButton);
+
+  constructor() {
+    effect(() => {
+      this.helmButton()?.setClass(this.customClass());
+    });
+  }
+
   onClick(event: MouseEvent): void {
-    if (!this.disabled()) {
-      this.clicked.emit(event);
-    }
+    if (!this.disabled()) this.clicked.emit(event);
   }
 }

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   DestroyRef,
@@ -15,7 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-audio-player',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',
 })

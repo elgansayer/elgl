@@ -33,7 +33,7 @@ Display chat messages with support for text, voice, corrections, doodles, and gi
 - **Timestamp**: 11px, text-muted, right-aligned
 - **Read receipt**: 14x14px icon, positioned right of timestamp
 
-### Color Scheme
+### Colour Scheme
 
 - **Own bubble**: `bg-purple-600` (`#7c3aed`), `text-white`
 - **Other bubble**: `bg-slate-800` (`#1e293b`), `text-slate-100`
@@ -86,7 +86,7 @@ Display chat messages with support for text, voice, corrections, doodles, and gi
 - Opacity: 70%
 - Pulsing animation on the bubble
 - Spinner icon replacing timestamp
-- "Sending..." text in muted color
+- "Sending..." text in muted colour
 
 ### Error (failed to send)
 

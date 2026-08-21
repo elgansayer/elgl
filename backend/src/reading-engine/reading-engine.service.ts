@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   SupabaseService,
@@ -6,6 +11,7 @@ import {
   ReadingProgressRow,
 } from '../supabase/supabase.service';
 import { ReadingEngineCacheService } from './reading-engine-cache.service';
+import { ReadingEngineCrashReportService } from './reading-engine-crash-report.service';
 import { ReadingEngineCacheNamespace } from './interfaces/cache-rules.interface';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
@@ -15,6 +21,7 @@ import {
   ReadingTokenBreakdown,
   ReadingSession,
 } from './interfaces/reading.interface';
+import { sanitiseReadingEngineData } from './sanitise-reading-engine.helper';
 
 @Injectable()
 export class ReadingEngineService {
@@ -23,8 +30,26 @@ export class ReadingEngineService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly cacheService: ReadingEngineCacheService,
+    @Optional()
+    private readonly crashReportService:
+      ReadingEngineCrashReportService | undefined,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private async reportServiceCrash(
+    operation: string,
+    error: unknown,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
+    const err = error instanceof Error ? error : new Error(String(error));
+    await this.crashReportService?.reportCrash({
+      operation,
+      error_type: err.constructor.name,
+      error_message: err.message,
+      stack_trace: err.stack,
+      context,
+    });
+  }
 
   private get db() {
     return this.supabaseService.getClient();
@@ -38,15 +63,16 @@ export class ReadingEngineService {
     userId: string,
     dto: CreateReadingResourceDto,
   ): Promise<ReadingResource> {
+    const sanitised = sanitiseReadingEngineData(dto);
     const { data, error } = await this.db
       .from('reading_resources')
       .insert({
-        title: dto.title,
-        content: dto.content,
-        language: dto.language,
-        difficulty: dto.difficulty ?? null,
-        topic: dto.topic ?? null,
-        source_url: dto.sourceUrl ?? null,
+        title: sanitised.title,
+        content: sanitised.content,
+        language: sanitised.language,
+        difficulty: sanitised.difficulty ?? null,
+        topic: sanitised.topic ?? null,
+        source_url: sanitised.sourceUrl ?? null,
         created_by: userId,
       })
       .select()
@@ -63,13 +89,16 @@ export class ReadingEngineService {
     resourceId: string,
     dto: UpdateReadingResourceDto,
   ): Promise<ReadingResource> {
+    const sanitised = sanitiseReadingEngineData(dto);
     const update: Partial<ReadingResourceRow> = {};
-    if (dto.title !== undefined) update.title = dto.title;
-    if (dto.content !== undefined) update.content = dto.content;
-    if (dto.language !== undefined) update.language = dto.language;
-    if (dto.difficulty !== undefined) update.difficulty = dto.difficulty;
-    if (dto.topic !== undefined) update.topic = dto.topic;
-    if (dto.sourceUrl !== undefined) update.source_url = dto.sourceUrl;
+    if (sanitised.title !== undefined) update.title = sanitised.title;
+    if (sanitised.content !== undefined) update.content = sanitised.content;
+    if (sanitised.language !== undefined) update.language = sanitised.language;
+    if (sanitised.difficulty !== undefined)
+      update.difficulty = sanitised.difficulty;
+    if (sanitised.topic !== undefined) update.topic = sanitised.topic;
+    if (sanitised.sourceUrl !== undefined)
+      update.source_url = sanitised.sourceUrl;
 
     const { data, error } = await this.db
       .from('reading_resources')
