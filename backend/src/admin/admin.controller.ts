@@ -28,6 +28,8 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
+import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminService } from './admin.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
@@ -58,6 +60,8 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('users.read')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
@@ -138,6 +142,8 @@ export class AdminController {
   }
 
   @Patch('users/:id/vip')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('users.manage')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
@@ -166,6 +172,8 @@ export class AdminController {
   }
 
   @Get('users/:id/login-history')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('users.sessions.read')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({
@@ -217,6 +225,8 @@ export class AdminController {
   }
 
   @Post('users/:id/ban')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
@@ -253,6 +263,8 @@ export class AdminController {
   }
 
   @Post('users/:id/warn')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
@@ -289,6 +301,8 @@ export class AdminController {
   }
 
   @Get('blocks')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
@@ -370,6 +384,8 @@ export class AdminController {
   }
 
   @Get('reports')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: 'List all reports',
@@ -468,6 +484,8 @@ export class AdminController {
   }
 
   @Delete('blocks/:blockId')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.manage')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({

@@ -119,7 +119,7 @@ export class CrashReportService {
     try {
       const db = await this.ensureDB();
       const entry: StoredCrashEntry = {
-        id: `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `crash-${Date.now()}-${crypto.randomUUID()}`,
         payload,
         storedAt: Date.now(),
         synced: false,
@@ -257,9 +257,7 @@ export class CrashReportService {
     try {
       const db = await this.ensureDB();
       const all = await this.getAllCrashesRaw(db);
-      return all
-        .sort((a, b) => b.storedAt - a.storedAt)
-        .slice(0, limit);
+      return all.sort((a, b) => b.storedAt - a.storedAt).slice(0, limit);
     } catch {
       return [];
     }

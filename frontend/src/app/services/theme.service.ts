@@ -1,21 +1,27 @@
-import { Injectable, signal, effect, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import type { UserProfile } from './user.service';
 
 export type Theme = 'light' | 'dark' | 'system';
 
-const DEFAULT_ACCENT = '#4f46e5';
+const ACCENT_STORAGE_KEY = 'app_primary_accent_color';
+const THEME_STORAGE_KEY = 'app_theme';
+const HEX_COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
 }
 
+function isAccentColour(value: unknown): value is string {
+  return typeof value === 'string' && HEX_COLOUR_PATTERN.test(value);
+}
+
 function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
+  const value = hex.slice(1);
   return [
-    Number.parseInt(h.slice(0, 2), 16),
-    Number.parseInt(h.slice(2, 4), 16),
-    Number.parseInt(h.slice(4, 6), 16),
+    Number.parseInt(value.slice(0, 2), 16),
+    Number.parseInt(value.slice(2, 4), 16),
+    Number.parseInt(value.slice(4, 6), 16),
   ];
 }
 
@@ -24,11 +30,13 @@ function hexToRgb(hex: string): [number, number, number] {
 })
 export class ThemeService {
   readonly currentTheme = signal<Theme>('system');
-  readonly primaryAccentColor = signal<string>(DEFAULT_ACCENT);
+  /** null means no custom preference: the theme-aware Relay CSS default applies. */
+  readonly primaryAccentColor = signal<string | null>(null);
   private document = inject(DOCUMENT);
 
   constructor() {
     this.initTheme();
+    this.initAccent();
 
     this.applyTheme(this.currentTheme());
     this.applyAccentColour(this.primaryAccentColor());
@@ -51,37 +59,74 @@ export class ThemeService {
   }
 
   private initTheme(): void {
-    if (typeof localStorage !== 'undefined') {
-      const savedTheme = localStorage.getItem('app_theme');
-      if (isTheme(savedTheme)) {
-        this.currentTheme.set(savedTheme);
-      }
+    if (typeof localStorage === 'undefined') return;
+
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    if (isTheme(savedTheme)) {
+      this.currentTheme.set(savedTheme);
+    }
+  }
+
+  private initAccent(): void {
+    if (typeof localStorage === 'undefined') return;
+
+    const savedAccent = localStorage.getItem(ACCENT_STORAGE_KEY);
+    if (isAccentColour(savedAccent)) {
+      this.primaryAccentColor.set(savedAccent);
+      return;
+    }
+
+    if (savedAccent !== null) {
+      localStorage.removeItem(ACCENT_STORAGE_KEY);
     }
   }
 
   setTheme(theme: Theme): void {
     this.currentTheme.set(theme);
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('app_theme', theme);
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
   }
 
   setPrimaryAccentColor(colour: string): void {
+    if (!isAccentColour(colour)) {
+      this.resetPrimaryAccentColor();
+      return;
+    }
+
     this.primaryAccentColor.set(colour);
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('app_primary_accent_color', colour);
+      localStorage.setItem(ACCENT_STORAGE_KEY, colour);
+    }
+  }
+
+  resetPrimaryAccentColor(): void {
+    this.primaryAccentColor.set(null);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(ACCENT_STORAGE_KEY);
     }
   }
 
   loadFromProfile(profile: Partial<Pick<UserProfile, 'primary_accent_color'>> | null): void {
-    const colour = profile?.primary_accent_color ?? DEFAULT_ACCENT;
-    this.setPrimaryAccentColor(colour);
+    const accent = profile?.primary_accent_color;
+    if (isAccentColour(accent)) {
+      this.setPrimaryAccentColor(accent);
+      return;
+    }
+
+    this.resetPrimaryAccentColor();
   }
 
-  private applyAccentColour(colour: string): void {
+  private applyAccentColour(colour: string | null): void {
     if (typeof document === 'undefined') return;
     const root = this.document?.documentElement;
     if (!root) return;
+
+    if (!colour) {
+      root.style.removeProperty('--color-primary-rgb');
+      root.style.removeProperty('--color-primary');
+      return;
+    }
 
     const [r, g, b] = hexToRgb(colour);
     root.style.setProperty('--color-primary-rgb', `${r} ${g} ${b}`);
