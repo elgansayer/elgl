@@ -1,2 +1,44 @@
+<!-- @dsCard group="Foundations" name="Focus ring" subtitle="keyboard focus-visible contract" -->
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Relay focus ring contract</title><style>:root{--surface:#f6f7fa;--text:#12151c;--primary:#c65230}body{margin:0;padding:2rem;background:var(--surface);color:var(--text);font-family:system-ui,sans-serif}button{border:1px solid currentColor;border-radius:.75rem;background:transparent;color:inherit;padding:.75rem 1rem}button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}</style></head><body><main><h1>Focus ring</h1><p>Keyboard focus uses the Relay primary accent with a two-pixel offset from the active surface.</p><button autofocus>Keyboard-focused action</button></main></body></html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relay focus ring contract</title>
+    <style>
+      :root {
+        --surface: #f6f7fa;
+        --text: #12151c;
+        --primary: #c65230;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: var(--surface);
+        color: var(--text);
+        font-family: system-ui, sans-serif;
+      }
+      button {
+        border: 1px solid currentColor;
+        border-radius: 0.75rem;
+        background: transparent;
+        color: inherit;
+        padding: 0.75rem 1rem;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Focus ring</h1>
+      <p>
+        Keyboard focus uses the Relay primary accent with a two-pixel offset from the active
+        surface.
+      </p>
+      <button autofocus>Keyboard-focused action</button>
+    </main>
+  </body>
+</html>

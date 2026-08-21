@@ -17,7 +17,9 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [HlmCheckbox, HlmButton, 
+  imports: [
+    HlmCheckbox,
+    HlmButton,
     FormsModule,
     TranslatePipe,
     UpperCasePipe,

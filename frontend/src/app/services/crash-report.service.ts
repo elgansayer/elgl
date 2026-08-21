@@ -257,9 +257,7 @@ export class CrashReportService {
     try {
       const db = await this.ensureDB();
       const all = await this.getAllCrashesRaw(db);
-      return all
-        .sort((a, b) => b.storedAt - a.storedAt)
-        .slice(0, limit);
+      return all.sort((a, b) => b.storedAt - a.storedAt).slice(0, limit);
     } catch {
       return [];
     }

@@ -25,7 +25,8 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 
 @Component({
   selector: 'app-my-subscription',
-  imports: [HlmButton, 
+  imports: [
+    HlmButton,
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
@@ -81,9 +82,7 @@ export class MySubscriptionComponent {
     },
     defaultValue: EMPTY_INVOICES,
   });
-  protected readonly invoices = computed(
-    () => this.invoicesResource.value() ?? EMPTY_INVOICES,
-  );
+  protected readonly invoices = computed(() => this.invoicesResource.value() ?? EMPTY_INVOICES);
 
   private readonly plansResource = resource({
     loader: async (): Promise<SubscriptionPlan[]> => {

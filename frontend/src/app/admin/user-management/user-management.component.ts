@@ -10,7 +10,15 @@ import { AppEmptyStateComponent } from '../../components/primitives/empty-state/
 
 @Component({
   selector: 'app-user-management',
-  imports: [HlmButton, CommonModule, TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [
+    HlmButton,
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppCardComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+  ],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {

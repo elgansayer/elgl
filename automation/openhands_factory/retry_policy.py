@@ -121,7 +121,7 @@ def _matching_agent_failure(job: Job, detail: str) -> tuple[str | None, str | No
         error = str(entry.get("error") or "")
         if not error or error not in detail:
             continue
-        kind = str(entry.get("kind") or "") or None
+        kind = str(entry.get("failure_classification") or entry.get("kind") or "") or None
         provider = str(entry.get("provider") or "") or None
         phase = str(entry.get("phase") or "") or None
         return kind, provider, phase

@@ -38,11 +38,16 @@ export class SrsMetricsAggregator {
       this.metricsService.setSrsDueCards(dueCount ?? 0);
 
       // Cards per SRS level
-      for (let level = 0; level <= 4; level++) {
+      // ⚡ Bolt Optimization: Replace sequential database queries in a loop with a concurrent Promise.all execution to improve metric aggregation performance
+      const levelPromises = Array.from({ length: 5 }, async (_, level) => {
         const { count } = await supabase
           .from('flashcards')
           .select('id', { count: 'exact', head: true })
           .eq('srs_level', level);
+        return { level, count };
+      });
+      const levelResults = await Promise.all(levelPromises);
+      for (const { level, count } of levelResults) {
         this.metricsService.setSrsCardsPerLevel(level, count ?? 0);
       }
 

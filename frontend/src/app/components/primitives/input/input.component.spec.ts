@@ -75,6 +75,17 @@ describe('AppInputComponent', () => {
     expect(inputElement.placeholder).toBe('Type here...');
   });
 
+  it('should generate a secure default input ID when none is provided', () => {
+    const generatedFixture = TestBed.createComponent(AppInputComponent);
+    generatedFixture.detectChanges();
+    const generatedInput: HTMLInputElement = generatedFixture.nativeElement.querySelector('input');
+
+    expect(generatedInput.id).toMatch(
+      /^app-input-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    generatedFixture.destroy();
+  });
+
   it('should emit valueChange on input event when not disabled', () => {
     inputElement.value = 'new text';
     inputElement.dispatchEvent(new Event('input'));

@@ -1,9 +1,10 @@
-import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
-import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
-import { HlmInput } from '@spartan-ng/helm/input';
-import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface VoiceroomCreatePayload {
@@ -20,46 +21,61 @@ interface SelectOption {
 
 @Component({
   selector: 'app-voiceroom-create-modal',
-  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
+  imports: [
+    FormsModule,
+    HlmButton,
+    HlmCheckbox,
+    HlmDialogImports,
+    HlmInput,
+    HlmNativeSelect,
+    TranslatePipe,
+  ],
   template: `
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-    >
-      <div
-        class="w-full max-w-md bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+    <hlm-dialog state="open" (closed)="closeModal()">
+      <hlm-dialog-content
+        *hlmDialogPortal="let ctx"
+        [showCloseButton]="false"
+        class="w-full max-w-md overflow-hidden border border-surface-100 bg-surface-200 p-0 shadow-2xl sm:max-w-md"
       >
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
-          <h2 class="text-xl font-bold text-text-primary">{{ 'audioRoom.modalTitle' | t }}</h2>
-          <button hlmBtn
-            (click)="closeModal()"
-            class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
+        <hlm-dialog-header
+          class="flex-row items-center justify-between gap-4 border-b border-surface-100 px-6 py-4 text-start"
+        >
+          <div class="min-w-0">
+            <h2 hlmDialogTitle class="text-xl font-bold text-text-primary">
+              {{ 'audioRoom.modalTitle' | t }}
+            </h2>
+            <p hlmDialogDescription class="mt-1 text-sm text-text-secondary">
+              {{ 'audioRoom.modalSubtitle' | t }}
+            </p>
+          </div>
+          <button
+            hlmBtn
+            hlmDialogClose
+            variant="ghost"
+            size="icon-sm"
+            class="shrink-0 rounded-full text-text-muted hover:bg-surface-100 hover:text-text-primary"
             [attr.aria-label]="'audioRoom.cancelBtn' | t"
           >
             ✕
           </button>
-        </div>
+        </hlm-dialog-header>
 
-        <!-- Body -->
-        <div class="p-6 flex flex-col gap-5">
-          <p class="text-sm text-text-secondary mb-2">{{ 'audioRoom.modalSubtitle' | t }}</p>
-
-          <!-- Title Input -->
+        <div class="flex flex-col gap-5 p-6">
           <div class="flex flex-col gap-2">
             <label for="roomTitle" class="text-sm font-medium text-text-secondary">
               {{ 'audioRoom.roomTitleLabel' | t }}
             </label>
-            <input hlmInput
+            <input
+              hlmInput
               id="roomTitle"
               type="text"
               [(ngModel)]="title"
               [placeholder]="'audioRoom.roomTitlePlaceholder' | t"
-              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+              class="w-full rounded-xl border border-surface-100 bg-surface-300 px-4 py-3 text-text-primary placeholder:text-text-muted"
               maxlength="100"
             />
           </div>
 
-          <!-- Language Pair Select -->
           <div class="flex flex-col gap-2">
             <label for="langPair" class="text-sm font-medium text-text-secondary">
               {{ 'audioRoom.languagePairLabel' | t }}
@@ -67,7 +83,8 @@ interface SelectOption {
             <hlm-native-select
               selectId="langPair"
               [(ngModel)]="languagePair"
-              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none" selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              class="w-full"
+              selectClass="w-full rounded-xl border border-surface-100 bg-surface-300 px-4 py-3 text-text-primary"
             >
               @for (option of languagePairOptions(); track option.value) {
                 <option [value]="option.value">
@@ -77,7 +94,6 @@ interface SelectOption {
             </hlm-native-select>
           </div>
 
-          <!-- Topic Select -->
           <div class="flex flex-col gap-2">
             <label for="topicTag" class="text-sm font-medium text-text-secondary">
               {{ 'audioRoom.topicLabel' | t }}
@@ -85,7 +101,8 @@ interface SelectOption {
             <hlm-native-select
               selectId="topicTag"
               [(ngModel)]="topicTag"
-              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none" selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              class="w-full"
+              selectClass="w-full rounded-xl border border-surface-100 bg-surface-300 px-4 py-3 text-text-primary"
             >
               @for (option of topicOptions(); track option.value) {
                 <option [value]="option.value">
@@ -95,38 +112,33 @@ interface SelectOption {
             </hlm-native-select>
           </div>
 
-          <!-- Video Stream Toggle -->
           <label
             for="isVideoStream"
             class="flex items-center gap-3 text-sm font-medium text-text-secondary"
           >
-            <hlm-checkbox
-              inputId="isVideoStream"
-              [(ngModel)]="isVideoStream"
-              class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
-            />
+            <hlm-checkbox inputId="isVideoStream" [(ngModel)]="isVideoStream" class="h-4 w-4" />
             {{ 'audioRoom.videoStreamLabel' | t }}
           </label>
         </div>
 
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-100/50">
-          <button hlmBtn
-            (click)="closeModal()"
-            class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
-          >
+        <hlm-dialog-footer
+          class="flex-row justify-end gap-3 border-t border-surface-100 bg-surface-100/50 px-6 py-4"
+        >
+          <button hlmBtn hlmDialogClose variant="ghost" class="rounded-xl px-5 py-2.5 font-bold">
             {{ 'audioRoom.cancelBtn' | t }}
           </button>
-          <button hlmBtn
+          <button
+            hlmBtn
+            hlmDialogClose
             (click)="submit()"
             [disabled]="!isValid()"
-            class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
+            class="rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-bold text-on-fill shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {{ 'audioRoom.launchStageBtn' | t }}
           </button>
-        </div>
-      </div>
-    </div>
+        </hlm-dialog-footer>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class VoiceroomCreateModalComponent {
@@ -197,8 +209,6 @@ export class VoiceroomCreateModalComponent {
       topicTag: this.topicTag(),
       isVideoStream: this.isVideoStream(),
     });
-
-    this.closeModal();
   }
 
   private resetForm(): void {

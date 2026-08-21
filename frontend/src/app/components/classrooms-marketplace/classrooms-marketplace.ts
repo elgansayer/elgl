@@ -18,7 +18,14 @@ import { JoyrideModule } from 'ngx-joyride';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [HlmButton, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    VideoClassroomErrorBoundaryComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+    JoyrideModule,
+  ],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -54,9 +61,7 @@ export class ClassroomsMarketplace implements OnInit {
     return all.filter((r) => r.language_pair === lang);
   });
 
-  readonly videoRooms = computed(() =>
-    this.filteredRooms().filter((r) => r.is_video_stream),
-  );
+  readonly videoRooms = computed(() => this.filteredRooms().filter((r) => r.is_video_stream));
 
   readonly isHosting = computed(() => {
     const userId = this.authService.currentUser()?.id;
@@ -73,14 +78,10 @@ export class ClassroomsMarketplace implements OnInit {
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await withRetry(
-        () =>
-          firstValueFrom(
-            this.http.get<AudioRoomRecord[]>(
-              `${this.baseUrl}/list`,
-              { headers: this.getHeaders() },
-            ),
-          ),
+      const list = await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/list`, { headers: this.getHeaders() }),
+        ),
       );
       const rooms = Array.isArray(list) ? list : [];
       this.rooms.set(rooms);

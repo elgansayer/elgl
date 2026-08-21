@@ -26,9 +26,7 @@ export class VisitorLogsComponent {
     () => this.visitors().filter((v) => v.is_blurred).length,
   );
   readonly filteredVisitors = computed(() =>
-    this.hideBlurred()
-      ? this.visitors().filter((v) => !v.is_blurred)
-      : this.visitors(),
+    this.hideBlurred() ? this.visitors().filter((v) => !v.is_blurred) : this.visitors(),
   );
 
   constructor() {

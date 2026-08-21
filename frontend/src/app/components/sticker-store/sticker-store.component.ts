@@ -29,7 +29,8 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     <div class="px-4 pb-4 overflow-x-auto">
       <div class="flex gap-2" role="group" [attr.aria-label]="'sticker.filterLabel' | t">
         @for (pill of categoryPills(); track pill.id) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             class="rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
             [class.bg-primary]="selectedCategory() === pill.id"
@@ -123,7 +124,8 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                   {{ 'stickerStore.unlocked' | t }}
                 </div>
               } @else {
-                <button hlmBtn
+                <button
+                  hlmBtn
                   type="button"
                   class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-vip to-accent py-2 text-sm font-semibold text-on-fill transition-all disabled:opacity-50"
                   [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"

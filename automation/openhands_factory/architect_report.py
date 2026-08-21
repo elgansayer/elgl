@@ -27,6 +27,8 @@ def load_architect_report(worktree: Path) -> list[ArchitectProposal]:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         raise FactoryError(f"Architect report invalid JSON: {error}") from error
+    if not isinstance(data, dict):
+        raise FactoryError("Architect report must be a JSON object")
 
     proposals_data = data.get("new_issues", [])
     if not isinstance(proposals_data, list):

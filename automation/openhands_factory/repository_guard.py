@@ -7,7 +7,8 @@ import os
 import re
 import signal
 import subprocess
-from collections.abc import Sequence
+import threading
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -16,6 +17,9 @@ from openhands_factory.exceptions import RepositorySafetyError
 
 CONFLICT_MARKER = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.MULTILINE)
 SAFE_BRANCH = re.compile(r"[^a-z0-9-]+")
+_PROCESSES: set[subprocess.Popen[str]] = set()
+_PROCESSES_LOCK = threading.Lock()
+_ACCEPTING_PROCESSES = True
 
 
 @dataclass(frozen=True)
@@ -31,7 +35,13 @@ class ProcessRunner(Protocol):
     ) -> ProcessResult: ...
 
 
-def run_process(arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
+def run_process(
+    arguments: Sequence[str],
+    cwd: Path,
+    timeout: int = 300,
+    *,
+    environment: Mapping[str, str] | None = None,
+) -> ProcessResult:
     # A verification command can background a long-lived child of its own (e.g.
     # the frontend-e2e step's `npm start -- --host 127.0.0.1 &` dev server). A
     # plain subprocess.run(timeout=...) only kills the immediate bash child on
@@ -40,14 +50,19 @@ def run_process(arguments: Sequence[str], cwd: Path, timeout: int = 300) -> Proc
     # (reparented to init) rather than terminated, leaking memory indefinitely.
     # start_new_session puts the whole command in its own process group so it
     # can be killed as a unit regardless of how it exits.
-    process = subprocess.Popen(
-        list(arguments),
-        cwd=cwd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
-    )
+    with _PROCESSES_LOCK:
+        if not _ACCEPTING_PROCESSES:
+            raise RuntimeError("Process start cancelled during Factory shutdown")
+        process = subprocess.Popen(
+            list(arguments),
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+            env=dict(environment) if environment is not None else None,
+        )
+        _PROCESSES.add(process)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -56,12 +71,41 @@ def run_process(arguments: Sequence[str], cwd: Path, timeout: int = 300) -> Proc
         raise
     finally:
         _kill_process_group(process)
+        with _PROCESSES_LOCK:
+            _PROCESSES.discard(process)
     return ProcessResult(process.returncode, stdout, stderr)
 
 
 def _kill_process_group(process: subprocess.Popen[str]) -> None:
     with contextlib.suppress(ProcessLookupError):
         os.killpg(process.pid, signal.SIGKILL)
+
+
+def request_process_shutdown() -> None:
+    """Block new repository children and terminate every active process group."""
+
+    global _ACCEPTING_PROCESSES
+    with _PROCESSES_LOCK:
+        _ACCEPTING_PROCESSES = False
+        processes = tuple(_PROCESSES)
+    for process in processes:
+        if process.poll() is not None:
+            _kill_process_group(process)
+            continue
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _kill_process_group(process)
+
+
+def reset_process_shutdown() -> None:
+    """Allow repository children for a newly activated daemon generation."""
+
+    global _ACCEPTING_PROCESSES
+    with _PROCESSES_LOCK:
+        _ACCEPTING_PROCESSES = True
 
 
 def verify_repository(
@@ -83,6 +127,24 @@ def branch_name(task_identifier: str, title: str) -> str:
 
 
 def ensure_push_target(branch: str, base_branch: str, *, extra_allowed: str | None = None) -> None:
+    components = branch.split("/")
+    invalid_ref = (
+        not branch
+        or branch == "@"
+        or branch.startswith(("-", "."))
+        or branch.endswith(("/", ".", ".lock"))
+        or ".." in branch
+        or "@{" in branch
+        or "//" in branch
+        or any(ord(character) < 32 or ord(character) == 127 for character in branch)
+        or any(character in " ~^:?*[\\" for character in branch)
+        or any(
+            not component or component.startswith(".") or component.endswith(".lock")
+            for component in components
+        )
+    )
+    if invalid_ref:
+        raise RepositorySafetyError(f"Unsafe Git branch name: {branch!r}")
     if branch in {base_branch, "main", "master"}:
         raise RepositorySafetyError(f"Direct push to protected branch {branch} is forbidden")
     if branch.startswith("factory/"):

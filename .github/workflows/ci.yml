@@ -5,12 +5,14 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -177,7 +179,7 @@ jobs:
       - run: npm run check:design-sync
       - name: Enforce Spartan ownership boundaries
         env:
-          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: npm run check:spartan-boundaries
       - name: Enforce full-tree Spartan adoption
         run: |
@@ -196,7 +198,7 @@ jobs:
         run: npm run check:component-system
       - name: Prevent new legacy primitive adoption
         env:
-          LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: npm run check:legacy-primitive-delta
       - name: Enforce design-sync drift on pull requests
         if: github.event_name == 'pull_request'
@@ -208,8 +210,144 @@ jobs:
         run: node scripts/check-admin-audit-integrity.mjs
       - name: Enforce append-only, collision-free migration changes
         env:
-          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: node scripts/check-migration-delta.mjs
+
+  database:
+    name: database / clean-reset
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect database-sensitive changes
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          run_database=false
+          zero_sha=0000000000000000000000000000000000000000
+
+          if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "$zero_sha" ]; then
+            run_database=true
+          elif git diff --name-only "$BASE_SHA" "$GITHUB_SHA" -- \
+            .github/workflows/ci.yml \
+            scripts/prepare-supabase-clean-replay.mjs \
+            supabase/ \
+            backend/src/supabase/ \
+            | grep -q .; then
+            run_database=true
+          fi
+
+          echo "run_database=$run_database" >> "$GITHUB_OUTPUT"
+          echo "Database verification required: $run_database"
+
+      - name: Setup Node.js for pinned Supabase CLI
+        if: steps.changes.outputs.run_database == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Initialize deterministic local Supabase configuration
+        if: steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 init --force
+
+      - name: Prepare deterministic replay of legacy migration corpus
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          mv supabase/migrations supabase/migrations-source
+          node scripts/prepare-supabase-clean-replay.mjs \
+            supabase/migrations-source \
+            supabase/migrations \
+            test-results/migration-replay-map.json
+
+      - name: Start local Supabase database
+        id: supabase-start
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            attempt_log="test-results/supabase-start-attempt-${attempt}.log"
+            echo "Supabase database start attempt ${attempt}/${max_attempts}"
+            if npx --yes supabase@2.114.0 db start 2>&1 | tee "$attempt_log" | tee -a test-results/supabase-start.log; then
+              exit 0
+            fi
+
+            if grep -Eq 'SQLSTATE|At statement:' "$attempt_log"; then
+              echo "Deterministic migration failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+              echo "Non-transient Supabase startup failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Supabase database failed to start after ${max_attempts} transient attempts."
+              exit 1
+            fi
+            npx --yes supabase@2.114.0 stop --no-backup || true
+            sleep $((attempt * 20))
+          done
+
+      - name: Upload Supabase startup failure log
+        if: failure() && steps.changes.outputs.run_database == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supabase-start-failure-${{ github.sha }}
+          path: test-results/supabase-start.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Rebuild database from zero using repository migration SQL
+        if: steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 db reset
+
+      - name: Generate schema-derived TypeScript evidence
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          npx --yes supabase@2.114.0 gen types typescript --local > test-results/database.types.ts
+          test -s test-results/database.types.ts
+          grep -q 'export type Database' test-results/database.types.ts
+
+      - name: Enforce generated Supabase type drift baseline
+        if: steps.changes.outputs.run_database == 'true'
+        run: |
+          set -euo pipefail
+          expected=$(node -p "require('./supabase/database-types.snapshot.json').sha256")
+          actual=$(sha256sum test-results/database.types.ts | awk '{print $1}')
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Generated Supabase database types drifted from the committed snapshot."
+            echo "expected=$expected"
+            echo "actual=$actual"
+            echo "Regenerate against a clean replay, review the schema change, then update supabase/database-types.snapshot.json in the same PR."
+            exit 1
+          fi
+          echo "Generated Supabase types match snapshot: $actual"
+
+      - name: Upload clean-database evidence
+        if: steps.changes.outputs.run_database == 'true' && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: supabase-clean-reset-evidence-${{ github.sha }}
+          path: |
+            test-results/database.types.ts
+            test-results/migration-replay-map.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop local Supabase stack
+        if: always() && steps.changes.outputs.run_database == 'true'
+        run: npx --yes supabase@2.114.0 stop --no-backup
 
   factory:
     runs-on: ubuntu-latest
@@ -220,13 +358,15 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: '0.12.5'
           enable-cache: true
           cache-dependency-glob: automation/uv.lock
       - name: Install frozen Factory dependencies
         run: uv sync --frozen --extra development
+        working-directory: automation
+      - run: uv run --frozen ruff format --check .
         working-directory: automation
       - run: uv run --frozen ruff check openhands_factory tests
         working-directory: automation
@@ -238,7 +378,7 @@ jobs:
   required-gate:
     name: CI / required
     if: always()
-    needs: [application-checks, constitution, factory]
+    needs: [application-checks, constitution, database, factory]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -246,10 +386,11 @@ jobs:
         env:
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
         run: |
           failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
             if [ "$result" != "success" ]; then
               failed=$((failed + 1))
             fi
@@ -262,6 +403,7 @@ jobs:
             echo "| --- | --- |"
             echo "| application-checks | $APPLICATION_CHECKS_RESULT |"
             echo "| constitution | $CONSTITUTION_RESULT |"
+            echo "| database | $DATABASE_RESULT |"
             echo "| factory | $FACTORY_RESULT |"
             echo
             echo "Failing canonical groups: **$failed**"
@@ -271,10 +413,11 @@ jobs:
         env:
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
         run: |
           failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
             if [ "$result" != "success" ]; then
               failed=1
             fi
@@ -284,6 +427,7 @@ jobs:
             echo "Canonical CI did not fully pass."
             echo "application-checks=$APPLICATION_CHECKS_RESULT"
             echo "constitution=$CONSTITUTION_RESULT"
+            echo "database=$DATABASE_RESULT"
             echo "factory=$FACTORY_RESULT"
             exit 1
           fi

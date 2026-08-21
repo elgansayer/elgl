@@ -13,9 +13,7 @@ def test_atomic_write_keeps_previous_valid_generation(tmp_path: Path) -> None:
     atomic_write_json(path, {"generation": 2})
 
     assert read_json(path, {}) == {"generation": 2}
-    assert json.loads((tmp_path / "jobs.json.bak").read_text(encoding="utf-8")) == {
-        "generation": 1
-    }
+    assert json.loads((tmp_path / "jobs.json.bak").read_text(encoding="utf-8")) == {"generation": 1}
 
 
 def test_read_recovers_from_corrupt_primary_using_backup(tmp_path: Path) -> None:
@@ -56,3 +54,37 @@ def test_corrupt_state_without_backup_still_fails_closed(tmp_path: Path) -> None
 
     with pytest.raises(json.JSONDecodeError):
         read_json(path, {})
+
+
+def test_schema_invalid_primary_recovers_without_replacing_a_good_backup(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "jobs.json"
+
+    def is_job_payload(value: object) -> bool:
+        return isinstance(value, dict) and isinstance(value.get("jobs"), list)
+
+    atomic_write_json(path, {"jobs": [{"id": 1}]}, validator=is_job_payload)
+    atomic_write_json(path, {"jobs": [{"id": 2}]}, validator=is_job_payload)
+    path.write_text('["valid JSON", "wrong schema"]', encoding="utf-8")
+
+    assert read_json(path, {}, validator=is_job_payload) == {"jobs": [{"id": 1}]}
+
+    atomic_write_json(path, {"jobs": [{"id": 3}]}, validator=is_job_payload)
+
+    assert read_json(path, {}, validator=is_job_payload) == {"jobs": [{"id": 3}]}
+    assert json.loads(path.with_suffix(".json.bak").read_text(encoding="utf-8")) == {
+        "jobs": [{"id": 1}]
+    }
+
+
+def test_atomic_write_rejects_a_new_schema_invalid_value(tmp_path: Path) -> None:
+    path = tmp_path / "jobs.json"
+
+    def is_job_payload(value: object) -> bool:
+        return isinstance(value, dict) and isinstance(value.get("jobs"), list)
+
+    with pytest.raises(ValueError, match="Refusing to write invalid"):
+        atomic_write_json(path, {"wrong": []}, validator=is_job_payload)
+
+    assert not path.exists()

@@ -14,7 +14,13 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 
 @Component({
   selector: 'app-vip-subscription',
-  imports: [HlmButton, RouterLink, AppButtonPrimaryComponent, AppGradientButtonComponent, TranslatePipe],
+  imports: [
+    HlmButton,
+    RouterLink,
+    AppButtonPrimaryComponent,
+    AppGradientButtonComponent,
+    TranslatePipe,
+  ],
   templateUrl: './vip-subscription.component.html',
   styleUrls: ['./vip-subscription.component.scss'],
 })

@@ -9,7 +9,8 @@ import { UserInterestsService } from '../../services/user-interests.service';
   template: `
     <div class="flex flex-wrap gap-2 ps-2 pe-2">
       @for (tag of availableTags.value() ?? []; track tag) {
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           (click)="toggle(tag)"
           [class.bg-primary]="selectedTags().includes(tag)"

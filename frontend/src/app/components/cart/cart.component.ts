@@ -40,7 +40,8 @@ interface CartItem {
                 <span class="text-sm font-semibold"
                   >{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span
                 >
-                <button hlmBtn
+                <button
+                  hlmBtn
                   class="rounded-full bg-danger px-3 py-1 text-xs font-medium text-on-fill hover:bg-danger/90"
                   (click)="removeItem(item.itemId)"
                   [attr.aria-label]="'cart.removeItem' | t"
@@ -59,7 +60,8 @@ interface CartItem {
             >{{ totalCoins() }} {{ 'common.coins' | t }}</span
           >
         </div>
-        <button hlmBtn
+        <button
+          hlmBtn
           class="mt-4 w-full rounded-full bg-primary text-on-fill py-2 font-semibold hover:bg-primary/90"
           (click)="checkout()"
           [attr.aria-label]="'cart.checkoutAria' | t"

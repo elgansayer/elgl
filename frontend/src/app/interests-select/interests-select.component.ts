@@ -16,7 +16,8 @@ export interface InterestVocabulary {
   template: `
     <div class="flex flex-wrap gap-2">
       @for (interest of interests.value(); track interest.id) {
-        <button hlmBtn
+        <button
+          hlmBtn
           class="px-4 py-2 rounded-full border-2 transition-colors"
           [class.bg-primary]="selectedIds().has(interest.id)"
           [class.text-on-fill]="selectedIds().has(interest.id)"
@@ -28,7 +29,11 @@ export interface InterestVocabulary {
         </button>
       }
     </div>
-    <button hlmBtn class="mt-4 px-6 py-2 bg-primary text-on-fill rounded-lg" (click)="confirmSelection()">
+    <button
+      hlmBtn
+      class="mt-4 px-6 py-2 bg-primary text-on-fill rounded-lg"
+      (click)="confirmSelection()"
+    >
       {{ 'interests.save' | t }}
     </button>
   `,

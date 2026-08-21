@@ -24,7 +24,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <h2 id="approve-speaker-title" class="text-xl font-bold text-text-primary">
             {{ 'audioRoom.approveSpeakerModalTitle' | t }}
           </h2>
-          <button hlmBtn
+          <button
+            hlmBtn
             class="text-text-secondary hover:text-text-primary transition-colors"
             [attr.aria-label]="'common.close' | t"
             (click)="dismiss.emit()"
@@ -57,7 +58,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   </div>
                 </div>
               </div>
-              <button hlmBtn
+              <button
+                hlmBtn
                 (click)="approve.emit(userId)"
                 class="rounded-xl bg-success ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-on-fill hover:bg-success/80 transition-colors shrink-0"
               >

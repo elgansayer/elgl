@@ -16,7 +16,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <p class="text-base-content/70 mb-6">{{ 'support.subtitle' | t }}</p>
 
       <div class="flex flex-wrap gap-2 mb-6">
-        <button hlmBtn
+        <button
+          hlmBtn
           [class.btn-primary]="selectedCategory() === ''"
           [class.btn-outline]="selectedCategory() !== ''"
           class="btn btn-sm"
@@ -25,7 +26,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'support.allCategories' | t }}
         </button>
         @for (cat of categories(); track cat) {
-          <button hlmBtn
+          <button
+            hlmBtn
             [class.btn-primary]="selectedCategory() === cat"
             [class.btn-outline]="selectedCategory() !== cat"
             class="btn btn-sm"
@@ -73,9 +75,7 @@ export class SupportCentreComponent {
     params: () => ({ category: this.selectedCategory() || undefined }),
     loader: async ({ params }) => {
       const res = await this.helpFaqService.getFAQs(params.category);
-      return (
-        res ?? { items: [], total: 0, page: 1, limit: 50 }
-      );
+      return res ?? { items: [], total: 0, page: 1, limit: 50 };
     },
     defaultValue: { items: [], total: 0, page: 1, limit: 50 },
   });

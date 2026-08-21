@@ -25,15 +25,16 @@ def extract_acceptance_criteria(body: str) -> list[str]:
     criteria = []
     in_criteria = False
     for line in lines:
-        if line.strip().lower().startswith("## acceptance criteria"):
+        stripped = line.strip()
+        if re.fullmatch(r"#{1,6}\s+acceptance criteria\s*:?\s*", stripped, re.IGNORECASE):
             in_criteria = True
             continue
         if in_criteria:
-            if line.strip().startswith("## "):
+            if re.match(r"^#{1,6}\s+", stripped):
                 break
-            if line.strip().startswith("- ") or line.strip().startswith("* "):
+            if stripped.startswith("- ") or stripped.startswith("* "):
                 # Extract bullet
-                criterion = line.strip()[2:].strip()
+                criterion = stripped[2:].strip()
                 # Remove checkbox if present
                 if (
                     criterion.startswith("[ ]")
@@ -45,7 +46,12 @@ def extract_acceptance_criteria(body: str) -> list[str]:
     return criteria
 
 
-def validate_review_report(worktree: Path, task_body: str) -> ReviewReport:
+def validate_review_report(
+    worktree: Path,
+    task_body: str,
+    *,
+    require_approval: bool = True,
+) -> ReviewReport:
     """Validate a review report.
 
     Which commit was reviewed is deliberately not read from the report: the caller
@@ -64,6 +70,8 @@ def validate_review_report(worktree: Path, task_body: str) -> ReviewReport:
         data = json.loads(report_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         raise FactoryError(f"Structured review report invalid JSON: {e}") from e
+    if not isinstance(data, dict):
+        raise FactoryError("Structured review report must be a JSON object")
 
     approved = data.get("approved")
     summary = data.get("summary")
@@ -120,15 +128,16 @@ def validate_review_report(worktree: Path, task_body: str) -> ReviewReport:
     if expected_criteria and set(report_criteria_text) != set(expected_criteria):
         raise FactoryError("Structured review report contains unrequested acceptance criteria")
 
-    for c in criteria:
-        if not c.get("passed"):
-            raise FactoryError(f"Acceptance criterion failed: {c.get('criterion')}")
+    if require_approval:
+        for criterion in criteria:
+            if not criterion.get("passed"):
+                raise FactoryError(f"Acceptance criterion failed: {criterion.get('criterion')}")
 
-    if blockers:
-        raise FactoryError(f"Structured review report contains blocking findings: {blockers}")
+        if blockers:
+            raise FactoryError(f"Structured review report contains blocking findings: {blockers}")
 
-    if not approved:
-        raise FactoryError("Structured review report is not approved")
+        if not approved:
+            raise FactoryError("Structured review report is not approved")
 
     return ReviewReport(
         approved=approved,

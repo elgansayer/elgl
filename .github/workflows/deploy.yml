@@ -15,12 +15,14 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  attestations: write
+  id-token: write
 
 jobs:
   build-and-push:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Verify tested commit is still current main
         id: deployment-target
@@ -49,40 +51,99 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Login to GitHub Container Registry
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push API image
+      - name: Build and push immutable API image
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/build-push-action@v7
+        id: build-api
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: backend
           file: backend/Dockerfile
           target: production
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/api:latest
-            ghcr.io/${{ github.repository }}/api:${{ github.event.workflow_run.head_sha }}
+          tags: ghcr.io/${{ github.repository }}/api:${{ github.event.workflow_run.head_sha }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push Web image
+      - name: Build and push immutable Web image
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/build-push-action@v7
+        id: build-web
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: frontend
           file: frontend/Dockerfile
           target: production
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/web:latest
-            ghcr.io/${{ github.repository }}/web:${{ github.event.workflow_run.head_sha }}
+          tags: ghcr.io/${{ github.repository }}/web:${{ github.event.workflow_run.head_sha }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Scan immutable API image
+        if: steps.deployment-target.outputs.deploy == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository }}/api:${{ github.event.workflow_run.head_sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
+
+      - name: Scan immutable Web image
+        if: steps.deployment-target.outputs.deploy == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository }}/web:${{ github.event.workflow_run.head_sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
+
+      - name: Attest API build provenance
+        if: steps.deployment-target.outputs.deploy == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}/api
+          subject-digest: ${{ steps.build-api.outputs.digest }}
+          push-to-registry: true
+
+      - name: Attest Web build provenance
+        if: steps.deployment-target.outputs.deploy == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}/web
+          subject-digest: ${{ steps.build-web.outputs.digest }}
+          push-to-registry: true
+
+      - name: Promote verified image digests to latest
+        if: steps.deployment-target.outputs.deploy == 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          API_DIGEST: ${{ steps.build-api.outputs.digest }}
+          WEB_DIGEST: ${{ steps.build-web.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "ghcr.io/${REPOSITORY}/api:latest" \
+            "ghcr.io/${REPOSITORY}/api@${API_DIGEST}"
+          docker buildx imagetools create \
+            --tag "ghcr.io/${REPOSITORY}/web:latest" \
+            "ghcr.io/${REPOSITORY}/web@${WEB_DIGEST}"

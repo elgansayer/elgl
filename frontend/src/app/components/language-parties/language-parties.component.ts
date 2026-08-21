@@ -70,7 +70,14 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
 
 @Component({
   standalone: true,
-  imports: [HlmNativeSelect, HlmButton, RouterModule, FormsModule, TranslatePipe, LanguagePartyCreateModalComponent],
+  imports: [
+    HlmNativeSelect,
+    HlmButton,
+    RouterModule,
+    FormsModule,
+    TranslatePipe,
+    LanguagePartyCreateModalComponent,
+  ],
   template: `<div class="min-h-screen bg-surface-500 text-text-primary">
       <!-- Header + Create button -->
       <div
@@ -80,7 +87,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
           <h1 class="text-2xl font-bold">{{ 'languageParty.title' | t }}</h1>
           <p class="text-sm text-text-secondary mt-1">{{ 'languageParty.subtitle' | t }}</p>
         </div>
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="openCreateModal()"
           class="ms-auto flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 active:scale-95 transition-all shadow-lg shadow-primary/20"
         >
@@ -97,7 +105,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
             <hlm-native-select
               [ngModel]="filterLanguagePair()"
               (ngModelChange)="filterLanguagePair.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllLanguages' | t }}</option>
               @for (opt of languagePairOptions; track opt.value) {
@@ -113,7 +122,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
             <hlm-native-select
               [ngModel]="filterTopic()"
               (ngModelChange)="filterTopic.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllTopics' | t }}</option>
               @for (opt of topicOptions; track opt.value) {
@@ -127,7 +137,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
             <hlm-native-select
               [ngModel]="filterLevel()"
               (ngModelChange)="filterLevel.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllLevels' | t }}</option>
               @for (opt of levelOptions; track opt.value) {
@@ -137,7 +148,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
           </div>
 
           @if (activeFilterCount() > 0) {
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="clearFilters()"
               class="flex items-center gap-1 px-3 py-2 rounded-full text-xs text-primary bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors shrink-0"
             >
@@ -266,7 +278,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                 </div>
 
                 <!-- Join button -->
-                <button hlmBtn
+                <button
+                  hlmBtn
                   (click)="joinParty(party)"
                   class="mt-3 w-full py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-success to-secondary hover:opacity-90 active:scale-[0.98] transition-all text-sm"
                 >
@@ -289,7 +302,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                   <p class="text-text-secondary mb-4">
                     {{ 'languageParty.emptyFilteredSubtitle' | t }}
                   </p>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="clearFilters()"
                     class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 active:scale-95 transition-all shadow-lg shadow-primary/20"
                   >
@@ -298,7 +312,8 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                 } @else {
                   <h2 class="text-xl font-bold mb-2">{{ 'languageParty.emptyTitle' | t }}</h2>
                   <p class="text-text-secondary mb-6">{{ 'languageParty.emptySubtitle' | t }}</p>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     (click)="openCreateModal()"
                     class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 active:scale-95 transition-all shadow-lg shadow-primary/20"
                   >

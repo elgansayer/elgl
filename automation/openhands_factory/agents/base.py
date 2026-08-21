@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from openhands_factory.models import Task
 
@@ -62,6 +63,7 @@ class AgentFailure:
     kind: AgentFailureKind
     message: str
     exit_code: int | None = None
+    retry_after_seconds: int | None = None
 
 
 @dataclass
@@ -75,6 +77,10 @@ class AgentResult:
     summary: str | None
     output_path: Path | None
     failure: AgentFailure | None
+    transport: str = "unknown"
+    model: str | None = None
+    attempt: int = 1
+    fallback_reason: str | None = None
 
 
 @dataclass
@@ -83,16 +89,25 @@ class AgentRequest:
     task: Task
     prompt: str
     cwd: Path
+    system_prompt: str = ""
+    timeout_seconds: int | None = None
+    max_output_bytes: int | None = None
+    prepare_attempt: Callable[[], None] | None = None
+    validate_output: Callable[[], None] | None = None
 
 
 class AgentProvider(Protocol):
     name: str
 
-    def health(self) -> ProviderHealth:
-        ...
+    def health(self) -> ProviderHealth: ...
 
-    def supports(self, phase: AgentPhase) -> bool:
-        ...
+    def supports(self, phase: AgentPhase) -> bool: ...
 
-    def run(self, request: AgentRequest) -> AgentResult:
-        ...
+    def run(self, request: AgentRequest) -> AgentResult: ...
+
+
+@runtime_checkable
+class HealthCacheInvalidator(Protocol):
+    """Optional capability for providers that cache inexpensive health probes."""
+
+    def invalidate_health_cache(self) -> None: ...

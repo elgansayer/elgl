@@ -1,142 +1,84 @@
-"""OpenAI Codex CLI agent provider."""
+"""OpenAI Codex CLI provider using ChatGPT subscription authentication."""
 
 from __future__ import annotations
 
-import asyncio
-import shutil
+import json
+from collections.abc import Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 
-from openhands_factory.agents.base import (
-    AgentFailure,
-    AgentFailureKind,
-    AgentPhase,
-    AgentRequest,
-    AgentResult,
-    ProviderHealth,
-    ProviderStatus,
-)
-from openhands_factory.pty_wrapper import PTYWrapper
-from openhands_factory.sandbox import SandboxRunner
+from openhands_factory.agents.base import AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.cli import CLIProvider, classify_process_failure
+from openhands_factory.agents.process import ProcessResult
 
 
-class CodexProvider:
+class CodexProvider(CLIProvider):
     name = "codex"
+    default_command = "codex"
+    default_model = "gpt-5.6-sol"
+    default_credential_paths = (".codex",)
+    default_runtime_paths = (".local/bin", ".npm-global")
 
-    def __init__(self, command: str = "codex") -> None:
-        self.command = command
+    @staticmethod
+    def _full_prompt(request: AgentRequest) -> str:
+        """Keep trusted policy in Codex's developer-instruction channel."""
 
-    def health(self) -> ProviderHealth:
-        if shutil.which("caveman") is None and shutil.which(self.command) is None:
+        return request.prompt
+
+    def auth_probe(self) -> tuple[Sequence[str], ProviderStatus]:
+        return ([*self._prefix(), "login", "status"], ProviderStatus.HEALTHY)
+
+    def interpret_auth_probe(
+        self,
+        result: ProcessResult,
+        successful_status: ProviderStatus,
+    ) -> ProviderHealth:
+        del successful_status
+        output = f"{result.stdout}\n{result.stderr}".lower()
+        if result.exit_code == 0 and "chatgpt" in output:
             return ProviderHealth(
-                provider=self.name,
-                status=ProviderStatus.UNAVAILABLE,
-                checked_at=datetime.now(UTC),
-                detail=f"Neither caveman nor {self.command} is installed",
+                self.name,
+                ProviderStatus.HEALTHY,
+                datetime.now(UTC),
+                detail="authenticated with ChatGPT subscription",
             )
+        failure = classify_process_failure(result)
         return ProviderHealth(
-            provider=self.name,
-            status=ProviderStatus.HEALTHY,
-            checked_at=datetime.now(UTC),
+            self.name,
+            ProviderStatus.AUTH_REQUIRED,
+            datetime.now(UTC),
+            detail=(
+                "ChatGPT subscription authentication is required"
+                if result.exit_code == 0
+                else failure.message
+            ),
         )
 
-    def supports(self, phase: AgentPhase) -> bool:
-        return True
-
-    def run(self, request: AgentRequest) -> AgentResult:
-        return asyncio.run(self._run_async(request))
-
-    async def _run_async(self, request: AgentRequest) -> AgentResult:
-        started_at = datetime.now(UTC)
-        try:
-            sandbox = SandboxRunner(request.cwd, triage_tags=request.task.triage_tags)
-            launcher = "caveman" if shutil.which("caveman") else self.command
-            cmd = (
-                [launcher, self.command, "exec", request.prompt]
-                if launcher == "caveman"
-                else [launcher, "exec", request.prompt]
-            )
-            wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
-
-            stdout_text = await asyncio.to_thread(wrapper.execute)
-            exit_code = 0 if "Error" not in stdout_text else 1
-
-            finished_at = datetime.now(UTC)
-            success = exit_code == 0
-
-            failure = None
-            if not success:
-                stderr_text = stdout_text.lower()
-                if any(
-                    marker in stderr_text
-                    for marker in (
-                        "authentication",
-                        "invalid token",
-                        "expired",
-                        "unauthorized",
-                    )
-                ):
-                    kind = AgentFailureKind.PROVIDER_AUTH
-                elif any(
-                    marker in stderr_text
-                    for marker in ("rate limit", "quota", "too many requests")
-                ):
-                    kind = AgentFailureKind.PROVIDER_RATE_LIMIT
-                elif "timeout" in stderr_text:
-                    kind = AgentFailureKind.PROVIDER_TIMEOUT
-                elif exit_code == 127:
-                    kind = AgentFailureKind.PROVIDER_UNAVAILABLE
-                else:
-                    kind = AgentFailureKind.INVALID_AGENT_OUTPUT
-
-                stderr_summary = stdout_text[:200]
-                failure = AgentFailure(
-                    kind=kind,
-                    message=f"Codex CLI failed with exit code {exit_code}: {stderr_summary}",
-                    exit_code=exit_code,
-                )
-
-            return AgentResult(
-                provider=self.name,
-                phase=request.phase,
-                success=success,
-                started_at=started_at,
-                finished_at=finished_at,
-                exit_code=exit_code,
-                summary=stdout_text,
-                output_path=None,
-                failure=failure,
-            )
-        except FileNotFoundError:
-            finished_at = datetime.now(UTC)
-            return AgentResult(
-                provider=self.name,
-                phase=request.phase,
-                success=False,
-                started_at=started_at,
-                finished_at=finished_at,
-                exit_code=127,
-                summary=None,
-                output_path=None,
-                failure=AgentFailure(
-                    kind=AgentFailureKind.PROVIDER_UNAVAILABLE,
-                    message=f"Command '{self.command}' not found on PATH.",
-                    exit_code=127,
-                ),
-            )
-        except Exception as error:
-            finished_at = datetime.now(UTC)
-            return AgentResult(
-                provider=self.name,
-                phase=request.phase,
-                success=False,
-                started_at=started_at,
-                finished_at=finished_at,
-                exit_code=None,
-                summary=None,
-                output_path=None,
-                failure=AgentFailure(
-                    kind=AgentFailureKind.INTERNAL_FACTORY_FAILURE,
-                    message=str(error),
-                    exit_code=None,
-                ),
-            )
+    def build_command(
+        self,
+        request: AgentRequest,
+        model: str,
+        prompt_path: Path | None,
+    ) -> Sequence[str]:
+        del prompt_path
+        command = [
+            *self._prefix(),
+            "exec",
+            "-m",
+            model,
+            "-c",
+            'model_reasoning_effort="max"',
+            # Codex applies workspace-write when --approve-for-me is selected.
+            # Passing an explicit sandbox as well is rejected by current CLIs.
+            "--approve-for-me",
+            "-C",
+            str(request.cwd),
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--color",
+            "never",
+        ]
+        if request.system_prompt:
+            command.extend(("-c", f"developer_instructions={json.dumps(request.system_prompt)}"))
+        return [*command, *self.extra_args, "-"]

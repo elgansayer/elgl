@@ -20,13 +20,9 @@ def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
         classify_failure("Conversation exceeded the maximum task duration")
         is FailureKind.TASK_TIMEOUT
     )
-    assert (
-        classify_failure("OAuth token expired; login required") is FailureKind.AUTHENTICATION
-    )
+    assert classify_failure("OAuth token expired; login required") is FailureKind.AUTHENTICATION
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
-    assert (
-        classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
-    )
+    assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
 
 
@@ -50,6 +46,26 @@ def test_agent_failure_context_is_persisted_in_stable_fingerprint() -> None:
     assert job.last_failure_kind == FailureKind.RATE_LIMIT.value
     assert job.last_failure_fingerprint is not None
     assert job.repeated_failure_count == 1
+
+
+def test_router_failure_classification_drives_durable_retry_class() -> None:
+    job = _job()
+    detail = "Agent CLI exited before completing the request"
+    job.provider_history.append(
+        {
+            "provider": "claude",
+            "phase": "implementation",
+            "success": False,
+            "error": detail,
+            "failure_classification": "provider_auth",
+        }
+    )
+
+    count = record_failure_diagnostics(job, detail)
+
+    assert count == 1
+    assert job.failure_counts == {FailureKind.AUTHENTICATION.value: 1}
+    assert job.last_failure_kind == FailureKind.AUTHENTICATION.value
 
 
 def test_identical_failure_shape_collapses_across_high_cardinality_values() -> None:

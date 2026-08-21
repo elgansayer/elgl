@@ -21,7 +21,8 @@ function getInputValue(event: Event): string {
         <label for="current-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.currentPassword' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="current-password"
           type="password"
           [value]="currentPassword()"
@@ -34,7 +35,8 @@ function getInputValue(event: Event): string {
         <label for="new-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.newPassword' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="new-password"
           type="password"
           [value]="newPassword()"
@@ -62,7 +64,8 @@ function getInputValue(event: Event): string {
         <label for="confirm-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.confirmPassword' | t
         }}</label>
-        <input hlmInput
+        <input
+          hlmInput
           id="confirm-password"
           type="password"
           [value]="confirmPassword()"
@@ -78,7 +81,8 @@ function getInputValue(event: Event): string {
         </div>
       }
 
-      <button hlmBtn
+      <button
+        hlmBtn
         class="block w-full py-2.5 rounded-lg text-on-fill font-semibold cursor-pointer bg-gradient-to-r from-primary to-secondary disabled:opacity-40"
         [disabled]="!allValid() || isSubmitting()"
         (click)="resetPassword()"

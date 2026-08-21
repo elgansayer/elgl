@@ -36,7 +36,8 @@ export interface GroupParticipant {
           <h2 class="text-lg font-bold text-text-primary">
             {{ 'group.participants' | t }} ({{ participants().length }})
           </h2>
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="close()"
             class="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-200 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
             [attr.aria-label]="'common.close' | t"

@@ -24,7 +24,8 @@
             &#127909;&#65039; {{ 'classroomsMarketplace.hostingBadge' | t }}
           </span>
         }
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           (click)="startOnboardingTour()"
           class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-fill hover:bg-primary/90 transition-colors text-sm font-bold"
@@ -46,7 +47,8 @@
         [text]="'videoClassroomTour.stepFiltersText' | t"
         stepPosition="bottom"
       >
-        <button hlmBtn
+        <button
+          hlmBtn
           type="button"
           (click)="selectLanguage(null)"
           [attr.aria-pressed]="!selectedLanguage()"
@@ -59,7 +61,8 @@
           {{ 'classroomsMarketplace.filterAll' | t }}
         </button>
         @for (lang of languagePairOptions(); track lang) {
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="selectLanguage(lang)"
             [attr.aria-pressed]="selectedLanguage() === lang"
@@ -188,7 +191,8 @@
                 <span>{{ 'classroomsMarketplace.createdAt' | t: { date: room.created_at } }}</span>
               </div>
 
-              <button hlmBtn
+              <button
+                hlmBtn
                 type="button"
                 (click)="joinRoom(room)"
                 class="w-full rounded-full bg-primary hover:bg-primary/90 text-on-fill font-bold py-2 text-xs transition-colors"

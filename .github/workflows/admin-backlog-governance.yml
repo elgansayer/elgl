@@ -109,7 +109,6 @@ jobs:
               'factory-quality-blocked',
               'needs-human',
               'duplicate',
-              'swarm-active',
           }
 
           gated = promoted = unchanged = 0

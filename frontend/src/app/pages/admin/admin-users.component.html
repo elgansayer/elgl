@@ -3,7 +3,8 @@
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
 
   <div class="flex flex-wrap items-center mb-4 gap-2">
-    <input hlmInput
+    <input
+      hlmInput
       type="search"
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
@@ -12,7 +13,8 @@
       [attr.aria-label]="'admin.users.searchPlaceholder' | t"
     />
     <div class="flex items-center gap-2 flex-wrap">
-      <button hlmBtn
+      <button
+        hlmBtn
         type="button"
         (click)="changePage(-1)"
         [disabled]="page() <= 1"
@@ -24,7 +26,8 @@
       <span class="text-sm whitespace-nowrap">
         {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
       </span>
-      <button hlmBtn
+      <button
+        hlmBtn
         type="button"
         (click)="changePage(1)"
         [disabled]="page() >= pageTotal()"
@@ -183,7 +186,8 @@
               </td>
               <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1">
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="openHistory(user)"
                     class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 whitespace-nowrap"
@@ -191,7 +195,8 @@
                   >
                     {{ 'admin.users.loginHistory' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="toggleVip(user)"
                     [disabled]="isVipUpdating() === user.id || !isOnline()"
@@ -203,7 +208,8 @@
                       user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t)
                     }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="warnUser(user)"
                     [disabled]="isWarning() !== null || !isOnline()"
@@ -212,7 +218,8 @@
                   >
                     {{ 'admin.users.warn' | t }}
                   </button>
-                  <button hlmBtn
+                  <button
+                    hlmBtn
                     type="button"
                     (click)="banUser(user)"
                     [disabled]="isBanning() !== null || !isOnline()"
@@ -275,7 +282,8 @@
           </table>
         }
         <div class="mt-4 text-end">
-          <button hlmBtn
+          <button
+            hlmBtn
             type="button"
             (click)="closeHistory()"
             class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100"

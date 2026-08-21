@@ -37,7 +37,8 @@ interface InterestTopic {
           role="radiogroup"
           [attr.aria-label]="'groups_discovery_filter_topics' | t"
         >
-          <button hlmBtn
+          <button
+            hlmBtn
             (click)="selectedInterest.set(null)"
             class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
             [class.bg-accent-500]="selectedInterest() === null"
@@ -52,7 +53,8 @@ interface InterestTopic {
             {{ 'groups_discovery_all_topics' | t }}
           </button>
           @for (topic of interestPills(); track topic.id) {
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="selectedInterest.set(topic.id)"
               class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
               [class.bg-accent-500]="selectedInterest() === topic.id"
@@ -96,7 +98,8 @@ interface InterestTopic {
           <span class="text-4xl mb-3">👥</span>
           <p class="text-sm">{{ 'groups_discovery_empty' | t }}</p>
           @if (selectedInterest()) {
-            <button hlmBtn
+            <button
+              hlmBtn
               (click)="selectedInterest.set(null)"
               class="mt-3 text-accent-400 text-sm font-semibold"
             >
@@ -133,7 +136,8 @@ interface InterestTopic {
                 </div>
                 <div class="shrink-0">
                   @if (!group.is_member && group.member_count < group.max_members) {
-                    <button hlmBtn
+                    <button
+                      hlmBtn
                       (click)="joinGroup(group.id)"
                       class="bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                       [disabled]="joiningId() === group.id"

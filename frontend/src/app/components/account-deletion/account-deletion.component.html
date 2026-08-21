@@ -5,7 +5,8 @@
     <p class="text-sm text-warning">
       {{ 'account_deletion.scheduled' | t: { date: date } }}
     </p>
-    <button hlmBtn
+    <button
+      hlmBtn
       class="btn btn-secondary"
       (click)="restoreAccount()"
       [disabled]="isLoading()"
@@ -17,7 +18,8 @@
     <p class="text-sm text-text-secondary">
       {{ 'account_deletion.description' | t }}
     </p>
-    <button hlmBtn
+    <button
+      hlmBtn
       class="btn btn-danger"
       (click)="requestDeletion()"
       [disabled]="isLoading()"
@@ -33,7 +35,8 @@
   <p class="text-sm text-text-secondary">
     {{ 'account_deletion.export_description' | t }}
   </p>
-  <button hlmBtn
+  <button
+    hlmBtn
     class="btn btn-primary"
     (click)="exportData()"
     [disabled]="isLoading()"

@@ -1,15 +1,7 @@
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
-import {
-  Component,
-  inject,
-  input,
-  resource,
-  signal,
-  DestroyRef,
-  effect,
-} from '@angular/core';
+import { Component, inject, input, resource, signal, DestroyRef, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -53,9 +45,7 @@ export class VoiceroomNotesComponent {
       refreshKey: this.refreshCounter(),
     }),
     loader: ({ params }) =>
-      firstValueFrom(
-        this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)
-      ),
+      firstValueFrom(this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)),
     defaultValue: [],
   });
 
@@ -109,7 +99,7 @@ export class VoiceroomNotesComponent {
         this.http.post(`/audio-rooms/${this.roomId()}/notes`, {
           content: c,
           vocabulary: this.vocabulary().trim() || undefined,
-        })
+        }),
       );
       this.content.set('');
       this.vocabulary.set('');
@@ -123,9 +113,7 @@ export class VoiceroomNotesComponent {
 
   async deleteNote(noteId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`)
-      );
+      await firstValueFrom(this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`));
       this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display

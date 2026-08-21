@@ -41,7 +41,8 @@
       <div
         class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
       >
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="clearCache()"
           [disabled]="isClearingCache()"
           class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
@@ -58,7 +59,8 @@
           }
         </button>
 
-        <button hlmBtn
+        <button
+          hlmBtn
           (click)="deleteOldMedia()"
           [disabled]="isDeletingOldMedia()"
           class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"

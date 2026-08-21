@@ -36,7 +36,7 @@ export class AppTextareaComponent {
   readonly disabled = input<boolean>(false);
   readonly readonly = input<boolean>(false);
   readonly label = input<string>('');
-  readonly textareaId = input<string>('app-textarea-' + Math.random().toString(36).substring(2, 9));
+  readonly textareaId = input<string>('app-textarea-' + crypto.randomUUID());
   readonly customClass = input<string>('');
 
   readonly valueChange = output<string>();

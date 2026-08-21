@@ -66,10 +66,32 @@ def test_capacity_store_is_cross_process_durable_and_expires_stale_leases(tmp_pa
     assert store.snapshot()[ProviderName.OPENCODE_GO.value] == 0
 
 
+def test_capacity_store_discards_previous_daemon_generation(tmp_path: Path) -> None:
+    previous = ProviderCapacityStore(tmp_path, factory_generation="previous")
+    previous.acquire(
+        "claude",
+        limit=1,
+        owner="old-worker",
+        wait_seconds=0,
+        lease_seconds=3600,
+    )
+
+    current = ProviderCapacityStore(tmp_path, factory_generation="current")
+    current.acquire(
+        "claude",
+        limit=1,
+        owner="new-worker",
+        wait_seconds=0,
+        lease_seconds=60,
+    )
+
+    assert current.snapshot() == {"claude": 1}
+
+
 def test_provider_model_is_non_secret_and_provider_specific(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
 
-    assert provider_model(factory_config, ProviderName.OPENAI_SUBSCRIPTION) == "gpt-5.2-codex"
+    assert provider_model(factory_config, ProviderName.OPENAI_SUBSCRIPTION) == "gpt-5.6-sol"
     assert provider_model(factory_config, ProviderName.OPENCODE_GO) == "openai/deepseek-v4-flash"
 
 
