@@ -5,7 +5,6 @@ import { MediaService } from '../../services/media.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { AppChipComponent } from '../primitives/chip/chip.component';
 
 const MAX_RECORDING_SECONDS = 120;
 
@@ -13,13 +12,7 @@ type RecorderErrorKey = 'audioIntro.microphoneError' | 'audioIntro.uploadError';
 
 @Component({
   selector: 'app-voice-recorder',
-  imports: [
-    HlmButton,
-    TranslatePipe,
-    AppCardComponent,
-    AppChipComponent,
-    AppButtonPrimaryComponent,
-  ],
+  imports: [HlmButton, TranslatePipe, AppCardComponent, AppButtonPrimaryComponent],
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })
