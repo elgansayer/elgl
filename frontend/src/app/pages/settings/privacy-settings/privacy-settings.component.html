@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" aria-label="Back">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" aria-label="Back">
       <span class="text-xl" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'privacy.hub.title' | t }}</h1>
@@ -11,7 +11,9 @@
     <p class="text-xs text-text-secondary">{{ 'privacy.hub.subtitle' | t }}</p>
 
     <!-- Hub Navigation Cards -->
-    <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+    <div
+      class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+    >
       @for (item of hubNavItems; track item.titleKey) {
         <a
           [routerLink]="item.route"
@@ -20,15 +22,15 @@
         >
           <span class="text-xl" aria-hidden="true">{{ item.icon }}</span>
           <div class="flex-1 min-w-0">
-            <span class="text-sm font-medium text-text-primary block">{{
-              item.titleKey | t
-            }}</span>
+            <span class="text-sm font-medium text-text-primary block">{{ item.titleKey | t }}</span>
             <span class="text-xs text-text-secondary block mt-0.5">{{
               item.descriptionKey | t
             }}</span>
           </div>
           @if (item.route === '/blocks' && blockedCount() > 0) {
-            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-medium">
+            <span
+              class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-danger/20 text-danger text-xs font-medium"
+            >
               {{ blockedCount() }}
             </span>
           }
@@ -45,6 +47,7 @@
       <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
         <div class="flex items-center gap-3 p-4 border-b border-surface-200">
           <input
+            hlmInput
             type="text"
             [ngModel]="mutedWordInput()"
             (ngModelChange)="mutedWordInput.set($event)"
@@ -54,8 +57,9 @@
             [attr.aria-label]="'privacy.hub.addMutedWordPlaceholder' | t"
           />
           <button
+            hlmBtn
             (click)="addMutedWord()"
-            class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+            class="px-4 py-2 rounded-lg bg-primary text-on-fill text-sm font-medium hover:bg-primary/90 transition-colors"
             [attr.aria-label]="'privacy.hub.addMutedWord' | t"
           >
             {{ 'privacy.hub.addMutedWord' | t }}
@@ -69,12 +73,15 @@
             </div>
           } @else {
             @for (word of mutedWords(); track word) {
-              <div class="flex items-center justify-between p-3 hover:bg-surface-200 transition-colors">
+              <div
+                class="flex items-center justify-between p-3 hover:bg-surface-200 transition-colors"
+              >
                 <span class="text-sm text-text-primary">{{ word }}</span>
                 <button
+                  hlmBtn
                   (click)="removeMutedWord(word)"
-                  class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
-                  [attr.aria-label]="('privacy.hub.removeMutedWordAria' | t: { word: word })"
+                  class="text-danger hover:text-danger/80 text-sm font-medium transition-colors"
+                  [attr.aria-label]="'privacy.hub.removeMutedWordAria' | t: { word: word }"
                 >
                   {{ 'privacy.hub.removeMutedWord' | t }}
                 </button>

@@ -1,7 +1,8 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SuggestFlashcardsController } from './suggest-flashcards.controller';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 describe('SuggestFlashcardsController', () => {
@@ -15,15 +16,15 @@ describe('SuggestFlashcardsController', () => {
         {
           provide: SuggestFlashcardsService,
           useValue: {
-            suggestFromMessage: jest.fn(),
+            suggestFromMessage: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(SrsRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<SuggestFlashcardsController>(
@@ -35,7 +36,7 @@ describe('SuggestFlashcardsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -46,9 +47,7 @@ describe('SuggestFlashcardsController', () => {
     it('should delegate to suggestFromMessage on the service', async () => {
       const dto = { message: 'Hello world' };
       const expected = { suggestions: ['hello', 'world'] };
-      (suggestService.suggestFromMessage as jest.Mock).mockResolvedValue(
-        expected,
-      );
+      (suggestService.suggestFromMessage as Mock).mockResolvedValue(expected);
 
       const result = await controller.suggest(dto);
 
@@ -58,7 +57,7 @@ describe('SuggestFlashcardsController', () => {
 
     it('should handle empty suggestions response', async () => {
       const dto = { message: '...' };
-      (suggestService.suggestFromMessage as jest.Mock).mockResolvedValue({
+      (suggestService.suggestFromMessage as Mock).mockResolvedValue({
         suggestions: [],
       });
 
@@ -74,7 +73,7 @@ describe('SuggestFlashcardsController', () => {
         target_language: 'fr',
         exclude_known: true,
       };
-      (suggestService.suggestFromMessage as jest.Mock).mockResolvedValue({
+      (suggestService.suggestFromMessage as Mock).mockResolvedValue({
         suggestions: ['monde'],
       });
 

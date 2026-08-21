@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsObject,
+  IsNotEmpty,
   Min,
   MaxLength,
 } from 'class-validator';
@@ -33,6 +34,7 @@ export class CreateEscrowDto {
   })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(500)
   reason?: string;
 
@@ -41,6 +43,28 @@ export class CreateEscrowDto {
       'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
     example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+}
+
+export class CreateEscrowHoldDto {
+  @ApiProperty({ description: 'UUID of the user receiving the payment' })
+  @IsString()
+  payee_id!: string;
+
+  @ApiProperty({ description: 'Amount of coins to hold', minimum: 1 })
+  @IsInt()
+  @Min(1)
+  amount_coins!: number;
+
+  @ApiProperty({ description: 'Reason for placing the hold' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({ description: 'Additional escrow metadata' })
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;

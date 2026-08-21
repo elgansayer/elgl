@@ -16,33 +16,28 @@ describe('ChatSettingsController', () => {
 
   beforeEach(async () => {
     const mockService = {
-      getSettings: jest.fn().mockResolvedValue(mockSettings),
-      updateSettings: jest
+      getSettings: vi.fn().mockResolvedValue(mockSettings),
+      updateSettings: vi
         .fn()
-        .mockImplementation(
-          (_userId: string, settings: unknown) =>
-            Promise.resolve(settings as ChatSettingsDto),
+        .mockImplementation((_userId: string, settings: unknown) =>
+          Promise.resolve(settings as ChatSettingsDto),
         ),
     };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [ChatSettingsController],
-      providers: [
-        { provide: ChatSettingsService, useValue: mockService },
-      ],
+      providers: [{ provide: ChatSettingsService, useValue: mockService }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
-    controller = moduleRef.get<ChatSettingsController>(
-      ChatSettingsController,
-    );
+    controller = moduleRef.get<ChatSettingsController>(ChatSettingsController);
     service = moduleRef.get<ChatSettingsService>(ChatSettingsService);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
