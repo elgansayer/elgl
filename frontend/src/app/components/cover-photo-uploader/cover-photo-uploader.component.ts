@@ -2,6 +2,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -15,7 +16,7 @@ interface CropBox {
 
 @Component({
   selector: 'app-cover-photo-uploader',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmButton, TranslatePipe, A11yClickableDirective],
   template: `
     <div class="relative mx-auto w-full max-w-2xl">
       <!-- Hidden file input -->
@@ -44,10 +45,8 @@ interface CropBox {
           <div
             class="absolute inset-0 flex cursor-pointer items-center justify-center bg-surface-500/90 text-text-primary opacity-100 transition-opacity duration-base ease-app sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             (click)="fileInput.click()"
-            (keydown.enter)="fileInput.click()"
-            (keydown.space)="fileInput.click(); $event.preventDefault()"
+            appA11yClickable
             tabindex="0"
-            role="button"
           >
             <div class="text-center">
               <svg
