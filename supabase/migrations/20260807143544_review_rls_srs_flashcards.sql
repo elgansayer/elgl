@@ -40,16 +40,20 @@ END $$;
 
 ALTER TABLE public.decks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS decks_select_own ON public.decks;
 CREATE POLICY decks_select_own ON public.decks
     FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS decks_insert_own ON public.decks;
 CREATE POLICY decks_insert_own ON public.decks
     FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS decks_update_own ON public.decks;
 CREATE POLICY decks_update_own ON public.decks
     FOR UPDATE TO authenticated USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS decks_delete_own ON public.decks;
 CREATE POLICY decks_delete_own ON public.decks
     FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
@@ -60,6 +64,7 @@ CREATE POLICY decks_delete_own ON public.decks
 
 ALTER TABLE public.deck_flashcards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS deck_flashcards_select_own ON public.deck_flashcards;
 CREATE POLICY deck_flashcards_select_own ON public.deck_flashcards
     FOR SELECT TO authenticated USING (
         EXISTS (
@@ -68,6 +73,7 @@ CREATE POLICY deck_flashcards_select_own ON public.deck_flashcards
         )
     );
 
+DROP POLICY IF EXISTS deck_flashcards_insert_own ON public.deck_flashcards;
 CREATE POLICY deck_flashcards_insert_own ON public.deck_flashcards
     FOR INSERT TO authenticated WITH CHECK (
         EXISTS (
@@ -76,6 +82,7 @@ CREATE POLICY deck_flashcards_insert_own ON public.deck_flashcards
         )
     );
 
+DROP POLICY IF EXISTS deck_flashcards_delete_own ON public.deck_flashcards;
 CREATE POLICY deck_flashcards_delete_own ON public.deck_flashcards
     FOR DELETE TO authenticated USING (
         EXISTS (

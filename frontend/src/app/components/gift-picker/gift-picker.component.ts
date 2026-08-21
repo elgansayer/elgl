@@ -1,84 +1,101 @@
 import { Component, input, output, inject, signal, computed } from '@angular/core';
-
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
 @Component({
   selector: 'app-gift-picker',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+    <hlm-dialog state="open" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl border border-surface-100 bg-surface-200 p-4 shadow-2xl sm:space-y-5 sm:rounded-3xl sm:p-6"
+        [attr.aria-labelledby]="titleId"
+        [attr.aria-describedby]="subtitleId"
       >
-        <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>🎁</span>
+            <h3 [id]="titleId" class="flex items-center gap-2 text-xl font-black text-text-primary">
+              <span aria-hidden="true">🎁</span>
               <span>{{ 'giftModal.title' | t }}</span>
             </h3>
-            <p class="text-xs text-text-secondary">
+            <p [id]="subtitleId" class="text-xs text-text-secondary">
               {{ 'giftModal.subtitle' | t }}
             </p>
           </div>
           <button
+            hlmBtn
+            type="button"
+            variant="ghost"
+            size="icon-touch"
             (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'common.close' | t"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
-        <!-- Coin balance bar -->
         <div
-          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
+          class="flex items-center justify-between rounded-2xl border border-vip/30 bg-vip/10 p-4"
         >
           <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
-              <span class="text-[10px] uppercase font-black text-amber-400 block">{{
+              <span class="block text-[10px] font-black uppercase text-vip">{{
                 'giftModal.balanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950">{{
-                'giftModal.coinsValue' | t: { coins: effectiveBalance() }
-              }}</span>
+              <span class="text-lg font-extrabold text-vip" aria-live="polite">
+                {{ 'giftModal.coinsValue' | t: { coins: effectiveBalance() } }}
+              </span>
             </div>
           </div>
-
           <button
+            hlmBtn
+            type="button"
+            variant="secondary"
+            size="sm"
+            class="text-vip"
             (click)="toggleCoinPackages()"
-            class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
         </div>
 
         @if (showCoinPackages()) {
-          <div class="space-y-3 animate-fadeIn">
-            <span class="text-xs font-bold text-text-primary block">{{
+          <div class="animate-fadeIn space-y-3">
+            <span class="block text-xs font-bold text-text-primary">{{
               'giftModal.bundlePrompt' | t
             }}</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
-                  class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
+                  class="flex items-center justify-between rounded-2xl border border-surface-100 bg-surface-300 p-3.5"
                 >
                   <div class="flex items-center gap-3">
-                    <span class="text-2xl">🪙</span>
+                    <span class="text-2xl" aria-hidden="true">🪙</span>
                     <div>
-                      <span class="font-black text-sm text-text-primary">{{
-                        'giftModal.package.' + pkg.id + '.title'
-                          | t: { coins: pkg.coins, name: pkg.name }
-                      }}</span>
-                      <span class="text-xs text-text-secondary block">{{
+                      <span class="text-sm font-black text-text-primary">
+                        {{
+                          'giftModal.package.' + pkg.id + '.title'
+                            | t: { coins: pkg.coins, name: pkg.name }
+                        }}
+                      </span>
+                      <span class="block text-xs text-text-secondary">{{
                         'giftModal.package.' + pkg.id + '.desc' | t
                       }}</span>
                     </div>
                   </div>
                   <button
+                    hlmBtn
+                    type="button"
+                    size="sm"
                     (click)="buyCoins(pkg.id)"
-                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+                    [attr.aria-label]="
+                      'giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name }
+                    "
                   >
                     {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
                   </button>
@@ -86,51 +103,61 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               }
             </div>
           </div>
-        }
-
-        @if (!showCoinPackages()) {
+        } @else {
           <div class="space-y-3">
             @if (!selectedGift()) {
-              <span class="text-xs font-bold text-text-primary block">{{
-                'giftModal.selectPrompt' | t: { name: receiverName() }
-              }}</span>
+              <span class="block text-xs font-bold text-text-primary">
+                {{ 'giftModal.selectPrompt' | t: { name: receiverName() } }}
+              </span>
             }
             @if (selectedGift(); as gift) {
-              <div class="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
-                <span class="text-3xl">{{ gift.icon }}</span>
+              <div
+                class="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3"
+              >
+                <span class="text-3xl" aria-hidden="true">{{ gift.icon }}</span>
                 <div class="flex-1">
-                  <span class="font-bold text-sm text-text-primary block">{{ gift.name }}</span>
+                  <span class="block text-sm font-bold text-text-primary">{{ gift.name }}</span>
                   <span class="text-xs text-text-secondary">{{
                     'giftModal.giftCost' | t: { cost: gift.cost_coins }
                   }}</span>
                 </div>
                 <button
-                  (click)="selectedGift.set(null); deductedAmount.set(0)"
-                  class="text-text-muted hover:text-text-secondary text-sm"
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  (click)="clearSelection()"
+                  [attr.aria-label]="'giftModal.deselectAria' | t: { name: gift.name }"
                 >
-                  ✕
+                  <span aria-hidden="true">✕</span>
                 </button>
               </div>
-            }
-            @if (!selectedGift()) {
-              <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto">
+            } @else {
+              <div
+                class="grid max-h-64 grid-cols-2 gap-2.5 overflow-y-auto xs:grid-cols-3 sm:grid-cols-4"
+                role="radiogroup"
+                [attr.aria-label]="'giftModal.giftListAria' | t"
+              >
                 @for (gift of economyStore.catalog(); track gift.id) {
                   <button
+                    hlmBtn
                     type="button"
+                    variant="outline"
+                    size="touch"
+                    role="radio"
+                    class="h-auto w-full flex-col space-y-1 rounded-2xl p-2.5 text-center"
                     (click)="selectGift(gift)"
                     [disabled]="gift.cost_coins > effectiveBalance()"
-                    [class]="
-                      'w-full p-2.5 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1 ' +
-                      (gift.cost_coins > effectiveBalance()
-                        ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
-                        : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
+                    [attr.aria-checked]="selectedGift()?.id === gift.id"
+                    [attr.aria-label]="
+                      'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }
                     "
                   >
-                    <span class="text-2xl block">{{ gift.icon }}</span>
-                    <span class="font-bold text-[10px] text-text-primary block truncate w-full">{{
+                    <span class="block text-2xl" aria-hidden="true">{{ gift.icon }}</span>
+                    <span class="block w-full truncate text-[10px] font-bold text-text-primary">{{
                       gift.name
                     }}</span>
-                    <span class="text-[10px] font-extrabold text-amber-600">{{
+                    <span class="text-[10px] font-extrabold text-vip">{{
                       'giftModal.giftCost' | t: { cost: gift.cost_coins }
                     }}</span>
                   </button>
@@ -140,19 +167,22 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
           </div>
         }
 
-        <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
-          <button
-            (click)="closed.emit()"
-            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
-          >
+        <div class="flex justify-end gap-3 border-t border-surface-100 pt-2">
+          <button hlmBtn type="button" variant="secondary" size="touch" (click)="closed.emit()">
             {{ 'giftModal.cancelBtn' | t }}
           </button>
           @if (!showCoinPackages()) {
             @if (selectedGift(); as gift) {
               <button
+                hlmBtn
+                type="button"
+                size="touch"
                 [disabled]="isSending()"
                 (click)="confirmSend()"
-                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+                [attr.aria-label]="
+                  'giftModal.sendAria'
+                    | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() }
+                "
               >
                 {{
                   isSending()
@@ -161,23 +191,22 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 }}
               </button>
             } @else {
-              <button
-                disabled
-                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
-              >
+              <button hlmBtn type="button" size="touch" disabled>
                 {{ 'giftModal.selectGift' | t }}
               </button>
             }
           }
         </div>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class GiftPickerComponent {
   receiverId = input.required<string>();
@@ -192,10 +221,19 @@ export class GiftPickerComponent {
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly effectiveBalance = computed(() => this.economyStore.coinsBalance() - this.deductedAmount());
+  readonly titleId = 'gift-picker-title-' + crypto.randomUUID();
+  readonly subtitleId = 'gift-picker-subtitle-' + crypto.randomUUID();
+
+  readonly effectiveBalance = computed(
+    () => this.economyStore.coinsBalance() - this.deductedAmount(),
+  );
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed') this.closed.emit();
+  }
 
   toggleCoinPackages(): void {
-    this.showCoinPackages.update((v) => !v);
+    this.showCoinPackages.update((value) => !value);
     if (this.showCoinPackages() && this.economyStore.coinPackages().length === 0) {
       void this.economyStore.loadCoinPackages();
     }
@@ -207,8 +245,12 @@ export class GiftPickerComponent {
 
   selectGift(gift: VirtualGift): void {
     this.selectedGift.set(gift);
-    // Auto-deduction: preview the cost by tracking deduction offset
     this.deductedAmount.set(gift.cost_coins);
+  }
+
+  clearSelection(): void {
+    this.selectedGift.set(null);
+    this.deductedAmount.set(0);
   }
 
   async confirmSend(): Promise<void> {
@@ -216,11 +258,7 @@ export class GiftPickerComponent {
     if (!gift) return;
     this.isSending.set(true);
     try {
-      const ok = await this.economyStore.sendGift(
-        this.receiverId(),
-        gift.id,
-        this.roomId(),
-      );
+      const ok = await this.economyStore.sendGift(this.receiverId(), gift.id, this.roomId());
       if (ok) {
         this.economyStore.triggerGiftAnimation({
           gift,

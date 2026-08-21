@@ -1,5 +1,16 @@
-import { Component, inject, input, output, signal, OnDestroy, effect } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import {
+  Component,
+  inject,
+  input,
+  output,
+  signal,
+  computed,
+  OnDestroy,
+  effect,
+} from '@angular/core';
 
+import { interval } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { LivekitService } from '../../services/livekit.service';
 import { AuthService } from '../../services/auth.service';
@@ -11,28 +22,28 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 
 @Component({
   selector: 'app-voip-call',
-  imports: [FormsModule],
+  imports: [HlmButton, FormsModule],
   template: `
     @if (showCallUI()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div
-          class="bg-surface-800 rounded-2xl shadow-2xl w-full max-w-sm ps-6 pe-6 pt-6 pb-6 text-center border border-slate-700"
+          class="bg-surface-900 rounded-2xl shadow-2xl w-full max-w-sm ps-6 pe-6 pt-6 pb-6 text-center border border-surface-50/30"
         >
           <!-- Caller/Callee Info -->
           <div class="mb-6">
             <div
-              class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mb-3"
+              class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl font-bold text-white mb-3"
             >
               {{ displayName()[0]?.toUpperCase() || '?' }}
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
-            <p class="text-text-muted text-sm mt-1">{{ callStatusText }}</p>
+            <p class="text-text-muted text-sm mt-1">{{ callStatusText() }}</p>
           </div>
 
           <!-- Call Timer (when connected) -->
           @if (callState() === 'connected') {
             <div class="text-3xl font-mono text-white mb-6">
-              {{ formattedDuration }}
+              {{ formattedDuration() }}
             </div>
           }
 
@@ -41,8 +52,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
             <!-- Incoming call actions -->
             @if (callDirection() === 'incoming' && callState() === 'ringing') {
               <button
+                hlmBtn
                 (click)="acceptCall()"
-                class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                class="w-16 h-16 rounded-full bg-success hover:bg-success/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -54,8 +66,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                 </svg>
               </button>
               <button
+                hlmBtn
                 (click)="rejectCall()"
-                class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -75,11 +88,12 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               callState() === 'connecting'
             ) {
               <button
+                hlmBtn
                 (click)="toggleMute()"
                 [class]="
                   isMuted()
-                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'
-                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100'
+                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-warning hover:bg-warning/90'
+                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-white/20 hover:bg-white/30'
                 "
               >
                 <svg
@@ -97,11 +111,12 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                 </svg>
               </button>
               <button
+                hlmBtn
                 (click)="toggleVideo()"
                 [class]="
                   isVideoEnabled()
-                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-surface-200 hover:bg-surface-100'
-                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-yellow-500 hover:bg-yellow-600'
+                    ? 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-white/20 hover:bg-white/30'
+                    : 'w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 shadow-lg bg-warning hover:bg-warning/90'
                 "
               >
                 <svg
@@ -119,8 +134,9 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                 </svg>
               </button>
               <button
+                hlmBtn
                 (click)="endCall()"
-                class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
+                class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -168,9 +184,35 @@ export class VoipCallComponent implements OnDestroy {
   readonly callState = signal<CallState>('ringing');
   readonly isMuted = signal(false);
   readonly isVideoEnabled = signal(false);
-  readonly callDuration = signal(0);
+  readonly callDurationSeconds = signal(0);
 
-  private durationInterval: ReturnType<typeof setInterval> | null = null;
+  readonly callStatusText = computed(() => {
+    switch (this.callState()) {
+      case 'ringing':
+        return this.callDirection() === 'incoming' ? 'Incoming call...' : 'Ringing...';
+      case 'connecting':
+        return 'Connecting...';
+      case 'connected':
+        return 'Connected';
+      case 'ended':
+        return 'Call ended';
+      case 'missed':
+        return 'Missed call';
+      case 'rejected':
+        return 'Call rejected';
+      default:
+        return '';
+    }
+  });
+
+  readonly formattedDuration = computed(() => {
+    const totalSeconds = this.callDurationSeconds();
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  });
+
+  private callDurationSub: { unsubscribe(): void } | null = null;
   private localAudioTrack: LocalTrack | null = null;
   private localVideoTrack: LocalTrack | null = null;
   private remoteAudioTrack: RemoteTrack | null = null;
@@ -193,32 +235,6 @@ export class VoipCallComponent implements OnDestroy {
         this.isVideoEnabled.set(true);
       }
     });
-  }
-
-  get callStatusText(): string {
-    switch (this.callState()) {
-      case 'ringing':
-        return this.callDirection() === 'incoming' ? 'Incoming call...' : 'Ringing...';
-      case 'connecting':
-        return 'Connecting...';
-      case 'connected':
-        return 'Connected';
-      case 'ended':
-        return 'Call ended';
-      case 'missed':
-        return 'Missed call';
-      case 'rejected':
-        return 'Call rejected';
-      default:
-        return '';
-    }
-  }
-
-  get formattedDuration(): string {
-    const totalSeconds = this.callDuration();
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
   async acceptCall(): Promise<void> {
@@ -258,8 +274,7 @@ export class VoipCallComponent implements OnDestroy {
         message_type: 'text',
         text_content: 'Call accepted',
       });
-    } catch (error) {
-      console.error('Failed to accept call:', error);
+    } catch {
       this.callState.set('ended');
     }
   }
@@ -308,16 +323,17 @@ export class VoipCallComponent implements OnDestroy {
   }
 
   private startDurationTimer(): void {
-    this.callDuration.set(0);
-    this.durationInterval = setInterval(() => {
-      this.callDuration.update((v) => v + 1);
-    }, 1000);
+    this.callDurationSeconds.set(0);
+    this.stopDurationTimer();
+    this.callDurationSub = interval(1000).subscribe(() => {
+      this.callDurationSeconds.update((v) => v + 1);
+    });
   }
 
   private stopDurationTimer(): void {
-    if (this.durationInterval) {
-      clearInterval(this.durationInterval);
-      this.durationInterval = null;
+    if (this.callDurationSub) {
+      this.callDurationSub.unsubscribe();
+      this.callDurationSub = null;
     }
   }
 

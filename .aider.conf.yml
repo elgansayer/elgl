@@ -1,9 +1,0 @@
-model: deepseek/deepseek-reasoner
-
-read:
-  - SPEC.md
-  - AGENTS.md
-
-show-model-warnings: false
-yes-always: true
-map-tokens: 2000

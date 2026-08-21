@@ -14,14 +14,14 @@ describe('MilestonesController', () => {
         {
           provide: MilestonesService,
           useValue: {
-            create: jest.fn().mockResolvedValue({ id: 'm-1' }),
-            findAllForUser: jest.fn().mockResolvedValue([{ id: 'm-1' }]),
-            findOneForUser: jest.fn().mockResolvedValue({ id: 'm-1' }),
-            markCompleted: jest
+            create: vi.fn().mockResolvedValue({ id: 'm-1' }),
+            findAllForUser: vi.fn().mockResolvedValue([{ id: 'm-1' }]),
+            findOneForUser: vi.fn().mockResolvedValue({ id: 'm-1' }),
+            markCompleted: vi
               .fn()
               .mockResolvedValue({ id: 'm-1', completed: true }),
-            remove: jest.fn().mockResolvedValue(undefined),
-            getProgress: jest
+            remove: vi.fn().mockResolvedValue(undefined),
+            getProgress: vi
               .fn()
               .mockResolvedValue({ total: 1, completed: 0, percentage: 0 }),
           },
@@ -29,7 +29,7 @@ describe('MilestonesController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<MilestonesController>(MilestonesController);
@@ -92,13 +92,13 @@ describe('MilestonesController', () => {
   });
 
   it('returns an empty array when no milestones exist for the user', async () => {
-    jest.spyOn(service, 'findAllForUser').mockResolvedValueOnce([]);
+    vi.spyOn(service, 'findAllForUser').mockResolvedValueOnce([]);
     const result = await controller.findAll({ user: { sub: 'user-1' } });
     expect(result).toEqual([]);
   });
 
   it('handles progress calculation when no milestones exist', async () => {
-    jest.spyOn(service, 'getProgress').mockResolvedValueOnce({
+    vi.spyOn(service, 'getProgress').mockResolvedValueOnce({
       total: 0,
       completed: 0,
       percentage: 0,
@@ -108,18 +108,18 @@ describe('MilestonesController', () => {
   });
 
   it('throws an error when marking a non-existent milestone as completed', async () => {
-    jest
-      .spyOn(service, 'markCompleted')
-      .mockRejectedValueOnce(new Error('Milestone not found'));
+    vi.spyOn(service, 'markCompleted').mockRejectedValueOnce(
+      new Error('Milestone not found'),
+    );
     await expect(
       controller.markCompleted('non-existent-id', { user: { sub: 'user-1' } }),
     ).rejects.toThrow('Milestone not found');
   });
 
   it('throws an error when removing a non-existent milestone', async () => {
-    jest
-      .spyOn(service, 'remove')
-      .mockRejectedValueOnce(new Error('Milestone not found'));
+    vi.spyOn(service, 'remove').mockRejectedValueOnce(
+      new Error('Milestone not found'),
+    );
     await expect(
       controller.remove('non-existent-id', { user: { sub: 'user-1' } }),
     ).rejects.toThrow('Milestone not found');

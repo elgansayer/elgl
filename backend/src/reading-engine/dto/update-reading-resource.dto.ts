@@ -22,7 +22,10 @@ export class UpdateReadingResourceDto {
   @MaxLength(5)
   language?: string;
 
-  @ApiPropertyOptional({ description: 'Difficulty level', enum: ['beginner', 'intermediate', 'advanced'] })
+  @ApiPropertyOptional({
+    description: 'Difficulty level',
+    enum: ['beginner', 'intermediate', 'advanced'],
+  })
   @IsString()
   @IsOptional()
   difficulty?: string;

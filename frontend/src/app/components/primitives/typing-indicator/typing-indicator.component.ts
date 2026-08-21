@@ -13,7 +13,7 @@ export interface TypingUser {
   template: `
     @if (visible()) {
       <div
-        class="flex items-center gap-2 px-4 py-1.5 bg-gray-800/80 rounded-t-lg animate-slide-up"
+        class="flex items-center gap-2 px-4 py-1.5 bg-surface-900/80 rounded-t-lg animate-slide-up"
         role="status"
         aria-live="polite"
         [attr.aria-label]="ariaLabel()"
@@ -24,12 +24,12 @@ export interface TypingUser {
               <img
                 [src]="user.avatarUrl ?? '/assets/default-avatar.svg'"
                 [alt]="user.displayName"
-                class="w-5 h-5 rounded-full ring-2 ring-gray-700 object-cover"
-               loading="lazy" />
+                class="w-5 h-5 rounded-full ring-2 ring-black/30 object-cover"
+              />
             }
             @if (remainingCount() > 0) {
               <span
-                class="w-5 h-5 rounded-full ring-2 ring-gray-700 bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold"
+                class="w-5 h-5 rounded-full ring-2 ring-black/30 bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold"
               >
                 +{{ remainingCount() }}
               </span>
@@ -38,11 +38,17 @@ export interface TypingUser {
         }
         <div class="flex items-center gap-1">
           <span class="flex items-center gap-1">
-            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 opacity-40 animate-typing-bounce"></span>
-            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 opacity-40 animate-typing-bounce-delayed-1"></span>
-            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-purple-400 opacity-40 animate-typing-bounce-delayed-2"></span>
+            <span
+              class="typing-dot w-1.5 h-1.5 rounded-full bg-neon-violet opacity-40 animate-typing-bounce"
+            ></span>
+            <span
+              class="typing-dot w-1.5 h-1.5 rounded-full bg-neon-violet opacity-40 animate-typing-bounce-delayed-1"
+            ></span>
+            <span
+              class="typing-dot w-1.5 h-1.5 rounded-full bg-neon-violet opacity-40 animate-typing-bounce-delayed-2"
+            ></span>
           </span>
-          <span class="text-xs text-gray-400 italic">{{ statusLabel() | t: statusParams() }}</span>
+          <span class="text-xs text-white/70 italic">{{ statusLabel() | t: statusParams() }}</span>
         </div>
       </div>
     }
@@ -50,12 +56,26 @@ export interface TypingUser {
   styles: [
     `
       @keyframes typingBounce {
-        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-        30% { transform: translateY(-4px); opacity: 1; }
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
       }
       @keyframes slideUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       .animate-typing-bounce {
         animation: typingBounce 1.4s ease-in-out infinite;
@@ -81,9 +101,7 @@ export class TypingIndicatorComponent {
 
   readonly visible = computed(() => this.typingUsers().length > 0);
 
-  readonly displayAvatars = computed(() =>
-    this.typingUsers().slice(0, this.maxVisible()),
-  );
+  readonly displayAvatars = computed(() => this.typingUsers().slice(0, this.maxVisible()));
 
   readonly remainingCount = computed(() =>
     Math.max(0, this.typingUsers().length - this.maxVisible()),
@@ -119,6 +137,10 @@ export class TypingIndicatorComponent {
       return this.typingUsers()[0].displayName + ' is typing';
     }
     if (count > 4) return 'Several people are typing';
-    return this.typingUsers().map((u) => u.displayName).join(', ') + ' are typing';
+    return (
+      this.typingUsers()
+        .map((u) => u.displayName)
+        .join(', ') + ' are typing'
+    );
   });
 }

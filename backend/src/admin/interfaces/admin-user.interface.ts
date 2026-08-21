@@ -45,3 +45,22 @@ export interface AdminBlocksListResult {
   page: number;
   pageSize: number;
 }
+
+export interface AdminReportEntry {
+  id: string;
+  reporter_id: string | null;
+  reported_user_id: string;
+  reason_category: string;
+  description: string | null;
+  status: string;
+  reported_name?: string | null;
+  reporter_name?: string | null;
+  created_at: string;
+}
+
+export interface AdminReportsListResult {
+  reports: AdminReportEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
