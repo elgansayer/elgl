@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { GlobalSearchComponent } from './global-search.component';
 import { I18nService } from '../../../services/i18n.service';
+import { RecommendationsService } from '../../../services/recommendations.service';
 import { ALL_LANGUAGE_CODES } from '../../primitives/language-picker/language-picker.component';
 
 describe('GlobalSearchComponent', () => {
@@ -43,7 +45,14 @@ describe('GlobalSearchComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [GlobalSearchComponent],
-      providers: [{ provide: I18nService, useValue: mockI18n }],
+      providers: [
+        provideRouter([]),
+        { provide: I18nService, useValue: mockI18n },
+        {
+          provide: RecommendationsService,
+          useValue: { getDiscoveryRecommendations: vi.fn().mockResolvedValue([]) },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GlobalSearchComponent);
@@ -198,7 +207,6 @@ describe('GlobalSearchComponent', () => {
 
     const secondLanguages = component.availableLanguages();
     expect(secondLanguages.length).toBe(ALL_LANGUAGE_CODES.length);
-    // The translated names should differ when UI language changes
     expect(secondLanguages[0].translatedName).not.toBe(firstLanguage);
   });
 });
