@@ -34,7 +34,7 @@ interface AiChatMessage {
           >
             {{ 'aiPartner.start' | t }}
           </button>
-          @for (room of rooms(); track room) {
+          @for (room of rooms(); track room.id) {
             <div
               (click)="selectRoom(room)"
               appA11yClickable
@@ -207,7 +207,7 @@ interface AiChatMessage {
 
               <!-- Messages (inline rendering to support correction UI) -->
               <div class="flex-1 overflow-y-auto p-4 space-y-4" #messagesContainer>
-                @for (msg of messages(); track msg) {
+                @for (msg of messages(); track msg.id) {
                   <div
                     class="group flex gap-2"
                     [class.flex-row-reverse]="msg.sender_id === currentUserId()"
