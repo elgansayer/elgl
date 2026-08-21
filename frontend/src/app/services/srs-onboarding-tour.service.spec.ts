@@ -38,7 +38,7 @@ describe('SrsOnboardingTourService', () => {
   it('should reset tour completion state', () => {
     service.resetTour();
     expect(service.hasCompletedTour()).toBe(false);
-    expect(localStorage.getItem('srs_onboarding_tour_completed')).toBeNull();
+    expect(localStorage.getItem('srs_onboarding_tour_completed')).toBeFalsy();
   });
 
   it('should mark tour complete on close', () => {

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, of, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -54,69 +54,218 @@ export class SafetyService {
     return this._blockedUserIds();
   }
 
-  private readonly MUTED_WORDS_STORAGE_KEY = 'hellotalk_muted_words';
-
-  private _mutedWords = signal<string[]>(
-    (() => {
-      if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem(this.MUTED_WORDS_STORAGE_KEY);
-        if (stored) {
-          try {
-            const arr: string[] = JSON.parse(stored);
-            return Array.isArray(arr) ? arr : [];
-          } catch {
-            // ignore
-          }
-        }
-      }
-      return [];
-    })(),
-  );
+  private readonly MUTED_WORDS_STORAGE_PREFIX = 'hellotalk_muted_words';
+  private readonly MUTED_WORDS_ANONYMOUS_OWNER = 'anonymous';
+  private readonly mutedWordSegmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
+  private activeMutedWordsOwner: string | null = null;
+  private _mutedWords = signal<string[]>([]);
 
   readonly mutedWords = this._mutedWords.asReadonly();
 
-  private persistMutedWords(): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(this.MUTED_WORDS_STORAGE_KEY, JSON.stringify(this._mutedWords()));
+  constructor() {
+    effect(() => {
+      const owner = this.getMutedWordsOwner();
+      this.activateMutedWordsOwner(owner);
+    });
+  }
+
+  private getMutedWordsOwner(): string {
+    return this.authService.currentUser()?.id ?? this.MUTED_WORDS_ANONYMOUS_OWNER;
+  }
+
+  private getMutedWordsStorageKey(owner: string): string {
+    return `${this.MUTED_WORDS_STORAGE_PREFIX}:${encodeURIComponent(owner)}`;
+  }
+
+  private getLocalStorage(): Storage | null {
+    try {
+      if (typeof globalThis === 'undefined' || !('localStorage' in globalThis)) return null;
+      return globalThis.localStorage;
+    } catch {
+      return null;
     }
   }
 
+  private readStorage(storage: Storage, key: string): string | null {
+    try {
+      return storage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  private writeStorage(storage: Storage, key: string, value: string): boolean {
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private removeStorage(storage: Storage, key: string): void {
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Storage is best-effort. Keep the in-memory filter usable if removal fails.
+    }
+  }
+
+  private normaliseMutedWord(value: string): string {
+    return value.normalize('NFKC').trim().toLowerCase();
+  }
+
+  private parseStoredMutedWords(value: string | null): string[] {
+    if (!value) return [];
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (!Array.isArray(parsed)) return [];
+
+      const words: string[] = [];
+      const seen = new Set<string>();
+      for (const candidate of parsed) {
+        if (typeof candidate !== 'string') continue;
+        const normalised = this.normaliseMutedWord(candidate);
+        if (!normalised || seen.has(normalised)) continue;
+        seen.add(normalised);
+        words.push(normalised);
+      }
+      return words;
+    } catch {
+      return [];
+    }
+  }
+
+  private loadMutedWordsForOwner(owner: string): string[] {
+    const storage = this.getLocalStorage();
+    if (!storage) return [];
+
+    const ownerKey = this.getMutedWordsStorageKey(owner);
+    const storedForOwner = this.readStorage(storage, ownerKey);
+    if (storedForOwner !== null) {
+      return this.parseStoredMutedWords(storedForOwner);
+    }
+
+    // Anonymous users deliberately get an isolated empty/default namespace. The legacy
+    // device-global value is claimed only by the first authenticated user after upgrade.
+    if (owner === this.MUTED_WORDS_ANONYMOUS_OWNER) return [];
+
+    const legacyValue = this.readStorage(storage, this.MUTED_WORDS_STORAGE_PREFIX);
+    if (legacyValue === null) return [];
+
+    const migratedWords = this.parseStoredMutedWords(legacyValue);
+    if (this.writeStorage(storage, ownerKey, JSON.stringify(migratedWords))) {
+      this.removeStorage(storage, this.MUTED_WORDS_STORAGE_PREFIX);
+    }
+    return migratedWords;
+  }
+
+  private activateMutedWordsOwner(owner: string): void {
+    if (this.activeMutedWordsOwner === owner) return;
+    this.activeMutedWordsOwner = owner;
+    this._mutedWords.set(this.loadMutedWordsForOwner(owner));
+  }
+
+  private ensureMutedWordsOwner(): string {
+    const owner = this.getMutedWordsOwner();
+    this.activateMutedWordsOwner(owner);
+    return owner;
+  }
+
+  private persistMutedWords(): void {
+    const owner = this.ensureMutedWordsOwner();
+    const storage = this.getLocalStorage();
+    if (!storage) return;
+    this.writeStorage(
+      storage,
+      this.getMutedWordsStorageKey(owner),
+      JSON.stringify(this._mutedWords()),
+    );
+  }
+
   addMutedWord(word: string): void {
-    const trimmed = word.trim().toLowerCase();
-    if (!trimmed) return;
-    this._mutedWords.update((prev) => {
-      if (prev.includes(trimmed)) return prev;
-      return [...prev, trimmed];
+    this.ensureMutedWordsOwner();
+    const normalised = this.normaliseMutedWord(word);
+    if (!normalised) return;
+    this._mutedWords.update((previous) => {
+      if (previous.includes(normalised)) return previous;
+      return [...previous, normalised];
     });
     this.persistMutedWords();
   }
 
   removeMutedWord(word: string): void {
-    const trimmed = word.trim().toLowerCase();
-    this._mutedWords.update((prev) => prev.filter((w) => w !== trimmed));
+    this.ensureMutedWordsOwner();
+    const normalised = this.normaliseMutedWord(word);
+    this._mutedWords.update((previous) => previous.filter((item) => item !== normalised));
     this.persistMutedWords();
   }
 
   isMutedWord(word: string): boolean {
-    return this._mutedWords().includes(word.trim().toLowerCase());
+    this.ensureMutedWordsOwner();
+    return this._mutedWords().includes(this.normaliseMutedWord(word));
   }
 
   clearMutedWords(): void {
+    const owner = this.ensureMutedWordsOwner();
     this._mutedWords.set([]);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(this.MUTED_WORDS_STORAGE_KEY);
-    }
+    const storage = this.getLocalStorage();
+    if (!storage) return;
+    this.removeStorage(storage, this.getMutedWordsStorageKey(owner));
   }
 
-  /** Apply mute‑word filter to an array of moments. */
-  filterMomentsByMutedWords(moments: MomentFeedItem[] | null | undefined): MomentFeedItem[] {
+  private tokeniseWordLikeSegments(value: string): string[] {
+    const normalised = this.normaliseMutedWord(value);
+    if (!normalised) return [];
+
+    const tokens: string[] = [];
+    for (const segment of this.mutedWordSegmenter.segment(normalised)) {
+      if (segment.isWordLike) tokens.push(segment.segment);
+    }
+    return tokens;
+  }
+
+  private containsMutedWord(text: string, mutedWord: string): boolean {
+    const normalisedText = this.normaliseMutedWord(text);
+    const normalisedMutedWord = this.normaliseMutedWord(mutedWord);
+    if (!normalisedText || !normalisedMutedWord) return false;
+
+    const mutedTokens = this.tokeniseWordLikeSegments(normalisedMutedWord);
+    if (mutedTokens.length === 0) {
+      // Symbols and emoji do not have word boundaries, so exact normalised substring
+      // matching is the least surprising behaviour for those explicit mute terms.
+      return normalisedText.includes(normalisedMutedWord);
+    }
+
+    const textTokens = this.tokeniseWordLikeSegments(normalisedText);
+    if (textTokens.length < mutedTokens.length) return false;
+
+    for (let start = 0; start <= textTokens.length - mutedTokens.length; start += 1) {
+      let matches = true;
+      for (let offset = 0; offset < mutedTokens.length; offset += 1) {
+        if (textTokens[start + offset] !== mutedTokens[offset]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return true;
+    }
+    return false;
+  }
+
+  /** Apply mute-word filtering to Moments with either content_text or text_content. */
+  filterMomentsByMutedWords<
+    T extends { content_text?: string | null; text_content?: string | null },
+  >(moments: T[] | null | undefined): T[] {
     if (!moments || moments.length === 0) return [];
+    this.ensureMutedWordsOwner();
     const muted = this._mutedWords();
     if (muted.length === 0) return moments;
+
     return moments.filter((moment) => {
-      if (!moment.content_text) return true;
-      const text: string = moment.content_text.toLowerCase();
-      return !muted.some((word) => text.includes(word));
+      const rawText = moment.content_text ?? moment.text_content;
+      if (!rawText) return true;
+      return !muted.some((word) => this.containsMutedWord(rawText, word));
     });
   }
 

@@ -1,21 +1,20 @@
-import { Component, input, output, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, input, output, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-daily-login-modal',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4 animate-fadeIn"
-      role="dialog"
-      aria-modal="true"
-      [attr.aria-labelledby]="dialogTitleId"
-      (keydown.escape)="closed.emit()"
-    >
-      <div
-        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-3 sm:space-y-4 max-h-[90vh] overflow-y-auto"
+    <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="max-h-[90vh] w-full max-w-sm space-y-4 overflow-y-auto rounded-2xl border border-surface-100 bg-surface-200 p-6 text-center shadow-2xl sm:rounded-3xl"
+        [attr.aria-labelledby]="dialogTitleId"
       >
-        <div class="text-6xl mb-2" aria-hidden="true">🎁</div>
+        <div class="text-6xl" aria-hidden="true">🎁</div>
         <h3 [id]="dialogTitleId" class="text-2xl font-black text-text-primary">
           {{ 'dailyLoginModal.title' | t }}
         </h3>
@@ -23,34 +22,29 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'dailyLoginModal.body' | t: { coins: coins() } }}
         </p>
         <button
-          #primaryButton
-          (click)="closed.emit()"
-          class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary/50"
-          [attr.aria-label]="('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })"
+          hlmBtn
+          hlmDialogClose
+          type="button"
+          size="touch"
+          class="mt-4 w-full"
+          [attr.aria-label]="
+            ('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })
+          "
         >
           {{ 'dailyLoginModal.cta' | t }}
         </button>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class DailyLoginModalComponent {
-  coins = input(0);
-  closed = output<void>();
+  readonly coins = input(0);
+  readonly open = input(true);
+  readonly closed = output<void>();
+  readonly dialogTitleId = 'daily-login-title-' + crypto.randomUUID();
+  readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
 
-  readonly dialogTitleId = 'daily-login-title-' + Math.random().toString(36).substring(2, 9);
-  private readonly primaryButton = viewChild.required<ElementRef<HTMLElement>>('primaryButton');
-
-  constructor() {
-    effect(() => {
-      if (this.coins()) {
-        setTimeout(() => {
-          const btn = this.primaryButton();
-          if (btn?.nativeElement) {
-            btn.nativeElement.focus();
-          }
-        });
-      }
-    });
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.open()) this.closed.emit();
   }
 }

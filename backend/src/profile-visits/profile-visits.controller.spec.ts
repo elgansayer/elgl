@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileVisitsController } from './profile-visits.controller';
 import { ProfileVisitsService } from './profile-visits.service';
@@ -16,20 +17,20 @@ describe('ProfileVisitsController', () => {
         {
           provide: ProfileVisitsService,
           useValue: {
-            recordVisit: jest.fn(),
-            getVisitors: jest.fn(),
+            recordVisit: vi.fn(),
+            getVisitors: vi.fn(),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn(),
+            getProfile: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<ProfileVisitsController>(ProfileVisitsController);
@@ -39,7 +40,7 @@ describe('ProfileVisitsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -57,10 +58,8 @@ describe('ProfileVisitsController', () => {
       const profile: any = { id: 'user-1', is_vip: true };
       const visitResult = { id: 'visit-1' };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(profile);
-      (profileVisitsService.recordVisit as jest.Mock).mockResolvedValue(
-        visitResult,
-      );
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (profileVisitsService.recordVisit as Mock).mockResolvedValue(visitResult);
 
       const result = await controller.recordVisit(
         { id: 'user-1' } as any,
@@ -77,8 +76,8 @@ describe('ProfileVisitsController', () => {
     });
 
     it('should fallback to false for isVip when user profile returns undefined is_vip', async () => {
-      (usersService.getProfile as jest.Mock).mockResolvedValue({});
-      (profileVisitsService.recordVisit as jest.Mock).mockResolvedValue({
+      (usersService.getProfile as Mock).mockResolvedValue({});
+      (profileVisitsService.recordVisit as Mock).mockResolvedValue({
         id: 'visit-2',
       });
 
@@ -103,10 +102,8 @@ describe('ProfileVisitsController', () => {
       const profile: any = { id: 'user-1', is_vip: false };
       const visitors: any[] = [{ id: 'visit-1', is_blurred: true }];
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(profile);
-      (profileVisitsService.getVisitors as jest.Mock).mockResolvedValue(
-        visitors,
-      );
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (profileVisitsService.getVisitors as Mock).mockResolvedValue(visitors);
 
       const result = await controller.getMyVisitors({ id: 'user-1' } as any);
 

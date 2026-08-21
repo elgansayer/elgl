@@ -1,21 +1,31 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuizService } from './quiz.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('QuizService', () => {
   let service: QuizService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
 
   const mockAssessmentRows = [
     {
       id: 'db-q1',
-      question_text: 'How well can you introduce yourself and answer basic questions?',
+      question_text:
+        'How well can you introduce yourself and answer basic questions?',
       language: 'en',
       options: [
         { id: 'o1', text: 'I struggle to understand and reply.', points: 1 },
-        { id: 'o2', text: 'I can do it with simple phrases if the other person speaks slowly.', points: 2 },
+        {
+          id: 'o2',
+          text: 'I can do it with simple phrases if the other person speaks slowly.',
+          points: 2,
+        },
         { id: 'o3', text: 'I can do it easily and confidently.', points: 3 },
-        { id: 'o4', text: 'I can do it fluently and naturally, adapting to context.', points: 4 },
+        {
+          id: 'o4',
+          text: 'I can do it fluently and naturally, adapting to context.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'speaking',
@@ -23,13 +33,30 @@ describe('QuizService', () => {
     },
     {
       id: 'db-q2',
-      question_text: 'Can you understand the main points of clear standard input?',
+      question_text:
+        'Can you understand the main points of clear standard input?',
       language: 'en',
       options: [
-        { id: 'o1', text: 'No, I need translation for most things.', points: 1 },
-        { id: 'o2', text: 'Yes, if the topic is very familiar to me.', points: 2 },
-        { id: 'o3', text: 'Yes, I understand almost everything clearly.', points: 3 },
-        { id: 'o4', text: 'Yes, I understand complex and nuanced content effortlessly.', points: 4 },
+        {
+          id: 'o1',
+          text: 'No, I need translation for most things.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'Yes, if the topic is very familiar to me.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'Yes, I understand almost everything clearly.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'Yes, I understand complex and nuanced content effortlessly.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'listening',
@@ -41,9 +68,21 @@ describe('QuizService', () => {
       language: 'en',
       options: [
         { id: 'o1', text: 'I cannot do this yet.', points: 1 },
-        { id: 'o2', text: 'I can give brief reasons and explanations.', points: 2 },
-        { id: 'o3', text: 'I can express myself fluently and spontaneously.', points: 3 },
-        { id: 'o4', text: 'I can present complex arguments with precision.', points: 4 },
+        {
+          id: 'o2',
+          text: 'I can give brief reasons and explanations.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I can express myself fluently and spontaneously.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'I can present complex arguments with precision.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'speaking',
@@ -54,10 +93,22 @@ describe('QuizService', () => {
       question_text: 'How well do you understand extended speech and lectures?',
       language: 'en',
       options: [
-        { id: 'o1', text: 'I can only follow if spoken slowly and clearly.', points: 1 },
+        {
+          id: 'o1',
+          text: 'I can only follow if spoken slowly and clearly.',
+          points: 1,
+        },
         { id: 'o2', text: 'I understand most of the main ideas.', points: 2 },
-        { id: 'o3', text: 'I understand complex arguments and nuanced meanings.', points: 3 },
-        { id: 'o4', text: 'I understand all nuances, accents, and implied meanings.', points: 4 },
+        {
+          id: 'o3',
+          text: 'I understand complex arguments and nuanced meanings.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'I understand all nuances, accents, and implied meanings.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'listening',
@@ -68,10 +119,22 @@ describe('QuizService', () => {
       question_text: 'How confident are you writing clear, detailed text?',
       language: 'en',
       options: [
-        { id: 'o1', text: 'I can only write simple isolated phrases.', points: 1 },
-        { id: 'o2', text: 'I can write connected text on familiar topics.', points: 2 },
+        {
+          id: 'o1',
+          text: 'I can only write simple isolated phrases.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I can write connected text on familiar topics.',
+          points: 2,
+        },
         { id: 'o3', text: 'I can write well-structured text.', points: 3 },
-        { id: 'o4', text: 'I can write sophisticated, stylistically appropriate texts.', points: 4 },
+        {
+          id: 'o4',
+          text: 'I can write sophisticated, stylistically appropriate texts.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'writing',
@@ -83,9 +146,17 @@ describe('QuizService', () => {
       language: 'en',
       options: [
         { id: 'o1', text: 'I struggle to keep up.', points: 1 },
-        { id: 'o2', text: 'I can handle most situations with pauses.', points: 2 },
+        {
+          id: 'o2',
+          text: 'I can handle most situations with pauses.',
+          points: 2,
+        },
         { id: 'o3', text: 'I interact fluently and spontaneously.', points: 3 },
-        { id: 'o4', text: 'I participate effortlessly in any conversation.', points: 4 },
+        {
+          id: 'o4',
+          text: 'I participate effortlessly in any conversation.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'speaking',
@@ -96,10 +167,26 @@ describe('QuizService', () => {
       question_text: 'How well can you read and understand authentic texts?',
       language: 'en',
       options: [
-        { id: 'o1', text: 'I can only understand very short, simple texts.', points: 1 },
-        { id: 'o2', text: 'I understand contemporary prose and articles.', points: 2 },
-        { id: 'o3', text: 'I read complex literary and technical texts with ease.', points: 3 },
-        { id: 'o4', text: 'I read and critically analyse any text.', points: 4 },
+        {
+          id: 'o1',
+          text: 'I can only understand very short, simple texts.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I understand contemporary prose and articles.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I read complex literary and technical texts with ease.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'I read and critically analyse any text.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'reading',
@@ -111,8 +198,16 @@ describe('QuizService', () => {
       language: 'en',
       options: [
         { id: 'o1', text: 'I make frequent basic errors.', points: 1 },
-        { id: 'o2', text: 'I am generally accurate with occasional errors.', points: 2 },
-        { id: 'o3', text: 'I use grammar accurately and appropriately.', points: 3 },
+        {
+          id: 'o2',
+          text: 'I am generally accurate with occasional errors.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I use grammar accurately and appropriately.',
+          points: 3,
+        },
         { id: 'o4', text: 'I use grammar flawlessly.', points: 4 },
       ],
       correct_option_id: 'o3',
@@ -124,10 +219,26 @@ describe('QuizService', () => {
       question_text: 'How wide is your vocabulary range?',
       language: 'en',
       options: [
-        { id: 'o1', text: 'I rely on a limited set of basic words.', points: 1 },
-        { id: 'o2', text: 'I have enough vocabulary for everyday topics.', points: 2 },
-        { id: 'o3', text: 'I have a broad vocabulary and use idiomatic expressions.', points: 3 },
-        { id: 'o4', text: 'I have an extensive vocabulary with precision.', points: 4 },
+        {
+          id: 'o1',
+          text: 'I rely on a limited set of basic words.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I have enough vocabulary for everyday topics.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I have a broad vocabulary and use idiomatic expressions.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'I have an extensive vocabulary with precision.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'vocabulary',
@@ -135,13 +246,26 @@ describe('QuizService', () => {
     },
     {
       id: 'db-q10',
-      question_text: 'How well can you summarise information from different sources?',
+      question_text:
+        'How well can you summarise information from different sources?',
       language: 'en',
       options: [
         { id: 'o1', text: 'I find summarising very difficult.', points: 1 },
-        { id: 'o2', text: 'I can summarise the main points from simple sources.', points: 2 },
-        { id: 'o3', text: 'I can reconstruct arguments coherently.', points: 3 },
-        { id: 'o4', text: 'I can synthesise information into original summaries.', points: 4 },
+        {
+          id: 'o2',
+          text: 'I can summarise the main points from simple sources.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I can reconstruct arguments coherently.',
+          points: 3,
+        },
+        {
+          id: 'o4',
+          text: 'I can synthesise information into original summaries.',
+          points: 4,
+        },
       ],
       correct_option_id: 'o3',
       skill_area: 'writing',
@@ -149,18 +273,21 @@ describe('QuizService', () => {
     },
   ];
 
-  function createMockSupabaseClient(data: unknown = mockAssessmentRows, error: unknown = null) {
-    const mockSelect = jest.fn().mockReturnValue({
-      eq: jest.fn().mockReturnValue({
-        order: jest.fn().mockResolvedValue({ data, error }),
+  function createMockSupabaseClient(
+    data: unknown = mockAssessmentRows,
+    error: unknown = null,
+  ) {
+    const mockSelect = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data, error }),
       }),
     });
-    return { from: jest.fn().mockReturnValue({ select: mockSelect }) };
+    return { from: vi.fn().mockReturnValue({ select: mockSelect }) };
   }
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn().mockReturnValue(createMockSupabaseClient()),
+      getClient: vi.fn().mockReturnValue(createMockSupabaseClient()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -206,13 +333,17 @@ describe('QuizService', () => {
     it('should map assessment rows to QuizQuestion format', async () => {
       const questions = await service.getQuestions('en');
       expect(questions[0].id).toBe('db-q1');
-      expect(questions[0].text).toBe('How well can you introduce yourself and answer basic questions?');
+      expect(questions[0].text).toBe(
+        'How well can you introduce yourself and answer basic questions?',
+      );
       expect(questions[0].skill).toBe('speaking');
       expect(questions[0].category).toBe('self-assessment');
     });
 
     it('should return fallback questions on Supabase error', async () => {
-      supabaseService.getClient.mockReturnValue(createMockSupabaseClient(null, { message: 'Database error' }));
+      supabaseService.getClient.mockReturnValue(
+        createMockSupabaseClient(null, { message: 'Database error' }),
+      );
       const questions = await service.getQuestions('en');
       expect(questions.length).toBe(10);
       expect(questions[0].id).toBe('q1');

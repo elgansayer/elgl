@@ -1,24 +1,26 @@
-// Mock jsdom and dompurify to avoid ESM import failures in Jest
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty
@@ -29,14 +31,14 @@ jest.mock('dompurify', () => ({
         .replace(/&quot;/g, '"')
         .replace(/&#x27;/g, "'");
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineController } from './reading-engine.controller';
 import { ReadingEngineService } from './reading-engine.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
 import {
@@ -50,15 +52,15 @@ describe('ReadingEngineController', () => {
   let readingService: ReadingEngineService;
 
   const mockService = {
-    createResource: jest.fn(),
-    listResources: jest.fn(),
-    getResource: jest.fn(),
-    updateResource: jest.fn(),
-    deleteResource: jest.fn(),
-    tokenise: jest.fn(),
-    getProgress: jest.fn(),
-    recordSession: jest.fn(),
-    clearUserCaches: jest.fn(),
+    createResource: vi.fn(),
+    listResources: vi.fn(),
+    getResource: vi.fn(),
+    updateResource: vi.fn(),
+    deleteResource: vi.fn(),
+    tokenise: vi.fn(),
+    getProgress: vi.fn(),
+    recordSession: vi.fn(),
+    clearUserCaches: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -67,7 +69,7 @@ describe('ReadingEngineController', () => {
       providers: [{ provide: ReadingEngineService, useValue: mockService }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
     controller = module.get<ReadingEngineController>(ReadingEngineController);
     readingService = module.get<ReadingEngineService>(ReadingEngineService);

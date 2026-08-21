@@ -1,23 +1,24 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 
 interface MockLogger {
-  info: jest.Mock;
-  error: jest.Mock;
-  warn: jest.Mock;
-  debug: jest.Mock;
+  info: Mock;
+  error: Mock;
+  warn: Mock;
+  debug: Mock;
 }
 
 interface MockQueryBuilder {
-  select: jest.Mock;
-  eq: jest.Mock;
-  then?: jest.Mock;
+  select: Mock;
+  eq: Mock;
+  then?: Mock;
 }
 
 interface MockSupabaseClient {
-  from: jest.Mock;
+  from: Mock;
 }
 
 describe('SuggestFlashcardsService', () => {
@@ -28,20 +29,20 @@ describe('SuggestFlashcardsService', () => {
 
   beforeEach(async () => {
     mockLogger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,13 +55,13 @@ describe('SuggestFlashcardsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('mock-value'),
+            get: vi.fn().mockReturnValue('mock-value'),
           },
         },
       ],
@@ -70,7 +71,7 @@ describe('SuggestFlashcardsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatService } from '../../services/chat.service';
@@ -10,8 +12,7 @@ interface WallpaperOption {
 
 @Component({
   selector: 'app-wallpaper-picker',
-  standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
     @if (isOpen()) {
       <div
@@ -21,16 +22,19 @@ interface WallpaperOption {
         (click)="close()"
       >
         <div
-          class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl max-h-80 overflow-y-auto"
+          class="fixed bottom-0 start-0 end-0 bg-surface-200 rounded-t-sheet p-4 shadow-lift max-h-80 overflow-y-auto"
           tabindex="0"
           (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
           (click)="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between mb-4 ps-1 pe-1">
-            <span class="text-lg font-semibold text-neutral-100">{{ 'chat.wallpaper.title' | t }}</span>
+            <span class="text-lg font-semibold text-text-primary">{{
+              'chat.wallpaper.title' | t
+            }}</span>
             <button
+              hlmBtn
               type="button"
-              class="p-2 rounded-lg text-neutral-400 hover:text-neutral-100 focus:outline-none"
+              class="p-2 rounded-app text-text-muted hover:text-text-primary focus:outline-none"
               (click)="close()"
               [attr.aria-label]="'common.close' | t"
             >
@@ -41,9 +45,10 @@ interface WallpaperOption {
           <div class="grid grid-cols-3 gap-3">
             @for (option of wallpaperOptions(); track option.id) {
               <button
+                hlmBtn
                 type="button"
                 (click)="select(option)"
-                class="focus:outline-none rounded-xl overflow-hidden border-2 border-neutral-700 hover:border-neutral-500 transition-colors"
+                class="focus:outline-none rounded-card overflow-hidden border-2 border-surface-100 hover:border-surface-300 transition-colors"
                 [attr.aria-label]="option.labelKey | t"
               >
                 <span
@@ -55,23 +60,25 @@ interface WallpaperOption {
           </div>
 
           <div class="mt-5">
-            <label for="wallpaper-custom-url" class="block text-sm text-neutral-300 mb-2 ps-1">
+            <label for="wallpaper-custom-url" class="block text-sm text-text-secondary mb-2 ps-1">
               {{ 'chat.wallpaper.custom_url_label' | t }}
             </label>
             <div class="flex gap-2">
               <input
+                hlmInput
                 #customUrlInput
                 id="wallpaper-custom-url"
                 type="text"
                 [value]="customUrl()"
                 (input)="customUrl.set(customUrlInput.value)"
                 placeholder="{{ 'chat.wallpaper.custom_url_placeholder' | t }}"
-                class="flex-1 min-w-0 rounded-xl border border-neutral-600 bg-neutral-800 px-3 py-2 text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                class="flex-1 min-w-0 rounded-app border border-surface-100 bg-surface-300 px-3 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
+                hlmBtn
                 type="button"
                 (click)="applyCustomUrl()"
-                class="shrink-0 rounded-xl bg-neutral-600 px-4 py-2 text-neutral-100 font-medium hover:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                class="shrink-0 rounded-app bg-primary px-4 py-2 text-on-fill font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 {{ 'chat.wallpaper.apply' | t }}
               </button>

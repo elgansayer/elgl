@@ -1,6 +1,7 @@
-import { Injectable, inject, ApplicationRef, signal } from '@angular/core';
+import { Injectable, inject, ApplicationRef, signal, DestroyRef } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter, firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 /**
  * Manages Angular Service Worker lifecycle events, including update
@@ -11,6 +12,7 @@ import { filter, firstValueFrom } from 'rxjs';
 export class SwUpdateService {
   private swUpdate = inject(SwUpdate);
   private appRef = inject(ApplicationRef);
+  private destroyRef = inject(DestroyRef);
 
   readonly updateAvailable = signal(false);
   readonly updateActivated = signal(false);
@@ -25,16 +27,21 @@ export class SwUpdateService {
     }
 
     this.swUpdate.versionUpdates
-      .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+      .pipe(
+        filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe((evt) => {
         this.updateAvailable.set(true);
         console.warn('New app version available:', evt.latestVersion);
       });
 
-    this.swUpdate.unrecoverable.subscribe((evt) => {
-      console.error('Unrecoverable SW state:', evt.reason);
-      document.location.reload();
-    });
+    this.swUpdate.unrecoverable
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((evt) => {
+        console.error('Unrecoverable SW state:', evt.reason);
+        document.location.reload();
+      });
 
     this.checkForUpdate();
   }

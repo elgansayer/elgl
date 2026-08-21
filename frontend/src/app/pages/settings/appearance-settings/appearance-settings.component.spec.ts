@@ -32,21 +32,24 @@ describe('AppearanceSettingsComponent', () => {
       translate: vi.fn((key: string) => key),
       setLanguage: vi.fn(),
       availableLanguages: [
-        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English' },
-        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish' },
+        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English', isRtl: false },
+        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish', isRtl: false },
       ],
     };
 
     themeServiceMock = {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
+      setPrimaryAccentColor: vi.fn(),
+      primaryAccentColor: signal('#4f46e5'),
+      loadFromProfile: vi.fn(),
     };
 
     fontScaleServiceMock = {
       scaleFactor: signal(1.0),
       setScale: vi.fn(),
       min: 0.8,
-      max: 1.2,
+      max: 1.5,
       step: 0.05,
     };
 
@@ -123,12 +126,8 @@ describe('AppearanceSettingsComponent', () => {
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
-  it('should change language from select event', () => {
-    const select = document.createElement('select');
-    select.value = 'es';
-    Object.defineProperty(select, 'value', { value: 'es' });
-    const event = { target: select } as unknown as Event;
-    component.onLanguageSelect(event);
+  it('should change language from the select value change', () => {
+    component.onLanguageValueChange('es');
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
@@ -142,6 +141,16 @@ describe('AppearanceSettingsComponent', () => {
     component.isVip.set(false);
     component.setAccentColor('#e11d48');
     expect(component.primaryAccentColor()).toBe('#4f46e5');
+  });
+
+  it('should update theme service accent colour when profile loads', async () => {
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  });
+
+  it('should update theme service accent colour on save', async () => {
+    component.primaryAccentColor.set('#e11d48');
+    await component.saveSettings();
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
   });
 
   it('should set custom colour from color input when VIP', () => {

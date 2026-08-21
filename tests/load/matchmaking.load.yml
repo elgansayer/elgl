@@ -1,5 +1,5 @@
 config:
-  target: "{{ $processEnvironment.API_URL || 'http://localhost:3000' }}"
+  target: "http://localhost:3000"
   phases:
     - name: "warmup"
       duration: 30
@@ -17,7 +17,7 @@ config:
   defaults:
     headers:
       Content-Type: "application/json"
-      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN }}"
   processor: "./helpers/matchmaking-helpers.js"
   plugins:
     expect: {}
@@ -32,9 +32,13 @@ scenarios:
 
   - name: "Get recommended partners (for-you)"
     weight: 40
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
     flow:
       - get:
-          url: "/recommendations/for-you"
+          url: "/api/recommendations/for-you"
           expect:
             - statusCode: 200
             - contentType: "application/json"
@@ -43,9 +47,11 @@ scenarios:
 
   - name: "Get daily recommendations"
     weight: 35
+    beforeRequest:
+      - "beforeRequest"
     flow:
       - get:
-          url: "/recommendations/daily"
+          url: "/api/recommendations/daily"
           expect:
             - statusCode: 200
             - contentType: "application/json"
@@ -54,13 +60,17 @@ scenarios:
 
   - name: "Dashboard mixed: for-you + daily"
     weight: 15
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
     flow:
       - get:
-          url: "/recommendations/for-you"
+          url: "/api/recommendations/for-you"
           expect:
             - statusCode: 200
       - get:
-          url: "/recommendations/daily"
+          url: "/api/recommendations/daily"
           expect:
             - statusCode: 200
 
@@ -68,10 +78,14 @@ scenarios:
 
   - name: "Rapid poll: for-you"
     weight: 10
+    beforeRequest:
+      - "beforeRequest"
+    afterResponse:
+      - "afterResponse"
     flow:
       - loop:
           - get:
-              url: "/recommendations/for-you"
+              url: "/api/recommendations/for-you"
               expect:
                 - statusCode: 200
         count: 3

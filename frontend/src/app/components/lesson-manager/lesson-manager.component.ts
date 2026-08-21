@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, computed, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,8 +10,7 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-lesson-manager',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe],
   templateUrl: './lesson-manager.component.html',
 })
 export class LessonManagerComponent {
