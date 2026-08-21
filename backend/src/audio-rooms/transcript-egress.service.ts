@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import {
-  EgressClient,
-  StreamOutput,
-  StreamProtocol,
-} from 'livekit-server-sdk';
+import { EgressClient, StreamOutput, StreamProtocol } from 'livekit-server-sdk';
 import { CloudflareStreamService } from '../cloudflare-stream/cloudflare-stream.service';
 
 const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 10 * 60 * 1000;
@@ -94,9 +90,9 @@ export class TranscriptEgressService {
       return egressId;
     } catch (error: unknown) {
       if (liveInputId) {
-        await this.cloudflareStream.deleteLiveInput(liveInputId).catch(() =>
-          undefined,
-        );
+        await this.cloudflareStream
+          .deleteLiveInput(liveInputId)
+          .catch(() => undefined);
       }
       this.logger.warn(
         { roomName, error: safeErrorMessage(error) },
@@ -145,8 +141,9 @@ export class TranscriptEgressService {
       );
       return null;
     } finally {
-      await this.cloudflareStream.deleteLiveInput(active.liveInputId).catch(
-        (error: unknown) => {
+      await this.cloudflareStream
+        .deleteLiveInput(active.liveInputId)
+        .catch((error: unknown) => {
           this.logger.warn(
             {
               roomName,
@@ -155,8 +152,7 @@ export class TranscriptEgressService {
             },
             'Cloudflare Stream live input cleanup failed',
           );
-        },
-      );
+        });
     }
   }
 
@@ -384,9 +380,7 @@ function isAzureJobStatus(value: unknown): value is AzureJobStatus {
   return true;
 }
 
-function isAzureFilesResponse(
-  value: unknown,
-): value is {
+function isAzureFilesResponse(value: unknown): value is {
   values: Array<{ kind: string; links: { contentUrl: string } }>;
 } {
   return (

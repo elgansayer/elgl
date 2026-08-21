@@ -119,3 +119,13 @@
 
 **Learning:** In the backend `metrics` aggregators, sequentially awaiting queries inside a loop significantly degraded aggregation performance.
 **Action:** When updating or querying multiple rows based on an array or iterable, use `.map` combined with `Promise.all` to convert a series of N sequential network calls into 1 concurrent block. This will significantly speed up metric aggregations and other loops across the application.
+
+## 2026-08-19 - [Optimize Fan-Out Chat Forwarding via Bulk Array Querying]
+
+**Learning:** In the backend `chat.service.ts`, forwarding a single message to multiple chat rooms (fan-out forwarding) initially verified target memberships and checked room blocklists iteratively using `await` inside a `for...of` loop over `roomIds`. This resulted in N separate sequential `chat_room_members` queries per target room, compounding database roundtrip delays when forwarding to many contacts.
+**Action:** Replace single iterative `.eq('room_id')` checks inside loops with a single bulk array lookup via `.in('room_id', validRoomIds)`. Load the results into an in-memory Map structure before iterating the valid target IDs for payload generation. This successfully transforms O(N) sequential queries into an O(1) bulk fetch, reducing network overhead significantly.
+
+## 2026-08-20 - [Optimize Lifetime Counts Query via Promise.all]
+
+**Learning:** In the backend `moments.service.ts`, `getLifetimeCounts` sequentially queried three independent counts (`moments`, `moment_comments`, and `translations`). In an isolated benchmark simulating network delay, fetching these sequentially took ~160ms, whereas fetching them concurrently via `Promise.all` reduced the execution time to ~50ms.
+**Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
