@@ -1,5 +1,8 @@
 import type { Mock } from 'vitest';
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NlpService } from './nlp.service';
 import { TranslationRouterService } from './translation-router.service';
@@ -222,9 +225,9 @@ describe('TranslationRouterService', () => {
     (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: vi.fn().mockResolvedValue([
-        { translations: [{ text: 'Hello', to: 'en' }] },
-      ]),
+      json: vi
+        .fn()
+        .mockResolvedValue([{ translations: [{ text: 'Hello', to: 'en' }] }]),
     });
 
     await service.translate('user-1', true, {
