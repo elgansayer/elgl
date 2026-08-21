@@ -10,12 +10,10 @@ describe('ModerationDashboardComponent', () => {
     let templateContent: string;
 
     beforeAll(() => {
-      const content = readFileSync(
-        resolve(__dirname, 'moderation-dashboard.component.ts'),
+      templateContent = readFileSync(
+        resolve(__dirname, 'moderation-dashboard.component.html'),
         'utf-8',
       );
-      const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
-      templateContent = match ? match[1] : content;
     });
 
     it('should not contain any physical direction CSS utilities', () => {
@@ -49,14 +47,13 @@ describe('ModerationDashboardComponent', () => {
 
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
-        'moderation.title', 'moderation.filterAria', 'moderation.profile',
-        'moderation.moment', 'moderation.dismiss', 'moderation.loading',
-        'moderation.error', 'moderation.reporter', 'moderation.reported_user',
-        'moderation.reason', 'moderation.approveAria', 'moderation.rejectAria',
-        'moderation.analyseAria', 'moderation.approve', 'moderation.reject',
-        'moderation.analyse', 'moderation.empty',
-        'moderation.reportItemAria', 'moderation.riskAnalysisAria',
-        'moderation.riskScore', 'moderation.flags', 'moderation.noFlags',
+        'moderation.title', 'moderation.profile', 'moderation.moment',
+        'moderation.dismiss', 'moderation.reporter', 'moderation.reported_user',
+        'moderation.reason', 'moderation.description', 'moderation.content',
+        'moderation.approve', 'moderation.reject', 'moderation.analyse',
+        'moderation.riskScore', 'moderation.noFlags', 'safety.moderation.loadError',
+        'safety.moderation.loadErrorDesc', 'safety.moderation.emptyTitle',
+        'safety.moderation.emptyDesc', 'common.retry',
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");

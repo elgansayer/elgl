@@ -47,7 +47,8 @@ export class AppleReceiptValidationDto {
   receipt_data!: string;
 
   @ApiPropertyOptional({
-    description: 'Whether to exclude old transactions from the response (Apple v2 API)',
+    description:
+      'Whether to exclude old transactions from the response (Apple v2 API)',
     example: false,
   })
   @IsOptional()

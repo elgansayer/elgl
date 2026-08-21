@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HobbyTagsController } from './hobby-tags.controller';
 import { HobbyTagsService } from './hobby-tags.service';
@@ -39,24 +40,21 @@ describe('HobbyTagsController', () => {
 
   beforeEach(async () => {
     const mockService = {
-      getAllTags: jest.fn(),
-      createTag: jest.fn(),
-      getUserTags: jest.fn(),
-      addUserTag: jest.fn(),
-      removeUserTag: jest.fn(),
-      updateProficiency: jest.fn(),
-      getVocabularyForTag: jest.fn(),
-      getUserVocabulary: jest.fn(),
+      getAllTags: vi.fn(),
+      createTag: vi.fn(),
+      getUserTags: vi.fn(),
+      addUserTag: vi.fn(),
+      removeUserTag: vi.fn(),
+      updateProficiency: vi.fn(),
+      getVocabularyForUser: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HobbyTagsController],
-      providers: [
-        { provide: HobbyTagsService, useValue: mockService },
-      ],
+      providers: [{ provide: HobbyTagsService, useValue: mockService }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<HobbyTagsController>(HobbyTagsController);
@@ -64,12 +62,12 @@ describe('HobbyTagsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getAllTags', () => {
     it('should return all tags', async () => {
-      (service.getAllTags as jest.Mock).mockResolvedValue([mockTag]);
+      (service.getAllTags as Mock).mockResolvedValue([mockTag]);
       const result = await controller.getAllTags();
       expect(result).toEqual([mockTag]);
     });
@@ -77,57 +75,53 @@ describe('HobbyTagsController', () => {
 
   describe('createGlobalTag', () => {
     it('should create a global tag', async () => {
-      (service.createTag as jest.Mock).mockResolvedValue(mockTag);
+      (service.createTag as Mock).mockResolvedValue(mockTag);
       const result = await controller.createGlobalTag({
         name: 'photography',
         category: 'Arts',
         icon: '📸',
       });
       expect(result).toEqual(mockTag);
-      expect(service.createTag).toHaveBeenCalledWith('photography', 'Arts', '📸');
+      expect(service.createTag).toHaveBeenCalledWith(
+        'photography',
+        'Arts',
+        '📸',
+      );
     });
   });
 
   describe('getMyTags', () => {
     it('should return user tags', async () => {
-      (service.getUserTags as jest.Mock).mockResolvedValue([mockUserTag]);
+      (service.getUserTags as Mock).mockResolvedValue([mockUserTag]);
       const result = await controller.getMyTags({ user: { id: 'user-1' } });
       expect(result).toEqual([mockUserTag]);
       expect(service.getUserTags).toHaveBeenCalledWith('user-1');
     });
   });
 
-  describe('getUserVocabulary', () => {
+  describe('getVocabulary', () => {
     it('should return vocabulary for user tags', async () => {
-      (service.getUserVocabulary as jest.Mock).mockResolvedValue([mockVocabularyItem]);
-      const result = await controller.getUserVocabulary(
+      (service.getVocabularyForUser as Mock).mockResolvedValue([
+        mockVocabularyItem,
+      ]);
+      const result = await controller.getVocabulary(
         { user: { id: 'user-1' } },
         'es',
       );
       expect(result).toEqual([mockVocabularyItem]);
-      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'es');
+      expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'es');
     });
 
-    it('should default language to en', async () => {
-      (service.getUserVocabulary as jest.Mock).mockResolvedValue([]);
-      await controller.getUserVocabulary({ user: { id: 'user-1' } }, '');
-      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'en');
-    });
-  });
-
-  describe('getTagVocabulary', () => {
-    it('should return vocabulary for a specific tag', async () => {
-      const vocab = [{ word: 'camera', translation: 'cámara', language: 'es' }];
-      (service.getVocabularyForTag as jest.Mock).mockResolvedValue(vocab);
-      const result = await controller.getTagVocabulary('tag-1', 'es');
-      expect(result).toEqual(vocab);
-      expect(service.getVocabularyForTag).toHaveBeenCalledWith('tag-1', 'es');
+    it('should pass language query param to service', async () => {
+      (service.getVocabularyForUser as Mock).mockResolvedValue([]);
+      await controller.getVocabulary({ user: { id: 'user-1' } }, 'fr');
+      expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'fr');
     });
   });
 
   describe('addTag', () => {
     it('should add a user tag', async () => {
-      (service.addUserTag as jest.Mock).mockResolvedValue(mockUserTag);
+      (service.addUserTag as Mock).mockResolvedValue(mockUserTag);
       const result = await controller.addTag(
         { user: { id: 'user-1' } },
         { hobby_tag_id: 'tag-1', proficiency_level: 2 },
@@ -139,7 +133,7 @@ describe('HobbyTagsController', () => {
 
   describe('removeTag', () => {
     it('should remove a user tag', async () => {
-      (service.removeUserTag as jest.Mock).mockResolvedValue(undefined);
+      (service.removeUserTag as Mock).mockResolvedValue(undefined);
       const result = await controller.removeTag(
         { user: { id: 'user-1' } },
         'tag-1',
@@ -151,14 +145,18 @@ describe('HobbyTagsController', () => {
 
   describe('updateProficiency', () => {
     it('should update proficiency level', async () => {
-      (service.updateProficiency as jest.Mock).mockResolvedValue(mockUserTag);
+      (service.updateProficiency as Mock).mockResolvedValue(mockUserTag);
       const result = await controller.updateProficiency(
         { user: { id: 'user-1' } },
         'tag-1',
         { proficiency_level: 3 },
       );
       expect(result).toEqual(mockUserTag);
-      expect(service.updateProficiency).toHaveBeenCalledWith('user-1', 'tag-1', 3);
+      expect(service.updateProficiency).toHaveBeenCalledWith(
+        'user-1',
+        'tag-1',
+        3,
+      );
     });
   });
 });

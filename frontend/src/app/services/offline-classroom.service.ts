@@ -206,7 +206,7 @@ export class OfflineClassroomService {
       throw new Error('IndexedDB not available');
     }
     await this.ensureDB();
-    const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `pending_${Date.now()}_${crypto.randomUUID()}`;
     const action: PendingClassroomAction = {
       id,
       actionType,

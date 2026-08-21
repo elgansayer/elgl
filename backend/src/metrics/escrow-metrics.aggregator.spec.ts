@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EscrowMetricsAggregator } from './escrow-metrics.aggregator';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -6,16 +7,16 @@ import { PinoLogger } from 'nestjs-pino';
 
 describe('EscrowMetricsAggregator', () => {
   let aggregator: EscrowMetricsAggregator;
-  let mockMetricsService: Record<string, jest.Mock>;
-  let mockSupabaseService: Record<string, jest.Mock>;
-  let mockRedisClient: Record<string, jest.Mock>;
+  let mockMetricsService: Record<string, Mock>;
+  let mockSupabaseService: Record<string, Mock>;
+  let mockRedisClient: Record<string, Mock>;
 
   function createSelectChain() {
     const eqResult: unknown = null;
-    const chain: Record<string, jest.Mock> = {
-      select: jest.fn(),
-      eq: jest.fn(),
-      lt: jest.fn(),
+    const chain: Record<string, Mock> = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      lt: vi.fn(),
     };
     chain.select.mockReturnValue(chain);
     chain.eq.mockReturnValue(chain);
@@ -25,36 +26,36 @@ describe('EscrowMetricsAggregator', () => {
 
   beforeEach(async () => {
     mockRedisClient = {
-      llen: jest.fn().mockResolvedValue(0),
+      llen: vi.fn().mockResolvedValue(0),
     };
 
     mockMetricsService = {
-      escrowTotalHeld: { set: jest.fn() },
-      escrowTotalCoinsHeld: { set: jest.fn() },
-      escrowStaleHeldCount: { set: jest.fn() },
-      setEscrowDegradedQueueSize: jest.fn(),
+      escrowTotalHeld: { set: vi.fn() },
+      escrowTotalCoinsHeld: { set: vi.fn() },
+      escrowStaleHeldCount: { set: vi.fn() },
+      setEscrowDegradedQueueSize: vi.fn(),
     };
 
     const mockLogger = {
-      error: jest.fn(),
-      warn: jest.fn(),
-      log: jest.fn(),
-      setContext: jest.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      log: vi.fn(),
+      setContext: vi.fn(),
     };
 
     const chain1 = createSelectChain();
-    chain1.select = jest.fn().mockReturnValue(chain1);
-    chain1.eq = jest.fn().mockResolvedValue({ count: 0 });
+    chain1.select = vi.fn().mockReturnValue(chain1);
+    chain1.eq = vi.fn().mockResolvedValue({ count: 0 });
     const chain2 = createSelectChain();
-    chain2.select = jest.fn().mockReturnValue(chain2);
-    chain2.eq = jest.fn().mockResolvedValue({ data: [] });
+    chain2.select = vi.fn().mockReturnValue(chain2);
+    chain2.eq = vi.fn().mockResolvedValue({ data: [] });
     const chain3 = createSelectChain();
-    chain3.select = jest.fn().mockReturnValue(chain3);
-    chain3.eq = jest.fn().mockReturnValue(chain3);
-    chain3.lt = jest.fn().mockResolvedValue({ count: 0 });
+    chain3.select = vi.fn().mockReturnValue(chain3);
+    chain3.eq = vi.fn().mockReturnValue(chain3);
+    chain3.lt = vi.fn().mockResolvedValue({ count: 0 });
 
     const supabaseClient = {
-      from: jest.fn(),
+      from: vi.fn(),
     };
     supabaseClient.from
       .mockReturnValueOnce(chain1)
@@ -62,8 +63,8 @@ describe('EscrowMetricsAggregator', () => {
       .mockReturnValueOnce(chain3);
 
     mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(supabaseClient),
-      getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+      getClient: vi.fn().mockReturnValue(supabaseClient),
+      getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({

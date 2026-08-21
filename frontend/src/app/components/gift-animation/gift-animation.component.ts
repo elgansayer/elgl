@@ -2,21 +2,19 @@ import { Component, input, computed } from '@angular/core';
 import { GiftPayload } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  colour: string;
-  rotation: number;
-  delay: number;
-  duration: number;
-}
-
 const PARTICLE_COLOURS = [
-  '#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6',
-  '#f59e0b', '#fbbf24', '#facc15', '#eab308', '#22c55e',
-  '#06b6d4', '#3b82f6',
+  '#f43f5e',
+  '#ec4899',
+  '#d946ef',
+  '#a855f7',
+  '#8b5cf6',
+  '#f59e0b',
+  '#fbbf24',
+  '#facc15',
+  '#eab308',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
 ];
 
 @Component({
@@ -25,16 +23,26 @@ const PARTICLE_COLOURS = [
   template: `
     @if (giftPayload(); as gift) {
       <div
-        class="gift-bubble inline-flex flex-col items-center bg-gradient-to-br from-amber-900/40 via-purple-900/30 to-rose-900/40 rounded-xl p-2 border border-amber-500/20 min-w-[140px]"
+        class="gift-bubble inline-flex flex-col items-center bg-gradient-to-br from-vip/40 via-neon-violet/30 to-accent/40 rounded-xl p-2 border border-vip/20 min-w-[140px]"
         role="status"
-        [attr.aria-label]="'gift.broadcastDesc' | t: { sender: (gift.sender_name ?? 'gift.someone' | t), receiver: (gift.receiver_name ?? 'gift.you' | t), giftName: gift.gift_name, cost: gift.coin_value }"
+        [attr.aria-label]="
+          'gift.broadcastDesc'
+            | t
+              : {
+                  sender: (gift.sender_name ?? 'gift.someone' | t),
+                  receiver: (gift.receiver_name ?? 'gift.you' | t),
+                  giftName: gift.gift_name,
+                  cost: gift.coin_value,
+                }
+        "
       >
         <!-- Animated gift icon with glow -->
         <div class="relative mb-1">
           <span
             class="text-4xl filter drop-shadow-lg animate-bounce-subtle inline-block"
             [style.animation-delay.ms]="0"
-          >{{ gift.gift_icon }}</span>
+            >{{ gift.gift_icon }}</span
+          >
           <!-- Mini sparkle particles -->
           <svg class="absolute -inset-2 pointer-events-none" viewBox="0 0 60 60" aria-hidden="true">
             @for (p of particles(); track p.id) {
@@ -52,9 +60,9 @@ const PARTICLE_COLOURS = [
           </svg>
         </div>
         <!-- Gift name and coin value -->
-        <span class="text-xs font-bold text-amber-200 text-center">{{ gift.gift_name }}</span>
-        <span class="text-[10px] text-amber-400/70 flex items-center gap-1">
-          <span class="inline-block w-3 h-3 rounded-full bg-amber-400"></span>
+        <span class="text-xs font-bold text-vip text-center">{{ gift.gift_name }}</span>
+        <span class="text-[10px] text-vip/70 flex items-center gap-1">
+          <span class="inline-block w-3 h-3 rounded-full bg-vip"></span>
           {{ gift.coin_value }}
         </span>
       </div>
@@ -70,8 +78,13 @@ const PARTICLE_COLOURS = [
         animation: bounceSubtle 1.2s ease-in-out infinite;
       }
       @keyframes bounceSubtle {
-        0%, 100% { transform: translateY(0) scale(1); }
-        50% { transform: translateY(-6px) scale(1.1); }
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-6px) scale(1.1);
+        }
       }
       .gift-particle {
         animation: particleFadeUp linear forwards;
@@ -87,7 +100,9 @@ const PARTICLE_COLOURS = [
         }
       }
       .gift-bubble {
-        box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 40px rgba(168, 85, 247, 0.08);
+        box-shadow:
+          0 0 20px rgba(245, 158, 11, 0.15),
+          0 0 40px rgba(168, 85, 247, 0.08);
       }
     `,
   ],

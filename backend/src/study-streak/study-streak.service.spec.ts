@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StudyStreakService } from './study-streak.service';
@@ -14,12 +15,12 @@ type MockResult = {
 };
 
 type QueryChainMock = {
-  select: jest.Mock;
-  from: jest.Mock;
-  eq: jest.Mock;
-  single: jest.Mock;
-  update: jest.Mock;
-  upsert: jest.Mock;
+  select: Mock;
+  from: Mock;
+  eq: Mock;
+  single: Mock;
+  update: Mock;
+  upsert: Mock;
   _setResolveData: (data: MockResult) => void;
   then: (resolve: (value: MockResult) => void) => undefined;
 };
@@ -37,7 +38,7 @@ const createQueryChain = (): QueryChainMock => {
     'upsert',
   ] as const;
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = vi.fn().mockReturnValue(chain);
   });
 
   let resolveData: MockResult | null = null;
@@ -56,15 +57,15 @@ const createQueryChain = (): QueryChainMock => {
 
 describe('StudyStreakService', () => {
   let service: StudyStreakService;
-  let supabaseMock: { from: jest.Mock };
-  let eventEmitterMock: { emit: jest.Mock };
+  let supabaseMock: { from: Mock };
+  let eventEmitterMock: { emit: Mock };
 
   beforeEach(async () => {
     supabaseMock = {
-      from: jest.fn(() => createQueryChain()),
+      from: vi.fn(() => createQueryChain()),
     };
     eventEmitterMock = {
-      emit: jest.fn(),
+      emit: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -73,7 +74,7 @@ describe('StudyStreakService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(supabaseMock),
+            getClient: vi.fn().mockReturnValue(supabaseMock),
           },
         },
         {

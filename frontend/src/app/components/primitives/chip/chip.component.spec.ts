@@ -40,6 +40,7 @@ describe('AppChipComponent', () => {
   let fixture: ComponentFixture<TestHostComponent>;
   let host: TestHostComponent;
   let chipElement: HTMLElement;
+  let actionButton: HTMLButtonElement;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -49,7 +50,8 @@ describe('AppChipComponent', () => {
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
     fixture.detectChanges();
-    chipElement = fixture.nativeElement.querySelector('span');
+    chipElement = fixture.nativeElement.querySelector('app-chip > span');
+    actionButton = chipElement.querySelector('button:not([aria-label])') as HTMLButtonElement;
   });
 
   it('should create and render label when provided', () => {
@@ -63,20 +65,20 @@ describe('AppChipComponent', () => {
     expect(chipElement.textContent?.trim()).toContain('Projected Chip');
   });
 
-  it('should apply default styles and logical padding', () => {
+  it('should apply product container styles and owned Helm compact sizing', () => {
     expect(chipElement.classList.contains('inline-flex')).toBe(true);
-    expect(chipElement.classList.contains('ps-3')).toBe(true);
-    expect(chipElement.classList.contains('pe-3')).toBe(true);
     expect(chipElement.classList.contains('bg-surface-100')).toBe(true);
+    expect(actionButton.classList.contains('h-7')).toBe(true);
+    expect(actionButton.classList.contains('px-2.5')).toBe(true);
   });
 
-  it('should emit clicked event when span is clicked', () => {
-    chipElement.click();
+  it('should emit clicked event when the chip action is clicked', () => {
+    actionButton.click();
     expect(host.clickCount).toBe(1);
   });
 
   it('should show remove button when removable and emit removed without emitting clicked', () => {
-    const removeBtn = chipElement.querySelector('button');
+    const removeBtn = chipElement.querySelector('button[aria-label="Remove chip"]') as HTMLButtonElement | null;
     expect(removeBtn).toBeTruthy();
     expect(removeBtn?.getAttribute('aria-label')).toBe('Remove chip');
 

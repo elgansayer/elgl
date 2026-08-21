@@ -114,6 +114,23 @@ prometheus_scrape:
       - hellotalk_video_classrooms_room_duration_seconds: histogram
       - hellotalk_video_classrooms_token_generation_duration_seconds: histogram
       - hellotalk_video_classrooms_participant_max: gauge
+      # Tutor Profiles metrics (Datadog custom metrics, #2092)
+      - hellotalk_tutor_profiles_created_total: counter
+      - hellotalk_tutor_profiles_updated_total: counter
+      - hellotalk_tutor_profiles_verification_failures_total: counter
+      - hellotalk_tutor_profiles_incomplete_total: gauge
+      - hellotalk_tutor_profiles_total: gauge
+      - hellotalk_tutor_profiles_search_requests_total: counter
+      - hellotalk_tutor_profiles_search_duration_seconds: histogram
+      - hellotalk_tutor_profiles_search_empty_results_total: counter
+      - hellotalk_tutor_profiles_sessions_booked_total: counter
+      - hellotalk_tutor_profiles_sessions_completed_total: counter
+      - hellotalk_tutor_profiles_sessions_cancelled_total: counter
+      - hellotalk_tutor_profiles_sessions_refunded_total: counter
+      - hellotalk_tutor_profiles_pending_sessions: gauge
+      - hellotalk_tutor_profiles_availability_stale: gauge
+      - hellotalk_tutor_profiles_api_errors_total: counter
+      - hellotalk_tutor_profiles_booking_duration_seconds: histogram
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

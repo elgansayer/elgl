@@ -1,9 +1,19 @@
-import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsInt, IsUUID, Min, Max } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  IsUUID,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class StartVideoCallDto {
   @ApiPropertyOptional({
-    description: 'Whether this is a video call (true) or audio-only (false). Defaults to true.',
+    description:
+      'Whether this is a video call (true) or audio-only (false). Defaults to true.',
     example: true,
   })
   @IsOptional()
@@ -11,7 +21,8 @@ export class StartVideoCallDto {
   is_video?: boolean;
 
   @ApiPropertyOptional({
-    description: 'UUID of the callee for direct calls. Omit for creating an open room.',
+    description:
+      'UUID of the callee for direct calls. Omit for creating an open room.',
     example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
     format: 'uuid',
   })
@@ -20,7 +31,8 @@ export class StartVideoCallDto {
   callee_id?: string;
 
   @ApiPropertyOptional({
-    description: 'Maximum participants allowed. Defaults to 2 for direct calls, up to 50 for classrooms.',
+    description:
+      'Maximum participants allowed. Defaults to 2 for direct calls, up to 50 for classrooms.',
     minimum: 2,
     maximum: 50,
     default: 2,

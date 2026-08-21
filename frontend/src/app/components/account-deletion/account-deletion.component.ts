@@ -1,10 +1,11 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-account-deletion',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   templateUrl: './account-deletion.component.html',
   styleUrls: ['./account-deletion.component.scss'],
 })
@@ -17,7 +18,7 @@ export class AccountDeletionComponent {
 
   async requestDeletion(): Promise<void> {
     const confirm = window.confirm(
-      'Are you sure you want to delete your account? This action can be undone within 30 days.'
+      'Are you sure you want to delete your account? This action can be undone within 30 days.',
     );
     if (!confirm) return;
 
