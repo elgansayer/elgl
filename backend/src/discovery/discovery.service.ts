@@ -54,8 +54,8 @@ export class DiscoveryService {
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   // Multi-signal ranking algorithm:
-  //   1. Fetch a candidate pool: users with correction_ratio > 0.5, and at least
-  //      7-day study streak, ordered by descending correction_ratio (top 50).
+  //   1. Fetch a candidate pool: discoverable, complete users with correction_ratio > 0.5,
+  //      and at least a 7-day study streak, ordered by descending correction_ratio (top 50).
   //   2. For each candidate, fetch their corrector rating score via CorrectorScoreService.
   //   3. Compute a weighted composite score:
   //        - Correction ratio .................. 30 %
@@ -70,27 +70,62 @@ export class DiscoveryService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    const clearStalePartnerCache = async (): Promise<void> => {
+      try {
+        await redis.del('partner_of_week_ids');
+      } catch (err) {
+        this.logger.error(
+          'Failed to clear stale Partner of the Week cache',
+          err,
+        );
+      }
+    };
+
     try {
-      // Step 1: Fetch candidate pool – users with good correction ratios and solid streaks
+      // Step 1: Keep the weekly highlight inside the same core visibility boundary
+      // as ordinary discovery: hidden or deletion-pending accounts must never be
+      // surfaced, and incomplete profiles are not useful recommendations.
       const { data: candidates, error } = await supabase
         .from('users')
-        .select('id, correction_ratio, study_streak_days')
+        .select(
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',
+        )
+        .eq('privacy_hide_from_search', false)
+        .eq('is_deletion_pending', false)
+        .not('display_name', 'is', null)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
         .gt('correction_ratio', 0.5)
         .gte('study_streak_days', 7)
         .order('correction_ratio', { ascending: false })
         .limit(50);
 
+      if (error) {
+        this.logger.error(
+          'Failed to fetch Partner of the Week candidates',
+          error,
+        );
+        await clearStalePartnerCache();
+        return;
+      }
+
       const qualifiedCandidates = candidates?.filter(
         (candidate) =>
+          candidate.privacy_hide_from_search === false &&
+          candidate.is_deletion_pending === false &&
+          typeof candidate.display_name === 'string' &&
+          candidate.display_name.trim().length > 0 &&
+          Array.isArray(candidate.native_languages) &&
+          candidate.native_languages.length > 0 &&
+          Array.isArray(candidate.target_languages) &&
+          candidate.target_languages.length > 0 &&
           (candidate.correction_ratio ?? 0) > 0.5 &&
           (candidate.study_streak_days ?? 0) >= 7,
       );
 
-      if (error || !qualifiedCandidates || qualifiedCandidates.length === 0) {
-        this.logger.warn(
-          'No users qualified for Partner of the Week',
-          error?.message,
-        );
+      if (!qualifiedCandidates || qualifiedCandidates.length === 0) {
+        this.logger.warn('No users qualified for Partner of the Week');
+        await clearStalePartnerCache();
         return;
       }
 
@@ -171,13 +206,14 @@ export class DiscoveryService {
         );
       };
 
-      // Step 4: Rank and select top 10
+      // Step 4: Rank and select top 10. User ID is a stable, privacy-neutral
+      // tie-breaker so the same inputs always produce the same ordering.
       const ranked = qualifiedCandidates
         .map((c) => ({
           id: c.id,
           composite: computeComposite(c),
         }))
-        .sort((a, b) => b.composite - a.composite);
+        .sort((a, b) => b.composite - a.composite || a.id.localeCompare(b.id));
 
       const top10 = ranked.slice(0, 10);
       const partnerIds = top10.map((r) => r.id);
@@ -190,10 +226,11 @@ export class DiscoveryService {
         604800,
       );
       this.logger.info(
-        `Partner of the Week set for ${partnerIds.length} users (composite scores: ${top10.map((r) => r.id.slice(0, 8) + ':' + r.composite.toFixed(3)).join(', ')})`,
+        `Partner of the Week cache refreshed for ${partnerIds.length} users`,
       );
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
+      await clearStalePartnerCache();
     }
   }
 

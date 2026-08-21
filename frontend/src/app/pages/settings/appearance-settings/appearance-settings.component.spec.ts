@@ -49,7 +49,7 @@ describe('AppearanceSettingsComponent', () => {
       scaleFactor: signal(1.0),
       setScale: vi.fn(),
       min: 0.8,
-      max: 1.2,
+      max: 1.5,
       step: 0.05,
     };
 
