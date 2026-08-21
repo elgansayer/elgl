@@ -1,7 +1,20 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmButton } from '@spartan-ng/helm/button';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+  OnDestroy,
+  DestroyRef,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
-import { JoyrideModule } from 'ngx-joyride';
+import { Subject, debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -10,7 +23,7 @@ import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -24,15 +37,22 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
+import { DiscoveryMapErrorBoundaryComponent } from './discovery-map-error-boundary.component';
+import { DiscoveryErrorBoundaryComponent } from '../discovery-error-boundary/discovery-error-boundary.component';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+
+/** Milliseconds to debounce partner search calls triggered by interaction changes. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-discovery',
   imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmButton,
     FormsModule,
-    JoyrideModule,
     TranslatePipe,
-    SanitiseHtmlPipe,
     ScrollablePillsComponent,
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
@@ -42,7 +62,10 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
-    AppSkeletonLoaderComponent,
+    DiscoverySkeletonCardComponent,
+    DiscoveryMapErrorBoundaryComponent,
+    DiscoveryErrorBoundaryComponent,
+    SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -55,14 +78,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
-  private readonly discoveryOnboardingService = inject(DiscoveryOnboardingService);
+  private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
 
   /** Whether currently offline and serving cached data */
   readonly isOffline = computed(() => !this.offlineCache.isOnline());
-  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
+  readonly isUsingCachedData = computed(
+    () => this.isOffline() && this.offlineCache.cachedDataAvailable(),
+  );
 
   readonly partners = signal<
     (UserProfile & {
@@ -74,7 +101,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
-  readonly skeletonCount = Array.from({ length: 5 }, (_, i) => i);
+  readonly searchError = signal<string | null>(null);
+  readonly hasError = computed(() => this.searchError() !== null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -84,12 +112,55 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedTargetLanguage = signal<string>('');
   readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
+  readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
+
+  readonly commonInterestTags: readonly string[] = [
+    'sports',
+    'music',
+    'travel',
+    'photography',
+    'gaming',
+    'cooking',
+    'reading',
+    'movies',
+    'fitness',
+    'art',
+    'technology',
+    'nature',
+  ];
+  readonly showAllInterests = signal(false);
+  readonly visibleInterestTags = computed(() =>
+    this.showAllInterests() ? this.commonInterestTags : this.commonInterestTags.slice(0, 6),
+  );
+  readonly errorBoundaryContext = computed(() => ({
+    component: 'discovery',
+    targetLanguage: this.selectedTargetLanguage(),
+    partnerCount: this.partners().length,
+    sortMode: this.selectedSort(),
+    radiusKm: this.selectedDistanceKm(),
+  }));
+
+  /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
+  private readonly searchTrigger$ = new Subject<void>();
+  /** Abort controller for cancelling in-flight partner search. */
+  private searchAbortController: AbortController | null = null;
+
+  private readonly discoveryTourEffect = effect(() => {
+    // Start the onboarding tour once partners have loaded and tour not yet completed
+    if (
+      !this.isLoading() &&
+      this.partners().length > 0 &&
+      !this.discoveryOnboarding.hasCompletedTour()
+    ) {
+      queueMicrotask(() => this.discoveryOnboarding.startTour());
+    }
+  });
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -106,21 +177,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
 
-  readonly filtersExpanded = signal<boolean>(true);
   readonly voiceRoomActive = signal<boolean>(false);
-
-  readonly activeFilterCount = computed(() => {
-    let count = 0;
-    if (this.selectedTargetLanguage()) count++;
-    if (this.selectedGender()) count++;
-    if (this.selectedFilter() !== 'all') count++;
-    if (this.selectedSort() !== 'best_match') count++;
-    if (this.ageRangeMin() !== 18 || this.ageRangeMax() !== 100) count++;
-    if (this.selectedDistanceKm() !== 50) count++;
-    if (this.seriousLearnerMode()) count++;
-    if (this.voiceRoomActive()) count++;
-    return count;
-  });
+  readonly hasAudioIntroOnly = signal<boolean>(false);
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -137,16 +195,30 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  onSortChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setSort(select.value);
+    }
+  }
+
+  onGenderChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setGender(select.value);
+    }
+  }
+
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
-    void this.searchPartners();
+    this.scheduleSearch();
   }
 
   onDistanceChanged(km: number): void {
     if (this.selectedDistanceKm() === km) return;
     this.selectedDistanceKm.set(km);
-    void this.searchPartners();
+    this.scheduleSearch();
   }
 
   onFilterSelect(id: string) {
@@ -172,7 +244,23 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  setInterest(interest: string): void {
+    this.selectedInterests.set(this.selectedInterests() === interest ? '' : interest);
+    void this.searchPartners();
+  }
+
+  toggleShowAllInterests(): void {
+    this.showAllInterests.update((value) => !value);
+  }
+
   async ngOnInit(): Promise<void> {
+    // Wire up RxJS-based debounced search auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        void this.searchPartners();
+      });
+
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -208,27 +296,42 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async searchPartners(): Promise<void> {
+    // Cancel any in-flight request to prevent stale responses and reduce server load
+    if (this.searchAbortController) {
+      this.searchAbortController.abort();
+    }
+    const controller = new AbortController();
+    this.searchAbortController = controller;
+    const signal = controller.signal;
+
     this.isLoading.set(true);
+    this.searchError.set(null);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
-      const results = await this.discoveryService.findPartners({
-        radius_metres: this.selectedDistanceKm() * 1000,
-        native_languages: this.selectedNativeLanguage() || undefined,
-        target_language: this.selectedTargetLanguage() || undefined,
-        serious_learner_only: this.seriousLearnerOnly(),
-        gender: isVip ? genderVal : undefined,
-        age_min: this.ageRangeMin(),
-        age_max: this.ageRangeMax(),
-        serious_learner_mode: this.seriousLearnerMode(),
-        proficiency_level: this.selectedProficiencyLevel() || undefined,
-        available_time_start:
-          this.availableTimeStart() || undefined,
-        available_time_end:
-          this.availableTimeEnd() || undefined,
-        sort: this.selectedSort(),
-        voice_room_active: this.voiceRoomActive() || undefined,
-      });
+      const results = await this.discoveryService.findPartners(
+        {
+          radius_metres: this.selectedDistanceKm() * 1000,
+          native_languages: this.selectedNativeLanguage() || undefined,
+          target_language: this.selectedTargetLanguage() || undefined,
+          serious_learner_only: this.seriousLearnerOnly(),
+          gender: isVip ? genderVal : undefined,
+          age_min: this.ageRangeMin(),
+          age_max: this.ageRangeMax(),
+          serious_learner_mode: this.seriousLearnerMode(),
+          proficiency_level: this.selectedProficiencyLevel() || undefined,
+          available_time_start: this.availableTimeStart() || undefined,
+          available_time_end: this.availableTimeEnd() || undefined,
+          sort: this.selectedSort(),
+          voice_room_active: this.voiceRoomActive() || undefined,
+          has_audio_intro: this.hasAudioIntroOnly() ? true : undefined,
+          interests: this.selectedInterests() || undefined,
+        },
+        signal,
+      );
+      // If request was aborted, don't update the UI with stale results
+      if (signal.aborted) return;
+
       // Filter out blocked users
       const blocked = this.blockedUserIds();
       const filtered =
@@ -237,23 +340,38 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       const mapped = filtered.map((partner) => ({
         ...partner,
         nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
-        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
-          code,
-          level: 1,
-        })),
+        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map(
+          (code) => ({
+            code,
+            level: 1,
+          }),
+        ),
         formattedDistance: this.formatDistanceHelper(partner.distance_metres),
       }));
 
       this.partners.set(mapped);
     } catch (e) {
-      console.error('Partner search failed:', e);
+      // Do not report failures from an intentionally superseded request.
+      if (!signal.aborted) {
+        console.error('Partner search failed:', e);
+        this.searchError.set(this.i18n.translate('discovery.searchError'));
+      }
     } finally {
-      this.isLoading.set(false);
+      // An older aborted request must not clear the loading state owned by its replacement.
+      if (this.searchAbortController === controller) {
+        this.searchAbortController = null;
+        this.isLoading.set(false);
+      }
     }
   }
 
-  toggleFiltersExpanded(): void {
-    this.filtersExpanded.update((v) => !v);
+  /** Debounced search via RxJS Subject - no manual timer, auto-cleans up. */
+  private scheduleSearch(): void {
+    this.searchTrigger$.next();
+  }
+
+  retrySearch(): void {
+    void this.searchPartners();
   }
 
   toggleVoiceRoomActive(): void {
@@ -298,28 +416,26 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.stopAudioIntro();
 
     const audio = new Audio(audioIntroUrl);
-    audio.addEventListener('ended', this.onAudioEnded);
-    audio.addEventListener('error', this.onAudioError);
+    const onEnded = () => this.stopAudioIntro();
+    const onError = () => this.stopAudioIntro();
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
     this.currentAudio = audio;
     this.playingPartnerId.set(partnerId);
 
     void audio.play().catch(() => this.stopAudioIntro());
   }
 
-  private onAudioEnded = (): void => {
-    this.stopAudioIntro();
-  };
-
-  private onAudioError = (): void => {
-    this.stopAudioIntro();
-  };
-
   private stopAudioIntro(): void {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
-      this.currentAudio.removeEventListener('ended', this.onAudioEnded);
-      this.currentAudio.removeEventListener('error', this.onAudioError);
+      // Remove event listeners to prevent memory leaks
+      this.currentAudio.onended = null;
+      this.currentAudio.onerror = null;
+      // Force load a short empty source to release the audio resource
+      this.currentAudio.src = '';
+      this.currentAudio.load();
       this.currentAudio = null;
     }
     this.playingPartnerId.set(null);
@@ -345,6 +461,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Cancel any in-flight search
+    if (this.searchAbortController) {
+      this.searchAbortController.abort();
+      this.searchAbortController = null;
+    }
+    // Debounce subscription auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$.complete();
     this.stopAudioIntro();
   }
 
@@ -352,6 +475,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     native_languages?: string;
     target_language?: string;
     proficiency_level?: string;
+    has_audio_intro?: boolean;
   }): void {
     if (filters.native_languages !== undefined) {
       this.selectedNativeLanguage.set(filters.native_languages);
@@ -361,6 +485,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
     if (filters.proficiency_level !== undefined) {
       this.selectedProficiencyLevel.set(filters.proficiency_level);
+    }
+    if (filters.has_audio_intro !== undefined) {
+      this.hasAudioIntroOnly.set(filters.has_audio_intro);
     }
     void this.searchPartners();
   }
@@ -379,10 +506,24 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
+    this.hasAudioIntroOnly.set(false);
+    this.selectedInterests.set('');
+    this.showAllInterests.set(false);
     void this.searchPartners();
   }
 
-  startDiscoveryTour(): void {
-    this.discoveryOnboardingService.startTour();
+  /** Start the matchmaking algorithm onboarding tour. */
+  startMatchmakingTour(): void {
+    this.matchmakingOnboarding.startTour();
+  }
+
+  /** Whether the matchmaking onboarding tour is currently active. */
+  isMatchmakingTourActive(): boolean {
+    return this.matchmakingOnboarding.isTourInProgress();
+  }
+
+  /** Close the matchmaking onboarding tour and mark it complete. */
+  closeMatchmakingTour(): void {
+    this.matchmakingOnboarding.markComplete();
   }
 }

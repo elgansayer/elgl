@@ -49,13 +49,15 @@ export class CuratedContentController {
   @ApiQuery({
     name: 'language',
     required: false,
-    description: 'ISO 639-1 language code to filter articles by (e.g. fr, es, ja).',
+    description:
+      'ISO 639-1 language code to filter articles by (e.g. fr, es, ja).',
     example: 'fr',
   })
   @ApiQuery({
     name: 'cefr_level',
     required: false,
-    description: 'CEFR proficiency level filter. One of: A1, A2, B1, B2, C1, C2.',
+    description:
+      'CEFR proficiency level filter. One of: A1, A2, B1, B2, C1, C2.',
     example: 'B1',
   })
   @ApiResponse({

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StudyBuddiesController } from './study-buddies.controller';
 import { StudyBuddiesService } from './study-buddies.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { StudyBuddiesRateLimiterGuard } from './study-buddies-rate-limiter.guard';
 
 describe('StudyBuddiesController', () => {
   let controller: StudyBuddiesController;
@@ -14,17 +15,15 @@ describe('StudyBuddiesController', () => {
         {
           provide: StudyBuddiesService,
           useValue: {
-            requestBuddy: jest.fn().mockResolvedValue({ id: 'req-1' }),
-            getIncomingRequests: jest.fn().mockResolvedValue([{ id: 'req-1' }]),
-            respondToRequest: jest
+            requestBuddy: vi.fn().mockResolvedValue({ id: 'req-1' }),
+            getIncomingRequests: vi.fn().mockResolvedValue([{ id: 'req-1' }]),
+            respondToRequest: vi
               .fn()
               .mockResolvedValue({ id: 'req-1', status: 'accepted' }),
-            getPotentialBuddies: jest
-              .fn()
-              .mockResolvedValue([{ id: 'user-2' }]),
-            followUser: jest.fn().mockResolvedValue(undefined),
-            unfollowUser: jest.fn().mockResolvedValue(undefined),
-            getOrCreateChannel: jest
+            getPotentialBuddies: vi.fn().mockResolvedValue([{ id: 'user-2' }]),
+            followUser: vi.fn().mockResolvedValue(undefined),
+            unfollowUser: vi.fn().mockResolvedValue(undefined),
+            getOrCreateChannel: vi
               .fn()
               .mockReturnValue({ channel: 'chat_user-1_user-2' }),
           },
@@ -32,7 +31,9 @@ describe('StudyBuddiesController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(StudyBuddiesRateLimiterGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<StudyBuddiesController>(StudyBuddiesController);

@@ -10,10 +10,10 @@
  */
 
 // ─────────────────────────────────────────
-// Reading Engine — Article Listing & Filters
+// Reading Engine - Article Listing & Filters
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Article Listing & Filters', () => {
+describe('LingQ Reading Engine - Article Listing & Filters', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -182,10 +182,10 @@ describe('LingQ Reading Engine — Article Listing & Filters', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Article Detail & Navigation
+// Reading Engine - Article Detail & Navigation
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Article Detail View', () => {
+describe('LingQ Reading Engine - Article Detail View', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -265,10 +265,10 @@ describe('LingQ Reading Engine — Article Detail View', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Tab Navigation
+// Reading Engine - Tab Navigation
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Tab Navigation', () => {
+describe('LingQ Reading Engine - Tab Navigation', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -353,10 +353,10 @@ describe('LingQ Reading Engine — Tab Navigation', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Reading Progress API
+// Reading Engine - Reading Progress API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Reading Progress API', () => {
+describe('LingQ Reading Engine - Reading Progress API', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -465,10 +465,10 @@ describe('LingQ Reading Engine — Reading Progress API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Tokenisation API
+// Reading Engine - Tokenisation API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Tokenisation API', () => {
+describe('LingQ Reading Engine - Tokenisation API', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources/art-1', {
       body: {
@@ -581,10 +581,10 @@ describe('LingQ Reading Engine — Tokenisation API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Resource CRUD API
+// Reading Engine - Resource CRUD API
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Resource CRUD API', () => {
+describe('LingQ Reading Engine - Resource CRUD API', () => {
   beforeEach(() => {
     cy.intercept('POST', '**/api/reading/resources', (req) => {
       req.reply({
@@ -728,10 +728,10 @@ describe('LingQ Reading Engine — Resource CRUD API', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Edge Cases & Empty States
+// Reading Engine - Edge Cases & Empty States
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Edge Cases', () => {
+describe('LingQ Reading Engine - Edge Cases', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
     cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
@@ -806,10 +806,10 @@ describe('LingQ Reading Engine — Edge Cases', () => {
 });
 
 // ─────────────────────────────────────────
-// Reading Engine — Accessibility
+// Reading Engine - Accessibility
 // ─────────────────────────────────────────
 
-describe('LingQ Reading Engine — Accessibility', () => {
+describe('LingQ Reading Engine - Accessibility', () => {
   beforeEach(() => {
     cy.intercept('GET', '**/api/reading/resources?*', {
       body: [
@@ -874,5 +874,141 @@ describe('LingQ Reading Engine — Accessibility', () => {
     cy.wait('@listResources');
     cy.get('[role="group"]').should('exist');
     cy.get('[role="group"]').should('have.attr', 'aria-label');
+  });
+
+  it('should have aria-label on the tablist navigation', () => {
+    cy.visit('/read');
+    cy.get('[role="tablist"]').should('have.attr', 'aria-label');
+  });
+});
+
+// ─────────────────────────────────────────
+// Reading Engine - Filter Interaction Tests
+// ─────────────────────────────────────────
+
+describe('LingQ Reading Engine - Combined Filter Interactions', () => {
+  beforeEach(() => {
+    cy.intercept('GET', '**/api/reading/resources?*', {
+      body: [
+        {
+          id: 'art-1',
+          title: 'Beginner Daily Life Article',
+          content: 'Content for beginner daily life.',
+          language: 'en-GB',
+          difficulty: 'beginner',
+          topic: 'daily-life',
+          sourceUrl: null,
+          createdBy: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'art-2',
+          title: 'Beginner Travel Article',
+          content: 'Content for beginner travel.',
+          language: 'en-GB',
+          difficulty: 'beginner',
+          topic: 'travel',
+          sourceUrl: null,
+          createdBy: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'art-3',
+          title: 'Intermediate Science Article',
+          content: 'Content for intermediate science.',
+          language: 'en-GB',
+          difficulty: 'intermediate',
+          topic: 'science',
+          sourceUrl: null,
+          createdBy: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'art-4',
+          title: 'Advanced Culture Article',
+          content: 'Content for advanced culture.',
+          language: 'en-GB',
+          difficulty: 'advanced',
+          topic: 'culture',
+          sourceUrl: null,
+          createdBy: 'system',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    }).as('listResources');
+
+    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
+    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
+      'getBlockedAndBlockerIds',
+    );
+    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
+    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
+    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
+    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
+  });
+
+  it('should filter by difficulty only', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.beginner').click();
+    cy.get('[role="listitem"]').should('have.length', 2);
+    cy.contains('Beginner Daily Life Article').should('be.visible');
+    cy.contains('Beginner Travel Article').should('be.visible');
+  });
+
+  it('should filter by topic only', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.topic.science').click();
+    cy.get('[role="listitem"]').should('have.length', 1);
+    cy.contains('Intermediate Science Article').should('be.visible');
+  });
+
+  it('should apply combined difficulty and topic filters', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.beginner').click();
+    cy.contains('button', 'readingEngine.topic.travel').click();
+    cy.get('[role="listitem"]').should('have.length', 1);
+    cy.contains('Beginner Travel Article').should('be.visible');
+  });
+
+  it('should show "clear filters" link when any filter is active', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.beginner').click();
+    cy.contains('readingEngine.clearFilters').should('be.visible');
+  });
+
+  it('should reset all filters when clear is clicked', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.beginner').click();
+    cy.contains('button', 'readingEngine.topic.travel').click();
+    cy.contains('readingEngine.clearFilters').click();
+    cy.get('[role="listitem"]').should('have.length', 4);
+  });
+
+  it('should show the "All" filter button as active when no specific filter is selected', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.advanced').click();
+    cy.contains('button', 'readingEngine.filterAll').click();
+    cy.get('[role="listitem"]').should('have.length', 4);
+  });
+
+  it('should show empty state when combined filters match nothing', () => {
+    cy.visit('/read');
+    cy.wait('@listResources');
+    cy.contains('button', 'readingEngine.difficulty.advanced').click();
+    cy.contains('button', 'readingEngine.topic.science').click();
+    cy.contains('readingEngine.noArticlesTitle').should('be.visible');
   });
 });
