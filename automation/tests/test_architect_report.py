@@ -36,6 +36,13 @@ def test_invalid_json_raises(tmp_path: Path) -> None:
         load_architect_report(tmp_path)
 
 
+def test_report_requires_a_json_object(tmp_path: Path) -> None:
+    (tmp_path / ".factory-architect.json").write_text("[]", encoding="utf-8")
+
+    with pytest.raises(FactoryError, match="must be a JSON object"):
+        load_architect_report(tmp_path)
+
+
 def test_new_issues_must_be_a_list(tmp_path: Path) -> None:
     (tmp_path / ".factory-architect.json").write_text(
         json.dumps({"new_issues": "nope"}), encoding="utf-8"

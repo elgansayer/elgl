@@ -1,6 +1,8 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -14,9 +16,9 @@ interface CropBox {
 
 @Component({
   selector: 'app-cover-photo-uploader',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe, A11yClickableDirective],
   template: `
-    <div class="relative w-full max-w-2xl mx-auto">
+    <div class="relative mx-auto w-full max-w-2xl">
       <!-- Hidden file input -->
       <input
         #fileInput
@@ -28,26 +30,27 @@ interface CropBox {
 
       <!-- Current cover photo or upload trigger -->
       @if (!imageSource()) {
-        <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
+        <div
+          class="group relative h-40 w-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 shadow-card sm:h-48 md:h-64"
+        >
           @if (currentCoverUrl()) {
             <img
               [src]="currentCoverUrl()"
               alt="{{ 'coverPhoto.previewAlt' | t }}"
-              class="w-full h-full object-cover"
+              class="h-full w-full object-cover"
             />
           } @else {
-            <div class="w-full h-full bg-gradient-to-br from-surface-300 to-surface-500"></div>
+            <div class="h-full w-full bg-gradient-to-br from-surface-300 to-surface-500"></div>
           }
           <div
-            class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+            class="absolute inset-0 flex cursor-pointer items-center justify-center bg-surface-500/90 text-text-primary opacity-100 transition-opacity duration-base ease-app sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             (click)="fileInput.click()"
-            (keydown.enter)="fileInput.click()"
+            appA11yClickable
             tabindex="0"
-            role="button"
           >
-            <div class="text-center text-white">
+            <div class="text-center">
               <svg
-                class="w-10 h-10 mx-auto mb-2"
+                class="mx-auto mb-2 h-10 w-10"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -70,7 +73,10 @@ interface CropBox {
       <!-- Cropping interface -->
       @if (imageSource()) {
         <div class="relative">
-          <div class="relative overflow-hidden rounded-xl" #imageContainer>
+          <div
+            class="relative overflow-hidden rounded-card border border-surface-100 bg-surface-200 shadow-card"
+            #imageContainer
+          >
             <img
               [src]="imageSource()"
               alt="Image to crop"
@@ -82,9 +88,9 @@ interface CropBox {
 
             @if (isCropping()) {
               <div class="absolute inset-0">
-                <!-- Dark overlay with crop window -->
+                <!-- Theme-aware overlay with crop window -->
                 <svg
-                  class="absolute inset-0 w-full h-full"
+                  class="absolute inset-0 h-full w-full"
                   viewBox="0 0 100 100"
                   preserveAspectRatio="none"
                 >
@@ -100,12 +106,17 @@ interface CropBox {
                       />
                     </mask>
                   </defs>
-                  <rect width="100" height="100" fill="rgba(0,0,0,0.5)" mask="url(#cropMask)" />
+                  <rect
+                    width="100"
+                    height="100"
+                    fill="rgb(var(--surface-900-rgb) / 0.55)"
+                    mask="url(#cropMask)"
+                  />
                 </svg>
 
                 <!-- Crop box with handles -->
                 <div
-                  class="absolute border-2 border-white cursor-move"
+                  class="absolute cursor-move border-2 border-primary"
                   [style.left.px]="cropBox().x"
                   [style.top.px]="cropBox().y"
                   [style.width.px]="cropBox().width"
@@ -115,22 +126,22 @@ interface CropBox {
                 >
                   <!-- Corner handles -->
                   <div
-                    class="absolute -top-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-nw-resize"
+                    class="absolute -top-1.5 -start-1.5 h-3 w-3 cursor-nw-resize rounded-full bg-primary ring-2 ring-on-fill"
                     (mousedown)="onHandleMouseDown($event, 'nw')"
                     (touchstart)="onHandleTouchStart($event, 'nw')"
                   ></div>
                   <div
-                    class="absolute -top-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-ne-resize"
+                    class="absolute -top-1.5 -end-1.5 h-3 w-3 cursor-ne-resize rounded-full bg-primary ring-2 ring-on-fill"
                     (mousedown)="onHandleMouseDown($event, 'ne')"
                     (touchstart)="onHandleTouchStart($event, 'ne')"
                   ></div>
                   <div
-                    class="absolute -bottom-1.5 -start-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-sw-resize"
+                    class="absolute -bottom-1.5 -start-1.5 h-3 w-3 cursor-sw-resize rounded-full bg-primary ring-2 ring-on-fill"
                     (mousedown)="onHandleMouseDown($event, 'sw')"
                     (touchstart)="onHandleTouchStart($event, 'sw')"
                   ></div>
                   <div
-                    class="absolute -bottom-1.5 -end-1.5 w-3 h-3 bg-surface-200 rounded-full cursor-se-resize"
+                    class="absolute -bottom-1.5 -end-1.5 h-3 w-3 cursor-se-resize rounded-full bg-primary ring-2 ring-on-fill"
                     (mousedown)="onHandleMouseDown($event, 'se')"
                     (touchstart)="onHandleTouchStart($event, 'se')"
                   ></div>
@@ -140,38 +151,56 @@ interface CropBox {
           </div>
 
           <!-- Action buttons -->
-          <div class="flex gap-2 mt-4">
+          <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             @if (!isCropping()) {
               <button
+                hlmBtn
+                type="button"
+                variant="secondary"
+                size="touch"
                 (click)="startCropping()"
-                class="px-4 py-2 bg-surface-200 text-text-primary rounded-lg hover:bg-surface-100 transition-colors text-sm"
+                class="w-full sm:w-auto"
               >
                 {{ 'common.crop' | t }}
               </button>
             } @else {
               <button
+                hlmBtn
+                type="button"
+                size="touch"
                 (click)="applyCrop()"
-                class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary-dark transition-colors text-sm"
+                class="w-full sm:w-auto"
               >
                 {{ 'common.applyCrop' | t }}
               </button>
               <button
+                hlmBtn
+                type="button"
+                variant="secondary"
+                size="touch"
                 (click)="cancelCrop()"
-                class="px-4 py-2 bg-surface-100 text-text-primary rounded-lg hover:bg-surface-200 transition-colors text-sm"
+                class="w-full sm:w-auto"
               >
                 {{ 'common.cancel' | t }}
               </button>
             }
             <button
+              hlmBtn
+              type="button"
+              size="touch"
               (click)="uploadCropped()"
               [disabled]="isUploading()"
-              class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/90 transition-colors text-sm disabled:opacity-50"
+              class="w-full sm:w-auto"
             >
               {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
             </button>
             <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
               (click)="reset()"
-              class="px-4 py-2 bg-danger text-on-fill rounded-lg hover:bg-danger/90 transition-colors text-sm"
+              class="w-full sm:w-auto"
             >
               {{ 'common.cancel' | t }}
             </button>
@@ -179,9 +208,11 @@ interface CropBox {
 
           <!-- Preview -->
           @if (croppedPreviewUrl()) {
-            <div class="mt-4">
-              <p class="text-sm text-text-muted mb-2">{{ 'common.preview' | t }}</p>
-              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg" />
+            <div
+              class="mt-4 rounded-card border border-surface-100 bg-surface-200 p-3 shadow-card sm:p-4"
+            >
+              <p class="mb-2 text-sm text-text-muted">{{ 'common.preview' | t }}</p>
+              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-card" />
             </div>
           }
         </div>

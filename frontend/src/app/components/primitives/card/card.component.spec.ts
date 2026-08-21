@@ -47,7 +47,7 @@ describe('AppCardComponent', () => {
     expect(cardElement.classList.contains('pt-4')).toBe(true);
     expect(cardElement.classList.contains('pb-4')).toBe(true);
     expect(cardElement.classList.contains('border')).toBe(true);
-    expect(cardElement.classList.contains('shadow-sm')).toBe(true);
+    expect(cardElement.classList.contains('shadow-card')).toBe(true);
     expect(cardElement.getAttribute('role')).toBe('region');
     expect(cardElement.getAttribute('tabindex')).toBeNull();
   });
@@ -62,6 +62,8 @@ describe('AppCardComponent', () => {
     expect(cardElement.classList.contains('pe-6')).toBe(true);
     expect(cardElement.classList.contains('pt-6')).toBe(true);
     expect(cardElement.classList.contains('pb-6')).toBe(true);
+    expect(cardElement.classList.contains('shadow-card')).toBe(true);
+    expect(cardElement.classList.contains('hover:shadow-lift')).toBe(true);
     expect(cardElement.classList.contains('cursor-pointer')).toBe(true);
     expect(cardElement.classList.contains('extra-class')).toBe(true);
     expect(cardElement.getAttribute('role')).toBe('button');

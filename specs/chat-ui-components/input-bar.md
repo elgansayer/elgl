@@ -25,7 +25,7 @@ Primary text input for composing and sending chat messages, with quick-access bu
 - **Icon buttons**: 36x36px each
 - **Send button**: 40x40px (appears when text is non-empty)
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-900` (`#0f172a`)
 - **Border top**: `border-t border-slate-700`

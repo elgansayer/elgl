@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -13,6 +14,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type DeckView = 'list' | 'detail';
 
@@ -48,12 +50,14 @@ const DECK_ICONS = [
   selector: 'app-flashcard-deck',
   standalone: true,
   imports: [
+    HlmButton,
     TranslatePipe,
     SrsErrorBoundaryComponent,
     AppCardComponent,
     AppButtonPrimaryComponent,
     AppInputComponent,
     AppChipComponent,
+    A11yClickableDirective,
   ],
   template: `
     <app-srs-error-boundary
@@ -70,6 +74,7 @@ const DECK_ICONS = [
               <p class="app-muted">{{ 'deck.subtitle' | t }}</p>
             </div>
             <button
+              hlmBtn
               type="button"
               (click)="activeView.set('list')"
               class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
@@ -128,6 +133,7 @@ const DECK_ICONS = [
                     <div class="flex flex-wrap gap-1.5">
                       @for (c of deckColourOptions; track c) {
                         <button
+                          hlmBtn
                           type="button"
                           (click)="newDeckColour.set(c)"
                           class="h-6 w-6 rounded-full border-2 transition-transform"
@@ -149,6 +155,7 @@ const DECK_ICONS = [
                     <div class="flex flex-wrap gap-1.5">
                       @for (ic of deckIconOptions; track ic) {
                         <button
+                          hlmBtn
                           type="button"
                           (click)="newDeckIcon.set(ic)"
                           class="flex h-7 w-7 items-center justify-center rounded-full border text-sm transition-transform"
@@ -191,8 +198,7 @@ const DECK_ICONS = [
                     class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"
                     [style.border-color]="deck.colour + '40'"
                     (click)="openDeckDetail(deck)"
-                    (keyup.enter)="openDeckDetail(deck)"
-                    role="button"
+                    appA11yClickable
                     tabindex="0"
                     [attr.aria-label]="'deck.openAriaLabel' | t: { name: deck.name }"
                   >
@@ -215,6 +221,7 @@ const DECK_ICONS = [
                         </div>
                       </div>
                       <button
+                        hlmBtn
                         type="button"
                         (click)="deleteDeckById(deck.id, $event)"
                         class="rounded-app p-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/20 hover:text-danger"
@@ -252,6 +259,7 @@ const DECK_ICONS = [
               <!-- Back + Header -->
               <div class="flex items-center gap-3">
                 <button
+                  hlmBtn
                   type="button"
                   (click)="activeView.set('list')"
                   class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-text-secondary"
@@ -259,6 +267,7 @@ const DECK_ICONS = [
                   ← {{ 'deck.backBtn' | t }}
                 </button>
                 <button
+                  hlmBtn
                   type="button"
                   (click)="toggleEditForm()"
                   class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-text-secondary"
@@ -329,6 +338,7 @@ const DECK_ICONS = [
                       <div class="flex flex-wrap gap-1.5">
                         @for (c of deckColourOptions; track c) {
                           <button
+                            hlmBtn
                             type="button"
                             (click)="editDeckColour.set(c)"
                             class="h-6 w-6 rounded-full border-2 transition-transform"
@@ -350,6 +360,7 @@ const DECK_ICONS = [
                       <div class="flex flex-wrap gap-1.5">
                         @for (ic of deckIconOptions; track ic) {
                           <button
+                            hlmBtn
                             type="button"
                             (click)="editDeckIcon.set(ic)"
                             class="flex h-7 w-7 items-center justify-center rounded-full border text-sm transition-transform"
@@ -372,6 +383,7 @@ const DECK_ICONS = [
                       {{ 'deck.saveBtn' | t }}
                     </app-button-primary>
                     <button
+                      hlmBtn
                       type="button"
                       (click)="showEditForm.set(false)"
                       class="rounded-app border ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-text-secondary"
@@ -403,6 +415,7 @@ const DECK_ICONS = [
                             <span class="ms-2 text-xs text-success">{{ fc.translation }}</span>
                           </div>
                           <button
+                            hlmBtn
                             type="button"
                             (click)="addCardToDeck(fc.id)"
                             class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-on-fill hover:opacity-90 flex-shrink-0"
@@ -438,6 +451,7 @@ const DECK_ICONS = [
                             <app-chip customClass="ms-2">L{{ fc.srs_level }}</app-chip>
                           </div>
                           <button
+                            hlmBtn
                             type="button"
                             (click)="removeCardFromDeck(fc.id)"
                             class="rounded-app ms-2 p-1 text-text-muted hover:bg-danger/20 hover:text-danger flex-shrink-0"

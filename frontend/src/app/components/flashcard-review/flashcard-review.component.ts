@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -21,6 +22,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
@@ -28,12 +30,14 @@ type ReviewGrade = 'again' | 'good' | 'known';
   selector: 'app-flashcard-review',
   standalone: true,
   imports: [
+    HlmButton,
     TranslatePipe,
     SrsErrorBoundaryComponent,
     AppSkeletonLoaderComponent,
     AppEmptyStateComponent,
     AppCardComponent,
     AppButtonPrimaryComponent,
+    A11yClickableDirective,
   ],
   template: `
     <app-srs-error-boundary
@@ -172,9 +176,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   class="flip-card cursor-pointer select-none"
                   [class.is-flipped]="isFlipped()"
                   (click)="flipCard()"
-                  (keyup.enter)="flipCard()"
-                  (keyup.space)="flipCard(); $event.preventDefault()"
-                  role="button"
+                  appA11yClickable
                   tabindex="0"
                   [attr.aria-label]="
                     (isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel')
@@ -219,6 +221,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       }
                       @if (card.pronunciation_url) {
                         <button
+                          hlmBtn
                           type="button"
                           class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
                           (click)="playAudio(card.pronunciation_url, $event)"
@@ -242,6 +245,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     [attr.aria-label]="'review.gradingGroupLabel' | t"
                   >
                     <button
+                      hlmBtn
                       type="button"
                       (click)="gradeReview('again')"
                       class="btn-grade btn-grade-again"
@@ -252,6 +256,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       <span class="text-[10px] opacity-80">{{ 'review.againHint' | t }}</span>
                     </button>
                     <button
+                      hlmBtn
                       type="button"
                       (click)="gradeReview('good')"
                       class="btn-grade btn-grade-good col-span-2"
@@ -262,6 +267,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       <span class="text-[10px] opacity-80">{{ nextIntervalHint() }}</span>
                     </button>
                     <button
+                      hlmBtn
                       type="button"
                       (click)="gradeReview('known')"
                       class="btn-grade btn-grade-known"
