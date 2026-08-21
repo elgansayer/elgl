@@ -8,14 +8,14 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
   template: `
     @if (!isOnline()) {
       <div
-        class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold shadow-md"
+        class="flex items-center justify-center gap-2 bg-warning text-on-fill px-4 py-2 text-sm font-semibold shadow-md"
         role="alert"
         aria-live="assertive"
       >
         <span class="text-base leading-none" aria-hidden="true">⚠️</span>
         <span>{{ 'admin.offline.banner' | t }}</span>
         @if (cachedDataAvailable()) {
-          <span class="text-white/80">
+          <span class="text-on-fill/80">
             {{ 'admin.offline.cachedDataAvailable' | t }}
           </span>
         }

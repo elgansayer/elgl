@@ -1,108 +1,79 @@
 import { Component, input, output, inject, computed } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore } from '../../services/economy.store';
 
 @Component({
   selector: 'app-sticker-picker',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
-    <!-- Backdrop -->
-    <div
-      class="fixed inset-0 z-40 bg-black/20 transition-opacity"
-      (click)="dismiss.emit()"
-      (keydown.enter)="dismiss.emit()"
-      tabindex="0"
-      role="button"
-    ></div>
-
-    <!-- Drawer -->
-    <div
-      class="fixed bottom-0 start-0 end-0 z-50 flex flex-col bg-white dark:bg-slate-800 rounded-t-2xl shadow-xl transition-transform duration-300 ease-in-out transform"
-      style="max-height: 50vh;"
-    >
-      <!-- Handle -->
-      <div
-        class="flex justify-center pt-3 pb-2 cursor-pointer"
-        (click)="dismiss.emit()"
-        (keydown.enter)="dismiss.emit()"
-        tabindex="0"
-        role="button"
+    <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="max-h-[50vh] w-full overflow-y-auto rounded-t-2xl border border-surface-100 bg-surface-200 p-0 shadow-xl sm:max-w-lg sm:rounded-2xl"
       >
-        <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
-      </div>
-
-      <!-- Header -->
-      <div
-        class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center"
-      >
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">{{ 'chatRoom.stickersDrawerTitle' | t }}</h3>
-      </div>
-
-      <!-- Sticker Packs (tab-style) -->
-      <div class="flex-1 overflow-y-auto p-4">
-        <!-- Default free stickers -->
-        <div class="mb-4">
-          <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{{ 'stickerStore.defaultStickers' | t }}</h4>
-          <div class="grid grid-cols-4 gap-3">
-            @for (sticker of defaultStickers; track sticker.id) {
-              <button
-                (click)="onSelectSticker(sticker.url)"
-                class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none"
-                [title]="sticker.name"
-              >
-                <img
-                  [src]="sticker.url"
-                  [alt]="sticker.name"
-                  class="w-full h-full object-contain drop-shadow-sm hover:scale-110 transition-transform"
-                  loading="lazy"
-                />
-              </button>
-            }
-          </div>
+        <div class="flex items-center justify-between border-b border-surface-100 px-4 py-3">
+          <h3 class="text-sm font-semibold text-text-primary">{{ 'chatRoom.stickersDrawerTitle' | t }}</h3>
+          <button hlmBtn type="button" variant="ghost" size="icon-touch" (click)="dismiss.emit()" [attr.aria-label]="'common.close' | t">
+            <span aria-hidden="true">✕</span>
+          </button>
         </div>
 
-        @if (unlockedPacks().length > 0) {
+        <div class="flex-1 overflow-y-auto p-4">
+          <div class="mb-4">
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">{{ 'stickerStore.defaultStickers' | t }}</h4>
+            <div class="grid grid-cols-4 gap-3">
+              @for (sticker of defaultStickers; track sticker.id) {
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  class="aspect-square h-auto rounded-xl p-2"
+                  (click)="onSelectSticker(sticker.url)"
+                  [attr.aria-label]="sticker.name"
+                  [title]="sticker.name"
+                >
+                  <img [src]="sticker.url" alt="" class="h-full w-full object-contain drop-shadow-sm transition-transform hover:scale-110" loading="lazy" />
+                </button>
+              }
+            </div>
+          </div>
+
           @for (pack of unlockedPacks(); track pack.id) {
             <div class="mb-4">
-              <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ pack.name }}</h4>
+              <div class="mb-2 flex items-center gap-2">
+                <h4 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">{{ pack.name }}</h4>
                 @if (pack.is_animated) {
-                  <span class="rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white">{{ 'stickerStore.animatedBadge' | t }}</span>
+                  <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-fill">{{ 'stickerStore.animatedBadge' | t }}</span>
                 }
               </div>
               <div class="grid grid-cols-4 gap-3">
                 @for (sticker of getPackStickers(pack); track sticker.id) {
                   <button
+                    hlmBtn
+                    type="button"
+                    variant="ghost"
+                    class="aspect-square h-auto rounded-xl p-2"
                     (click)="onSelectSticker(sticker.url)"
-                    class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none"
+                    [attr.aria-label]="pack.name"
                     [title]="sticker.url.split('/').pop() ?? ''"
                   >
                     @if (sticker.is_animated) {
-                      <video
-                        [src]="sticker.url"
-                        autoplay
-                        loop
-                        muted
-                        playsinline
-                        class="w-full h-full object-contain drop-shadow-sm hover:scale-110 transition-transform"
-                      ></video>
+                      <video [src]="sticker.url" autoplay loop muted playsinline class="h-full w-full object-contain drop-shadow-sm"></video>
                     } @else {
-                      <img
-                        [src]="sticker.url"
-                        [alt]="pack.name"
-                        class="w-full h-full object-contain drop-shadow-sm hover:scale-110 transition-transform"
-                        loading="lazy"
-                      />
+                      <img [src]="sticker.url" alt="" class="h-full w-full object-contain drop-shadow-sm transition-transform hover:scale-110" loading="lazy" />
                     }
                   </button>
                 }
               </div>
             </div>
           }
-        }
-      </div>
-    </div>
+        </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class StickerPickerComponent {
@@ -112,6 +83,7 @@ export class StickerPickerComponent {
   readonly isOpen = input<boolean>(false);
   readonly selectSticker = output<string>();
   readonly dismiss = output<void>();
+  readonly dialogState = computed<HlmDialogState>(() => this.isOpen() ? 'open' : 'closed');
 
   readonly defaultStickers = [
     { id: 'default_happy', url: 'assets/stickers/happy.png', name: 'Happy', is_animated: false },
@@ -126,12 +98,14 @@ export class StickerPickerComponent {
 
   readonly unlockedPacks = computed(() => this.economyStore.unlockedStickerPacks());
 
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && this.isOpen()) this.dismiss.emit();
+  }
+
   getPackStickers(pack: { id: string; name: string; sticker_urls?: string[]; is_animated?: boolean }): { id: string; url: string; is_animated: boolean }[] {
-    if (!pack.sticker_urls || pack.sticker_urls.length === 0) {
-      return [];
-    }
-    return pack.sticker_urls.map((url, i) => ({
-      id: `${pack.id}_${i}`,
+    if (!pack.sticker_urls?.length) return [];
+    return pack.sticker_urls.map((url, index) => ({
+      id: `${pack.id}_${index}`,
       url,
       is_animated: pack.is_animated ?? (url.endsWith('.webm') || url.endsWith('.json')),
     }));

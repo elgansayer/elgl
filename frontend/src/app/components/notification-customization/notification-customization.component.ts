@@ -1,10 +1,12 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { NotificationPreferencesService } from '../../services/notification-preferences.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-notification-customization',
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   templateUrl: './notification-customization.component.html',
 })
 export class NotificationCustomizationComponent {
