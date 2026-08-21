@@ -57,6 +57,7 @@ describe('rankDiscoveryRecommendations', () => {
       ]),
     );
     expect(result[0]).not.toHaveProperty('last_active_at');
+    expect(result[0]).not.toHaveProperty('recommendation_score');
   });
 
   it('does not use hidden online activity as a ranking signal', () => {
@@ -70,13 +71,14 @@ describe('rankDiscoveryRecommendations', () => {
       NOW,
     );
 
+    expect(result.map((item) => item.id)).toEqual([
+      'visible-active',
+      'hidden-active',
+    ]);
     const hidden = result.find((item) => item.id === 'hidden-active');
     const visible = result.find((item) => item.id === 'visible-active');
     expect(hidden?.recommendation_reasons).not.toContain('active_recently');
     expect(visible?.recommendation_reasons).toContain('active_recently');
-    expect((visible?.recommendation_score ?? 0) > (hidden?.recommendation_score ?? 0)).toBe(
-      true,
-    );
   });
 
   it('filters hidden, deleted, deletion-pending and incomplete profiles', () => {
