@@ -1,8 +1,10 @@
 import {
   Controller,
   Get,
+  Post,
   Delete,
   Param,
+  Body,
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -20,6 +22,16 @@ export class BlocksController {
   async getBlockedUsers(@CurrentUser() user: User | null) {
     if (!user) throw new UnauthorizedException();
     return this.blocksService.getBlockedUsers(user.id);
+  }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Post()
+  async blockUser(
+    @CurrentUser() user: User | null,
+    @Body() body: { blocked_id: string },
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.blocksService.blockUser(user.id, body.blocked_id);
   }
 
   @UseGuards(SupabaseAuthGuard)

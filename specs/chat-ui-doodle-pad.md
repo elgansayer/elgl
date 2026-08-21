@@ -28,7 +28,7 @@ A canvas-based drawing component for creating and sending doodle sketches in cha
 
 - **Canvas**: `bg-white rounded-xl`, `border border-gray-600`
 - **Toolbar**: Below canvas, `flex gap-2 p-2 bg-gray-800 rounded-b-xl`
-- **Color picker**: 8 preset colors (black, red, blue, green, yellow, purple, orange, white) as `w-6 h-6 rounded-full` circles
+- **Colour picker**: 8 preset colours (black, red, blue, green, yellow, purple, orange, white) as `w-6 h-6 rounded-full` circles
 - **Brush size**: 3 sizes (small/2px, medium/4px, large/8px) as circles with varying diameters
 - **Undo/Redo**: Arrow icons, `text-gray-400 hover:text-white`, disabled when no history
 - **Clear**: Trash icon, `text-red-400 hover:text-red-300`
@@ -38,7 +38,7 @@ A canvas-based drawing component for creating and sending doodle sketches in cha
 ## Behavior
 
 - Uses HTML5 Canvas 2D API with `pointer events` for drawing
-- Stores stroke history as array of `{ points: Point[], color: string, size: number }` for undo/redo
+- Stores stroke history as array of `{ points: Point[], colour: string, size: number }` for undo/redo
 - Maximum 50 undo steps
 - On send: converts canvas to PNG blob via `canvas.toBlob()`, uploads to R2, emits URL
 - On clear: confirmation dialog "Clear your doodle?"

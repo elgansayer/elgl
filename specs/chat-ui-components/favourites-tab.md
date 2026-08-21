@@ -48,7 +48,7 @@ Display bookmarked messages, corrections, and audio clips for easy reference and
 - **Filter tabs**: 44px height
 - **Action buttons**: 32x32px
 
-### Color Scheme
+### Colour Scheme
 
 - **Background**: `bg-slate-900`
 - **Item background**: `bg-slate-800`, hover `bg-slate-750`

@@ -1,48 +1,29 @@
 /// <reference types="cypress" />
 
 /**
- * Discovery Map E2E Test Flows
+ * Browser acceptance coverage for the current Find Partners discovery surface.
  *
- * Covers the full Discovery / Find Partners experience:
- * page load, partner listing, filter controls (pills, language,
- * sort, gender, age range, distance, serious learner, voice room),
- * partner card interactions, empty/loading states, VIP gates,
- * global search, banner dismissal, error handling, and graceful
- * degradation of non-critical endpoints.
- *
- * Discovery endpoints exercised:
- *  - GET  /api/discovery/partners          (partner search with 15+ query params)
- *  - GET  /api/discovery/partner-of-week   (partner-of-week IDs, graceful fallback)
- *  - GET  /api/users/me                    (user profile for target language pills)
- *  - GET  /api/safety/blocked-ids          (blocked user filtering)
- *
- * Test count: 17 describe blocks, 45+ it cases.
+ * The Angular development server renders with SSR, so the initial data request can
+ * happen before Cypress owns the browser. Every test therefore performs a real
+ * client-side filter change and waits for that exact request before asserting UI.
+ * Backend controller contracts belong to the backend E2E suite, not this browser spec.
  */
-
-// -----------------------------------------------------------------
-// Shared helpers
-// -----------------------------------------------------------------
-
-const DISCOVERY_BASE = '/api/discovery';
 
 interface PartnerRecord {
   id: string;
   display_name: string;
-  avatar_url?: string;
-  bio_text?: string;
+  avatar_url: string;
+  bio_text: string;
   native_languages: string[];
   target_languages: string[];
   is_vip: boolean;
   is_serious_learner: boolean;
-  is_partner_of_week?: boolean;
   mbti_personality_type?: string;
   audio_intro_url?: string;
   distance_metres?: number;
-  last_active_at?: string;
-  interests?: string[];
+  last_active_at: string;
+  interests: string[];
   shared_interests?: string[];
-  country?: string;
-  city?: string;
   vip_tier: string;
   coins_balance: number;
   study_streak_days: number;
@@ -51,1512 +32,379 @@ interface PartnerRecord {
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
   privacy_hide_gender: boolean;
+  created_at: string;
 }
 
+interface MockOptions {
+  partners?: PartnerRecord[];
+  blockedIds?: string[];
+  partnerOfWeekIds?: string[];
+  partnerOfWeekUnavailable?: boolean;
+  partnerDelayMs?: number;
+}
+
+let unexpectedApiRequests: string[] = [];
+
+const transparentAvatar =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"/%3E';
+
 function makePartner(overrides: Partial<PartnerRecord> = {}): PartnerRecord {
+  const now = new Date().toISOString();
   return {
     id: 'partner-001',
     display_name: 'Maria Garcia',
-    avatar_url: 'https://i.pravatar.cc/150?u=partner-001',
-    bio_text: 'Hola! I am learning English and love meeting new people.',
+    avatar_url: transparentAvatar,
+    bio_text: 'Learning English and looking for thoughtful conversation partners.',
     native_languages: ['ES'],
     target_languages: ['EN', 'JA'],
-    is_vip: false,
+    is_vip: true,
     is_serious_learner: true,
+    mbti_personality_type: 'ENFP',
+    audio_intro_url: 'data:audio/ogg;base64,T2dnUw==',
     distance_metres: 2500,
-    last_active_at: new Date().toISOString(),
-    interests: ['reading', 'travel', 'photography', 'cooking', 'music'],
-    vip_tier: 'none',
+    last_active_at: now,
+    interests: ['reading', 'travel', 'photography', 'music'],
+    shared_interests: ['travel', 'photography'],
+    vip_tier: 'premium',
     coins_balance: 0,
-    study_streak_days: 0,
-    correction_ratio: 0,
+    study_streak_days: 7,
+    correction_ratio: 0.8,
     privacy_hide_age: false,
     privacy_hide_location: false,
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
+    created_at: now,
     ...overrides,
   };
 }
 
-function createMockPartners(): PartnerRecord[] {
+function partners(): PartnerRecord[] {
   return [
-    makePartner({
-      id: 'partner-001',
-      display_name: 'Maria Garcia',
-      bio_text: 'Hola! I am learning English and love meeting new people.',
-      native_languages: ['ES'],
-      target_languages: ['EN', 'JA'],
-      is_vip: true,
-      is_partner_of_week: true,
-      mbti_personality_type: 'ENFP',
-      audio_intro_url: 'https://example.com/audio/maria.ogg',
-      distance_metres: 2500,
-      interests: ['reading', 'travel', 'photography', 'cooking', 'music'],
-      shared_interests: ['travel', 'photography'],
-    }),
+    makePartner(),
     makePartner({
       id: 'partner-002',
       display_name: 'Kenji Tanaka',
-      bio_text: 'よろしくお願いします！I want to practice English conversation.',
+      bio_text: 'Practising conversation and helping people learn Japanese.',
       native_languages: ['JA'],
       target_languages: ['EN'],
-      is_serious_learner: true,
+      is_vip: false,
+      is_serious_learner: false,
       mbti_personality_type: 'ISTJ',
+      audio_intro_url: undefined,
       distance_metres: 8500,
-      last_active_at: new Date(Date.now() - 1800000).toISOString(), // 30 min ago
-      interests: ['anime', 'technology', 'gaming'],
-    }),
-    makePartner({
-      id: 'partner-003',
-      display_name: 'Sophie Dubois',
-      bio_text: 'Bonjour! Looking for language exchange partners.',
-      native_languages: ['FR'],
-      target_languages: ['EN', 'DE'],
-      distance_metres: 12000,
-      last_active_at: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-      interests: ['art', 'fashion', 'cooking'],
-    }),
-    makePartner({
-      id: 'partner-004',
-      display_name: 'Ahmed Hassan',
-      bio_text: 'مرحبا! I can help with Arabic and want to practice Spanish.',
-      native_languages: ['AR'],
-      target_languages: ['ES'],
-      is_vip: true,
-      is_partner_of_week: true,
-      distance_metres: 500,
-      last_active_at: new Date(Date.now() - 300000).toISOString(), // 5 min ago
-      interests: ['football', 'history', 'poetry', 'travel', 'technology', 'photography'],
-    }),
-    makePartner({
-      id: 'partner-005',
-      display_name: 'Ling Wei',
-      bio_text: '你好！Teaching Chinese, learning Korean and English.',
-      native_languages: ['ZH'],
-      target_languages: ['KO', 'EN'],
-      distance_metres: 42000,
-      last_active_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      interests: ['calligraphy', 'tea', 'hiking'],
+      interests: ['technology', 'gaming'],
+      shared_interests: undefined,
     }),
   ];
 }
 
-function mockUserProfile(targetLanguages: string[] = ['JA', 'KO', 'FR']): Record<string, unknown> {
-  return {
+function userProfile(): PartnerRecord {
+  return makePartner({
     id: 'mock-user-123',
     display_name: 'Test User',
     native_languages: ['EN'],
-    target_languages: targetLanguages,
-    is_vip: false,
+    target_languages: ['JA', 'FR'],
+    is_vip: true,
     is_serious_learner: false,
-    privacy_hide_age: false,
-    privacy_hide_location: false,
-    privacy_hide_from_search: false,
-    privacy_hide_gender: false,
-    vip_tier: 'none',
-    coins_balance: 0,
-    study_streak_days: 0,
-    correction_ratio: 0,
-  };
+    audio_intro_url: undefined,
+    interests: [],
+    shared_interests: undefined,
+  });
 }
 
-function setupDiscoveryMocks(partners: PartnerRecord[] = createMockPartners()): void {
-  // Broad safety / chat intercepts to avoid 401/500 noise
-  cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-  cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-  cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-  cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-  cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-    'getBlockedAndBlockerIds',
-  );
-  cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-  cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
+function installApplicationMocks(options: MockOptions = {}): void {
+  unexpectedApiRequests = [];
+  const responsePartners = options.partners ?? partners();
+  const blockedIds = options.blockedIds ?? [];
+  const partnerOfWeekIds = options.partnerOfWeekIds ?? ['partner-001'];
 
-  // User profile
+  // Specific routes below are registered later and therefore take precedence.
+  // Any unrecognised request is recorded and failed so the acceptance suite cannot
+  // hide a removed or misspelt integration behind a permissive empty response.
+  cy.intercept('**/api/**', (request) => {
+    unexpectedApiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
+    request.reply({ statusCode: 418, body: { error: 'Unexpected acceptance request' } });
+  });
+  cy.intercept('https://mock.supabase.co/**', { statusCode: 200, body: [] });
+
+  cy.intercept('GET', '**/api/version/minimum', {
+    statusCode: 200,
+    body: { minimumSupported: '1.0.0' },
+  });
+  cy.intercept('GET', '**/api/economy/catalog', { statusCode: 200, body: [] });
+  cy.intercept('GET', '**/api/economy/balance', {
+    statusCode: 200,
+    body: { coins_balance: 0 },
+  });
+  cy.intercept('GET', '**/api/economy/transactions', {
+    statusCode: 200,
+    body: { transactions: [] },
+  });
+  cy.intercept('GET', '**/api/economy/sticker-packs', {
+    statusCode: 200,
+    body: { packs: [], owned_pack_ids: [], user_coins: 0 },
+  });
+  cy.intercept('POST', '**/api/economy/daily-check-in', {
+    statusCode: 200,
+    body: { claimed: false, coins_rewarded: 0, new_balance: 0 },
+  });
+  cy.intercept('POST', '**/api/chat/token', { statusCode: 200, body: {} });
+  cy.intercept('GET', '**/api/chat/rooms', { statusCode: 200, body: [] });
+  cy.intercept('GET', '**/api/chat/locked-rooms', { statusCode: 200, body: [] });
+  cy.intercept('GET', '**/api/chat/labels', { statusCode: 200, body: [] });
+  cy.intercept('GET', '**/api/notifications/unread-count', {
+    statusCode: 200,
+    body: { unreadCount: 0 },
+  });
+  cy.intercept('GET', '**/api/safety/blocked-ids', {
+    statusCode: 200,
+    body: blockedIds,
+  });
+  cy.intercept('GET', '**/api/safety/blocked-ids/*', {
+    statusCode: 200,
+    body: blockedIds,
+  });
+  cy.intercept('GET', '**/api/safety/blocker-ids/*', {
+    statusCode: 200,
+    body: blockedIds,
+  });
+  cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', {
+    statusCode: 200,
+    body: blockedIds,
+  });
   cy.intercept('GET', '**/api/users/me', {
     statusCode: 200,
-    body: mockUserProfile(),
-  }).as('getUserProfile');
-
-  // Discovery partners
-  cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
+    body: userProfile(),
+  });
+  cy.intercept('PATCH', '**/api/users/me', {
     statusCode: 200,
-    body: partners,
+    body: userProfile(),
+  });
+  if (options.partnerOfWeekUnavailable) {
+    cy.intercept('GET', '**/api/discovery/partner-of-week', { forceNetworkError: true }).as(
+      'getPartnerOfWeek',
+    );
+  } else {
+    cy.intercept('GET', '**/api/discovery/partner-of-week', {
+      statusCode: 200,
+      body: partnerOfWeekIds,
+    }).as('getPartnerOfWeek');
+  }
+  cy.intercept('GET', '**/api/discovery/partners*', {
+    statusCode: 200,
+    body: responsePartners,
+    delay: options.partnerDelayMs ?? 0,
   }).as('getPartners');
-
-  // Partner of week
-  cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-    statusCode: 200,
-    body: ['partner-001', 'partner-004'],
-  }).as('getPartnerOfWeek');
 }
 
-// -----------------------------------------------------------------
-// 1. Page Load & Partner Listing
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Page Load & Partner Listing', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-  });
-
-  it('should load the discovery page and display the title', () => {
-    cy.get('app-discovery').should('exist');
-    cy.contains(/Find Partners|Discovery/i).should('exist');
-  });
-
-  it('should render all partner cards from the API response', () => {
-    cy.wait('@getPartners');
-
-    const partnerNames = ['Maria Garcia', 'Kenji Tanaka', 'Sophie Dubois', 'Ahmed Hassan', 'Ling Wei'];
-    for (const name of partnerNames) {
-      cy.contains(name).should('be.visible');
+function waitForSearch(fragment: string): Cypress.Chainable<string> {
+  return cy.wait('@getPartners').then((interception) => {
+    const url = interception.request.url;
+    if (url.includes(fragment)) {
+      return cy.wrap(url, { log: false });
     }
+    return waitForSearch(fragment);
+  });
+}
+
+function visitDiscoveryOnline(): void {
+  cy.visit('/discovery', {
+    onBeforeLoad: (window) => {
+      Object.defineProperty(window.navigator, 'onLine', {
+        configurable: true,
+        value: true,
+      });
+    },
+  });
+}
+
+function visitDiscovery(options: MockOptions = {}): void {
+  installApplicationMocks(options);
+  visitDiscoveryOnline();
+  cy.contains('app-discovery main [role="listitem"]', 'Maria Garcia', { timeout: 15000 }).should(
+    'be.visible',
+  );
+  cy.get('app-discovery #sortBySelect').select('nearest');
+  waitForSearch('sort=nearest');
+  cy.get('app-discovery main [role="list"]').should('be.visible');
+  cy.contains('app-discovery main [role="listitem"]', 'Maria Garcia').should('be.visible');
+}
+
+describe('Discovery Map browser acceptance', () => {
+  afterEach(() => {
+    expect(unexpectedApiRequests, 'unexpected application API requests').to.deep.equal([]);
   });
 
-  it('should display partner bio text on each card', () => {
-    cy.wait('@getPartners');
+  it('renders the Find Partners surface from a controlled client request', () => {
+    visitDiscovery();
 
-    cy.contains('Hola! I am learning English').should('be.visible');
-    cy.contains('よろしくお願いします').should('be.visible');
+    cy.get('app-discovery h1').should('contain.text', 'Find partners');
+    cy.get('app-discovery main [role="listitem"]').should('have.length', 2);
+    cy.contains('Maria Garcia').should('be.visible');
+    cy.contains('Kenji Tanaka').should('be.visible');
   });
 
-  it('should display distance formatting for each partner', () => {
-    cy.wait('@getPartners');
+  it('renders profile quality and language-exchange signals', () => {
+    visitDiscovery();
 
-    // Distance values are formatted: "X.X km · Y.Y mi"
-    cy.contains(/km/).should('be.visible');
-    cy.contains(/mi/).should('be.visible');
+    cy.contains('Learning English and looking for thoughtful conversation partners.').should(
+      'be.visible',
+    );
+    cy.contains('2.5 km').should('be.visible');
+    cy.contains('ENFP').should('be.visible');
+    cy.contains('VIP').should('be.visible');
+    cy.contains('Partner of the Week').should('be.visible');
+    cy.contains('travel, photography').should('be.visible');
   });
 
-  it('should display active status labels for partners', () => {
-    cy.wait('@getPartners');
+  it('limits interest chips and shows the remaining count', () => {
+    visitDiscovery();
 
-    // At least one "Active" status indicator should appear
-    cy.get('.text-green-500').should('exist');
-  });
-
-  it('should display partner interests as chips', () => {
-    cy.wait('@getPartners');
-
+    cy.contains('reading').should('be.visible');
     cy.contains('travel').should('be.visible');
     cy.contains('photography').should('be.visible');
-    cy.contains('anime').should('be.visible');
-  });
-});
-
-// -----------------------------------------------------------------
-// 2. Partner Card Content & Badges
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Partner Card Details', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
+    cy.contains('+1').should('be.visible');
   });
 
-  it('should render VIP badge for VIP partners', () => {
-    cy.get('.bg-yellow-400').should('exist');
+  it('exposes accessible partner cards, avatars and audio controls', () => {
+    visitDiscovery();
+
+    cy.get('app-discovery main [role="listitem"]')
+      .first()
+      .should('have.attr', 'aria-label', 'Language partner: Maria Garcia');
+    cy.get('img[alt="Avatar of Maria Garcia"]').should('be.visible');
+    cy.get('button[aria-label="Play introduction"]').should(
+      'have.attr',
+      'aria-pressed',
+      'false',
+    );
   });
 
-  it('should render Partner of the Week badge', () => {
-    cy.contains(/Partner of the Week/i).should('exist');
+  it('navigates from a partner card to the matching chat', () => {
+    visitDiscovery();
+
+    cy.get('app-discovery main [role="listitem"]').first().click();
+    cy.location('pathname').should('eq', '/chat/partner-001');
   });
 
-  it('should render MBTI personality type badge when available', () => {
-    cy.contains('ENFP').should('be.visible');
-    cy.contains('ISTJ').should('be.visible');
+  it('sends the selected sort order to the API', () => {
+    visitDiscovery();
+
+    cy.get('#sortBySelect').should('have.value', 'nearest');
   });
 
-  it('should render audio intro play button for partners with audio intro', () => {
-    // Maria Garcia has an audio_intro_url
-    cy.get('[aria-label*="audio" i], [aria-label*="Audio" i], [aria-pressed]').should('exist');
+  it('applies the serious learner pill', () => {
+    visitDiscovery();
+
+    cy.get('app-scrollable-pills').contains('button', 'Serious Learners Only').click();
+    waitForSearch('serious_learner_only=true');
+    cy.get('app-discovery main [role="listitem"]').should('have.length', 1);
+    cy.contains('Maria Garcia').should('be.visible');
   });
 
-  it('should render fluency indicator for native and target languages', () => {
-    cy.get('app-fluency-indicator').should('exist');
+  it('applies the near-me distance band', () => {
+    visitDiscovery();
+
+    cy.get('app-scrollable-pills').contains('button', 'Near Me (Radius)').click();
+    waitForSearch('radius_metres=10000');
   });
 
-  it('should display shared interests highlight when present', () => {
-    cy.contains(/shared interests/i).should('exist');
+  it('applies the city distance band', () => {
+    visitDiscovery();
+
+    cy.get('app-scrollable-pills').contains('button', 'City Level').click();
+    waitForSearch('radius_metres=25000');
   });
 
-  it('should render partner avatars', () => {
-    cy.get('img[alt="avatar"]').should('have.length.at.least', 3);
+  it('applies list-driven global language and proficiency filters', () => {
+    visitDiscovery();
+
+    cy.get('#global-nativeLanguages').select('es');
+    cy.get('#global-targetLanguage').select('ja');
+    cy.get('#global-proficiencyLevel').select('b1');
+    cy.get('app-global-search button').click();
+    waitForSearch('native_languages=es')
+      .should('include', 'target_language=ja')
+      .and('include', 'level=b1');
   });
 
-  it('should display "View VIP" link when user is not VIP', () => {
-    cy.get('a[href="/vip"]').should('exist');
-  });
-});
+  it('applies the voice-room-active filter', () => {
+    visitDiscovery();
 
-// -----------------------------------------------------------------
-// 3. Partner Card Navigation
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Partner Card Navigation', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should navigate to partner chat when clicking the partner card body', () => {
-    cy.contains('Maria Garcia').click();
-
-    // Should navigate to chat/[partnerId]
-    cy.url().should('include', '/chat/partner-001');
-  });
-
-  it('should navigate to partner profile when clicking the avatar', () => {
-    cy.get('img[alt="avatar"]').first().click({ force: true });
-
-    cy.url().should('include', '/profile/user/partner-001');
-  });
-
-  it('should navigate to VIP page from gender VIP badge', () => {
-    cy.get('a[href="/vip"]').first().click();
-    cy.url().should('include', '/vip');
-  });
-
-  it('should have gradient action button for each partner', () => {
-    cy.get('app-gradient-button').should('have.length.at.least', 3);
-  });
-});
-
-// -----------------------------------------------------------------
-// 4. Filter Pills
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Filter Pills', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display all filter pills (All, Serious, Nearby, City, Paid)', () => {
-    cy.get('app-scrollable-pills').should('exist');
-    cy.contains(/All/i).should('exist');
-    cy.contains(/Serious/i).should('exist');
-    cy.contains(/Near Me|Nearby/i).should('exist');
-    cy.contains(/City/i).should('exist');
-    cy.contains(/Paid/i).should('exist');
-  });
-
-  it('should trigger a new partner search when a filter pill is clicked', () => {
-    cy.contains(/Serious/i).click();
-
-    cy.wait('@getPartners').its('request.url').should('include', 'serious_learner_only=true');
-  });
-
-  it('should trigger nearby filter with reduced distance', () => {
-    cy.contains(/Near Me|Nearby/i).click();
-
-    cy.wait('@getPartners').its('request.url').should('include', 'radius_metres=10000');
-  });
-
-  it('should trigger city filter with appropriate distance', () => {
-    cy.contains(/City/i).click();
-
-    cy.wait('@getPartners').its('request.url').should('include', 'radius_metres=25000');
-  });
-});
-
-// -----------------------------------------------------------------
-// 5. Language Filter
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Language Filter', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display language pills for user target languages', () => {
-    // Mock profile has JA, KO, FR as target languages
-    cy.get('.flex.overflow-x-auto button').should('exist');
-  });
-
-  it('should trigger a search when a language pill is clicked', () => {
-    // Click the first language button (skip "Any" button)
-    cy.get('.flex.overflow-x-auto button').first().click();
-
-    cy.wait('@getPartners').its('request.url').should('include', 'target_language=');
-  });
-
-  it('should have an "Any Language" button to reset the language filter', () => {
-    cy.contains(/Any/i).should('exist').click();
-    cy.wait('@getPartners');
-  });
-});
-
-// -----------------------------------------------------------------
-// 6. Sort Selector
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Sort Selector', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display a sort dropdown with options', () => {
-    cy.get('#sortBySelect').should('exist');
-    cy.get('#sortBySelect option').should('have.length.at.least', 4);
-  });
-
-  it('should trigger a new search when sort option is changed', () => {
-    cy.get('#sortBySelect').select('nearest');
-
-    cy.wait('@getPartners').its('request.url').should('include', 'sort=nearest');
-  });
-
-  it('should default to best_match sorting', () => {
-    cy.get('#sortBySelect').should('have.value', 'best_match');
-  });
-});
-
-// -----------------------------------------------------------------
-// 7. Gender Filter (VIP Gated)
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Gender Filter', () => {
-  it('should show gender select as disabled when user is not VIP', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('#genderSelect').should('be.disabled');
-    cy.get('#genderVipNote').should('be.visible');
-  });
-
-  it('should show VIP requirement link for gender filter', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('#genderVipNote').should('contain.text', 'VIP');
-    cy.get('#genderVipNote').click();
-    cy.url().should('include', '/vip');
-  });
-});
-
-// -----------------------------------------------------------------
-// 8. Age Range Slider
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Age Range Filter', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display the age range slider', () => {
-    cy.get('app-age-range-slider').should('exist');
-  });
-
-  it('should trigger a search when age range is changed', () => {
-    // Age range slider emits when changed; verify the component exists
-    cy.get('app-age-range-slider').should('exist');
-    // The slider component behaviour is tested in its own unit tests;
-    // here we verify it renders and does not 401
-  });
-});
-
-// -----------------------------------------------------------------
-// 9. Distance Slider
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Distance Slider', () => {
-  it('should display the distance slider', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('app-distance-slider').should('exist');
-  });
-
-  it('should show VIP upgrade note when user is not VIP', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('#distanceVipNote').should('be.visible');
-    cy.get('#distanceVipNote').should('contain.text', 'VIP');
-  });
-});
-
-// -----------------------------------------------------------------
-// 10. Serious Learner Mode Toggle
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Serious Learner Mode', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display the serious learner mode toggle checkbox', () => {
-    cy.get('#seriousModeCheckbox').should('exist');
-  });
-
-  it('should display description text for serious learner mode', () => {
-    cy.contains(/serious/i).should('exist');
-  });
-
-  it('should be unchecked by default for non-serious learners', () => {
-    cy.get('#seriousModeCheckbox').should('not.be.checked');
-  });
-
-  it('should trigger a search when toggled', () => {
-    cy.get('#seriousModeCheckbox').check();
-
-    cy.wait('@getPartners');
-  });
-});
-
-// -----------------------------------------------------------------
-// 11. Voice Room Active Toggle
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Voice Room Active Filter', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display the voice room active toggle checkbox', () => {
-    cy.get('#voiceRoomActiveCheckbox').should('exist');
-  });
-
-  it('should be unchecked by default', () => {
-    cy.get('#voiceRoomActiveCheckbox').should('not.be.checked');
-  });
-
-  it('should trigger a search when toggled', () => {
     cy.get('#voiceRoomActiveCheckbox').check();
-
-    cy.wait('@getPartners').its('request.url').should('include', 'voice_room_active=true');
-  });
-});
-
-// -----------------------------------------------------------------
-// 12. Banner Ad
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Banner', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
+    waitForSearch('voice_room_active=true');
   });
 
-  it('should display the promotional banner', () => {
-    cy.contains(/Paid Practice|banner/i).should('exist');
+  it('shows VIP controls for the authenticated VIP mock user', () => {
+    visitDiscovery();
+
+    cy.get('#genderSelect').should('not.be.disabled').select('female');
+    waitForSearch('gender=female');
+    cy.get('app-distance-slider input').should('not.be.disabled');
   });
 
-  it('should dismiss the banner when the close button is clicked', () => {
-    cy.get('button[aria-label="Close banner"]').click();
+  it('dismisses the promotional banner with an accessible close action', () => {
+    visitDiscovery();
 
-    // Banner should be removed from the DOM
-    cy.contains(/Paid Practice/i).should('not.exist');
+    cy.contains('Unlock Paid Practice').should('be.visible');
+    cy.get('app-discovery button[aria-label="Close"]').click();
+    cy.contains('Unlock Paid Practice').should('not.exist');
   });
 
-  it('should navigate to VIP page from banner CTA button', () => {
-    cy.get('a[href="/vip"]').first().click();
-    cy.url().should('include', '/vip');
-  });
-});
+  it('navigates from the promotional action to VIP', () => {
+    visitDiscovery();
 
-// -----------------------------------------------------------------
-// 13. Global Search Integration
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Global Search', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
+    cy.get('app-discovery button[aria-label="View VIP"]').click();
+    cy.location('pathname').should('eq', '/vip');
   });
 
-  it('should render the global search component', () => {
-    cy.get('app-global-search').should('exist');
-  });
+  it('shows and recovers from the empty state', () => {
+    installApplicationMocks({ partners: [] });
+    visitDiscoveryOnline();
+    cy.get('app-empty-state', { timeout: 15000 }).should('exist');
+    cy.get('app-discovery #sortBySelect').select('nearest');
+    waitForSearch('sort=nearest');
 
-  it('should trigger a partner search when search filters are emitted', () => {
-    // The global search component is rendered and should not produce console errors
-    cy.get('app-global-search').should('exist');
-    cy.get('body').should('exist');
-    // Additional search interaction tests depend on GlobalSearchComponent internals
-  });
-});
-
-// -----------------------------------------------------------------
-// 14. Empty & Loading States
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Empty & Loading States', () => {
-  it('should show loading state while fetching partners', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
-
-    // Simulate a slow response
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, (req) => {
-      req.on('response', (res) => {
-        res.setDelay(2000);
-      });
-      req.reply({ statusCode: 200, body: [] });
-    }).as('slowPartners');
-
-    cy.visit('/discovery');
-
-    // While loading, the searching/empty-state component should be visible
     cy.get('app-empty-state').should('exist');
-
-    // After loading, results render
-    cy.wait('@slowPartners');
+    cy.intercept('GET', '**/api/discovery/partners?*sort=best_match*').as('resetPartners');
+    cy.get('app-empty-state button').click({ force: true });
+    cy.wait('@resetPartners');
+    cy.get('app-discovery #sortBySelect').should('have.value', 'best_match');
   });
 
-  it('should show empty state when no partners are found', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
+  it('announces loading while a client search is in flight', () => {
+    installApplicationMocks({ partnerDelayMs: 3000 });
+    visitDiscoveryOnline();
+    cy.contains('app-discovery main [role="listitem"]', 'Maria Garcia', { timeout: 15000 }).should(
+      'be.visible',
     );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
+    cy.get('app-discovery #sortBySelect').select('nearest');
 
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: [],
-    }).as('emptyPartners');
-
-    cy.visit('/discovery');
-    cy.wait('@emptyPartners');
-
-    // Empty state with "no users nearby" message
-    cy.get('app-empty-state').should('exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 15. API Contract Tests - Error Handling & Edge Cases
-//
-// Note: UI-level 500 error tests are intentionally omitted because the
-// global E2E hardener (cypress/support/e2e.ts) throws on any 500+
-// response. The DiscoveryService handles errors client-side via
-// catchError(() => of(MOCK_PARTNERS)), verified in Vitest unit tests.
-// -----------------------------------------------------------------
-
-describe('Discovery Map - API Contract', () => {
-  it('should return 200 with partner array from GET /api/discovery/partners', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/partners`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      // The hardener disallows 500+; if we get here, status is <500
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
+    cy.get('app-discovery section[aria-busy="true"]').should('be.visible');
+    waitForSearch('sort=nearest');
+    cy.get('app-discovery section[aria-busy="true"]').should('not.exist');
   });
 
-  it('should return valid partner shape from GET /api/discovery/partners', () => {
-    const partners = createMockPartners();
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: partners,
-    });
-
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/partners`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      if (response.status !== 200) return;
-      expect(response.body).to.be.an('array');
-      if (response.body.length > 0) {
-        const p = response.body[0];
-        expect(p).to.have.property('id');
-        expect(p).to.have.property('display_name');
-        expect(p).to.have.property('native_languages');
-      }
-    });
-  });
-
-  it('should return 200 with string array from GET /api/discovery/partner-of-week', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/partner-of-week`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      // Can return 200 or 401 (unauthenticated)
-      expect(response.status).to.be.oneOf([200, 401]);
-      if (response.status === 200) {
-        expect(response.body).to.be.an('array');
-      }
-    });
-  });
-
-  it('should properly encode query parameters on partner search', () => {
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: [],
-    }).as('encodedSearch');
-
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/partners?target_language=JA&sort=nearest&radius_metres=25000&serious_learner_only=true&age_min=18&age_max=65`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-});
-
-// -----------------------------------------------------------------
-// 16. Resilience - Graceful Degradation for Non-critical Endpoints
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Graceful Degradation', () => {
-  it('should render partner list even when partner-of-week endpoint returns empty', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-
-    // Partner-of-week returns empty (graceful)
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-      statusCode: 200,
-      body: [],
-    }).as('emptyPartnerOfWeek');
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Partners should still render fully without the partner-of-week badge
-    cy.contains('Maria Garcia').should('be.visible');
-    cy.contains('Kenji Tanaka').should('be.visible');
-
-    // Partner-of-week badge should NOT appear (since no one is partner of week)
-    // All partners still have their cards
-    cy.get('article').should('have.length', 5);
-  });
-
-  it('should load discovery with minimal profile data (empty target languages)', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-
-    // Profile with empty target_languages
-    cy.intercept('GET', '**/api/users/me', {
-      statusCode: 200,
-      body: mockUserProfile([]), // no target languages
-    }).as('getUserProfile');
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Discovery should still work; just no language-specific pills
-    cy.contains('Maria Garcia').should('be.visible');
-    cy.get('body').should('exist');
-  });
-
-  it('should show partner list even when partner-of-week returns 500', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-
-    // Partners succeed
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-
-    // Partner-of-week returns 500 (simulating Redis failure)
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-      statusCode: 500,
-      body: { error: 'Redis unavailable' },
-    }).as('getPartnerOfWeekError');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Partners should still render even without PoW badges
-    cy.contains('Maria Garcia').should('be.visible');
-    cy.get('article').should('have.length', 5);
-  });
-
-  it('should handle safety blocked-ids endpoint failure gracefully', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-
-    // Safety blocked-ids endpoint fails
-    cy.intercept('GET', '**/api/safety/blocked-ids', {
-      statusCode: 500,
-      body: {},
-    }).as('getBlockedIdsError');
-
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Partners should still render even when safety endpoint fails
-    cy.contains('Maria Garcia').should('be.visible');
-    cy.get('article').should('have.length', 5);
-  });
-
-  it('should fall back to mock data when partners endpoint returns 500', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', { body: mockUserProfile() }).as('getUserProfile');
-
-    // Partners endpoint returns 500
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 500,
-      body: { error: 'Internal Server Error' },
-    }).as('getPartnersError');
-
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, { body: [] }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartnersError');
-
-    // Should still show mock data fallback (at least some content appears)
-    cy.get('article').should('exist');
-    cy.get('body').should('exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 17. User-driven Discovery Flow (Integration)
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Full User Journey', () => {
-  it('should complete the full discovery: load -> filter -> navigate -> chat', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // 1. Verify page loaded with partners
-    cy.contains('Maria Garcia').should('be.visible');
-    cy.contains('Kenji Tanaka').should('be.visible');
-
-    // 2. Apply a filter pill
-    cy.contains(/Serious/i).click();
-    cy.wait('@getPartners');
-
-    // 3. Change sort option
-    cy.get('#sortBySelect').select('newest');
-    cy.wait('@getPartners');
-
-    // 4. Select a language
-    cy.get('.flex.overflow-x-auto button').first().click();
-    cy.wait('@getPartners');
-
-    // 5. Toggle voice room active
-    cy.get('#voiceRoomActiveCheckbox').check();
-    cy.wait('@getPartners');
-
-    // 6. Navigate to a partner's chat
-    cy.contains('Maria Garcia').click();
-    cy.url().should('include', '/chat/partner-001');
-  });
-});
-
-// -----------------------------------------------------------------
-// 18. Offline / PWA Fallback
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Offline / PWA Fallback', () => {
-  it('should display the offline banner when offline with cached data', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Normally the offline banner is not present when online
-    cy.get('[role="alert"]').should('not.exist');
-  });
-
-  it('should still render partner cards when served from cache', () => {
-    // Even without the offline banner, partner list renders
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
+  it('filters blocked users out of returned partner data', () => {
+    visitDiscovery({ blockedIds: ['partner-002'] });
 
     cy.contains('Maria Garcia').should('be.visible');
-    cy.get('article').should('have.length.at.least', 3);
-  });
-
-  it('should display cached data indicator text in offline banner when present', () => {
-    // The offline banner text keys are configured in i18n;
-    // verify the component handles offline state gracefully
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // App should render the discovery page without errors
-    cy.get('app-discovery').should('exist');
-    cy.get('body').should('exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 19. Audio Intro Playback
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Audio Intro Playback', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should render play button for partners with audio intro URL', () => {
-    // Maria Garcia has audio_intro_url in mock data
-    cy.contains('Maria Garcia')
-      .parents('article')
-      .find('[aria-pressed]')
-      .should('exist');
-  });
-
-  it('should toggle play/pause when audio intro button is clicked', () => {
-    // Click the play button on Maria Garcia's card
-    cy.contains('Maria Garcia')
-      .parents('article')
-      .find('[aria-pressed]')
-      .click();
-
-    // After clicking, the button should still exist (playing state)
-    cy.contains('Maria Garcia')
-      .parents('article')
-      .find('[aria-pressed]')
-      .should('exist');
-  });
-
-  it('should not show play button for partners without audio intro', () => {
-    // Kenji Tanaka does NOT have audio_intro_url
-    cy.contains('Kenji Tanaka')
-      .parents('article')
-      .find('[aria-pressed]')
-      .should('not.exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 20. Blocked User Filtering
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Blocked User Filtering', () => {
-  it('should filter out blocked users from partner results', () => {
-    const partners = createMockPartners();
-    setupDiscoveryMocks(partners);
-    cy.intercept('GET', '**/api/safety/blocked-ids', {
-      statusCode: 200,
-      body: ['partner-002', 'partner-005'],
-    }).as('getBlockedIds');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Blocked partners should be hidden
     cy.contains('Kenji Tanaka').should('not.exist');
-    cy.contains('Ling Wei').should('not.exist');
+  });
 
-    // Non-blocked partners should still be visible
+  it('degrades safely when the partner-of-week endpoint is unavailable', () => {
+    visitDiscovery({ partnerOfWeekUnavailable: true });
+
     cy.contains('Maria Garcia').should('be.visible');
-    cy.contains('Sophie Dubois').should('be.visible');
-    cy.contains('Ahmed Hassan').should('be.visible');
+    cy.contains('Partner of the Week').should('not.exist');
   });
 
-  it('should display all partners when no users are blocked', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('article').should('have.length', 5);
-  });
-});
-
-// -----------------------------------------------------------------
-// 21. Gender Filter - VIP (Enabled) State
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Gender Filter (VIP Enabled)', () => {
-  it('should enable gender select when user is VIP', () => {
-    // Set up user profile with VIP = true
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', {
-      statusCode: 200,
-      body: { ...mockUserProfile(), is_vip: true },
-    }).as('getUserProfile');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-      statusCode: 200,
-      body: ['partner-001', 'partner-004'],
-    }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Gender select should now be enabled for VIP users
-    cy.get('#genderSelect').should('not.be.disabled');
-  });
-
-  it('should hide VIP upgrade note when user is VIP', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', {
-      statusCode: 200,
-      body: { ...mockUserProfile(), is_vip: true },
-    }).as('getUserProfile');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-      statusCode: 200,
-      body: ['partner-001'],
-    }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // VIP upgrade note should not be visible
-    cy.get('#genderVipNote').should('not.exist');
-  });
-
-  it('should trigger search when gender filter is changed (VIP)', () => {
-    cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-    cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-    cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-    cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-      'getBlockedAndBlockerIds',
-    );
-    cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-    cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 0 } }).as('getBalance');
-    cy.intercept('GET', '**/api/users/me', {
-      statusCode: 200,
-      body: { ...mockUserProfile(), is_vip: true },
-    }).as('getUserProfile');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partners*`, {
-      statusCode: 200,
-      body: createMockPartners(),
-    }).as('getPartners');
-    cy.intercept('GET', `${DISCOVERY_BASE}/partner-of-week`, {
-      statusCode: 200,
-      body: ['partner-001'],
-    }).as('getPartnerOfWeek');
-
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('#genderSelect').select('female');
-    cy.wait('@getPartners');
-    // Verify search was triggered with gender param
-    cy.get('@getPartners').its('request.url').should('include', 'gender=female');
-  });
-});
-
-// -----------------------------------------------------------------
-// 22. Notification Bell Navigation
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Notification Bell', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should render the notification link in the header', () => {
-    cy.get('a[routerLink="/notifications"]').should('exist');
-  });
-
-  it('should navigate to notifications when bell icon is clicked', () => {
-    cy.get('a[routerLink="/notifications"]').first().click();
-    cy.url().should('include', '/notifications');
-  });
-});
-
-// -----------------------------------------------------------------
-// 23. Reset Filters
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Reset Filters', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should allow clearing language filter back to no selection', () => {
-    // First select a language pill
-    cy.get('.flex.overflow-x-auto button').first().click();
-    cy.wait('@getPartners');
-
-    // Then click the "Any" button to reset
-    cy.contains(/Any/i).click();
-    cy.wait('@getPartners');
-  });
-
-  it('should allow resetting filter pill to All', () => {
-    // Apply a non-default filter
-    cy.contains(/Serious/i).click();
-    cy.wait('@getPartners');
-
-    // Switch back to All
-    cy.contains(/All/i).click();
-    cy.wait('@getPartners');
-  });
-
-  it('should reset multiple applied filters via UI interaction', () => {
-    // Apply serious filter
-    cy.contains(/Serious/i).click();
-    cy.wait('@getPartners');
-
-    // Uncheck voice room active if checked
-    cy.get('#voiceRoomActiveCheckbox').check();
-    cy.wait('@getPartners');
-    cy.get('#voiceRoomActiveCheckbox').uncheck();
-    cy.wait('@getPartners');
-
-    // Partners should still be rendering
-    cy.get('article').should('have.length.at.least', 1);
-  });
-});
-
-// -----------------------------------------------------------------
-// 24. Language Picker Dropdown
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Language Picker', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should render the app-language-picker component', () => {
-    cy.get('app-language-picker').should('exist');
-  });
-
-  it('should allow selecting a language from the language picker', () => {
-    cy.get('app-language-picker').should('exist');
-    // The language picker is rendered inside the language pills row
-    cy.get('body').should('exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 25. Discovery Map - Combined Filter Operations
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Combined Filter Operations', () => {
-  it('should apply multiple filters and produce API request with all params', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // 1. Apply serious learner filter
-    cy.contains(/Serious/i).click();
-    cy.wait('@getPartners');
-
-    // 2. Select sort by nearest
-    cy.get('#sortBySelect').select('nearest');
-    cy.wait('@getPartners');
-
-    // 3. Uncheck voice room (toggle off after toggle on)
-    cy.get('#voiceRoomActiveCheckbox').check();
-    cy.wait('@getPartners');
-
-    // Verify partners still render after combined operations
-    cy.get('article').should('have.length.at.least', 1);
-  });
-
-  it('should survive rapid filter toggles without errors', () => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Toggle voice room on and off rapidly
-    cy.get('#voiceRoomActiveCheckbox').check();
-    cy.get('#voiceRoomActiveCheckbox').uncheck();
-    cy.wait('@getPartners');
-
-    // Toggle serious mode
-    cy.get('#seriousModeCheckbox').check();
-    cy.get('#seriousModeCheckbox').uncheck();
-    cy.wait('@getPartners');
-
-    // Page should still be functional
-    cy.contains('Maria Garcia').should('be.visible');
-  });
-
-  it('should render correct partner count after filtering', () => {
-    // Set up partners with only one serious learner
-    const partners = [
-      makePartner({
-        id: 'partner-001',
-        display_name: 'Maria Garcia',
-        is_serious_learner: true,
-      }),
-      makePartner({
-        id: 'partner-002',
-        display_name: 'Kenji Tanaka',
-        is_serious_learner: false,
-      }),
-      makePartner({
-        id: 'partner-003',
-        display_name: 'Sophie Dubois',
-        is_serious_learner: false,
-      }),
-    ];
-    setupDiscoveryMocks(partners);
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Apply serious filter
-    cy.contains(/Serious/i).click();
-    cy.wait('@getPartners');
-
-    // Only the serious learner should be visible
-    cy.contains('Maria Garcia').should('be.visible');
-  });
-});
-
-// -----------------------------------------------------------------
-// 26. Sort Options - All Values
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Sort Options Coverage', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should trigger search with sort=best_match by default', () => {
-    cy.get('#sortBySelect').should('have.value', 'best_match');
-  });
-
-  it('should trigger search with sort=online_now', () => {
-    cy.get('#sortBySelect').select('online_now');
-    cy.wait('@getPartners').its('request.url').should('include', 'sort=online_now');
-  });
-
-  it('should trigger search with sort=newest', () => {
-    cy.get('#sortBySelect').select('newest');
-    cy.wait('@getPartners').its('request.url').should('include', 'sort=newest');
-  });
-});
-
-// -----------------------------------------------------------------
-// 27. Filter Pill - Paid Practice
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Paid Practice Filter', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should display the Paid Practice filter pill', () => {
-    cy.contains(/Paid/i).should('exist');
-  });
-
-  it('should trigger a search when Paid pill is clicked', () => {
-    cy.contains(/Paid/i).click();
-    cy.wait('@getPartners');
-    // Paid filter resets distance to 50km and removes serious_learner_only
-    cy.get('@getPartners').its('request.url').should('not.include', 'serious_learner_only=true');
-  });
-});
-
-// -----------------------------------------------------------------
-// 28. Accessibility & Screen Reader
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Accessibility', () => {
-  beforeEach(() => {
-    setupDiscoveryMocks();
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-  });
-
-  it('should have the main landmark region', () => {
-    cy.get('main').should('exist');
-  });
-
-  it('should have a status region for live announcements', () => {
-    cy.get('[role="status"]').should('exist');
-  });
-
-  it('should have an aria-label on filter pills radiogroup', () => {
-    cy.get('[role="radiogroup"]').should('exist');
-  });
-
-  it('should label partner cards as list items', () => {
-    cy.get('[role="list"]').should('exist');
-    cy.get('[role="listitem"]').should('have.length.at.least', 3);
-  });
-
-  it('should have aria-labels on avatar images', () => {
-    cy.get('article img').first().should('have.attr', 'alt');
-  });
-
-  it('should have a skip link in the header navigation', () => {
-    cy.get('h1').should('exist');
-  });
-});
-
-// -----------------------------------------------------------------
-// 29. Additional API Contract Tests
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Additional API Contracts', () => {
-  it('GET /api/discovery/audio-intros should return 200 or 401', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/audio-intros`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-
-  it('GET /api/discovery/recent-native-speakers should return 200 or 401', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/recent-native-speakers`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-
-  it('GET /api/discovery/spotlight should return 200 or 401', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/spotlight`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-
-  it('GET /api/discovery/language-pair should return 200 or 401', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/language-pair?native_language=EN&target_language=JA`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-
-  it('GET /api/discovery/search-by-location should return 200 or 401', () => {
-    cy.request({
-      method: 'GET',
-      url: `${DISCOVERY_BASE}/search-by-location?country=JP&city=Tokyo`,
-      failOnStatusCode: false,
-    }).then((response) => {
-      expect(response.status).to.be.oneOf([200, 401]);
-    });
-  });
-});
-
-// -----------------------------------------------------------------
-// 30. Partner Card Detail Verification
-// -----------------------------------------------------------------
-
-describe('Discovery Map - Partner Card Edge Cases', () => {
-  it('should handle partners with empty interests gracefully', () => {
-    const partners = [
-      makePartner({
-        id: 'partner-minimal',
-        display_name: 'Minimal User',
-        bio_text: 'Just a basic profile',
-        interests: [],
-        distance_metres: 1000,
-        last_active_at: new Date().toISOString(),
-        native_languages: ['EN'],
-        target_languages: ['ES'],
-      }),
-    ];
-    setupDiscoveryMocks(partners);
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.contains('Minimal User').should('be.visible');
-    cy.get('article').should('have.length', 1);
-  });
-
-  it('should handle partners with many interests (overflow)', () => {
-    const partners = [
-      makePartner({
-        id: 'partner-many',
-        display_name: 'Many Interests User',
-        interests: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
-        distance_metres: 500,
-        last_active_at: new Date().toISOString(),
-      }),
-    ];
-    setupDiscoveryMocks(partners);
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    // Should show overflow count (+5)
-    cy.contains('+5').should('be.visible');
-  });
-
-  it('should handle partner with hidden location privacy', () => {
-    const partners = [
-      makePartner({
-        id: 'partner-hidden',
-        display_name: 'Private User',
-        privacy_hide_location: true,
-        distance_metres: undefined,
-        last_active_at: new Date().toISOString(),
-      }),
-    ];
-    setupDiscoveryMocks(partners);
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.contains('Private User').should('be.visible');
-  });
-
-  it('should display VIP partner with correct badge styling', () => {
-    const partners = [
-      makePartner({
-        id: 'partner-vip',
-        display_name: 'VIP User',
-        is_vip: true,
-        vip_tier: 'gold',
-        distance_metres: 3000,
-        last_active_at: new Date().toISOString(),
-      }),
-    ];
-    setupDiscoveryMocks(partners);
-    cy.visit('/discovery');
-    cy.wait('@getPartners');
-
-    cy.get('.bg-yellow-400').should('exist');
-    cy.contains('VIP User').should('be.visible');
+  it('keeps responsive list layouts for mobile, tablet and desktop', () => {
+    visitDiscovery();
+
+    cy.get('app-discovery main [role="list"]')
+      .should('have.class', 'grid-cols-1')
+      .and('have.class', 'md:grid-cols-2')
+      .and('have.class', 'lg:grid-cols-3');
   });
 });

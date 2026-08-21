@@ -51,8 +51,8 @@ describe('EarnedBadgesComponent', () => {
     badgesSignal.set({ isVip: true, isSeriousLearner: false });
     fixture.detectChanges();
 
-    const vipBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find(
-      (span) => (span as HTMLElement).textContent?.includes('👑'),
+    const vipBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find((span) =>
+      (span as HTMLElement).textContent?.includes('👑'),
     );
 
     expect(vipBadge).toBeTruthy();
@@ -62,8 +62,8 @@ describe('EarnedBadgesComponent', () => {
     badgesSignal.set({ isVip: false, isSeriousLearner: true });
     fixture.detectChanges();
 
-    const seriousBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find(
-      (span) => (span as HTMLElement).textContent?.includes('🎓'),
+    const seriousBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find((span) =>
+      (span as HTMLElement).textContent?.includes('🎓'),
     );
 
     expect(seriousBadge).toBeTruthy();
@@ -86,7 +86,7 @@ describe('EarnedBadgesComponent', () => {
     badgesSignal.set({ isVip: false, isSeriousLearner: false });
     fixture.detectChanges();
 
-    const noneBadge = fixture.nativeElement.querySelector('span.text-xs.text-neutral-400');
+    const noneBadge = fixture.nativeElement.querySelector('span.text-xs.text-text-muted');
     expect(noneBadge).toBeTruthy();
     expect((noneBadge as HTMLElement).textContent?.trim()).toBe('badges.none');
   });
