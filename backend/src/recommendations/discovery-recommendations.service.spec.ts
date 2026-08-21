@@ -1,11 +1,12 @@
 import { rankDiscoveryRecommendations } from './discovery-recommendations.service';
 
 const NOW = Date.parse('2026-08-21T10:00:00Z');
+type Candidate = Parameters<typeof rankDiscoveryRecommendations>[1][number];
 
 function candidate(
   id: string,
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+  overrides: Partial<Candidate> = {},
+): Candidate {
   return {
     id,
     display_name: `User ${id}`,
@@ -37,7 +38,7 @@ describe('rankDiscoveryRecommendations', () => {
           last_active_at: '2026-08-01T00:00:00Z',
         }),
         candidate('active-and-shared'),
-      ] as never[],
+      ],
       new Map([
         ['interest-heavy', 1],
         ['active-and-shared', 2],
@@ -66,7 +67,7 @@ describe('rankDiscoveryRecommendations', () => {
       [
         candidate('hidden-active', { privacy_hide_online_status: true }),
         candidate('visible-active'),
-      ] as never[],
+      ],
       new Map(),
       NOW,
     );
@@ -91,7 +92,7 @@ describe('rankDiscoveryRecommendations', () => {
         candidate('pending', { is_deletion_pending: true }),
         candidate('no-name', { display_name: '   ' }),
         candidate('no-language', { native_languages: [] }),
-      ] as never[],
+      ],
       new Map(),
       NOW,
     );
@@ -108,7 +109,7 @@ describe('rankDiscoveryRecommendations', () => {
 
     const result = rankDiscoveryRecommendations(
       current,
-      candidates.reverse() as never[],
+      candidates.reverse(),
       new Map(),
       NOW,
       50,
@@ -128,7 +129,7 @@ describe('rankDiscoveryRecommendations', () => {
           target_languages: ['ko'],
           last_active_at: null,
         }),
-      ] as never[],
+      ],
       new Map([['shared-only', 1]]),
       NOW,
     );
