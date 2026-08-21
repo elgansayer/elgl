@@ -4,7 +4,6 @@ import { lastValueFrom } from 'rxjs';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import { FcmService } from './fcm.service';
-import { MOCK_CURRENT_USER } from './mock-data';
 
 export interface AppUser extends User {
   is_vip?: boolean;
@@ -51,24 +50,28 @@ export class AuthService {
   }
 
   private async initAuthListener(): Promise<void> {
-    const {
-      data: { session },
-    } = await this.supabase.auth.getSession();
-    this.updateAuthState(session);
-    if (session) {
-      void this.refreshEarnedBadges(session.user.id);
+    try {
+      const {
+        data: { session },
+        error,
+      } = await this.supabase.auth.getSession();
+      if (error) {
+        throw error;
+      }
+
+      this.updateAuthState(session);
+      if (session) {
+        void this.refreshEarnedBadges(session.user.id);
+      } else {
+        this.earnedBadges.set(null);
+      }
+    } catch {
+      console.warn('Failed to restore authentication session');
+      this.updateAuthState(null);
+      this.earnedBadges.set(null);
+    } finally {
+      this.isLoading.set(false);
     }
-    if (!session) {
-      this.currentUser.set(MOCK_CURRENT_USER);
-      this.currentSession.set({
-        access_token: 'mock-jwt-token',
-        refresh_token: 'mock-refresh-token',
-        expires_in: 3600,
-        token_type: 'bearer',
-        user: MOCK_CURRENT_USER,
-      });
-    }
-    this.isLoading.set(false);
 
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
@@ -76,16 +79,6 @@ export class AuthService {
         void this.refreshEarnedBadges(session.user.id);
       } else {
         this.earnedBadges.set(null);
-      }
-      if (!session) {
-        this.currentUser.set(MOCK_CURRENT_USER);
-        this.currentSession.set({
-          access_token: 'mock-jwt-token',
-          refresh_token: 'mock-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: MOCK_CURRENT_USER,
-        });
       }
     });
   }
@@ -276,9 +269,7 @@ export class AuthService {
 
   private updateAuthState(session: Session | null): void {
     this.currentSession.set(session);
-    if (session) {
-      this.currentUser.set(this.toAppUser(session.user)!);
-    }
+    this.currentUser.set(session ? this.toAppUser(session.user) : null);
   }
 
   async signInWithEmail(
