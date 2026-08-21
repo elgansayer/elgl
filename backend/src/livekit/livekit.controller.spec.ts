@@ -81,9 +81,9 @@ describe('LivekitController', () => {
 
   describe('getToken', () => {
     it('should return a token and ICE servers', async () => {
-      const result = await controller.getToken({
+      const mockReq = { user: { id: 'user-123' } } as any;
+      const result = await controller.getToken(mockReq, {
         room_name: 'test-room',
-        participant_identity: 'user-123',
       });
 
       expect(AccessToken).toHaveBeenCalledWith(
@@ -157,9 +157,9 @@ describe('LivekitController', () => {
         .compile();
 
       const ctrl = module.get<LivekitController>(LivekitController);
-      const result = await ctrl.getToken({
+      const mockReq = { user: { id: 'user-2' } } as any;
+      const result = await ctrl.getToken(mockReq, {
         room_name: 'bare-room',
-        participant_identity: 'user-2',
       });
 
       expect(result.token).toBe('mock-livekit-jwt');
@@ -169,12 +169,21 @@ describe('LivekitController', () => {
     it('should propagate token generation errors', async () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
 
+      const mockReq = { user: { id: 'user-3' } } as any;
       await expect(
-        controller.getToken({
+        controller.getToken(mockReq, {
           room_name: 'fail-room',
-          participant_identity: 'user-3',
         }),
       ).rejects.toThrow('JWT signing failed');
+    });
+
+    it('should throw UnauthorizedException if user is not in request', async () => {
+      const mockReq = { user: null } as any;
+      await expect(
+        controller.getToken(mockReq, {
+          room_name: 'fail-room',
+        }),
+      ).rejects.toThrow('User not identified');
     });
   });
 });
