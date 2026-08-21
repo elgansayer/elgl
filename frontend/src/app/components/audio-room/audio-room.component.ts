@@ -91,7 +91,12 @@ export class AudioRoomComponent implements OnInit {
   );
   readonly stageParticipants = computed(() => this.stageViewModel().participants);
   readonly stageOverflowCount = computed(() => this.stageViewModel().overflowCount);
-  readonly audienceCount = computed(() => normaliseAudienceCount(this.store.audienceCount()));
+  readonly audienceCount = computed(() => {
+    const count = this.store.stageInfo()
+      ? this.store.audienceCount()
+      : (this.store.currentRoom()?.listeners_count ?? this.store.audienceCount());
+    return normaliseAudienceCount(count);
+  });
   readonly audiencePlaceholderAvatars = computed(() =>
     buildAudienceSeatIndexes(this.audienceCount()),
   );
