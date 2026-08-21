@@ -8,10 +8,12 @@ describe('EventCreationPolicyService', () => {
   let service: EventCreationPolicyService;
   let getClient: Mock;
 
-  const futureDate = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const futureDate = () =>
+    new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
   const dto = (overrides: Partial<CreateEventDto> = {}): CreateEventDto => ({
     title: 'Language exchange',
+    description: 'Weekly language exchange',
     date_time: futureDate(),
     venue_type: 'zoom',
     location: 'https://example.zoom.us/j/123456789',
@@ -21,11 +23,15 @@ describe('EventCreationPolicyService', () => {
 
   beforeEach(() => {
     getClient = vi.fn();
-    service = new EventCreationPolicyService({ getClient } as unknown as SupabaseService);
+    service = new EventCreationPolicyService({
+      getClient,
+    } as unknown as SupabaseService);
   });
 
   it('accepts a future event with a safe web meeting URL', async () => {
-    await expect(service.assertCanCreate('host-1', dto())).resolves.toBeUndefined();
+    await expect(
+      service.assertCanCreate('host-1', dto()),
+    ).resolves.toBeUndefined();
     expect(getClient).not.toHaveBeenCalled();
   });
 
@@ -118,7 +124,9 @@ describe('EventCreationPolicyService', () => {
   });
 
   it('fails closed when Audio Room validation storage fails', async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'db down' } });
+    const maybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: 'db down' } });
     getClient.mockReturnValue({
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
