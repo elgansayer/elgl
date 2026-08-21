@@ -259,19 +259,7 @@ The user's role: Someone practising casual English.
     let systemPrompt = scenario?.systemPrompt;
 
     if (!systemPrompt) {
-      const [profile, flashcards, streak] = await Promise.all([
-        this.usersService.getProfile(userId).catch(() => null),
-        this.flashcardsService
-          .getFlashcards(userId, undefined, 10)
-          .catch(() => []),
-        this.studyStreakService.getStreak(userId).catch(() => 0),
-      ]);
-      systemPrompt = this.getDefaultSystemPrompt(
-        profile,
-        flashcards,
-        streak,
-        learnerKnowledge,
-      );
+      systemPrompt = this.getDefaultSystemPrompt(learnerKnowledge);
     }
     const scenarioName = scenario?.name ?? 'free conversation';
 
@@ -297,22 +285,24 @@ The user's role: Someone practising casual English.
   }
 
   private getDefaultSystemPrompt(
-    profile: UserProfile | null,
-    flashcards: Flashcard[],
-    streak: number,
     learnerKnowledge: LearnerKnowledgeProfile | null = null,
   ): string {
-    const targetLanguages = profile?.target_languages?.join(', ') || 'English';
-    const interests = profile?.interests?.join(', ') || 'various topics';
-    const level =
-      learnerKnowledge?.overallProficiency?.level ||
-      profile?.proficiency_level ||
-      'beginner/intermediate';
+    const targetLanguages = learnerKnowledge?.targetLanguages?.join(', ') || 'English';
+    const interests = learnerKnowledge?.interests?.join(', ') || 'various topics';
+    const level = learnerKnowledge?.overallProficiency?.level || 'beginner/intermediate';
 
     let flashcardContext = '';
-    if (flashcards && flashcards.length > 0) {
-      const words = flashcards.map((f) => f.word_token).join(', ');
-      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation to help them practice.`;
+    if (learnerKnowledge) {
+      const learningWords = Array.from(
+        learnerKnowledge.knowledgeItems.values(),
+      )
+        .filter((item) => item.status === 'learning' || item.status === 'new')
+        .map((item) => item.id.replace('vocab:', ''))
+        .join(', ');
+
+      if (learningWords) {
+        flashcardContext = `\n- The user has recently been studying these words/phrases: ${learningWords}. Try to naturally incorporate some of these into the conversation to help them practice.`;
+      }
     }
 
     let knowledgeContext = '';
@@ -330,8 +320,8 @@ The user's role: Someone practising casual English.
     }
 
     let streakContext = '';
-    if (streak > 3) {
-      streakContext = `\n- The user is on a ${streak}-day study streak! Acknowledge their dedication if appropriate.`;
+    if (learnerKnowledge && learnerKnowledge.studyStreak && learnerKnowledge.studyStreak > 3) {
+      streakContext = `\n- The user is on a ${learnerKnowledge.studyStreak}-day study streak! Acknowledge their dedication if appropriate.`;
     }
 
     return `You are a personalized, expert language tutor helping a learner practice ${targetLanguages}. Stay in character as a supportive and knowledgeable tutor.

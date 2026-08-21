@@ -30,6 +30,9 @@ export interface RecentEncounter {
   timestamp: Date;
 }
 
+import { UsersService } from '../users/users.service';
+import { StudyStreakService } from '../study-streak/study-streak.service';
+
 export interface LearnerKnowledgeProfile {
   userId: string;
   language: string;
@@ -44,6 +47,10 @@ export interface LearnerKnowledgeProfile {
   };
   knowledgeItems: Map<string, KnowledgeItem>;
   recentEncounters: RecentEncounter[];
+  interests?: string[];
+  studyStreak?: number;
+  nativeLanguages?: string[];
+  targetLanguages?: string[];
 }
 
 @Injectable()
@@ -56,6 +63,8 @@ export class LearnerKnowledgeService {
     private readonly assessmentsService: AssessmentsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
+    private readonly usersService: UsersService,
+    private readonly studyStreakService: StudyStreakService,
   ) {}
 
   async getProfile(
@@ -67,20 +76,29 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources (Mock implementation for now based on design doc)
-    const [flashcards, vocabulary, assessments, lessons, momentsCounts] =
-      await Promise.all([
-        this.flashcardsService
-          .getFlashcards(userId, undefined, 20)
-          .catch(() => []),
-        this.hobbyTagsService
-          .getUserVocabulary(userId, language)
-          .catch(() => []),
-        this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
-        this.lessonsService.listLessons().catch(() => []), // Placeholder
-        this.momentsService
-          .getLifetimeCounts(userId)
-          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-      ]);
+    const [
+      flashcards,
+      vocabulary,
+      assessments,
+      lessons,
+      momentsCounts,
+      profile,
+      studyStreak,
+    ] = await Promise.all([
+      this.flashcardsService
+        .getFlashcards(userId, undefined, 20)
+        .catch(() => []),
+      this.hobbyTagsService
+        .getUserVocabulary(userId, language)
+        .catch(() => []),
+      this.assessmentsService.getQuestions(language).catch(() => []), // Placeholder
+      this.lessonsService.listLessons().catch(() => []), // Placeholder
+      this.momentsService
+        .getLifetimeCounts(userId)
+        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+      this.usersService.getProfile(userId).catch(() => null),
+      this.studyStreakService.getStreak(userId).catch(() => 0),
+    ]);
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
@@ -130,6 +148,10 @@ export class LearnerKnowledgeService {
       },
       knowledgeItems,
       recentEncounters,
+      interests: profile?.interests,
+      studyStreak,
+      nativeLanguages: profile?.native_languages,
+      targetLanguages: profile?.target_languages,
     };
   }
 }
