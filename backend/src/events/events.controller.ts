@@ -14,6 +14,7 @@ import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 import { RsvpDto } from './dto/rsvp.dto';
+import { RsvpSummariesQueryDto } from './dto/rsvp-summaries-query.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import type { AuthenticatedRequest } from '../auth/authenticated-request.interface';
 
@@ -55,6 +56,16 @@ export class EventsController {
     if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
     return this.eventsService.getUserEvents(userId, status as any);
+  }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Get('rsvp-summaries')
+  async getRsvpSummaries(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: RsvpSummariesQueryDto,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    return this.eventsService.getRsvpSummaries(req.user.id, query.event_ids);
   }
 
   @UseGuards(SupabaseAuthGuard)
