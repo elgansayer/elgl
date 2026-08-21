@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { withRetry, HttpRetryOptions } from './http-retry';
 
 export interface VideoClassroomCrashContext {
   roomId?: string;
@@ -17,6 +18,8 @@ export interface VideoClassroomCrashContext {
 }
 
 const MAX_RECENT_CRASHES = 10;
+const MAX_STACK_LENGTH = 2000;
+const MAX_MESSAGE_LENGTH = 500;
 
 @Injectable({
   providedIn: 'root',
@@ -38,10 +41,13 @@ export class VideoClassroomErrorHandlerService {
    * Report a video-classroom-specific crash with rich context.
    */
   reportVideoClassroomCrash(error: Error, context?: VideoClassroomCrashContext): void {
+    const rawStack = error.stack ?? '';
     const payload = {
-      message: error.message || 'Unknown video classroom crash',
+      message: (error.message || 'Unknown video classroom crash').slice(0, MAX_MESSAGE_LENGTH),
       name: error.name || 'VideoClassroomError',
-      stack: error.stack ?? undefined,
+      stack: rawStack.length > MAX_STACK_LENGTH
+        ? rawStack.slice(0, MAX_STACK_LENGTH) + '...'
+        : rawStack || undefined,
       url: typeof window !== 'undefined' ? window.location.href : '',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       timestamp: new Date().toISOString(),
@@ -81,15 +87,22 @@ export class VideoClassroomErrorHandlerService {
   }
 
   /**
-   * Safe wrapper for video classroom API calls that reports crashes automatically.
+   * Safe wrapper for video classroom API calls with exponential backoff retry
+   * for HTTP 429 (Too Many Requests) errors and automatic crash reporting.
+   *
+   * @param action - Label for crash reporting.
+   * @param fn - The async operation to wrap.
+   * @param context - Optional crash context metadata.
+   * @param retryOptions - Optional retry configuration (defaults: maxRetries=3, baseDelayMs=500).
    */
   async wrapClassroomCall<T>(
     action: string,
     fn: () => Promise<T>,
     context?: VideoClassroomCrashContext,
+    retryOptions?: HttpRetryOptions,
   ): Promise<T | null> {
     try {
-      return await fn();
+      return await withRetry(fn, retryOptions);
     } catch (err: unknown) {
       const error =
         err instanceof Error ? err : new Error(String(err));

@@ -2,51 +2,82 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+
+const mockPinoLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
 
 describe('ModerationService', () => {
   let service: ModerationService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockMetricsService: any;
+  let mockLogger: any;
 
   beforeEach(async () => {
+    mockLogger = {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    };
+
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      limit: jest.fn(),
-      single: jest.fn(),
-      maybeSingle: jest.fn(),
-      then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      limit: vi.fn(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
+      then: vi.fn((resolve: any) => resolve(mockQueryBuilder._response)),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     mockMetricsService = {
-      recordTsReportSubmitted: jest.fn(),
-      recordTsModerationAction: jest.fn(),
-      recordTsDatingRiskScore: jest.fn(),
-      setTsPendingReports: jest.fn(),
+      recordTsReportSubmitted: vi.fn(),
+      recordTsModerationAction: vi.fn(),
+      recordTsDatingRiskScore: vi.fn(),
+      setTsPendingReports: vi.fn(),
+      recordAdminReportResolution: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ModerationService,
         {
+          provide: 'PinoLogger:ModerationService',
+          useValue: mockPinoLogger,
+        },
+        {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: `PinoLogger:${ModerationService.name}`,
+          useValue: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+            trace: vi.fn(),
+          },
         },
       ],
     }).compile();
@@ -55,7 +86,7 @@ describe('ModerationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -273,9 +304,9 @@ describe('ModerationService', () => {
       mockQueryBuilder._response = { data: [reportRow], error: null };
 
       const momentBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn((resolve: any) =>
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) =>
           resolve({
             data: [
               {
@@ -320,9 +351,9 @@ describe('ModerationService', () => {
       mockQueryBuilder._response = { data: [reportRow], error: null };
 
       const momentBuilder = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn((resolve: any) =>
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) =>
           resolve({ data: null, error: { message: 'not found' } }),
         ),
       };

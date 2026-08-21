@@ -10,9 +10,15 @@
   display: none;
 }
 
-/* Responsive partner card minimum height on desktop grid */
+/* Mobile touch optimisations for partner cards */
+article[role='listitem'] {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Responsive header: reduce padding-top on larger screens since desktop-sidebar takes nav space */
 @media (min-width: 1024px) {
-  .discovery-grid article {
-    min-height: 120px;
+  .discovery-header {
+    padding-top: 1rem;
   }
 }

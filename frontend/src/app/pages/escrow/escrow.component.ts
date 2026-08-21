@@ -1,7 +1,7 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EscrowService, EscrowTransaction } from '../../services/escrow.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
@@ -17,9 +17,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 @Component({
   selector: 'app-escrow',
   imports: [
+    HlmButton,
     RouterLink,
     DatePipe,
-    JoyrideModule,
     TranslatePipe,
     AppCardComponent,
     AppEmptyStateComponent,
@@ -29,14 +29,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   ],
   template: `
     <div class="app-screen app-padded pb-10">
-      <header
-        class="flex items-center gap-3 pt-2"
-        joyrideStep="escrowStepTitle"
-        [title]="'escrow.onboarding.stepTitleTitle' | t"
-        [text]="'escrow.onboarding.stepTitleText' | t"
-        stepPosition="bottom"
-      >
+      <header class="flex items-center gap-3 pt-2">
         <button
+          hlmBtn
           type="button"
           (click)="goBack()"
           [attr.aria-label]="'common.back' | t"
@@ -49,9 +44,10 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
           <p class="app-muted">{{ 'escrow.subtitle' | t }}</p>
         </div>
         <button
+          hlmBtn
           type="button"
           (click)="startOnboardingTour()"
-          class="ms-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/80 transition-colors text-sm font-bold"
+          class="ms-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-fill hover:bg-primary/90 transition-colors text-sm font-bold"
           [attr.aria-label]="'escrow.onboarding.helpBtn' | t"
           [title]="'escrow.onboarding.helpBtn' | t"
         >
@@ -60,26 +56,21 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       </header>
 
       <!-- Status Filter Pills -->
-      <nav
-        class="flex gap-2 overflow-x-auto py-3"
-        aria-label="{{ 'escrow.filterLabel' | t }}"
-        joyrideStep="escrowStepFilters"
-        [title]="'escrow.onboarding.stepFiltersTitle' | t"
-        [text]="'escrow.onboarding.stepFiltersText' | t"
-        stepPosition="bottom"
-      >
+      <nav class="flex gap-2 overflow-x-auto py-3" aria-label="{{ 'escrow.filterLabel' | t }}">
         @for (f of statusFilters; track f) {
           <button
+            hlmBtn
             type="button"
             class="whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
             [class.bg-primary]="selectedStatus() === f"
-            [class.text-white]="selectedStatus() === f"
+            [class.text-on-fill]="selectedStatus() === f"
             [class.bg-surface-100]="selectedStatus() !== f"
             [class.text-text-secondary]="selectedStatus() !== f"
             [class.hover:bg-surface-50]="selectedStatus() !== f"
             (click)="onFilterChange(f)"
+            [attr.aria-pressed]="selectedStatus() === f"
           >
-            {{ ('escrow.status.' + f) | t }}
+            {{ 'escrow.status.' + f | t }}
             @if (f === 'all') {
               ({{ totalCount() }})
             } @else {
@@ -112,9 +103,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
       <!-- Error State -->
       @if (!loading() && error()) {
-        <app-card variant="outlined" customClass="border-red-500/40 bg-red-500/10">
+        <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
           <div class="flex flex-col items-start gap-3">
-            <p class="text-sm text-red-400">{{ 'escrow.loadError' | t }}</p>
+            <p class="text-sm text-danger">{{ 'escrow.loadError' | t }}</p>
             <app-button-secondary size="sm" (clicked)="reload()">
               {{ 'escrow.retry' | t }}
             </app-button-secondary>
@@ -133,7 +124,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
         } @else {
           <app-empty-state
             icon="🔍"
-            [title]="'escrow.emptyFilteredTitle' | t: { status: ('escrow.status.' + selectedStatus()) | t }"
+            [title]="
+              'escrow.emptyFilteredTitle' | t: { status: 'escrow.status.' + selectedStatus() | t }
+            "
             [description]="'escrow.emptyFilteredDescription' | t"
             [actionLabel]="'escrow.showAll' | t"
             (actionClicked)="onFilterChange('all')"
@@ -143,13 +136,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
       <!-- Escrow List -->
       @if (!loading() && !error() && filteredEscrows().length > 0) {
-        <div
-          class="space-y-3"
-          joyrideStep="escrowStepTransactions"
-          [title]="'escrow.onboarding.stepTransactionsTitle' | t"
-          [text]="'escrow.onboarding.stepTransactionsText' | t"
-          stepPosition="top"
-        >
+        <div class="space-y-3">
           @for (escrow of filteredEscrows(); track escrow.id) {
             <a
               [routerLink]="['/escrow', escrow.id]"
@@ -162,7 +149,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
                       {{ escrow.description }}
                     </span>
                     <app-pill
-                      [label]="('escrow.status.' + escrow.status) | t"
+                      [label]="'escrow.status.' + escrow.status | t"
                       [colour]="statusColour(escrow.status)"
                       size="sm"
                     />
@@ -175,7 +162,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
                       <span class="text-xs text-text-secondary">{{ 'escrow.coins' | t }}</span>
                     </div>
                     <span class="text-xs text-text-secondary">
-                      {{ escrow.created_at | date:'mediumDate' }}
+                      {{ escrow.created_at | date: 'mediumDate' }}
                     </span>
                   </div>
                   <p class="text-xs text-text-secondary truncate">
@@ -240,7 +227,7 @@ export class EscrowComponent {
     return this.countsByStatus()[status] ?? 0;
   }
 
-  protected statusColour(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  protected statusColour(status: string): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
     switch (status) {
       case 'released':
         return 'success';
@@ -259,7 +246,7 @@ export class EscrowComponent {
     this.escrowOnboarding.startTour();
   }
 
-  protected onFilterChange(status: StatusFilter): void {
+  onFilterChange(status: StatusFilter): void {
     this.selectedStatus.set(status);
   }
 

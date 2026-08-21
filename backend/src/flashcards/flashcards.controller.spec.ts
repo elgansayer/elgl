@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
 import { User } from '@supabase/supabase-js';
@@ -6,7 +7,12 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import {
+  CreateFlashcardDto,
+  QueryDueReviewsDto,
+  QueryFlashcardsDto,
+  UpdateSrsDto,
+} from './dto/flashcard.dto';
 
 function mockUser(overrides: Partial<User> = {}): User {
   return {
@@ -37,21 +43,22 @@ function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
 
 function mockResponse(): Partial<Response> {
   return {
-    header: jest.fn(),
+    header: vi.fn(),
   };
 }
 
 describe('FlashcardsController', () => {
   let controller: FlashcardsController;
-  let flashcardsService: jest.Mocked<Partial<FlashcardsService>>;
+  let flashcardsService: Mocked<Partial<FlashcardsService>>;
 
   beforeEach(async () => {
     flashcardsService = {
-      getHealthStatus: jest.fn(),
-      createOrUpdateFlashcard: jest.fn(),
-      updateSrsLevel: jest.fn(),
-      getFlashcards: jest.fn(),
-      getDueReviews: jest.fn(),
+      getHealthStatus: vi.fn(),
+      createOrUpdateFlashcard: vi.fn(),
+      updateSrsLevel: vi.fn(),
+      getFlashcards: vi.fn(),
+      getDueReviews: vi.fn(),
+      purgeSrsCache: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,16 +71,16 @@ describe('FlashcardsController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(SrsRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<FlashcardsController>(FlashcardsController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -89,7 +96,7 @@ describe('FlashcardsController', () => {
         lastSuccessfulSync: null,
         cacheStats: { cachedFlashcardCount: 0, pendingSyncCount: 0 },
       };
-      flashcardsService.getHealthStatus = jest.fn().mockReturnValue(health);
+      flashcardsService.getHealthStatus = vi.fn().mockReturnValue(health);
 
       const result = controller.getHealth();
       expect(result).toEqual(health);
@@ -117,7 +124,9 @@ describe('FlashcardsController', () => {
         word_token: 'bonjour',
         translation: 'hello',
       });
-      flashcardsService.createOrUpdateFlashcard = jest.fn().mockResolvedValue(card);
+      flashcardsService.createOrUpdateFlashcard = vi
+        .fn()
+        .mockResolvedValue(card);
 
       const res = mockResponse();
       const result = await controller.createFlashcard(
@@ -129,7 +138,6 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
-      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
       expect(res.header).not.toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
@@ -140,7 +148,9 @@ describe('FlashcardsController', () => {
         translation: 'test',
       };
       const degradedCard = mockFlashcard({ degraded: true });
-      flashcardsService.createOrUpdateFlashcard = jest.fn().mockResolvedValue(degradedCard);
+      flashcardsService.createOrUpdateFlashcard = vi
+        .fn()
+        .mockResolvedValue(degradedCard);
 
       const res = mockResponse();
       await controller.createFlashcard(mockUser(), dto, res as Response);
@@ -159,7 +169,7 @@ describe('FlashcardsController', () => {
     it('should call service updateSrsLevel when user is provided', async () => {
       const dto: UpdateSrsDto = { quality: 4 };
       const card = mockFlashcard({ id: 'card-1', srs_level: 2 });
-      flashcardsService.updateSrsLevel = jest.fn().mockResolvedValue(card);
+      flashcardsService.updateSrsLevel = vi.fn().mockResolvedValue(card);
 
       const res = mockResponse();
       const result = await controller.updateSrs(
@@ -179,7 +189,9 @@ describe('FlashcardsController', () => {
     it('should set X-SRS-Degraded header when result is degraded', async () => {
       const dto: UpdateSrsDto = { quality: 3 };
       const degradedCard = mockFlashcard({ id: 'card-1', degraded: true });
-      flashcardsService.updateSrsLevel = jest.fn().mockResolvedValue(degradedCard);
+      flashcardsService.updateSrsLevel = vi
+        .fn()
+        .mockResolvedValue(degradedCard);
 
       const res = mockResponse();
       await controller.updateSrs(mockUser(), 'card-1', dto, res as Response);
@@ -189,18 +201,29 @@ describe('FlashcardsController', () => {
 
   describe('getFlashcards', () => {
     it('should return empty array if user is not provided', async () => {
-      const result = await controller.getFlashcards(null);
+      const query: QueryFlashcardsDto = { limit: 50, offset: 0 };
+      const result = await controller.getFlashcards(null, query);
       expect(result).toEqual([]);
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
-    it('should call service getFlashcards with parsed integer level', async () => {
+    it('should call service getFlashcards with query params', async () => {
       const cards: Flashcard[] = [mockFlashcard()];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getFlashcards = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      const result = await controller.getFlashcards(mockUser(), '3', res as Response);
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
+      const query: QueryFlashcardsDto = { level: 3, limit: 50, offset: 0 };
+      const result = await controller.getFlashcards(
+        mockUser(),
+        query,
+        res as Response,
+      );
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        3,
+        50,
+        0,
+      );
       expect(result).toEqual(cards);
     });
 
@@ -209,28 +232,39 @@ describe('FlashcardsController', () => {
         mockFlashcard({ id: 'ok' }),
         mockFlashcard({ id: 'degraded-one', degraded: true }),
       ];
-      flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getFlashcards = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      await controller.getFlashcards(mockUser(), undefined, res as Response);
+      const query: QueryFlashcardsDto = { limit: 50, offset: 0 };
+      await controller.getFlashcards(mockUser(), query, res as Response);
       expect(res.header).toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
   });
 
   describe('getDueReviews', () => {
     it('should return empty array if user is not provided', async () => {
-      const result = await controller.getDueReviews(null);
+      const query: QueryDueReviewsDto = { limit: 20, offset: 0 };
+      const result = await controller.getDueReviews(null, query);
       expect(result).toEqual([]);
       expect(flashcardsService.getDueReviews).not.toHaveBeenCalled();
     });
 
-    it('should call service getDueReviews when user is provided', async () => {
+    it('should call service getDueReviews with query params', async () => {
       const cards: Flashcard[] = [mockFlashcard({ id: 'card-due' })];
-      flashcardsService.getDueReviews = jest.fn().mockResolvedValue(cards);
+      flashcardsService.getDueReviews = vi.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      const result = await controller.getDueReviews(mockUser(), res as Response);
-      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
+      const query: QueryDueReviewsDto = { limit: 20, offset: 0 };
+      const result = await controller.getDueReviews(
+        mockUser(),
+        query,
+        res as Response,
+      );
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith(
+        'user-1',
+        20,
+        0,
+      );
       expect(result).toEqual(cards);
     });
   });

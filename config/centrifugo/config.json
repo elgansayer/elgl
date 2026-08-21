@@ -2,10 +2,18 @@
   "v3_use_offset": true,
   "token_hmac_secret_key": "secret-centrifugo-token-key-change-in-prod",
   "api_key": "secret-centrifugo-api-key-change-in-prod",
-  "allowed_origins": ["*"],
+  "allowed_origins": [
+    "*"
+  ],
   "engine": "redis",
   "redis_address": "redis://cache:6379",
-  "client_connection_rate_limit": 5,
+  "prometheus": true,
+  "redis_prefix": "centrifugo",
+  "redis_connect_timeout": "5s",
+  "redis_read_timeout": "5s",
+  "redis_write_timeout": "2s",
+  "redis_idle_timeout": "300s",
+  "client_connection_rate_limit": 10,
   "client_user_connection_limit": 5,
   "client_channel_limit": 50,
   "client_queue_max_size": 1048576,
@@ -18,7 +26,8 @@
       "presence": true,
       "history_size": 100,
       "history_ttl": "30d",
-      "channel_limit": 20
+      "channel_limit": 20,
+      "channel_subscription_rate_limit": 10
     },
     {
       "name": "room",
@@ -27,14 +36,16 @@
       "presence": true,
       "history_size": 50,
       "history_ttl": "24h",
-      "channel_limit": 10
+      "channel_limit": 10,
+      "channel_subscription_rate_limit": 10
     },
     {
       "name": "user",
       "publish": true,
       "subscribe_to_publish": true,
       "presence": true,
-      "channel_limit": 5
+      "channel_limit": 5,
+      "channel_subscription_rate_limit": 5
     }
   ]
 }

@@ -1,19 +1,33 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
+import { OfflineVideoClassroomService } from '../../services/offline-video-classroom.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
-import { firstValueFrom } from 'rxjs';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { withRetry } from '../../services/http-retry';
+import { firstValueFrom, interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { JoyrideModule } from 'ngx-joyride';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent],
+  imports: [
+    HlmButton,
+    TranslatePipe,
+    VideoClassroomErrorBoundaryComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+    JoyrideModule,
+  ],
   templateUrl: './classrooms-marketplace.html',
-  styleUrl: './classrooms-marketplace.scss',
+  styles: [''],
 })
 export class ClassroomsMarketplace implements OnInit {
   private store = inject(AudioRoomsStore);
@@ -21,6 +35,8 @@ export class ClassroomsMarketplace implements OnInit {
   private http = inject(HttpClient);
   private errorHandler = inject(VideoClassroomErrorHandlerService);
   private destroyRef = inject(DestroyRef);
+  private onboardingService = inject(VideoClassroomOnboardingService);
+  private offlineService = inject(OfflineVideoClassroomService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly rooms = signal<AudioRoomRecord[]>([]);
@@ -45,9 +61,7 @@ export class ClassroomsMarketplace implements OnInit {
     return all.filter((r) => r.language_pair === lang);
   });
 
-  readonly videoRooms = computed(() =>
-    this.filteredRooms().filter((r) => r.is_video_stream),
-  );
+  readonly videoRooms = computed(() => this.filteredRooms().filter((r) => r.is_video_stream));
 
   readonly isHosting = computed(() => {
     const userId = this.authService.currentUser()?.id;
@@ -64,19 +78,27 @@ export class ClassroomsMarketplace implements OnInit {
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await firstValueFrom(
-        this.http.get<AudioRoomRecord[]>(
-          `${this.baseUrl}/list`,
-          { headers: this.getHeaders() },
+      const list = await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/list`, { headers: this.getHeaders() }),
         ),
       );
-      this.rooms.set(Array.isArray(list) ? list : []);
+      const rooms = Array.isArray(list) ? list : [];
+      this.rooms.set(rooms);
+      // Cache successful fetch for offline use
+      void this.offlineService.cacheClassroomListing(rooms);
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      this.errorMessage.set(error.message);
-      this.errorHandler.reportVideoClassroomCrash(error, {
-        action: 'loadClassrooms',
-      });
+      // Attempt to serve cached data when offline or on fetch failure
+      const cached = await this.offlineService.getCachedClassroomListing();
+      if (cached && cached.length > 0) {
+        this.rooms.set(cached);
+      } else {
+        const error = err instanceof Error ? err : new Error(String(err));
+        this.errorMessage.set(error.message);
+        this.errorHandler.reportVideoClassroomCrash(error, {
+          action: 'loadClassrooms',
+        });
+      }
     } finally {
       this.isLoading.set(false);
     }
@@ -84,18 +106,14 @@ export class ClassroomsMarketplace implements OnInit {
 
   private subscribeToUpdates(): void {
     // Watch active rooms from the store for real-time updates
-    this.store.activeRooms;
-    // Simpler: poll or watch via effect-like pattern
-    const interval = setInterval(() => {
-      const fresh = this.store.activeRooms();
-      if (fresh.length > 0) {
-        this.rooms.set(fresh);
-      }
-    }, 5000);
-
-    this.destroyRef.onDestroy(() => {
-      clearInterval(interval);
-    });
+    interval(5000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const fresh = this.store.activeRooms();
+        if (fresh.length > 0) {
+          this.rooms.set(fresh);
+        }
+      });
   }
 
   selectLanguage(lang: string | null): void {
@@ -126,5 +144,10 @@ export class ClassroomsMarketplace implements OnInit {
   getHeaders(): Record<string, string> {
     const token = this.authService.getAccessToken();
     return { Authorization: `Bearer ${token ?? ''}` };
+  }
+
+  /** Start the video classroom onboarding tour using ngx-joyride. */
+  startOnboardingTour(): void {
+    this.onboardingService.startMarketplaceTour();
   }
 }

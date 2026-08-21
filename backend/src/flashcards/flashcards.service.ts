@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry, isRateLimitError } from '../common/retry';
 
@@ -24,13 +24,21 @@ export class FlashcardsService {
   /** Count of degraded operations since last successful sync. */
   private degradedOperationCount = 0;
 
+  /** Maximum number of entries allowed in the in-memory store to prevent unbounded growth. */
+  private readonly MAX_MEMORY_STORE_SIZE = 10_000;
+
+  /** Maximum number of flashcards returned in a single query (hard cap). */
+  private readonly MAX_FLASHCARDS_PER_QUERY = 200;
+
+  /** Maximum number of due reviews returned in a single query. */
+  private readonly MAX_DUE_REVIEWS_PER_QUERY = 100;
+
   constructor(
     @InjectPinoLogger(FlashcardsService.name)
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly metricsService: MetricsService,
-    private readonly cloudflareCacheService: CloudflareCacheService,
   ) {}
 
   /**
@@ -355,7 +363,17 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit = 50,
+    offset = 0,
+  ): Promise<Flashcard[]> {
+    const safeLimit = Math.min(
+      Math.max(1, limit),
+      this.MAX_FLASHCARDS_PER_QUERY,
+    );
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
@@ -367,6 +385,8 @@ export class FlashcardsService {
       query = query.eq('srs_level', level);
     }
 
+    query = query.range(safeOffset, safeOffset + safeLimit - 1);
+
     try {
       const response = await query;
       if (response.error || !response.data) {
@@ -375,7 +395,10 @@ export class FlashcardsService {
             { userId },
             'Database unavailable for getFlashcards, returning from memory store',
           );
-          return this.getCachedFlashcards(userId, level);
+          return this.getCachedFlashcards(userId, level).slice(
+            safeOffset,
+            safeOffset + safeLimit,
+          );
         }
         return [];
       }
@@ -385,20 +408,35 @@ export class FlashcardsService {
         { userId, error: (error as Error).message },
         'getFlashcards failed, returning from memory store',
       );
-      return this.getCachedFlashcards(userId, level);
+      return this.getCachedFlashcards(userId, level).slice(
+        safeOffset,
+        safeOffset + safeLimit,
+      );
     }
   }
 
-  async getDueReviews(userId: string): Promise<Flashcard[]> {
+  async getDueReviews(
+    userId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<Flashcard[]> {
+    const safeLimit = Math.min(
+      Math.max(1, limit),
+      this.MAX_DUE_REVIEWS_PER_QUERY,
+    );
+    const safeOffset = Math.max(0, offset);
     const supabase = this.supabaseService.getClient();
     try {
-      const response = await supabase
+      const query = supabase
         .from('flashcards')
         .select('*')
         .eq('user_id', userId)
         .lt('srs_level', 4)
         .lte('next_review_at', new Date().toISOString())
-        .order('next_review_at', { ascending: true });
+        .order('next_review_at', { ascending: true })
+        .range(safeOffset, safeOffset + safeLimit - 1);
+
+      const response = await query;
 
       if (response.error || !response.data) {
         if (this.isConnectivityError(response.error)) {
@@ -406,7 +444,8 @@ export class FlashcardsService {
             { userId },
             'Database unavailable for getDueReviews, returning from memory store',
           );
-          return this.getCachedDueReviews(userId);
+          const cached = this.getCachedDueReviews(userId);
+          return cached.slice(safeOffset, safeOffset + safeLimit);
         }
         return [];
       }
@@ -416,7 +455,8 @@ export class FlashcardsService {
         { userId, error: (error as Error).message },
         'getDueReviews failed, returning from memory store',
       );
-      return this.getCachedDueReviews(userId);
+      const cached = this.getCachedDueReviews(userId);
+      return cached.slice(safeOffset, safeOffset + safeLimit);
     }
   }
 
@@ -425,6 +465,15 @@ export class FlashcardsService {
   private markSuccessfulSync(): void {
     this.lastSuccessfulSync = new Date().toISOString();
     this.degradedOperationCount = 0;
+    // Clear the in-memory store when connectivity is restored to prevent unbounded memory growth.
+    // Degraded entries are now stale since the DB is reachable again.
+    if (this.memoryStore.size > 0) {
+      this.logger.info(
+        { clearedEntries: this.memoryStore.size },
+        'Connectivity restored - clearing degraded memory store',
+      );
+      this.memoryStore.clear();
+    }
   }
 
   private createDegradedFlashcard(
@@ -432,8 +481,17 @@ export class FlashcardsService {
     cleanToken: string,
     dto: CreateFlashcardDto,
   ): Flashcard {
+    // Prevent unbounded memory growth: evict oldest entries when the
+    // in-memory store exceeds its configured maximum capacity.
+    if (this.memoryStore.size >= this.MAX_MEMORY_STORE_SIZE) {
+      const oldestKey = this.memoryStore.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.memoryStore.delete(oldestKey);
+      }
+    }
+
     const card: Flashcard = {
-      id: `degraded-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      id: `degraded-${Date.now()}-${randomUUID()}`,
       user_id: userId,
       word_token: cleanToken,
       original_context: dto.original_context ?? null,

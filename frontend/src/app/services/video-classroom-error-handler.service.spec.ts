@@ -1,9 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { VideoClassroomErrorHandlerService } from './video-classroom-error-handler.service';
 import { AuthService } from './auth.service';
+
+const API_ERROR_URL = 'http://localhost:3000/api/analytics/client-error';
 
 describe('VideoClassroomErrorHandlerService', () => {
   let service: VideoClassroomErrorHandlerService;
@@ -47,7 +50,7 @@ describe('VideoClassroomErrorHandlerService', () => {
       renderingError: true,
     });
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(API_ERROR_URL);
     expect(req.request.method).toBe('POST');
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('LiveKit room disconnect');
@@ -64,7 +67,7 @@ describe('VideoClassroomErrorHandlerService', () => {
     const testError = new Error('SFU crash');
     service.reportVideoClassroomCrash(testError, { action: 'connect' });
 
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(API_ERROR_URL).flush({ status: 'logged' });
 
     expect(service.recentCrashes().length).toBe(1);
     expect(service.recentCrashes()[0].message).toBe('SFU crash');
@@ -74,7 +77,7 @@ describe('VideoClassroomErrorHandlerService', () => {
   it('should limit recent crashes to MAX_RECENT_CRASHES (10)', () => {
     for (let i = 0; i < 15; i++) {
       service.reportVideoClassroomCrash(new Error(`Crash ${i}`), { action: 'test' });
-      httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+      httpTesting.expectOne(API_ERROR_URL).flush({ status: 'logged' });
     }
 
     expect(service.recentCrashes().length).toBe(10);
@@ -85,7 +88,7 @@ describe('VideoClassroomErrorHandlerService', () => {
     const testError = new Error('Network timeout');
     service.reportVideoClassroomCrash(testError, { action: 'join' });
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(API_ERROR_URL);
     req.flush('Server error', { status: 500, statusText: 'Internal Server Error' });
 
     // Should not throw; recentCrashes should still be updated
@@ -98,7 +101,7 @@ describe('VideoClassroomErrorHandlerService', () => {
     expect(result).toBe('rooms-data');
   });
 
-  it('wrapClassroomCall should report crash and return null on error', async () => {
+  it('wrapClassroomCall should report crash and return null on non-429 error', async () => {
     const testError = new Error('API unreachable');
     const result = await service.wrapClassroomCall('fetchRooms', async () => {
       throw testError;
@@ -108,11 +111,86 @@ describe('VideoClassroomErrorHandlerService', () => {
     expect(service.recentCrashes().length).toBe(1);
     expect(service.recentCrashes()[0].context).toBe('fetchRooms');
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(API_ERROR_URL);
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('API unreachable');
     const metadata = body['metadata'] as Record<string, unknown>;
     expect(metadata['category']).toBe('video-classroom');
+    req.flush({ status: 'logged' });
+  });
+
+  it('wrapClassroomCall should retry on HTTP 429 and succeed on retry', async () => {
+    const rateLimitError = new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests' });
+    let callCount = 0;
+    const fn = async (): Promise<string> => {
+      callCount++;
+      if (callCount === 1) {
+        throw rateLimitError;
+      }
+      return 'retry-success';
+    };
+
+    const result = await service.wrapClassroomCall(
+      'fetchRooms',
+      fn,
+      { roomId: 'room-429' },
+      { maxRetries: 3, baseDelayMs: 1 },
+    );
+
+    expect(result).toBe('retry-success');
+    expect(callCount).toBe(2);
+    // No crash should be reported on successful retry
+    expect(service.recentCrashes().length).toBe(0);
+  });
+
+  it('wrapClassroomCall should report crash after exhausting 429 retries', async () => {
+    const rateLimitError = new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests' });
+    let callCount = 0;
+    const fn = async (): Promise<string> => {
+      callCount++;
+      throw rateLimitError;
+    };
+
+    const result = await service.wrapClassroomCall(
+      'fetchRooms',
+      fn,
+      { roomId: 'room-429-exhausted' },
+      { maxRetries: 2, baseDelayMs: 1 },
+    );
+
+    expect(result).toBeNull();
+    expect(callCount).toBe(3); // initial + 2 retries
+    expect(service.recentCrashes().length).toBe(1);
+    expect(service.recentCrashes()[0].context).toBe('fetchRooms');
+
+    const req = httpTesting.expectOne(API_ERROR_URL);
+    const body = req.request.body as Record<string, unknown>;
+    expect((body['metadata'] as Record<string, unknown>)['roomId']).toBe('room-429-exhausted');
+    req.flush({ status: 'logged' });
+  });
+
+  it('wrapClassroomCall throws immediately on non-429 HTTP error without retry', async () => {
+    const serverError = new HttpErrorResponse({ status: 500, statusText: 'Internal Server Error' });
+    let callCount = 0;
+    const fn = async (): Promise<string> => {
+      callCount++;
+      throw serverError;
+    };
+
+    const result = await service.wrapClassroomCall(
+      'fetchRooms',
+      fn,
+      { roomId: 'room-500' },
+      { maxRetries: 3, baseDelayMs: 1 },
+    );
+
+    expect(result).toBeNull();
+    expect(callCount).toBe(1); // no retry on 500
+    expect(service.recentCrashes().length).toBe(1);
+
+    const req = httpTesting.expectOne(API_ERROR_URL);
+    const body = req.request.body as Record<string, unknown>;
+    expect((body['metadata'] as Record<string, unknown>)['roomId']).toBe('room-500');
     req.flush({ status: 'logged' });
   });
 });

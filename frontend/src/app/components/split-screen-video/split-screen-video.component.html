@@ -1,61 +1,133 @@
-<div class="flex w-full h-full gap-2 flex-col md:flex-row" role="group" aria-label="Split screen video">
-  <!-- Host Video -->
-  <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.hostVideoAria' | t">
-    <video
-      [src]="hostVideoUrl()"
-      autoplay
-      playsinline
-      muted
-      class="w-full h-full object-cover"
-      [attr.aria-label]="'splitScreen.hostVideoAria' | t"
-    ></video>
-    <div
-      class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
-      role="status"
-    >
-      {{ hostName() }} (Host)
-    </div>
+@if (hasError()) {
+  <div
+    class="flex w-full h-full items-center justify-center bg-surface-900 rounded-2xl"
+    role="region"
+    aria-label="Video stream error"
+  >
+    <app-empty-state
+      icon="🎥"
+      [title]="'videoClassroomErrorBoundary.title' | t"
+      [description]="'videoClassroomErrorBoundary.description' | t"
+      [actionLabel]="'videoClassroomErrorBoundary.retryBtn' | t"
+      (actionClicked)="onRetryClick()"
+      [customClass]="'border-danger/30 bg-danger/10 mx-4'"
+    />
   </div>
-
-  <!-- Co-Host Video or Invite Placeholder -->
-  @if (hasCoHost()) {
-    <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.coHostVideoAria' | t">
-      <video
-        [src]="coHostVideoUrl()"
-        autoplay
-        playsinline
-        class="w-full h-full object-cover"
-        [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
-      ></video>
+} @else {
+  <div
+    class="flex w-full h-full gap-2 sm:gap-3 flex-col md:flex-row"
+    role="group"
+    aria-label="Split screen video"
+  >
+    <div
+      class="relative flex-1 bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg min-h-0"
+      role="region"
+      [attr.aria-label]="'splitScreen.hostVideoAria' | t"
+    >
+      @if (isLoading()) {
+        <div
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-900 p-4"
+        >
+          <app-skeleton-loader [height]="'64px'" [width]="'64px'" [variant]="'circle'" />
+          <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+          <p class="text-white/60 text-xs" aria-live="polite">
+            {{ 'splitScreen.loadingHost' | t }}
+          </p>
+        </div>
+      } @else if (hostVideoUrl()) {
+        <video
+          [src]="hostVideoUrl()"
+          autoplay
+          playsinline
+          muted
+          class="w-full h-full object-cover"
+          [attr.aria-label]="'splitScreen.hostVideoAria' | t"
+        ></video>
+      } @else {
+        <div
+          class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-900"
+        >
+          <span class="text-4xl" aria-hidden="true">🎥</span>
+          <p class="text-white/60 text-xs sm:text-sm" aria-live="polite">
+            {{ 'videoRoom.waitingForHost' | t }}
+          </p>
+        </div>
+      }
       <div
-        class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+        class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
         role="status"
       >
-        {{ coHostName() }} (Co-Host)
+        {{ hostName() }} (Host)
       </div>
     </div>
-  } @else {
-    <div
-      class="relative flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-slate-700 flex items-center justify-center"
-    >
-      <button
-        (click)="onInviteClick()"
-        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-white"
-        [attr.aria-label]="'splitScreen.inviteCoHostAria' | t"
+
+    @if (hasCoHost() && coHostVideoUrl()) {
+      <div
+        class="relative flex-1 bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg min-h-0"
+        role="region"
+        [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12 mb-3"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
+        <video
+          [src]="coHostVideoUrl()"
+          autoplay
+          playsinline
+          class="w-full h-full object-cover"
+          [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
+        ></video>
+        <div
+          class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
+          role="status"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        <span class="text-lg font-semibold">Invite Co-Host</span>
-      </button>
-    </div>
-  }
-</div>
+          {{ coHostName() }} (Co-Host)
+        </div>
+      </div>
+      <div
+        class="relative flex-1 bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg min-h-0"
+        role="region"
+        [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
+      >
+        <div
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-900 p-4"
+        >
+          <app-skeleton-loader [height]="'64px'" [width]="'64px'" [variant]="'circle'" />
+          <app-skeleton-loader [height]="'14px'" [width]="'50%'" [variant]="'text'" />
+          <p class="text-white/60 text-xs" aria-live="polite">
+            {{ 'splitScreen.loadingCoHost' | t }}
+          </p>
+        </div>
+        <div
+          class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
+          role="status"
+        >
+          {{ coHostName() }} (Co-Host)
+        </div>
+      </div>
+    } @else {
+      <div
+        class="relative flex-1 bg-surface-900 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-white/20 flex items-center justify-center min-h-0"
+      >
+        <button
+          hlmBtn
+          (click)="onInviteClick()"
+          class="flex flex-col items-center text-white/60 hover:text-white transition-colors p-4 sm:p-6 rounded-xl hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white"
+          [attr.aria-label]="'splitScreen.inviteCoHostAria' | t"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-8 w-8 sm:h-12 sm:w-12 mb-2 sm:mb-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span class="text-sm sm:text-lg font-semibold">{{
+            'splitScreen.inviteCoHostBtn' | t
+          }}</span>
+        </button>
+      </div>
+    }
+  </div>
+}

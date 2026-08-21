@@ -38,12 +38,12 @@ describe('LeaderboardService', () => {
       error: supabaseError,
     });
 
-    const mockLimit = jest.fn().mockReturnValue(fakeChain);
-    const mockOrder = jest.fn().mockReturnValue({ limit: mockLimit });
-    const mockSelect = jest.fn().mockReturnValue({ order: mockOrder });
+    const mockLimit = vi.fn().mockReturnValue(fakeChain);
+    const mockOrder = vi.fn().mockReturnValue({ limit: mockLimit });
+    const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
 
     const mockClient = {
-      from: jest.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
         select: mockSelect,
       }),
     };
@@ -59,7 +59,7 @@ describe('LeaderboardService', () => {
         LeaderboardService,
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(mockClient) },
+          useValue: { getClient: vi.fn().mockReturnValue(mockClient) },
         },
       ],
     }).compile();

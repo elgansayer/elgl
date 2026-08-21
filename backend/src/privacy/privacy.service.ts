@@ -1,9 +1,13 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import { scrubCoinPurchasesForArchive } from '../economy/sanitise-economy.helper';
+import {
+  scrubCoinPurchasesForArchive,
+  scrubEscrowTransactionsForArchive,
+} from '../economy/sanitise-economy.helper';
 
 @Injectable()
 export class PrivacyService {
@@ -12,6 +16,7 @@ export class PrivacyService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly safetyCacheService: SafetyCacheInvalidationService,
   ) {}
 
   async requestArchive(userId: string, dto: ArchiveRequestDto): Promise<void> {
@@ -70,12 +75,18 @@ export class PrivacyService {
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
 
+    // GDPR: Immediately scrub location data and opt out of discovery
     const { error } = await supabase
       .from('users')
       .update({
         scheduled_for_deletion_at: deletionDate.toISOString(),
         deletion_requested_at: new Date().toISOString(),
         is_deletion_pending: true,
+        privacy_hide_from_search: true,
+        location: null,
+        mock_location: null,
+        mock_country: null,
+        mock_city: null,
       })
       .eq('id', userId);
 
@@ -86,8 +97,11 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
+    // Invalidate all Redis caches that may contain this user's data
+    await this.safetyCacheService.invalidateUserCaches(userId);
+
     this.logger.log(
-      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`,
+      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}. Location data scrubbed, discovery caches invalidated.`,
     );
   }
 
@@ -120,49 +134,116 @@ export class PrivacyService {
   ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
-    // 1) Basic profile
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select(
-        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, created_at',
-      )
-      .eq('id', userId)
-      .single();
+    // 1) Basic profile (includes location data for GDPR right to access)
+    const queries = [
+      supabase
+        .from('users')
+        .select(
+          'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
+        )
+        .eq('id', userId)
+        .single(),
+      supabase
+        .from('moments')
+        .select('*')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('moment_comments')
+        .select('*')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('flashcards')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('decks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('favourites')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('coin_purchases')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('escrow_transactions')
+        .select('*')
+        .eq('payer_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('escrow_transactions')
+        .select('*')
+        .eq('payee_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('gift_transactions')
+        .select('*')
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('gift_transactions')
+        .select('*')
+        .eq('receiver_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('user_sticker_packs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('unlocked_at', { ascending: false }),
+      supabase
+        .from('reading_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('reading_resources')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false }),
+    ];
 
-    // 2) Moments authored by the user
-    const { data: userMoments } = await supabase
-      .from('moments')
-      .select('*')
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false });
+    const results = await Promise.allSettled(queries);
 
-    // 3) Moment comments authored by the user
-    const { data: userMomentComments } = await supabase
-      .from('moment_comments')
-      .select('*')
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false });
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Promise rejected at task index ${index} for user ${userId} when fetching user data for GDPR archive export`,
+          result.reason,
+        );
+      } else if (result.status === 'fulfilled' && result.value.error) {
+        this.logger.error(
+          `Supabase error at task index ${index} for user ${userId} when fetching user data for GDPR archive export: ${result.value.error.message}`,
+        );
+      }
+    });
 
-    // 4) Chat messages sent by the user
-    const { data: userChatMessages } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false });
+    const getValue = (index: number) => {
+      const res = results[index];
+      if (res.status === 'fulfilled' && res.value && res.value.data) {
+        return res.value.data;
+      }
+      return null;
+    };
 
-    // 5) Flashcards saved by the user
-    const { data: userFlashcards } = await supabase
-      .from('flashcards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    // 5b) Decks created by the user (SRS organisation)
-    const { data: userDecks } = await supabase
-      .from('decks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const userProfile = getValue(0);
+    const userMoments = getValue(1);
+    const userMomentComments = getValue(2);
+    const userChatMessages = getValue(3);
+    const userFlashcards = getValue(4);
+    const userDecks = getValue(5) as any[];
 
     // 5c) Deck-flashcard junction records for the user's decks
     let userDeckFlashcards: unknown[] = [];
@@ -176,32 +257,24 @@ export class PrivacyService {
       userDeckFlashcards = junctionData ?? [];
     }
 
-    // 6) Favourites bookmarked by the user
-    const { data: userFavourites } = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const userFavourites = getValue(6);
+    const coinPurchases = getValue(7) as any[];
+    const escrowAsPayer = getValue(8) as any[];
+    const escrowAsPayee = getValue(9) as any[];
 
-// 7) Coin purchases (GDPR: receipt tokens + transaction IDs scrubbed)
-    const { data: coinPurchases } = await supabase
-      .from('coin_purchases')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const escrowTransactions = [
+      ...(escrowAsPayer ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payer',
+      })),
+      ...(escrowAsPayee ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payee',
+      })),
+    ];
 
-    // 8) Gift transactions (sent and received)
-    const { data: sentGifts } = await supabase
-      .from('gift_transactions')
-      .select('*')
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false });
-
-    const { data: receivedGifts } = await supabase
-      .from('gift_transactions')
-      .select('*')
-      .eq('receiver_id', userId)
-      .order('created_at', { ascending: false });
+    const sentGifts = getValue(10) as any[];
+    const receivedGifts = getValue(11) as any[];
 
     const giftTransactions = [
       ...(sentGifts ?? []).map((g: Record<string, unknown>) => ({
@@ -214,12 +287,9 @@ export class PrivacyService {
       })),
     ];
 
-    // 10) Sticker pack ownership
-    const { data: userStickerPacks } = await supabase
-      .from('user_sticker_packs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('unlocked_at', { ascending: false });
+    const userStickerPacks = getValue(12);
+    const readingProgress = getValue(13);
+    const readingResources = getValue(14);
 
     return {
       export_generated_at: new Date().toISOString(),
@@ -232,8 +302,14 @@ export class PrivacyService {
       deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
+      escrow_transactions: scrubEscrowTransactionsForArchive(
+        escrowTransactions,
+        userId,
+      ),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      reading_progress: readingProgress ?? null,
+      reading_resources: readingResources ?? [],
     };
   }
 }

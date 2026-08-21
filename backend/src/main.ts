@@ -36,8 +36,15 @@ async function bootstrap() {
     }),
   );
 
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl) {
+    throw new Error(
+      'FRONTEND_URL must be configured in all environments for secure CORS',
+    );
+  }
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: frontendUrl,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -80,13 +87,38 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'bearer',
     )
-    .addTag('Virtual Coin Economy', 'Virtual coin economy: gift catalogue, coin packages, purchasing, daily check-in, gift sending, and sticker pack unlocking')
+    .addTag(
+      'Matchmaking & Discovery',
+      'Language partner discovery and matchmaking: personalised recommendations, partner search with PostGIS proximity, language pair matching, Partner of the Week, audio intro discovery, and location-based search',
+    )
+    .addTag(
+      'Virtual Coin Economy',
+      'Virtual coin economy: gift catalogue, coin packages, purchasing, daily check-in, gift sending, and sticker pack unlocking',
+    )
     .addTag('Admin - Users', 'Administrative user management operations')
     .addTag('Admin - Blocks', 'Administrative block management operations')
     .addTag('Moderation', 'Content moderation and reporting operations')
-.addTag(
+    .addTag(
       'Escrow Payments',
       'Escrow payment system for holding and releasing coins between users for service transactions',
+    )
+    .addTag(
+      'Matchmaking',
+      `Partner discovery and matchmaking endpoints. The matchmaking system uses a
+four-tier fallback architecture:
+
+1. Interest-based matching: Finds users sharing the same interest tags,
+   ranked by shared-interest count and quality signals.
+2. Language exchange matching: Pairs users with complementary native and
+   target languages for mutual language practice.
+3. Most active users: Global leaderboard ranked by study streak.
+4. Mock data fallback: In-memory seed data ensuring the frontend always
+   renders content.
+
+Endpoints reside in /api/recommendations (multi-tier "for you" feed and
+cached daily recommendations) and /api/discovery (partner search with
+spatial filtering, language pair, audio intros, Partner of the Week,
+spotlight, and location-based search).`,
     )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
