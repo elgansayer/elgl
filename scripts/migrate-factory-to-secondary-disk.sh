@@ -39,12 +39,12 @@ fi
 
 systemctl stop hellotalk-factory-health.timer hellotalk-factory.service
 
-install -d -o hellotalk-factory -g hellotalk-factory -m 0750 "$STATE_TARGET" "$LOG_TARGET"
+install -d -o dev -g dev -m 0750 "$STATE_TARGET" "$LOG_TARGET"
 rsync -aHAX --numeric-ids --remove-source-files "$STATE_SOURCE/" "$STATE_TARGET/"
 rsync -aHAX --numeric-ids --remove-source-files "$LOG_SOURCE/" "$LOG_TARGET/"
 find "$STATE_SOURCE" -depth -type d -empty -delete
 find "$LOG_SOURCE" -depth -type d -empty -delete
-install -d -o hellotalk-factory -g hellotalk-factory -m 0750 "$STATE_SOURCE" "$LOG_SOURCE"
+install -d -o dev -g dev -m 0750 "$STATE_SOURCE" "$LOG_SOURCE"
 
 cp -a "$FSTAB" "$FSTAB.factory-backup.$(date -u +%Y%m%dT%H%M%SZ)"
 if ! grep -Fqx "$STATE_TARGET $STATE_SOURCE none bind,nofail 0 0" "$FSTAB"; then
@@ -56,7 +56,7 @@ fi
 
 mount "$STATE_SOURCE"
 mount "$LOG_SOURCE"
-chown hellotalk-factory:hellotalk-factory "$STATE_SOURCE" "$LOG_SOURCE"
+chown dev:dev "$STATE_SOURCE" "$LOG_SOURCE"
 systemctl daemon-reload
 
 echo 'Factory state and logs migrated to the secondary disk.'

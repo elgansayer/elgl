@@ -53,9 +53,12 @@ import { AppCardComponent } from '../primitives/card/card.component';
           @for (day of days(); track $index) {
             @if (day) {
               <button
+                hlmBtn
                 type="button"
                 class="flex w-full flex-col items-center min-h-[72px] p-1.5 bg-surface-300 text-text-primary transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-                [attr.aria-label]="'events.calendar.selectDate' | t: { date: formatCalendarDate(day) }"
+                [attr.aria-label]="
+                  'events.calendar.selectDate' | t: { date: formatCalendarDate(day) }
+                "
                 [attr.aria-pressed]="selectedDay() === day"
                 [attr.aria-current]="isToday(day) ? 'date' : null"
                 [class.hover:bg-surface-200]="true"
