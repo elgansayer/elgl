@@ -27,9 +27,7 @@ export class R2ObjectService {
     this.publicBaseUrl = this.readRequiredUrl(
       'CLOUDFLARE_R2_PUBLIC_URL',
     ).toString();
-    this.serviceToken = this.readRequiredSecret(
-      'CLOUDFLARE_R2_SERVICE_TOKEN',
-    );
+    this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
     this.timeoutMs = this.readPositiveInteger(
       'CLOUDFLARE_R2_SOURCE_FETCH_TIMEOUT_MS',
       DEFAULT_SOURCE_FETCH_TIMEOUT_MS,
@@ -45,11 +43,7 @@ export class R2ObjectService {
     contentType: string,
     maximumBytes = this.maximumBytes,
   ): { uploadUrl: string; publicUrl: string } {
-    return this.r2Service.createObjectUploadUrl(
-      key,
-      contentType,
-      maximumBytes,
-    );
+    return this.r2Service.createObjectUploadUrl(key, contentType, maximumBytes);
   }
 
   async uploadBytes(
@@ -141,7 +135,10 @@ export class R2ObjectService {
 
   private objectGatewayUrl(key: string): URL {
     const path = `/v1/objects/${encodeObjectKey(key)}`;
-    return new URL(path.replace(/^\/+/, ''), ensureTrailingSlash(this.gatewayBaseUrl));
+    return new URL(
+      path.replace(/^\/+/, ''),
+      ensureTrailingSlash(this.gatewayBaseUrl),
+    );
   }
 
   private serviceHeaders(): HeadersInit {
@@ -225,6 +222,7 @@ function encodeObjectKey(key: string): string {
     key.length > 1024 ||
     key.startsWith('/') ||
     key.includes('\\') ||
+    // eslint-disable-next-line no-control-regex
     /[\u0000-\u001f\u007f]/.test(key) ||
     key.split('/').some((segment) => segment === '.' || segment === '..')
   ) {

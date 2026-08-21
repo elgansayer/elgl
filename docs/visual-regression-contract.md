@@ -15,17 +15,54 @@ The repository uses `design-sync.manifest.json` as the stable identity layer and
 - have a corresponding design-sync ID,
 - use the same repository preview path as the design-sync manifest,
 - include every state required by that manifest item,
-- retain required representatives for forms/buttons, overlays, discovery, chat, vocabulary and moderation.
+- retain required representatives for forms/buttons, overlays, discovery, chat, vocabulary and moderation,
+- retain the fixed 768px and 1024px tablet verification viewports,
+- retain the required tablet light, dark, RTL and text-scale states on representative product screens.
 
 `cd frontend && npm run visual:capture:ci` starts a dependency-free static repository preview server and runs an isolated Cypress configuration. It captures the deterministic states Cypress can express reliably today:
 
 - light,
 - dark,
 - 390px mobile,
+- 768px tablet in light and dark themes,
+- 768px tablet in RTL,
+- 768px tablet with 200% root text scale,
+- 1024px tablet/desktop-boundary width in light and dark themes,
 - wide desktop,
 - RTL.
 
-The capture suite disables CSS transitions/animations and waits for document fonts before taking screenshots.
+The capture suite disables CSS transitions/animations and waits for document fonts before taking screenshots. Tablet states also fail the Cypress run if the document develops horizontal overflow. The 200% root text-scale state is a deterministic reflow signal; it is not represented as browser zoom.
+
+## Tablet responsive migration gate
+
+The tablet gate is intentionally split into a cheap contract check and a rendered browser check.
+
+Run the cheap matrix check from the repository root:
+
+```bash
+npm run check:visual-contract-matrix
+```
+
+This fails when a representative screen drops any required tablet state or when the canonical 768px/1024px viewport definitions drift. The failure is explicit, for example:
+
+```text
+screen.discovery: tablet responsive gate is missing state: tablet-768-dark
+```
+
+Run the rendered gate with:
+
+```bash
+cd frontend
+npm run visual:capture:ci
+```
+
+For the representative discovery, chat, vocabulary and moderation previews, Cypress renders the 768px `md` composition and the 1024px `lg` boundary in both light and dark themes. It also exercises RTL and 200% text scaling at 768px. A layout that creates horizontal document overflow fails with an assertion containing the state name, for example:
+
+```text
+tablet-768-text-200: tablet layout must not create horizontal document overflow
+```
+
+These states are migration guards, not permission to optimize only for two exact widths. Feature and Relay layouts must remain fluid between breakpoints and continue to follow the repository responsive architecture.
 
 ## States not yet treated as pixel baselines
 

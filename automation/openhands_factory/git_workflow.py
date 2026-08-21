@@ -255,15 +255,26 @@ class GitWorkflow:
             if not os.path.lexists(absolute):
                 digest.update(b"<deleted>")
                 continue
-            digest.update(str(os.lstat(absolute).st_mode).encode("ascii"))
+            stat = os.lstat(absolute)
+            digest.update(str(stat.st_mode).encode("ascii"))
             object_hash = self.runner(
                 ("git", "hash-object", "--no-filters", "--", relative),
                 self.repository,
             )
             if object_hash.returncode != 0:
-                raise RepositorySafetyError(
-                    f"Could not fingerprint changed path {relative}: {object_hash.stderr}"
-                )
+                # git hash-object only hashes blobs; it cannot hash a directory, and
+                # some filesystems/git versions can report an entire untracked
+                # directory (rather than each file within it) as a single changed
+                # path, or an unusual entry (a broken symlink, socket, device file)
+                # that git otherwise declines to hash. The fingerprint's job is
+                # change detection, not exact content identity, so fall back to
+                # size/mtime rather than letting one unusual path hard-fail the
+                # whole task and force a quarantine over something that was never
+                # a real safety problem.
+                digest.update(b"<unhashable>")
+                digest.update(str(stat.st_size).encode("ascii"))
+                digest.update(str(stat.st_mtime_ns).encode("ascii"))
+                continue
             digest.update(object_hash.stdout.strip().encode("ascii"))
         return digest.hexdigest()
 

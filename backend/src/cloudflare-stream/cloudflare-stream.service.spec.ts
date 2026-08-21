@@ -5,8 +5,7 @@ import { CloudflareStreamService } from './cloudflare-stream.service';
 
 const CONFIG: Record<string, string> = {
   CLOUDFLARE_STREAM_ACCOUNT_ID: 'account-123',
-  CLOUDFLARE_STREAM_API_TOKEN:
-    'test-cloudflare-stream-api-token',
+  CLOUDFLARE_STREAM_API_TOKEN: 'test-cloudflare-stream-api-token',
   CLOUDFLARE_STREAM_ALLOWED_ORIGINS:
     'https://app.example.com,https://admin.example.com',
   CLOUDFLARE_STREAM_POLL_INTERVAL_MS: '1',
@@ -62,8 +61,7 @@ describe('CloudflareStreamService', () => {
 
     expect(input).toEqual({
       inputId: 'input-123',
-      rtmpsUrl:
-        'rtmps://live.cloudflare.com:443/live/secret-stream-key',
+      rtmpsUrl: 'rtmps://live.cloudflare.com:443/live/secret-stream-key',
     });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.cloudflare.com/client/v4/accounts/account-123/stream/live_inputs',
