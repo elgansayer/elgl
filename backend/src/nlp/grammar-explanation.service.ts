@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 
