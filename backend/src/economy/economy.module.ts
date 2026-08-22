@@ -14,13 +14,7 @@ import { EconomyExceptionFilter } from './economy-exception.filter';
 import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 
 @Module({
-  imports: [
-    UsersModule,
-    ChatModule,
-    HttpModule,
-    MetricsModule,
-    LlmProxyModule,
-  ],
+  imports: [UsersModule, ChatModule, HttpModule, MetricsModule, LlmProxyModule],
   controllers: [EconomyController, PremiumAiController],
   providers: [
     EconomyService,
