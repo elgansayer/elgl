@@ -97,21 +97,24 @@ describe('TypingService', () => {
     expect(centrifugeMock.publish).not.toHaveBeenCalled();
   });
 
-  it('throttles repeated start events but always sends stop and allows an immediate restart', async () => {
-    service.connect('room-1');
-    await Promise.resolve();
+  it(
+    'throttles repeated start events but always sends stop and allows an immediate restart',
+    async () => {
+      service.connect('room-1');
+      await Promise.resolve();
 
-    service.sendTyping(true);
-    service.sendTyping(true);
-    expect(centrifugeMock.publish).toHaveBeenCalledTimes(1);
+      service.sendTyping(true);
+      service.sendTyping(true);
+      expect(centrifugeMock.publish).toHaveBeenCalledTimes(1);
 
-    service.sendTyping(false);
-    service.sendTyping(true);
+      service.sendTyping(false);
+      service.sendTyping(true);
 
-    expect(centrifugeMock.publish).toHaveBeenCalledTimes(3);
-    expect(centrifugeMock.publish.mock.calls[1]?.[1]).toMatchObject({ typing: false });
-    expect(centrifugeMock.publish.mock.calls[2]?.[1]).toMatchObject({ typing: true });
-  });
+      expect(centrifugeMock.publish).toHaveBeenCalledTimes(3);
+      expect(centrifugeMock.publish.mock.calls[1]?.[1]).toMatchObject({ typing: false });
+      expect(centrifugeMock.publish.mock.calls[2]?.[1]).toMatchObject({ typing: true });
+    },
+  );
 
   it('tracks valid remote typing events and expires them after the timeout', async () => {
     service.connect('room-1');
@@ -180,7 +183,9 @@ describe('TypingService', () => {
   it('keeps only the newest room subscription during rapid navigation', async () => {
     const first = deferred<void>();
     const second = deferred<void>();
-    centrifugeMock.connect.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    centrifugeMock.connect
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
 
     service.connect('room-1');
     service.connect('room-2');
@@ -192,6 +197,9 @@ describe('TypingService', () => {
     second.resolve(undefined);
     await Promise.resolve();
     expect(centrifugeMock.subscribe).toHaveBeenCalledTimes(1);
-    expect(centrifugeMock.subscribe).toHaveBeenCalledWith('chat:room-2:typing', expect.any(Function));
+    expect(centrifugeMock.subscribe).toHaveBeenCalledWith(
+      'chat:room-2:typing',
+      expect.any(Function),
+    );
   });
 });
