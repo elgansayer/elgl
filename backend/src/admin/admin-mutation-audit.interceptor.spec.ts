@@ -15,12 +15,15 @@ function contextFor(
     requestId?: string;
     params?: Record<string, string>;
     handlerName?: string;
+    controllerName?: string;
   } = {},
 ): ExecutionContext {
   const handler = Object.defineProperty(function testHandler() {}, 'name', {
     value: options.handlerName ?? 'testHandler',
   });
-  const controller = class TestController {};
+  const controller = Object.defineProperty(class TestController {}, 'name', {
+    value: options.controllerName ?? 'TestController',
+  });
   const request = {
     method,
     baseUrl,
@@ -103,7 +106,16 @@ describe('AdminMutationAuditInterceptor', () => {
 
     await firstValueFrom(
       interceptor.intercept(
-        contextFor('GET', '/api/admin/v1', '/audit', { sub: 'admin-user' }),
+        contextFor(
+          'GET',
+          '/api/admin/v1',
+          '/audit',
+          { sub: 'admin-user' },
+          {
+            controllerName: 'AdminV1Controller',
+            handlerName: 'listAudit',
+          },
+        ),
         next,
       ),
     );
