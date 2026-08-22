@@ -1,7 +1,7 @@
 import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import {
   CacheControlInterceptor,
-  CACHE_PUBLIC_LONG,
+  CACHE_PUBLIC_SHORT,
 } from '../common/cache.interceptor';
 import { WordOfTheDayService } from './word-of-the-day.service';
 
@@ -10,11 +10,12 @@ export class WordOfTheDayController {
   constructor(private readonly service: WordOfTheDayService) {}
 
   /**
-   * Word of the day changes once daily.
-   * Aggressive public CDN caching is safe and recommended.
+   * The response is stable for a UTC calendar day. A short edge TTL avoids a
+   * 24-hour cache entry crossing midnight and serving yesterday's word for a
+   * full additional day.
    */
   @Get()
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   findOne() {
     return this.service.getTodayWord();
   }
