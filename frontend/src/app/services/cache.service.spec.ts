@@ -12,7 +12,7 @@ function installIndexedDb(outcomes: Record<string, DeleteOutcome> = {}) {
       if (outcome === 'success') {
         request.onsuccess?.call(request, event);
       } else if (outcome === 'blocked') {
-        request.onblocked?.call(request, event);
+        request.onblocked?.call(request, event as IDBVersionChangeEvent);
       } else {
         request.onerror?.call(request, event);
       }
