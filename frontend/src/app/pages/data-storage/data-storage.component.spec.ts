@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { signal } from '@angular/core';
@@ -18,13 +18,16 @@ describe('DataStorageComponent', () => {
   beforeEach(async () => {
     dataStorageServiceMock = {
       cellularAutoDownload: signal(true),
-      clearLocalCache: vi.fn(),
       toggleCellularAutoDownload: vi.fn(),
       estimateCacheSize: vi.fn().mockResolvedValue(2048),
     };
 
     cacheServiceMock = {
-      clearCache: vi.fn().mockResolvedValue(undefined),
+      clearCache: vi.fn().mockResolvedValue({
+        localEntriesRemoved: 1,
+        cacheStoresRemoved: 1,
+        databasesRemoved: 3,
+      }),
       deleteOldMedia: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -53,74 +56,101 @@ describe('DataStorageComponent', () => {
     await fixture.whenStable();
   });
 
-  it('should create', () => {
+  it('creates and computes cache size on init', () => {
     expect(component).toBeTruthy();
+    expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalled();
+    expect(component.cacheSize()).toBe(2048);
   });
 
-  it('should navigate back', () => {
+  it('navigates back', () => {
     component.goBack();
     expect(locationMock.back).toHaveBeenCalled();
   });
 
-  it('should toggle cellular auto-download', () => {
+  it('toggles cellular auto-download through the storage service', () => {
     component.toggleCellular();
-    expect(dataStorageServiceMock.toggleCellularAutoDownload).toHaveBeenCalled();
+    expect(dataStorageServiceMock.toggleCellularAutoDownload).toHaveBeenCalledTimes(1);
   });
 
-  it('should have cellularAutoDownload signal from service', () => {
-    expect(component.cellularAutoDownload()).toBe(true);
-  });
-
-  it('should format cache size as bytes', () => {
-    component['cacheSize'].set(500);
+  it('formats cache sizes without exposing an invented value while unavailable', () => {
+    component.cacheSize.set(500);
     expect(component.formattedCacheSize()).toBe('500 B');
-  });
 
-  it('should format cache size as KB', () => {
-    component['cacheSize'].set(1536);
+    component.cacheSize.set(1536);
     expect(component.formattedCacheSize()).toBe('1.5 KB');
-  });
 
-  it('should format cache size as MB', () => {
-    component['cacheSize'].set(2_500_000);
+    component.cacheSize.set(2_500_000);
     expect(component.formattedCacheSize()).toBe('2.4 MB');
-  });
 
-  it('should return empty string when cache size is null', () => {
-    component['cacheSize'].set(null);
+    component.cacheSize.set(null);
     expect(component.formattedCacheSize()).toBe('');
   });
 
-  it('should compute cache size on init', async () => {
-    expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalled();
-  });
-
-  it('should clear cache and show success', async () => {
+  it('requires an explicit confirmation before clearing cache', async () => {
     await component.clearCache();
-    expect(dataStorageServiceMock.clearLocalCache).toHaveBeenCalled();
-    expect(cacheServiceMock.clearCache).toHaveBeenCalled();
+    expect(cacheServiceMock.clearCache).not.toHaveBeenCalled();
+
+    component.requestClearCache();
+    expect(component.confirmClearCache()).toBe(true);
+    expect(cacheServiceMock.clearCache).not.toHaveBeenCalled();
+
+    await component.clearCache();
+    expect(cacheServiceMock.clearCache).toHaveBeenCalledTimes(1);
+    expect(component.confirmClearCache()).toBe(false);
     expect(component.successMessage()).toBe('dataStorage.cacheCleared');
     expect(component.isClearingCache()).toBe(false);
   });
 
-  it('should handle clear cache error', async () => {
-    (cacheServiceMock.clearCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
-    await component.clearCache();
-    expect(component.errorMessage()).toBe('Failed to clear cache');
-    expect(component.isClearingCache()).toBe(false);
+  it('allows a pending cache clear to be cancelled without mutation', () => {
+    component.requestClearCache();
+    component.cancelClearCache();
+
+    expect(component.confirmClearCache()).toBe(false);
+    expect(cacheServiceMock.clearCache).not.toHaveBeenCalled();
   });
 
-  it('should delete old media and show success', async () => {
+  it('reports partial cache-clear failure and leaves confirmation available for retry', async () => {
+    (cacheServiceMock.clearCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('partial failure'),
+    );
+    component.requestClearCache();
+
+    await component.clearCache();
+
+    expect(component.errorMessage()).toContain('Failed to clear');
+    expect(component.confirmClearCache()).toBe(true);
+    expect(component.isClearingCache()).toBe(false);
+    expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalledTimes(2);
+  });
+
+  it('deletes old media and refreshes the cache estimate', async () => {
     await component.deleteOldMedia();
-    expect(cacheServiceMock.deleteOldMedia).toHaveBeenCalled();
+
+    expect(cacheServiceMock.deleteOldMedia).toHaveBeenCalledTimes(1);
     expect(component.successMessage()).toBe('dataStorage.oldMediaDeleted');
     expect(component.isDeletingOldMedia()).toBe(false);
+    expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalledTimes(2);
   });
 
-  it('should handle delete old media error', async () => {
-    (cacheServiceMock.deleteOldMedia as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+  it('handles old-media deletion failure', async () => {
+    (cacheServiceMock.deleteOldMedia as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('failure'),
+    );
+
     await component.deleteOldMedia();
-    expect(component.errorMessage()).toBe('Failed to delete old media');
+
+    expect(component.errorMessage()).toContain('Failed to delete old media');
     expect(component.isDeletingOldMedia()).toBe(false);
+  });
+
+  it('keeps cache size unavailable when estimation fails', async () => {
+    (dataStorageServiceMock.estimateCacheSize as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('storage denied'),
+    );
+
+    await component.computeCacheSize();
+
+    expect(component.cacheSize()).toBeNull();
+    expect(component.isComputingSize()).toBe(false);
   });
 });
