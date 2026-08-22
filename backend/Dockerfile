@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Development
-FROM node:22-alpine AS development
+FROM node:26-alpine AS development
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -16,7 +16,7 @@ EXPOSE 3000
 CMD ["npm", "run", "start:dev"]
 
 # Stage 3: Production
-FROM node:22-alpine AS production
+FROM node:26-alpine AS production
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev \
