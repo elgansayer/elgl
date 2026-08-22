@@ -1,66 +1,45 @@
 import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common';
-import DOMPurify from 'dompurify';
+import createDOMPurify, { type Config } from 'dompurify';
 import { JSDOM } from 'jsdom';
 
 const window = new JSDOM('').window;
-const purify = DOMPurify(window);
+const purify = createDOMPurify(window);
+
+const STRICT_TEXT_CONFIG: Config = {
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  ALLOW_ARIA_ATTR: false,
+  FORBID_TAGS: [
+    'script',
+    'style',
+    'form',
+    'input',
+    'button',
+    'iframe',
+    'object',
+    'embed',
+    'svg',
+    'math',
+  ],
+  FORBID_ATTR: ['style', 'srcdoc'],
+  RETURN_TRUSTED_TYPE: false,
+};
 
 /**
- * Fields that must never pass through HTML sanitisation because they contain
- * non-user-authored technical data whose angle-bracket content is meaningful
- * (e.g. stack traces with `<anonymous>`, webhook signatures, etc.).
+ * @deprecated Plain-text DTOs must be domain-validated and rendered through
+ * text sinks. Rich HTML fields must use `SanitiseRichHtmlPipe`. This legacy
+ * compatibility pipe is retained only for callers that explicitly pass one
+ * string and need all markup stripped; it must never be registered globally
+ * or applied recursively to request objects.
  */
-const SANITISATION_EXEMPT_KEYS = new Set([
-  'stack',
-  'componentStack',
-  'rawBody',
-  'signedPayload',
-  // Stack-frame fields that may contain angle brackets (e.g. <anonymous>)
-  'functionName',
-  'fileName',
-  'source',
-]);
-
 @Injectable()
-export class SanitiseHtmlPipe implements PipeTransform {
-  transform(value: unknown, _metadata: ArgumentMetadata): unknown {
-    return this.sanitiseValue(value);
-  }
-
-  private isPlainObject(val: unknown): val is Record<string, unknown> {
-    if (val === null || typeof val !== 'object') {
-      return false;
-    }
-    const proto = Object.getPrototypeOf(val) as unknown;
-    return proto === Object.prototype || proto === null;
-  }
-
-  private sanitiseValue(value: unknown, keyName?: string): unknown {
-    if (typeof value === 'string') {
-      // Skip sanitisation for password fields to avoid corrupting legitimate passwords
-      if (keyName && keyName.toLowerCase().includes('password')) {
-        return value;
-      }
-      // Exempt non-user-authored technical fields whose angle-bracket
-      // content is meaningful (stack traces, webhook signatures, etc.)
-      if (keyName && SANITISATION_EXEMPT_KEYS.has(keyName)) {
-        return value;
-      }
-      return purify.sanitize(value);
+export class SanitiseHtmlPipe implements PipeTransform<unknown, unknown> {
+  transform(value: unknown, _metadata?: ArgumentMetadata): unknown {
+    if (typeof value !== 'string') {
+      return value;
     }
 
-    if (Array.isArray(value)) {
-      return value.map((item: unknown) => this.sanitiseValue(item, keyName));
-    }
-
-    if (this.isPlainObject(value)) {
-      const sanitised: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(value)) {
-        sanitised[key] = this.sanitiseValue(val, key);
-      }
-      return sanitised;
-    }
-
-    return value;
+    return String(purify.sanitize(value, STRICT_TEXT_CONFIG));
   }
 }
