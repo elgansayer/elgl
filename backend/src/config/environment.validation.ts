@@ -166,5 +166,5 @@ export function validateEnvironment(
     throw new Error(`Environment validation failed: ${details}`);
   }
 
-  return result.value as unknown as Record<string, unknown>;
+  return result.value;
 }
