@@ -34,8 +34,11 @@ describe('WordOfTheDayService', () => {
     const results = Array.from({ length: 7 }, (_, offset) =>
       service.getTodayWord(new Date(Date.UTC(2026, 7, 22 + offset))),
     );
+    const uniqueEntries = new Set(
+      results.map((entry) => `${entry.languageCode}:${entry.word}`),
+    );
 
-    expect(new Set(results.map((entry) => `${entry.languageCode}:${entry.word}`)).size).toBe(7);
+    expect(uniqueEntries.size).toBe(7);
   });
 
   it('rejects invalid dates instead of fabricating content', () => {
