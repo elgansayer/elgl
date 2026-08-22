@@ -73,7 +73,7 @@ export class CentrifugeService {
       clearTimeout(this.reconnectTimer);
     }
 
-    // Exception allowed by AGENTS.md Section 5.3:
+    // Exception allowed by frontend/AGENTS.md's Lifecycle Hook Bans note:
     // `setTimeout` is permitted for imperative third-party library integration
     // (Centrifugo reconnection backoff is a non-reactive real-time concern).
     this.reconnectTimer = setTimeout(() => {
