@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsFeedComponent } from './events-feed.component';
 import { Event, EventsService } from '../../services/events.service';
 
-function event(id: string): Event {
+function event(id: string, overrides: Partial<Event> = {}): Event {
   return {
     id,
     title: `Event ${id}`,
@@ -13,6 +13,7 @@ function event(id: string): Event {
     is_cancelled: false,
     created_at: '2026-08-19T12:00:00.000Z',
     updated_at: '2026-08-19T12:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -20,6 +21,7 @@ describe('EventsFeedComponent', () => {
   let fixture: ComponentFixture<EventsFeedComponent>;
   let component: EventsFeedComponent;
   let listEvents: ReturnType<typeof vi.fn>;
+  let getCategories: ReturnType<typeof vi.fn>;
 
   async function settle(): Promise<void> {
     await Promise.resolve();
@@ -29,29 +31,33 @@ describe('EventsFeedComponent', () => {
 
   beforeEach(async () => {
     listEvents = vi.fn().mockReturnValue(of([]));
+    getCategories = vi
+      .fn()
+      .mockReturnValue(of(['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange']));
 
     await TestBed.configureTestingModule({
       imports: [EventsFeedComponent],
-      providers: [{ provide: EventsService, useValue: { listEvents } }],
+      providers: [{ provide: EventsService, useValue: { listEvents, getCategories } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EventsFeedComponent);
     component = fixture.componentInstance;
   });
 
-  it('loads the first upcoming page and exposes Spartan radio-group selection semantics', async () => {
+  it('loads the first upcoming page and backend category catalogue', async () => {
     fixture.detectChanges();
     await settle();
 
+    expect(getCategories).toHaveBeenCalledTimes(1);
     expect(listEvents).toHaveBeenCalledWith({
       status: 'upcoming',
       language_pair: undefined,
+      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(fixture.nativeElement.querySelector('[role="radiogroup"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelectorAll('hlm-radio')).toHaveLength(2);
-    expect(fixture.nativeElement.querySelector('app-select')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('app-select')).toHaveLength(2);
   });
 
   it('does not reload when the already-selected status is chosen again', async () => {
@@ -64,7 +70,7 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenCalledTimes(1);
   });
 
-  it('resets to page one when the status or language filter changes', async () => {
+  it('resets to page one when status, language, or category filters change', async () => {
     fixture.detectChanges();
     await settle();
 
@@ -72,19 +78,41 @@ describe('EventsFeedComponent', () => {
     await settle();
     component.onLanguageChange('en-ja');
     await settle();
+    component.onCategoryChange('audio_room');
+    await settle();
 
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'past',
       language_pair: undefined,
+      category: undefined,
       page: 1,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'past',
       language_pair: 'en-ja',
+      category: undefined,
       page: 1,
       limit: 20,
     });
+    expect(listEvents).toHaveBeenNthCalledWith(4, {
+      status: 'past',
+      language_pair: 'en-ja',
+      category: 'audio_room',
+      page: 1,
+      limit: 20,
+    });
+  });
+
+  it('rejects category values that were not returned by the backend catalogue', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    component.onCategoryChange('not-a-category');
+    await settle();
+
+    expect(component.category()).toBeUndefined();
+    expect(listEvents).toHaveBeenCalledTimes(1);
   });
 
   it('ignores stale responses after a newer filter request wins', async () => {
@@ -110,13 +138,36 @@ describe('EventsFeedComponent', () => {
     expect(component.status()).toBe('past');
   });
 
+  it('does not surface cancelled events in the upcoming discovery list', async () => {
+    listEvents.mockReturnValueOnce(
+      of([event('visible'), event('cancelled', { is_cancelled: true })]),
+    );
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.visibleEvents().map((item) => item.id)).toEqual(['visible']);
+    expect(fixture.nativeElement.textContent).toContain('Event visible');
+    expect(fixture.nativeElement.textContent).not.toContain('Event cancelled');
+  });
+
+  it('renders each visible event as a navigable detail link', async () => {
+    listEvents.mockReturnValueOnce(of([event('event-123')]));
+
+    fixture.detectChanges();
+    await settle();
+
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+    expect(links.some((link) => link.getAttribute('href') === '/events/event-123')).toBe(true);
+  });
+
   it('retries the same next page after a load-more failure instead of skipping it', async () => {
     const firstPage = Array.from({ length: 20 }, (_, index) => event(`page-1-${index}`));
     listEvents
       .mockReset()
       .mockReturnValueOnce(of(firstPage))
       .mockReturnValueOnce(throwError(() => new Error('temporary failure')))
-      .mockReturnValueOnce(of([event('page-2')])) ;
+      .mockReturnValueOnce(of([event('page-2')]));
 
     fixture.detectChanges();
     await settle();
@@ -131,12 +182,14 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenNthCalledWith(2, {
       status: 'upcoming',
       language_pair: undefined,
+      category: undefined,
       page: 2,
       limit: 20,
     });
     expect(listEvents).toHaveBeenNthCalledWith(3, {
       status: 'upcoming',
       language_pair: undefined,
+      category: undefined,
       page: 2,
       limit: 20,
     });
@@ -160,6 +213,7 @@ describe('EventsFeedComponent', () => {
     expect(listEvents).toHaveBeenLastCalledWith({
       status: 'upcoming',
       language_pair: undefined,
+      category: undefined,
       page: 1,
       limit: 20,
     });
