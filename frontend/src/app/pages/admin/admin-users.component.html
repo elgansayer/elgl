@@ -112,19 +112,15 @@
         </tbody>
       </table>
     </div>
-  } @else if (usersLoadError()) {
+  } @else if (usersLoadError() || users().length === 0) {
     <app-empty-state
-      icon="⚠️"
-      [title]="'admin.userManagement.loadError' | t"
-      [description]="'admin.userManagement.loadErrorDesc' | t"
-      [actionLabel]="'common.retry' | t"
+      [icon]="usersLoadError() ? '⚠️' : '👥'"
+      [title]="(usersLoadError() ? 'admin.userManagement.loadError' : 'admin.users.emptyTitle') | t"
+      [description]="
+        (usersLoadError() ? 'admin.userManagement.loadErrorDesc' : 'admin.users.emptyDesc') | t
+      "
+      [actionLabel]="usersLoadError() ? ('common.retry' | t) : ''"
       (actionClicked)="retryUsers()"
-    />
-  } @else if (users().length === 0) {
-    <app-empty-state
-      icon="👥"
-      [title]="'admin.users.emptyTitle' | t"
-      [description]="'admin.users.emptyDesc' | t"
     />
   } @else {
     <div class="overflow-x-auto">
@@ -271,13 +267,20 @@
             }
           </div>
         } @else if (historyLoadError()) {
-          <app-empty-state
-            icon="⚠️"
-            [title]="'admin.userManagement.loadError' | t"
-            [description]="'admin.userManagement.loadErrorDesc' | t"
-            [actionLabel]="'common.retry' | t"
-            (actionClicked)="retryHistory()"
-          />
+          <div
+            role="alert"
+            class="rounded-card border border-danger/40 bg-danger/5 p-4 text-start"
+          >
+            <p class="font-semibold text-text-primary">
+              {{ 'admin.userManagement.loadError' | t }}
+            </p>
+            <p class="mt-1 text-sm text-text-secondary">
+              {{ 'admin.userManagement.loadErrorDesc' | t }}
+            </p>
+            <button hlmBtn type="button" class="mt-3" (click)="retryHistory()">
+              {{ 'common.retry' | t }}
+            </button>
+          </div>
         } @else if (loginHistory().length === 0) {
           <p class="text-text-secondary">{{ 'admin.users.noHistory' | t }}</p>
         } @else {
