@@ -49,10 +49,10 @@ describe('NlpController explainGrammar', () => {
   it('preserves VIP daily-limit bypass semantics', async () => {
     getProfile.mockResolvedValue({ is_vip: true });
 
-    await controller.explainGrammar(
-      { id: 'vip-user' } as User,
-      { original: 'I go.', corrected: 'I went.' },
-    );
+    await controller.explainGrammar({ id: 'vip-user' } as User, {
+      original: 'I go.',
+      corrected: 'I went.',
+    });
 
     expect(checkRateLimit).toHaveBeenCalledWith('vip-user', true);
   });
