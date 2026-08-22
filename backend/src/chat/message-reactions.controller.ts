@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -10,6 +10,12 @@ import { MessageReactionsService } from './message-reactions.service';
 @UseGuards(SupabaseAuthGuard, ThrottlerGuard)
 export class MessageReactionsController {
   constructor(private readonly reactionsService: MessageReactionsService) {}
+
+  @Get('room/:roomId/reactions')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getRoomReactions(@CurrentUser() user: User, @Param('roomId') roomId: string) {
+    return this.reactionsService.getRoomReactions(user.id, roomId);
+  }
 
   @Put(':messageId/reaction')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
