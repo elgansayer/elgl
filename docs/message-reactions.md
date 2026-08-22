@@ -6,7 +6,7 @@ Issue: #1160
 
 Authenticated members of a chat room can add or remove one of six lightweight reactions on any non-deleted message: ❤️, 😂, 👍, 😮, 😢, or 🙏. Reactions are independent, so a user may react with more than one supported emoji. Repeating the same desired state is idempotent.
 
-The chat view loads reaction state in one bounded request for the latest 100 messages rather than issuing a request per message. Each message exposes the six quick actions and aggregated counts. The current user's state is represented with `aria-pressed`, controls use touch-sized Spartan buttons, and mutation controls are disabled while that message has an update in flight. A failed reaction update leaves the previous authoritative state visible and shows the existing generic error message without blocking chat.
+The production `ChatRoomComponent` renders messages through `LongPressContextMenuComponent`; that shared message wrapper now renders the reaction control directly below each message bubble. All controls in a room share one cached room-state request, so rendering a history page does not create an N+1 reaction lookup. Each message exposes exactly six quick actions and displays the aggregate count on the same control when non-zero. The current user's state is represented with `aria-pressed`, controls use touch-sized Spartan buttons, and mutation controls are disabled while that message has an update in flight. A failed reaction update leaves the previous authoritative state visible and shows the existing generic error message without blocking chat.
 
 ## API
 
@@ -19,9 +19,9 @@ Reaction mutations are rate limited. Adding uses the existing `(message_id, user
 
 ## Realtime and failure behaviour
 
-After persistence, the backend publishes a `reaction` event on the existing `chat:<roomId>` Centrifugo channel. The Angular chat view subscribes through the shared resilient Centrifugo service, validates the untrusted publication shape and supported emoji set, bounds reaction rows, and replaces that message's local reaction state with the server-authoritative payload. This keeps other connected participants in sync without polling.
+After persistence, the backend publishes a `reaction` event on the existing `chat:<roomId>` Centrifugo channel. The shared Centrifugo client now supports additive channel listeners, which lets reaction state coexist with the room's primary message/read-receipt subscriber without replacing it. `MessageReactionsService` maintains one reaction listener per active room, validates the untrusted publication shape and supported emoji set, bounds reaction rows, and replaces that message's local reaction state with the server-authoritative payload. This keeps other connected participants in sync without polling.
 
-Persistence remains authoritative: if Centrifugo is temporarily unavailable, the API still succeeds and clients recover the correct reaction state on the next room load. Old clients simply ignore the unknown event. Provider failures are logged without message text, emoji history, tokens, or other private conversation content.
+Persistence remains authoritative: if Centrifugo is temporarily unavailable, the API still succeeds and clients recover the correct reaction state on the next room load. A failed initial reaction-state request is contained as an optional sub-resource failure and does not create an unhandled promise rejection. Old clients simply ignore the unknown event. Provider failures are logged without message text, emoji history, tokens, or other private conversation content.
 
 ## Security and privacy
 
@@ -41,7 +41,8 @@ Focused coverage includes:
 - bounded room-state loading and grouping;
 - supported/unsupported reaction aggregation in Angular;
 - add/remove desired-state emission and duplicate-interaction suppression;
-- untrusted realtime publication validation and bounded reconciliation through the shared chat channel.
+- malformed, unsupported, and oversized realtime publication rejection;
+- the repository's design-sync reconciliation for the changed Spartan component surface.
 
 The repository's normal database-reset, backend unit/build/lint, frontend unit/build/static-analysis, design-governance, and E2E checks remain the deployment gate.
 
