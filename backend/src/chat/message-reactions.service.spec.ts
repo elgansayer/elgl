@@ -4,8 +4,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 
 describe('MessageReactionsService', () => {
-  const logger = { warn: vi.fn() };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -31,14 +29,13 @@ describe('MessageReactionsService', () => {
     };
     const publish = vi.fn();
     const service = new MessageReactionsService(
-      logger as never,
       { getClient: () => client } as unknown as SupabaseService,
       { publish } as unknown as CentrifugoService,
     );
 
-    await expect(service.setReaction('outsider', 'message-1', '❤️', true)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.setReaction('outsider', 'message-1', '❤️', true),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(client.from).not.toHaveBeenCalledWith('message_reactions');
     expect(publish).not.toHaveBeenCalled();
   });
@@ -55,7 +52,10 @@ describe('MessageReactionsService', () => {
     const membershipQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { user_id: 'user-1' },
+        error: null,
+      }),
     };
     const upsert = vi.fn().mockResolvedValue({ error: null });
     const mutationQuery = { upsert };
@@ -78,12 +78,13 @@ describe('MessageReactionsService', () => {
     };
     const publish = vi.fn().mockResolvedValue(undefined);
     const service = new MessageReactionsService(
-      logger as never,
       { getClient: () => client } as unknown as SupabaseService,
       { publish } as unknown as CentrifugoService,
     );
 
-    await expect(service.setReaction('user-1', 'message-1', '❤️', true)).resolves.toEqual({
+    await expect(
+      service.setReaction('user-1', 'message-1', '❤️', true),
+    ).resolves.toEqual({
       message_id: 'message-1',
       reactions: [{ user_id: 'user-1', emoji: '❤️' }],
     });
@@ -103,7 +104,10 @@ describe('MessageReactionsService', () => {
     const membershipQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { user_id: 'user-1' },
+        error: null,
+      }),
     };
     const messageQuery = {
       select: vi.fn().mockReturnThis(),
@@ -133,12 +137,13 @@ describe('MessageReactionsService', () => {
       }),
     };
     const service = new MessageReactionsService(
-      logger as never,
       { getClient: () => client } as unknown as SupabaseService,
       { publish: vi.fn() } as unknown as CentrifugoService,
     );
 
-    await expect(service.getRoomReactions('user-1', 'room-1')).resolves.toEqual({
+    await expect(
+      service.getRoomReactions('user-1', 'room-1'),
+    ).resolves.toEqual({
       reactions: {
         'message-1': [
           { user_id: 'user-1', emoji: '👍' },
@@ -147,6 +152,9 @@ describe('MessageReactionsService', () => {
       },
     });
     expect(messageQuery.limit).toHaveBeenCalledWith(100);
-    expect(reactionQuery.in).toHaveBeenCalledWith('message_id', ['message-1', 'message-2']);
+    expect(reactionQuery.in).toHaveBeenCalledWith('message_id', [
+      'message-1',
+      'message-2',
+    ]);
   });
 });
