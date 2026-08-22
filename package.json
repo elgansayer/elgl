@@ -9,7 +9,7 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
-    "check:constitution": "node scripts/verify-constitution.mjs",
+    "check:constitution": "node scripts/verify-constitution.mjs && npm run check:content-security-boundaries",
     "check:lint-contract": "node --test scripts/verify-project-lint-contract.test.mjs && node scripts/verify-project-lint-contract.mjs",
     "check:agent-ui-governance": "node scripts/check-agent-ui-governance.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
