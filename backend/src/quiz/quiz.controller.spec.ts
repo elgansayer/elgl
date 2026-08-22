@@ -10,14 +10,15 @@ describe('QuizController', () => {
     getQuestions: vi.fn(),
     submitResults: vi.fn(),
   };
-  const controller = new QuizController(
-    quizService as unknown as QuizService,
-  );
+  const controller = new QuizController(quizService as unknown as QuizService);
 
   beforeEach(() => vi.clearAllMocks());
 
   it('requires the Supabase authentication guard for the diagnostic surface', () => {
-    const guards = Reflect.getMetadata(GUARDS_METADATA, QuizController) as unknown[];
+    const guards = Reflect.getMetadata(
+      GUARDS_METADATA,
+      QuizController,
+    ) as unknown[];
     expect(guards).toContain(SupabaseAuthGuard);
   });
 
