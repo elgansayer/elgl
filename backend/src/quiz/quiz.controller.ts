@@ -21,7 +21,7 @@ export class QuizController {
 
   @Get('questions')
   getQuestions(@Query() query: QuizQuestionsQueryDto) {
-    return this.quizService.getQuestions(query.language);
+    return this.quizService.getQuestions(query.language || 'en');
   }
 
   @Post('results')
