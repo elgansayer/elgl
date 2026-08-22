@@ -134,10 +134,10 @@ export class MessageReactionsService {
   }
 
   async setReaction(
-    roomId: string,
     messageId: string,
     emoji: MessageReactionEmoji,
     active: boolean,
+    roomId?: string,
   ): Promise<MessageReactionState> {
     const raw = await firstValueFrom(
       this.http.put<unknown>(
@@ -148,7 +148,7 @@ export class MessageReactionsService {
     );
     const state = parseMessageReactionPublication({ reaction: raw });
     if (!state) throw new Error('Invalid message reaction response');
-    this.applyMessageState(roomId, state);
+    if (roomId) this.applyMessageState(roomId, state);
     return state;
   }
 
