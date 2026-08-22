@@ -67,10 +67,15 @@ export const settingsRoutes: Routes = [
     title: 'Linked Accounts - HelloTalk',
   },
   {
-    path: 'data-storage',
+    path: 'settings/data-storage',
     loadComponent: () =>
       import('../pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
     title: 'Data & Storage - HelloTalk',
+  },
+  {
+    path: 'data-storage',
+    redirectTo: 'settings/data-storage',
+    pathMatch: 'full',
   },
   {
     path: 'device-transfer',
@@ -97,8 +102,7 @@ export const settingsRoutes: Routes = [
     path: 'version',
     loadComponent: () =>
       import('../components/version-check/version-check.component').then(
-        (m) => m.VersionCheckComponent,
-      ),
+        (m) => m.VersionCheckComponent),
     title: 'App Version - HelloTalk',
   },
 ];
