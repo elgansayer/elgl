@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -26,12 +27,14 @@ export class MutedWordsController {
   }
 
   @Get()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   async list(@CurrentUser() user: User | null): Promise<MutedWordsResponseDto> {
     const words = await this.mutedWordsService.list(this.requireUserId(user));
     return { words };
   }
 
   @Post()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async add(
     @CurrentUser() user: User | null,
     @Body() dto: MutedWordDto,
@@ -44,6 +47,7 @@ export class MutedWordsController {
   }
 
   @Delete()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async remove(
     @CurrentUser() user: User | null,
     @Body() dto: MutedWordDto,
