@@ -11,6 +11,11 @@ export interface SystemEventPayload {
   [key: string]: any;
 }
 
+export interface MessageReaction {
+  user_id: string;
+  emoji: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -28,6 +33,7 @@ export interface ChatMessage {
     display_name?: string | null;
     avatar_url?: string | null;
   } | null;
+  reactions?: MessageReaction[] | null;
   link_preview?: LinkPreview | null;
   /** Original text detected by the translation service */
   original_text?: string | null;

@@ -1,0 +1,58 @@
+# Message reactions
+
+Issue: #1160
+
+## Product behaviour
+
+Authenticated members of a chat room can add or remove one of six lightweight reactions on any non-deleted message: ❤️, 😂, 👍, 😮, 😢, or 🙏. Reactions are independent, so a user may react with more than one supported emoji. Repeating the same desired state is idempotent.
+
+The production `ChatRoomComponent` renders messages through `LongPressContextMenuComponent`; that shared message wrapper now renders the reaction control directly below each message bubble. All controls in a room share one cached room-state request, so rendering a history page does not create an N+1 reaction lookup. Each message exposes exactly six quick actions and displays the aggregate count on the same control when non-zero. The current user's state is represented with `aria-pressed`, controls use touch-sized Spartan buttons, and mutation controls are disabled while that message has an update in flight. A failed reaction update leaves the previous authoritative state visible and shows the existing generic error message without blocking chat.
+
+## API
+
+All endpoints require the existing Supabase bearer authentication guard.
+
+- `GET /chat/messages/room/:roomId/reactions` returns `{ reactions: Record<messageId, Array<{ user_id, emoji }>> }` for at most the newest 100 non-deleted messages. The caller must be a member of the room.
+- `PUT /chat/messages/:messageId/reaction` accepts `{ emoji, active }`. `emoji` is restricted to the six supported values and `active` is an explicit boolean desired state. The caller must be a member of the message's room.
+
+Reaction mutations are rate limited. Adding uses the existing `(message_id, user_id, emoji)` unique key with an upsert, so retries cannot create duplicate reactions. Removing an absent reaction is also successful. The server returns the complete authoritative state for that message after each mutation.
+
+## Realtime and failure behaviour
+
+After persistence, the backend publishes a `reaction` event on the existing `chat:<roomId>` Centrifugo channel. The shared Centrifugo client now supports additive channel listeners, which lets reaction state coexist with the room's primary message/read-receipt subscriber without replacing it. `MessageReactionsService` maintains one reaction listener per active room, validates the untrusted publication shape and supported emoji set, bounds reaction rows, and replaces that message's local reaction state with the server-authoritative payload. This keeps other connected participants in sync without polling.
+
+Persistence remains authoritative: if Centrifugo is temporarily unavailable, the API still succeeds and clients recover the correct reaction state on the next room load. A failed initial reaction-state request is contained as an optional sub-resource failure and does not create an unhandled promise rejection. Old clients simply ignore the unknown event. Provider failures are logged without message text, emoji history, tokens, or other private conversation content.
+
+## Security and privacy
+
+The original `message_reactions` migration allowed every authenticated Supabase client to read every reaction row. `20260822195800_harden_message_reactions.sql` removes that permissive policy, scopes replacement reads to room membership, and revokes direct mutation grants from `anon` and `authenticated`, so production writes pass through the authenticated, rate-limited NestJS API. Ownership/membership RLS mutation policies remain as defence in depth if direct grants are deliberately restored later.
+
+The migration also adds a `NOT VALID` supported-emoji check. PostgreSQL enforces it for all new rows immediately without risking rollout on historical unsupported rows. Existing rows are retained; the API/UI only expose the supported set.
+
+Reaction rows contain only message ID, user ID, emoji, and timestamp. They cascade with message/user deletion through the existing foreign keys. No new retention class or private content is introduced.
+
+## Verification
+
+Focused coverage includes:
+
+- DTO rejection of unsupported emoji and non-boolean desired state;
+- room-membership authorization before mutation;
+- idempotent upsert and authoritative Centrifugo publication;
+- bounded room-state loading and grouping;
+- supported/unsupported reaction aggregation in Angular;
+- add/remove desired-state emission and duplicate-interaction suppression;
+- malformed, unsupported, and oversized realtime publication rejection;
+- the repository's design-sync reconciliation for the changed Spartan component surface.
+
+The repository's normal database-reset, backend unit/build/lint, frontend unit/build/static-analysis, design-governance, and E2E checks remain the deployment gate.
+
+## Rollout
+
+1. Apply the Supabase migration before or alongside the backend deployment. Mixed versions are safe because the table and unique constraint already exist and no prior production client depended on direct reaction mutations.
+2. Deploy the backend endpoints.
+3. Deploy the Angular client. Old clients simply ignore the new Centrifugo event and continue chatting normally.
+4. Watch API error/rate-limit logs and database reset checks after rollout.
+
+## Rollback
+
+Revert the application commits to remove the API and UI. Keeping the migration is safe and preferable because it tightens access to an otherwise unused table. If direct authenticated Supabase mutation must be restored during an emergency rollback, explicitly restore the previous grants and policies in a new forward migration rather than editing deployed migration history.
