@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 interface BackendPackageJson {
@@ -97,6 +98,6 @@ describe('NestJS backend bootstrap contract', () => {
   });
 
   it('keeps the contract rooted in the backend package instead of a generated sibling project', () => {
-    expect(backendRoot.endsWith('/backend')).toBe(true);
+    expect(basename(backendRoot)).toBe('backend');
   });
 });
