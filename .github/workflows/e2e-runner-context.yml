@@ -31,6 +31,9 @@ jobs:
           cache: npm
           cache-dependency-path: e2e/package-lock.json
 
+      - name: Verify test runner ownership
+        run: node --test scripts/verify-test-runner-contexts.test.mjs && node scripts/verify-test-runner-contexts.mjs
+
       - name: Install E2E dependencies
         run: npm ci --legacy-peer-deps
         working-directory: e2e
