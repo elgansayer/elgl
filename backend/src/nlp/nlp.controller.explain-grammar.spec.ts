@@ -23,7 +23,7 @@ describe('NlpController explainGrammar', () => {
     controller = new NlpController(
       { checkRateLimit } as unknown as NlpService,
       { getProfile } as unknown as UsersService,
-      {} as GrammarCheckService,
+      {} as unknown as GrammarCheckService,
       { explain } as unknown as GrammarExplanationService,
     );
   });
