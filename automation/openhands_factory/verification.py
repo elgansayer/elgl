@@ -171,9 +171,28 @@ def run_isolated_verification_process(
     return run_process(command, resolved_workspace, timeout, environment=environment)
 
 
+def _touches(changed_paths: set[Path], *prefixes: str) -> bool:
+    return any(path.parts and path.parts[0] in prefixes for path in changed_paths)
+
+
 def commands_for(repository: Path, changed_paths: set[Path]) -> list[VerificationCommand]:
     if not changed_paths:
         raise VerificationFailed("Verification requires at least one changed path")
+    # Each workspace's own build/lint/test commands only run when this diff
+    # actually touches that workspace - a repair or review pass that only
+    # changed backend/ has no way to affect frontend's or automation's own
+    # suite, so re-running them every retry was pure waste. The cross-cutting
+    # governance checks (constitution, design-sync, migration-delta, etc.)
+    # stay unconditional; they inspect the whole tree by design. If a diff
+    # touches none of the four workspaces below - a root-level or workflow
+    # file, say - fall back to running everything rather than silently
+    # verifying nothing.
+    touches_automation = _touches(changed_paths, "automation")
+    touches_frontend = _touches(changed_paths, "frontend")
+    touches_backend = _touches(changed_paths, "backend")
+    touches_admin = _touches(changed_paths, "admin-portal")
+    if not (touches_automation or touches_frontend or touches_backend or touches_admin):
+        touches_automation = touches_frontend = touches_backend = touches_admin = True
     commands = [
         VerificationCommand("constitution", ("npm", "run", "check:constitution"), repository),
         VerificationCommand(
@@ -238,40 +257,46 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
             ("env", "MIGRATION_BASE_SHA=origin/main", "node", "scripts/check-migration-delta.mjs"),
             repository,
         ),
-        VerificationCommand(
-            "factory-format",
-            ("uv", "run", "--frozen", "ruff", "format", "--check", "."),
-            repository / "automation",
-        ),
-        VerificationCommand(
-            "factory-lint",
-            ("uv", "run", "--frozen", "ruff", "check", "."),
-            repository / "automation",
-        ),
-        VerificationCommand(
-            "factory-types",
-            ("uv", "run", "--frozen", "mypy"),
-            repository / "automation",
-        ),
-        VerificationCommand(
-            "factory-tests",
-            ("uv", "run", "--frozen", "pytest"),
-            repository / "automation",
-        ),
     ]
-    for script in (
-        "check:control-flow",
-        "check:template-bindings",
-        "check:rtl-logical",
-        "lint:check",
-        "build",
-        "test",
-    ):
-        commands.append(
-            VerificationCommand(
-                f"frontend-{script}", ("npm", "run", script), repository / "frontend"
-            )
+    if touches_automation:
+        commands.extend(
+            [
+                VerificationCommand(
+                    "factory-format",
+                    ("uv", "run", "--frozen", "ruff", "format", "--check", "."),
+                    repository / "automation",
+                ),
+                VerificationCommand(
+                    "factory-lint",
+                    ("uv", "run", "--frozen", "ruff", "check", "."),
+                    repository / "automation",
+                ),
+                VerificationCommand(
+                    "factory-types",
+                    ("uv", "run", "--frozen", "mypy"),
+                    repository / "automation",
+                ),
+                VerificationCommand(
+                    "factory-tests",
+                    ("uv", "run", "--frozen", "pytest"),
+                    repository / "automation",
+                ),
+            ]
         )
+    if touches_frontend:
+        for script in (
+            "check:control-flow",
+            "check:template-bindings",
+            "check:rtl-logical",
+            "lint:check",
+            "build",
+            "test",
+        ):
+            commands.append(
+                VerificationCommand(
+                    f"frontend-{script}", ("npm", "run", script), repository / "frontend"
+                )
+            )
     if any(path.parts and path.parts[0] in {"frontend", "e2e"} for path in changed_paths):
         commands.append(
             VerificationCommand(
@@ -301,18 +326,22 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
                 exclusive=True,
             )
         )
-    for script in ("lint:check", "build", "test", "test:e2e"):
-        commands.append(
-            VerificationCommand(f"backend-{script}", ("npm", "run", script), repository / "backend")
-        )
-    for script in ("lint:check", "build", "test"):
-        commands.append(
-            VerificationCommand(
-                f"admin-{script}",
-                ("npm", "run", script),
-                repository / "admin-portal",
+    if touches_backend:
+        for script in ("lint:check", "build", "test", "test:e2e"):
+            commands.append(
+                VerificationCommand(
+                    f"backend-{script}", ("npm", "run", script), repository / "backend"
+                )
             )
-        )
+    if touches_admin:
+        for script in ("lint:check", "build", "test"):
+            commands.append(
+                VerificationCommand(
+                    f"admin-{script}",
+                    ("npm", "run", script),
+                    repository / "admin-portal",
+                )
+            )
     return [replace(command, workspace=repository) for command in commands]
 
 

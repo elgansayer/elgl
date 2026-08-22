@@ -1126,8 +1126,14 @@ class FactoryPipeline:
         return True
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
+        # README.md deliberately excluded: it embeds the full feature-spec
+        # document (tens of KB), sent unconditionally on every implementation
+        # call regardless of task scope. AGENTS.md carries the actual
+        # enforceable constraints (i18n, RTL, Spartan, British English) that
+        # every task needs; the issue body already carries whatever
+        # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("README.md")):
+        for relative in (Path("AGENTS.md"), Path("TODO.md")):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))
