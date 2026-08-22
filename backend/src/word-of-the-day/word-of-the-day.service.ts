@@ -149,7 +149,9 @@ export class WordOfTheDayService {
       now.getUTCDate(),
     );
     const dayNumber = Math.floor(utcDate / MILLISECONDS_PER_DAY);
-    const index = ((dayNumber % WORD_CATALOGUE.length) + WORD_CATALOGUE.length) % WORD_CATALOGUE.length;
+    const index =
+      ((dayNumber % WORD_CATALOGUE.length) + WORD_CATALOGUE.length) %
+      WORD_CATALOGUE.length;
     const entry = WORD_CATALOGUE[index];
 
     return {
