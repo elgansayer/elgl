@@ -8,7 +8,10 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
-import { ProfileVisibility, UserService } from '../../../services/user.service';
+import {
+  ProfileVisibility,
+  ProfileVisibilityService,
+} from '../../../services/profile-visibility.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -28,7 +31,7 @@ type VisibilityRequestState = 'loading' | 'ready' | 'saving' | 'error';
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
   private blockedUsersService = inject(BlockedUsersService);
-  private userService = inject(UserService);
+  private profileVisibilityService = inject(ProfileVisibilityService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -95,7 +98,7 @@ export class PrivacySettingsComponent {
     this.visibilitySuccess.set('');
 
     try {
-      this.profileVisibility.set(await this.userService.getProfileVisibility());
+      this.profileVisibility.set(await this.profileVisibilityService.get());
       this.visibilityState.set('ready');
     } catch {
       this.visibilityState.set('error');
@@ -113,10 +116,7 @@ export class PrivacySettingsComponent {
     this.visibilitySuccess.set('');
 
     try {
-      const persisted = await this.userService.setProfileVisibility(next);
-      if ((persisted.profile_visibility ?? next) !== next) {
-        throw new Error('Profile visibility was not persisted');
-      }
+      await this.profileVisibilityService.set(next);
       this.visibilityState.set('ready');
       this.visibilitySuccess.set('privacy.success');
     } catch {
