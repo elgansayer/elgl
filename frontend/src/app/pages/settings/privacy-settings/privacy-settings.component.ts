@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 import { SafetyService } from '../../../services/safety.service';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import { ProfileVisibility, UserService } from '../../../services/user.service';
 
 interface HubNavItem {
   readonly icon: string;
@@ -15,6 +16,8 @@ interface HubNavItem {
   readonly descriptionKey: string;
   readonly route: string;
 }
+
+type VisibilityRequestState = 'loading' | 'ready' | 'saving' | 'error';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -25,16 +28,28 @@ interface HubNavItem {
 export class PrivacySettingsComponent {
   private safetyService = inject(SafetyService);
   private blockedUsersService = inject(BlockedUsersService);
+  private userService = inject(UserService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
-  readonly isLoading = signal(false);
   readonly mutedWordInput = signal('');
   readonly blockedCount = signal(0);
-  readonly successMessage = signal('');
+  readonly profileVisibility = signal<ProfileVisibility>('everyone');
+  readonly visibilityState = signal<VisibilityRequestState>('loading');
+  readonly visibilityError = signal('');
+  readonly visibilitySuccess = signal('');
 
   readonly mutedWords = this.safetyService.mutedWords;
   readonly blockedUsers = this.blockedUsersService.blockedUsers;
+
+  readonly visibilityOptions: readonly {
+    value: ProfileVisibility;
+    labelKey: string;
+  }[] = [
+    { value: 'everyone', labelKey: 'profile.visibility.everyone' },
+    { value: 'vips_only', labelKey: 'profile.visibility.vipsOnly' },
+    { value: 'hidden', labelKey: 'profile.visibility.hidden' },
+  ];
 
   readonly hubNavItems: HubNavItem[] = [
     {
@@ -65,12 +80,50 @@ export class PrivacySettingsComponent {
 
   constructor() {
     this.loadCounts();
+    void this.loadProfileVisibility();
   }
 
   private loadCounts(): void {
     this.blockedUsersService.loadBlockedUsers().then(() => {
       this.blockedCount.set(this.blockedUsers().length);
     });
+  }
+
+  async loadProfileVisibility(): Promise<void> {
+    this.visibilityState.set('loading');
+    this.visibilityError.set('');
+    this.visibilitySuccess.set('');
+
+    try {
+      this.profileVisibility.set(await this.userService.getProfileVisibility());
+      this.visibilityState.set('ready');
+    } catch {
+      this.visibilityState.set('error');
+      this.visibilityError.set('privacy.loadError');
+    }
+  }
+
+  async setProfileVisibility(next: ProfileVisibility): Promise<void> {
+    if (this.visibilityState() === 'saving' || next === this.profileVisibility()) return;
+
+    const previous = this.profileVisibility();
+    this.profileVisibility.set(next);
+    this.visibilityState.set('saving');
+    this.visibilityError.set('');
+    this.visibilitySuccess.set('');
+
+    try {
+      const persisted = await this.userService.setProfileVisibility(next);
+      if ((persisted.profile_visibility ?? next) !== next) {
+        throw new Error('Profile visibility was not persisted');
+      }
+      this.visibilityState.set('ready');
+      this.visibilitySuccess.set('privacy.success');
+    } catch {
+      this.profileVisibility.set(previous);
+      this.visibilityState.set('error');
+      this.visibilityError.set('privacy.error');
+    }
   }
 
   addMutedWord(): void {
