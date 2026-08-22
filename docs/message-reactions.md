@@ -19,13 +19,13 @@ Reaction mutations are rate limited. Adding uses the existing `(message_id, user
 
 ## Realtime and failure behaviour
 
-After persistence, the backend publishes a `reaction` event on the existing `chat:<roomId>` Centrifugo channel. Persistence is authoritative: if Centrifugo is temporarily unavailable, the API still succeeds and clients recover the correct reaction state on the next room load. Provider failures are logged without message text, emoji history, tokens, or other private conversation content.
+After persistence, the backend publishes a `reaction` event on the existing `chat:<roomId>` Centrifugo channel. The Angular chat view subscribes through the shared resilient Centrifugo service, validates the untrusted publication shape and supported emoji set, bounds reaction rows, and replaces that message's local reaction state with the server-authoritative payload. This keeps other connected participants in sync without polling.
 
-The initial Angular integration updates the acting client's state directly from the mutation response. Other connected clients can consume the published event as their realtime chat pipeline evolves; a reload always reconciles from Supabase through the authenticated API.
+Persistence remains authoritative: if Centrifugo is temporarily unavailable, the API still succeeds and clients recover the correct reaction state on the next room load. Old clients simply ignore the unknown event. Provider failures are logged without message text, emoji history, tokens, or other private conversation content.
 
 ## Security and privacy
 
-The original `message_reactions` migration allowed every authenticated Supabase client to read every reaction row. `20260822195800_harden_message_reactions.sql` replaces that permissive policy with room-membership-scoped reads and revokes direct mutation grants from `anon` and `authenticated`, so production writes pass through the authenticated, rate-limited NestJS API. Ownership/membership RLS mutation policies remain as defence in depth if direct grants are deliberately restored later.
+The original `message_reactions` migration allowed every authenticated Supabase client to read every reaction row. `20260822195800_harden_message_reactions.sql` removes that permissive policy, scopes replacement reads to room membership, and revokes direct mutation grants from `anon` and `authenticated`, so production writes pass through the authenticated, rate-limited NestJS API. Ownership/membership RLS mutation policies remain as defence in depth if direct grants are deliberately restored later.
 
 The migration also adds a `NOT VALID` supported-emoji check. PostgreSQL enforces it for all new rows immediately without risking rollout on historical unsupported rows. Existing rows are retained; the API/UI only expose the supported set.
 
@@ -40,7 +40,8 @@ Focused coverage includes:
 - idempotent upsert and authoritative Centrifugo publication;
 - bounded room-state loading and grouping;
 - supported/unsupported reaction aggregation in Angular;
-- add/remove desired-state emission and duplicate-interaction suppression.
+- add/remove desired-state emission and duplicate-interaction suppression;
+- untrusted realtime publication validation and bounded reconciliation through the shared chat channel.
 
 The repository's normal database-reset, backend unit/build/lint, frontend unit/build/static-analysis, design-governance, and E2E checks remain the deployment gate.
 
@@ -53,4 +54,4 @@ The repository's normal database-reset, backend unit/build/lint, frontend unit/b
 
 ## Rollback
 
-Revert the application commits to remove the API and UI. Keeping the migration is safe and preferable because it only tightens access to an otherwise unused table. If direct authenticated Supabase mutation must be restored during an emergency rollback, explicitly restore the previous grants and policies in a new forward migration rather than editing deployed migration history.
+Revert the application commits to remove the API and UI. Keeping the migration is safe and preferable because it tightens access to an otherwise unused table. If direct authenticated Supabase mutation must be restored during an emergency rollback, explicitly restore the previous grants and policies in a new forward migration rather than editing deployed migration history.
