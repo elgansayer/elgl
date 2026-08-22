@@ -107,7 +107,10 @@ export class MessageReactionsService {
       if (state) this.applyMessageState(roomId, state);
     });
     this.roomUnlisteners.set(roomId, unlisten);
-    void this.ensureRoomLoaded(roomId);
+    void this.ensureRoomLoaded(roomId).catch(() => {
+      // Reactions are an optional chat enhancement. A transient sub-resource
+      // failure must not surface as an unhandled rejection or block messaging.
+    });
   }
 
   releaseRoom(roomId: string): void {
