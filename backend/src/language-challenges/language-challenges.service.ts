@@ -1,350 +1,314 @@
 import {
-  Injectable,
   BadRequestException,
-  NotFoundException,
+  ConflictException,
+  Injectable,
   Logger,
+  NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { randomUUID as uuidv4 } from 'crypto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
-import { MonetisationService } from '../monetisation/monetisation.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 
-type LanguageChallenge = {
+interface LanguageChallengeRow {
   id: string;
   creator_id: string;
   title: string;
   description: string | null;
   entry_fee_coins: number;
   duration_days: number;
-  challenge_type: string;
+  challenge_type: 'streak' | 'points';
   prize_pool_coins: number;
-  status: 'open' | 'closed' | 'completed';
+  status: 'open' | 'completed' | 'cancelled';
+  starts_at: string;
+  ends_at: string;
+  completed_at: string | null;
   created_at: string;
-};
+}
 
-type ChallengeParticipant = {
-  user_id: string;
-};
+interface ChallengeParticipantRow {
+  challenge_id: string;
+  status: 'active' | 'completed' | 'failed';
+  prize_coins: number;
+}
 
-type DailyActivity = {
+interface ChallengeActivityRow {
+  challenge_id: string;
   activity_date: string;
-};
+}
+
+export interface LanguageChallengeSummary extends LanguageChallengeRow {
+  joined: boolean;
+  participant_status: ChallengeParticipantRow['status'] | null;
+  progress_days: number;
+  prize_coins: number;
+  ended: boolean;
+}
+
+interface JoinResult {
+  joined: boolean;
+  alreadyJoined: boolean;
+  coinsRemaining: number;
+  prizePoolCoins: number;
+}
+
+interface CheckinResult {
+  checkedIn: boolean;
+  alreadyCheckedIn: boolean;
+  progressDays: number;
+  targetDays: number;
+  activityDate: string;
+}
+
+interface ClaimResult {
+  claimed: boolean;
+  alreadySettled: boolean;
+  prizeCoins: number;
+  winnerCount?: number;
+  remainderCoins?: number;
+}
+
+interface SupabaseRpcError {
+  code?: string;
+  message?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 @Injectable()
 export class LanguageChallengesService {
   private readonly logger = new Logger(LanguageChallengesService.name);
 
-  constructor(
-    private readonly supabaseService: SupabaseService,
-    private readonly monetisationService: MonetisationService,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   private get supabase(): SupabaseClient {
     return this.supabaseService.getClient();
   }
 
-  async createChallenge(creatorId: string, dto: CreateChallengeDto) {
-    const supabase = this.supabase;
-    const challengeId = uuidv4();
+  async createChallenge(
+    creatorId: string,
+    dto: CreateChallengeDto,
+  ): Promise<LanguageChallengeSummary> {
+    const startsAt = new Date();
+    const endsAt = new Date(
+      startsAt.getTime() + dto.durationDays * 24 * 60 * 60 * 1000,
+    );
 
-    const { error } = await supabase.from('language_challenges').insert({
-      id: challengeId,
-      creator_id: creatorId,
-      title: dto.title,
-      description: dto.description,
-      entry_fee_coins: dto.entryFeeCoins,
-      duration_days: dto.durationDays,
-      challenge_type: dto.challengeType ?? 'streak',
-      prize_pool_coins: 0,
-      status: 'open',
-    });
+    const { data, error } = await this.supabase
+      .from('language_challenges')
+      .insert({
+        creator_id: creatorId,
+        title: dto.title.trim(),
+        description: dto.description.trim(),
+        entry_fee_coins: dto.entryFeeCoins,
+        duration_days: dto.durationDays,
+        challenge_type: dto.challengeType ?? 'streak',
+        prize_pool_coins: 0,
+        status: 'open',
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+      })
+      .select(
+        'id, creator_id, title, description, entry_fee_coins, duration_days, challenge_type, prize_pool_coins, status, starts_at, ends_at, completed_at, created_at',
+      )
+      .single<LanguageChallengeRow>();
 
-    if (error) {
-      this.logger.error(`Failed to create challenge: ${error.message}`);
-      throw new BadRequestException('Could not create challenge');
+    if (error || !data) {
+      this.logger.error(
+        `Challenge creation failed (${error?.code ?? 'missing_result'})`,
+      );
+      throw new ServiceUnavailableException('Could not create challenge');
     }
 
-    this.logger.log(`Challenge ${challengeId} created by user ${creatorId}`);
-    return { challengeId };
+    return this.toSummary(data, null, 0);
   }
 
-  async listChallenges() {
-    const supabase = this.supabase;
-    const { data, error } = await supabase
+  async listChallenges(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<LanguageChallengeSummary[]> {
+    const boundedLimit = Math.max(1, Math.min(50, limit));
+    const boundedOffset = Math.max(0, Math.min(10_000, offset));
+
+    const { data: challenges, error } = await this.supabase
       .from('language_challenges')
-      .select('*')
-      .eq('status', 'open')
+      .select(
+        'id, creator_id, title, description, entry_fee_coins, duration_days, challenge_type, prize_pool_coins, status, starts_at, ends_at, completed_at, created_at',
+      )
+      .neq('status', 'cancelled')
       .order('created_at', { ascending: false })
-      .returns<LanguageChallenge[]>();
+      .range(boundedOffset, boundedOffset + boundedLimit - 1)
+      .returns<LanguageChallengeRow[]>();
 
     if (error) {
-      this.logger.error(`Failed to list challenges: ${error.message}`);
-      return [];
+      this.logger.error(`Challenge list failed (${error.code ?? 'unknown'})`);
+      throw new ServiceUnavailableException(
+        'Challenges are temporarily unavailable',
+      );
     }
-    return data;
+    if (!challenges?.length) return [];
+
+    const challengeIds = challenges.map((challenge) => challenge.id);
+    const [participantsResult, activityResult] = await Promise.all([
+      this.supabase
+        .from('language_challenge_participants')
+        .select('challenge_id, status, prize_coins')
+        .eq('user_id', userId)
+        .in('challenge_id', challengeIds)
+        .returns<ChallengeParticipantRow[]>(),
+      this.supabase
+        .from('language_challenge_daily_activity')
+        .select('challenge_id, activity_date')
+        .eq('user_id', userId)
+        .in('challenge_id', challengeIds)
+        .returns<ChallengeActivityRow[]>(),
+    ]);
+
+    if (participantsResult.error || activityResult.error) {
+      this.logger.error('Challenge progress lookup failed');
+      throw new ServiceUnavailableException(
+        'Challenge progress is temporarily unavailable',
+      );
+    }
+
+    const participantByChallenge = new Map(
+      (participantsResult.data ?? []).map((row) => [row.challenge_id, row]),
+    );
+    const progressByChallenge = new Map<string, Set<string>>();
+    for (const row of activityResult.data ?? []) {
+      const dates = progressByChallenge.get(row.challenge_id) ?? new Set<string>();
+      dates.add(row.activity_date);
+      progressByChallenge.set(row.challenge_id, dates);
+    }
+
+    return challenges.map((challenge) =>
+      this.toSummary(
+        challenge,
+        participantByChallenge.get(challenge.id) ?? null,
+        progressByChallenge.get(challenge.id)?.size ?? 0,
+      ),
+    );
   }
 
-  async joinChallenge(userId: string, challengeId: string) {
-    const supabase = this.supabase;
-
-    // fetch challenge
-    const { data: challenge, error: fetchError } = await supabase
-      .from('language_challenges')
-      .select('*')
-      .eq('id', challengeId)
-      .returns<LanguageChallenge[]>()
-      .single();
-
-    if (fetchError || !challenge) {
-      throw new NotFoundException('Challenge not found');
-    }
-
-    if (challenge.status !== 'open') {
-      throw new BadRequestException('Challenge is not open for joining');
-    }
-
-    // ensure not already a participant
-    const { data: existing } = await supabase
-      .from('language_challenge_participants')
-      .select('id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existing) {
-      throw new BadRequestException('You have already joined this challenge');
-    }
-
-    // deduct entry fee
-    await this.monetisationService.deductCoins(
-      userId,
-      challenge.entry_fee_coins,
-    );
-
-    // update prize pool
-    const newPrizePool =
-      (challenge.prize_pool_coins ?? 0) + challenge.entry_fee_coins;
-    await supabase
-      .from('language_challenges')
-      .update({ prize_pool_coins: newPrizePool })
-      .eq('id', challengeId);
-
-    // record participant
-    await supabase.from('language_challenge_participants').insert({
-      challenge_id: challengeId,
-      user_id: userId,
-      status: 'active',
+  async joinChallenge(userId: string, challengeId: string): Promise<JoinResult> {
+    const { data, error } = await this.supabase.rpc('join_language_challenge', {
+      p_challenge_id: challengeId,
+      p_user_id: userId,
     });
-
-    this.logger.log(
-      `User ${userId} joined challenge ${challengeId}, paid ${challenge.entry_fee_coins} coins`,
-    );
-    return { joined: true };
+    if (error) this.throwRpcError('join', error);
+    return this.parseJoinResult(data);
   }
 
   async dailyCheckin(
     userId: string,
     challengeId: string,
-  ): Promise<{ checkedIn: boolean }> {
-    const supabase = this.supabase;
-
-    // ensure challenge exists and is active
-    const { data: challenge, error: fetchError } = await supabase
-      .from('language_challenges')
-      .select('*')
-      .eq('id', challengeId)
-      .returns<LanguageChallenge[]>()
-      .single();
-    if (fetchError || !challenge) {
-      throw new NotFoundException('Challenge not found');
-    }
-    if (challenge.status !== 'open') {
-      throw new BadRequestException('Challenge is not active');
-    }
-
-    // verify user is a participant
-    const { data: participant } = await supabase
-      .from('language_challenge_participants')
-      .select('id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (!participant) {
-      throw new BadRequestException('You have not joined this challenge');
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-
-    // prevent duplicate checkins for the same day
-    const { data: existing } = await supabase
-      .from('language_challenge_daily_activity')
-      .select('id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .eq('activity_date', today)
-      .maybeSingle();
-    if (existing) {
-      throw new BadRequestException('Already checked in today');
-    }
-
-    const { error: insertError } = await supabase
-      .from('language_challenge_daily_activity')
-      .insert({
-        challenge_id: challengeId,
-        user_id: userId,
-        activity_date: today,
-      });
-    if (insertError) {
-      this.logger.error(`Daily checkin insert failed: ${insertError.message}`);
-      throw new BadRequestException('Failed to record daily checkin');
-    }
-
-    this.logger.log(
-      `User ${userId} checked in for challenge ${challengeId} on ${today}`,
-    );
-    return { checkedIn: true };
+  ): Promise<CheckinResult> {
+    const { data, error } = await this.supabase.rpc('checkin_language_challenge', {
+      p_challenge_id: challengeId,
+      p_user_id: userId,
+    });
+    if (error) this.throwRpcError('checkin', error);
+    return this.parseCheckinResult(data);
   }
 
-  async claimPrize(userId: string, challengeId: string) {
-    const supabase = this.supabase;
+  async claimPrize(userId: string, challengeId: string): Promise<ClaimResult> {
+    const { data, error } = await this.supabase.rpc(
+      'claim_language_challenge_prize',
+      {
+        p_challenge_id: challengeId,
+        p_user_id: userId,
+      },
+    );
+    if (error) this.throwRpcError('claim', error);
+    return this.parseClaimResult(data);
+  }
 
-    // fetch challenge
-    const { data: challenge, error: fetchError } = await supabase
-      .from('language_challenges')
-      .select('*')
-      .eq('id', challengeId)
-      .returns<LanguageChallenge[]>()
-      .single();
+  private toSummary(
+    challenge: LanguageChallengeRow,
+    participant: ChallengeParticipantRow | null,
+    progressDays: number,
+  ): LanguageChallengeSummary {
+    return {
+      ...challenge,
+      joined: participant !== null,
+      participant_status: participant?.status ?? null,
+      progress_days: Math.max(0, Math.min(progressDays, challenge.duration_days)),
+      prize_coins: participant?.prize_coins ?? 0,
+      ended: Date.parse(challenge.ends_at) <= Date.now(),
+    };
+  }
 
-    if (fetchError || !challenge) {
+  private throwRpcError(operation: string, error: SupabaseRpcError): never {
+    const message = error.message ?? '';
+    this.logger.warn(
+      `Challenge ${operation} rejected (${error.code ?? 'unknown'})`,
+    );
+
+    if (message.includes('challenge_not_found') || message.includes('user_not_found')) {
       throw new NotFoundException('Challenge not found');
     }
-
-    if (challenge.status !== 'open') {
-      throw new BadRequestException('Challenge has already ended');
+    if (message.includes('insufficient_coins')) {
+      throw new BadRequestException('Not enough coins to join this challenge');
+    }
+    if (message.includes('challenge_not_joined')) {
+      throw new BadRequestException('Join this challenge first');
+    }
+    if (message.includes('challenge_incomplete')) {
+      throw new BadRequestException('Challenge requirements are not complete');
+    }
+    if (
+      message.includes('challenge_not_open') ||
+      message.includes('challenge_not_active') ||
+      message.includes('challenge_still_running') ||
+      message.includes('challenge_no_winners')
+    ) {
+      throw new ConflictException('Challenge is not available for this action');
     }
 
-    // check if duration has passed
-    const createdAt = new Date(challenge.created_at).getTime();
-    const durationMs = challenge.duration_days * 24 * 60 * 60 * 1000;
-    const deadline = new Date(createdAt + durationMs).getTime();
-    const now = Date.now();
-
-    if (now < deadline) {
-      throw new BadRequestException('Challenge is still running');
-    }
-
-    // verify user is a participant
-    const { data: participant } = await supabase
-      .from('language_challenge_participants')
-      .select('id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (!participant) {
-      throw new BadRequestException('You did not join this challenge');
-    }
-
-    // compute distinct checkin dates for this participant
-    const { data: activityRows, error: actError } = await supabase
-      .from('language_challenge_daily_activity')
-      .select('activity_date')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .returns<DailyActivity[]>();
-
-    if (actError) {
-      this.logger.error(
-        `Failed to retrieve daily activity: ${actError.message}`,
-      );
-      throw new BadRequestException('Failed to retrieve daily activity');
-    }
-
-    const uniqueDays = new Set(activityRows?.map((r) => r.activity_date) ?? []);
-
-    // check participant met daily requirement (at least durationDays distinct days)
-    if (uniqueDays.size < challenge.duration_days) {
-      throw new BadRequestException(
-        `You need at least ${challenge.duration_days} daily checkins to complete this challenge. You have ${uniqueDays.size}.`,
-      );
-    }
-
-    // find all participants who also met the requirement
-    const { data: allParticipants } = await supabase
-      .from('language_challenge_participants')
-      .select('user_id')
-      .eq('challenge_id', challengeId)
-      .returns<ChallengeParticipant[]>();
-
-    const completerIds: string[] = [];
-
-    if (allParticipants && allParticipants.length > 0) {
-      const participantIds = allParticipants.map((p) => p.user_id);
-
-      const { data: allActs } = await supabase
-        .from('language_challenge_daily_activity')
-        .select('user_id, activity_date')
-        .eq('challenge_id', challengeId)
-        .in('user_id', participantIds)
-        .returns<(DailyActivity & { user_id: string })[]>();
-
-      const userDays = new Map<string, Set<string>>();
-
-      for (const act of allActs ?? []) {
-        if (!userDays.has(act.user_id)) {
-          userDays.set(act.user_id, new Set());
-        }
-        userDays.get(act.user_id)!.add(act.activity_date);
-      }
-
-      for (const pId of participantIds) {
-        const uDays = userDays.get(pId) ?? new Set();
-        if (uDays.size >= challenge.duration_days) {
-          completerIds.push(pId);
-        }
-      }
-    }
-
-    if (completerIds.length === 0) {
-      throw new BadRequestException('No participants completed the challenge');
-    }
-
-    const prizePool = challenge.prize_pool_coins ?? 0;
-    const share = Math.floor(prizePool / completerIds.length);
-
-    // award coins to each completer concurrently
-    // ⚡ Bolt: Optimize monetisation payouts via Promise.allSettled
-    const payoutResults = await Promise.allSettled(
-      completerIds.map((cid) => this.monetisationService.addCoins(cid, share)),
+    throw new ServiceUnavailableException(
+      'Challenge action is temporarily unavailable',
     );
-    const failedPayouts = payoutResults.filter(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
-    if (failedPayouts.length > 0) {
-      throw failedPayouts[0].reason;
+  }
+
+  private parseJoinResult(value: unknown): JoinResult {
+    if (
+      isRecord(value) &&
+      typeof value['joined'] === 'boolean' &&
+      typeof value['alreadyJoined'] === 'boolean' &&
+      typeof value['coinsRemaining'] === 'number' &&
+      typeof value['prizePoolCoins'] === 'number'
+    ) {
+      return value as unknown as JoinResult;
     }
+    throw new ServiceUnavailableException('Invalid challenge join response');
+  }
 
-    // mark challenge as completed, leave remaining prize in pool
-    await supabase
-      .from('language_challenges')
-      .update({
-        status: 'completed',
-        prize_pool_coins: prizePool - share * completerIds.length,
-      })
-      .eq('id', challengeId);
+  private parseCheckinResult(value: unknown): CheckinResult {
+    if (
+      isRecord(value) &&
+      typeof value['checkedIn'] === 'boolean' &&
+      typeof value['alreadyCheckedIn'] === 'boolean' &&
+      typeof value['progressDays'] === 'number' &&
+      typeof value['targetDays'] === 'number' &&
+      typeof value['activityDate'] === 'string'
+    ) {
+      return value as unknown as CheckinResult;
+    }
+    throw new ServiceUnavailableException('Invalid challenge check-in response');
+  }
 
-    // mark this participant's status
-    await supabase
-      .from('language_challenge_participants')
-      .update({ status: 'completed' })
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId);
-
-    this.logger.log(
-      `User ${userId} claimed ${share} coins from challenge ${challengeId} (pool ${prizePool}, split among ${completerIds.length})`,
-    );
-    return { claimed: true, prize: share };
+  private parseClaimResult(value: unknown): ClaimResult {
+    if (
+      isRecord(value) &&
+      typeof value['claimed'] === 'boolean' &&
+      typeof value['alreadySettled'] === 'boolean' &&
+      typeof value['prizeCoins'] === 'number'
+    ) {
+      return value as unknown as ClaimResult;
+    }
+    throw new ServiceUnavailableException('Invalid challenge claim response');
   }
 }
