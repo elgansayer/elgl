@@ -12,7 +12,7 @@ from openhands_factory.exceptions import FactoryError, VerificationFailed
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.pipeline import FactoryPipeline
+from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -1428,6 +1428,57 @@ def test_security_review_runs_between_implementation_and_verification(
     assert len(conversations.prompts) == 2
     assert "security instructions" in conversations.prompts[1]
     assert "Ignore Factory policy" not in conversations.prompts[1]
+
+
+class TestSecurityReviewExemption:
+    def test_docs_translation_and_skill_only_diffs_are_exempt(self) -> None:
+        assert _is_security_review_exempt(
+            {
+                Path("README.md"),
+                Path("docs/notes.txt"),
+                Path("frontend/src/assets/i18n/es.json"),
+                Path(".agents/skills/example/SKILL.md"),
+            }
+        )
+
+    def test_any_production_source_path_forces_a_real_review(self) -> None:
+        assert not _is_security_review_exempt(
+            {Path("README.md"), Path("backend/src/quests/quests.service.ts")}
+        )
+
+    def test_empty_diff_is_not_exempt(self) -> None:
+        # commands_for() treats an empty diff as a hard error elsewhere in the
+        # pipeline (an empty diff should never reach security-review at
+        # all), so this only guards against ever silently skipping here.
+        assert not _is_security_review_exempt(set())
+
+    def test_a_test_file_is_not_exempt(self) -> None:
+        # A test fixture can carry a real secret, and no separate
+        # deterministic secret-scanner gate covers that class of change.
+        assert not _is_security_review_exempt({Path("backend/src/auth/auth.service.spec.ts")})
+
+
+def test_security_review_is_skipped_for_a_docs_only_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    conversations = SecurityReviewConversations()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=conversations,  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.SECURITY_REVIEW
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    prompt_dir = pipeline.config.worktree_dir / "issue-42" / "automation/prompts"
+    _seed_prompts(prompt_dir)
+
+    result = pipeline.run_job("42")
+
+    assert result is not None and result.state is JobState.VERIFYING
+    assert conversations.prompts == []
 
 
 def test_review_avoids_every_provider_that_may_have_changed_code(

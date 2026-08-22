@@ -47,6 +47,43 @@ CODE_MUTATING_AGENT_PHASES = {
     "ci-repair",
 }
 
+# A path in one of these categories can never introduce the vulnerability
+# classes security.md's checklist scans for (hardcoded secrets, webhook/
+# payment trust, privileged-state handling, authz, injection, security
+# config) - it has no runtime execution surface at all. Translation content
+# files are included deliberately: a locale JSON's *values* are rendered
+# strings, never executed or trusted as privileged input.
+#
+# Test files are deliberately NOT exempt: a test fixture can accidentally
+# carry a real secret or credential, and no separate deterministic
+# secret-scanner gate covers that class of change, so a hardcoded-secrets
+# check still needs to run on them.
+_SECURITY_EXEMPT_SUFFIXES = (".md", ".txt")
+_SECURITY_EXEMPT_DIR_PARTS = ("i18n", "locales")
+_SECURITY_EXEMPT_PATH_PREFIXES = (Path(".agents/skills"),)
+
+
+def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
+    """Whether every changed path is provably outside security.md's scope.
+
+    Deliberately conservative: any single path that isn't docs, translation
+    content, or a skill file forces a real security-review agent call.
+    False negatives here (running the agent when it wasn't strictly needed)
+    are cheap; false positives (skipping a review a diff actually needed)
+    are not, so this only skips when every path matches.
+    """
+    if not changed_paths:
+        return False
+    for path in changed_paths:
+        if path.suffix in _SECURITY_EXEMPT_SUFFIXES:
+            continue
+        if set(path.parts) & set(_SECURITY_EXEMPT_DIR_PARTS):
+            continue
+        if any(str(path).startswith(str(prefix)) for prefix in _SECURITY_EXEMPT_PATH_PREFIXES):
+            continue
+        return False
+    return True
+
 
 class FactoryPipeline:
     def __init__(
@@ -644,6 +681,15 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.SECURITY_REVIEW:
+            try:
+                exempt = _is_security_review_exempt(workflow.changed_paths())
+            except RepositorySafetyError:
+                # Can't prove the diff is out of scope, so fall through to a
+                # real review rather than crash the job or skip it blind.
+                exempt = False
+            if exempt:
+                job.state = JobState.VERIFYING
+                return
             self._run_agent(
                 job,
                 worktree,
