@@ -1,5 +1,5 @@
 import { HlmInput } from '@spartan-ng/helm/input';
-import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, input, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
@@ -8,10 +8,13 @@ import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { SafetyService } from '../../services/safety.service';
 import { DraftService } from '../../services/draft.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import {
+  MESSAGE_REACTION_EMOJIS,
   MessageReactionsService,
   type MessageReaction,
   type MessageReactionEmoji,
+  type MessageReactionState,
 } from '../../services/message-reactions.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -82,7 +85,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     `,
   ],
 })
-export class ChatViewComponent implements OnInit {
+export class ChatViewComponent implements OnInit, OnDestroy {
   roomId = input.required<string>();
   currentUserId = input<string>();
 
@@ -91,6 +94,8 @@ export class ChatViewComponent implements OnInit {
   private safetyService = inject(SafetyService);
   private draftService = inject(DraftService);
   private messageReactionsService = inject(MessageReactionsService);
+  private centrifugeService = inject(CentrifugeService);
+  private realtimeChannel: string | null = null;
 
   messages: ChatMessage[] = [];
   newMessageText = '';
@@ -111,6 +116,12 @@ export class ChatViewComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    this.realtimeChannel = `chat:${this.roomId()}`;
+    this.centrifugeService.subscribe(this.realtimeChannel, (publication) => {
+      this.applyReactionPublication(publication);
+    });
+    void this.centrifugeService.connect();
+
     await this.loadMessages();
     await Promise.all([this.loadBlockedUsers(), this.loadReactions()]);
 
@@ -118,6 +129,12 @@ export class ChatViewComponent implements OnInit {
     const draft = this.draftService.loadChatDraft(this.roomId());
     if (draft) {
       this.newMessageText = draft;
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.realtimeChannel) {
+      this.centrifugeService.unsubscribe(this.realtimeChannel);
     }
   }
 
@@ -150,15 +167,47 @@ export class ChatViewComponent implements OnInit {
         event.emoji,
         event.added,
       );
-      this.reactionRows.update((rows) => ({
-        ...rows,
-        [state.message_id]: state.reactions,
-      }));
+      this.applyReactionState(state);
     } catch {
       this.reactionErrorIds.update((ids) => this.withAdded(ids, event.messageId));
     } finally {
       this.reactionPendingIds.update((ids) => this.without(ids, event.messageId));
     }
+  }
+
+  private applyReactionPublication(value: unknown): void {
+    if (!this.isReactionPublication(value)) return;
+    this.applyReactionState(value.reaction);
+  }
+
+  private applyReactionState(state: MessageReactionState): void {
+    this.reactionRows.update((rows) => ({
+      ...rows,
+      [state.message_id]: state.reactions,
+    }));
+  }
+
+  private isReactionPublication(
+    value: unknown,
+  ): value is { reaction: MessageReactionState } {
+    if (typeof value !== 'object' || value === null || !('reaction' in value)) return false;
+    const reaction = value.reaction;
+    if (typeof reaction !== 'object' || reaction === null) return false;
+    if (!('message_id' in reaction) || !('reactions' in reaction)) return false;
+    if (typeof reaction.message_id !== 'string' || reaction.message_id.length > 128) return false;
+    if (!Array.isArray(reaction.reactions) || reaction.reactions.length > 600) return false;
+
+    return reaction.reactions.every((row: unknown) => {
+      if (typeof row !== 'object' || row === null || !('user_id' in row) || !('emoji' in row)) {
+        return false;
+      }
+      return (
+        typeof row.user_id === 'string' &&
+        row.user_id.length <= 128 &&
+        typeof row.emoji === 'string' &&
+        (MESSAGE_REACTION_EMOJIS as readonly string[]).includes(row.emoji)
+      );
+    });
   }
 
   private async loadMessages(): Promise<void> {
