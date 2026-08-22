@@ -89,6 +89,12 @@ describe('ChatRoomComponent (threaded replies)', () => {
       translateWordOrSentence: vi.fn(),
       saveWord: vi.fn(),
       updateSrsLevel: vi.fn(),
+      checkGrammar: vi.fn().mockResolvedValue({
+        original: '',
+        corrected: '',
+        explanation: '',
+        errors_found: 0,
+      }),
     };
 
     const mockTypingService = {
@@ -278,13 +284,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('Enter sends the message when no mention list is open', () => {
+    it('Enter sends the message when no mention list is open', async () => {
       component.textInput = 'Just a message';
 
       component.onComposerKeydown({
         key: 'Enter',
         preventDefault: vi.fn(),
       } as unknown as KeyboardEvent);
+      // onComposerKeydown fire-and-forgets the async sendTextMessage(), which
+      // awaits a grammar check before sending - flush that microtask chain.
+      await Promise.resolve();
+      await Promise.resolve();
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),
