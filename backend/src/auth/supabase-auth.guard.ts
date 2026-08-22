@@ -36,14 +36,13 @@ export class SupabaseAuthGuard implements CanActivate {
     if (contextType === 'http') {
       const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
       targetObject = request;
-      token = this.extractTokenFromHeader(request);
+      token = this.extractBearerToken(request.headers.authorization);
     } else if (contextType === 'ws') {
       const client = context.switchToWs().getClient<WsHandshakeClient>();
       targetObject = client;
-      const authHeader = client.handshake?.headers?.authorization;
-      token = authHeader
-        ? authHeader.split(' ')[1]
-        : client.handshake?.auth?.token;
+      token =
+        this.extractBearerToken(client.handshake?.headers?.authorization) ??
+        this.extractHandshakeToken(client.handshake?.auth?.token);
     } else {
       throw new UnauthorizedException('Unsupported execution context');
     }
@@ -52,10 +51,19 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing authentication token');
     }
 
-    const supabase = this.supabaseService.getClient();
-    const result = await supabase.auth.getUser(token);
+    let result: Awaited<
+      ReturnType<ReturnType<SupabaseService['getClient']>['auth']['getUser']>
+    >;
+    try {
+      const supabase = this.supabaseService.getClient();
+      result = await supabase.auth.getUser(token);
+    } catch {
+      // Authentication must fail closed if the provider cannot validate the token.
+      // Do not expose provider/network details or the supplied credential.
+      throw new UnauthorizedException('Invalid or expired token');
+    }
 
-    if (result.error || !result.data || !result.data.user) {
+    if (result.error || !result.data?.user) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
@@ -72,15 +80,21 @@ export class SupabaseAuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) {
+  private extractBearerToken(authHeader: unknown): string | undefined {
+    if (typeof authHeader !== 'string') {
       return undefined;
     }
-    const parts = authHeader.split(' ');
-    if (parts.length === 2 && parts[0] === 'Bearer') {
-      return parts[1];
+
+    const match = /^Bearer\s+(\S+)$/i.exec(authHeader.trim());
+    return match?.[1];
+  }
+
+  private extractHandshakeToken(token: unknown): string | undefined {
+    if (typeof token !== 'string') {
+      return undefined;
     }
-    return undefined;
+
+    const trimmed = token.trim();
+    return trimmed.length > 0 && !/\s/.test(trimmed) ? trimmed : undefined;
   }
 }
