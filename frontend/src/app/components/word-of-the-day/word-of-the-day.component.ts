@@ -1,73 +1,87 @@
-import { Component, computed, resource, inject } from '@angular/core';
+import { Component, computed, resource } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
-import { AuthService } from '../../services/auth.service';
 
 export interface WordOfTheDay {
   word: string;
   translation: string;
   language: string;
+  languageCode?: string;
   example?: string;
+  date?: string;
+}
+
+function isWordOfTheDay(value: unknown): value is WordOfTheDay {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return ['word', 'translation', 'language'].every(
+    (field) => typeof record[field] === 'string' && record[field].trim().length > 0,
+  );
 }
 
 @Component({
   selector: 'app-word-of-the-day',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <section
       class="bg-surface-300 rounded-xl p-4 space-y-2"
       role="region"
-      aria-label="{{ 'home.wordOfDay.title' | t }}"
+      [attr.aria-label]="'home.wordOfDay.title' | t"
+      [attr.aria-busy]="isLoading()"
     >
       <h2 class="text-sm uppercase tracking-wider text-text-muted font-medium">
         {{ 'home.wordOfDay.title' | t }}
       </h2>
-      <div class="flex items-center gap-3">
-        <span class="text-3xl font-bold text-accent">{{ word() }}</span>
-        <span class="text-lg text-text-secondary">{{ translation() }}</span>
-        <span class="text-sm text-text-muted ms-auto">{{ language() }}</span>
-      </div>
-      @if (example(); as ex) {
-        <p class="text-sm text-text-muted italic">{{ ex }}</p>
+
+      @if (isLoading()) {
+        <p class="text-sm text-text-muted" role="status">{{ 'common.loading' | t }}</p>
+      } @else if (hasError()) {
+        <div class="space-y-3" role="alert">
+          <p class="text-sm text-text-muted">{{ 'common.error_generic' | t }}</p>
+          <button hlmBtn size="touch" type="button" variant="outline" (click)="reload()">
+            {{ 'common.retry' | t }}
+          </button>
+        </div>
+      } @else if (wordOfTheDay(); as entry) {
+        <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span class="break-words text-3xl font-bold text-accent">{{ entry.word }}</span>
+          <span class="break-words text-lg text-text-secondary">{{ entry.translation }}</span>
+          <span class="text-sm text-text-muted sm:ms-auto">{{ entry.language }}</span>
+        </div>
+        @if (entry.example; as example) {
+          <p class="break-words text-sm italic text-text-muted">{{ example }}</p>
+        }
       }
     </section>
   `,
   styles: [':host { display: block; }'],
 })
 export class WordOfTheDayComponent {
-  private readonly authService = inject(AuthService);
-
   private readonly wordOfTheDayResource = resource<WordOfTheDay, unknown>({
-    loader: () => {
-      const token = this.authService.getAccessToken();
-      if (!token) {
-        return Promise.resolve({
-          word: 'Hola',
-          translation: 'Hello',
-          language: 'Spanish',
-          example: '¡Hola! ¿Cómo estás?',
-        });
+    loader: async () => {
+      const response = await fetch(`${environment.apiUrl}/word-of-the-day`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch word of the day');
       }
-      return fetch(`${environment.apiUrl}/word-of-the-day`)
-        .then((r) => {
-          if (!r.ok) throw new Error('Failed to fetch word of the day');
-          return r.json();
-        })
-        .catch(() => ({
-          word: 'Hola',
-          translation: 'Hello',
-          language: 'Spanish',
-          example: '¡Hola! ¿Cómo estás?',
-        }));
+
+      const payload: unknown = await response.json();
+      if (!isWordOfTheDay(payload)) {
+        throw new Error('Invalid word of the day response');
+      }
+
+      return payload;
     },
   });
 
-  protected readonly word = computed(() => this.wordOfTheDayResource.value()?.word ?? 'Hola');
-  protected readonly translation = computed(
-    () => this.wordOfTheDayResource.value()?.translation ?? 'Hello',
-  );
-  protected readonly language = computed(
-    () => this.wordOfTheDayResource.value()?.language ?? 'Spanish',
-  );
-  protected readonly example = computed(() => this.wordOfTheDayResource.value()?.example);
+  protected readonly wordOfTheDay = computed(() => this.wordOfTheDayResource.value());
+  protected readonly isLoading = computed(() => this.wordOfTheDayResource.isLoading());
+  protected readonly hasError = computed(() => this.wordOfTheDayResource.error() !== undefined);
+
+  protected reload(): void {
+    this.wordOfTheDayResource.reload();
+  }
 }
