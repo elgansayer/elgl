@@ -179,7 +179,8 @@ export class LanguageChallengesService {
     );
     const progressByChallenge = new Map<string, Set<string>>();
     for (const row of activityResult.data ?? []) {
-      const dates = progressByChallenge.get(row.challenge_id) ?? new Set<string>();
+      const dates =
+        progressByChallenge.get(row.challenge_id) ?? new Set<string>();
       dates.add(row.activity_date);
       progressByChallenge.set(row.challenge_id, dates);
     }
@@ -193,7 +194,10 @@ export class LanguageChallengesService {
     );
   }
 
-  async joinChallenge(userId: string, challengeId: string): Promise<JoinResult> {
+  async joinChallenge(
+    userId: string,
+    challengeId: string,
+  ): Promise<JoinResult> {
     const { data, error } = await this.supabase.rpc('join_language_challenge', {
       p_challenge_id: challengeId,
       p_user_id: userId,
@@ -206,10 +210,13 @@ export class LanguageChallengesService {
     userId: string,
     challengeId: string,
   ): Promise<CheckinResult> {
-    const { data, error } = await this.supabase.rpc('checkin_language_challenge', {
-      p_challenge_id: challengeId,
-      p_user_id: userId,
-    });
+    const { data, error } = await this.supabase.rpc(
+      'checkin_language_challenge',
+      {
+        p_challenge_id: challengeId,
+        p_user_id: userId,
+      },
+    );
     if (error) this.throwRpcError('checkin', error);
     return this.parseCheckinResult(data);
   }
@@ -235,7 +242,10 @@ export class LanguageChallengesService {
       ...challenge,
       joined: participant !== null,
       participant_status: participant?.status ?? null,
-      progress_days: Math.max(0, Math.min(progressDays, challenge.duration_days)),
+      progress_days: Math.max(
+        0,
+        Math.min(progressDays, challenge.duration_days),
+      ),
       prize_coins: participant?.prize_coins ?? 0,
       ended: Date.parse(challenge.ends_at) <= Date.now(),
     };
@@ -247,7 +257,10 @@ export class LanguageChallengesService {
       `Challenge ${operation} rejected (${error.code ?? 'unknown'})`,
     );
 
-    if (message.includes('challenge_not_found') || message.includes('user_not_found')) {
+    if (
+      message.includes('challenge_not_found') ||
+      message.includes('user_not_found')
+    ) {
       throw new NotFoundException('Challenge not found');
     }
     if (message.includes('insufficient_coins')) {
@@ -297,7 +310,9 @@ export class LanguageChallengesService {
     ) {
       return value as unknown as CheckinResult;
     }
-    throw new ServiceUnavailableException('Invalid challenge check-in response');
+    throw new ServiceUnavailableException(
+      'Invalid challenge check-in response',
+    );
   }
 
   private parseClaimResult(value: unknown): ClaimResult {
