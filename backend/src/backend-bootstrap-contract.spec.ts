@@ -89,7 +89,10 @@ describe('NestJS backend bootstrap contract', () => {
   });
 
   it('boots AppModule through NestFactory and listens on the configured port', () => {
-    const mainSource = readFileSync(new URL('./main.ts', import.meta.url), 'utf8');
+    const mainSource = readFileSync(
+      new URL('./main.ts', import.meta.url),
+      'utf8',
+    );
 
     expect(mainSource).toContain("import { NestFactory } from '@nestjs/core'");
     expect(mainSource).toContain("import { AppModule } from './app.module'");
