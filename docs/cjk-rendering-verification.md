@@ -51,10 +51,10 @@ A regression that stops synchronising the UI locale to the document, marks a CJK
 
 This gate does not mechanically require `lang` on every user-authored string. Content language can legitimately be unknown, and inventing language metadata would be worse than an explicit unknown state. Component-level `lang` boundaries should be added and tested when a feature has authoritative source/target language metadata.
 
-The gate also does not prohibit `overflow-wrap: anywhere` or narrow machine-token handling. Those are valid for URLs, opaque IDs and other unbounded tokens when applied to the token rather than weakening wrapping rules for an entire language-content paragraph.
+The gate also does not prohibit `overflow-wrap: anywhere` or narrow machine-token handling. Those are valid for URLs, opaque IDs and other unbounded tokens when applied to the token rather than weakening wrapping rules for an entire language-content paragraph. Existing technical diagnostic blocks explicitly marked with `font-mono` are treated as this narrow machine-text exception, so stack/error strings can still break safely without weakening ordinary CJK prose.
 
 IME composition behaviour remains an input-component responsibility. Enter-based submit/search handlers must continue to respect `KeyboardEvent.isComposing`; focused component tests should be added whenever such a handler is introduced or migrated.
 
 ## Rollback
 
-This change adds only verification and tests. Rollback is a normal revert of the gate commit. Do not work around a failure by adding a CJK-specific font stack, forcing `break-all`, fabricating `lang` metadata, or changing CJK content to RTL.
+This change adds only verification and tests. Rollback is a normal revert of the gate commit. Do not work around a failure by adding a CJK-specific font stack, forcing `break-all` onto ordinary language content, fabricating `lang` metadata, or changing CJK content to RTL.
