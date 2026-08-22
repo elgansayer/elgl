@@ -9,7 +9,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -38,7 +43,10 @@ export class PremiumAiController {
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @EconomyRateLimit({ maxRequests: 20, windowSeconds: 60 })
   @ApiOperation({ summary: 'List coin-funded one-off AI services' })
-  @ApiResponse({ status: 200, description: 'Stable server-priced AI service catalog.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stable server-priced AI service catalog.',
+  })
   getServices() {
     return this.premiumAiService.getCatalog();
   }
@@ -52,11 +60,21 @@ export class PremiumAiController {
       'Charges the server-defined coin price exactly once per idempotency key, analyses recent messages in a room the caller belongs to, and refunds automatically if generation fails.',
   })
   @ApiResponse({ status: 201, description: 'Conversation report generated.' })
-  @ApiResponse({ status: 400, description: 'Insufficient coins or insufficient conversation text.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Insufficient coins or insufficient conversation text.',
+  })
   @ApiResponse({ status: 401, description: 'Authentication required.' })
   @ApiResponse({ status: 403, description: 'Caller is not a room member.' })
-  @ApiResponse({ status: 409, description: 'The same request is already processing or was refunded.' })
-  @ApiResponse({ status: 503, description: 'AI provider or persistence temporarily unavailable; charged coins are refunded.' })
+  @ApiResponse({
+    status: 409,
+    description: 'The same request is already processing or was refunded.',
+  })
+  @ApiResponse({
+    status: 503,
+    description:
+      'AI provider or persistence temporarily unavailable; charged coins are refunded.',
+  })
   async conversationAnalysis(
     @CurrentUser() user: User | null,
     @Body() dto: ConversationAnalysisDto,
