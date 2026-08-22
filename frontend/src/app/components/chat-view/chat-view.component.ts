@@ -10,8 +10,8 @@ import { SafetyService } from '../../services/safety.service';
 import { DraftService } from '../../services/draft.service';
 import { CentrifugeService } from '../../services/centrifuge.service';
 import {
-  MESSAGE_REACTION_EMOJIS,
   MessageReactionsService,
+  parseMessageReactionPublication,
   type MessageReaction,
   type MessageReactionEmoji,
   type MessageReactionState,
@@ -176,8 +176,8 @@ export class ChatViewComponent implements OnInit, OnDestroy {
   }
 
   private applyReactionPublication(value: unknown): void {
-    if (!this.isReactionPublication(value)) return;
-    this.applyReactionState(value.reaction);
+    const state = parseMessageReactionPublication(value);
+    if (state) this.applyReactionState(state);
   }
 
   private applyReactionState(state: MessageReactionState): void {
@@ -185,29 +185,6 @@ export class ChatViewComponent implements OnInit, OnDestroy {
       ...rows,
       [state.message_id]: state.reactions,
     }));
-  }
-
-  private isReactionPublication(
-    value: unknown,
-  ): value is { reaction: MessageReactionState } {
-    if (typeof value !== 'object' || value === null || !('reaction' in value)) return false;
-    const reaction = value.reaction;
-    if (typeof reaction !== 'object' || reaction === null) return false;
-    if (!('message_id' in reaction) || !('reactions' in reaction)) return false;
-    if (typeof reaction.message_id !== 'string' || reaction.message_id.length > 128) return false;
-    if (!Array.isArray(reaction.reactions) || reaction.reactions.length > 600) return false;
-
-    return reaction.reactions.every((row: unknown) => {
-      if (typeof row !== 'object' || row === null || !('user_id' in row) || !('emoji' in row)) {
-        return false;
-      }
-      return (
-        typeof row.user_id === 'string' &&
-        row.user_id.length <= 128 &&
-        typeof row.emoji === 'string' &&
-        (MESSAGE_REACTION_EMOJIS as readonly string[]).includes(row.emoji)
-      );
-    });
   }
 
   private async loadMessages(): Promise<void> {
