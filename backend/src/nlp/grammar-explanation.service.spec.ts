@@ -57,11 +57,11 @@ describe('GrammarExplanationService', () => {
   });
 
   it.each([
-    ['provider failure', Promise.reject(new Error('provider leaked private sentence'))],
-    ['empty response', Promise.resolve('   ')],
-    ['oversized response', Promise.resolve('x'.repeat(2_501))],
+    ['provider failure', () => Promise.reject(new Error('provider leaked private sentence'))],
+    ['empty response', () => Promise.resolve('   ')],
+    ['oversized response', () => Promise.resolve('x'.repeat(2_501))],
   ])('fails closed on %s without returning provider details', async (_name, outcome) => {
-    chatCompletion.mockReturnValue(outcome);
+    chatCompletion.mockImplementation(outcome);
 
     await expect(
       service.explain({
