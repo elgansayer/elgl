@@ -170,3 +170,53 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
+
+
+def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("backend/src/quiz/quiz.service.ts")})
+    names = {command.name for command in commands}
+
+    assert "backend-lint:check" in names
+    assert "backend-build" in names
+    assert "frontend-build" not in names
+    assert "admin-lint:check" not in names
+    assert "factory-tests" not in names
+    # Cross-cutting governance checks still run regardless of which
+    # workspace changed.
+    assert "constitution" in names
+    assert "migration-delta" in names
+
+
+def test_a_frontend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    names = {command.name for command in commands}
+
+    assert "frontend-build" in names
+    assert "backend-build" not in names
+    assert "admin-build" not in names
+    assert "factory-tests" not in names
+
+
+def test_an_automation_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
+    commands = commands_for(tmp_path, {Path("automation/openhands_factory/pipeline.py")})
+    names = {command.name for command in commands}
+
+    assert "factory-tests" in names
+    assert "factory-format" in names
+    assert "backend-build" not in names
+    assert "frontend-build" not in names
+    assert "admin-build" not in names
+
+
+def test_a_change_outside_every_workspace_falls_back_to_running_everything(
+    tmp_path: Path,
+) -> None:
+    # A root-level or CI-workflow-only change can't be attributed to any one
+    # workspace - verifying nothing would be worse than verifying everything.
+    commands = commands_for(tmp_path, {Path("AGENTS.md")})
+    names = {command.name for command in commands}
+
+    assert "backend-build" in names
+    assert "frontend-build" in names
+    assert "admin-build" in names
+    assert "factory-tests" in names
