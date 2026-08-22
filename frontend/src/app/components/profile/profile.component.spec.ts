@@ -98,6 +98,70 @@ describe('ProfileComponent', () => {
     expect(text).toContain('🔥 14d');
   });
 
+  it('should render saved learning goals as profile text', async () => {
+    const learningGoals = 'Become conversational before moving abroad.\nPractise pronunciation.';
+    mockUserService.getMyProfile.mockResolvedValue(makeProfile({ learning_goals: learningGoals }));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const section = fixture.nativeElement.querySelector(
+      '[aria-labelledby="learning-goals-heading"]',
+    ) as HTMLElement | null;
+    expect(section).not.toBeNull();
+    expect(section?.textContent).toContain('Learning goals');
+    expect(section?.textContent).toContain('Become conversational before moving abroad.');
+    expect(section?.textContent).toContain('Practise pronunciation.');
+  });
+
+  it('should preload and persist learning goals from the profile editor', async () => {
+    mockUserService.getMyProfile.mockResolvedValue(
+      makeProfile({ learning_goals: 'Practise for travel' }),
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleEdit();
+    fixture.detectChanges();
+
+    const textarea = fixture.nativeElement.querySelector(
+      '#profile-learning-goals',
+    ) as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toBe('Practise for travel');
+
+    textarea!.value = 'Read novels without translation';
+    textarea!.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    await fixture.componentInstance.saveProfile();
+
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ learning_goals: 'Read novels without translation' }),
+    );
+  });
+
+  it('should bound learning goals to 1000 characters before persistence', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleEdit();
+    fixture.detectChanges();
+
+    const textarea = fixture.nativeElement.querySelector(
+      '#profile-learning-goals',
+    ) as HTMLTextAreaElement;
+    textarea.value = 'x'.repeat(1200);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.learningGoals()).toHaveLength(1000);
+    await fixture.componentInstance.saveProfile();
+    expect(mockUserService.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ learning_goals: 'x'.repeat(1000) }),
+    );
+  });
+
   it('should bind the saved audio intro to the profile audio player', async () => {
     const audioIntroUrl = 'https://media.example.test/audio/profile-intro.webm';
     mockUserService.getMyProfile.mockResolvedValue(makeProfile({ audio_intro_url: audioIntroUrl }));
