@@ -13,6 +13,13 @@ ALTER TABLE public.message_reactions
 CREATE INDEX IF NOT EXISTS idx_message_reactions_message_created_at
   ON public.message_reactions (message_id, created_at);
 
+-- Remove the earlier all-authenticated read policy and ownership-only mutation
+-- policies. PostgreSQL combines permissive policies with OR, so leaving them in
+-- place would defeat the room-membership boundary below.
+DROP POLICY IF EXISTS message_reactions_select_authenticated ON public.message_reactions;
+DROP POLICY IF EXISTS message_reactions_insert_own ON public.message_reactions;
+DROP POLICY IF EXISTS message_reactions_delete_own ON public.message_reactions;
+
 DROP POLICY IF EXISTS message_reactions_member_select ON public.message_reactions;
 CREATE POLICY message_reactions_member_select
   ON public.message_reactions
