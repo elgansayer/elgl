@@ -28,10 +28,15 @@ export class SystemMessageService {
     return normalized;
   }
 
-  private normalizeParams(params: Record<string, unknown>): Record<string, SystemEventParam> {
+  private normalizeParams(
+    params: Record<string, unknown>,
+  ): Record<string, SystemEventParam> {
     const normalized: Record<string, SystemEventParam> = {};
 
-    for (const [key, value] of Object.entries(params).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
+    for (const [key, value] of Object.entries(params).slice(
+      0,
+      MAX_SYSTEM_EVENT_PARAMS,
+    )) {
       // `type` is reserved and is always assigned by the backend below.
       if (key === 'type' || !SYSTEM_EVENT_PARAM_KEY_PATTERN.test(key)) continue;
 
@@ -107,14 +112,19 @@ export class SystemMessageService {
       ...new Set(
         (memberships ?? [])
           .map((membership: { room_id?: unknown }) => membership.room_id)
-          .filter((roomId): roomId is string => typeof roomId === 'string' && roomId.length > 0),
+          .filter(
+            (roomId): roomId is string =>
+              typeof roomId === 'string' && roomId.length > 0,
+          ),
       ),
     ];
 
     const results = await Promise.allSettled(
       roomIds.map((roomId) => this.publishToRoom(roomId, eventType, params)),
     );
-    const failed = results.filter((result) => result.status === 'rejected').length;
+    const failed = results.filter(
+      (result) => result.status === 'rejected',
+    ).length;
 
     if (failed > 0) {
       this.logger.warn(
@@ -141,7 +151,9 @@ export class SystemMessageService {
       .eq('user_id', userA);
 
     if (roomsAError) {
-      this.logger.warn('Unable to resolve source memberships for direct system event');
+      this.logger.warn(
+        'Unable to resolve source memberships for direct system event',
+      );
       return;
     }
 
@@ -149,7 +161,10 @@ export class SystemMessageService {
       ...new Set(
         (roomsA ?? [])
           .map((room: { room_id?: unknown }) => room.room_id)
-          .filter((roomId): roomId is string => typeof roomId === 'string' && roomId.length > 0),
+          .filter(
+            (roomId): roomId is string =>
+              typeof roomId === 'string' && roomId.length > 0,
+          ),
       ),
     ];
     if (roomIdsA.length === 0) return;
@@ -161,7 +176,9 @@ export class SystemMessageService {
       .in('room_id', roomIdsA);
 
     if (mutualRoomsError) {
-      this.logger.warn('Unable to resolve mutual memberships for direct system event');
+      this.logger.warn(
+        'Unable to resolve mutual memberships for direct system event',
+      );
       return;
     }
     if (!mutualRooms || mutualRooms.length === 0) return;
@@ -170,7 +187,10 @@ export class SystemMessageService {
       ...new Set(
         mutualRooms
           .map((room: { room_id?: unknown }) => room.room_id)
-          .filter((roomId): roomId is string => typeof roomId === 'string' && roomId.length > 0),
+          .filter(
+            (roomId): roomId is string =>
+              typeof roomId === 'string' && roomId.length > 0,
+          ),
       ),
     ];
 
@@ -191,7 +211,9 @@ export class SystemMessageService {
       roomCounts.set(member.room_id, (roomCounts.get(member.room_id) ?? 0) + 1);
     }
 
-    const directRoomId = candidateRoomIds.find((roomId) => roomCounts.get(roomId) === 2);
+    const directRoomId = candidateRoomIds.find(
+      (roomId) => roomCounts.get(roomId) === 2,
+    );
     if (directRoomId) {
       await this.publishToRoom(directRoomId, eventType, params);
     }
