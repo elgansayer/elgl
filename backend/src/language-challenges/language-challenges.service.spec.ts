@@ -156,7 +156,9 @@ describe('LanguageChallengesService', () => {
       neq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
-      returns: vi.fn().mockResolvedValue({ data: [baseChallenge], error: null }),
+      returns: vi
+        .fn()
+        .mockResolvedValue({ data: [baseChallenge], error: null }),
     };
     const participantQuery = {
       select: vi.fn().mockReturnThis(),
@@ -231,7 +233,9 @@ describe('LanguageChallengesService', () => {
   it('creates bounded challenge data and returns a typed summary', async () => {
     const insert = vi.fn().mockReturnThis();
     const select = vi.fn().mockReturnThis();
-    const single = vi.fn().mockResolvedValue({ data: baseChallenge, error: null });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: baseChallenge, error: null });
     from.mockReturnValueOnce({ insert, select, single });
 
     const result = await service.createChallenge(
