@@ -27,7 +27,8 @@ function isAbortError(error: unknown): boolean {
   template: `
     <div
       (touchstart)="onTouchStart($event)"
-      (touchend)="onTouchEnd()"
+      (touchmove)="onTouchMove($event)"
+      (touchend)="onTouchEnd($event)"
       (touchcancel)="onTouchCancel()"
       (mousedown)="onMouseDown($event)"
       (mouseup)="onMouseUp()"
@@ -396,6 +397,11 @@ export class LongPressContextMenuComponent {
   private readonly destroyRef = inject(DestroyRef);
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
+  private readonly SWIPE_REPLY_THRESHOLD_PX = 56;
+  private readonly SWIPE_VERTICAL_TOLERANCE_PX = 48;
+  private touchStartX: number | null = null;
+  private touchStartY: number | null = null;
+  private touchSwipeCancelled = false;
   private simplificationController?: AbortController;
   private simplificationRequestId = 0;
   private explanationController?: AbortController;
@@ -403,7 +409,7 @@ export class LongPressContextMenuComponent {
 
   constructor() {
     this.destroyRef.onDestroy(() => {
-      this.cancelTimer();
+      this.resetTouchGesture();
       this.simplificationController?.abort();
       this.explanationController?.abort();
       this.simplificationController = undefined;
@@ -413,17 +419,74 @@ export class LongPressContextMenuComponent {
     });
   }
 
-  onTouchStart(event: TouchEvent) {
+  onTouchStart(event: TouchEvent): void {
+    this.resetTouchGesture();
     if (event.touches.length !== 1) return;
+
+    const touch = event.touches.item(0);
+    if (!touch) return;
+
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
     this.startTimer();
   }
 
-  onTouchEnd() {
+  onTouchMove(event: TouchEvent): void {
+    if (this.touchStartX === null || this.touchStartY === null) return;
+
+    // Any touch movement must stop the long-press path. Swipe classification
+    // remains thresholded below, but a user who starts scrolling or swiping
+    // should never have the context menu appear underneath that gesture.
     this.cancelTimer();
+
+    if (event.touches.length !== 1) {
+      this.touchSwipeCancelled = true;
+      return;
+    }
+
+    const touch = event.touches.item(0);
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+    const horizontalDistance = Math.abs(deltaX);
+    const verticalDistance = Math.abs(deltaY);
+
+    if (
+      verticalDistance > this.SWIPE_VERTICAL_TOLERANCE_PX ||
+      verticalDistance > horizontalDistance
+    ) {
+      this.touchSwipeCancelled = true;
+    }
   }
 
-  onTouchCancel() {
+  onTouchEnd(event?: TouchEvent): void {
     this.cancelTimer();
+
+    const startX = this.touchStartX;
+    const startY = this.touchStartY;
+    const touch = event?.changedTouches.item(0) ?? null;
+    const cancelled = this.touchSwipeCancelled;
+    this.resetTouchGesture();
+
+    if (startX === null || startY === null || !touch || cancelled) return;
+
+    const horizontalDistance = Math.abs(touch.clientX - startX);
+    const verticalDistance = Math.abs(touch.clientY - startY);
+    if (
+      horizontalDistance < this.SWIPE_REPLY_THRESHOLD_PX ||
+      verticalDistance > this.SWIPE_VERTICAL_TOLERANCE_PX ||
+      horizontalDistance <= verticalDistance
+    ) {
+      return;
+    }
+
+    if (event?.cancelable) event.preventDefault();
+    this.reply.emit({ messageId: this.messageId() });
+  }
+
+  onTouchCancel(): void {
+    this.resetTouchGesture();
   }
 
   onMouseDown(event: MouseEvent) {
@@ -461,6 +524,13 @@ export class LongPressContextMenuComponent {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = undefined;
     }
+  }
+
+  private resetTouchGesture(): void {
+    this.cancelTimer();
+    this.touchStartX = null;
+    this.touchStartY = null;
+    this.touchSwipeCancelled = false;
   }
 
   closeMenu() {
