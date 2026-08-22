@@ -1,25 +1,63 @@
 import { HlmInput } from '@spartan-ng/helm/input';
 import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
+import { MessageReactionBarComponent } from '../message-reaction-bar/message-reaction-bar.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { SafetyService } from '../../services/safety.service';
 import { DraftService } from '../../services/draft.service';
-import { FormsModule } from '@angular/forms';
+import {
+  MessageReactionsService,
+  type MessageReaction,
+  type MessageReactionEmoji,
+} from '../../services/message-reactions.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-view',
-  imports: [HlmInput, FormsModule, ChatMessageComponent],
+  imports: [
+    HlmInput,
+    FormsModule,
+    ChatMessageComponent,
+    MessageReactionBarComponent,
+    TranslatePipe,
+  ],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        @for (msg of filteredMessages(); track msg) {
-          <app-chat-message
-            [message]="msg"
-            [currentUserId]="effectiveUserId()"
-            (messageBlocked)="onMessageBlocked($event)"
-          ></app-chat-message>
+        @for (msg of filteredMessages(); track msg.id) {
+          <div class="min-w-0">
+            <app-chat-message
+              [message]="msg"
+              [currentUserId]="effectiveUserId()"
+              (messageBlocked)="onMessageBlocked($event)"
+            ></app-chat-message>
+
+            @if (msg.message_type !== 'system' && effectiveUserId()) {
+              <div
+                class="mt-1 flex min-w-0"
+                [class.justify-end]="msg.sender_id === effectiveUserId()"
+                [class.justify-start]="msg.sender_id !== effectiveUserId()"
+              >
+                <div class="max-w-full">
+                  <app-message-reaction-bar
+                    [messageId]="msg.id"
+                    [currentUserId]="effectiveUserId() ?? ''"
+                    [reactions]="reactionRecord(msg.id)"
+                    [pending]="reactionPendingIds().has(msg.id)"
+                    (reacted)="onReaction($event)"
+                  />
+                  @if (reactionErrorIds().has(msg.id)) {
+                    <p role="alert" class="mt-1 text-xs text-danger">
+                      {{ 'common.error_generic' | t }}
+                    </p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
         }
       </div>
       <div class="border-t p-4">
@@ -52,11 +90,15 @@ export class ChatViewComponent implements OnInit {
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
   private draftService = inject(DraftService);
+  private messageReactionsService = inject(MessageReactionsService);
 
   messages: ChatMessage[] = [];
   newMessageText = '';
 
   private blockedUserIds = signal<Set<string>>(new Set<string>());
+  private readonly reactionRows = signal<Record<string, MessageReaction[]>>({});
+  readonly reactionPendingIds = signal<Set<string>>(new Set<string>());
+  readonly reactionErrorIds = signal<Set<string>>(new Set<string>());
 
   readonly effectiveUserId = computed(
     () => this.currentUserId() ?? this.authService.currentUser()?.id,
@@ -70,7 +112,7 @@ export class ChatViewComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadMessages();
-    await this.loadBlockedUsers();
+    await Promise.all([this.loadBlockedUsers(), this.loadReactions()]);
 
     // Restore chat draft for this room
     const draft = this.draftService.loadChatDraft(this.roomId());
@@ -84,11 +126,57 @@ export class ChatViewComponent implements OnInit {
     this.draftService.saveChatDraft(this.roomId(), value);
   }
 
+  reactionRecord(messageId: string): Record<string, string[]> {
+    const grouped: Record<string, string[]> = {};
+    for (const reaction of this.reactionRows()[messageId] ?? []) {
+      (grouped[reaction.emoji] ??= []).push(reaction.user_id);
+    }
+    return grouped;
+  }
+
+  async onReaction(event: {
+    messageId: string;
+    emoji: MessageReactionEmoji;
+    added: boolean;
+  }): Promise<void> {
+    if (this.reactionPendingIds().has(event.messageId)) return;
+
+    this.reactionErrorIds.update((ids) => this.without(ids, event.messageId));
+    this.reactionPendingIds.update((ids) => this.withAdded(ids, event.messageId));
+
+    try {
+      const state = await this.messageReactionsService.setReaction(
+        event.messageId,
+        event.emoji,
+        event.added,
+      );
+      this.reactionRows.update((rows) => ({
+        ...rows,
+        [state.message_id]: state.reactions,
+      }));
+    } catch {
+      this.reactionErrorIds.update((ids) => this.withAdded(ids, event.messageId));
+    } finally {
+      this.reactionPendingIds.update((ids) => this.without(ids, event.messageId));
+    }
+  }
+
   private async loadMessages(): Promise<void> {
     try {
       this.messages = await this.chatService.getMessages(this.roomId());
     } catch (err) {
       console.error('Failed to load messages', err);
+    }
+  }
+
+  private async loadReactions(): Promise<void> {
+    if (!this.effectiveUserId()) return;
+    try {
+      const state = await this.messageReactionsService.getRoomReactions(this.roomId());
+      this.reactionRows.set(state.reactions);
+    } catch {
+      // Messages remain usable when the reaction sub-resource is unavailable.
+      this.reactionRows.set({});
     }
   }
 
@@ -131,5 +219,17 @@ export class ChatViewComponent implements OnInit {
     } catch (err) {
       console.error('Failed to send message', err);
     }
+  }
+
+  private withAdded(values: Set<string>, value: string): Set<string> {
+    const next = new Set(values);
+    next.add(value);
+    return next;
+  }
+
+  private without(values: Set<string>, value: string): Set<string> {
+    const next = new Set(values);
+    next.delete(value);
+    return next;
   }
 }
