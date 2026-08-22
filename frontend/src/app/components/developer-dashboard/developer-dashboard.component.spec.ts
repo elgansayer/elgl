@@ -1,9 +1,9 @@
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { describe, expect, it, vi } from 'vitest';
 import { DeveloperDashboardComponent } from './developer-dashboard.component';
 
 type DashboardHarness = {
-  isGeneratingApiKey: ReturnType<typeof signal<boolean>>;
+  isGeneratingApiKey: WritableSignal<boolean>;
   store: {
     generateApiKey: ReturnType<typeof vi.fn>;
   };
