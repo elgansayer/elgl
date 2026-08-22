@@ -56,17 +56,10 @@ export class AdminUsersComponent {
       this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
-  readonly users = computed(() => {
-    try {
-      return this.usersResource.value()?.users ?? [];
-    } catch (err: unknown) {
-      this.reportCrash(err, 'users derivation');
-      return [];
-    }
-  });
-
+  readonly users = computed(() => this.usersResource.value()?.users ?? []);
   readonly total = computed(() => this.usersResource.value()?.total ?? 0);
   readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly usersLoadError = computed(() => this.usersResource.error() !== undefined);
 
   readonly pageTotal = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
@@ -88,6 +81,8 @@ export class AdminUsersComponent {
   });
 
   readonly loginHistory = computed(() => this.historyResource.value() ?? []);
+  readonly isHistoryLoading = computed(() => this.historyResource.isLoading());
+  readonly historyLoadError = computed(() => this.historyResource.error() !== undefined);
 
   onSearchInput(event: Event): void {
     const target = event.target;
@@ -105,6 +100,16 @@ export class AdminUsersComponent {
     }
     this.page.set(next);
     this.refreshToken.update((v) => v + 1);
+  }
+
+  retryUsers(): void {
+    this.usersResource.reload();
+  }
+
+  retryHistory(): void {
+    if (this.selectedUserId()) {
+      this.historyResource.reload();
+    }
   }
 
   async toggleVip(user: AdminUserSummary): Promise<void> {
