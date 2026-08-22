@@ -158,10 +158,7 @@ describe('NlpController', () => {
       );
 
       expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith(
-        'user-1',
-        false,
-      );
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
       expect(grammarCheckService.check).toHaveBeenCalledWith(dto);
       expect(result).toEqual(response);
     });
@@ -175,15 +172,11 @@ describe('NlpController', () => {
         errors_found: 0,
       });
 
-      await controller.grammarCheck(
-        { id: 'vip-user' } as any,
-        { text: 'Fine.' },
-      );
+      await controller.grammarCheck({ id: 'vip-user' } as any, {
+        text: 'Fine.',
+      });
 
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith(
-        'vip-user',
-        true,
-      );
+      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('vip-user', true);
     });
   });
 
