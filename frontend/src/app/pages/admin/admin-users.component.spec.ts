@@ -101,6 +101,6 @@ describe('AdminUsersComponent', () => {
 
     expect(component.historyLoadError()).toBe(true);
     expect(component.loginHistory()).toEqual([]);
-    expect(fixture.nativeElement.querySelector('[role="dialog"] app-empty-state')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[role="dialog"] [role="alert"]')).toBeTruthy();
   });
 });
