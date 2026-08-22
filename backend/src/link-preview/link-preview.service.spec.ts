@@ -321,7 +321,9 @@ describe('LinkPreviewService', () => {
   });
 
   it('does not log raw URLs or provider messages when a fetch fails', async () => {
-    const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const rawUrl = 'https://example.com/private?token=super-secret';
     httpService.get.mockReturnValue(
       throwError(() => new Error('provider leaked token=provider-secret')),
@@ -331,7 +333,9 @@ describe('LinkPreviewService', () => {
       BadRequestException,
     );
 
-    const log = errorSpy.mock.calls.map(([message]) => String(message)).join('\n');
+    const log = errorSpy.mock.calls
+      .map(([message]) => String(message))
+      .join('\n');
     expect(log).not.toContain('super-secret');
     expect(log).not.toContain('/private');
     expect(log).not.toContain('provider-secret');

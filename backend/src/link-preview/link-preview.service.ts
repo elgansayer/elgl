@@ -113,7 +113,9 @@ export class LinkPreviewService {
           );
         } catch {
           // The preview is still valid when Redis is unavailable.
-          this.logger.warn(`Link-preview cache write unavailable (${descriptor})`);
+          this.logger.warn(
+            `Link-preview cache write unavailable (${descriptor})`,
+          );
         }
       }
       return preview;
