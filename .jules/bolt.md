@@ -134,3 +134,6 @@
 
 **Learning:** In the backend `achievements.service.ts`, `getFullAchievements` executed three independent queries sequentially: `getUserAchievements`, `getUserMessageCount`, and `getStudyStreakDays`. In an isolated benchmark simulating network delay, fetching these sequentially takes more time, whereas fetching them concurrently reduces the execution time.
 **Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
+## 2026-08-22 - Optimize database lookups in chat service
+**Learning:** Sequential awaits for fetching blocked user arrays can introduce unnecessary N+1 latency bottlenecks when the lookups are independent.
+**Action:** Use `Promise.all` to fetch independent database records (like sender and receiver blocked IDs) concurrently.
