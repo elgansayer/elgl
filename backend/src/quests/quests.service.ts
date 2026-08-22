@@ -24,6 +24,18 @@ export interface Quest {
   updated_at: string;
 }
 
+interface QuestRpcResult {
+  data: unknown;
+  error: { message?: string } | null;
+}
+
+interface QuestRpcClient {
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<QuestRpcResult>;
+}
+
 const QUEST_KEYS = new Set<QuestKey>(['correct_moments', 'post_moment']);
 const MAX_PROGRESS_INCREMENT = 100;
 
@@ -34,8 +46,8 @@ export class QuestsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getQuests(userId: string): Promise<Quest[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.rpc('get_or_create_user_quests', {
+    const rpcClient = this.getRpcClient();
+    const { data, error } = await rpcClient.rpc('get_or_create_user_quests', {
       p_user_id: userId,
     });
 
@@ -72,8 +84,8 @@ export class QuestsService {
       throw new BadRequestException('Quest progress amount must be 1 to 100');
     }
 
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.rpc('advance_user_quests', {
+    const rpcClient = this.getRpcClient();
+    const { error } = await rpcClient.rpc('advance_user_quests', {
       p_user_id: userId,
       p_quest_key: questKey,
       p_amount: amount,
@@ -83,5 +95,9 @@ export class QuestsService {
       this.logger.error('Failed to atomically advance quest progress');
       throw new InternalServerErrorException('Unable to update quest progress');
     }
+  }
+
+  private getRpcClient(): QuestRpcClient {
+    return this.supabaseService.getClient() as unknown as QuestRpcClient;
   }
 }
