@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewController } from './link-preview.controller';
 import { LinkPreviewService } from './link-preview.service';
 
@@ -25,6 +27,15 @@ describe('LinkPreviewController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('requires Supabase authentication for the network scraper endpoint', () => {
+    const guards = Reflect.getMetadata(
+      GUARDS_METADATA,
+      LinkPreviewController,
+    ) as unknown[];
+
+    expect(guards).toContain(SupabaseAuthGuard);
   });
 
   it('rejects a request without a url query parameter', async () => {
