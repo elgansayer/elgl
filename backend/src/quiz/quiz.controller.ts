@@ -1,24 +1,36 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { QuizQuestionsQueryDto, SubmitQuizDto } from './dto/quiz.dto';
 import { QuizService } from './quiz.service';
 
-interface QuizSubmission {
-  score: number;
-  maxScore: number;
-  suggestedLevel: string;
-  answers: Record<string, number>;
-}
-
 @Controller('quiz')
+@UseGuards(SupabaseAuthGuard)
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @Get('questions')
-  getQuestions(@Query('language') language: string) {
-    return this.quizService.getQuestions(language || 'en');
+  getQuestions(@Query() query: QuizQuestionsQueryDto) {
+    return this.quizService.getQuestions(query.language);
   }
 
   @Post('results')
-  submitResults(@Body() results: QuizSubmission) {
-    return this.quizService.submitResults(results);
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  submitResults(
+    @CurrentUser() user: User | null,
+    @Body() results: SubmitQuizDto,
+  ) {
+    if (!user) throw new UnauthorizedException();
+    return this.quizService.submitResults(user.id, results);
   }
 }
