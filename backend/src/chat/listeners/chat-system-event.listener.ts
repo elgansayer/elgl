@@ -14,7 +14,9 @@ export class ChatSystemEventListener {
     private readonly supabaseService: SupabaseService,
   ) {}
 
-  private async resolveDisplayName(userId: string): Promise<string | undefined> {
+  private async resolveDisplayName(
+    userId: string,
+  ): Promise<string | undefined> {
     try {
       const { data, error } = await this.supabaseService
         .getClient()
@@ -31,7 +33,9 @@ export class ChatSystemEventListener {
       }
 
       const displayName = data.display_name.trim();
-      return displayName ? displayName.slice(0, MAX_SYSTEM_DISPLAY_NAME_LENGTH) : undefined;
+      return displayName
+        ? displayName.slice(0, MAX_SYSTEM_DISPLAY_NAME_LENGTH)
+        : undefined;
     } catch {
       this.logger.warn('Unable to resolve display name for system event');
       return undefined;
