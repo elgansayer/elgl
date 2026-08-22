@@ -15,11 +15,17 @@ describe('MutedWordsController', () => {
     );
     const user = { id: 'user-1' } as never;
 
-    await expect(controller.list(user)).resolves.toEqual({ words: ['spoiler'] });
-    await expect(controller.add(user, { word: 'politics' })).resolves.toEqual({
+    await expect(controller.list(user)).resolves.toEqual({
+      words: ['spoiler'],
+    });
+    await expect(
+      controller.add(user, { word: 'politics' }),
+    ).resolves.toEqual({
       words: ['spoiler', 'politics'],
     });
-    await expect(controller.remove(user, { word: 'spoiler' })).resolves.toEqual({
+    await expect(
+      controller.remove(user, { word: 'spoiler' }),
+    ).resolves.toEqual({
       words: ['politics'],
     });
 
