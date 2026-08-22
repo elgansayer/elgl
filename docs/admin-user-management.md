@@ -20,20 +20,16 @@ The dedicated admin portal intentionally separates user investigation from highe
 
 ## Verification
 
-Automated coverage verifies that:
+The dedicated admin portal's existing routes, authenticated `AdminUsersService`, bounded search, URL-encoded detail lookups, and capability-scoped backend endpoints are part of the repository's normal admin-portal build/lint verification. The fail-closed changes in this issue add focused executable coverage for the consumer admin surface. That coverage verifies that:
 
-- the dedicated admin portal refuses user API access when no admin bearer token exists;
-- dedicated-portal searches send the bearer token, bounded pagination, and a trimmed search query to `/admin/v1/users`;
-- detail identifiers are URL-encoded before privileged requests;
-- user-search authorization failures and sensitive login-history failures propagate instead of substituting data;
-- the consumer admin route sends authentication plus search/pagination parameters;
-- consumer user-list network and authorization failures reject instead of returning mock users;
-- sensitive login-history failures reject instead of returning mock sessions;
+- user listing sends authentication plus search/pagination parameters;
+- user-list network and authorization failures reject instead of returning synthetic users;
+- sensitive login-history failures reject instead of returning synthetic sessions;
 - global block-list failures reject instead of becoming an apparently empty list;
-- the consumer admin user component renders retryable user-list and login-history failure states;
+- the user-management component renders retryable user-list and login-history failure states;
 - a genuine empty result remains distinct from an unavailable result.
 
-The standard repository CI remains the integration gate for both Angular applications, frontend unit/static-analysis/build checks, backend checks, database checks, admin-portal unit/lint/build checks, and repository governance.
+The standard repository CI remains the integration gate for both Angular applications, frontend unit/static-analysis/build checks, backend checks, database checks, admin-portal lint/build checks, and repository governance.
 
 ## Rollout and rollback
 
