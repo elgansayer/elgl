@@ -24,6 +24,7 @@ from openhands_factory.exceptions import (
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
+from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
@@ -875,16 +876,28 @@ class FactoryPipeline:
                 f"Failed checks:\n{evidence}\n"
                 f"Mergeability: {status.mergeable}"
             )
-            self._run_agent(
-                job,
-                worktree,
-                "repair",
-                build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                require_repository_change=True,
-            )
+            # A large share of CI repairs are a workspace's own formatter or
+            # auto-fixable lint rule drifting, not something that needs an
+            # agent's judgement. Try that for free first; only spend an LLM
+            # call if the worktree is still unchanged afterwards.
+            attempt_mechanical_repair(worktree)
+            mechanically_repaired = workflow.has_changes()
+            if not mechanically_repaired:
+                self._run_agent(
+                    job,
+                    worktree,
+                    "repair",
+                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                    require_repository_change=True,
+                )
             self._verify(workflow)
             workflow.stage_all()
-            workflow.commit(f"fix: repair CI for {self._subject(job)} {job.task.identifier}")
+            commit_subject = (
+                "fix: apply automatic formatting for"
+                if mechanically_repaired
+                else "fix: repair CI for"
+            )
+            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -1113,8 +1126,14 @@ class FactoryPipeline:
         return True
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
+        # README.md deliberately excluded: it embeds the full feature-spec
+        # document (tens of KB), sent unconditionally on every implementation
+        # call regardless of task scope. AGENTS.md carries the actual
+        # enforceable constraints (i18n, RTL, Spartan, British English) that
+        # every task needs; the issue body already carries whatever
+        # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("README.md")):
+        for relative in (Path("AGENTS.md"), Path("TODO.md")):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))
