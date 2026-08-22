@@ -21,9 +21,12 @@ ALTER TABLE public.user_quests
 -- Converge any legacy rows before adding stricter invariants.
 UPDATE public.user_quests
 SET quest_type = CASE WHEN quest_type = 'weekly' THEN 'weekly' ELSE 'daily' END,
-    progress = GREATEST(COALESCE(progress, 0), 0),
+    progress = LEAST(
+        GREATEST(COALESCE(progress, 0), 0),
+        GREATEST(COALESCE(target, 1), 1)
+    ),
     target = GREATEST(COALESCE(target, 1), 1),
-    reward_coins = GREATEST(COALESCE(reward_coins, 0), 0),
+    reward_coins = LEAST(GREATEST(COALESCE(reward_coins, 0), 0), 10000),
     completed = COALESCE(completed, false),
     period_start = COALESCE(
         period_start,
@@ -189,7 +192,7 @@ BEGIN
     END IF;
 
     -- Ensures defaults exist and period rollover happens before rows are locked.
-    PERFORM public.get_or_create_user_quests(p_user_id);
+    PERFORM * FROM public.get_or_create_user_quests(p_user_id);
 
     FOR v_quest IN
         SELECT *
