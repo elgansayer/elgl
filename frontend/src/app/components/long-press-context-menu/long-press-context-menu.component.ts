@@ -3,6 +3,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { NlpRequestError, NlpService } from '../../services/nlp.service';
+import { MessageReactionControlComponent } from '../message-reaction-control/message-reaction-control.component';
 
 interface ExplainGrammarContext {
   messageId: string;
@@ -23,7 +24,12 @@ function isAbortError(error: unknown): boolean {
 
 @Component({
   selector: 'app-long-press-context-menu',
-  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
+  imports: [
+    TranslatePipe,
+    MessageReactionControlComponent,
+    ...HlmButtonImports,
+    ...HlmDialogImports,
+  ],
   template: `
     <div
       (touchstart)="onTouchStart($event)"
@@ -37,6 +43,12 @@ function isAbortError(error: unknown): boolean {
     >
       <ng-content />
     </div>
+
+    <app-message-reaction-control
+      [roomId]="roomId()"
+      [messageId]="messageId()"
+      [senderId]="senderId()"
+    />
 
     <button
       hlmBtn
