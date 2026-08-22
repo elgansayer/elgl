@@ -1,60 +1,69 @@
 import {
+  Body,
   Controller,
-  Post,
   Get,
   Param,
-  Body,
+  ParseUUIDPipe,
+  Post,
+  Query,
   UseGuards,
-  Req,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LanguageChallengesService } from './language-challenges.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
-import { JoinChallengeDto } from './dto/join-challenge.dto';
-import { ClaimPrizeDto } from './dto/claim-prize.dto';
+import { ListChallengesQueryDto } from './dto/list-challenges-query.dto';
+
+interface AuthUser {
+  id: string;
+}
 
 @Controller('language-challenges')
+@UseGuards(SupabaseAuthGuard, ThrottlerGuard)
 export class LanguageChallengesController {
   constructor(private readonly challengesService: LanguageChallengesService) {}
 
   @Post()
-  @UseGuards(SupabaseAuthGuard)
-  async create(@Body() dto: CreateChallengeDto, @Req() req: any) {
-    const userId = req.user.id;
-    return this.challengesService.createChallenge(userId, dto);
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  create(@Body() dto: CreateChallengeDto, @CurrentUser() user: AuthUser) {
+    return this.challengesService.createChallenge(user.id, dto);
   }
 
   @Get()
-  async list() {
-    return this.challengesService.listChallenges();
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  list(@Query() query: ListChallengesQueryDto, @CurrentUser() user: AuthUser) {
+    return this.challengesService.listChallenges(
+      user.id,
+      query.limit,
+      query.offset,
+    );
   }
 
   @Post(':id/join')
-  @UseGuards(SupabaseAuthGuard)
-  async join(
-    @Param('id') challengeId: string,
-    @Body() _dto: JoinChallengeDto,
-    @Req() req: any,
-  ) {
-    const userId = req.user.id;
-    return this.challengesService.joinChallenge(userId, challengeId);
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  join(
+    @Param('id', new ParseUUIDPipe()) challengeId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<unknown> {
+    return this.challengesService.joinChallenge(user.id, challengeId);
   }
 
   @Post(':id/daily-checkin')
-  @UseGuards(SupabaseAuthGuard)
-  async dailyCheckin(@Param('id') challengeId: string, @Req() req: any) {
-    const userId = req.user.id;
-    return this.challengesService.dailyCheckin(userId, challengeId);
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  dailyCheckin(
+    @Param('id', new ParseUUIDPipe()) challengeId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<unknown> {
+    return this.challengesService.dailyCheckin(user.id, challengeId);
   }
 
   @Post(':id/claim')
-  @UseGuards(SupabaseAuthGuard)
-  async claim(
-    @Param('id') challengeId: string,
-    @Body() _dto: ClaimPrizeDto,
-    @Req() req: any,
-  ) {
-    const userId = req.user.id;
-    return this.challengesService.claimPrize(userId, challengeId);
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  claim(
+    @Param('id', new ParseUUIDPipe()) challengeId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<unknown> {
+    return this.challengesService.claimPrize(user.id, challengeId);
   }
 }
