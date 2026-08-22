@@ -11,7 +11,7 @@ The current partner discovery system (`backend/src/discovery/discovery.service.t
   - Gender (VIP only).
   - Location (country, city, and proximity via PostGIS `ST_DWithin`).
   - Interests (PostgreSQL array overlaps).
-  - "Serious Learner" toggle (requires `study_streak_days > 7` and `correction_ratio >= 0.8`).
+  - "Serious Learner" toggle (requires an active study streak of at least 7 days, with streak activity in the last 24 hours).
   - Presence of an audio intro.
   - Active voice room.
   - Availability blocks (morning, afternoon, evening, and exact Tandem-style time overlap).
