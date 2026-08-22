@@ -18,9 +18,10 @@ function isWordOfTheDay(value: unknown): value is WordOfTheDay {
   }
 
   const record = value as Record<string, unknown>;
-  return ['word', 'translation', 'language'].every(
-    (field) => typeof record[field] === 'string' && record[field].trim().length > 0,
-  );
+  return ['word', 'translation', 'language'].every((field) => {
+    const fieldValue = record[field];
+    return typeof fieldValue === 'string' && fieldValue.trim().length > 0;
+  });
 }
 
 @Component({
@@ -77,9 +78,15 @@ export class WordOfTheDayComponent {
     },
   });
 
-  protected readonly wordOfTheDay = computed(() => this.wordOfTheDayResource.value());
-  protected readonly isLoading = computed(() => this.wordOfTheDayResource.isLoading());
-  protected readonly hasError = computed(() => this.wordOfTheDayResource.error() !== undefined);
+  protected readonly wordOfTheDay = computed(() =>
+    this.wordOfTheDayResource.value(),
+  );
+  protected readonly isLoading = computed(() =>
+    this.wordOfTheDayResource.isLoading(),
+  );
+  protected readonly hasError = computed(
+    () => this.wordOfTheDayResource.error() !== undefined,
+  );
 
   protected reload(): void {
     this.wordOfTheDayResource.reload();
