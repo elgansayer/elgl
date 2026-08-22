@@ -440,6 +440,45 @@ class TestAgentProviders(unittest.TestCase):
         )
         self.assertEqual(runner.stdin, ["untrusted issue text"])
 
+    def test_claude_uses_max_effort_for_build_critical_phases(self):
+        runner = FakeProcessRunner("success output")
+        provider = ClaudeCodeProvider(process_runner=runner)
+        request = AgentRequest(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=Task("1", "test", "body", "issue", 1),
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+
+        provider.run(request)
+
+        command = runner.commands[0]
+        self.assertEqual(command[command.index("--effort") + 1], "max")
+
+    def test_claude_uses_low_effort_for_repair_class_phases(self):
+        # quality_repair/code_review/ci_repair are the fast/haiku-tier phases -
+        # attempt_mechanical_repair() already resolves the purely mechanical CI
+        # failures before an agent is invoked, so what reaches here rarely
+        # needs "max" reasoning.
+        for phase in (AgentPhase.QUALITY_REPAIR, AgentPhase.CODE_REVIEW, AgentPhase.CI_REPAIR):
+            runner = FakeProcessRunner("success output")
+            provider = ClaudeCodeProvider(process_runner=runner)
+            request = AgentRequest(
+                phase=phase,
+                task=Task("1", "test", "body", "issue", 1),
+                prompt="do it",
+                cwd=Path("/tmp"),
+            )
+
+            provider.run(request)
+
+            command = runner.commands[0]
+            self.assertEqual(
+                command[command.index("--effort") + 1],
+                "low",
+                msg=f"expected low effort for {phase}",
+            )
+
     def test_codex_provider(self):
         runner = FakeProcessRunner("codex success")
         provider = CodexProvider(process_runner=runner)

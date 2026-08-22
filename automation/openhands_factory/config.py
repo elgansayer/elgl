@@ -92,9 +92,15 @@ class AgentTimeoutsConfig(BaseModel):
     architecture: int = 1800
     implementation: int = 3600
     security_review: int = 1800
-    quality_repair: int = 3600
-    code_review: int = 1800
-    ci_repair: int = 3600
+    # Repair/review phases now route to each provider's fast/low-effort tier
+    # (see phase_models and claude.py's per-phase --effort), so a runaway
+    # attempt on a narrow CI failure or review pass shouldn't need the same
+    # hour-long ceiling implementation gets. Left generous enough that a
+    # genuinely slow attempt still finishes rather than getting killed into
+    # an extra retry cycle.
+    quality_repair: int = 1800
+    code_review: int = 900
+    ci_repair: int = 1800
     general_action: int = 1800
 
     @model_validator(mode="after")
