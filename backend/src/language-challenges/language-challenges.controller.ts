@@ -44,7 +44,7 @@ export class LanguageChallengesController {
   join(
     @Param('id', new ParseUUIDPipe()) challengeId: string,
     @CurrentUser() user: AuthUser,
-  ) {
+  ): Promise<unknown> {
     return this.challengesService.joinChallenge(user.id, challengeId);
   }
 
@@ -53,7 +53,7 @@ export class LanguageChallengesController {
   dailyCheckin(
     @Param('id', new ParseUUIDPipe()) challengeId: string,
     @CurrentUser() user: AuthUser,
-  ) {
+  ): Promise<unknown> {
     return this.challengesService.dailyCheckin(user.id, challengeId);
   }
 
@@ -62,7 +62,7 @@ export class LanguageChallengesController {
   claim(
     @Param('id', new ParseUUIDPipe()) challengeId: string,
     @CurrentUser() user: AuthUser,
-  ) {
+  ): Promise<unknown> {
     return this.challengesService.claimPrize(user.id, challengeId);
   }
 }
