@@ -23,6 +23,9 @@ import Redis from 'ioredis';
  */
 const MAX_RESPONSE_BYTES = 5_000_000;
 const MAX_URL_LENGTH = 2_048;
+const MAX_TITLE_LENGTH = 300;
+const MAX_DESCRIPTION_LENGTH = 1_000;
+const MAX_SITE_NAME_LENGTH = 200;
 const CACHE_TTL_SECONDS = 3_600;
 const CACHE_PREFIX = 'link_preview:v2';
 
@@ -44,9 +47,11 @@ const safeLookup = (
       return;
     }
 
-    const candidate =
-      typeof address === 'string' ? address : address[0]?.address;
-    if (candidate && isPrivateIp(candidate)) {
+    const candidates =
+      typeof address === 'string'
+        ? [address]
+        : address.map((candidate) => candidate.address);
+    if (candidates.some((candidate) => isPrivateIp(candidate))) {
       callback(
         new Error('SSRF blocked: resolved address is not publicly routable'),
         address,
@@ -172,11 +177,60 @@ export class LinkPreviewService {
     }
   }
 
+  private validateRedirectTarget(options: {
+    protocol?: unknown;
+    hostname?: unknown;
+    host?: unknown;
+    port?: unknown;
+    auth?: unknown;
+  }): void {
+    if (options.auth) {
+      throw new BadRequestException(
+        'Redirect targets with embedded credentials are not allowed',
+      );
+    }
+
+    const protocol =
+      typeof options.protocol === 'string' ? options.protocol : '';
+    const hostname =
+      typeof options.hostname === 'string' ? options.hostname : '';
+    const host = typeof options.host === 'string' ? options.host : '';
+
+    if (!protocol || (!hostname && !host)) {
+      throw new BadRequestException('Invalid redirect target');
+    }
+
+    let authority = host;
+    if (hostname) {
+      const normalizedHostname =
+        hostname.includes(':') && !hostname.startsWith('[')
+          ? `[${hostname}]`
+          : hostname;
+      const port =
+        options.port === undefined ||
+        options.port === null ||
+        options.port === ''
+          ? ''
+          : `:${String(options.port)}`;
+      authority = `${normalizedHostname}${port}`;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(`${protocol}//${authority}/`);
+    } catch {
+      throw new BadRequestException('Invalid redirect target');
+    }
+
+    this.validateExternalUrl(parsed);
+  }
+
   private async fetchPreview(url: string): Promise<LinkPreview | null> {
     const response = await firstValueFrom(
       this.httpService.get<string>(url, {
         timeout: 5000,
         maxRedirects: 3,
+        beforeRedirect: (options) => this.validateRedirectTarget(options),
         httpAgent,
         httpsAgent,
         maxContentLength: MAX_RESPONSE_BYTES,
@@ -204,14 +258,18 @@ export class LinkPreviewService {
       this.getMetaTag($, 'description') ||
       '';
 
-    const title = this.sanitizeMetaContent(rawTitle);
-    const description = this.sanitizeMetaContent(rawDescription);
+    const title = this.sanitizeMetaContent(rawTitle, MAX_TITLE_LENGTH);
+    const description = this.sanitizeMetaContent(
+      rawDescription,
+      MAX_DESCRIPTION_LENGTH,
+    );
     const image = this.sanitizeImageUrl(
       this.getMetaTag($, 'og:image') || '',
       url,
     );
     const siteName = this.sanitizeMetaContent(
       this.getMetaTag($, 'og:site_name') || new URL(url).hostname,
+      MAX_SITE_NAME_LENGTH,
     );
 
     if (!title && !description && !image) {
@@ -235,17 +293,18 @@ export class LinkPreviewService {
     ).trim();
   }
 
-  private sanitizeMetaContent(raw: string): string {
+  private sanitizeMetaContent(raw: string, maxLength: number): string {
     const sanitized = this.dompurify.sanitize(raw, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
     });
     const $inner = cheerio.load(`<div>${sanitized}</div>`);
-    return $inner('div').text().trim();
+    const text = $inner('div').text().trim();
+    return text.length > maxLength ? text.slice(0, maxLength) : text;
   }
 
   private sanitizeImageUrl(raw: string, pageUrl: string): string {
-    if (!raw) {
+    if (!raw || raw.length > MAX_URL_LENGTH) {
       return '';
     }
 
