@@ -36,6 +36,18 @@ interface PersistedAnalysis {
   message_count: number;
 }
 
+interface PremiumAiRpcError {
+  code?: string;
+  message: string;
+}
+
+interface PremiumAiRpcClient {
+  rpc(
+    name: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: PremiumAiRpcError | null }>;
+}
+
 const PREMIUM_AI_CATALOG: readonly PremiumAiServiceCatalogItem[] = [
   {
     key: 'conversation_analysis_report',
@@ -75,9 +87,13 @@ function parsePersistedAnalysis(value: unknown): PersistedAnalysis | null {
   ) {
     return null;
   }
+
   const report = result['report'].trim();
   if (!report || report.length > MAX_REPORT_CHARS) return null;
-  return { report, message_count: Math.max(0, Math.trunc(result['message_count'])) };
+  return {
+    report,
+    message_count: Math.max(0, Math.trunc(result['message_count'])),
+  };
 }
 
 @Injectable()
@@ -118,7 +134,9 @@ export class PremiumAiService {
       );
     }
     if (!membership) {
-      throw new ForbiddenException('You do not have access to this conversation.');
+      throw new ForbiddenException(
+        'You do not have access to this conversation.',
+      );
     }
 
     const { data: rawMessages, error: messagesError } = await supabase
@@ -144,7 +162,8 @@ export class PremiumAiService {
         return (
           typeof row['sender_id'] === 'string' &&
           typeof row['message_type'] === 'string' &&
-          (typeof row['text_content'] === 'string' || row['text_content'] === null) &&
+          (typeof row['text_content'] === 'string' ||
+            row['text_content'] === null) &&
           typeof row['created_at'] === 'string'
         );
       })
@@ -164,7 +183,7 @@ export class PremiumAiService {
       );
     }
 
-    const { data: startData, error: startError } = await supabase.rpc(
+    const { data: startData, error: startError } = await this.rpc(
       'start_premium_ai_service',
       {
         p_user_id: userId,
@@ -175,12 +194,16 @@ export class PremiumAiService {
     );
 
     if (startError) {
-      const message = startError.message?.toLowerCase() ?? '';
+      const message = startError.message.toLowerCase();
       if (message.includes('insufficient coins')) {
-        throw new BadRequestException('You do not have enough coins for this report.');
+        throw new BadRequestException(
+          'You do not have enough coins for this report.',
+        );
       }
       if (message.includes('room access denied')) {
-        throw new ForbiddenException('You do not have access to this conversation.');
+        throw new ForbiddenException(
+          'You do not have access to this conversation.',
+        );
       }
       this.logger.warn(
         `Premium AI charge failed (${startError.code ?? 'unknown'})`,
@@ -199,82 +222,96 @@ export class PremiumAiService {
     }
 
     if (!startRow.created) {
-      if (startRow.run_status === 'completed') {
-        const persisted = parsePersistedAnalysis(startRow.run_result);
-        if (!persisted) {
-          this.logger.error('Completed premium AI run has an invalid result shape');
-          throw new InternalServerErrorException(
-            'The saved conversation analysis is unavailable.',
-          );
-        }
-        return {
-          run_id: startRow.run_id,
-          service_key: 'conversation_analysis_report',
-          cost_coins: startRow.run_cost_coins,
-          coins_remaining: startRow.coins_remaining,
-          status: 'completed',
-          report: persisted.report,
-          message_count: persisted.message_count,
-          reused: true,
-        };
-      }
+      return this.handleExistingRun(startRow);
+    }
 
-      if (startRow.run_status === 'pending') {
-        throw new ConflictException(
-          'This conversation analysis request is already processing.',
-        );
-      }
-
-      throw new ConflictException(
-        'The previous attempt was refunded. Start a new request to try again.',
+    let report: string;
+    try {
+      report = await this.generateReport(transcript, messages.length);
+    } catch {
+      await this.refundPendingRun(userId, startRow.run_id, 'provider_failure');
+      this.logger.warn(
+        'Premium AI provider failed; charged coins were refunded',
+      );
+      throw new ServiceUnavailableException(
+        'The report could not be generated. Your coins have been refunded.',
       );
     }
 
-    try {
-      const report = await this.generateReport(transcript, messages.length);
-      const persisted: PersistedAnalysis = {
-        report,
-        message_count: messages.length,
-      };
+    const persisted: PersistedAnalysis = {
+      report,
+      message_count: messages.length,
+    };
+    const { data: completed, error: completeError } = await this.rpc(
+      'complete_premium_ai_service',
+      {
+        p_user_id: userId,
+        p_run_id: startRow.run_id,
+        p_result: persisted,
+      },
+    );
 
-      const { data: completed, error: completeError } = await supabase.rpc(
-        'complete_premium_ai_service',
-        {
-          p_user_id: userId,
-          p_run_id: startRow.run_id,
-          p_result: persisted,
-        },
+    if (completeError || completed !== true) {
+      this.logger.error(
+        `Premium AI completion persistence failed (${completeError?.code ?? 'invalid-result'})`,
       );
+      await this.refundPendingRun(
+        userId,
+        startRow.run_id,
+        'persistence_failure',
+      );
+      throw new ServiceUnavailableException(
+        'The report could not be saved. Your coins have been refunded.',
+      );
+    }
 
-      if (completeError || completed !== true) {
+    this.logger.log('Premium AI conversation analysis completed');
+    return {
+      run_id: startRow.run_id,
+      service_key: 'conversation_analysis_report',
+      cost_coins: startRow.run_cost_coins,
+      coins_remaining: startRow.coins_remaining,
+      status: 'completed',
+      report,
+      message_count: messages.length,
+      reused: false,
+    };
+  }
+
+  private handleExistingRun(
+    startRow: StartRunRpcRow,
+  ): ConversationAnalysisResult {
+    if (startRow.run_status === 'completed') {
+      const persisted = parsePersistedAnalysis(startRow.run_result);
+      if (!persisted) {
         this.logger.error(
-          `Premium AI completion persistence failed (${completeError?.code ?? 'invalid-result'})`,
+          'Completed premium AI run has an invalid result shape',
         );
-        await this.refundPendingRun(userId, startRow.run_id, 'persistence_failure');
-        throw new ServiceUnavailableException(
-          'The report could not be saved. Your coins have been refunded.',
+        throw new InternalServerErrorException(
+          'The saved conversation analysis is unavailable.',
         );
       }
-
-      this.logger.log('Premium AI conversation analysis completed');
       return {
         run_id: startRow.run_id,
         service_key: 'conversation_analysis_report',
         cost_coins: startRow.run_cost_coins,
         coins_remaining: startRow.coins_remaining,
         status: 'completed',
-        report,
-        message_count: messages.length,
-        reused: false,
+        report: persisted.report,
+        message_count: persisted.message_count,
+        reused: true,
       };
-    } catch (error: unknown) {
-      if (error instanceof ServiceUnavailableException) throw error;
-      await this.refundPendingRun(userId, startRow.run_id, 'provider_failure');
-      this.logger.warn('Premium AI provider failed; charged coins were refunded');
-      throw new ServiceUnavailableException(
-        'The report could not be generated. Your coins have been refunded.',
+    }
+
+    if (startRow.run_status === 'pending') {
+      throw new ConflictException(
+        'This conversation analysis request is already processing.',
       );
     }
+
+    throw new ConflictException(
+      'The previous attempt was refunded. Start a new request to try again.',
+    );
   }
 
   private buildTranscript(userId: string, messages: MessageRow[]): string {
@@ -283,10 +320,12 @@ export class PremiumAiService {
 
     for (const message of messages) {
       const text = (message.text_content ?? '')
-        .replace(/\u0000/g, '')
+        .split('\u0000')
+        .join('')
         .trim()
         .slice(0, MAX_MESSAGE_CHARS);
       if (!text) continue;
+
       const line = `${message.sender_id === userId ? 'Learner' : 'Partner'}: ${text}`;
       if (used + line.length + 1 > MAX_TRANSCRIPT_CHARS) break;
       lines.push(line);
@@ -338,14 +377,11 @@ export class PremiumAiService {
     runId: string,
     errorCode: string,
   ): Promise<void> {
-    const { error } = await this.supabaseService.getClient().rpc(
-      'fail_premium_ai_service',
-      {
-        p_user_id: userId,
-        p_run_id: runId,
-        p_error_code: errorCode,
-      },
-    );
+    const { error } = await this.rpc('fail_premium_ai_service', {
+      p_user_id: userId,
+      p_run_id: runId,
+      p_error_code: errorCode,
+    });
     if (error) {
       this.logger.error(
         `Premium AI refund reconciliation failed (${error.code ?? 'unknown'})`,
@@ -354,5 +390,13 @@ export class PremiumAiService {
         'The report failed and the coin refund requires reconciliation.',
       );
     }
+  }
+
+  private rpc(
+    name: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: PremiumAiRpcError | null }> {
+    const client = this.supabaseService.getClient() as unknown as PremiumAiRpcClient;
+    return client.rpc(name, args);
   }
 }
