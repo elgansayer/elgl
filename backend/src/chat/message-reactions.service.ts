@@ -2,9 +2,9 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
 import {
@@ -33,10 +33,9 @@ export interface RoomReactionState {
 @Injectable()
 export class MessageReactionsService {
   private static readonly ROOM_MESSAGE_LIMIT = 100;
+  private readonly logger = new Logger(MessageReactionsService.name);
 
   constructor(
-    @InjectPinoLogger(MessageReactionsService.name)
-    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
   ) {}
