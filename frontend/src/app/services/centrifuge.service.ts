@@ -20,7 +20,10 @@ export class CentrifugeService {
   private authService = inject(AuthService);
   private centrifuge: Centrifuge | null = null;
   private subscriptions = new Map<string, Subscription>();
+  /** Primary owner callback retained for backwards-compatible subscribe/unsubscribe. */
   private subscriptionHandlers = new Map<string, (data: unknown) => void>();
+  /** Additive feature listeners which must not replace the room owner's callback. */
+  private additiveHandlers = new Map<string, Set<(data: unknown) => void>>();
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionallyDisconnected = false;
@@ -89,17 +92,18 @@ export class CentrifugeService {
     this.subscriptions.clear();
   }
 
-  private createSubscription(
-    channel: string,
-    onMessage: (data: unknown) => void,
-  ): Subscription | null {
+  private createSubscription(channel: string): Subscription | null {
     if (!this.centrifuge) {
       return null;
     }
 
     const subscription = this.centrifuge.newSubscription(channel);
     subscription.on('publication', (ctx) => {
-      onMessage(ctx.data);
+      const primary = this.subscriptionHandlers.get(channel);
+      primary?.(ctx.data);
+      for (const handler of this.additiveHandlers.get(channel) ?? []) {
+        handler(ctx.data);
+      }
     });
     subscription.subscribe();
     this.subscriptions.set(channel, subscription);
@@ -108,8 +112,24 @@ export class CentrifugeService {
 
   private restoreSubscriptions(): void {
     this.clearActiveSubscriptions();
-    for (const [channel, onMessage] of this.subscriptionHandlers.entries()) {
-      this.createSubscription(channel, onMessage);
+    const channels = new Set([
+      ...this.subscriptionHandlers.keys(),
+      ...this.additiveHandlers.keys(),
+    ]);
+    for (const channel of channels) {
+      this.createSubscription(channel);
+    }
+  }
+
+  private cleanupSubscriptionIfUnused(channel: string): void {
+    if (this.subscriptionHandlers.has(channel)) return;
+    if ((this.additiveHandlers.get(channel)?.size ?? 0) > 0) return;
+
+    this.additiveHandlers.delete(channel);
+    const subscription = this.subscriptions.get(channel);
+    if (subscription) {
+      subscription.unsubscribe();
+      this.subscriptions.delete(channel);
     }
   }
 
@@ -202,23 +222,38 @@ export class CentrifugeService {
 
     const existing = this.subscriptions.get(channel);
     if (existing) {
-      existing.removeAllListeners('publication');
-      existing.on('publication', (ctx) => {
-        onMessage(ctx.data);
-      });
       return existing;
     }
 
-    return this.createSubscription(channel, onMessage);
+    return this.createSubscription(channel);
+  }
+
+  /**
+   * Adds an independent publication listener without replacing the channel's
+   * primary subscriber. The returned cleanup function removes only this listener.
+   */
+  listen(channel: string, onMessage: (data: unknown) => void): () => void {
+    const handlers = this.additiveHandlers.get(channel) ?? new Set<(data: unknown) => void>();
+    handlers.add(onMessage);
+    this.additiveHandlers.set(channel, handlers);
+
+    if (!this.subscriptions.has(channel)) {
+      this.createSubscription(channel);
+    }
+
+    return () => {
+      const current = this.additiveHandlers.get(channel);
+      current?.delete(onMessage);
+      if (current?.size === 0) {
+        this.additiveHandlers.delete(channel);
+      }
+      this.cleanupSubscriptionIfUnused(channel);
+    };
   }
 
   unsubscribe(channel: string): void {
     this.subscriptionHandlers.delete(channel);
-    const subscription = this.subscriptions.get(channel);
-    if (subscription) {
-      subscription.unsubscribe();
-      this.subscriptions.delete(channel);
-    }
+    this.cleanupSubscriptionIfUnused(channel);
   }
 
   async publish(channel: string, data: unknown): Promise<void> {
@@ -250,6 +285,7 @@ export class CentrifugeService {
     this.centrifuge = null;
     this.clearActiveSubscriptions();
     this.subscriptionHandlers.clear();
+    this.additiveHandlers.clear();
     client?.disconnect();
 
     this.isConnected.set(false);
