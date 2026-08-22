@@ -164,18 +164,13 @@
 
           <!-- Correction type (when item_type is 'correction' but payload may differ) -->
           @if (fav.item_type === 'correction' && !fav.item_payload?.message_type) {
-            <div
-              class="mt-3 min-w-0 break-words rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
-            >
-              @if (
-                fav.item_payload?.correction_payload?.original &&
-                fav.item_payload?.correction_payload?.corrected
-              ) {
-                <span class="line-through text-danger me-2">{{
-                  fav.item_payload.correction_payload.original
-                }}</span>
-                <span class="text-success">{{ fav.item_payload.correction_payload.corrected }}</span>
-              }
+            <div class="mt-3">
+              <app-visual-diff
+                [original]="fav.item_payload?.correction_payload?.original ?? ''"
+                [corrected]="fav.item_payload?.correction_payload?.corrected ?? ''"
+                [explanation]="fav.item_payload?.correction_payload?.explanation ?? ''"
+                [showActions]="true"
+              ></app-visual-diff>
             </div>
           }
 
