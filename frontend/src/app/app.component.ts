@@ -26,7 +26,7 @@ import { ReportUserModalComponent } from './components/report-user-modal/report-
 import { ReportUserModalService } from './components/report-user-modal/report-user-modal.service';
 import { DailyLoginModalComponent } from './components/daily-login-modal/daily-login-modal.component';
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
-import { ConversationAnalysisLauncherComponent } from './components/conversation-analysis-launcher/conversation-analysis-launcher.component';
+import { ConversationAnalysisLauncherComponent } from './features/premium-ai/conversation-analysis-launcher.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
