@@ -73,7 +73,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
       ) ?? [];
     const capabilityKey = capabilities[0];
     const routePath = request.route?.path ?? request.path;
-    const routeKey = `${method} ${request.baseUrl ?? ''}${routePath ?? ''}`;
+    const normalizedBaseUrl = (request.baseUrl ?? '').replace(/^\/api(?=\/)/, '');
+    const routeKey = `${method} ${normalizedBaseUrl}${routePath ?? ''}`;
     if (MANUALLY_AUDITED_ROUTES.has(routeKey)) {
       return next.handle();
     }
