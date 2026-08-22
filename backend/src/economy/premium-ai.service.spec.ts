@@ -13,23 +13,24 @@ function createClient(options?: {
   complete?: boolean;
   completeError?: { message: string; code?: string } | null;
 }) {
-  const membership = options?.member === false ? null : { room_id: '11111111-1111-4111-8111-111111111111' };
-  const messages =
-    options?.messages ??
-    [
-      {
-        sender_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-        message_type: 'text',
-        text_content: 'I went to the shop yesterday.',
-        created_at: '2026-08-22T10:00:00Z',
-      },
-      {
-        sender_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-        message_type: 'text',
-        text_content: 'Nice. What did you buy?',
-        created_at: '2026-08-22T10:01:00Z',
-      },
-    ];
+  const membership =
+    options?.member === false
+      ? null
+      : { room_id: '11111111-1111-4111-8111-111111111111' };
+  const messages = options?.messages ?? [
+    {
+      sender_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      message_type: 'text',
+      text_content: 'I went to the shop yesterday.',
+      created_at: '2026-08-22T10:00:00Z',
+    },
+    {
+      sender_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      message_type: 'text',
+      text_content: 'Nice. What did you buy?',
+      created_at: '2026-08-22T10:01:00Z',
+    },
+  ];
 
   const rpc = vi.fn(async (name: string) => {
     if (name === 'start_premium_ai_service') {
@@ -48,7 +49,10 @@ function createClient(options?: {
       };
     }
     if (name === 'complete_premium_ai_service') {
-      return { data: options?.complete ?? true, error: options?.completeError ?? null };
+      return {
+        data: options?.complete ?? true,
+        error: options?.completeError ?? null,
+      };
     }
     if (name === 'fail_premium_ai_service') {
       return { data: true, error: null };
@@ -63,7 +67,10 @@ function createClient(options?: {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
               eq: vi.fn(() => ({
-                maybeSingle: vi.fn(async () => ({ data: membership, error: null })),
+                maybeSingle: vi.fn(async () => ({
+                  data: membership,
+                  error: null,
+                })),
               })),
             })),
           })),
@@ -117,9 +124,9 @@ describe('PremiumAiService', () => {
       { chatCompletion: vi.fn() } as never,
     );
 
-    await expect(service.runConversationAnalysis(userId, dto)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rpc).not.toHaveBeenCalled();
     expect(client.from).not.toHaveBeenCalledWith('chat_messages');
   });
@@ -140,16 +147,17 @@ describe('PremiumAiService', () => {
       { chatCompletion: vi.fn() } as never,
     );
 
-    await expect(service.runConversationAnalysis(userId, dto)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('charges exactly once, persists the report and returns the remaining balance', async () => {
+  it('charges exactly once, persists the report and returns the balance', async () => {
     const { client, rpc } = createClient();
-    const chatCompletion = vi.fn(async () =>
-      'Strengths\nClear past tense.\n\nRecurring language issues\nArticles.\n\nUseful vocabulary\nreceipt\n\nNext steps\nPractise articles.',
+    const chatCompletion = vi.fn(
+      async () =>
+        'Strengths\nClear past tense.\n\nRecurring language issues\nArticles.\n\nUseful vocabulary\nreceipt\n\nNext steps\nPractise articles.',
     );
     const service = new PremiumAiService(
       { getClient: () => client } as never,
@@ -180,10 +188,13 @@ describe('PremiumAiService', () => {
       'complete_premium_ai_service',
       expect.objectContaining({ p_user_id: userId }),
     );
-    expect(rpc).not.toHaveBeenCalledWith('fail_premium_ai_service', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith(
+      'fail_premium_ai_service',
+      expect.anything(),
+    );
   });
 
-  it('returns an already completed idempotent request without paying or invoking the provider again', async () => {
+  it('reuses a completed request without another provider call', async () => {
     const { client, rpc } = createClient({
       start: {
         run_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -231,9 +242,9 @@ describe('PremiumAiService', () => {
       { chatCompletion: vi.fn(async () => '') } as never,
     );
 
-    await expect(service.runConversationAnalysis(userId, dto)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(rpc).toHaveBeenCalledWith(
       'fail_premium_ai_service',
       expect.objectContaining({
