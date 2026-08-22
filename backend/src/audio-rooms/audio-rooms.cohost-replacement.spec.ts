@@ -48,11 +48,13 @@ describe('AudioRoomsService co-host replacement', () => {
 
     queryBuilder.select.mockReturnValue(queryBuilder);
     queryBuilder.eq.mockReturnValue(queryBuilder);
-    queryBuilder.update.mockImplementation((payload: { co_host_id?: string | null }) => {
-      if (payload.co_host_id === null) sequence.push('db-demote');
-      if (payload.co_host_id === 'user-3') sequence.push('db-assign');
-      return queryBuilder;
-    });
+    queryBuilder.update.mockImplementation(
+      (payload: { co_host_id?: string | null }) => {
+        if (payload.co_host_id === null) sequence.push('db-demote');
+        if (payload.co_host_id === 'user-3') sequence.push('db-assign');
+        return queryBuilder;
+      },
+    );
     queryBuilder.single
       .mockResolvedValueOnce({ data: roomBefore, error: null })
       .mockResolvedValueOnce({ data: roomAfter, error: null });
@@ -62,13 +64,20 @@ describe('AudioRoomsService co-host replacement', () => {
     };
 
     const centrifugo = {
-      publish: vi.fn().mockImplementation(
-        async (_channel: string, payload: { type: string }): Promise<boolean> => {
-          if (payload.type === 'co_host_removed') sequence.push('notify-remove');
-          if (payload.type === 'co_host_changed') sequence.push('notify-change');
-          return true;
-        },
-      ),
+      publish: vi
+        .fn()
+        .mockImplementation(
+          async (
+            _channel: string,
+            payload: { type: string },
+          ): Promise<boolean> => {
+            if (payload.type === 'co_host_removed')
+              sequence.push('notify-remove');
+            if (payload.type === 'co_host_changed')
+              sequence.push('notify-change');
+            return true;
+          },
+        ),
     };
 
     const livekitClient = {
@@ -185,7 +194,9 @@ describe('AudioRoomsService co-host replacement', () => {
   });
 
   it('continues safely when the previous co-host is already disconnected', async () => {
-    const { service, sequence, livekitClient } = createHarness({ participants: [] });
+    const { service, sequence, livekitClient } = createHarness({
+      participants: [],
+    });
 
     await service.inviteCoHost('host-1', {
       room_id: 'room-1',
@@ -204,10 +215,7 @@ describe('AudioRoomsService co-host replacement', () => {
 
   it('fails closed when a legacy identity suffix is ambiguous', async () => {
     const { service, queryBuilder, centrifugo } = createHarness({
-      participants: [
-        { identity: 'One_user-2' },
-        { identity: 'Two_user-2' },
-      ],
+      participants: [{ identity: 'One_user-2' }, { identity: 'Two_user-2' }],
     });
 
     await expect(
