@@ -166,10 +166,37 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert "tmpfs /var/tmp" in sandbox_script
     assert "tmpfs /dev/shm" in sandbox_script
     assert "remount,bind,ro /opt/hellotalk-factory" in sandbox_script
+    assert "uv_cache=$service_home/.cache/uv" in sandbox_script
+    assert "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache" in sandbox_script
+    # PID 1 of the sandbox must reap children itself rather than exec-replacing
+    # straight into the target command, or an orphaned grandchild (a leftover
+    # dev server, a test's own subprocess-under-test) never gets reaped and
+    # sits as a zombie for the sandbox's whole lifetime.
+    assert "exec /usr/bin/setpriv" not in sandbox_script
+    assert "os.waitpid(-1, 0)" in sandbox_script
     assert isinstance(environment, dict)
     assert "GITHUB_TOKEN" not in environment
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
+    assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
+    assert environment["UV_OFFLINE"] == "1"
+
+
+def test_uv_cache_mount_is_writable_not_read_only() -> None:
+    """Unlike Cypress's cache, the uv cache must stay writable: uv still
+    touches lock/tag metadata in it even on a full cache hit, and a
+    read-only remount (as used for Cypress and the repository) would turn
+    those routine writes into hard sandbox failures."""
+    from openhands_factory.verification import _VERIFICATION_SANDBOX_SCRIPT
+
+    uv_cache_block = _VERIFICATION_SANDBOX_SCRIPT.split("uv_cache=$service_home/.cache/uv")[
+        1
+    ].split("fi", 1)[0]
+    assert "remount" not in uv_cache_block
+    assert (
+        "mount --bind /mnt/factory-verification/uv-cache /tmp/uv-cache"
+        in _VERIFICATION_SANDBOX_SCRIPT
+    )
 
 
 def test_a_backend_only_change_skips_the_other_workspaces(tmp_path: Path) -> None:
