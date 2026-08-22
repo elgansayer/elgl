@@ -30,9 +30,9 @@ Focused coverage lives in:
 
 - `backend/src/word-of-the-day/word-of-the-day.service.spec.ts`
 - `backend/src/word-of-the-day/word-of-the-day.controller.spec.ts`
-- `frontend/src/app/components/word-of-the-day/word-of-the-day.component.spec.ts`
+- `frontend/src/app/pages/home/word-of-the-day-card.component.spec.ts`
 
-The tests cover target/native/fallback language selection, UTC determinism and rotation, locale normalisation, provider failure, authentication, bearer-token delivery, unavailable UI, and removal of mock fallback content.
+The tests cover target/native/fallback language selection, UTC determinism and rotation, locale normalisation, provider failure, authentication, bearer-token delivery, unavailable UI, and removal of mock fallback content from the active Home card.
 
 ## Rollout and rollback
 
