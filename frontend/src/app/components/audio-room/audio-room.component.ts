@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
+import { AudioRoomArchivesService } from '../../services/audio-room-archives.service';
 import { AuthService } from '../../services/auth.service';
 import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
@@ -69,6 +70,7 @@ export class AudioRoomComponent implements OnInit {
   readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly archiveService = inject(AudioRoomArchivesService);
 
   readonly showCreateModal = signal<boolean>(false);
   readonly showPrivatePartyModal = signal<boolean>(false);
@@ -174,6 +176,7 @@ export class AudioRoomComponent implements OnInit {
       );
       this.showCreateModal.set(false);
       await this.store.joinRoom(room);
+      await this.recordParticipationSafely(room.id);
     } catch (e) {
       console.error('Error creating live room:', e);
       showToast(this.i18n.translate('audioRoom.launchError'));
@@ -191,6 +194,7 @@ export class AudioRoomComponent implements OnInit {
       });
       this.showPrivatePartyModal.set(false);
       await this.store.joinRoom(room);
+      await this.recordParticipationSafely(room.id);
     } catch (e) {
       console.error('Error creating private party:', e);
       showToast(this.i18n.translate('privateParty.createError'));
@@ -199,6 +203,7 @@ export class AudioRoomComponent implements OnInit {
 
   async join(room: AudioRoomRecord): Promise<void> {
     await this.store.joinRoom(room);
+    await this.recordParticipationSafely(room.id);
   }
 
   leave(): void {
@@ -231,11 +236,20 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async archive(): Promise<void> {
+    const room = this.store.currentRoom();
+    if (!room) return;
     const confirmed = await this.confirmService.confirm(
       this.i18n.translate('audioRoom.archiveConfirm'),
     );
     if (!confirmed) return;
-    await this.store.archiveRoom();
+
+    try {
+      await this.archiveService.finalize(room.id);
+      this.store.leaveRoom();
+    } catch (error) {
+      console.error('Archive room error:', error);
+      showToast(this.i18n.translate('common.error_generic'));
+    }
   }
 
   readonly quickPollService = inject(QuickPollService);
@@ -295,6 +309,16 @@ export class AudioRoomComponent implements OnInit {
           ? this.i18n.translate('quickPoll.alreadyVoted')
           : this.i18n.translate('common.error');
       showToast(msg);
+    }
+  }
+
+  private async recordParticipationSafely(roomId: string): Promise<void> {
+    try {
+      await this.archiveService.recordParticipation(roomId);
+    } catch (error) {
+      // Joining the live room remains available if archive history persistence is
+      // temporarily unavailable. The backend will still retain host access.
+      console.warn('Audio room participation could not be recorded:', error);
     }
   }
 }
