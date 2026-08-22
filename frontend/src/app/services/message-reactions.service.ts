@@ -9,7 +9,7 @@ export type MessageReactionEmoji = (typeof MESSAGE_REACTION_EMOJIS)[number];
 
 export interface MessageReaction {
   user_id: string;
-  emoji: string;
+  emoji: MessageReactionEmoji;
 }
 
 export interface MessageReactionState {
@@ -19,6 +19,37 @@ export interface MessageReactionState {
 
 export interface RoomReactionState {
   reactions: Record<string, MessageReaction[]>;
+}
+
+const SUPPORTED_REACTION_EMOJIS = new Set<string>(MESSAGE_REACTION_EMOJIS);
+
+export function parseMessageReactionPublication(value: unknown): MessageReactionState | null {
+  if (typeof value !== 'object' || value === null || !('reaction' in value)) return null;
+  const reaction = value.reaction;
+  if (typeof reaction !== 'object' || reaction === null) return null;
+  if (!('message_id' in reaction) || !('reactions' in reaction)) return null;
+  if (typeof reaction.message_id !== 'string' || reaction.message_id.length > 128) return null;
+  if (!Array.isArray(reaction.reactions) || reaction.reactions.length > 600) return null;
+
+  const rows: MessageReaction[] = [];
+  for (const row of reaction.reactions) {
+    if (
+      typeof row !== 'object' ||
+      row === null ||
+      !('user_id' in row) ||
+      !('emoji' in row) ||
+      typeof row.user_id !== 'string' ||
+      row.user_id.length === 0 ||
+      row.user_id.length > 128 ||
+      typeof row.emoji !== 'string' ||
+      !SUPPORTED_REACTION_EMOJIS.has(row.emoji)
+    ) {
+      return null;
+    }
+    rows.push({ user_id: row.user_id, emoji: row.emoji as MessageReactionEmoji });
+  }
+
+  return { message_id: reaction.message_id, reactions: rows };
 }
 
 @Injectable({ providedIn: 'root' })
