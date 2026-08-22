@@ -20,10 +20,15 @@ describe('PremiumAiController', () => {
         cost_coins: 30,
       },
     ]);
-    const controller = new PremiumAiController({ getCatalog } as unknown as PremiumAiService);
+    const controller = new PremiumAiController({
+      getCatalog,
+    } as unknown as PremiumAiService);
 
     expect(controller.getServices()).toEqual([
-      expect.objectContaining({ key: 'conversation_analysis_report', cost_coins: 30 }),
+      expect.objectContaining({
+        key: 'conversation_analysis_report',
+        cost_coins: 30,
+      }),
     ]);
     expect(getCatalog).toHaveBeenCalledTimes(1);
   });
@@ -34,9 +39,9 @@ describe('PremiumAiController', () => {
       runConversationAnalysis,
     } as unknown as PremiumAiService);
 
-    await expect(controller.conversationAnalysis(null, dto)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.conversationAnalysis(null, dto),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(runConversationAnalysis).not.toHaveBeenCalled();
   });
 
@@ -56,7 +61,9 @@ describe('PremiumAiController', () => {
       runConversationAnalysis,
     } as unknown as PremiumAiService);
 
-    await expect(controller.conversationAnalysis(user, dto)).resolves.toEqual(result);
+    await expect(
+      controller.conversationAnalysis(user, dto),
+    ).resolves.toEqual(result);
     expect(runConversationAnalysis).toHaveBeenCalledWith(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       dto,
