@@ -7,6 +7,10 @@ app can render rich link cards inside chat messages and other surfaces.
 
 `GET /api/link-preview?url=<absolute http(s) url>`
 
+The HTTP endpoint is authenticated with `SupabaseAuthGuard` and is limited to
+30 requests per minute by the NestJS throttler. Internal backend callers such
+as `ChatService` continue to call `LinkPreviewService` directly.
+
 Returns a `LinkPreview` object:
 
 ```json
@@ -28,18 +32,24 @@ returns `null`.
    are accepted; embedded credentials, private literal hosts, localhost,
    overlong URLs and custom ports are rejected.
 2. **SSRF protection:** every DNS lookup is wrapped in `safeLookup`, which
-   rejects private, loopback, link-local and reserved addresses (see
-   `ip-guard.ts`) before the request is sent.
+   rejects the complete set of private, loopback, link-local and reserved
+   addresses returned by DNS (see `ip-guard.ts`) before the request is sent.
+   The same protocol, credential, host and port policy is re-applied to every
+   redirect target before `follow-redirects` is allowed to continue, closing
+   the redirect-to-private/custom-port bypass class.
 3. **Fetching:** the page is downloaded with a 5 second timeout, at most three
    redirects, and a 5 MB response size cap.
 4. **Parsing:** `cheerio` extracts `og:title`, `og:description`, `og:image`
    and `og:site_name`, falling back to `<title>` and the `description` meta
    tag when OpenGraph tags are absent. Relative image URLs are resolved
    against the source page.
-5. **Sanitisation:** all scraped text fields are run through a strict
-   DOMPurify configuration that allows no tags and no attributes. Returned
-   image URLs must also be ordinary public `http(s)` URLs; unsafe schemes,
-   credentials, custom ports, localhost and private literal IPs are dropped.
+5. **Sanitisation and output bounds:** all scraped text fields are run through
+   a strict DOMPurify configuration that allows no tags and no attributes.
+   Titles are capped at 300 characters, descriptions at 1,000 and site names
+   at 200 before they reach Redis or an API response. Returned image URLs must
+   also be ordinary public `http(s)` URLs, fit inside the 2,048-character URL
+   bound, and cannot contain credentials, custom ports, localhost or private
+   literal IPs.
 6. **Caching:** successful previews are cached for one hour. Cache keys contain
    only a SHA-256 digest of the normalized URL (`link_preview:v2:<digest>`),
    so private query strings are not copied into Redis keys. Redis read/write
@@ -59,17 +69,41 @@ Preview scraping is best effort for chat delivery. A cache outage does not
 prevent a fresh scrape, while invalid/unreachable external URLs follow the
 existing service error contract.
 
+## Failure and abuse behaviour
+
+- Missing/malformed URLs and non-HTML responses return the existing 400-class
+  scraper error rather than leaking provider details.
+- Unauthenticated direct scraper requests are rejected before any network
+  request is attempted.
+- Excessive direct requests are throttled before they can amplify outbound
+  network work.
+- A redirect cannot switch to localhost, a private literal address, embedded
+  credentials or a custom port. DNS resolution is still checked by the guarded
+  HTTP(S) agents on every connection, including redirects.
+- Redis failure degrades to an uncached fetch; it never weakens URL validation.
+- Oversized pages, URLs and metadata are rejected or bounded before they can
+  become unbounded cache/API payloads.
+
 ## Tests
 
 - `ip-guard.spec.ts`: SSRF IP classification (IPv4, IPv6, IPv4-mapped IPv6).
 - `link-preview.service.spec.ts`: URL validation, SSRF boundaries, privacy-safe
   cache keys/logging, cache degradation, parsing, sanitisation, safe image
   handling and network error handling.
-- `link-preview.controller.spec.ts`: query parameter validation and service
-  delegation.
+- `link-preview.security.spec.ts`: redirect revalidation, metadata bounds and
+  overlong image metadata.
+- `link-preview.controller.spec.ts`: authentication metadata, query parameter
+  validation and service delegation.
 
-## Rollback
+## Rollout and rollback
 
-The change is application-only and has no schema migration. A rollback can
-revert the service/tests/documentation commit. Redis entries using the `v2`
-hashed namespace naturally expire after one hour and require no cleanup.
+This is application-only and has no schema migration. Deploy backend instances
+normally; mixed versions remain compatible because the response interface and
+Redis namespace are unchanged. Existing internal callers are unaffected by the
+new controller guard.
+
+Rollback can revert the controller/service/tests/documentation commits. The
+security checks are intentionally fail-closed, so do not selectively remove
+redirect validation or DNS guarding while leaving the public scraper exposed.
+Redis entries in the `v2` namespace naturally expire after one hour and require
+no cleanup.
