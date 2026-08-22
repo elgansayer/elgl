@@ -36,7 +36,7 @@ Do not substitute these core technologies:
 ## 3. Globalisation, i18n & RTL
 
 Any change touching user-facing text, word tokenisation, or directional CSS: read
-`.agents/skills/i18n-rtl-globalisation/SKILL.md` first. Zero hard-coded UI strings in any language; `TranslatePipe`
+`.agents/skills/i18n-translation-workflow/SKILL.md` first. Zero hard-coded UI strings in any language; `TranslatePipe`
 (frontend) and `I18nService` (backend/programmatic) carry all user-facing text; `Intl.Segmenter` for tokenisation;
 Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL.
 
@@ -78,7 +78,7 @@ conventions from scratch:
 - `payment-webhook-security` - secure payment/webhook/IAP patterns.
 - `realtime-centrifugo-channel` - adding new Centrifugo channels/JSON payload types.
 - `livekit-room-flow` - LiveKit room creation, stage management, and token refresh flows.
-- `i18n-rtl-globalisation` - user-facing text, word tokenisation, RTL layout (frontend and backend).
+- `i18n-translation-workflow` - user-facing text, word tokenisation, RTL layout (frontend and backend).
 
 ## 8. Strict Execution & Quality Rules
 
