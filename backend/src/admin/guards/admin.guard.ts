@@ -9,6 +9,7 @@ import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import { AdminAuditService } from '../admin-audit.service';
 import { AdminAuthorizationService } from '../admin-authorization.service';
+import { AdminCapability } from '../admin-capabilities';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -31,7 +32,7 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    let capabilities;
+    let capabilities: AdminCapability[];
     try {
       capabilities = await this.authorization.getEffectiveCapabilities(user.id);
     } catch (error) {
