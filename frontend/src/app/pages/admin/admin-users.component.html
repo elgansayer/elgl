@@ -40,7 +40,7 @@
   </div>
 
   @if (isLoading()) {
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto" aria-busy="true">
       <table class="min-w-full divide-y divide-surface-100">
         <thead class="bg-surface-100">
           <tr>
@@ -112,6 +112,14 @@
         </tbody>
       </table>
     </div>
+  } @else if (usersLoadError()) {
+    <app-empty-state
+      icon="⚠️"
+      [title]="'admin.userManagement.loadError' | t"
+      [description]="'admin.userManagement.loadErrorDesc' | t"
+      [actionLabel]="'common.retry' | t"
+      (actionClicked)="retryUsers()"
+    />
   } @else if (users().length === 0) {
     <app-empty-state
       icon="👥"
@@ -251,9 +259,26 @@
       <div
         class="bg-surface-200 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'admin.users.loginHistoryTitle' | t"
       >
         <h3 class="text-lg font-semibold mb-4">{{ 'admin.users.loginHistoryTitle' | t }}</h3>
-        @if (loginHistory().length === 0) {
+        @if (isHistoryLoading()) {
+          <div class="space-y-3" aria-busy="true">
+            @for (row of [1, 2, 3]; track row) {
+              <app-skeleton-loader [height]="'16px'" [width]="'100%'" [variant]="'text'" />
+            }
+          </div>
+        } @else if (historyLoadError()) {
+          <app-empty-state
+            icon="⚠️"
+            [title]="'admin.userManagement.loadError' | t"
+            [description]="'admin.userManagement.loadErrorDesc' | t"
+            [actionLabel]="'common.retry' | t"
+            (actionClicked)="retryHistory()"
+          />
+        } @else if (loginHistory().length === 0) {
           <p class="text-text-secondary">{{ 'admin.users.noHistory' | t }}</p>
         } @else {
           <table class="min-w-full divide-y divide-surface-100">
