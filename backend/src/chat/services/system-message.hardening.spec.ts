@@ -7,8 +7,7 @@ describe('SystemMessageService hardening', () => {
     membershipError?: { message: string } | null;
     publish?: ReturnType<typeof vi.fn>;
   }) {
-    const publish =
-      options?.publish ?? vi.fn().mockResolvedValue(true);
+    const publish = options?.publish ?? vi.fn().mockResolvedValue(true);
     const memberships = options?.memberships ?? [];
     const membershipError = options?.membershipError ?? null;
 
