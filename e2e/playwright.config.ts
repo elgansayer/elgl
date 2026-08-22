@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const frontendWebServerCommand = process.env.CI
+  ? 'cd ../frontend && npm run build && npm run start'
+  : 'cd ../frontend && npm run start';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -56,7 +60,9 @@ export default defineConfig({
       timeout: 180000,
     },
     {
-      command: 'cd ../frontend && npm run start',
+      // In CI, fail immediately on Angular compilation errors instead of waiting
+      // for Playwright's web-server timeout to terminate a repeatedly failing dev server.
+      command: frontendWebServerCommand,
       url: 'http://localhost:4200',
       reuseExistingServer: !process.env.CI,
       timeout: 300000,
