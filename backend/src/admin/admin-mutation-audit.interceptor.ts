@@ -27,14 +27,14 @@ const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const ADMIN_REASON_CODES = new Set<string>(ADMIN_ACTION_REASON_CODES);
 
 // These reads already produce richer, semantic audit events in their controller.
-// Keep the list explicit during migration so the generic interceptor never emits
-// duplicate records for the same privileged read.
-const MANUALLY_AUDITED_ROUTES = new Set([
-  'GET /admin/v1/system/health',
-  'GET /admin/v1/audit',
-  'GET /admin/v1/moderation/reports',
-  'GET /admin/v1/users/:id/login-history',
-  'GET /admin/v1/logs',
+// Keying by controller + handler is independent of global prefixes and Express
+// router mounting, so the same operation is never double-audited.
+const MANUALLY_AUDITED_HANDLERS = new Set([
+  'AdminV1Controller.getSystemHealth',
+  'AdminV1Controller.listAudit',
+  'AdminV1Controller.listModerationReports',
+  'AdminV1Controller.getUserLoginHistory',
+  'AdminOperationalEventsV1Controller.list',
 ]);
 
 /**
@@ -66,18 +66,20 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
       throw new UnauthorizedException();
     }
 
+    const handler = context.getHandler();
+    const controller = context.getClass();
+    const handlerKey = `${controller.name}.${handler.name}`;
+    if (MANUALLY_AUDITED_HANDLERS.has(handlerKey)) {
+      return next.handle();
+    }
+
     const capabilities =
       this.reflector.getAllAndOverride<AdminCapability[]>(
         ADMIN_CAPABILITIES_METADATA_KEY,
-        [context.getHandler(), context.getClass()],
+        [handler, controller],
       ) ?? [];
     const capabilityKey = capabilities[0];
     const routePath = request.route?.path ?? request.path;
-    const normalizedBaseUrl = (request.baseUrl ?? '').replace(/^\/api(?=\/)/, '');
-    const routeKey = `${method} ${normalizedBaseUrl}${routePath ?? ''}`;
-    if (MANUALLY_AUDITED_ROUTES.has(routeKey)) {
-      return next.handle();
-    }
 
     const requestId = request.headers['x-request-id'];
     const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
@@ -132,7 +134,7 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         correlationId,
         metadata: {
           source: 'admin-request-interceptor',
-          operation: context.getHandler().name,
+          operation: handler.name,
           resultCount: this.getResultCount(result),
         },
       });
