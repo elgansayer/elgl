@@ -399,7 +399,6 @@ export class LongPressContextMenuComponent {
   private readonly LONG_PRESS_DURATION = 600;
   private readonly SWIPE_REPLY_THRESHOLD_PX = 56;
   private readonly SWIPE_VERTICAL_TOLERANCE_PX = 48;
-  private readonly GESTURE_MOVE_TOLERANCE_PX = 10;
   private touchStartX: number | null = null;
   private touchStartY: number | null = null;
   private touchSwipeCancelled = false;
@@ -434,9 +433,14 @@ export class LongPressContextMenuComponent {
 
   onTouchMove(event: TouchEvent): void {
     if (this.touchStartX === null || this.touchStartY === null) return;
+
+    // Any touch movement must stop the long-press path. Swipe classification
+    // remains thresholded below, but a user who starts scrolling or swiping
+    // should never have the context menu appear underneath that gesture.
+    this.cancelTimer();
+
     if (event.touches.length !== 1) {
       this.touchSwipeCancelled = true;
-      this.cancelTimer();
       return;
     }
 
@@ -447,13 +451,6 @@ export class LongPressContextMenuComponent {
     const deltaY = touch.clientY - this.touchStartY;
     const horizontalDistance = Math.abs(deltaX);
     const verticalDistance = Math.abs(deltaY);
-
-    if (
-      horizontalDistance >= this.GESTURE_MOVE_TOLERANCE_PX ||
-      verticalDistance >= this.GESTURE_MOVE_TOLERANCE_PX
-    ) {
-      this.cancelTimer();
-    }
 
     if (
       verticalDistance > this.SWIPE_VERTICAL_TOLERANCE_PX ||
