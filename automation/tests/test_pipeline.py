@@ -867,6 +867,114 @@ def test_terminal_ci_failure_enters_provider_repair_instead_of_waiting(
     assert result.state is JobState.REPAIRING
 
 
+def _repairing_job(factory_config: FactoryConfig, github: GitHub) -> None:
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    _seed_prompts(worktree / "automation/prompts")
+    github.statuses = [
+        PullRequestStatus(
+            77,
+            "OPEN",
+            False,
+            "MERGEABLE",
+            "",
+            "reviewed-head",
+            False,
+            False,
+            frozenset({"backend / lint"}),
+        )
+    ]
+    task = Task("77", "Repair failed CI", "Body", "github-pull-request", 10, pr_branch="fix/x")
+    job = Job(
+        task=task,
+        state=JobState.REPAIRING,
+        branch="fix/x",
+        pull_request=77,
+        head_sha="reviewed-head",
+    )
+    return job
+
+
+def test_mechanical_repair_skips_the_agent_when_it_alone_fixes_the_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    agent_calls: list[Task] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            agent_calls.append(task)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair", lambda worktree: None
+    )
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "1111111")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert agent_calls == []
+    assert result.state is JobState.REVIEWING
+    assert "automatic formatting" in committed[0]
+
+
+def test_agent_repair_still_runs_when_mechanical_fixers_change_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    job = _repairing_job(factory_config, github)
+    agent_calls: list[Task] = []
+
+    class TrackingConversations(Conversations):
+        def run(self, task, workspace, prompt, *, timeout_seconds=None):  # type: ignore[override]
+            agent_calls.append(task)
+            return super().run(task, workspace, prompt, timeout_seconds=timeout_seconds)
+
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=TrackingConversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.attempt_mechanical_repair", lambda worktree: None
+    )
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    fingerprints = iter(("before-repair", "after-repair"))
+    monkeypatch.setattr(GitWorkflow, "change_fingerprint", lambda workflow: next(fingerprints))
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    committed: list[str] = []
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: committed.append(message))
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "1111111")
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None and result.last_error is None
+    assert len(agent_calls) == 1
+    assert result.state is JobState.REVIEWING
+    assert "repair CI" in committed[0]
+
+
 @pytest.mark.parametrize("initial_state", [JobState.CI_PENDING, JobState.MERGE_QUEUED])
 def test_behind_pull_request_is_updated_at_the_inspected_head(
     tmp_path: Path,
