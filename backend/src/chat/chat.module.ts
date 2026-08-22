@@ -23,6 +23,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
+import { MessageReactionsController } from './message-reactions.controller';
+import { MessageReactionsService } from './message-reactions.service';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
+    MessageReactionsController,
   ],
   providers: [
     CentrifugoService,
@@ -54,6 +57,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
+    MessageReactionsService,
   ],
   exports: [
     CentrifugoService,
@@ -64,6 +68,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
+    MessageReactionsService,
   ],
 })
 export class ChatModule {}
