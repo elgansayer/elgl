@@ -14,41 +14,27 @@ import {
       role="group"
       [attr.aria-busy]="pending()"
     >
-      @for (reaction of getReactionEntries(); track reaction.emoji) {
+      @for (emoji of quickEmojis; track emoji) {
         <button
           hlmBtn
           type="button"
           variant="ghost"
           size="touch"
-          class="min-w-11 rounded-full px-2"
+          class="min-w-11 rounded-full px-2 opacity-75 hover:opacity-100 focus:opacity-100"
           [disabled]="pending()"
-          (click)="toggleReaction(reaction.emoji)"
-          [class.bg-primary/20]="reaction.users.includes(currentUserId())"
-          [class.text-primary]="reaction.users.includes(currentUserId())"
-          [attr.aria-pressed]="reaction.users.includes(currentUserId())"
-          [attr.aria-label]="reaction.emoji + ' ' + reaction.users.length"
+          (click)="toggleReaction(emoji)"
+          [class.bg-primary/20]="hasCurrentUserReaction(emoji)"
+          [class.text-primary]="hasCurrentUserReaction(emoji)"
+          [class.opacity-100]="reactionCount(emoji) > 0"
+          [attr.aria-pressed]="hasCurrentUserReaction(emoji)"
+          [attr.aria-label]="emoji + ' ' + reactionCount(emoji)"
         >
-          <span aria-hidden="true">{{ reaction.emoji }}</span>
-          <span class="tabular-nums">{{ reaction.users.length }}</span>
+          <span aria-hidden="true">{{ emoji }}</span>
+          @if (reactionCount(emoji) > 0) {
+            <span class="tabular-nums" aria-hidden="true">{{ reactionCount(emoji) }}</span>
+          }
         </button>
       }
-      <div class="flex flex-wrap gap-1">
-        @for (emoji of quickEmojis; track emoji) {
-          <button
-            hlmBtn
-            type="button"
-            variant="ghost"
-            size="touch"
-            class="min-w-11 rounded-full px-2 opacity-70 hover:opacity-100 focus:opacity-100"
-            [disabled]="pending()"
-            (click)="toggleReaction(emoji)"
-            [attr.aria-pressed]="hasCurrentUserReaction(emoji)"
-            [attr.aria-label]="emoji"
-          >
-            <span aria-hidden="true">{{ emoji }}</span>
-          </button>
-        }
-      </div>
     </div>
   `,
 })
@@ -67,6 +53,10 @@ export class MessageReactionBarComponent {
       const users = reactions[emoji] ?? [];
       return users.length > 0 ? [{ emoji, users }] : [];
     });
+  }
+
+  reactionCount(emoji: MessageReactionEmoji): number {
+    return this.reactions()[emoji]?.length ?? 0;
   }
 
   hasCurrentUserReaction(emoji: MessageReactionEmoji): boolean {
