@@ -32,11 +32,12 @@ export class LanguageChallengesController {
 
   @Get()
   @Throttle({ default: { limit: 60, ttl: 60000 } })
-  list(
-    @Query() query: ListChallengesQueryDto,
-    @CurrentUser() user: AuthUser,
-  ) {
-    return this.challengesService.listChallenges(user.id, query.limit, query.offset);
+  list(@Query() query: ListChallengesQueryDto, @CurrentUser() user: AuthUser) {
+    return this.challengesService.listChallenges(
+      user.id,
+      query.limit,
+      query.offset,
+    );
   }
 
   @Post(':id/join')
