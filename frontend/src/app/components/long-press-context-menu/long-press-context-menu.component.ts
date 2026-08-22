@@ -463,12 +463,12 @@ export class LongPressContextMenuComponent {
     }
   }
 
-  onTouchEnd(event: TouchEvent): void {
+  onTouchEnd(event?: TouchEvent): void {
     this.cancelTimer();
 
     const startX = this.touchStartX;
     const startY = this.touchStartY;
-    const touch = event.changedTouches.item(0);
+    const touch = event?.changedTouches.item(0) ?? null;
     const cancelled = this.touchSwipeCancelled;
     this.resetTouchGesture();
 
@@ -484,7 +484,7 @@ export class LongPressContextMenuComponent {
       return;
     }
 
-    if (event.cancelable) event.preventDefault();
+    if (event?.cancelable) event.preventDefault();
     this.reply.emit({ messageId: this.messageId() });
   }
 
