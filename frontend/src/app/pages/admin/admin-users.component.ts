@@ -56,10 +56,18 @@ export class AdminUsersComponent {
       this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
-  readonly users = computed(() => this.usersResource.value()?.users ?? []);
-  readonly total = computed(() => this.usersResource.value()?.total ?? 0);
-  readonly isLoading = computed(() => this.usersResource.isLoading());
+  // resource().value() re-throws the loader's error while the resource is in
+  // an error state, so usersLoadError must be checked before touching value()
+  // or an errored load crashes change detection instead of surfacing
+  // usersLoadError in the template.
   readonly usersLoadError = computed(() => this.usersResource.error() !== undefined);
+  readonly users = computed(() =>
+    this.usersLoadError() ? [] : (this.usersResource.value()?.users ?? []),
+  );
+  readonly total = computed(() =>
+    this.usersLoadError() ? 0 : (this.usersResource.value()?.total ?? 0),
+  );
+  readonly isLoading = computed(() => this.usersResource.isLoading());
 
   readonly pageTotal = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
@@ -80,9 +88,11 @@ export class AdminUsersComponent {
     },
   });
 
-  readonly loginHistory = computed(() => this.historyResource.value() ?? []);
-  readonly isHistoryLoading = computed(() => this.historyResource.isLoading());
   readonly historyLoadError = computed(() => this.historyResource.error() !== undefined);
+  readonly loginHistory = computed(() =>
+    this.historyLoadError() ? [] : (this.historyResource.value() ?? []),
+  );
+  readonly isHistoryLoading = computed(() => this.historyResource.isLoading());
 
   onSearchInput(event: Event): void {
     const target = event.target;

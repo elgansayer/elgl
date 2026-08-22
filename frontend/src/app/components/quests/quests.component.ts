@@ -1,11 +1,12 @@
 import { Component, inject, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { Quest, QuestStore } from '../../services/quests.store';
 
 @Component({
   selector: 'app-quests',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, HlmButton, TranslatePipe],
   template: `
     <div class="p-4 bg-surface text-start" role="region" aria-label="{{ 'quests.title' | t }}">
       <h2 class="text-xl font-bold mb-4">{{ 'quests.title' | t }}</h2>
@@ -16,6 +17,7 @@ import { Quest, QuestStore } from '../../services/quests.store';
           <div class="mb-3 flex flex-wrap items-center gap-2" role="alert">
             <span>{{ 'common.error' | t }}</span>
             <button
+              hlmBtn
               type="button"
               class="rounded-md border border-border px-3 py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               (click)="retry()"

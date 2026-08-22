@@ -229,7 +229,15 @@ describe('FavouritesComponent', () => {
       currentTime: 0,
       onended: null as (() => void) | null,
     };
-    vi.stubGlobal('Audio', vi.fn(() => audio));
+    // Audio is constructed with `new` in the component - an arrow-function
+    // mock implementation has no [[Construct]] and throws "not a
+    // constructor", so this needs a real function.
+    vi.stubGlobal(
+      'Audio',
+      vi.fn(function () {
+        return audio;
+      }),
+    );
 
     component.toggleAudio(mockFavourites[2]);
     expect(component.audioPlayingId()).toBeNull();

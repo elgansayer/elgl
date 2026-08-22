@@ -44,8 +44,8 @@ describe('UpdateProfileDto', () => {
 
     const errors = await validate(dto);
 
-    expect(
-      errors.some((error) => error.property === 'proficiency_level'),
-    ).toBe(false);
+    expect(errors.some((error) => error.property === 'proficiency_level')).toBe(
+      false,
+    );
   });
 });

@@ -93,8 +93,8 @@ describe('ProfileComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('en,ja');
-    expect(text).toContain('fr,ko');
+    expect(text).toContain('en, ja');
+    expect(text).toContain('fr, ko');
     expect(text).toContain('🔥 14d');
   });
 
