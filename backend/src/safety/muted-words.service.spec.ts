@@ -1,10 +1,10 @@
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
-import {
-  MAX_MUTED_WORDS,
-  MutedWordsService,
-} from './muted-words.service';
+import { MAX_MUTED_WORDS, MutedWordsService } from './muted-words.service';
 
 function listBuilder(
   data: Array<{ normalized_word: string }> = [],
@@ -91,7 +91,11 @@ describe('MutedWordsService', () => {
     };
     const after = listBuilder([{ normalized_word: 'spoiler' }]);
     const client = {
-      from: vi.fn().mockReturnValueOnce(before).mockReturnValueOnce(insert).mockReturnValueOnce(after),
+      from: vi
+        .fn()
+        .mockReturnValueOnce(before)
+        .mockReturnValueOnce(insert)
+        .mockReturnValueOnce(after),
     };
     const service = new MutedWordsService({
       getClient: () => client,
@@ -117,7 +121,10 @@ describe('MutedWordsService', () => {
       .mockResolvedValueOnce({ error: null });
     const after = listBuilder([{ normalized_word: 'other' }]);
     const client = {
-      from: vi.fn().mockReturnValueOnce(deleteBuilder).mockReturnValueOnce(after),
+      from: vi
+        .fn()
+        .mockReturnValueOnce(deleteBuilder)
+        .mockReturnValueOnce(after),
     };
     const service = new MutedWordsService({
       getClient: () => client,
