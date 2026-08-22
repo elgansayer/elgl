@@ -21,6 +21,20 @@ export interface Event {
   participants_count?: number;
 }
 
+export type EventVenueType = 'audio_room' | 'zoom' | 'in_person';
+
+export interface CreateEventRequest {
+  title: string;
+  description: string;
+  category?: string;
+  date_time: string;
+  venue_type: EventVenueType;
+  location: string;
+  timezone: string;
+  language_pair?: string;
+  max_participants?: number;
+}
+
 export interface EventsQuery {
   language_pair?: string;
   category?: 'Audio Rooms' | 'Learning Seminars' | 'In-person Meetups' | 'Cultural Exchanges';
@@ -79,16 +93,7 @@ export class EventsService {
     return this.http.get<Event>(`${environment.apiUrl}/events/${eventId}`);
   }
 
-  createEvent(dto: {
-    title: string;
-    description?: string;
-    category?: string;
-    date_time: string;
-    location?: string;
-    language_pair?: string;
-    max_participants?: number;
-    mentions?: string[];
-  }) {
+  createEvent(dto: CreateEventRequest) {
     return this.http.post<Event>(`${environment.apiUrl}/events`, dto);
   }
 
