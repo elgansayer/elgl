@@ -67,11 +67,14 @@ export class MutedWordsService {
     const { error } = await this.supabaseService
       .getClient()
       .from('user_muted_words')
+      // This migration is newer than the repository's hand-maintained Supabase
+      // schema shim. Keep the cast local to the new table until generated types
+      // replace that shim, matching existing unmapped-table callers.
       .insert({
         user_id: userId,
         word,
         normalized_word: word,
-      });
+      } as never);
 
     if (error) {
       // A concurrent identical insert is idempotent. The database uniqueness
