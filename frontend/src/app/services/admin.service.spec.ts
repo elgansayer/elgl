@@ -118,4 +118,46 @@ describe('AdminService', () => {
     const result = await promise;
     expect(result.length).toBe(1);
   });
+
+  it('posts to the authenticated ban endpoint without fabricating a mutation result', async () => {
+    const promise = service.banUser('user-1');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/ban`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush({ message: 'User banned' });
+
+    await expect(promise).resolves.toEqual({ message: 'User banned' });
+  });
+
+  it('propagates ban endpoint failures to the admin UI', async () => {
+    const promise = service.banUser('user-1');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/ban`);
+    req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    await expect(promise).rejects.toBeTruthy();
+  });
+
+  it('posts to the authenticated warn endpoint without fabricating a mutation result', async () => {
+    const promise = service.warnUser('user-1');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/warn`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush({ message: 'User warned' });
+
+    await expect(promise).resolves.toEqual({ message: 'User warned' });
+  });
+
+  it('propagates warn endpoint failures to the admin UI', async () => {
+    const promise = service.warnUser('user-1');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/warn`);
+    req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    await expect(promise).rejects.toBeTruthy();
+  });
 });
