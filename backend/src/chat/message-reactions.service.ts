@@ -7,7 +7,10 @@ import {
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
-import type { MessageReactionEmoji } from './dto/message-reaction.dto';
+import {
+  MESSAGE_REACTION_EMOJIS,
+  type MessageReactionEmoji,
+} from './dto/message-reaction.dto';
 
 export interface MessageReactionRow {
   user_id: string;
@@ -38,7 +41,10 @@ export class MessageReactionsService {
     private readonly centrifugoService: CentrifugoService,
   ) {}
 
-  async getRoomReactions(userId: string, roomId: string): Promise<RoomReactionState> {
+  async getRoomReactions(
+    userId: string,
+    roomId: string,
+  ): Promise<RoomReactionState> {
     const supabase = this.supabaseService.getClient();
     await this.assertMembership(userId, roomId, 'load');
 
@@ -57,7 +63,10 @@ export class MessageReactionsService {
 
     const messageIds = messages
       .map((row: unknown) =>
-        typeof row === 'object' && row !== null && 'id' in row && typeof row.id === 'string'
+        typeof row === 'object' &&
+        row !== null &&
+        'id' in row &&
+        typeof row.id === 'string'
           ? row.id
           : null,
       )
@@ -81,7 +90,10 @@ export class MessageReactionsService {
     const grouped: Record<string, MessageReactionRow[]> = {};
     for (const row of data) {
       if (!this.isStoredReaction(row)) continue;
-      (grouped[row.message_id] ??= []).push({ user_id: row.user_id, emoji: row.emoji });
+      (grouped[row.message_id] ??= []).push({
+        user_id: row.user_id,
+        emoji: row.emoji,
+      });
     }
 
     return { reactions: grouped };
@@ -165,7 +177,9 @@ export class MessageReactionsService {
 
     if (membershipError) {
       this.logger.warn(`Message reaction membership ${operation} lookup failed`);
-      throw new InternalServerErrorException(`Unable to ${operation} reactions`);
+      throw new InternalServerErrorException(
+        `Unable to ${operation} reactions`,
+      );
     }
     if (!membership) {
       throw new ForbiddenException('You are not a member of this conversation');
@@ -186,7 +200,9 @@ export class MessageReactionsService {
     }
 
     const reactions = data
-      .filter((row: unknown): row is StoredMessageReactionRow => this.isStoredReaction(row))
+      .filter((row: unknown): row is StoredMessageReactionRow =>
+        this.isStoredReaction(row),
+      )
       .map(({ user_id, emoji }) => ({ user_id, emoji }));
 
     return { message_id: messageId, reactions };
@@ -201,7 +217,8 @@ export class MessageReactionsService {
       'emoji' in value &&
       typeof value.message_id === 'string' &&
       typeof value.user_id === 'string' &&
-      typeof value.emoji === 'string'
+      typeof value.emoji === 'string' &&
+      (MESSAGE_REACTION_EMOJIS as readonly string[]).includes(value.emoji)
     );
   }
 }
