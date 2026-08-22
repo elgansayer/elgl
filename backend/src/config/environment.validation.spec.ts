@@ -41,7 +41,8 @@ function productionEnvironment(): Record<string, string> {
     GOOGLE_PLAY_PACKAGE_NAME: 'com.elgl.app',
     GOOGLE_PLAY_ACCESS_TOKEN: 'prod-google-play-access-token',
     GOOGLE_PUBSUB_AUDIENCE: 'https://api.elgl.app/google-play/webhook',
-    GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL: 'billing@elgl-prod.iam.gserviceaccount.com',
+    GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL:
+      'billing@elgl-prod.iam.gserviceaccount.com',
     TRANSFER_SECRET: 'prod-transfer-secret',
     LLM_API_KEY: 'prod-llm-api-key',
   };
@@ -86,7 +87,11 @@ describe('validateEnvironment', () => {
 
   it.each([
     ['SUPABASE_URL', 'not-a-url', 'must be a valid URL'],
-    ['DATABASE_URL', 'https://db.internal/elgl', 'must use postgres: or postgresql:'],
+    [
+      'DATABASE_URL',
+      'https://db.internal/elgl',
+      'must use postgres: or postgresql:',
+    ],
     ['REDIS_URL', 'http://redis.internal', 'must use redis: or rediss:'],
     ['LIVEKIT_URL', 'https://livekit.elgl.app', 'must use ws: or wss:'],
   ])('rejects malformed or wrong-scheme %s values', (key, value, message) => {
