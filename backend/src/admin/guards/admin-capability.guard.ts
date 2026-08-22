@@ -81,7 +81,8 @@ export class AdminCapabilityGuard implements CanActivate {
       ? rawTargetId[0]
       : rawTargetId;
     const targetId =
-      typeof candidateTargetId === 'string' && SAFE_TARGET_ID.test(candidateTargetId)
+      typeof candidateTargetId === 'string' &&
+      SAFE_TARGET_ID.test(candidateTargetId)
         ? candidateTargetId
         : undefined;
 
@@ -99,7 +100,10 @@ export class AdminCapabilityGuard implements CanActivate {
         correlationId,
         metadata: {
           source: 'admin-capability-guard',
-          operation: outcome === 'denied' ? 'capability-denied' : 'capability-check-failed',
+          operation:
+            outcome === 'denied'
+              ? 'capability-denied'
+              : 'capability-check-failed',
         },
       });
     } catch {
