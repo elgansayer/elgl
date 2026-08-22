@@ -4,6 +4,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
 import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -32,6 +33,12 @@ describe('NlpController', () => {
           provide: GrammarCheckService,
           useValue: {
             check: vi.fn(),
+          },
+        },
+        {
+          provide: GrammarExplanationService,
+          useValue: {
+            explain: vi.fn(),
           },
         },
         {
