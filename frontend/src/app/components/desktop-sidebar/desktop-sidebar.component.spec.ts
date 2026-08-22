@@ -22,6 +22,11 @@ class MockUnreadCounterService {
     return this.counts.get(tab) ?? 0;
   }
 
+  badgeText(tab: NavTab): string {
+    const count = this.tabCount(tab);
+    return count > 99 ? '99+' : String(count);
+  }
+
   setCount(tab: NavTab, count: number): void {
     this.counts.set(tab, count);
   }
@@ -133,6 +138,21 @@ describe('DesktopSidebarComponent', () => {
       expect(badge?.textContent?.trim() === testCase.expected).toBe(true);
       expect(allBadges.length).toBe(1);
     }
+  });
+
+  it('should expose the full unread count to assistive technology', () => {
+    unreadCounter.setCount('chat', 125);
+    fixture.detectChanges();
+
+    const chatLink: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/chat"]');
+    const visualBadge: HTMLElement | null = chatLink.querySelector('span.ms-auto');
+    const screenReaderText: HTMLElement | null = chatLink.querySelector('span.sr-only');
+
+    expect(visualBadge?.getAttribute('aria-hidden')).toBe('true');
+    expect(visualBadge?.textContent?.trim()).toBe('99+');
+    expect(screenReaderText?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '125 chatList.filterUnread',
+    );
   });
 
   it('should cap unread badge text at 99+ without changing the underlying count', () => {
