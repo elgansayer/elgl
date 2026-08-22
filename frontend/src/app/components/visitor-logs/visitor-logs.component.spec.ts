@@ -100,6 +100,8 @@ describe('VisitorLogsComponent', () => {
   async function settle(): Promise<void> {
     await fixture.whenStable();
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
   }
 
   it('loads visitor data and exposes visible and blurred counts', async () => {
