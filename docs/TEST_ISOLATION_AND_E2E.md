@@ -51,9 +51,27 @@ Current Playwright coverage includes authentication/onboarding pages, chat/messa
 
 Playwright is the better home for cross-browser, RTL, device-profile, and full-stack/infrastructure-sensitive flows. Cypress remains appropriate for existing Angular-centric feature flows.
 
+## Runner context contract
+
+Test files must be executed by the package and runner that owns them. A Playwright spec imports globals such as `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and can surface misleading errors such as `ReferenceError: describe is not defined`.
+
+Use these package-owned entry points:
+
+- Angular/frontend unit tests: `cd frontend && npm test`
+- NestJS/backend unit tests: `cd backend && npm test`
+- Admin portal unit tests: `cd admin-portal && npm test`
+- Standalone Playwright E2E: `cd e2e && npm test`
+- Playwright discovery without starting browsers: `cd e2e && npm test -- --list`
+
+Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that touch the standalone Playwright suite must enter the `e2e` package context first.
+
+`npm run check:test-runner-contexts` is the repository guard for this ownership contract. It validates package-script ownership, rejects known wrong-runner command forms in workflows and automation instructions, and verifies that the lightweight Playwright discovery workflow installs and runs from `working-directory: e2e`.
+
 ## Current Playwright CI blocker
 
-Playwright is not currently wired into the canonical GitHub Actions workflows. Its config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
+Full Playwright browser execution is not currently wired into the canonical GitHub Actions workflows. The lightweight `E2E Runner Context` workflow performs test discovery only, which proves the correct runner can collect the suite without starting application servers or browsers.
+
+The Playwright config starts the real backend and frontend servers. Backend startup validates configuration for Supabase, database, Redis, Centrifugo, LiveKit, R2, translation services, and Stripe. A full or nightly Playwright job therefore needs a reproducible test harness/service stack or explicit test doubles before it can be added without becoming permanently red.
 
 Do not solve this by injecting production credentials into untrusted PR jobs. Build an isolated CI environment first.
 
