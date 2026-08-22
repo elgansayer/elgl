@@ -19,9 +19,9 @@ describe('WordOfTheDayController', () => {
     } as unknown as WordOfTheDayService;
     const controller = new WordOfTheDayController(service);
 
-    await expect(
-      controller.findOne({ id: 'user-1' } as User),
-    ).resolves.toEqual(dailyWord);
+    await expect(controller.findOne({ id: 'user-1' } as User)).resolves.toEqual(
+      dailyWord,
+    );
     expect(service.getTodayWordForUser).toHaveBeenCalledWith('user-1');
   });
 

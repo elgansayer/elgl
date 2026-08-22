@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
@@ -16,10 +16,22 @@ class MockI18nService {
 }
 
 class MockUnreadCounterService {
-  private readonly counts = new Map<NavTab, number>();
+  // Backed by signals - like the real service - so template reads via
+  // tabCount() register as reactive dependencies and the zoneless fixture
+  // re-renders when a test calls setCount().
+  private readonly counts = new Map<NavTab, WritableSignal<number>>();
+
+  private signalFor(tab: NavTab): WritableSignal<number> {
+    let value = this.counts.get(tab);
+    if (!value) {
+      value = signal(0);
+      this.counts.set(tab, value);
+    }
+    return value;
+  }
 
   tabCount(tab: NavTab): number {
-    return this.counts.get(tab) ?? 0;
+    return this.signalFor(tab)();
   }
 
   badgeText(tab: NavTab): string {
@@ -28,11 +40,17 @@ class MockUnreadCounterService {
   }
 
   setCount(tab: NavTab, count: number): void {
-    this.counts.set(tab, count);
+    this.signalFor(tab).set(count);
   }
 
+  // Reuses each tab's existing signal instance rather than discarding it -
+  // the template's reactive subscription is tied to that specific signal
+  // object, so replacing it with a fresh one on the next setCount() would
+  // leave the template pointed at an orphaned signal that never updates.
   reset(): void {
-    this.counts.clear();
+    for (const value of this.counts.values()) {
+      value.set(0);
+    }
   }
 }
 
@@ -128,7 +146,6 @@ describe('DesktopSidebarComponent', () => {
       unreadCounter.reset();
       unreadCounter.setCount(testCase.tab, testCase.count);
       fixture.detectChanges();
-
       const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
         `a[href="${testCase.path}"]`,
       );
