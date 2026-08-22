@@ -4,44 +4,14 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService } from '../../../services/user.service';
+import { MessageFilterSettingsService } from './message-filter-settings.service';
 
-interface LanguageOption {
+interface GenderOption {
   code: string;
   name: string;
 }
 
-const COMMON_LANGUAGES: LanguageOption[] = [
-  { code: 'ar', name: 'Arabic' },
-  { code: 'bn', name: 'Bengali' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'cs', name: 'Czech' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'el', name: 'Greek' },
-  { code: 'he', name: 'Hebrew' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'id', name: 'Indonesian' },
-  { code: 'it', name: 'Italian' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ms', name: 'Malay' },
-  { code: 'fa', name: 'Persian' },
-  { code: 'pl', name: 'Polish' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'sv', name: 'Swedish' },
-  { code: 'th', name: 'Thai' },
-  { code: 'tr', name: 'Turkish' },
-  { code: 'uk', name: 'Ukrainian' },
-  { code: 'ur', name: 'Urdu' },
-  { code: 'vi', name: 'Vietnamese' },
-];
-
-const GENDER_OPTIONS: LanguageOption[] = [
+const GENDER_OPTIONS: GenderOption[] = [
   { code: 'male', name: 'profile.gender.male' },
   { code: 'female', name: 'profile.gender.female' },
   { code: 'other', name: 'profile.gender.other' },
@@ -54,7 +24,7 @@ const GENDER_OPTIONS: LanguageOption[] = [
   imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
 })
 export class MessageFilterSettingsComponent implements OnInit {
-  private readonly userService = inject(UserService);
+  private readonly filtersService = inject(MessageFilterSettingsService);
   private readonly location = inject(Location);
 
   readonly isLoading = signal(true);
@@ -64,65 +34,86 @@ export class MessageFilterSettingsComponent implements OnInit {
 
   readonly ageMin = signal<number | null>(null);
   readonly ageMax = signal<number | null>(null);
-  readonly selectedLanguages = signal<string[]>([]);
   readonly selectedGenders = signal<string[]>([]);
+  readonly sameNativeLanguage = signal(false);
+  readonly sameTargetLanguage = signal(false);
+  readonly sameGender = signal(false);
+  readonly sameAge = signal(false);
 
-  readonly languages = COMMON_LANGUAGES;
   readonly genderOptions = GENDER_OPTIONS;
 
-  readonly hasFilters = computed(() => {
-    return (
+  readonly hasFilters = computed(
+    () =>
       this.ageMin() !== null ||
       this.ageMax() !== null ||
-      this.selectedLanguages().length > 0 ||
-      this.selectedGenders().length > 0
-    );
-  });
+      this.selectedGenders().length > 0 ||
+      this.sameNativeLanguage() ||
+      this.sameTargetLanguage() ||
+      this.sameGender() ||
+      this.sameAge(),
+  );
 
   async ngOnInit(): Promise<void> {
     try {
-      const filters = await this.userService.getMessageFilters();
-      if (filters) {
-        if (filters.age_min !== undefined) this.ageMin.set(filters.age_min);
-        if (filters.age_max !== undefined) this.ageMax.set(filters.age_max);
-        if (filters.allowed_native_languages) {
-          this.selectedLanguages.set(filters.allowed_native_languages);
-        }
-        if (filters.allowed_genders) {
-          this.selectedGenders.set(filters.allowed_genders);
-        }
+      const filters = await this.filtersService.getFilters();
+      if (filters.enabled && !filters.allowEveryone) {
+        this.ageMin.set(filters.ageMin ?? null);
+        this.ageMax.set(filters.ageMax ?? null);
+        this.selectedGenders.set(filters.allowedGenders ?? []);
+        this.sameNativeLanguage.set(filters.sameNativeLanguage ?? false);
+        this.sameTargetLanguage.set(filters.sameTargetLanguage ?? false);
+        this.sameGender.set(filters.sameGender ?? false);
+        this.sameAge.set(filters.sameAge ?? false);
       }
     } catch {
-      // Keep defaults
+      this.errorMessage.set('settings.messageFilters.loadError');
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  toggleLanguage(code: string): void {
-    this.selectedLanguages.update((current) =>
-      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
-    );
+  selectEveryone(): void {
+    this.ageMin.set(null);
+    this.ageMax.set(null);
+    this.selectedGenders.set([]);
+    this.sameNativeLanguage.set(false);
+    this.sameTargetLanguage.set(false);
+    this.sameGender.set(false);
+    this.sameAge.set(false);
   }
 
   toggleGender(code: string): void {
     this.selectedGenders.update((current) =>
-      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
+      current.includes(code) ? current.filter((value) => value !== code) : [...current, code],
     );
   }
 
   async saveFilters(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
-    this.isSaving.set(true);
 
+    if (
+      this.ageMin() !== null &&
+      this.ageMax() !== null &&
+      Number(this.ageMin()) > Number(this.ageMax())
+    ) {
+      this.errorMessage.set('settings.messageFilters.invalidAgeRange');
+      return;
+    }
+
+    this.isSaving.set(true);
     try {
-      await this.userService.setMessageFilters({
-        age_min: this.ageMin() ?? undefined,
-        age_max: this.ageMax() ?? undefined,
-        allowed_native_languages:
-          this.selectedLanguages().length > 0 ? this.selectedLanguages() : undefined,
-        allowed_genders: this.selectedGenders().length > 0 ? this.selectedGenders() : undefined,
+      const enabled = this.hasFilters();
+      await this.filtersService.saveFilters({
+        enabled,
+        allowEveryone: !enabled,
+        allowedGenders: this.selectedGenders(),
+        sameNativeLanguage: this.sameNativeLanguage(),
+        sameTargetLanguage: this.sameTargetLanguage(),
+        sameGender: this.sameGender(),
+        sameAge: this.sameAge(),
+        ageMin: this.ageMin() ?? undefined,
+        ageMax: this.ageMax() ?? undefined,
       });
       this.successMessage.set('settings.messageFilters.saved');
     } catch {
@@ -130,10 +121,6 @@ export class MessageFilterSettingsComponent implements OnInit {
     } finally {
       this.isSaving.set(false);
     }
-  }
-
-  getLanguageName(code: string): string {
-    return this.languages.find((l) => l.code === code)?.name ?? code.toUpperCase();
   }
 
   goBack(): void {

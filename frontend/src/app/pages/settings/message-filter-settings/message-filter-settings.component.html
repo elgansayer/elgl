@@ -12,148 +12,106 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert">
           {{ errorMessage() | t }}
         </div>
       }
       @if (successMessage()) {
-        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success" role="status">
           {{ successMessage() | t }}
         </div>
       }
 
-      <section class="space-y-4">
+      <section class="space-y-2">
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.messageFilters.description' | t }}
         </h2>
-        <p class="text-xs text-text-secondary">
-          {{ 'settings.messageFilters.subtitle' | t }}
-        </p>
+        <p class="text-xs text-text-secondary">{{ 'settings.messageFilters.subtitle' | t }}</p>
       </section>
 
-      <!-- Age Range -->
+      <section class="space-y-3 rounded-xl border border-surface-200 bg-surface-100 p-4">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-sm font-semibold text-text-primary">{{ 'settings.messageFilters.everyone' | t }}</h3>
+            <p class="text-xs text-text-secondary">{{ 'settings.messageFilters.everyoneHint' | t }}</p>
+          </div>
+          <button
+            hlmBtn
+            type="button"
+            (click)="selectEveryone()"
+            class="rounded-full px-4 py-2 text-xs font-semibold"
+            [class.bg-accent]="!hasFilters()"
+            [class.text-on-fill]="!hasFilters()"
+            [class.bg-surface-200]="hasFilters()"
+          >
+            {{ 'settings.messageFilters.everyone' | t }}
+          </button>
+        </div>
+      </section>
+
       <section class="space-y-3">
-        <h3 class="text-sm font-semibold text-text-primary">
-          {{ 'settings.messageFilters.ageRange' | t }}
-        </h3>
+        <h3 class="text-sm font-semibold text-text-primary">{{ 'settings.messageFilters.matchingProfile' | t }}</h3>
+
+        <label class="flex items-center justify-between gap-4 rounded-xl border border-surface-200 bg-surface-100 p-4">
+          <span class="text-sm text-text-primary">{{ 'settings.messageFilters.sameNativeLanguage' | t }}</span>
+          <input type="checkbox" [ngModel]="sameNativeLanguage()" (ngModelChange)="sameNativeLanguage.set($event)" />
+        </label>
+
+        <label class="flex items-center justify-between gap-4 rounded-xl border border-surface-200 bg-surface-100 p-4">
+          <span class="text-sm text-text-primary">{{ 'settings.messageFilters.sameTargetLanguage' | t }}</span>
+          <input type="checkbox" [ngModel]="sameTargetLanguage()" (ngModelChange)="sameTargetLanguage.set($event)" />
+        </label>
+
+        <label class="flex items-center justify-between gap-4 rounded-xl border border-surface-200 bg-surface-100 p-4">
+          <span class="text-sm text-text-primary">{{ 'settings.messageFilters.sameGender' | t }}</span>
+          <input type="checkbox" [ngModel]="sameGender()" (ngModelChange)="sameGender.set($event)" />
+        </label>
+
+        <label class="flex items-center justify-between gap-4 rounded-xl border border-surface-200 bg-surface-100 p-4">
+          <span class="text-sm text-text-primary">{{ 'settings.messageFilters.sameAge' | t }}</span>
+          <input type="checkbox" [ngModel]="sameAge()" (ngModelChange)="sameAge.set($event)" />
+        </label>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-text-primary">{{ 'settings.messageFilters.gender' | t }}</h3>
+        <p class="text-xs text-text-secondary">{{ 'settings.messageFilters.genderHint' | t }}</p>
+        <div class="flex flex-wrap gap-2">
+          @for (gender of genderOptions; track gender.code) {
+            <button
+              hlmBtn
+              type="button"
+              (click)="toggleGender(gender.code)"
+              class="rounded-full px-4 py-2 text-xs font-medium border"
+              [class.bg-accent]="selectedGenders().includes(gender.code)"
+              [class.border-accent]="selectedGenders().includes(gender.code)"
+              [class.text-on-fill]="selectedGenders().includes(gender.code)"
+              [class.bg-surface-100]="!selectedGenders().includes(gender.code)"
+              [class.border-surface-200]="!selectedGenders().includes(gender.code)"
+            >
+              {{ gender.name | t }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-sm font-semibold text-text-primary">{{ 'settings.messageFilters.ageRange' | t }}</h3>
         <div class="flex items-center gap-3">
           <div class="flex-1">
-            <label class="block text-xs text-text-secondary mb-1" for="age-min">
-              {{ 'settings.messageFilters.ageMin' | t }}
-            </label>
-            <input
-              hlmInput
-              id="age-min"
-              type="number"
-              min="0"
-              max="150"
-              [ngModel]="ageMin()"
-              (ngModelChange)="ageMin.set($event || null)"
-              class="w-full bg-surface-100 border border-surface-200 rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
-              [attr.placeholder]="'settings.messageFilters.ageMinPlaceholder' | t"
-            />
+            <label class="block text-xs text-text-secondary mb-1" for="age-min">{{ 'settings.messageFilters.ageMin' | t }}</label>
+            <input hlmInput id="age-min" type="number" min="0" max="120" [ngModel]="ageMin()" (ngModelChange)="ageMin.set($event === '' || $event === null ? null : +$event)" class="w-full" />
           </div>
           <div class="flex-1">
-            <label class="block text-xs text-text-secondary mb-1" for="age-max">
-              {{ 'settings.messageFilters.ageMax' | t }}
-            </label>
-            <input
-              hlmInput
-              id="age-max"
-              type="number"
-              min="0"
-              max="150"
-              [ngModel]="ageMax()"
-              (ngModelChange)="ageMax.set($event || null)"
-              class="w-full bg-surface-100 border border-surface-200 rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
-              [attr.placeholder]="'settings.messageFilters.ageMaxPlaceholder' | t"
-            />
+            <label class="block text-xs text-text-secondary mb-1" for="age-max">{{ 'settings.messageFilters.ageMax' | t }}</label>
+            <input hlmInput id="age-max" type="number" min="0" max="120" [ngModel]="ageMax()" (ngModelChange)="ageMax.set($event === '' || $event === null ? null : +$event)" class="w-full" />
           </div>
         </div>
       </section>
 
-      <!-- Native Language Filter -->
-      <section class="space-y-3">
-        <h3 class="text-sm font-semibold text-text-primary">
-          {{ 'settings.messageFilters.nativeLanguage' | t }}
-        </h3>
-        <p class="text-xs text-text-secondary">
-          {{ 'settings.messageFilters.nativeLanguageHint' | t }}
-        </p>
-        <div class="flex flex-wrap gap-2">
-          @for (lang of languages; track lang.code) {
-            <button
-              hlmBtn
-              type="button"
-              (click)="toggleLanguage(lang.code)"
-              class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
-              [class.bg-accent]="selectedLanguages().includes(lang.code)"
-              [class.border-accent]="selectedLanguages().includes(lang.code)"
-              [class.text-on-fill]="selectedLanguages().includes(lang.code)"
-              [class.bg-surface-100]="!selectedLanguages().includes(lang.code)"
-              [class.border-surface-200]="!selectedLanguages().includes(lang.code)"
-              [class.text-text-secondary]="!selectedLanguages().includes(lang.code)"
-            >
-              {{ lang.name }}
-            </button>
-          }
-        </div>
-        @if (selectedLanguages().length > 0) {
-          <div class="flex flex-wrap gap-1 pt-1">
-            @for (code of selectedLanguages(); track code) {
-              <span
-                class="inline-flex items-center gap-1 rounded-full bg-accent/10 border border-accent/30 px-3 py-1 text-xs text-accent cursor-pointer"
-                (click)="toggleLanguage(code)"
-              >
-                {{ getLanguageName(code) }}
-                <span class="font-bold">×</span>
-              </span>
-            }
-          </div>
-        }
-      </section>
-
-      <!-- Gender Filter -->
-      <section class="space-y-3">
-        <h3 class="text-sm font-semibold text-text-primary">
-          {{ 'settings.messageFilters.gender' | t }}
-        </h3>
-        <p class="text-xs text-text-secondary">
-          {{ 'settings.messageFilters.genderHint' | t }}
-        </p>
-        <div class="flex flex-wrap gap-2">
-          @for (g of genderOptions; track g.code) {
-            <button
-              hlmBtn
-              type="button"
-              (click)="toggleGender(g.code)"
-              class="rounded-full px-4 py-2 text-xs font-medium transition-all duration-150 border"
-              [class.bg-accent]="selectedGenders().includes(g.code)"
-              [class.border-accent]="selectedGenders().includes(g.code)"
-              [class.text-on-fill]="selectedGenders().includes(g.code)"
-              [class.bg-surface-100]="!selectedGenders().includes(g.code)"
-              [class.border-surface-200]="!selectedGenders().includes(g.code)"
-              [class.text-text-secondary]="!selectedGenders().includes(g.code)"
-            >
-              {{ g.name | t }}
-            </button>
-          }
-        </div>
-      </section>
-
-      <!-- Save Button -->
       <div class="pt-4">
-        <button
-          hlmBtn
-          (click)="saveFilters()"
-          [disabled]="isSaving()"
-          class="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-fill transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          @if (isSaving()) {
-            {{ 'common.saving' | t }}
-          } @else {
-            {{ 'common.save' | t }}
-          }
+        <button hlmBtn (click)="saveFilters()" [disabled]="isSaving()" class="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-on-fill disabled:opacity-50">
+          @if (isSaving()) { {{ 'common.saving' | t }} } @else { {{ 'common.save' | t }} }
         </button>
       </div>
     }
