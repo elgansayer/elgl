@@ -50,23 +50,25 @@ AS $$
 DECLARE
   raw_key TEXT;
   request_role TEXT := COALESCE(auth.role(), '');
-  credential_changed BOOLEAN;
+  credential_changed BOOLEAN := false;
 BEGIN
-  credential_changed :=
-    (TG_OP = 'INSERT' AND (
+  -- OLD is not defined for INSERT triggers, so compute the change set in
+  -- operation-specific branches instead of relying on boolean short-circuiting.
+  IF TG_OP = 'INSERT' THEN
+    credential_changed :=
       NEW.developer_api_key IS NOT NULL OR
       NEW.developer_api_key_hash IS NOT NULL OR
       NEW.developer_api_key_prefix IS NOT NULL OR
       NEW.developer_api_key_last_four IS NOT NULL OR
-      NEW.developer_api_key_created_at IS NOT NULL
-    )) OR
-    (TG_OP = 'UPDATE' AND (
+      NEW.developer_api_key_created_at IS NOT NULL;
+  ELSE
+    credential_changed :=
       NEW.developer_api_key IS DISTINCT FROM OLD.developer_api_key OR
       NEW.developer_api_key_hash IS DISTINCT FROM OLD.developer_api_key_hash OR
       NEW.developer_api_key_prefix IS DISTINCT FROM OLD.developer_api_key_prefix OR
       NEW.developer_api_key_last_four IS DISTINCT FROM OLD.developer_api_key_last_four OR
-      NEW.developer_api_key_created_at IS DISTINCT FROM OLD.developer_api_key_created_at
-    ));
+      NEW.developer_api_key_created_at IS DISTINCT FROM OLD.developer_api_key_created_at;
+  END IF;
 
   -- API-key lifecycle is owned by the trusted backend. A browser using the
   -- authenticated/anon Supabase role must not be able to mint, replace, redact
@@ -76,20 +78,22 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  IF TG_OP = 'UPDATE' AND NEW.developer_api_key IS NOT DISTINCT FROM OLD.developer_api_key THEN
-    -- Do not allow callers to tamper with derived metadata independently of the
-    -- key. Trusted maintenance can still clear all fields by changing the
-    -- developer_api_key column itself to NULL.
-    IF
-      NEW.developer_api_key_hash IS DISTINCT FROM OLD.developer_api_key_hash OR
-      NEW.developer_api_key_prefix IS DISTINCT FROM OLD.developer_api_key_prefix OR
-      NEW.developer_api_key_last_four IS DISTINCT FROM OLD.developer_api_key_last_four OR
-      NEW.developer_api_key_created_at IS DISTINCT FROM OLD.developer_api_key_created_at
-    THEN
-      RAISE EXCEPTION 'Developer API key metadata is derived and cannot be changed directly'
-        USING ERRCODE = '22023';
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.developer_api_key IS NOT DISTINCT FROM OLD.developer_api_key THEN
+      -- Do not allow callers to tamper with derived metadata independently of
+      -- the key. Trusted maintenance can still clear all fields by changing the
+      -- developer_api_key column itself to NULL.
+      IF
+        NEW.developer_api_key_hash IS DISTINCT FROM OLD.developer_api_key_hash OR
+        NEW.developer_api_key_prefix IS DISTINCT FROM OLD.developer_api_key_prefix OR
+        NEW.developer_api_key_last_four IS DISTINCT FROM OLD.developer_api_key_last_four OR
+        NEW.developer_api_key_created_at IS DISTINCT FROM OLD.developer_api_key_created_at
+      THEN
+        RAISE EXCEPTION 'Developer API key metadata is derived and cannot be changed directly'
+          USING ERRCODE = '22023';
+      END IF;
+      RETURN NEW;
     END IF;
-    RETURN NEW;
   END IF;
 
   IF NEW.developer_api_key IS NULL OR btrim(NEW.developer_api_key) = '' THEN
