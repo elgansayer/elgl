@@ -1,0 +1,1 @@
+The plan is to optimize the `chat.service.ts` by using `Promise.all` for fetching the blocked user lists for both the sender and the receiver in parallel, which currently happen sequentially in the `sendMessage` and `shareContact` methods.
