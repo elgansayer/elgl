@@ -74,7 +74,9 @@ function isBlank(value: unknown): boolean {
 }
 
 function assertRequiredProductionValues(config: Record<string, unknown>): void {
-  const missing = PRODUCTION_REQUIRED_ENV_KEYS.filter((key) => isBlank(config[key]));
+  const missing = PRODUCTION_REQUIRED_ENV_KEYS.filter((key) =>
+    isBlank(config[key]),
+  );
   if (missing.length > 0) {
     throw new Error(
       `Production environment is missing required variables: ${missing.join(', ')}`,
@@ -141,7 +143,9 @@ function assertUrlSchemes(config: Record<string, unknown>): void {
 export function validateEnvironment(
   rawConfig: Record<string, unknown>,
 ): Record<string, unknown> {
-  const nodeEnv = String(rawConfig.NODE_ENV ?? 'development').toLowerCase();
+  const rawNodeEnv = rawConfig.NODE_ENV;
+  const nodeEnv =
+    typeof rawNodeEnv === 'string' ? rawNodeEnv.toLowerCase() : 'development';
 
   if (nodeEnv === 'production') {
     assertRequiredProductionValues(rawConfig);
@@ -150,15 +154,17 @@ export function validateEnvironment(
 
   assertUrlSchemes(rawConfig);
 
-  const { error, value } = validationSchema.validate(rawConfig, {
+  const result = validationSchema.validate(rawConfig, {
     allowUnknown: true,
     abortEarly: false,
   });
 
-  if (error) {
-    const details = error.details.map((detail) => detail.message).join('; ');
+  if (result.error) {
+    const details = result.error.details
+      .map((detail) => detail.message)
+      .join('; ');
     throw new Error(`Environment validation failed: ${details}`);
   }
 
-  return value as Record<string, unknown>;
+  return result.value as unknown as Record<string, unknown>;
 }
