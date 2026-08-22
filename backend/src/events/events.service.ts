@@ -337,20 +337,26 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Event not found');
     }
 
-    // Fetch RSVP counts
-    const { count: attendingCount, error: aErr } = await supabase
-      .from('event_rsvps')
-      .select('id', { head: true, count: 'exact' })
-      .eq('event_id', eventId)
-      .eq('status', 'attending');
+    // Fetch RSVP counts concurrently
+    // ⚡ Bolt Optimization: Grouped sequential database queries into a concurrent Promise.all execution to reduce latency.
+    const [attendingRes, interestedRes] = await Promise.all([
+      supabase
+        .from('event_rsvps')
+        .select('id', { head: true, count: 'exact' })
+        .eq('event_id', eventId)
+        .eq('status', 'attending'),
+      supabase
+        .from('event_rsvps')
+        .select('id', { head: true, count: 'exact' })
+        .eq('event_id', eventId)
+        .eq('status', 'interested'),
+    ]);
+    const { count: attendingCount, error: aErr } = attendingRes;
+    const { count: interestedCount, error: iErr } = interestedRes;
+
     if (aErr) {
       this.logger.warn('Failed to fetch attending count', aErr);
     }
-    const { count: interestedCount, error: iErr } = await supabase
-      .from('event_rsvps')
-      .select('id', { head: true, count: 'exact' })
-      .eq('event_id', eventId)
-      .eq('status', 'interested');
     if (iErr) {
       this.logger.warn('Failed to fetch interested count', iErr);
     }
