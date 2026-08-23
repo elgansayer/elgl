@@ -26,16 +26,12 @@ test('rejects deployments that lose the corporate-network TLS fallback', () => {
   const files = loadLiveKitTurnNetworkingFiles();
   const errors = verifyLiveKitTurnNetworking({
     ...files,
-    compose: files.compose.replace(
-      "'${LIVEKIT_TURN_TLS_PORT:-443}:${LIVEKIT_TURN_TLS_PORT:-443}'",
-      "'5349:5349'",
-    ),
+    compose: files.compose.replace("'443:443'", "'5349:5349'"),
   });
 
   assert.ok(
     errors.some(
-      (error) =>
-        error.includes('docker-compose.yml') && error.includes('LIVEKIT_TURN_TLS_PORT'),
+      (error) => error.includes('docker-compose.yml') && error.includes('443:443'),
     ),
   );
 });
