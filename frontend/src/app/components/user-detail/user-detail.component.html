@@ -5,66 +5,80 @@
     <div class="flex items-center gap-4">
       <button
         hlmBtn
-        aria-label="Go back"
+        type="button"
+        [attr.aria-label]="'common.back' | t"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
-        <span class="text-xl">←</span>
+        <span class="text-xl" aria-hidden="true">←</span>
       </button>
       <h1 class="text-lg font-bold">{{ profile()?.display_name || ('common.unknownUser' | t) }}</h1>
     </div>
   </div>
 
   @if (isLoading()) {
-    <div class="flex items-center justify-center flex-1">
-      <div class="animate-spin text-4xl text-neon-blue">↻</div>
+    <div class="flex items-center justify-center flex-1" role="status" aria-live="polite">
+      <div class="animate-spin text-4xl text-neon-blue" aria-hidden="true">↻</div>
+      <span class="sr-only">{{ 'common.loading' | t }}</span>
     </div>
   } @else if (errorMessage()) {
-    <div class="flex items-center justify-center flex-1 text-center p-8">
+    <div class="flex items-center justify-center flex-1 text-center p-8" role="alert">
       <p class="text-neon-pink">{{ errorMessage() }}</p>
     </div>
   } @else if (profile()) {
     <div class="relative w-full h-48 bg-surface-300">
       @if (profile()?.cover_photo_url) {
-        <img [src]="profile()?.cover_photo_url" class="w-full h-full object-cover" />
+        <img
+          [src]="profile()?.cover_photo_url"
+          [alt]="profile()?.display_name || ('common.unknownUser' | t)"
+          class="w-full h-full object-cover"
+        />
       }
       <div class="absolute inset-0 bg-gradient-to-t from-surface-500 to-transparent"></div>
     </div>
 
     <div class="px-6 relative -mt-16 pb-8">
-      <div class="flex justify-between items-end mb-4">
+      <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
         <div
           class="relative h-24 w-24 rounded-full border-4 border-surface-500 bg-surface-300 flex items-center justify-center overflow-hidden"
         >
           @if (profile()?.avatar_url) {
-            <img [src]="profile()?.avatar_url" alt="avatar" class="h-full w-full object-cover" />
+            <img
+              [src]="profile()?.avatar_url"
+              [alt]="profile()?.display_name || ('common.unknownUser' | t)"
+              class="h-full w-full object-cover"
+            />
           } @else {
-            <span class="text-3xl font-bold text-text-secondary">{{
+            <span class="text-3xl font-bold text-text-secondary" aria-hidden="true">{{
               profile()?.display_name?.charAt(0) || '?'
             }}</span>
           }
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2 justify-end">
           @if (profile()) {
             <app-report-button [userId]="profile()!.id" />
           }
 
           <button
             hlmBtn
+            type="button"
             (click)="toggleLike()"
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
             [class.text-neon-pink]="isLiked()"
             [class.border-neon-pink]="isLiked()"
-            aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
+            [attr.aria-label]="isLiked() ? 'Unlike profile' : 'Like profile'"
           >
-            {{ isLiked() ? '❤️' : '🤍' }}
+            <span aria-hidden="true">{{ isLiked() ? '❤️' : '🤍' }}</span>
           </button>
 
           <button
             hlmBtn
+            type="button"
             (click)="toggleFollow()"
-            class="h-10 px-6 rounded-full font-bold transition-colors"
+            [disabled]="isUpdatingFollow() || isOpeningChat()"
+            [attr.aria-busy]="isUpdatingFollow() ? 'true' : null"
+            class="min-h-11 px-6 rounded-full font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             [class.bg-neon-blue]="!isFollowing()"
             [class.text-white]="!isFollowing()"
             [class.bg-surface-300]="isFollowing()"
@@ -77,6 +91,12 @@
           </button>
         </div>
       </div>
+
+      @if (actionErrorKey()) {
+        <p class="mb-4 text-sm text-danger" role="alert" aria-live="assertive">
+          {{ actionErrorKey() | t }}
+        </p>
+      }
 
       <div class="mb-6">
         <h2 class="text-2xl font-black">{{ profile()?.display_name }}</h2>
@@ -102,7 +122,7 @@
         }
       </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div class="bg-surface-300 p-4 rounded-2xl">
           <p class="text-text-secondary text-xs font-bold uppercase mb-1">
             {{ 'profile.nativeLang' | t }}
@@ -152,11 +172,12 @@
           <div class="mt-4 pt-4 border-t border-surface-100">
             <button
               hlmBtn
+              type="button"
               (click)="playAudioIntro(profile()?.audio_intro_url)"
-              class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
+              class="flex min-h-11 items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
               [attr.aria-label]="'profile.playAudioIntro' | t"
             >
-              <span class="bg-neon-blue/20 p-2 rounded-full">▶️</span>
+              <span class="bg-neon-blue/20 p-2 rounded-full" aria-hidden="true">▶️</span>
               {{ 'profile.playAudioIntro' | t }}
             </button>
           </div>
@@ -170,12 +191,16 @@
       }
 
       <div class="flex flex-col gap-3">
-        <a
-          [routerLink]="['/chat', profile()?.id]"
-          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+        <button
+          hlmBtn
+          type="button"
+          (click)="openChat()"
+          [disabled]="isOpeningChat() || isUpdatingFollow()"
+          [attr.aria-busy]="isOpeningChat() ? 'true' : null"
+          class="w-full min-h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
         >
           {{ 'chatList.tapToChat' | t }}
-        </a>
+        </button>
       </div>
     </div>
   }
