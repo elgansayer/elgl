@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from openhands_factory.pr_lifecycle import PullRequestLifecycleTracker
@@ -99,3 +100,33 @@ def test_failed_notification_remains_pending_for_retry(tmp_path: Path) -> None:
 
     assert len(alerts.calls) == 2
     assert tracker.snapshot()[0]["notification_sent_at"] is not None
+
+
+def test_worker_trackers_cannot_overwrite_each_others_events(tmp_path: Path) -> None:
+    alerts_a = Alerts([True])
+    alerts_b = Alerts([True])
+    tracker_a = PullRequestLifecycleTracker(tmp_path, "owner/repo", alerts_a)  # type: ignore[arg-type]
+    tracker_b = PullRequestLifecycleTracker(tmp_path, "owner/repo", alerts_b)  # type: ignore[arg-type]
+
+    def record(tracker: PullRequestLifecycleTracker, pr: int, sha: str) -> None:
+        tracker.record(
+            "reviewed",
+            pull_request=pr,
+            head_sha=sha,
+            title=f"PR {pr}",
+            detail="Independent review accepted this head.",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(record, tracker_a, 77, "head-a"),
+            executor.submit(record, tracker_b, 78, "head-b"),
+        ]
+        for future in futures:
+            future.result()
+
+    snapshot = tracker_a.snapshot()
+    assert {(item["pull_request"], item["head_sha"]) for item in snapshot} == {
+        (77, "head-a"),
+        (78, "head-b"),
+    }
