@@ -50,9 +50,9 @@ describe('VideoCallsEncryptionService', () => {
   });
 
   it('refuses self-calls before generating a session', async () => {
-    await expect(service.createSession(roomName, callerId, callerId)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.createSession(roomName, callerId, callerId),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(redis.setex).not.toHaveBeenCalled();
   });
 
@@ -64,9 +64,9 @@ describe('VideoCallsEncryptionService', () => {
       }),
     );
 
-    await expect(service.getKeyForParticipant(roomName, remoteUserId)).resolves.toBe(
-      'A'.repeat(43),
-    );
+    await expect(
+      service.getKeyForParticipant(roomName, remoteUserId),
+    ).resolves.toBe('A'.repeat(43));
   });
 
   it('does not reveal whether a room exists to a non-participant', async () => {
