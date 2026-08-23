@@ -51,18 +51,8 @@ export function verifyLiveKitTurnNetworking({
     'LIVEKIT_TURN_KEY_FILE=/run/secrets/livekit_turn_key',
   );
   requireText(errors, 'docker-compose.yml', compose, "'58000-58100:58000-58100/udp'");
-  requireText(
-    errors,
-    'docker-compose.yml',
-    compose,
-    "'${LIVEKIT_TURN_TLS_PORT:-443}:${LIVEKIT_TURN_TLS_PORT:-443}'",
-  );
-  requireText(
-    errors,
-    'docker-compose.yml',
-    compose,
-    "'${LIVEKIT_TURN_UDP_PORT:-3478}:${LIVEKIT_TURN_UDP_PORT:-3478}/udp'",
-  );
+  requireText(errors, 'docker-compose.yml', compose, "'443:443'");
+  requireText(errors, 'docker-compose.yml', compose, "'3478:3478/udp'");
   requireText(
     errors,
     'docker-compose.yml',
