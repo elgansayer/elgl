@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { ChatPinsService } from '../../services/chat-pins.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
@@ -46,6 +47,7 @@ interface ChatRoomPreview {
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
+  private readonly chatPinsService = inject(ChatPinsService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
@@ -56,6 +58,8 @@ export class ChatListComponent implements OnInit {
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+  readonly pinPendingRoomIds = signal<Set<string>>(new Set());
+  readonly pinStateUnavailable = signal<boolean>(false);
 
   /** Active tab: 'chats' | 'groups' */
   readonly activeTab = signal<'chats' | 'groups'>('chats');
@@ -77,17 +81,17 @@ export class ChatListComponent implements OnInit {
     this.groups.set(await this.groupsService.getDiscoverableGroups());
   }
 
-  // Computed previews after excluding locked rooms
   readonly regularAndPinnedPreviews = computed(() => {
     const lockedIds = this.lockedRoomIds();
-    return this.filteredPreviews().filter((p) => !lockedIds.includes(p.id));
+    return [...this.filteredPreviews()]
+      .filter((preview) => !lockedIds.includes(preview.id))
+      .sort((a, b) => Number(b.isPinned) - Number(a.isPinned));
   });
   readonly lockedPreviews = computed(() => {
     const lockedIds = this.lockedRoomIds();
     return this.previews().filter((p) => lockedIds.includes(p.id));
   });
 
-  // --------------------------------------------------------------------
   notImplemented(): void {
     notImplementedToast();
   }
@@ -185,8 +189,7 @@ export class ChatListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadPreviews();
-    await this.loadLockedRooms();
-    await this.loadLabels();
+    await Promise.all([this.loadPinnedRooms(), this.loadLockedRooms(), this.loadLabels()]);
   }
 
   async loadPreviews(): Promise<void> {
@@ -209,7 +212,6 @@ export class ChatListComponent implements OnInit {
       });
 
       this.previews.set(previewList);
-      // Sync global chat unread counter
       const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
       this.unreadCounter.setChatUnread(totalChatUnread);
     } catch (error) {
@@ -217,6 +219,61 @@ export class ChatListComponent implements OnInit {
       this.previews.set([]);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async loadPinnedRooms(): Promise<void> {
+    try {
+      const ids = new Set(await this.chatPinsService.getPinnedRoomIds());
+      this.previews.update((previews) =>
+        previews.map((preview) => ({ ...preview, isPinned: ids.has(preview.id) })),
+      );
+      this.pinStateUnavailable.set(false);
+    } catch (error) {
+      console.error('Failed to load pinned chats:', error);
+      this.previews.update((previews) =>
+        previews.map((preview) => ({ ...preview, isPinned: false })),
+      );
+      this.pinStateUnavailable.set(true);
+    }
+  }
+
+  isPinPending(roomId: string): boolean {
+    return this.pinPendingRoomIds().has(roomId);
+  }
+
+  pinActionLabel(preview: ChatRoomPreview): string {
+    const action = this.i18n.translate(
+      preview.isPinned ? 'moments.unpinBtn' : 'moments.pinBtn',
+    );
+    return `${action} ${preview.title}`;
+  }
+
+  async toggleRoomPin(event: Event, preview: ChatRoomPreview): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.isPinPending(preview.id)) return;
+
+    const desiredPinned = !preview.isPinned;
+    this.pinPendingRoomIds.update((ids) => new Set(ids).add(preview.id));
+
+    try {
+      await this.chatPinsService.setPinned(preview.id, desiredPinned);
+      this.previews.update((previews) =>
+        previews.map((room) =>
+          room.id === preview.id ? { ...room, isPinned: desiredPinned } : room,
+        ),
+      );
+      this.pinStateUnavailable.set(false);
+    } catch (error) {
+      console.error('Failed to update pinned chat:', error);
+      showToast(this.i18n.translate('common.error_generic'), 'error');
+    } finally {
+      this.pinPendingRoomIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(preview.id);
+        return next;
+      });
     }
   }
 
@@ -234,7 +291,6 @@ export class ChatListComponent implements OnInit {
       this.showLocked.set(false);
       return;
     }
-    // Request biometric / app unlock before revealing locked chats
     await this.authService.unlockApp();
     if (!this.authService.appLocked()) {
       this.showLocked.set(true);
@@ -289,7 +345,7 @@ export class ChatListComponent implements OnInit {
       subtitle: room.subtitle,
       avatar: room.avatar,
       isOnline: room.is_online,
-      isPinned: room.is_pinned,
+      isPinned: false,
       isVip: room.is_vip ?? false,
       flagEmoji: this.getFlagEmoji(room.native_languages),
       lastMessageText: this.toMessagePreview(lastMessage),
