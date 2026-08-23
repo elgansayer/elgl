@@ -175,7 +175,9 @@ describe('EventsService', () => {
     });
 
     it('fails the scheduler tick closed when the claim RPC is unavailable', async () => {
-      const client = createReminderClient([], { message: 'database unavailable' });
+      const client = createReminderClient([], {
+        message: 'database unavailable',
+      });
       supabaseService.getClient.mockReturnValue(client);
 
       await expect(reminderService().checkReminders()).resolves.toBeUndefined();
