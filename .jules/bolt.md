@@ -138,3 +138,7 @@
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
+
+## 2026-08-23 - [Optimize Comment Mention Notification via Promise.all]
+**Learning:** Found sequential calls to `notificationPreferencesService.shouldSendNotification` and `notificationsService.createNotification` inside a `for...of` loop when sending mentions to multiple users in `comment-mention-notification.listener.ts`. These independent queries cause unnecessary additive network latency.
+**Action:** Replaced the sequential `for...of` loop with a concurrent `Promise.all` batch map over filtered recipients to optimize database query execution and reduce wait times.

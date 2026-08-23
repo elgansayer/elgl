@@ -16,13 +16,9 @@ const migration = readFileSync(
 describe('harden chat favourites migration', () => {
   it('adds the snapshot fields consumed by the Angular favourites UI without rewriting migration 003', () => {
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS item_type TEXT');
-    expect(migration).toContain(
-      'ADD COLUMN IF NOT EXISTS item_payload JSONB',
-    );
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS item_payload JSONB');
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS notes TEXT');
-    expect(migration).toContain(
-      "ALTER COLUMN item_type SET DEFAULT 'message'",
-    );
+    expect(migration).toContain("ALTER COLUMN item_type SET DEFAULT 'message'");
     expect(migration).toContain('ALTER COLUMN item_type SET NOT NULL');
   });
 
