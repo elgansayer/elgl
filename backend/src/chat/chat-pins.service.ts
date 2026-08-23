@@ -4,7 +4,33 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+
+type ChatRoomPinRow = {
+  user_id: string;
+  room_id: string;
+  created_at: string;
+};
+
+type ChatPinsDatabase = {
+  public: {
+    Tables: {
+      chat_room_pins: {
+        Row: ChatRoomPinRow;
+        Insert: Pick<ChatRoomPinRow, 'user_id' | 'room_id'> & {
+          created_at?: string;
+        };
+        Update: Partial<ChatRoomPinRow>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
 
 export interface ChatPinState {
   room_id: string;
@@ -18,8 +44,7 @@ export class ChatPinsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getPinnedRoomIds(userId: string): Promise<string[]> {
-    const { data, error } = await this.supabaseService
-      .getClient()
+    const { data, error } = await this.getPinsClient()
       .from('chat_room_pins')
       .select('room_id')
       .eq('user_id', userId)
@@ -34,7 +59,7 @@ export class ChatPinsService {
     }
 
     return (data ?? [])
-      .map((row: { room_id?: unknown }) => row.room_id)
+      .map((row) => row.room_id)
       .filter((roomId): roomId is string => typeof roomId === 'string');
   }
 
@@ -61,8 +86,9 @@ export class ChatPinsService {
       throw new NotFoundException('Chat room not found.');
     }
 
+    const pinsClient = this.getPinsClient();
     if (isPinned) {
-      const { error } = await client.from('chat_room_pins').upsert(
+      const { error } = await pinsClient.from('chat_room_pins').upsert(
         { user_id: userId, room_id: roomId },
         { onConflict: 'user_id,room_id', ignoreDuplicates: true },
       );
@@ -73,7 +99,7 @@ export class ChatPinsService {
         );
       }
     } else {
-      const { error } = await client
+      const { error } = await pinsClient
         .from('chat_room_pins')
         .delete()
         .eq('user_id', userId)
@@ -87,6 +113,13 @@ export class ChatPinsService {
     }
 
     return { room_id: roomId, is_pinned: isPinned };
+  }
+
+  private getPinsClient(): SupabaseClient<ChatPinsDatabase> {
+    // This table is introduced by this issue's additive migration. Keep the
+    // local schema explicit until the repository-wide generated type snapshot
+    // is refreshed after deployment.
+    return this.supabaseService.getClient() as unknown as SupabaseClient<ChatPinsDatabase>;
   }
 
   private logStoreFailure(operation: string, providerCode?: string): void {
