@@ -12,7 +12,9 @@ describe('UpdateProfileDto coordinates', () => {
     ['mock_location', { latitude: -90, longitude: -180 }],
     ['mock_location', { latitude: 90, longitude: 180 }],
   ])('accepts valid %s boundary coordinates', async (field, coordinates) => {
-    await expect(validateProfile({ [field]: coordinates })).resolves.toEqual([]);
+    await expect(validateProfile({ [field]: coordinates })).resolves.toEqual(
+      [],
+    );
   });
 
   it.each([
