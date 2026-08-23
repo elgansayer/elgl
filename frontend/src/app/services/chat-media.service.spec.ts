@@ -66,6 +66,7 @@ describe('ChatMediaService', () => {
 
     await expect(uploadPromise).resolves.toEqual({
       url: 'https://cdn.example/object.jpg',
+      objectKey: 'chat-media/user/image/standard/object.jpg',
       kind: 'image',
       quality: 'standard',
     });
@@ -95,6 +96,7 @@ describe('ChatMediaService', () => {
 
     await expect(uploadPromise).resolves.toEqual({
       url: 'https://cdn.example/video.mp4',
+      objectKey: 'chat-media/user/video/hd/video.mp4',
       kind: 'video',
       quality: 'hd',
     });
