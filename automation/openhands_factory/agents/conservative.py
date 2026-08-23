@@ -68,8 +68,7 @@ class ConservativeAgentRouter(AgentRouter):
                 str(entry.get("provider"))
                 for entry in job.provider_history
                 if (
-                    entry.get("phase") in _CODE_MUTATING_PHASES
-                    or entry.get("mutated_code") is True
+                    entry.get("phase") in _CODE_MUTATING_PHASES or entry.get("mutated_code") is True
                 )
                 and isinstance(entry.get("provider"), str)
             }
