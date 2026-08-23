@@ -8,6 +8,9 @@ import { AuthService } from './auth.service';
 import { ProfileChatActionsService } from './profile-chat-actions.service';
 import { environment } from '../../environments/environment';
 
+const PARTNER_ID = '22222222-2222-4222-8222-222222222222';
+const ROOM_ID = '33333333-3333-4333-8333-333333333333';
+
 class AuthServiceStub {
   token: string | null = 'test-token';
 
@@ -38,29 +41,34 @@ describe('ProfileChatActionsService', () => {
   afterEach(() => http.verify());
 
   it('posts the partner id to the authenticated direct-room endpoint', async () => {
-    const promise = service.openDirectChat('partner-1');
+    const promise = service.openDirectChat(PARTNER_ID);
     const req = http.expectOne(`${environment.apiUrl}/chat/direct-rooms`);
 
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ partnerId: 'partner-1' });
+    expect(req.request.body).toEqual({ partnerId: PARTNER_ID });
     expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
-    req.flush({ room_id: '33333333-3333-4333-8333-333333333333' });
+    req.flush({ room_id: ROOM_ID });
 
-    await expect(promise).resolves.toEqual({
-      room_id: '33333333-3333-4333-8333-333333333333',
-    });
+    await expect(promise).resolves.toEqual({ room_id: ROOM_ID });
   });
 
   it('fails before the network when there is no authenticated session', async () => {
     auth.token = null;
-    await expect(service.openDirectChat('partner-1')).rejects.toThrow(
+    await expect(service.openDirectChat(PARTNER_ID)).rejects.toThrow(
       'Authentication required',
     );
     http.expectNone(`${environment.apiUrl}/chat/direct-rooms`);
   });
 
+  it('fails before the network for a malformed partner id', async () => {
+    await expect(service.openDirectChat('../user')).rejects.toThrow(
+      'Invalid chat partner',
+    );
+    http.expectNone(`${environment.apiUrl}/chat/direct-rooms`);
+  });
+
   it('rejects malformed room ids instead of navigating to an untrusted path', async () => {
-    const promise = service.openDirectChat('partner-1');
+    const promise = service.openDirectChat(PARTNER_ID);
     const req = http.expectOne(`${environment.apiUrl}/chat/direct-rooms`);
     req.flush({ room_id: '../settings' });
 
