@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { isIP } from 'node:net';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { normalizeAdminOperatorNote } from './admin-action-reasons';
 import {
   AdminNetworkBlockScope,
   CreateAdminNetworkAllowlistDto,
@@ -61,6 +62,7 @@ export interface AdminNetworkAllowlistEntry {
 const MAX_BLOCK_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const MIN_BLOCK_DURATION_MS = 5 * 60 * 1000;
 const DECISION_CACHE_SECONDS = 30;
+const DECISION_CACHE_EPOCH_KEY = 'network-abuse:v1:epoch';
 
 @Injectable()
 export class AdminNetworkAbuseService {
@@ -111,7 +113,9 @@ export class AdminNetworkAbuseService {
       .order('created_at', { ascending: false })
       .limit(boundedLimit);
     if (error) throw error;
-    return (data ?? []).map((row) => this.mapBlock(row as Record<string, unknown>));
+    return (data ?? []).map((row) =>
+      this.mapBlock(row as Record<string, unknown>),
+    );
   }
 
   async listAllowlist(limit = 50): Promise<AdminNetworkAllowlistEntry[]> {
@@ -135,6 +139,7 @@ export class AdminNetworkAbuseService {
   ): Promise<AdminNetworkBlock> {
     const network = this.normalizeCidr(input.cidr);
     const expiresAt = this.validateBlockExpiry(input.expiresAt);
+    const operatorNote = normalizeAdminOperatorNote(input.operatorNote);
     const existing = await this.findBlockByIdempotency(
       actorUserId,
       input.idempotencyKey,
@@ -147,7 +152,7 @@ export class AdminNetworkAbuseService {
         network,
         scope: input.scope,
         reason_code: input.reasonCode,
-        operator_note: input.operatorNote?.trim() || null,
+        operator_note: operatorNote,
         expires_at: expiresAt,
         created_by: actorUserId,
         idempotency_key: input.idempotencyKey,
@@ -246,7 +251,13 @@ export class AdminNetworkAbuseService {
     }
 
     const redis = this.supabaseService.getRedisClient();
-    const key = `network-abuse:v1:${this.hashIp(ip)}:${scope}`;
+    let epoch = '0';
+    try {
+      epoch = (await redis.get(DECISION_CACHE_EPOCH_KEY)) ?? '0';
+    } catch {
+      // Enforcement can still consult PostgreSQL when Redis is degraded.
+    }
+    const key = `network-abuse:v1:${epoch}:${this.hashIp(ip)}:${scope}`;
     try {
       const cached = await redis.get(key);
       if (cached === '1') return true;
@@ -493,9 +504,7 @@ export class AdminNetworkAbuseService {
 
   private async invalidateDecisionCache(): Promise<void> {
     try {
-      const redis = this.supabaseService.getRedisClient();
-      const keys = await redis.keys('network-abuse:v1:*');
-      if (keys.length > 0) await redis.del(...keys.slice(0, 500));
+      await this.supabaseService.getRedisClient().incr(DECISION_CACHE_EPOCH_KEY);
     } catch {
       // Decisions expire after 30 seconds, so cache invalidation is best effort.
     }
