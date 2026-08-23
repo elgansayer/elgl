@@ -9,20 +9,20 @@ import { UploadedChatMedia } from './chat-media.service';
 export class ChatMediaMessageService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly endpoint = `${environment.apiUrl}/chat/messages`;
+  private readonly endpoint = `${environment.apiUrl}/media/chat/send`;
 
   async send(roomId: string, media: UploadedChatMedia): Promise<void> {
     const token = this.auth.getAccessToken();
     if (!token) throw new Error('Sign in before sending chat media');
-    if (!roomId || !media.url) throw new Error('Chat media message is incomplete');
+    if (!roomId || !media.objectKey) throw new Error('Chat media message is incomplete');
 
     await firstValueFrom(
       this.http.post(
         this.endpoint,
         {
-          room_id: roomId,
-          message_type: media.kind,
-          media_url: media.url,
+          roomId,
+          mediaKind: media.kind,
+          objectKey: media.objectKey,
         },
         { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) },
       ),
