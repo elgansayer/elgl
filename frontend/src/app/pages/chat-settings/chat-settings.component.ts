@@ -16,6 +16,18 @@ import {
       @if (!loaded()) {
         <div class="text-text-secondary text-center py-8">{{ 'common.loading' | t }}</div>
       } @else {
+        @if (settingsLoadError()) {
+          <div class="bg-surface-100 rounded-xl p-4 space-y-3" role="alert">
+            <p class="text-text-primary">Chat settings are temporarily unavailable.</p>
+            <p class="text-text-secondary text-sm">
+              Your saved settings remain active. Retention controls are disabled until they can be loaded.
+            </p>
+            <button hlmBtn class="min-h-11" (click)="retryLoadSettings()">
+              {{ 'common.retry' | t }}
+            </button>
+          </div>
+        }
+
         <!-- Disappearing messages -->
         <section
           class="bg-surface-100 rounded-xl p-4 space-y-3"
@@ -35,9 +47,9 @@ import {
           </label>
           <select
             id="disappearing-messages-ttl"
-            class="min-h-11 w-full rounded-lg border border-border bg-surface-50 px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            class="min-h-11 w-full rounded-lg border border-border bg-surface-50 px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
             [value]="disappearingMessagesTtl()"
-            [disabled]="disappearingMessagesSaving()"
+            [disabled]="disappearingMessagesSaving() || settingsLoadError()"
             aria-describedby="disappearing-messages-description disappearing-messages-status"
             (change)="changeDisappearingMessagesTtl($event)"
           >
@@ -54,7 +66,7 @@ import {
               <span class="text-danger" role="alert">
                 Could not save the message lifetime. Your previous setting is still active.
               </span>
-            } @else if (disappearingMessagesTtl() !== 'off') {
+            } @else if (!settingsLoadError() && disappearingMessagesTtl() !== 'off') {
               <span class="text-text-secondary">
                 New messages you send will be permanently removed after this time.
               </span>
@@ -63,7 +75,7 @@ import {
         </section>
 
         <!-- Auto-Translate -->
-        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between gap-4">
           <div class="flex flex-col">
             <span class="text-text-primary text-base">{{
               'chat_settings.auto_translate' | t
@@ -75,6 +87,7 @@ import {
           <button
             hlmBtn
             role="switch"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="autoTranslate()"
             [attr.aria-label]="'chat_settings.auto_translate' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -91,7 +104,7 @@ import {
         </div>
 
         <!-- Read Receipts -->
-        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between gap-4">
           <div class="flex flex-col">
             <span class="text-text-primary text-base">{{ 'chat_settings.read_receipts' | t }}</span>
             <span class="text-text-secondary text-sm">{{
@@ -101,6 +114,7 @@ import {
           <button
             hlmBtn
             role="switch"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="readReceipts()"
             [attr.aria-label]="'chat_settings.read_receipts' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -117,7 +131,7 @@ import {
         </div>
 
         <!-- Enter-to-Send -->
-        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between gap-4">
           <div class="flex flex-col">
             <span class="text-text-primary text-base">{{ 'chat_settings.enter_to_send' | t }}</span>
             <span class="text-text-secondary text-sm">{{
@@ -127,6 +141,7 @@ import {
           <button
             hlmBtn
             role="switch"
+            [disabled]="settingsLoadError()"
             [attr.aria-checked]="enterToSend()"
             [attr.aria-label]="'chat_settings.enter_to_send' | t"
             class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
@@ -146,7 +161,8 @@ import {
         <div class="mt-8 text-center">
           <button
             hlmBtn
-            class="text-primary text-sm underline decoration-primary"
+            [disabled]="settingsLoadError()"
+            class="text-primary text-sm underline decoration-primary min-h-11"
             (click)="resetToDefaults()"
           >
             {{ 'chat_settings.reset_defaults' | t }}
@@ -165,22 +181,23 @@ export class ChatSettingsComponent {
   readonly disappearingMessagesTtl = this.settingsService.disappearingMessagesTtl;
   readonly disappearingMessagesSaving = this.settingsService.disappearingMessagesSaving;
   readonly disappearingMessagesError = this.settingsService.disappearingMessagesError;
+  readonly settingsLoadError = this.settingsService.settingsLoadError;
   readonly loaded = this.settingsService.loaded;
 
   constructor() {
-    this.settingsService.loadSettings();
+    void this.settingsService.loadSettings();
   }
 
   toggleAutoTranslate(): void {
-    this.settingsService.updateSetting('autoTranslate', !this.autoTranslate());
+    void this.settingsService.updateSetting('autoTranslate', !this.autoTranslate());
   }
 
   toggleReadReceipts(): void {
-    this.settingsService.updateSetting('readReceipts', !this.readReceipts());
+    void this.settingsService.updateSetting('readReceipts', !this.readReceipts());
   }
 
   toggleEnterToSend(): void {
-    this.settingsService.updateSetting('enterToSend', !this.enterToSend());
+    void this.settingsService.updateSetting('enterToSend', !this.enterToSend());
   }
 
   changeDisappearingMessagesTtl(event: Event): void {
@@ -189,8 +206,12 @@ export class ChatSettingsComponent {
     void this.settingsService.updateDisappearingMessagesTtl(value);
   }
 
+  retryLoadSettings(): void {
+    void this.settingsService.loadSettings();
+  }
+
   resetToDefaults(): void {
-    this.settingsService.resetToDefaults();
+    void this.settingsService.resetToDefaults();
   }
 
   private isDisappearingMessagesTtl(value: string): value is DisappearingMessagesTtl {
