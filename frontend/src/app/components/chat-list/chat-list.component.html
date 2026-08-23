@@ -170,7 +170,12 @@
         </app-empty-state>
       }
 
-      @if (!isLoading() && regularAndPinnedPreviews().length === 0) {
+      @if (
+        !isLoading() &&
+        regularAndPinnedPreviews().length === 0 &&
+        archivedRoomIds().length === 0 &&
+        lockedRoomIds().length === 0
+      ) {
         <app-empty-state
           [illustration]="'/assets/illustrations/no-messages.svg'"
           [title]="'chatList.noMessagesFound' | t"
@@ -188,144 +193,179 @@
       }
 
       @for (preview of regularAndPinnedPreviews(); track preview.id) {
-        <a
-          [routerLink]="['/chat', preview.id]"
-          class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
-        >
-          <div class="relative shrink-0">
-            <div
-              class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-on-fill font-bold text-lg"
-            >
-              {{ preview.avatar || preview.title.charAt(0) }}
-            </div>
-            @if (preview.isOnline) {
-              <span
-                class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
-              ></span>
-            }
-          </div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline mb-0.5">
-              <div class="flex items-center gap-2 truncate">
-                <h3 class="text-[15px] font-bold text-text-primary truncate">
-                  {{ preview.title }}
-                </h3>
-                <span
-                  class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
-                  >{{ 'discovery.vipBadge' | t }}</span
-                >
+        <div class="flex items-center gap-1 p-2 pe-3 hover:bg-surface-300 transition-colors">
+          <a [routerLink]="['/chat', preview.id]" class="flex min-w-0 flex-1 items-center gap-3 p-2">
+            <div class="relative shrink-0">
+              <div
+                class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-on-fill font-bold text-lg"
+              >
+                {{ preview.avatar || preview.title.charAt(0) }}
               </div>
-              <span class="text-xs text-text-secondary shrink-0 ms-2">
-                @if (preview.lastMessageAt) {
-                  {{ preview.lastMessageAt | date: 'shortTime' }}
-                }
-              </span>
-            </div>
-            <div class="flex justify-between items-center gap-2">
-              <p class="text-[13px] text-text-secondary truncate">
-                {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
-              </p>
-              @if (preview.unreadCount > 0) {
+              @if (preview.isOnline) {
                 <span
-                  class="bg-gradient-to-br from-primary to-accent-500 text-on-fill text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-accent/30"
-                >
-                  {{ preview.unreadCount }}
-                </span>
+                  class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
+                  [attr.aria-label]="'chatList.online' | t"
+                ></span>
               }
             </div>
-          </div>
 
-          <button
-            hlmBtn
-            type="button"
-            (click)="toggleRoomLock($event, preview.id)"
-            class="shrink-0 text-text-muted hover:text-text-primary p-1"
-            [attr.aria-label]="'chatList.lockChat' | t"
-            [attr.title]="'chatList.lockChat' | t"
-          >
-            <span class="text-sm">🔓</span>
-          </button>
-        </a>
-      }
-
-      <!-- Locked folder section -->
-      @if (lockedRoomIds().length > 0) {
-        <div class="px-4 py-2 border-t border-surface-200">
-          <button
-            hlmBtn
-            (click)="toggleLockedFolder()"
-            class="flex items-center gap-2 text-text-primary"
-            [attr.aria-label]="'chatList.lockedFolder' | t"
-          >
-            <span>{{ showLocked() ? '🔓' : '🔒' }}</span>
-            <span>{{ 'chatList.lockedFolder' | t }}</span>
-            <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
-          </button>
-        </div>
-        @if (showLocked()) {
-          @for (preview of lockedPreviews(); track preview.id) {
-            <a
-              [routerLink]="['/chat', preview.id]"
-              class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
-            >
-              <div class="relative shrink-0">
-                <div
-                  class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-on-fill font-bold text-lg"
-                >
-                  {{ preview.avatar || preview.title.charAt(0) }}
-                </div>
-                @if (preview.isOnline) {
-                  <span
-                    class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
-                  ></span>
-                }
-              </div>
-
-              <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-baseline mb-0.5">
-                  <div class="flex items-center gap-2 truncate">
-                    <h3 class="text-[15px] font-bold text-text-primary truncate">
-                      {{ preview.title }}
-                    </h3>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-baseline mb-0.5">
+                <div class="flex items-center gap-2 truncate">
+                  <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
+                  @if (preview.isVip) {
                     <span
                       class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
-                  </div>
-                  <span class="text-xs text-text-secondary shrink-0 ms-2">
-                    @if (preview.lastMessageAt) {
-                      {{ preview.lastMessageAt | date: 'shortTime' }}
-                    }
-                  </span>
-                </div>
-                <div class="flex justify-between items-center gap-2">
-                  <p class="text-[13px] text-text-secondary truncate">
-                    {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
-                  </p>
-                  @if (preview.unreadCount > 0) {
-                    <span
-                      class="bg-gradient-to-br from-primary to-accent-500 text-on-fill text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-accent/30"
-                    >
-                      {{ preview.unreadCount }}
-                    </span>
                   }
                 </div>
+                <span class="text-xs text-text-secondary shrink-0 ms-2">
+                  @if (preview.lastMessageAt) {
+                    {{ preview.lastMessageAt | date: 'shortTime' }}
+                  }
+                </span>
               </div>
+              <div class="flex justify-between items-center gap-2">
+                <p class="text-[13px] text-text-secondary truncate">
+                  {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
+                </p>
+                @if (preview.unreadCount > 0) {
+                  <span
+                    class="bg-gradient-to-br from-primary to-accent-500 text-on-fill text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-accent/30"
+                    [attr.aria-label]="('chatList.unreadCount' | t: { count: preview.unreadCount })"
+                  >
+                    {{ preview.unreadCount }}
+                  </span>
+                }
+              </div>
+            </div>
+          </a>
 
-              <button
-                hlmBtn
-                type="button"
-                (click)="toggleRoomLock($event, preview.id)"
-                class="shrink-0 text-text-muted hover:text-text-primary p-1"
-                [attr.aria-label]="'chatList.unlockChat' | t"
-                [attr.title]="'chatList.unlockChat' | t"
-              >
-                <span class="text-sm">🔒</span>
-              </button>
-            </a>
+          <button
+            hlmBtn
+            type="button"
+            (click)="toggleRoomArchive($event, preview.id)"
+            class="shrink-0 min-h-11 min-w-11 text-text-muted hover:text-text-primary"
+            [attr.aria-label]="'chatList.archiveChat' | t"
+            [attr.title]="'chatList.archiveChat' | t"
+          >
+            <span aria-hidden="true">🗄️</span>
+          </button>
+          <button
+            hlmBtn
+            type="button"
+            (click)="toggleRoomLock($event, preview.id)"
+            class="shrink-0 min-h-11 min-w-11 text-text-muted hover:text-text-primary"
+            [attr.aria-label]="'chatList.lockChat' | t"
+            [attr.title]="'chatList.lockChat' | t"
+          >
+            <span aria-hidden="true">🔓</span>
+          </button>
+        </div>
+      }
+
+      <!-- Archived folder: private per-member inbox preference. -->
+      @if (archivedRoomIds().length > 0) {
+        <section class="border-t border-surface-200" [attr.aria-label]="'chatList.archivedFolder' | t">
+          <div class="px-4 py-2">
+            <button
+              hlmBtn
+              type="button"
+              (click)="toggleArchivedFolder()"
+              class="flex min-h-11 items-center gap-2 text-text-primary"
+              [attr.aria-expanded]="showArchived()"
+            >
+              <span aria-hidden="true">🗄️</span>
+              <span>{{ 'chatList.archivedFolder' | t }}</span>
+              <span class="text-xs text-text-secondary">({{ archivedRoomIds().length }})</span>
+            </button>
+          </div>
+          @if (showArchived()) {
+            @for (preview of archivedPreviews(); track preview.id) {
+              <div class="flex items-center gap-1 p-2 pe-3 bg-surface-400/30">
+                <a [routerLink]="['/chat', preview.id]" class="flex min-w-0 flex-1 items-center gap-3 p-2">
+                  <div
+                    class="w-12 h-12 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-on-fill font-bold text-lg"
+                  >
+                    {{ preview.avatar || preview.title.charAt(0) }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex justify-between gap-2">
+                      <h3 class="truncate text-[15px] font-bold text-text-primary">{{ preview.title }}</h3>
+                      @if (preview.lastMessageAt) {
+                        <span class="shrink-0 text-xs text-text-secondary">{{ preview.lastMessageAt | date: 'shortTime' }}</span>
+                      }
+                    </div>
+                    <p class="truncate text-[13px] text-text-secondary">{{ preview.lastMessageText }}</p>
+                  </div>
+                </a>
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="toggleRoomArchive($event, preview.id)"
+                  class="shrink-0 min-h-11 min-w-11 text-text-muted hover:text-text-primary"
+                  [attr.aria-label]="'chatList.unarchiveChat' | t"
+                  [attr.title]="'chatList.unarchiveChat' | t"
+                >
+                  <span aria-hidden="true">↩️</span>
+                </button>
+              </div>
+            }
           }
-        }
+        </section>
+      }
+
+      <!-- Locked chats are the hidden folder and require the app-unlock flow before details load. -->
+      @if (lockedRoomIds().length > 0) {
+        <section class="border-t border-surface-200" [attr.aria-label]="'chatList.lockedFolder' | t">
+          <div class="px-4 py-2">
+            <button
+              hlmBtn
+              type="button"
+              (click)="toggleLockedFolder()"
+              class="flex min-h-11 items-center gap-2 text-text-primary"
+              [attr.aria-expanded]="showLocked()"
+              [attr.aria-label]="'chatList.lockedFolder' | t"
+            >
+              <span aria-hidden="true">{{ showLocked() ? '🔓' : '🔒' }}</span>
+              <span>{{ 'chatList.lockedFolder' | t }}</span>
+              <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
+            </button>
+          </div>
+          @if (showLocked()) {
+            @for (preview of lockedPreviews(); track preview.id) {
+              <div class="flex items-center gap-1 p-2 pe-3 bg-surface-400/30">
+                <a [routerLink]="['/chat', preview.id]" class="flex min-w-0 flex-1 items-center gap-3 p-2">
+                  <div
+                    class="w-12 h-12 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-on-fill font-bold text-lg"
+                  >
+                    {{ preview.avatar || preview.title.charAt(0) }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex justify-between gap-2">
+                      <h3 class="truncate text-[15px] font-bold text-text-primary">{{ preview.title }}</h3>
+                      @if (preview.lastMessageAt) {
+                        <span class="shrink-0 text-xs text-text-secondary">{{ preview.lastMessageAt | date: 'shortTime' }}</span>
+                      }
+                    </div>
+                    <p class="truncate text-[13px] text-text-secondary">{{ preview.lastMessageText }}</p>
+                  </div>
+                </a>
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="toggleRoomLock($event, preview.id)"
+                  class="shrink-0 min-h-11 min-w-11 text-text-muted hover:text-text-primary"
+                  [attr.aria-label]="'chatList.unlockChat' | t"
+                  [attr.title]="'chatList.unlockChat' | t"
+                >
+                  <span aria-hidden="true">🔒</span>
+                </button>
+              </div>
+            }
+          }
+        </section>
       }
     </main>
   }
