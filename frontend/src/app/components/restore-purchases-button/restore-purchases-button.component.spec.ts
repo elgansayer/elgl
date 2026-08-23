@@ -41,37 +41,77 @@ describe('RestorePurchasesButtonComponent', () => {
     httpMock.verify();
   });
 
-  it('should create', () => {
+  it('creates in the idle state', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should display restore purchases text when not restoring', () => {
     expect(fixture.nativeElement.textContent).toContain('restore_purchases');
   });
 
-  it('should show loading spinner when isRestoring is true', () => {
+  it('shows a busy state while restoring', () => {
     restoreService.isRestoring.set(true);
     fixture.detectChanges();
-    const spinner = fixture.nativeElement.querySelector('.animate-spin');
-    expect(spinner).toBeTruthy();
+
+    expect(fixture.nativeElement.querySelector('.animate-spin')).toBeTruthy();
     expect(fixture.nativeElement.textContent).toContain('restoring');
+    expect(fixture.nativeElement.querySelector('app-button-secondary')?.getAttribute('aria-busy')).toBe(
+      'true',
+    );
   });
 
-  it('should call restorePurchases on button click', () => {
+  it('emits restored only after an authoritative successful restore', async () => {
+    const emitted = vi.fn();
+    component.restored.subscribe(emitted);
     const restoreSpy = vi.spyOn(restoreService, 'restorePurchases').mockResolvedValue({
       success: true,
-      restoredPlans: [],
-      message: 'test',
+      restoredPlans: ['consumer'],
+      message: 'restorePurchases.success',
+      status: 'restored',
+      platform: 'stripe',
+      tier: 'consumer',
     });
-    const button = fixture.nativeElement.querySelector('app-button-secondary');
-    button.dispatchEvent(new Event('clicked'));
+
+    await component.onRestore();
+
     expect(restoreSpy).toHaveBeenCalledOnce();
+    expect(emitted).toHaveBeenCalledOnce();
   });
 
-  it('should disable button when isRestoring is true', () => {
+  it('does not emit restored for no-subscription or failure outcomes', async () => {
+    const emitted = vi.fn();
+    component.restored.subscribe(emitted);
+    vi.spyOn(restoreService, 'restorePurchases').mockResolvedValue({
+      success: false,
+      restoredPlans: [],
+      message: 'restorePurchases.noSubscriptionFound',
+      status: 'no_valid_subscription',
+      platform: 'stripe',
+    });
+
+    await component.onRestore();
+
+    expect(emitted).not.toHaveBeenCalled();
+  });
+
+  it('ignores a second activation while a restore is already in progress', async () => {
     restoreService.isRestoring.set(true);
+    const restoreSpy = vi.spyOn(restoreService, 'restorePurchases');
+
+    await component.onRestore();
+
+    expect(restoreSpy).not.toHaveBeenCalled();
+  });
+
+  it('announces the latest restore result through a polite live region', () => {
+    restoreService.lastRestoreResult.set({
+      success: false,
+      restoredPlans: [],
+      message: 'restorePurchases.failed',
+      status: 'failed',
+      platform: 'stripe',
+    });
     fixture.detectChanges();
-    expect(restoreService.isRestoring()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('restoring');
+
+    const status = fixture.nativeElement.querySelector('[role="status"]');
+    expect(status?.textContent).toContain('restorePurchases.failed');
+    expect(status?.getAttribute('aria-live')).toBe('polite');
   });
 });
