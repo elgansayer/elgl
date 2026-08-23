@@ -6,6 +6,10 @@ import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT_EXTENSIONS = new Set(['.sh', '.bash', '.mjs', '.cjs', '.js', '.ts', '.json', '.yml', '.yaml']);
+const IGNORED_SCAN_PATHS = new Set([
+  'scripts/verify-playwright-test-boundary.mjs',
+  'scripts/verify-playwright-test-boundary.test.mjs',
+]);
 const CONTEXT_LINES = 10;
 
 function normalizePath(path) {
@@ -35,7 +39,7 @@ function scanPlaywrightInvocations(files) {
 
   for (const [rawPath, content] of Object.entries(files)) {
     const path = normalizePath(rawPath);
-    if (!SCRIPT_EXTENSIONS.has(extname(path))) {
+    if (IGNORED_SCAN_PATHS.has(path) || !SCRIPT_EXTENSIONS.has(extname(path))) {
       continue;
     }
 
