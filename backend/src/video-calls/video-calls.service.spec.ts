@@ -28,9 +28,13 @@ vi.mock('livekit-server-sdk', () => {
 });
 
 let counter = 0;
-vi.mock('crypto', () => ({
-  randomUUID: () => `00000000-0000-4000-8000-${String(counter++).padStart(12, '0')}`,
-}));
+vi.mock('crypto', async () => {
+  const actual = await vi.importActual<typeof import('crypto')>('crypto');
+  return {
+    ...actual,
+    randomUUID: () => `00000000-0000-4000-8000-${String(counter++).padStart(12, '0')}`,
+  };
+});
 
 describe('VideoCallsService', () => {
   let service: VideoCallsService;
