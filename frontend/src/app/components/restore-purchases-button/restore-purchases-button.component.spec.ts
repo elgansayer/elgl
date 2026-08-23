@@ -52,9 +52,9 @@ describe('RestorePurchasesButtonComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.animate-spin')).toBeTruthy();
     expect(fixture.nativeElement.textContent).toContain('restoring');
-    expect(fixture.nativeElement.querySelector('app-button-secondary')?.getAttribute('aria-busy')).toBe(
-      'true',
-    );
+    expect(
+      fixture.nativeElement.querySelector('app-button-secondary')?.getAttribute('aria-busy'),
+    ).toBe('true');
   });
 
   it('emits restored only after an authoritative successful restore', async () => {
