@@ -9,39 +9,23 @@ export class FavouritesService {
   async addFavourite(
     userId: string,
     dto: AddFavouriteDto,
-  ): Promise<{
-    id: string;
-    user_id: string;
-    item_type: string;
-    item_payload: Record<string, unknown>;
-    notes: string | null;
-  }> {
+  ): Promise<{ success: true }> {
     const supabase = this.supabaseService.getClient();
 
-    // Use the historical relational columns as the write contract. The
-    // database trigger canonicalises the snapshot, validates membership, and
-    // turns a retried insert into an idempotent update.
-    const { error: insertError } = await supabase.from('favourites').insert({
+    // Supply only the message identity in the application-facing shape. The
+    // database trigger resolves it onto the historical message_id column,
+    // verifies room membership, and rebuilds the canonical message snapshot.
+    const { error } = await supabase.from('favourites').insert({
       user_id: userId,
-      message_id: dto.message_id,
-      note_text: dto.note_text ?? null,
+      item_type: 'message',
+      item_payload: { id: dto.message_id },
+      notes: dto.note_text ?? null,
     });
 
-    if (insertError) {
+    if (error) {
       throw new Error('Failed to add favourite');
     }
-
-    const { data, error: readError } = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('message_id', dto.message_id)
-      .single();
-
-    if (readError || !data) {
-      throw new Error('Failed to load saved favourite');
-    }
-    return data;
+    return { success: true };
   }
 
   async removeFavourite(
