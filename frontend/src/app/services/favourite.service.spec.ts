@@ -1,10 +1,10 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { FavouriteService, AddFavouriteDto } from './favourite.service';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '../../environments/environment';
 import type { FavouriteRecord } from './chat.service';
+import { AddFavouriteDto, FavouriteService } from './favourite.service';
 
 describe('FavouriteService', () => {
   let service: FavouriteService;
@@ -13,7 +13,11 @@ describe('FavouriteService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [FavouriteService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        FavouriteService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     });
     service = TestBed.inject(FavouriteService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -29,7 +33,10 @@ describe('FavouriteService', () => {
 
   describe('addFavourite', () => {
     it('should POST to /chat/favourites with the dto', async () => {
-      const dto: AddFavouriteDto = { message_id: 'msg-1', note_text: 'nice phrase' };
+      const dto: AddFavouriteDto = {
+        message_id: 'msg-1',
+        note_text: 'nice phrase',
+      };
       const resultPromise = service.addFavourite(dto);
 
       const req = httpMock.expectOne(`${baseUrl}/favourites`);
@@ -73,7 +80,15 @@ describe('FavouriteService', () => {
           id: 'fav-1',
           user_id: 'user-1',
           item_type: 'message',
-          item_payload: { text_content: 'hello' },
+          item_payload: {
+            id: 'msg-1',
+            room_id: 'room-1',
+            sender_id: 'user-2',
+            message_type: 'text',
+            text_content: 'hello',
+            is_read: false,
+            created_at: '2025-01-01T00:00:00Z',
+          },
           created_at: '2025-01-01T00:00:00Z',
         },
       ];
