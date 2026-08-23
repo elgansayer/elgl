@@ -11,6 +11,8 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { DirectChatController } from './direct-chat.controller';
+import { DirectChatService } from './direct-chat.service';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
@@ -40,6 +42,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    DirectChatController,
     ChatMediaSendController,
     ChatSearchController,
     ChatSettingsController,
@@ -53,6 +56,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    DirectChatService,
     ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
@@ -67,6 +71,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    DirectChatService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
