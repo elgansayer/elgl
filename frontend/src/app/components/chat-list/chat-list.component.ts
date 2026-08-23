@@ -243,7 +243,10 @@ export class ChatListComponent implements OnInit {
   }
 
   pinActionLabel(preview: ChatRoomPreview): string {
-    return `${preview.isPinned ? 'Unpin' : 'Pin'} ${preview.title}`;
+    const action = this.i18n.translate(
+      preview.isPinned ? 'moments.unpinBtn' : 'moments.pinBtn',
+    );
+    return `${action} ${preview.title}`;
   }
 
   async toggleRoomPin(event: Event, preview: ChatRoomPreview): Promise<void> {
