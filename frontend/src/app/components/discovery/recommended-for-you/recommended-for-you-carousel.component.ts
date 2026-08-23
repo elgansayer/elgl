@@ -15,6 +15,7 @@ import {
 })
 export class RecommendedForYouCarouselComponent {
   private readonly recommendationsService = inject(RecommendationsService);
+  private loadRequestId = 0;
 
   @ViewChild('carousel') private carousel?: ElementRef<HTMLElement>;
 
@@ -27,16 +28,23 @@ export class RecommendedForYouCarouselComponent {
   }
 
   async load(): Promise<void> {
+    const requestId = ++this.loadRequestId;
     this.loading.set(true);
     this.error.set(false);
     try {
       const recommendations = await this.recommendationsService.getDiscoveryRecommendations();
+      if (requestId !== this.loadRequestId) return;
+
       // Keep the order returned by the server stable for the lifetime of this load.
       this.recommendations.set(recommendations.slice(0, 10));
     } catch {
-      this.error.set(true);
+      if (requestId === this.loadRequestId) {
+        this.error.set(true);
+      }
     } finally {
-      this.loading.set(false);
+      if (requestId === this.loadRequestId) {
+        this.loading.set(false);
+      }
     }
   }
 
@@ -47,19 +55,22 @@ export class RecommendedForYouCarouselComponent {
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const distance = Math.max(240, element.clientWidth * 0.75);
     element.scrollBy({
-      left: direction * Math.max(240, element.clientWidth * 0.75),
+      left: direction * distance * (this.isRtl(element) ? -1 : 1),
       behavior: reduceMotion ? 'auto' : 'smooth',
     });
   }
 
   onCarouselKeydown(event: KeyboardEvent): void {
+    const rtl = this.isRtl(this.carousel?.nativeElement);
+
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      this.scroll(-1);
+      this.scroll(rtl ? 1 : -1);
     } else if (event.key === 'ArrowRight') {
       event.preventDefault();
-      this.scroll(1);
+      this.scroll(rtl ? -1 : 1);
     }
   }
 
@@ -86,5 +97,26 @@ export class RecommendedForYouCarouselComponent {
     const target = recommendation.target_languages[0]?.toUpperCase();
     if (native && target) return `${native} → ${target}`;
     return native ?? target ?? '';
+  }
+
+  private isRtl(element?: HTMLElement): boolean {
+    const explicitDirection = element?.closest('[dir]')?.getAttribute('dir');
+    if (explicitDirection) {
+      return explicitDirection.toLowerCase() === 'rtl';
+    }
+
+    if (typeof document !== 'undefined') {
+      const documentDirection = document.documentElement.getAttribute('dir');
+      if (documentDirection) {
+        return documentDirection.toLowerCase() === 'rtl';
+      }
+    }
+
+    return (
+      typeof window !== 'undefined' &&
+      !!element &&
+      typeof window.getComputedStyle === 'function' &&
+      window.getComputedStyle(element).direction === 'rtl'
+    );
   }
 }
