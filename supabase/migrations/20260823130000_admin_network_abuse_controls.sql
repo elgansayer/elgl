@@ -189,6 +189,11 @@ as $$
     from public.login_history lh
     where lh.created_at >= now() - interval '30 days'
       and public.try_parse_inet(lh.ip_address) <<= p_cidr
+  ), stats as (
+    select
+      count(*)::int as observed_login_events_30d,
+      count(distinct user_id)::int as observed_accounts_30d
+    from observations
   ), conflicts as (
     select coalesce(jsonb_agg(a.network::text order by masklen(a.network)), '[]'::jsonb) as networks
     from public.admin_network_allowlist a
@@ -198,12 +203,11 @@ as $$
   )
   select jsonb_build_object(
     'network', p_cidr::text,
-    'observed_login_events_30d', count(o.user_id)::int,
-    'observed_accounts_30d', count(distinct o.user_id)::int,
+    'observed_login_events_30d', s.observed_login_events_30d,
+    'observed_accounts_30d', s.observed_accounts_30d,
     'allowlist_conflicts', c.networks
   )
-  from observations o cross join conflicts c
-  group by c.networks;
+  from stats s cross join conflicts c;
 $$;
 
 revoke all on function public.admin_network_block_impact(cidr) from public, anon, authenticated;
