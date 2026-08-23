@@ -36,11 +36,14 @@ describe('ChatSettingsService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should have default signal values', () => {
+  it('should have safe default signal values', () => {
     expect(service.autoTranslate()).toBe(false);
     expect(service.readReceipts()).toBe(false);
     expect(service.enterToSend()).toBe(false);
     expect(service.textSize()).toBe('medium');
+    expect(service.disappearingMessagesTtl()).toBe('off');
+    expect(service.disappearingMessagesSaving()).toBe(false);
+    expect(service.disappearingMessagesError()).toBe(false);
     expect(service.loaded()).toBe(false);
   });
 
@@ -51,6 +54,7 @@ describe('ChatSettingsService', () => {
         readReceipts: true,
         enterToSend: false,
         textSize: 'large',
+        disappearingMessagesTtl: '7d',
       };
 
       const promise = service.loadSettings();
@@ -65,10 +69,11 @@ describe('ChatSettingsService', () => {
       expect(service.readReceipts()).toBe(true);
       expect(service.enterToSend()).toBe(false);
       expect(service.textSize()).toBe('large');
+      expect(service.disappearingMessagesTtl()).toBe('7d');
       expect(service.loaded()).toBe(true);
     });
 
-    it('should fall back to defaults when textSize is missing', async () => {
+    it('should fall back to safe defaults when optional values are missing', async () => {
       const promise = service.loadSettings();
       httpTesting
         .expectOne('http://localhost:3000/api/chat/settings')
@@ -76,10 +81,25 @@ describe('ChatSettingsService', () => {
 
       await promise;
       expect(service.textSize()).toBe('medium');
+      expect(service.disappearingMessagesTtl()).toBe('off');
       expect(service.loaded()).toBe(true);
     });
 
+    it('should reject an unknown retention value from an older or corrupt response', async () => {
+      const promise = service.loadSettings();
+      httpTesting.expectOne('http://localhost:3000/api/chat/settings').flush({
+        autoTranslate: false,
+        readReceipts: false,
+        enterToSend: false,
+        disappearingMessagesTtl: '1m',
+      });
+
+      await promise;
+      expect(service.disappearingMessagesTtl()).toBe('off');
+    });
+
     it('should fall back to defaults on API error', async () => {
+      service.disappearingMessagesTtl.set('90d');
       const promise = service.loadSettings();
       httpTesting
         .expectOne('http://localhost:3000/api/chat/settings')
@@ -91,6 +111,7 @@ describe('ChatSettingsService', () => {
       expect(service.readReceipts()).toBe(false);
       expect(service.enterToSend()).toBe(false);
       expect(service.textSize()).toBe('medium');
+      expect(service.disappearingMessagesTtl()).toBe('off');
       expect(service.loaded()).toBe(true);
     });
   });
@@ -158,6 +179,50 @@ describe('ChatSettingsService', () => {
 
       await promise;
       expect(service.textSize()).toBe('medium');
+    });
+  });
+
+  describe('updateDisappearingMessagesTtl', () => {
+    it('persists a supported lifetime and clears pending state', async () => {
+      const promise = service.updateDisappearingMessagesTtl('24h');
+      expect(service.disappearingMessagesTtl()).toBe('24h');
+      expect(service.disappearingMessagesSaving()).toBe(true);
+
+      const req = httpTesting.expectOne('http://localhost:3000/api/chat/settings');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ disappearingMessagesTtl: '24h' });
+      req.flush({ disappearingMessagesTtl: '24h' });
+
+      await expect(promise).resolves.toBe(true);
+      expect(service.disappearingMessagesSaving()).toBe(false);
+      expect(service.disappearingMessagesError()).toBe(false);
+    });
+
+    it('rolls back the setting and exposes a retryable error on failure', async () => {
+      service.disappearingMessagesTtl.set('7d');
+
+      const promise = service.updateDisappearingMessagesTtl('90d');
+      httpTesting
+        .expectOne('http://localhost:3000/api/chat/settings')
+        .error(new ProgressEvent('error'));
+
+      await expect(promise).resolves.toBe(false);
+      expect(service.disappearingMessagesTtl()).toBe('7d');
+      expect(service.disappearingMessagesSaving()).toBe(false);
+      expect(service.disappearingMessagesError()).toBe(true);
+    });
+
+    it('suppresses duplicate retention changes while a save is pending', async () => {
+      const first = service.updateDisappearingMessagesTtl('24h');
+      const second = service.updateDisappearingMessagesTtl('90d');
+
+      await expect(second).resolves.toBe(false);
+      expect(service.disappearingMessagesTtl()).toBe('24h');
+
+      httpTesting
+        .expectOne('http://localhost:3000/api/chat/settings')
+        .flush({ disappearingMessagesTtl: '24h' });
+      await first;
     });
   });
 });
