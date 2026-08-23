@@ -4,7 +4,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AuthService } from '../../services/auth.service';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -20,7 +19,7 @@ import {
 @Component({
   selector: 'app-lessons',
   standalone: true,
-  imports: [CommonModule, RouterLink, HlmButton, AppCardComponent, TranslatePipe],
+  imports: [CommonModule, RouterLink, HlmButton, TranslatePipe],
   template: `
     <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8" aria-labelledby="lessons-title">
       <div class="mx-auto max-w-6xl">
@@ -36,13 +35,13 @@ import {
           @if (selectedLessonResource.isLoading()) {
             <p role="status" aria-live="polite">{{ 'common.loading' | t }}</p>
           } @else if (selectedLessonResource.error()) {
-            <app-card variant="outlined">
+            <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h1 id="lessons-title" class="text-xl font-bold">Lesson unavailable</h1>
               <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retrySelectedLesson()">
                 Retry
               </button>
-            </app-card>
+            </section>
           } @else if (selectedLesson(); as lesson) {
             <article aria-labelledby="lessons-title">
               <header class="mb-6">
@@ -60,7 +59,7 @@ import {
                 }
               </header>
 
-              <app-card variant="default" customClass="overflow-hidden">
+              <section class="overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
                 <div
                   class="mb-5 flex gap-1"
                   role="progressbar"
@@ -129,7 +128,7 @@ import {
                     Next
                   </button>
                 </div>
-              </app-card>
+              </section>
             </article>
           }
         } @else {
@@ -141,16 +140,16 @@ import {
           @if (lessonsResource.isLoading()) {
             <p role="status" aria-live="polite">{{ 'common.loading' | t }}</p>
           } @else if (lessonsResource.error()) {
-            <app-card variant="outlined">
+            <section class="rounded-card border-2 border-surface-100 bg-surface-200 p-4">
               <h2 class="text-xl font-bold">Unable to load lessons</h2>
               <p class="mt-2 text-secondary">{{ 'common.error_generic' | t }}</p>
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">Retry</button>
-            </app-card>
+            </section>
           } @else if (lessons().length === 0) {
-            <app-card variant="default">
+            <section class="rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
               <h2 class="text-xl font-bold">No lessons available</h2>
               <p class="mt-2 text-secondary">New lessons will appear here when they are published.</p>
-            </app-card>
+            </section>
           } @else {
             <section aria-labelledby="featured-lessons-title">
               <h2 id="featured-lessons-title" class="mb-4 text-xl font-bold">Featured</h2>
@@ -184,7 +183,7 @@ import {
         [attr.aria-label]="'Open lesson: ' + lesson.title"
         (click)="resetProgress()"
       >
-        <app-card variant="default" customClass="h-full overflow-hidden hover:shadow-lift">
+        <div class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift">
           @if (safeUrl(lesson.cover_image_url); as coverUrl) {
             <img
               class="mb-4 aspect-video w-full rounded-app object-cover"
@@ -205,7 +204,7 @@ import {
           @if (lesson.description) {
             <p class="mt-2 line-clamp-3 break-words text-sm text-secondary">{{ lesson.description }}</p>
           }
-        </app-card>
+        </div>
       </a>
     </ng-template>
   `,
