@@ -5,11 +5,17 @@ import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
+import { VideoCompressionService } from './video-compression.service';
 
 @Module({
   imports: [SupabaseModule, CloudflareR2Module],
   controllers: [MediaController],
-  providers: [MediaService, AudioCompressionService, ImageCompressionService],
+  providers: [
+    MediaService,
+    AudioCompressionService,
+    ImageCompressionService,
+    VideoCompressionService,
+  ],
   exports: [MediaService, AudioCompressionService],
 })
 export class MediaModule {}
