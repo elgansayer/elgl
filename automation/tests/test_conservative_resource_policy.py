@@ -80,7 +80,8 @@ def test_review_admission_gate_allows_two_unique_shas_per_hour_and_survives_rest
 
     restarted = ReviewAdmissionGate(path, interval_seconds=3600, max_admissions=2)
     assert restarted.available_slots(started + timedelta(minutes=59)) == 0
-    assert restarted.available_slots(started + timedelta(hours=1, minutes=1)) == 1
+    assert restarted.available_slots(started + timedelta(hours=1, seconds=30)) == 1
+    assert restarted.available_slots(started + timedelta(hours=1, minutes=1)) == 2
 
 
 def test_review_admission_gate_suppresses_same_sha_inside_window(tmp_path: Path) -> None:
