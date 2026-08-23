@@ -32,7 +32,7 @@ MERGED
   -> normal issue/worktree cleanup continues
 ```
 
-The scheduled `Factory Merge Gate` workflow remains a recovery fallback for a daemon interruption after review. Both paths require the `factory-reviewed` label, the canonical Factory review status, `CI / required`, a clean merge state, and the current reviewed head.
+The scheduled `Factory Merge Gate` workflow remains a recovery fallback for a daemon interruption after review. The scheduled fallback additionally requires the `factory-reviewed` label. The direct Factory path relies on durable `MERGE_QUEUED` state produced only after review approval, then rechecks the SHA-scoped `factory/independent-review` status, `CI / required`, the current reviewed head, and GitHub merge state immediately before merging.
 
 ## Durable tracking
 
@@ -42,7 +42,7 @@ Lifecycle evidence is stored in:
 <FACTORY_STATE_DIR>/pr_lifecycle.json
 ```
 
-Each event is keyed by pull request number, reviewed head SHA and lifecycle event. A new commit therefore gets a new review lifecycle, while repeated polling and daemon restarts cannot create duplicate success notifications.
+Each event is keyed by pull request number, reviewed head SHA and lifecycle event. A new commit therefore gets a new review lifecycle, while repeated polling and daemon restarts de-duplicate the same success event during normal operation.
 
 Stored events include:
 
