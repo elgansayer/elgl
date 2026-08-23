@@ -162,6 +162,29 @@ describe('AdminMutationAuditInterceptor', () => {
     expect(JSON.stringify(recorded)).not.toContain('must-never-be-audited');
   });
 
+  it('does not misclassify a failed success-audit write as an operation failure', async () => {
+    const { interceptor, audit } = interceptorWithAudit();
+    const auditFailure = new Error('audit unavailable');
+    audit.record.mockRejectedValueOnce(auditFailure);
+    const next: CallHandler = { handle: () => of({ ok: true }) };
+
+    await expect(
+      firstValueFrom(
+        interceptor.intercept(
+          contextFor('POST', '/api/admin', '/users/:id/ban', {
+            sub: 'admin-user',
+          }),
+          next,
+        ),
+      ),
+    ).rejects.toBe(auditFailure);
+
+    expect(audit.record).toHaveBeenCalledTimes(1);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'success' }),
+    );
+  });
+
   it('captures an allow-listed reason without copying the request body', async () => {
     const { interceptor, audit } = interceptorWithAudit();
     const next: CallHandler = { handle: () => of({ ok: true }) };
@@ -202,9 +225,15 @@ describe('AdminMutationAuditInterceptor', () => {
 
     await firstValueFrom(
       interceptor.intercept(
-        contextFor('GET', '/api/admin', '/users', { sub: 'admin-user' }, {
-          requestId: 'Bearer secret-token-value',
-        }),
+        contextFor(
+          'GET',
+          '/api/admin',
+          '/users',
+          { sub: 'admin-user' },
+          {
+            requestId: 'Bearer secret-token-value',
+          },
+        ),
         next,
       ),
     );
@@ -230,6 +259,7 @@ describe('AdminMutationAuditInterceptor', () => {
       ),
     ).rejects.toThrow('operation failed');
 
+    expect(audit.record).toHaveBeenCalledTimes(1);
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         outcome: 'failed',
