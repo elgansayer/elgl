@@ -41,7 +41,9 @@ describe('POST /chat/messages pipeline contract', () => {
   it('keeps the request DTO bounded and validates supported message shapes', () => {
     expect(dto).toMatch(/room_id!:\s*string/);
     expect(dto).toMatch(/@MaxLength\(128\)[\s\S]*?room_id!/);
-    expect(dto).toMatch(/@IsIn\(\[[\s\S]*?'text'[\s\S]*?'voice'[\s\S]*?'correction'[\s\S]*?'doodle'[\s\S]*?'sticker'[\s\S]*?'view_once_media'[\s\S]*?\]\)/);
+    expect(dto).toMatch(
+      /@IsIn\(\[[\s\S]*?'text'[\s\S]*?'voice'[\s\S]*?'correction'[\s\S]*?'doodle'[\s\S]*?'sticker'[\s\S]*?'view_once_media'[\s\S]*?\]\)/,
+    );
     expect(dto).toMatch(/text_content must not be blank/);
     expect(dto).toMatch(/@MaxLength\(10000\)[\s\S]*?text_content\?: string/);
   });
@@ -49,7 +51,9 @@ describe('POST /chat/messages pipeline contract', () => {
   it('persists the authenticated sender and message payload before publishing realtime state', () => {
     const source = sendMessageSource();
     const insertIndex = source.indexOf(".from('chat_messages')");
-    const savedIndex = source.indexOf('const savedMessage = insertResponse.data');
+    const savedIndex = source.indexOf(
+      'const savedMessage = insertResponse.data',
+    );
     const publishIndex = source.indexOf(
       'await this.centrifugoService.publish(`chat:${dto.room_id}`',
     );
@@ -72,7 +76,10 @@ describe('POST /chat/messages pipeline contract', () => {
     const failureIndex = source.indexOf(
       'if (insertResponse.error || !insertResponse.data)',
     );
-    const throwIndex = source.indexOf('throw new Error(`Failed to save message:', failureIndex);
+    const throwIndex = source.indexOf(
+      'throw new Error(`Failed to save message:',
+      failureIndex,
+    );
     const publishIndex = source.indexOf(
       'await this.centrifugoService.publish(`chat:${dto.room_id}`',
     );
