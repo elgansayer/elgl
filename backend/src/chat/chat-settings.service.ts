@@ -1,16 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ChatSettingsDto } from './dto/chat-settings.dto';
+import {
+  ChatSettingsDto,
+  DisappearingMessageTtl,
+  DISAPPEARING_MESSAGE_TTLS,
+} from './dto/chat-settings.dto';
 
 @Injectable()
 export class ChatSettingsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  private defaultSettings: ChatSettingsDto = {
+  private readonly defaultSettings: ChatSettingsDto = {
     autoTranslate: false,
     readReceipts: false,
     enterToSend: false,
+    disappearingMessagesTtl: 'off',
   };
+
+  private normalizeDisappearingMessagesTtl(
+    value: unknown,
+  ): DisappearingMessageTtl {
+    return typeof value === 'string' &&
+      (DISAPPEARING_MESSAGE_TTLS as readonly string[]).includes(value)
+      ? (value as DisappearingMessageTtl)
+      : 'off';
+  }
 
   async getSettings(userId: string): Promise<ChatSettingsDto> {
     const { data, error } = await this.supabaseService
@@ -20,7 +34,13 @@ export class ChatSettingsService {
       .eq('id', userId)
       .single();
 
-    if (error || !data?.chat_preferences) {
+    if (error) {
+      throw new ServiceUnavailableException(
+        'Chat settings are temporarily unavailable',
+      );
+    }
+
+    if (!data?.chat_preferences) {
       return { ...this.defaultSettings };
     }
 
@@ -29,6 +49,9 @@ export class ChatSettingsService {
       autoTranslate: prefs.autoTranslate ?? this.defaultSettings.autoTranslate,
       readReceipts: prefs.readReceipts ?? this.defaultSettings.readReceipts,
       enterToSend: prefs.enterToSend ?? this.defaultSettings.enterToSend,
+      disappearingMessagesTtl: this.normalizeDisappearingMessagesTtl(
+        prefs.disappearingMessagesTtl,
+      ),
     };
   }
 
@@ -41,6 +64,8 @@ export class ChatSettingsService {
       autoTranslate: settings.autoTranslate ?? current.autoTranslate,
       readReceipts: settings.readReceipts ?? current.readReceipts,
       enterToSend: settings.enterToSend ?? current.enterToSend,
+      disappearingMessagesTtl:
+        settings.disappearingMessagesTtl ?? current.disappearingMessagesTtl,
     };
 
     const { error } = await this.supabaseService
@@ -52,7 +77,9 @@ export class ChatSettingsService {
       .eq('id', userId);
 
     if (error) {
-      throw new Error(`Failed to update chat settings: ${error.message}`);
+      throw new ServiceUnavailableException(
+        'Chat settings could not be updated',
+      );
     }
 
     return merged;
