@@ -1,4 +1,4 @@
-"""Durable admission control for newly discovered GitHub issues."""
+"""Restart-safe admission control for expensive Factory work."""
 
 from __future__ import annotations
 
@@ -13,18 +13,23 @@ _STATE_VERSION = 1
 
 
 @dataclass(frozen=True)
-class IssueAdmission:
+class Admission:
     task_id: str
     admitted_at: datetime
 
 
-class IssueAdmissionGate:
-    """Rate-limit only first-time issue admission while preserving pipeline progress.
+# Backwards-compatible name retained for callers/tests which imported the old
+# issue-specific record directly.
+IssueAdmission = Admission
 
-    The Factory advances one durable state transition per scheduler dispatch. Applying
-    an hourly delay to every dispatch would therefore make implementation, review, CI
-    repair, and merge polling unnecessarily slow. This gate is consulted only for a
-    GitHub issue which is still in ``DISCOVERED``.
+
+class DurableAdmissionGate:
+    """Persist a sliding-window admission budget before expensive work starts.
+
+    The gate is deliberately generic so issue intake and independent PR reviews
+    share exactly the same restart-safe accounting. Persisting an admission before
+    worker submission means a daemon crash may conservatively delay work, but can
+    never reset the budget and accidentally launch an extra agent invocation.
     """
 
     def __init__(
@@ -35,9 +40,9 @@ class IssueAdmissionGate:
         max_admissions: int = 1,
     ) -> None:
         if interval_seconds < 0:
-            raise ValueError("issue admission interval cannot be negative")
+            raise ValueError("admission interval cannot be negative")
         if max_admissions <= 0:
-            raise ValueError("issue admissions per interval must be positive")
+            raise ValueError("admissions per interval must be positive")
         self.path = path
         self.interval = timedelta(seconds=interval_seconds)
         self.max_admissions = max_admissions
@@ -47,7 +52,7 @@ class IssueAdmissionGate:
         return self.interval.total_seconds() > 0
 
     def available_slots(self, now: datetime | None = None) -> int | None:
-        """Return available admissions, or ``None`` when admission limiting is disabled."""
+        """Return available admissions, or ``None`` when limiting is disabled."""
 
         if not self.enabled:
             return None
@@ -55,11 +60,7 @@ class IssueAdmissionGate:
         return max(0, self.max_admissions - len(active))
 
     def admit(self, task_id: str, now: datetime | None = None) -> bool:
-        """Persist an admission before worker submission.
-
-        Persisting first makes the limit restart-safe. A daemon crash can delay an issue,
-        but cannot accidentally admit a second issue inside the configured interval.
-        """
+        """Persist an admission before worker submission."""
 
         if not self.enabled:
             return True
@@ -67,7 +68,7 @@ class IssueAdmissionGate:
         active = self._active_admissions(current)
         if len(active) >= self.max_admissions:
             return False
-        active.append(IssueAdmission(task_id=task_id, admitted_at=current))
+        active.append(Admission(task_id=task_id, admitted_at=current))
         self._write(active)
         return True
 
@@ -104,14 +105,14 @@ class IssueAdmissionGate:
             ],
         }
 
-    def _active_admissions(self, now: datetime) -> list[IssueAdmission]:
+    def _active_admissions(self, now: datetime) -> list[Admission]:
         payload = read_json(
             self.path,
             {"version": _STATE_VERSION, "admissions": []},
             validator=self._valid_payload,
         )
         admissions = [
-            IssueAdmission(
+            Admission(
                 task_id=str(item["task_id"]),
                 admitted_at=datetime.fromisoformat(str(item["admitted_at"])),
             )
@@ -123,7 +124,7 @@ class IssueAdmissionGate:
             self._write(active)
         return active
 
-    def _write(self, admissions: list[IssueAdmission]) -> None:
+    def _write(self, admissions: list[Admission]) -> None:
         atomic_write_json(
             self.path,
             {
@@ -152,7 +153,18 @@ class IssueAdmissionGate:
             admitted_at = item.get("admitted_at")
             if not isinstance(admitted_at, str):
                 return False
-            parsed = datetime.fromisoformat(admitted_at)
+            try:
+                parsed = datetime.fromisoformat(admitted_at)
+            except ValueError:
+                return False
             if parsed.tzinfo is None:
                 return False
         return True
+
+
+class IssueAdmissionGate(DurableAdmissionGate):
+    """Rate-limit first-time GitHub issue admission while existing work progresses."""
+
+
+class ReviewAdmissionGate(DurableAdmissionGate):
+    """Rate-limit independent PR review attempts without delaying CI/merge polling."""
