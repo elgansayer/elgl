@@ -26,20 +26,22 @@ describe('ChatMediaMessageService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it.each(['image', 'video'] as const)('sends %s media through the authenticated chat API', async (kind) => {
+  it.each(['image', 'video'] as const)('sends %s media through the authenticated media API', async (kind) => {
+    const objectKey = `chat-media/user/${kind}/hd/123-aaaaaaaaaaaaaaaaaaaaaaaa.${kind === 'image' ? 'jpg' : 'mp4'}`;
     const sendPromise = service.send('room-123', {
       url: `https://cdn.example/${kind}`,
+      objectKey,
       kind,
       quality: 'hd',
     });
 
-    const request = httpMock.expectOne(`${environment.apiUrl}/chat/messages`);
+    const request = httpMock.expectOne(`${environment.apiUrl}/media/chat/send`);
     expect(request.request.method).toBe('POST');
     expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');
     expect(request.request.body).toEqual({
-      room_id: 'room-123',
-      message_type: kind,
-      media_url: `https://cdn.example/${kind}`,
+      roomId: 'room-123',
+      mediaKind: kind,
+      objectKey,
     });
     request.flush({ id: 'message-1' });
 
@@ -51,6 +53,7 @@ describe('ChatMediaMessageService', () => {
     await expect(
       service.send('room-123', {
         url: 'https://cdn.example/image',
+        objectKey: 'chat-media/user/image/standard/123-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
         kind: 'image',
         quality: 'standard',
       }),
