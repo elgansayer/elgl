@@ -108,6 +108,7 @@ def test_conservative_router_limits_one_phase_to_primary_plus_one_fallback(
         [first, second, third],
         policy=OrderedPolicy(["first", "second", "third"]),
         same_provider_retries=0,
+        enabled=True,
     )
 
     with pytest.raises(ProviderCapacityUnavailable, match="All eligible providers failed"):
@@ -134,6 +135,7 @@ def test_conservative_router_preserves_independent_review_before_candidate_cap(
     router = ConservativeAgentRouter(
         providers,
         policy=OrderedPolicy(["first", "second", "third"]),
+        enabled=True,
     )
 
     candidates, _ = router._candidate_names(AgentPhase.CODE_REVIEW, job)
@@ -147,6 +149,7 @@ def test_conservative_router_enforces_two_review_shas_per_hour(tmp_path: Path) -
         [provider],
         capacity_store=ProviderCapacityStore(tmp_path),
         provider_limits={"first": 2},
+        enabled=True,
     )
 
     first_request, first_job = review_request(tmp_path, "10", "aaa")
@@ -190,6 +193,7 @@ def test_conservative_router_allows_only_one_review_agent_at_a_time(tmp_path: Pa
         [provider],
         capacity_store=ProviderCapacityStore(tmp_path),
         provider_limits={"first": 2},
+        enabled=True,
     )
     first_request, first_job = review_request(tmp_path, "10", "aaa")
     second_request, second_job = review_request(tmp_path, "11", "bbb")
