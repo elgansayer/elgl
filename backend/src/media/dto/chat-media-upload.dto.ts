@@ -1,4 +1,12 @@
-import { IsIn, IsInt, IsNotEmpty, IsString, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export const CHAT_MEDIA_QUALITIES = ['standard', 'hd'] as const;
 export type ChatMediaQuality = (typeof CHAT_MEDIA_QUALITIES)[number];
@@ -13,10 +21,12 @@ export const MAX_CHAT_MEDIA_UPLOAD_BYTES = 25 * 1024 * 1024;
 export class ChatMediaUploadDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   filename!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(128)
   contentType!: string;
 
   @IsIn(CHAT_MEDIA_QUALITIES)
