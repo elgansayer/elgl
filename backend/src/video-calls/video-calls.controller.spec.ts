@@ -9,7 +9,10 @@ describe('VideoCallsController', () => {
   let controller: VideoCallsController;
   let videoCallsService: VideoCallsService;
 
-  const mockUser = { id: '11111111-1111-4111-8111-111111111111', email: 'test@hellotalk.com' };
+  const mockUser = {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'test@hellotalk.com',
+  };
   const remoteUserId = '22222222-2222-4222-8222-222222222222';
   const roomName = 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
@@ -96,9 +99,9 @@ describe('VideoCallsController', () => {
 
       const req = { user: mockUser } as any;
 
-      await expect(
-        controller.startCall(req, { remoteUserId }),
-      ).rejects.toThrow('Encrypted calls unavailable');
+      await expect(controller.startCall(req, { remoteUserId })).rejects.toThrow(
+        'Encrypted calls unavailable',
+      );
     });
   });
 
