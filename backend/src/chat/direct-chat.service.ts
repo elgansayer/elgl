@@ -11,6 +11,12 @@ import { SafetyService } from '../safety/safety.service';
 
 const MAX_ROOM_ID_LENGTH = 128;
 
+type DirectChatProfile = {
+  id: string;
+  profile_visibility?: 'everyone' | 'vips_only' | 'hidden' | null;
+  is_deleted?: boolean | null;
+};
+
 @Injectable()
 export class DirectChatService {
   private readonly logger = new Logger(DirectChatService.name);
@@ -43,9 +49,9 @@ export class DirectChatService {
   ): Promise<{ room_id: string }> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: partner, error: partnerError } = await supabase
+    const { data: rawPartner, error: partnerError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, profile_visibility, is_deleted')
       .eq('id', partnerId)
       .maybeSingle();
 
@@ -55,7 +61,33 @@ export class DirectChatService {
       );
       throw new ServiceUnavailableException('Unable to open chat right now');
     }
-    if (!partner) throw new NotFoundException('User not found');
+
+    const partner = rawPartner as DirectChatProfile | null;
+    if (!partner || partner.is_deleted) throw new NotFoundException('User not found');
+
+    const visibility = partner.profile_visibility ?? 'everyone';
+    if (visibility === 'hidden') {
+      throw new ForbiddenException('Direct chat is unavailable for this user');
+    }
+
+    if (visibility === 'vips_only') {
+      const { data: currentUser, error: currentUserError } = await supabase
+        .from('users')
+        .select('is_vip')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (currentUserError || !currentUser) {
+        this.logger.warn(
+          `direct_chat_entitlement_lookup_failed code=${currentUserError?.code ?? 'unknown'}`,
+        );
+        throw new ServiceUnavailableException('Unable to open chat right now');
+      }
+
+      if (!Boolean((currentUser as { is_vip?: boolean | null }).is_vip)) {
+        throw new ForbiddenException('Direct chat is unavailable for this user');
+      }
+    }
 
     let blockedIds: string[];
     try {
