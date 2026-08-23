@@ -52,7 +52,7 @@ BEGIN
       FROM public.chat_room_members AS member_count
       WHERE member_count.room_id = first_member.room_id
     ) = 2
-  ORDER BY first_member.joined_at ASC NULLS LAST, first_member.room_id::TEXT ASC
+  ORDER BY first_member.room_id::TEXT ASC
   LIMIT 1;
 
   IF v_room_id IS NOT NULL THEN
