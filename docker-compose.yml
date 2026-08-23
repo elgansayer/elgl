@@ -58,6 +58,10 @@ services:
     image: centrifugo/centrifugo:v5
     restart: always
     command: centrifugo -c /centrifugo/config.json
+    environment:
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_SECRET:?CENTRIFUGO_SECRET is required}
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:?CENTRIFUGO_API_KEY is required}
+      CENTRIFUGO_ALLOWED_ORIGINS: ${FRONTEND_URL:?FRONTEND_URL is required}
     ports:
       - '8000:8000'
       - '8001:8001'
