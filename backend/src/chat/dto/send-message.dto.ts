@@ -16,6 +16,8 @@ const MEDIA_MESSAGE_TYPES = [
   'doodle',
   'sticker',
   'view_once_media',
+  'image',
+  'video',
 ] as const;
 
 export class CorrectionPayloadDto {
@@ -80,6 +82,8 @@ export class SendMessageDto {
     'correction_request',
     'status_reply',
     'view_once_media',
+    'image',
+    'video',
   ])
   message_type!: string;
 
