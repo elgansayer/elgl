@@ -1,7 +1,10 @@
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { ChatSettingsService } from '../../services/chat-settings.service';
+import {
+  ChatSettingsService,
+  DisappearingMessagesTtl,
+} from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-settings',
@@ -13,6 +16,52 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
       @if (!loaded()) {
         <div class="text-text-secondary text-center py-8">{{ 'common.loading' | t }}</div>
       } @else {
+        <!-- Disappearing messages -->
+        <section
+          class="bg-surface-100 rounded-xl p-4 space-y-3"
+          aria-labelledby="disappearing-messages-title"
+        >
+          <div class="space-y-1">
+            <h3 id="disappearing-messages-title" class="text-text-primary text-base font-medium">
+              Disappearing messages
+            </h3>
+            <p id="disappearing-messages-description" class="text-text-secondary text-sm">
+              Choose how long newly sent messages remain available. Existing messages keep their current lifetime.
+            </p>
+          </div>
+
+          <label class="block text-sm text-text-primary" for="disappearing-messages-ttl">
+            Message lifetime
+          </label>
+          <select
+            id="disappearing-messages-ttl"
+            class="min-h-11 w-full rounded-lg border border-border bg-surface-50 px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            [value]="disappearingMessagesTtl()"
+            [disabled]="disappearingMessagesSaving()"
+            aria-describedby="disappearing-messages-description disappearing-messages-status"
+            (change)="changeDisappearingMessagesTtl($event)"
+          >
+            <option value="off">Off</option>
+            <option value="24h">24 hours</option>
+            <option value="7d">7 days</option>
+            <option value="90d">90 days</option>
+          </select>
+
+          <p id="disappearing-messages-status" class="min-h-5 text-sm" aria-live="polite">
+            @if (disappearingMessagesSaving()) {
+              <span class="text-text-secondary">{{ 'common.saving' | t }}</span>
+            } @else if (disappearingMessagesError()) {
+              <span class="text-danger" role="alert">
+                Could not save the message lifetime. Your previous setting is still active.
+              </span>
+            } @else if (disappearingMessagesTtl() !== 'off') {
+              <span class="text-text-secondary">
+                New messages you send will be permanently removed after this time.
+              </span>
+            }
+          </p>
+        </section>
+
         <!-- Auto-Translate -->
         <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
           <div class="flex flex-col">
@@ -113,6 +162,9 @@ export class ChatSettingsComponent {
   readonly autoTranslate = this.settingsService.autoTranslate;
   readonly readReceipts = this.settingsService.readReceipts;
   readonly enterToSend = this.settingsService.enterToSend;
+  readonly disappearingMessagesTtl = this.settingsService.disappearingMessagesTtl;
+  readonly disappearingMessagesSaving = this.settingsService.disappearingMessagesSaving;
+  readonly disappearingMessagesError = this.settingsService.disappearingMessagesError;
   readonly loaded = this.settingsService.loaded;
 
   constructor() {
@@ -131,7 +183,17 @@ export class ChatSettingsComponent {
     this.settingsService.updateSetting('enterToSend', !this.enterToSend());
   }
 
+  changeDisappearingMessagesTtl(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (!this.isDisappearingMessagesTtl(value)) return;
+    void this.settingsService.updateDisappearingMessagesTtl(value);
+  }
+
   resetToDefaults(): void {
     this.settingsService.resetToDefaults();
+  }
+
+  private isDisappearingMessagesTtl(value: string): value is DisappearingMessagesTtl {
+    return value === 'off' || value === '24h' || value === '7d' || value === '90d';
   }
 }
