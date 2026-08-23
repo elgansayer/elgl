@@ -2,6 +2,7 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  NestInterceptor,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -82,7 +83,9 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     const routePath = request.route?.path ?? request.path;
 
     const requestId = request.headers['x-request-id'];
-    const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const rawCorrelationId = Array.isArray(requestId)
+      ? requestId[0]
+      : requestId;
     const correlationId =
       typeof rawCorrelationId === 'string' &&
       SAFE_CORRELATION_ID.test(rawCorrelationId)
@@ -103,10 +106,11 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         ? candidateTargetId
         : undefined;
     const targetType = this.resolveTargetType(request, targetId);
-    const action = `${method.toLowerCase()} ${request.baseUrl ?? ''}${routePath ?? ''}`.slice(
-      0,
-      160,
-    );
+    const action =
+      `${method.toLowerCase()} ${request.baseUrl ?? ''}${routePath ?? ''}`.slice(
+        0,
+        160,
+      );
 
     const reasonCode = this.getReasonCode(request.body);
     // Validate the only free-text field before a mutation can run. This avoids
@@ -162,7 +166,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     if (request.params?.blockId) return 'block';
     if (request.params?.assignmentId) return 'role-assignment';
     if (request.params?.roleId) return 'admin-role';
-    if (targetId && `${request.baseUrl}${request.path}`.includes('/users/')) {
+    const requestPath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (targetId && /(?:^|\/)users(?:\/|$)/.test(requestPath)) {
       return 'user';
     }
     return 'admin-resource';
