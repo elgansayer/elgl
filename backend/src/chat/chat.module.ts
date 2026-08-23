@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
@@ -23,6 +24,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
+import { DisappearingMessagesCleanupService } from './disappearing-messages-cleanup.service';
+import { DisappearingMessagesInterceptor } from './disappearing-messages.interceptor';
 
 @Module({
   imports: [
@@ -54,6 +57,12 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
+    DisappearingMessagesCleanupService,
+    DisappearingMessagesInterceptor,
+    {
+      provide: APP_INTERCEPTOR,
+      useExisting: DisappearingMessagesInterceptor,
+    },
   ],
   exports: [
     CentrifugoService,
