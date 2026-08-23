@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
 
 describe('disappearing messages migration contract', () => {
   const migration = readFileSync(
@@ -18,16 +19,26 @@ describe('disappearing messages migration contract', () => {
 
   it('derives supported expiries from the persisted sender preference', () => {
     expect(migration).toMatch(/chat_preferences ->> 'disappearingMessagesTtl'/);
-    expect(migration).toMatch(/WHEN '24h' THEN base_time \+ INTERVAL '24 hours'/);
-    expect(migration).toMatch(/WHEN '7d' THEN base_time \+ INTERVAL '7 days'/);
-    expect(migration).toMatch(/WHEN '90d' THEN base_time \+ INTERVAL '90 days'/);
+    expect(migration).toMatch(
+      /WHEN '24h' THEN base_time \+ INTERVAL '24 hours'/,
+    );
+    expect(migration).toMatch(
+      /WHEN '7d' THEN base_time \+ INTERVAL '7 days'/,
+    );
+    expect(migration).toMatch(
+      /WHEN '90d' THEN base_time \+ INTERVAL '90 days'/,
+    );
     expect(migration).toMatch(/ELSE NULL/);
     expect(migration).toMatch(/BEFORE INSERT ON public\.chat_messages/i);
   });
 
   it('purges expired content in bounded concurrency-safe batches', () => {
-    expect(migration).toMatch(/purge_expired_chat_messages\(p_limit INTEGER DEFAULT 500\)/);
-    expect(migration).toMatch(/LEAST\(GREATEST\(COALESCE\(p_limit, 500\), 1\), 1000\)/);
+    expect(migration).toMatch(
+      /purge_expired_chat_messages\(p_limit INTEGER DEFAULT 500\)/,
+    );
+    expect(migration).toMatch(
+      /LEAST\(GREATEST\(COALESCE\(p_limit, 500\), 1\), 1000\)/,
+    );
     expect(migration).toMatch(/expires_at <= now\(\)/);
     expect(migration).toMatch(/FOR UPDATE SKIP LOCKED/);
     expect(migration).toMatch(/LIMIT safe_limit/);
