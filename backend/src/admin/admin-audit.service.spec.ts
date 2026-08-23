@@ -3,6 +3,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AdminAuditService } from './admin-audit.service';
 
 describe('AdminAuditService', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('persists an allow-listed, scrubbed audit event', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn().mockReturnValue({ insert });
@@ -170,9 +174,10 @@ describe('AdminAuditService', () => {
 
   it('does not fail a completed audit write when retention cleanup fails', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
-    const rpc = vi
-      .fn()
-      .mockResolvedValue({ data: null, error: new Error('retention unavailable') });
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error('retention unavailable'),
+    });
     const errorLog = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
