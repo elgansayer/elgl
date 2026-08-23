@@ -7,6 +7,8 @@ from pathlib import Path
 from threading import RLock
 from typing import Literal
 
+from filelock import FileLock
+
 from openhands_factory.alerts import AlertService
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -25,6 +27,8 @@ class PullRequestLifecycleTracker:
     daemon restarts cannot spam the same notification.
     """
 
+    _process_lock = RLock()
+
     def __init__(
         self,
         state_dir: Path,
@@ -37,7 +41,7 @@ class PullRequestLifecycleTracker:
         self.repository = repository
         self.alerts = alerts
         self.retry_seconds = max(1, retry_seconds)
-        self._lock = RLock()
+        self.file_lock = FileLock(str(self.path) + ".lock")
 
     @staticmethod
     def _event_key(pull_request: int, head_sha: str, event: PullRequestLifecycleEvent) -> str:
@@ -93,7 +97,7 @@ class PullRequestLifecycleTracker:
             f"{detail}\n"
             f"https://github.com/{self.repository}/pull/{pull_request}"
         )
-        with self._lock:
+        with self._process_lock, self.file_lock:
             payload = self._load()
             events = payload.get("events")
             if not isinstance(events, dict):
@@ -120,7 +124,7 @@ class PullRequestLifecycleTracker:
         if limit <= 0:
             return
         now = datetime.now(UTC)
-        with self._lock:
+        with self._process_lock, self.file_lock:
             payload = self._load()
             events = payload.get("events")
             if not isinstance(events, dict):
@@ -194,7 +198,7 @@ class PullRequestLifecycleTracker:
     def snapshot(self) -> list[dict[str, object]]:
         """Return lifecycle events in chronological order for operator diagnostics."""
 
-        with self._lock:
+        with self._process_lock, self.file_lock:
             events = self._load().get("events")
             if not isinstance(events, dict):
                 return []
