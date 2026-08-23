@@ -21,7 +21,14 @@ describe('DirectChatService', () => {
 
   beforeEach(async () => {
     rpc = vi.fn().mockResolvedValue({ data: ROOM_ID, error: null });
-    maybeSingle = vi.fn().mockResolvedValue({ data: { id: PARTNER_ID }, error: null });
+    maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: PARTNER_ID,
+        profile_visibility: 'everyone',
+        is_deleted: false,
+      },
+      error: null,
+    });
 
     const query = {
       select: vi.fn().mockReturnThis(),
@@ -47,7 +54,7 @@ describe('DirectChatService', () => {
     service = module.get(DirectChatService);
   });
 
-  it('opens the atomic direct room for an existing unblocked user', async () => {
+  it('opens the atomic direct room for an existing visible unblocked user', async () => {
     await expect(service.openDirectChat(USER_ID, PARTNER_ID)).resolves.toEqual({
       room_id: ROOM_ID,
     });
@@ -73,10 +80,83 @@ describe('DirectChatService', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it('treats soft-deleted partners as unavailable', async () => {
+    maybeSingle.mockResolvedValueOnce({
+      data: { id: PARTNER_ID, profile_visibility: 'everyone', is_deleted: true },
+      error: null,
+    });
+
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('preserves hidden-profile privacy', async () => {
+    maybeSingle.mockResolvedValueOnce({
+      data: { id: PARTNER_ID, profile_visibility: 'hidden', is_deleted: false },
+      error: null,
+    });
+
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('preserves VIP-only profile visibility for free users', async () => {
+    maybeSingle
+      .mockResolvedValueOnce({
+        data: { id: PARTNER_ID, profile_visibility: 'vips_only', is_deleted: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { is_vip: false }, error: null });
+
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('allows VIP users to open VIP-only profiles', async () => {
+    maybeSingle
+      .mockResolvedValueOnce({
+        data: { id: PARTNER_ID, profile_visibility: 'vips_only', is_deleted: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { is_vip: true }, error: null });
+
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).resolves.toEqual({
+      room_id: ROOM_ID,
+    });
+  });
+
+  it('fails closed if VIP entitlement cannot be verified', async () => {
+    maybeSingle
+      .mockResolvedValueOnce({
+        data: { id: PARTNER_ID, profile_visibility: 'vips_only', is_deleted: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: { code: 'XX000' } });
+
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('fails closed when either participant has blocked the other', async () => {
     safetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([PARTNER_ID]);
     await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
       ForbiddenException,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the safety relationship cannot be checked', async () => {
+    safetyService.getBlockedAndBlockerIds.mockRejectedValueOnce(new Error('redis down'));
+    await expect(service.openDirectChat(USER_ID, PARTNER_ID)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
     );
     expect(rpc).not.toHaveBeenCalled();
   });
