@@ -170,9 +170,10 @@ describe('AdminAuditService', () => {
 
   it('does not fail a completed audit write when retention cleanup fails', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
-    const rpc = vi
-      .fn()
-      .mockResolvedValue({ data: null, error: new Error('retention unavailable') });
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error('retention unavailable'),
+    });
     const errorLog = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
@@ -191,7 +192,9 @@ describe('AdminAuditService', () => {
       }),
     ).resolves.toBeUndefined();
 
-    const logged = errorLog.mock.calls.map((call) => String(call[0])).join('\n');
+    const logged = errorLog.mock.calls
+      .map((call) => String(call[0]))
+      .join('\n');
     expect(logged).toContain('admin_audit_retention_failed');
     expect(logged).not.toContain('retention unavailable');
   });

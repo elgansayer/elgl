@@ -102,7 +102,8 @@ describe('ChatMediaMessageService', () => {
     const result = await service.send('user-1', {
       roomId: 'room-1',
       mediaKind: 'video',
-      objectKey: 'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.mp4',
+      objectKey:
+        'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.mp4',
     });
 
     expect(result.id).toBe('message-existing');
