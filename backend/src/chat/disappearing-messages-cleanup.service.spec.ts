@@ -82,7 +82,9 @@ describe('DisappearingMessagesCleanupService', () => {
       ],
       error: null,
     });
-    publish.mockRejectedValueOnce(new Error('realtime unavailable')).mockResolvedValueOnce(undefined);
+    publish
+      .mockRejectedValueOnce(new Error('realtime unavailable'))
+      .mockResolvedValueOnce(undefined);
 
     await expect(service.purgeExpiredMessages()).resolves.toBeUndefined();
     expect(publish).toHaveBeenCalledTimes(2);
