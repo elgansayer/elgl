@@ -15,7 +15,8 @@ interface StoredEncryptionSession {
 
 const CALL_SESSION_PREFIX = 'video-calls:e2ee:';
 const CALL_SESSION_TTL_SECONDS = 60 * 60;
-const ROOM_NAME_PATTERN = /^video_[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ROOM_NAME_PATTERN =
+  /^video_[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Brokers short-lived LiveKit E2EE material outside the media plane.
@@ -56,13 +57,18 @@ export class VideoCallsEncryptionService {
       );
     } catch {
       this.logger.error('Unable to persist encrypted call session');
-      throw new ServiceUnavailableException('Encrypted calls are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Encrypted calls are temporarily unavailable',
+      );
     }
 
     return key;
   }
 
-  async getKeyForParticipant(roomName: string, userId: string): Promise<string> {
+  async getKeyForParticipant(
+    roomName: string,
+    userId: string,
+  ): Promise<string> {
     this.assertRoomName(roomName);
 
     let raw: string | null;
@@ -72,7 +78,9 @@ export class VideoCallsEncryptionService {
         .get(`${CALL_SESSION_PREFIX}${roomName}`);
     } catch {
       this.logger.error('Unable to read encrypted call session');
-      throw new ServiceUnavailableException('Encrypted calls are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Encrypted calls are temporarily unavailable',
+      );
     }
 
     if (!raw) {
@@ -84,17 +92,23 @@ export class VideoCallsEncryptionService {
       session = JSON.parse(raw) as StoredEncryptionSession;
     } catch {
       this.logger.error('Encrypted call session could not be decoded');
-      throw new ServiceUnavailableException('Encrypted calls are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Encrypted calls are temporarily unavailable',
+      );
     }
 
     if (
       typeof session.key !== 'string' ||
       session.key.length < 32 ||
       !Array.isArray(session.participants) ||
-      !session.participants.every((participant) => typeof participant === 'string')
+      !session.participants.every(
+        (participant) => typeof participant === 'string',
+      )
     ) {
       this.logger.error('Encrypted call session failed integrity validation');
-      throw new ServiceUnavailableException('Encrypted calls are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Encrypted calls are temporarily unavailable',
+      );
     }
 
     if (!session.participants.includes(userId)) {
