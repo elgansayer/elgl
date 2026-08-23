@@ -5,6 +5,16 @@ import { CentrifugoService } from './centrifugo.service';
 
 const CLEANUP_BATCH_SIZE = 500;
 
+type CleanupRpcResponse = {
+  data: unknown;
+  error: { code?: string | null } | null;
+};
+
+type CleanupRpc = (
+  functionName: 'purge_expired_chat_messages',
+  args: { p_limit: number },
+) => Promise<CleanupRpcResponse>;
+
 interface ExpiredMessageIdentity {
   message_id: string;
   room_id: string;
@@ -26,9 +36,14 @@ export class DisappearingMessagesCleanupService {
 
   @Cron('0 * * * * *', { name: 'purgeExpiredChatMessages' })
   async purgeExpiredMessages(): Promise<void> {
-    const { data, error } = await this.supabaseService
-      .getClient()
-      .rpc('purge_expired_chat_messages', { p_limit: CLEANUP_BATCH_SIZE });
+    const client = this.supabaseService.getClient();
+    // The repository keeps a deliberately small hand-curated Supabase RPC
+    // interface. Keep this new migration-owned function narrow here until the
+    // generated schema type becomes the repository-wide source of truth.
+    const cleanupRpc = client.rpc.bind(client) as unknown as CleanupRpc;
+    const { data, error } = await cleanupRpc('purge_expired_chat_messages', {
+      p_limit: CLEANUP_BATCH_SIZE,
+    });
 
     if (error) {
       this.logger.error(
