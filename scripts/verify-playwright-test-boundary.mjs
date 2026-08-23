@@ -26,11 +26,11 @@ function hasSafePlaywrightContext(lines, index, path) {
   const end = Math.min(lines.length, index + CONTEXT_LINES + 1);
   const context = lines.slice(start, end).join('\n');
 
-  return (
-    /(?:^|[;&|(]\s*cd\s+(?:\.\/)?e2e(?:\s|&&|\)|$))/m.test(context) ||
-    /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(context) ||
-    /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context)
-  );
+  const changesIntoE2e = /\bcd\s+(?:\.\/)?e2e(?:\s|&&|;|\)|$)/m.test(context);
+  const usesE2eWorkingDirectory = /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(context);
+  const usesE2eConfig = /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context);
+
+  return changesIntoE2e || usesE2eWorkingDirectory || usesE2eConfig;
 }
 
 function scanPlaywrightInvocations(files) {
@@ -44,7 +44,8 @@ function scanPlaywrightInvocations(files) {
 
     const lines = content.split(/\r?\n/);
     lines.forEach((line, index) => {
-      if (!/\b(?:npx\s+)?playwright\s+test\b/.test(line)) {
+      const normalizedLine = line.replace(/\s+/g, ' ').trim();
+      if (!normalizedLine.includes('playwright test')) {
         return;
       }
 
@@ -69,7 +70,7 @@ function validateE2ePackage(e2ePackageJson) {
   }
 
   const testScript = pkg?.scripts?.test;
-  if (typeof testScript !== 'string' || !/\bplaywright\s+test\b/.test(testScript)) {
+  if (typeof testScript !== 'string' || !testScript.includes('playwright test')) {
     violations.push('e2e/package.json must own the canonical Playwright test script');
   }
 
