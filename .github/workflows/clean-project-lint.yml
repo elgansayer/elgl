@@ -16,8 +16,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint-contract:
+    name: lint contract guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify repository lint contract
+        run: npm run check:lint-contract
+
   clean-lint:
     name: ${{ matrix.project }} / npm run lint clean tree
+    needs: lint-contract
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
