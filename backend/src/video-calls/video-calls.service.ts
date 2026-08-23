@@ -143,8 +143,10 @@ export class VideoCallsService {
   ): Promise<EncryptedVideoCallResponse> {
     // Authorize against the encrypted call session before minting a LiveKit
     // token. This prevents knowledge of a room UUID from becoming admission.
-    const e2eeKey =
-      await this.encryptionService.getKeyForParticipant(roomName, userId);
+    const e2eeKey = await this.encryptionService.getKeyForParticipant(
+      roomName,
+      userId,
+    );
 
     const marker: DegradationMarker = {
       degraded: false,
