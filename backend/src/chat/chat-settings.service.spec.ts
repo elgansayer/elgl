@@ -45,9 +45,7 @@ describe('ChatSettingsService', () => {
       };
       mockFrom.mockReturnValue(chain);
 
-      const result = await service.getSettings(userId);
-
-      expect(result).toEqual({
+      await expect(service.getSettings(userId)).resolves.toEqual({
         autoTranslate: false,
         readReceipts: false,
         enterToSend: false,
@@ -55,7 +53,7 @@ describe('ChatSettingsService', () => {
       });
     });
 
-    it('should return default settings on error', async () => {
+    it('should fail closed when persisted settings cannot be read', async () => {
       const chain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -65,14 +63,9 @@ describe('ChatSettingsService', () => {
       };
       mockFrom.mockReturnValue(chain);
 
-      const result = await service.getSettings(userId);
-
-      expect(result).toEqual({
-        autoTranslate: false,
-        readReceipts: false,
-        enterToSend: false,
-        disappearingMessagesTtl: 'off',
-      });
+      await expect(service.getSettings(userId)).rejects.toThrow(
+        'Chat settings are temporarily unavailable',
+      );
     });
 
     it('should return merged settings from stored preferences', async () => {
@@ -92,9 +85,7 @@ describe('ChatSettingsService', () => {
       };
       mockFrom.mockReturnValue(chain);
 
-      const result = await service.getSettings(userId);
-
-      expect(result).toEqual({
+      await expect(service.getSettings(userId)).resolves.toEqual({
         autoTranslate: true,
         readReceipts: false,
         enterToSend: true,
@@ -163,7 +154,7 @@ describe('ChatSettingsService', () => {
       expect(updateChain.eq).toHaveBeenCalledWith('id', userId);
     });
 
-    it('should throw an error if the database update fails', async () => {
+    it('should return a sanitized failure if the database update fails', async () => {
       const getChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -181,13 +172,13 @@ describe('ChatSettingsService', () => {
       };
       const updateChain = {
         update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: new Error('DB write error') }),
+        eq: vi.fn().mockResolvedValue({ error: new Error('sensitive DB write error') }),
       };
       mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
       await expect(
         service.updateSettings(userId, { autoTranslate: true }),
-      ).rejects.toThrow('Failed to update chat settings: DB write error');
+      ).rejects.toThrow('Chat settings could not be updated');
     });
 
     it('should allow partial updates and preserve other settings', async () => {
