@@ -24,8 +24,8 @@ function message(
     room_id: 'room-1',
     sender_id: 'partner-1',
     message_type: type,
-    media_url: mediaUrl ?? null,
-    text_content: type === 'text' ? `message ${id}` : null,
+    media_url: mediaUrl,
+    text_content: type === 'text' ? `message ${id}` : undefined,
     is_read: true,
     created_at: '2026-08-23T09:00:00.000Z',
     sender: { id: 'partner-1', display_name: 'Partner', avatar_url: null },
@@ -53,7 +53,7 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
       translateText: vi.fn(),
-      markMessageRead: vi.fn().mockResolvedValue(undefined),
+      markMessageStatus: vi.fn().mockResolvedValue(undefined),
     };
     const authService = {
       currentUser: signal({ id: 'user-1', display_name: 'Me' }),
