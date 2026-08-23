@@ -5,7 +5,10 @@ CREATE TABLE IF NOT EXISTS public.chat_room_pins (
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, room_id)
+  PRIMARY KEY (user_id, room_id),
+  FOREIGN KEY (room_id, user_id)
+    REFERENCES public.chat_room_members(room_id, user_id)
+    ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_room_pins_user_created
