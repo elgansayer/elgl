@@ -8,6 +8,7 @@ export interface DirectChatResult {
   room_id: string;
 }
 
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ROOM_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 @Injectable({ providedIn: 'root' })
@@ -17,6 +18,8 @@ export class ProfileChatActionsService {
   private readonly baseUrl = `${environment.apiUrl}/chat/direct-rooms`;
 
   async openDirectChat(partnerId: string): Promise<DirectChatResult> {
+    if (!UUID_V4.test(partnerId)) throw new Error('Invalid chat partner');
+
     const token = this.authService.getAccessToken();
     if (!token) throw new Error('Authentication required');
 
