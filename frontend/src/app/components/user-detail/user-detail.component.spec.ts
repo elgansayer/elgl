@@ -2,11 +2,12 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileChatActionsService } from '../../services/profile-chat-actions.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
@@ -29,6 +30,7 @@ function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile 
     privacy_hide_from_search: false,
     privacy_hide_gender: false,
     created_at: '2026-01-01T00:00:00.000Z',
+    is_followed_by_me: false,
   };
 }
 
@@ -40,17 +42,24 @@ function createDeferred<T>() {
   return { promise, resolve };
 }
 
-describe('UserDetailComponent bio translation', () => {
+describe('UserDetailComponent', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
+  let followUser: ReturnType<typeof vi.fn>;
+  let unfollowUser: ReturnType<typeof vi.fn>;
+  let openDirectChat: ReturnType<typeof vi.fn>;
+  let router: Router;
 
   beforeEach(async () => {
     currentLang = signal('en-GB');
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
+    followUser = vi.fn().mockResolvedValue(undefined);
+    unfollowUser = vi.fn().mockResolvedValue(undefined);
+    openDirectChat = vi.fn().mockResolvedValue({ room_id: 'room-123' });
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -62,14 +71,18 @@ describe('UserDetailComponent bio translation', () => {
           provide: UserService,
           useValue: {
             getUserProfile,
-            followUser: vi.fn(),
-            unfollowUser: vi.fn(),
+            followUser,
+            unfollowUser,
             likeProfile: vi.fn(),
           },
         },
         {
           provide: DiscoveryService,
           useValue: { translateBio },
+        },
+        {
+          provide: ProfileChatActionsService,
+          useValue: { openDirectChat },
         },
         {
           provide: I18nService,
@@ -89,6 +102,7 @@ describe('UserDetailComponent bio translation', () => {
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
     fixture.componentRef.setInput('userId', 'user-1');
     fixture.detectChanges();
     await Promise.resolve();
@@ -194,5 +208,71 @@ describe('UserDetailComponent bio translation', () => {
 
     expect(component.isTranslating()).toBe(false);
     expect(component.displayBio).toBe('Translated bio');
+  });
+
+  it('opens an authoritative direct room before navigating', async () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    await component.openChat();
+
+    expect(openDirectChat).toHaveBeenCalledWith('user-1');
+    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(component.actionErrorKey()).toBe('');
+  });
+
+  it('does not navigate and exposes retry feedback when opening a chat fails', async () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    openDirectChat.mockRejectedValueOnce(new Error('provider unavailable'));
+
+    await component.openChat();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(component.actionErrorKey()).toBe('common.error_generic');
+    expect(component.isOpeningChat()).toBe(false);
+  });
+
+  it('deduplicates concurrent open-chat actions', async () => {
+    const deferred = createDeferred<{ room_id: string }>();
+    openDirectChat.mockReturnValueOnce(deferred.promise);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const first = component.openChat();
+    const second = component.openChat();
+    expect(openDirectChat).toHaveBeenCalledTimes(1);
+
+    deferred.resolve({ room_id: 'room-123' });
+    await Promise.all([first, second]);
+  });
+
+  it('changes follow state only after the server confirms it', async () => {
+    const deferred = createDeferred<void>();
+    followUser.mockReturnValueOnce(deferred.promise);
+
+    const action = component.toggleFollow();
+    expect(component.isFollowing()).toBe(false);
+    expect(component.isUpdatingFollow()).toBe(true);
+
+    deferred.resolve(undefined);
+    await action;
+    expect(component.isFollowing()).toBe(true);
+    expect(component.isUpdatingFollow()).toBe(false);
+  });
+
+  it('preserves follow state and exposes retry feedback when the mutation fails', async () => {
+    followUser.mockRejectedValueOnce(new Error('failed'));
+
+    await component.toggleFollow();
+
+    expect(component.isFollowing()).toBe(false);
+    expect(component.actionErrorKey()).toBe('common.error_generic');
+  });
+
+  it('uses the authoritative unfollow mutation for an existing follow', async () => {
+    component.isFollowing.set(true);
+
+    await component.toggleFollow();
+
+    expect(unfollowUser).toHaveBeenCalledWith('user-1');
+    expect(component.isFollowing()).toBe(false);
   });
 });
