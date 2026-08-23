@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -12,6 +13,8 @@ export interface ChatPinState {
 
 @Injectable()
 export class ChatPinsService {
+  private readonly logger = new Logger(ChatPinsService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getPinnedRoomIds(userId: string): Promise<string[]> {
@@ -24,6 +27,7 @@ export class ChatPinsService {
       .limit(100);
 
     if (error) {
+      this.logStoreFailure('list', error.code);
       throw new ServiceUnavailableException(
         'Pinned chats are temporarily unavailable.',
       );
@@ -48,6 +52,7 @@ export class ChatPinsService {
       .maybeSingle();
 
     if (membershipError) {
+      this.logStoreFailure('membership', membershipError.code);
       throw new ServiceUnavailableException(
         'Unable to verify chat membership right now.',
       );
@@ -62,6 +67,7 @@ export class ChatPinsService {
         { onConflict: 'user_id,room_id', ignoreDuplicates: true },
       );
       if (error) {
+        this.logStoreFailure('pin', error.code);
         throw new ServiceUnavailableException(
           'Unable to pin this chat right now.',
         );
@@ -73,6 +79,7 @@ export class ChatPinsService {
         .eq('user_id', userId)
         .eq('room_id', roomId);
       if (error) {
+        this.logStoreFailure('unpin', error.code);
         throw new ServiceUnavailableException(
           'Unable to unpin this chat right now.',
         );
@@ -80,5 +87,13 @@ export class ChatPinsService {
     }
 
     return { room_id: roomId, is_pinned: isPinned };
+  }
+
+  private logStoreFailure(operation: string, providerCode?: string): void {
+    this.logger.warn({
+      event: 'chat_pin_store_failure',
+      operation,
+      providerCode: providerCode || 'unknown',
+    });
   }
 }
