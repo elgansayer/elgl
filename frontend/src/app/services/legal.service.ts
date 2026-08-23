@@ -21,6 +21,7 @@ const MAX_SECTION_ID_LENGTH = 80;
 const MAX_HEADING_LENGTH = 240;
 const MAX_SECTION_CONTENT_LENGTH = 20_000;
 const SECTION_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 @Injectable({ providedIn: 'root' })
 export class LegalService {
@@ -67,13 +68,7 @@ export class LegalService {
       const heading = this.readBoundedString(section['heading'], MAX_HEADING_LENGTH);
       const content = this.readBoundedString(section['content'], MAX_SECTION_CONTENT_LENGTH);
 
-      if (
-        !id ||
-        !heading ||
-        !content ||
-        !SECTION_ID_PATTERN.test(id) ||
-        seenIds.has(id)
-      ) {
+      if (!id || !heading || !content || !SECTION_ID_PATTERN.test(id) || seenIds.has(id)) {
         throw new Error('Invalid legal document response');
       }
 
@@ -102,11 +97,19 @@ export class LegalService {
   }
 
   private isIsoCalendarDate(value: string): boolean {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const match = ISO_CALENDAR_DATE_PATTERN.exec(value);
+    if (!match) {
       return false;
     }
 
-    const [year, month, day] = value.split('-').map(Number);
+    const [, yearText, monthText, dayText] = match;
+    if (!yearText || !monthText || !dayText) {
+      return false;
+    }
+
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
     const date = new Date(Date.UTC(year, month - 1, day));
 
     return (
