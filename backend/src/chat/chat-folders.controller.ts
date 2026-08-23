@@ -17,11 +17,11 @@ import { ChatFoldersService } from './chat-folders.service';
 
 @Controller('chat/folders')
 @UseGuards(SupabaseAuthGuard)
-@Header('Cache-Control', 'no-store')
 export class ChatFoldersController {
   constructor(private readonly chatFoldersService: ChatFoldersService) {}
 
   @Get('archived')
+  @Header('Cache-Control', 'no-store')
   async getArchivedRooms(
     @CurrentUser() user: User | null,
   ): Promise<ChatRoomRecord[]> {
@@ -30,6 +30,7 @@ export class ChatFoldersController {
   }
 
   @Post('archived/:roomId')
+  @Header('Cache-Control', 'no-store')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   async archiveRoom(
     @CurrentUser() user: User | null,
@@ -41,6 +42,7 @@ export class ChatFoldersController {
   }
 
   @Delete('archived/:roomId')
+  @Header('Cache-Control', 'no-store')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   async unarchiveRoom(
     @CurrentUser() user: User | null,
@@ -52,11 +54,12 @@ export class ChatFoldersController {
   }
 
   /**
-   * Locked chats are the product's hidden-chat folder. The client only calls
-   * this endpoint after its app-unlock flow succeeds. Server-side membership
-   * remains authoritative, so callers cannot request arbitrary room IDs.
+   * Locked chats are the product's hidden-chat folder. The first-party client
+   * calls this endpoint only after its local app-unlock flow succeeds.
+   * Membership remains authoritative on the server.
    */
   @Get('hidden')
+  @Header('Cache-Control', 'no-store')
   async getHiddenRooms(
     @CurrentUser() user: User | null,
   ): Promise<ChatRoomRecord[]> {
