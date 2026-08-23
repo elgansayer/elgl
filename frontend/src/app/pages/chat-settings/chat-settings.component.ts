@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,7 +9,7 @@ import {
 
 @Component({
   selector: 'app-chat-settings',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmNativeSelect, HlmButton, TranslatePipe],
   template: `
     <div class="p-4 max-w-md mx-auto space-y-6 bg-surface-500 min-h-screen">
       <h2 class="text-xl font-semibold text-text-primary">{{ 'chat_settings.title' | t }}</h2>
@@ -45,9 +46,10 @@ import {
           <label class="block text-sm text-text-primary" for="disappearing-messages-ttl">
             Message lifetime
           </label>
-          <select
-            id="disappearing-messages-ttl"
-            class="min-h-11 w-full rounded-lg border border-border bg-surface-50 px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+          <hlm-native-select
+            selectId="disappearing-messages-ttl"
+            class="w-full"
+            selectClass="min-h-11 w-full rounded-lg border border-border bg-surface-50 px-3 py-2 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
             [value]="disappearingMessagesTtl()"
             [disabled]="disappearingMessagesSaving() || settingsLoadError()"
             aria-describedby="disappearing-messages-description disappearing-messages-status"
@@ -57,7 +59,7 @@ import {
             <option value="24h">24 hours</option>
             <option value="7d">7 days</option>
             <option value="90d">90 days</option>
-          </select>
+          </hlm-native-select>
 
           <p id="disappearing-messages-status" class="min-h-5 text-sm" aria-live="polite">
             @if (disappearingMessagesSaving()) {
