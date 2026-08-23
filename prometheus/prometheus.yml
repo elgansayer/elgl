@@ -25,3 +25,11 @@ scrape_configs:
         labels:
           service: 'centrifugo'
     scrape_interval: 10s
+
+  - job_name: 'livekit'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['sfu:6789']
+        labels:
+          service: 'livekit-sfu'
+    scrape_interval: 10s
