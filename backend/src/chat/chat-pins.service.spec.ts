@@ -32,13 +32,20 @@ describe('ChatPinsService', () => {
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue({
-        data: [{ room_id: roomId }, { room_id: 'room-2' }, { room_id: null }],
+        data: [
+          { room_id: roomId },
+          { room_id: 'room-2' },
+          { room_id: null },
+        ],
         error: null,
       }),
     };
     mockFrom.mockReturnValue(chain);
 
-    await expect(service.getPinnedRoomIds(userId)).resolves.toEqual([roomId, 'room-2']);
+    await expect(service.getPinnedRoomIds(userId)).resolves.toEqual([
+      roomId,
+      'room-2',
+    ]);
     expect(mockFrom).toHaveBeenCalledWith('chat_room_pins');
     expect(chain.eq).toHaveBeenCalledWith('user_id', userId);
     expect(chain.limit).toHaveBeenCalledWith(100);
@@ -49,7 +56,10 @@ describe('ChatPinsService', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue({ data: null, error: new Error('database unavailable') }),
+      limit: vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error('database unavailable'),
+      }),
     };
     mockFrom.mockReturnValue(chain);
 
@@ -62,7 +72,9 @@ describe('ChatPinsService', () => {
     const membership = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { room_id: roomId }, error: null }),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { room_id: roomId }, error: null }),
     };
     const pins = {
       upsert: vi.fn().mockResolvedValue({ error: null }),
@@ -89,16 +101,18 @@ describe('ChatPinsService', () => {
     };
     mockFrom.mockReturnValue(membership);
 
-    await expect(service.setPinned(userId, roomId, true)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.setPinned(userId, roomId, true),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('unpins idempotently and scopes deletion to the authenticated user and room', async () => {
     const membership = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { room_id: roomId }, error: null }),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { room_id: roomId }, error: null }),
     };
     const deleteChain = {
       eq: vi.fn(),
