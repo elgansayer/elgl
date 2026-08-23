@@ -88,10 +88,12 @@ export class ChatPinsService {
 
     const pinsClient = this.getPinsClient();
     if (isPinned) {
-      const { error } = await pinsClient.from('chat_room_pins').upsert(
-        { user_id: userId, room_id: roomId },
-        { onConflict: 'user_id,room_id', ignoreDuplicates: true },
-      );
+      const { error } = await pinsClient
+        .from('chat_room_pins')
+        .upsert(
+          { user_id: userId, room_id: roomId },
+          { onConflict: 'user_id,room_id', ignoreDuplicates: true },
+        );
       if (error) {
         this.logStoreFailure('pin', error.code);
         throw new ServiceUnavailableException(
@@ -119,7 +121,8 @@ export class ChatPinsService {
     // This table is introduced by this issue's additive migration. Keep the
     // local schema explicit until the repository-wide generated type snapshot
     // is refreshed after deployment.
-    return this.supabaseService.getClient() as unknown as SupabaseClient<ChatPinsDatabase>;
+    return this.supabaseService
+      .getClient() as unknown as SupabaseClient<ChatPinsDatabase>;
   }
 
   private logStoreFailure(operation: string, providerCode?: string): void {
