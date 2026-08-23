@@ -47,7 +47,7 @@ export class AppearanceSettingsComponent {
   readonly currentTextSize = this.fontScaleService.textSizePreference;
   readonly currentChatTextSize = this.fontScaleService.chatTextSize;
 
-  readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
+  readonly themeOptions: Theme[] = ['system', 'light', 'dark'];
   readonly textSizeOptions: readonly TextSizePreference[] = ['small', 'normal', 'large'];
   readonly chatTextSizeOptions: readonly ChatTextSizePreference[] = ['small', 'medium', 'large'];
 
