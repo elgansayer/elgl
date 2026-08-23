@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -9,6 +9,9 @@ import { PresignedMediaUploadDto } from './dto/presigned-media-upload.dto';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
+import { VideoCompressionService } from './video-compression.service';
+
+export type ChatMediaQuality = 'standard' | 'hd';
 
 @Injectable()
 export class MediaService {
@@ -28,11 +31,21 @@ export class MediaService {
     'audio/x-m4a',
   ];
 
+  private static readonly ALLOWED_VIDEO_CONTENT_TYPES = [
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+  ];
+
+  private static readonly MAX_CHAT_IMAGE_BYTES = 20 * 1024 * 1024;
+  private static readonly MAX_CHAT_VIDEO_BYTES = 100 * 1024 * 1024;
+
   constructor(
     private readonly r2ObjectService: R2ObjectService,
     private readonly supabaseService: SupabaseService,
     private readonly audioCompressionService: AudioCompressionService,
     private readonly imageCompressionService: ImageCompressionService,
+    private readonly videoCompressionService: VideoCompressionService,
   ) {}
 
   async generatePresignedUrl(
@@ -42,10 +55,7 @@ export class MediaService {
     const uniqueHash = randomBytes(8).toString('hex');
     const extension = this.safeExtension(dto.filename, 'bin');
     const objectKey = `${dto.folder}/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
-    const upload = this.r2ObjectService.createUploadUrl(
-      objectKey,
-      dto.contentType,
-    );
+    const upload = this.r2ObjectService.createUploadUrl(objectKey, dto.contentType);
 
     return {
       uploadUrl: upload.uploadUrl,
@@ -99,6 +109,66 @@ export class MediaService {
     });
   }
 
+  async uploadChatMedia(
+    userId: string,
+    file: Express.Multer.File,
+    quality: ChatMediaQuality,
+  ): Promise<{ url: string; mediaType: 'image' | 'video'; quality: ChatMediaQuality }> {
+    const contentType = file.mimetype.split(';', 1)[0].trim().toLowerCase();
+    const isImage = MediaService.ALLOWED_IMAGE_CONTENT_TYPES.includes(contentType);
+    const isVideo = MediaService.ALLOWED_VIDEO_CONTENT_TYPES.includes(contentType);
+
+    if (!isImage && !isVideo) {
+      throw new BadRequestException('Only JPEG, PNG, WebP, MP4, WebM, and MOV media are allowed');
+    }
+    if (quality !== 'standard' && quality !== 'hd') {
+      throw new BadRequestException('Quality must be standard or hd');
+    }
+
+    const maxBytes = isImage
+      ? MediaService.MAX_CHAT_IMAGE_BYTES
+      : MediaService.MAX_CHAT_VIDEO_BYTES;
+    if (file.size > maxBytes || file.buffer.length > maxBytes) {
+      throw new PayloadTooLargeException(
+        isImage ? 'Image exceeds the 20 MB limit' : 'Video exceeds the 100 MB limit',
+      );
+    }
+
+    const uniqueHash = randomBytes(8).toString('hex');
+    if (isImage) {
+      const bytes =
+        quality === 'standard'
+          ? await this.imageCompressionService.compress(file.buffer, contentType)
+          : file.buffer;
+      const extension = this.safeExtension(file.originalname, contentType === 'image/png' ? 'png' : 'jpg');
+      const objectKey = `chat-media/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+      const object = await this.r2ObjectService.uploadBytes(objectKey, contentType, bytes);
+      return { url: object.publicUrl, mediaType: 'image', quality };
+    }
+
+    if (quality === 'hd') {
+      const extension = this.safeExtension(file.originalname, contentType === 'video/webm' ? 'webm' : 'mp4');
+      const objectKey = `chat-media/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
+      const object = await this.r2ObjectService.uploadBytes(objectKey, contentType, file.buffer);
+      return { url: object.publicUrl, mediaType: 'video', quality };
+    }
+
+    const inputExtension = this.safeExtension(file.originalname, 'video');
+    const inputPath = path.join(os.tmpdir(), `${Date.now()}-${uniqueHash}.${inputExtension}`);
+    const outputPath = path.join(os.tmpdir(), `${Date.now()}-${uniqueHash}-standard.mp4`);
+    try {
+      await fs.writeFile(inputPath, file.buffer);
+      await this.videoCompressionService.compressToStandardMp4(inputPath, outputPath);
+      const output = await fs.readFile(outputPath);
+      const objectKey = `chat-media/${userId}/${Date.now()}-${uniqueHash}.mp4`;
+      const object = await this.r2ObjectService.uploadBytes(objectKey, 'video/mp4', output);
+      return { url: object.publicUrl, mediaType: 'video', quality };
+    } finally {
+      await fs.unlink(inputPath).catch(() => undefined);
+      await fs.unlink(outputPath).catch(() => undefined);
+    }
+  }
+
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,
@@ -111,25 +181,15 @@ export class MediaService {
 
     const randomName = randomBytes(8).toString('hex');
     const safeExtension = this.safeExtension(file.originalname, 'bin');
-    const inputPath = path.join(
-      os.tmpdir(),
-      `${Date.now()}-input-${randomName}.${safeExtension}`,
-    );
-    const outputPath = path.join(
-      os.tmpdir(),
-      `${Date.now()}-output-${randomName}.ogg`,
-    );
+    const inputPath = path.join(os.tmpdir(), `${Date.now()}-input-${randomName}.${safeExtension}`);
+    const outputPath = path.join(os.tmpdir(), `${Date.now()}-output-${randomName}.ogg`);
 
     try {
       await fs.writeFile(inputPath, file.buffer);
       await this.audioCompressionService.compressToOgg(inputPath, outputPath);
       const compressedBuffer = await fs.readFile(outputPath);
       const objectKey = `voice-notes/${userId}/${Date.now()}-${randomName}.ogg`;
-      const object = await this.r2ObjectService.uploadBytes(
-        objectKey,
-        'audio/ogg',
-        compressedBuffer,
-      );
+      const object = await this.r2ObjectService.uploadBytes(objectKey, 'audio/ogg', compressedBuffer);
       return { url: object.publicUrl };
     } finally {
       await fs.unlink(inputPath).catch(() => undefined);
@@ -158,10 +218,7 @@ export class MediaService {
     );
 
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('users')
-      .update({ cover_url: stored.publicUrl })
-      .eq('id', userId);
+    const { error } = await supabase.from('users').update({ cover_url: stored.publicUrl }).eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update cover photo URL');
@@ -181,11 +238,7 @@ export class MediaService {
       Buffer.from(object.bytes),
       object.contentType,
     );
-    await this.r2ObjectService.uploadBytes(
-      objectKey,
-      object.contentType,
-      compressedBuffer,
-    );
+    await this.r2ObjectService.uploadBytes(objectKey, object.contentType, compressedBuffer);
   }
 
   async uploadAndSetCoverImage(
@@ -197,24 +250,14 @@ export class MediaService {
       MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
       'Only JPEG, PNG, and WebP images are allowed',
     );
-    const compressedBuffer = await this.imageCompressionService.compress(
-      file.buffer,
-      file.mimetype,
-    );
+    const compressedBuffer = await this.imageCompressionService.compress(file.buffer, file.mimetype);
     const uniqueHash = randomBytes(8).toString('hex');
     const extension = this.safeExtension(file.originalname, 'jpg');
     const objectKey = `covers/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
-    const object = await this.r2ObjectService.uploadBytes(
-      objectKey,
-      file.mimetype,
-      compressedBuffer,
-    );
+    const object = await this.r2ObjectService.uploadBytes(objectKey, file.mimetype, compressedBuffer);
 
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('users')
-      .update({ cover_url: object.publicUrl })
-      .eq('id', userId);
+    const { error } = await supabase.from('users').update({ cover_url: object.publicUrl }).eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update cover photo URL');
@@ -232,24 +275,14 @@ export class MediaService {
       MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
       'Only JPEG, PNG, and WebP images are allowed',
     );
-    const compressedBuffer = await this.imageCompressionService.compress(
-      file.buffer,
-      file.mimetype,
-    );
+    const compressedBuffer = await this.imageCompressionService.compress(file.buffer, file.mimetype);
     const uniqueHash = randomBytes(8).toString('hex');
     const extension = this.safeExtension(file.originalname, 'jpg');
     const objectKey = `avatars/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
-    const object = await this.r2ObjectService.uploadBytes(
-      objectKey,
-      file.mimetype,
-      compressedBuffer,
-    );
+    const object = await this.r2ObjectService.uploadBytes(objectKey, file.mimetype, compressedBuffer);
 
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('users')
-      .update({ avatar_url: object.publicUrl })
-      .eq('id', userId);
+    const { error } = await supabase.from('users').update({ avatar_url: object.publicUrl }).eq('id', userId);
 
     if (error) {
       throw new Error('Failed to update avatar photo URL');
@@ -258,10 +291,7 @@ export class MediaService {
     return { avatarUrl: object.publicUrl };
   }
 
-  async markMediaAsViewed(
-    userId: string,
-    mediaId: string,
-  ): Promise<{ success: boolean }> {
+  async markMediaAsViewed(userId: string, mediaId: string): Promise<{ success: boolean }> {
     const supabase = this.supabaseService.getClient();
     const { data: media, error: fetchError } = await supabase
       .from('media')
@@ -277,10 +307,7 @@ export class MediaService {
       throw new BadRequestException('Media is not view-once or already viewed');
     }
 
-    const { error: updateError } = await supabase
-      .from('media')
-      .update({ viewed: true })
-      .eq('id', mediaId);
+    const { error: updateError } = await supabase.from('media').update({ viewed: true }).eq('id', mediaId);
 
     if (updateError) {
       throw new Error('Failed to mark media as viewed');
@@ -294,10 +321,7 @@ export class MediaService {
     allowedTypes: readonly string[],
     message: string,
   ): void {
-    const normalisedContentType = contentType
-      .split(';', 1)[0]
-      .trim()
-      .toLowerCase();
+    const normalisedContentType = contentType.split(';', 1)[0].trim().toLowerCase();
     if (!allowedTypes.includes(normalisedContentType)) {
       throw new BadRequestException(message);
     }
