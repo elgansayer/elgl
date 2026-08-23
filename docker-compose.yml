@@ -77,19 +77,26 @@ services:
     restart: always
     command: --config /livekit/config.yaml
     environment:
-      - LIVEKIT_TURN_ENABLED=true
-      - LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:-turn.example.com}
-      - LIVEKIT_TURN_TLS_PORT=5349
-      - LIVEKIT_TURN_UDP_PORT=3478
-      - LIVEKIT_RTC_STUN_SERVERS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
+      - 'LIVEKIT_KEYS=${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_SECRET:?LIVEKIT_SECRET is required}'
+      - 'LIVEKIT_TURN_ENABLED=true'
+      - 'LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:?LIVEKIT_TURN_DOMAIN is required}'
+      - 'LIVEKIT_TURN_TLS_PORT=${LIVEKIT_TURN_TLS_PORT:-443}'
+      - 'LIVEKIT_TURN_UDP_PORT=${LIVEKIT_TURN_UDP_PORT:-3478}'
+      - 'LIVEKIT_TURN_EXTERNAL_TLS=false'
+      - 'LIVEKIT_TURN_CERT_FILE=/run/secrets/livekit_turn_cert'
+      - 'LIVEKIT_TURN_KEY_FILE=/run/secrets/livekit_turn_key'
+      - 'LIVEKIT_RTC_STUN_SERVERS=${LIVEKIT_RTC_STUN_SERVERS:-stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302}'
     ports:
       - '7880:7880'
       - '7881:7881'
-      - '3478:3478/udp'
-      - '5349:5349'
-      - '50000-60000:50000-60000/udp'
+      - '${LIVEKIT_TURN_UDP_PORT:-3478}:${LIVEKIT_TURN_UDP_PORT:-3478}/udp'
+      - '${LIVEKIT_TURN_TLS_PORT:-443}:${LIVEKIT_TURN_TLS_PORT:-443}'
+      - '58000-58100:58000-58100/udp'
     volumes:
-      - ./config/livekit:/livekit
+      - ./config/livekit:/livekit:ro
+    secrets:
+      - livekit_turn_cert
+      - livekit_turn_key
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:7880/']
       interval: 30s
@@ -148,3 +155,9 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+
+secrets:
+  livekit_turn_cert:
+    file: ${LIVEKIT_TURN_CERT_FILE:?LIVEKIT_TURN_CERT_FILE is required}
+  livekit_turn_key:
+    file: ${LIVEKIT_TURN_KEY_FILE:?LIVEKIT_TURN_KEY_FILE is required}
