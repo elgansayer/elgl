@@ -1,6 +1,6 @@
+import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LinkPreviewCardComponent } from './link-preview-card.component';
-import { By } from '@angular/platform-browser';
 
 describe('LinkPreviewCardComponent', () => {
   let fixture: ComponentFixture<LinkPreviewCardComponent>;
@@ -19,7 +19,7 @@ describe('LinkPreviewCardComponent', () => {
     description?: string;
     image?: string;
     siteName?: string;
-  }) {
+  }): void {
     fixture.componentRef.setInput('url', inputs.url);
     fixture.componentRef.setInput('title', inputs.title ?? '');
     fixture.componentRef.setInput('description', inputs.description ?? '');
@@ -32,6 +32,15 @@ describe('LinkPreviewCardComponent', () => {
     setInputs({ url: 'https://example.com/article' });
     const anchor = fixture.debugElement.query(By.css('a'));
     expect(anchor.nativeElement.href).toBe('https://example.com/article');
+  });
+
+  it('does not render a card for an unsafe destination URL', () => {
+    setInputs({
+      url: 'javascript:alert(1)',
+      title: 'Unsafe preview',
+    });
+
+    expect(fixture.debugElement.query(By.css('a'))).toBeNull();
   });
 
   it('renders title, description, and site name', () => {
@@ -59,13 +68,53 @@ describe('LinkPreviewCardComponent', () => {
     expect(img.nativeElement.src).toBe('https://example.com/img.png');
   });
 
+  it('does not render an unsafe image URL', () => {
+    setInputs({
+      url: 'https://example.com',
+      image: 'data:text/html,<script>alert(1)</script>',
+    });
+
+    expect(fixture.debugElement.query(By.css('img'))).toBeNull();
+  });
+
+  it('removes a preview image after the browser reports a load failure', () => {
+    setInputs({
+      url: 'https://example.com',
+      image: 'https://example.com/broken.png',
+    });
+
+    fixture.debugElement.query(By.css('img')).triggerEventHandler('error');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('img'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('a'))).toBeTruthy();
+  });
+
+  it('renders a replacement image after an earlier image failed', () => {
+    setInputs({
+      url: 'https://example.com',
+      image: 'https://example.com/broken.png',
+    });
+    fixture.debugElement.query(By.css('img')).triggerEventHandler('error');
+    fixture.detectChanges();
+
+    setInputs({
+      url: 'https://example.com',
+      image: 'https://example.com/replacement.png',
+    });
+
+    const img = fixture.debugElement.query(By.css('img'));
+    expect(img).toBeTruthy();
+    expect(img.nativeElement.src).toBe('https://example.com/replacement.png');
+  });
+
   it('does not render an image element when no image input is given', () => {
     setInputs({ url: 'https://example.com' });
     const img = fixture.debugElement.query(By.css('img'));
     expect(img).toBeNull();
   });
 
-  it('opens the link in a new tab', () => {
+  it('opens the link in a new tab without opener access', () => {
     setInputs({ url: 'https://example.com' });
     const anchor = fixture.debugElement.query(By.css('a'));
     expect(anchor.nativeElement.target).toBe('_blank');
