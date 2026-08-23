@@ -143,7 +143,10 @@ export class VideoCallsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid room name.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 403, description: 'Call unavailable or user is not a participant.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Call unavailable or user is not a participant.',
+  })
   @ApiResponse({
     status: 503,
     description: 'Encrypted call key broker unavailable.',
