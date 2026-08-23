@@ -166,7 +166,11 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   private async dispatchReminderClaims(
     claims: EventReminderClaim[],
   ): Promise<void> {
-    for (let offset = 0; offset < claims.length; offset += REMINDER_SEND_CONCURRENCY) {
+    for (
+      let offset = 0;
+      offset < claims.length;
+      offset += REMINDER_SEND_CONCURRENCY
+    ) {
       const chunk = claims.slice(offset, offset + REMINDER_SEND_CONCURRENCY);
       const results = await Promise.allSettled(
         chunk.map(async (claim) => {
@@ -179,17 +183,25 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
           );
           const minuteLabel = minutesUntilStart === 1 ? 'minute' : 'minutes';
 
-          await this.notificationsService.sendPushNotification(claim.user_id, {
-            type: 'event_reminder',
-            title: `Event Reminder: ${eventTitle}`,
-            body: `Your event "${eventTitle}" starts in ${minutesUntilStart} ${minuteLabel}.`,
-            category: 'groups',
-            data: {
-              eventId: claim.event_id,
-              route: `/events/${claim.event_id}`,
-              startsAt: claim.event_date_time,
-            },
-          });
+          const dispatchResult =
+            await this.notificationsService.sendPushNotification(
+              claim.user_id,
+              {
+                type: 'event_reminder',
+                title: `Event Reminder: ${eventTitle}`,
+                body: `Your event "${eventTitle}" starts in ${minutesUntilStart} ${minuteLabel}.`,
+                category: 'groups',
+                data: {
+                  eventId: claim.event_id,
+                  route: `/events/${claim.event_id}`,
+                  startsAt: claim.event_date_time,
+                },
+              },
+            );
+
+          if (dispatchResult === 'retry') {
+            throw new Error('Push dispatch requested retry');
+          }
 
           return claim.reminder_id;
         }),
