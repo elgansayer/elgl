@@ -26,9 +26,15 @@ describe('001_initial_schema migration contract', () => {
 
   it('defines the VIP, economy and learning-state fields with safe defaults', () => {
     expect(migration).toMatch(/is_vip\s+BOOLEAN\s+NOT NULL\s+DEFAULT false/i);
-    expect(migration).toMatch(/coins_balance\s+INTEGER\s+NOT NULL\s+DEFAULT 0/i);
-    expect(migration).toMatch(/study_streak_days\s+INTEGER\s+NOT NULL\s+DEFAULT 1/i);
-    expect(migration).toMatch(/correction_ratio\s+REAL\s+NOT NULL\s+DEFAULT 1\.0/i);
+    expect(migration).toMatch(
+      /coins_balance\s+INTEGER\s+NOT NULL\s+DEFAULT 0/i,
+    );
+    expect(migration).toMatch(
+      /study_streak_days\s+INTEGER\s+NOT NULL\s+DEFAULT 1/i,
+    );
+    expect(migration).toMatch(
+      /correction_ratio\s+REAL\s+NOT NULL\s+DEFAULT 1\.0/i,
+    );
   });
 
   it('indexes spatial discovery and common user lookup fields', () => {
@@ -41,6 +47,8 @@ describe('001_initial_schema migration contract', () => {
     expect(migration).toMatch(
       /users_display_name_trgm_idx\s+ON public\.users\s+USING GIN\s*\(display_name gin_trgm_ops\)/i,
     );
-    expect(migration).toMatch(/users_is_vip_idx\s+ON public\.users\s*\(is_vip\)/i);
+    expect(migration).toMatch(
+      /users_is_vip_idx\s+ON public\.users\s*\(is_vip\)/i,
+    );
   });
 });
