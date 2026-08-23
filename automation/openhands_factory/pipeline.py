@@ -364,6 +364,15 @@ class FactoryPipeline:
                 workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
+            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
+            # whose pull request was closed (not merged) while the factory was
+            # still reviewing or waiting on CI never got here at all - its
+            # worktree, and everything downstream of it, stayed on disk forever.
+            # reconcile() only resets a DONE job with this exact message back to
+            # DISCOVERED when job.pull_request is still None, which is already
+            # never true once a PR-review job reaches this branch (it is set
+            # immediately in _discover_pull_request), so this message split does
+            # not change that behaviour.
             job.last_error = (
                 "Issue closed before pull request creation"
                 if job.task.source == "github-issue"
@@ -374,7 +383,15 @@ class FactoryPipeline:
         return self.jobs.load()
 
     def _reconcile_quarantine_labels(self) -> None:
-        """Clear GitHub quarantine labels no longer backed by durable state."""
+        """Clear GitHub quarantine labels no longer backed by durable state.
+
+        Bounded recovery changes a due job back to ``DISCOVERED`` before the next
+        GitHub refresh. Discovery deliberately excludes ``factory-quarantined`` and
+        ``needs-human``, so an interrupted or older recovery can otherwise hide the
+        job forever. Durable state is authoritative. Label cleanup is idempotent and
+        intentionally silent because routine circuit recovery is control-plane noise.
+        """
+
         durable_quarantined = {
             int(task_id)
             for task_id, job in self.jobs.load().items()
@@ -391,10 +408,14 @@ class FactoryPipeline:
         )
 
     def request_label_reconciliation(self) -> None:
+        """Request one control-label reconciliation before the next discovery read."""
+
         self.labels_ready = False
         self.active_label_reconciliation_pending = True
 
     def _reconcile_active_labels(self, protected_task_ids: set[str]) -> None:
+        """Repair one bounded batch of stale Factory ownership markers."""
+
         jobs = self.jobs.load()
         protected_numeric = {int(task_id) for task_id in protected_task_ids if task_id.isdigit()}
         durable_active = protected_numeric | {
@@ -410,6 +431,7 @@ class FactoryPipeline:
         if not batch:
             self.active_label_reconciliation_pending = False
             return
+
         released = self.github.release_active_issues(batch)
         self.active_label_reconciliation_pending = len(stale_labels) > len(released)
         LOGGER.warning(
@@ -452,6 +474,7 @@ class FactoryPipeline:
         return job
 
     def run_job(self, task_id: str) -> Job | None:
+        """Advance one scheduler-selected job and merge only its durable state."""
         job = self.jobs.load().get(task_id)
         if job is None or job.state in TERMINAL_STATES:
             return None
@@ -481,6 +504,8 @@ class FactoryPipeline:
         self.tasks.release(job.task.identifier)
 
     def _publish_quarantine(self, job: Job) -> None:
+        """Publish one recoverable human-action circuit without retry spam."""
+
         issue = int(job.task.identifier)
         try:
             self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
@@ -494,7 +519,10 @@ class FactoryPipeline:
                 "durable state and labels.",
             )
         except FactoryError:
-            LOGGER.exception("factory.job.quarantine_notification_failed task=%s", job.task.identifier)
+            LOGGER.exception(
+                "factory.job.quarantine_notification_failed task=%s",
+                job.task.identifier,
+            )
             return
         job.quarantine_notification_pending = False
         self.jobs.save_job(job)
@@ -511,6 +539,8 @@ class FactoryPipeline:
         require_repository_change: bool = False,
     ) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
+
+        # Map phase string to enum
         phase_map = {
             "planning": AgentPhase.PLANNING,
             "architecture": AgentPhase.ARCHITECTURE,
@@ -523,9 +553,20 @@ class FactoryPipeline:
         }
         agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
         if job.pull_request is not None:
-            self.github.remove_issue_labels(job.pull_request, ("factory-reviewed", "factory-review"))
+            # A previous review label can survive an interrupted state transition.
+            # Clear every merge-eligibility marker before any new AI-backed phase,
+            # including a nominally read-only review which may still edit code.
+            # The label and SHA-scoped status are published again only after a
+            # fresh, valid report approves the resulting head.
+            self.github.remove_issue_labels(
+                job.pull_request,
+                ("factory-reviewed", "factory-review"),
+            )
             if job.head_sha is not None:
-                self.github.publish_review_pending(job.head_sha, detail=f"Factory {agent_phase.value} in progress")
+                self.github.publish_review_pending(
+                    job.head_sha,
+                    detail=f"Factory {agent_phase.value} in progress",
+                )
         baseline_fingerprint: str | None = None
         workflow = self._workflow(worktree)
 
@@ -556,9 +597,14 @@ class FactoryPipeline:
             prompt=prompt,
             cwd=worktree,
             system_prompt=self.system_prompt,
-            prepare_attempt=(prepare if prepare_attempt is not None or require_repository_change else None),
-            validate_output=(validate if validate_output is not None or require_repository_change else None),
+            prepare_attempt=(
+                prepare if prepare_attempt is not None or require_repository_change else None
+            ),
+            validate_output=(
+                validate if validate_output is not None or require_repository_change else None
+            ),
         )
+
         excluded: set[str] = set()
         if agent_phase in {AgentPhase.CODE_REVIEW, AgentPhase.SECURITY_REVIEW}:
             excluded = {
@@ -571,22 +617,32 @@ class FactoryPipeline:
                 and isinstance(entry.get("provider"), str)
             }
         result = self.router.run(request, job, exclude=excluded)
+
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
         elif agent_phase is AgentPhase.CODE_REVIEW:
             job.review_provider = result.provider
         elif agent_phase is AgentPhase.SECURITY_REVIEW:
             job.security_provider = result.provider
+
         if not result.success:
             if result.failure:
                 if result.provider == "openhands":
                     raise FactoryError(result.failure.message)
-                raise FactoryError(f"Agent provider '{result.provider}' failed: {result.failure.message}")
+                raise FactoryError(
+                    f"Agent provider '{result.provider}' failed: {result.failure.message}"
+                )
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
 
     def _advance(self, job: Job) -> None:
+        # Notification delivery is best-effort and never changes merge eligibility.
+        # Retry a small number of previously-recorded lifecycle events on ordinary
+        # Factory progress so a transient Telegram outage is eventually visible.
         self.pr_lifecycle.flush_pending()
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        # Control prompts must never come from the agent-modifiable worktree. The
+        # dedicated Factory checkout is deployed from main and remains outside every
+        # task diff, so an implementation cannot weaken its own security or review phase.
         prompt_dir = self.prompt_dir
         if job.state is JobState.DISCOVERED:
             if job.task.source == "github-pull-request":
@@ -606,9 +662,11 @@ class FactoryPipeline:
             self.github.add_issue_labels(int(job.task.identifier), ("factory-active",))
             self.github.add_comment(
                 int(job.task.identifier),
-                "OpenHands factory started this issue. It is using an isolated worktree, "
-                "parallel capacity is controlled by the factory configuration, and the "
-                "implementation will be verified before a pull request is opened.",
+                (
+                    "OpenHands factory started this issue. It is using an isolated worktree, "
+                    "parallel capacity is controlled by the factory configuration, and the "
+                    "implementation will be verified before a pull request is opened."
+                ),
             )
             job.state = JobState.IMPLEMENTING
             return
@@ -619,8 +677,20 @@ class FactoryPipeline:
         )
         if job.state is JobState.IMPLEMENTING:
             context_files = self._context_files(worktree)
-            prompt = build_task_prompt(prompt_dir, job.task, context_files, self._verification_descriptions(worktree), [])
-            self._run_agent(job, worktree, "implementation", prompt, require_repository_change=True)
+            prompt = build_task_prompt(
+                prompt_dir,
+                job.task,
+                context_files,
+                self._verification_descriptions(worktree),
+                [],
+            )
+            self._run_agent(
+                job,
+                worktree,
+                "implementation",
+                prompt,
+                require_repository_change=True,
+            )
             job.state = JobState.SECURITY_REVIEW
             return
 
@@ -628,11 +698,18 @@ class FactoryPipeline:
             try:
                 exempt = _is_security_review_exempt(workflow.changed_paths())
             except RepositorySafetyError:
+                # Can't prove the diff is out of scope, so fall through to a
+                # real review rather than crash the job or skip it blind.
                 exempt = False
             if exempt:
                 job.state = JobState.VERIFYING
                 return
-            self._run_agent(job, worktree, "security", build_phase_prompt(prompt_dir, "security", job.task))
+            self._run_agent(
+                job,
+                worktree,
+                "security",
+                build_phase_prompt(prompt_dir, "security", job.task),
+            )
             job.state = JobState.VERIFYING
             return
 
@@ -656,7 +733,13 @@ class FactoryPipeline:
             if job.pull_request is None:
                 job.state = JobState.PR_DRAFT
             else:
-                self.github.add_comment(job.pull_request, "OpenHands factory verified and pushed a repair to the existing pull request branch. Independent review is running again.")
+                self.github.add_comment(
+                    job.pull_request,
+                    (
+                        "OpenHands factory verified and pushed a repair to the existing "
+                        "pull request branch. Independent review is running again."
+                    ),
+                )
                 job.state = JobState.REVIEWING
             return
 
@@ -669,6 +752,7 @@ class FactoryPipeline:
                 return
             if job.quality_repairs >= 2:
                 raise FactoryError("Quality repair limit exceeded")
+
             quality_finding_text = "\n".join(
                 f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
             )
@@ -679,7 +763,15 @@ class FactoryPipeline:
             if review_finding_text:
                 sections.append(f"Repair evidence:\n\n{review_finding_text}")
             extra = "\n\n".join(sections)
-            self._run_agent(job, worktree, "quality_repair", build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra), require_repository_change=True)
+
+            self._run_agent(
+                job,
+                worktree,
+                "quality_repair",
+                build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+                require_repository_change=True,
+            )
+
             job.review_findings.clear()
             job.quality_repairs += 1
             job.state = JobState.VERIFYING
@@ -688,8 +780,19 @@ class FactoryPipeline:
         if job.state is JobState.PR_DRAFT:
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
-            job.pull_request = self.github.create_pull_request(job.branch, f"Fixes #{job.task.identifier}: {job.task.title}", self._pull_request_body(job))
-            self.github.add_comment(job.pull_request, "OpenHands factory created this pull request. The factory will review the same branch, repair verification failures, wait for required checks, and merge only after the reviewed commit is still current.")
+            job.pull_request = self.github.create_pull_request(
+                job.branch,
+                f"Fixes #{job.task.identifier}: {job.task.title}",
+                self._pull_request_body(job),
+            )
+            self.github.add_comment(
+                job.pull_request,
+                (
+                    "OpenHands factory created this pull request. The factory will review the "
+                    "same branch, repair verification failures, wait for required checks, and "
+                    "merge only after the reviewed commit is still current."
+                ),
+            )
             job.state = JobState.REVIEWING
             return
 
@@ -697,6 +800,12 @@ class FactoryPipeline:
             if self._refresh_pull_request_if_changed(job, worktree):
                 return
 
+            # The worktree persists across retries of this state, so a review report
+            # left behind by an earlier failed attempt (crashed conversation, hit its
+            # turn budget, etc.) must not be re-validated as if it were fresh: remove
+            # it before running the conversation, so a conversation that fails to
+            # (re)write a valid report is reported as missing one, not judged against
+            # someone else's stale output.
             def clear_review_report() -> None:
                 (worktree / ".factory-review.json").unlink(missing_ok=True)
 
@@ -711,7 +820,11 @@ class FactoryPipeline:
                 prepare_attempt=clear_review_report,
                 validate_output=require_valid_review_report,
             )
-            report = validate_review_report(worktree, job.task.body, require_approval=False)
+            report = validate_review_report(
+                worktree,
+                job.task.body,
+                require_approval=False,
+            )
             (worktree / ".factory-review.json").unlink(missing_ok=True)
             if workflow.has_changes():
                 if job.repair_attempts >= 5:
@@ -751,18 +864,30 @@ class FactoryPipeline:
                 raise FactoryError("Pull request number is missing")
             if job.head_sha is None:
                 job.head_sha = workflow.head_sha()
-            self.github.publish_review_status(job.head_sha, approved=True, detail=report.summary[:140])
+            self.github.publish_review_status(
+                job.head_sha,
+                approved=True,
+                detail=report.summary[:140],
+            )
             self.github.add_issue_labels(job.pull_request, ("factory-reviewed",))
             self.github.mark_ready(job.pull_request)
             self.github.request_review(job.pull_request)
             self.github.add_comment(
                 job.pull_request,
-                "OpenHands factory review passed. Local verification completed and the reviewed head SHA is recorded as a required status. Waiting for GitHub checks before merge.",
+                (
+                    "OpenHands factory review passed. Local verification completed and the "
+                    "reviewed head SHA is recorded as a required status. Waiting for GitHub "
+                    "checks before merge."
+                ),
             )
             self._record_pr_lifecycle(
                 job,
                 "reviewed",
-                "Factory independent review accepted this exact commit, published the factory/independent-review success status, and applied factory-reviewed. Required GitHub checks must still pass before merge.",
+                (
+                    "Factory independent review accepted this exact commit, published the "
+                    "factory/independent-review success status, and applied factory-reviewed. "
+                    "Required GitHub checks must still pass before merge."
+                ),
             )
             job.state = JobState.CI_PENDING
             return
@@ -770,7 +895,11 @@ class FactoryPipeline:
         if job.state is JobState.CI_PENDING:
             status = self._status(job)
             if status.state == "MERGED":
-                self._record_pr_lifecycle(job, "merged", "GitHub already reports the reviewed pull request as merged.")
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub already reports the reviewed pull request as merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -782,11 +911,23 @@ class FactoryPipeline:
                 or status.merge_state_status in {"UNKNOWN", "BLOCKED", "HAS_HOOKS", "DRAFT"}
             ):
                 return
-            elif status.checks_passed and status.mergeable == "MERGEABLE" and status.merge_state_status == "CLEAN":
+            elif (
+                status.checks_passed
+                and status.mergeable == "MERGEABLE"
+                and status.merge_state_status == "CLEAN"
+            ):
+                # Persist a visible queue transition before the merge attempt. The
+                # MERGE_QUEUED worker re-reads GitHub immediately before using an
+                # exact-head merge. The scheduled workflow remains a recovery fallback
+                # if the daemon stops after review. Native auto-merge stays disabled so
+                # a later CHANGES_REQUESTED review cannot race the Factory gate.
                 self._record_pr_lifecycle(
                     job,
                     "merge-queued",
-                    "All required checks passed, GitHub reports the reviewed head as clean and mergeable, and the Factory queued an exact-head squash merge.",
+                    (
+                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "and mergeable, and the Factory queued an exact-head squash merge."
+                    ),
                 )
                 job.state = JobState.MERGE_QUEUED
             else:
@@ -812,14 +953,32 @@ class FactoryPipeline:
                 return
             failed_checks = "\n".join(f"- {name}" for name in sorted(status.failed_checks))
             evidence = failed_checks or "- No terminal failed check name was reported by GitHub."
-            repair_context = f"GitHub evidence for the current reviewed head:\n\nFailed checks:\n{evidence}\nMergeability: {status.mergeable}"
+            repair_context = (
+                "GitHub evidence for the current reviewed head:\n\n"
+                f"Failed checks:\n{evidence}\n"
+                f"Mergeability: {status.mergeable}"
+            )
+            # A large share of CI repairs are a workspace's own formatter or
+            # auto-fixable lint rule drifting, not something that needs an
+            # agent's judgement. Try that for free first; only spend an LLM
+            # call if the worktree is still unchanged afterwards.
             attempt_mechanical_repair(worktree)
             mechanically_repaired = workflow.has_changes()
             if not mechanically_repaired:
-                self._run_agent(job, worktree, "repair", build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context), require_repository_change=True)
+                self._run_agent(
+                    job,
+                    worktree,
+                    "repair",
+                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                    require_repository_change=True,
+                )
             self._verify(workflow)
             workflow.stage_all()
-            commit_subject = "fix: apply automatic formatting for" if mechanically_repaired else "fix: repair CI for"
+            commit_subject = (
+                "fix: apply automatic formatting for"
+                if mechanically_repaired
+                else "fix: repair CI for"
+            )
             workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
@@ -827,19 +986,34 @@ class FactoryPipeline:
             job.head_sha = workflow.head_sha()
             job.repair_attempts += 1
             if job.pull_request is not None:
-                self.github.add_comment(job.pull_request, "OpenHands factory repaired the branch after verification or CI feedback. The branch is returning to review before merge.")
+                self.github.add_comment(
+                    job.pull_request,
+                    (
+                        "OpenHands factory repaired the branch after verification or CI "
+                        "feedback. The branch is returning to review before merge."
+                    ),
+                )
             job.state = JobState.REVIEWING
             return
 
         if job.state is JobState.MERGE_QUEUED:
+            # Backfill lifecycle evidence for jobs that were already queued before
+            # this Factory version, and make retries/restarts idempotently visible.
             self._record_pr_lifecycle(
                 job,
                 "merge-queued",
-                "All required checks passed, GitHub reports the reviewed head as clean and mergeable, and the Factory queued an exact-head squash merge.",
+                (
+                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "and mergeable, and the Factory queued an exact-head squash merge."
+                ),
             )
             status = self._status(job)
             if status.state == "MERGED":
-                self._record_pr_lifecycle(job, "merged", "GitHub confirmed that the reviewed pull request was merged.")
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub confirmed that the reviewed pull request was merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -860,19 +1034,34 @@ class FactoryPipeline:
             else:
                 if job.pull_request is None or job.head_sha is None:
                     raise FactoryError("Merge-queued job is missing pull request provenance")
+                # The queue state was established on an earlier transition. Re-read
+                # status above, then ask GitHub to merge only this exact reviewed SHA.
+                # No --admin or auto-merge bypass is used, so GitHub rules remain
+                # authoritative and a changed head is rejected server-side.
                 self.github.merge_pull_request(job.pull_request, job.head_sha)
                 confirmed = self._status(job)
                 if confirmed.state == "MERGED":
-                    self._record_pr_lifecycle(job, "merged", "GitHub confirmed the Factory exact-head squash merge completed.")
+                    self._record_pr_lifecycle(
+                        job,
+                        "merged",
+                        "GitHub confirmed the Factory exact-head squash merge completed.",
+                    )
                     job.state = JobState.MERGED
                 elif confirmed.head_sha != job.head_sha:
                     self._refresh_pull_request_for_review(job, worktree)
             return
 
         if job.state is JobState.MERGED:
-            self._record_pr_lifecycle(job, "merged", "GitHub confirmed that the reviewed pull request is merged.")
+            self._record_pr_lifecycle(
+                job,
+                "merged",
+                "GitHub confirmed that the reviewed pull request is merged.",
+            )
             if job.pull_request is not None:
-                self.github.add_comment(job.pull_request, "OpenHands factory confirmed that GitHub merged this pull request.")
+                self.github.add_comment(
+                    job.pull_request,
+                    "OpenHands factory confirmed that GitHub merged this pull request.",
+                )
             if job.task.source == "github-issue":
                 issue = int(job.task.identifier)
                 self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
@@ -881,7 +1070,14 @@ class FactoryPipeline:
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
 
-    def _record_pr_lifecycle(self, job: Job, event: PullRequestLifecycleEvent, detail: str) -> None:
+    def _record_pr_lifecycle(
+        self,
+        job: Job,
+        event: PullRequestLifecycleEvent,
+        detail: str,
+    ) -> None:
+        """Persist and notify significant PR lifecycle transitions idempotently."""
+
         if job.pull_request is None or job.head_sha is None:
             return
         self.pr_lifecycle.record(
@@ -893,6 +1089,13 @@ class FactoryPipeline:
         )
 
     def _discover_pull_request(self, job: Job, worktree: Path) -> None:
+        """Start independently reviewing a pull request the factory did not create.
+
+        Checks out and verifies the current head before entering REVIEWING, then
+        reuses the normal repair, CI polling and merge-safety states. The only
+        difference from an issue-driven job is that the branch and pull request
+        already exist.
+        """
         if job.task.pr_branch is None:
             raise FactoryError("Pull request branch is missing")
         if worktree.exists():
@@ -909,21 +1112,40 @@ class FactoryPipeline:
         job.branch = job.task.pr_branch
         job.pull_request = int(job.task.identifier)
         job.head_sha = self._workflow(worktree).head_sha()
-        self.github.publish_review_pending(job.head_sha, detail="Factory pull request verification in progress")
+        self.github.publish_review_pending(
+            job.head_sha,
+            detail="Factory pull request verification in progress",
+        )
         self.github.add_comment(
             job.pull_request,
-            "OpenHands factory is independently reviewing this pull request. It will run verification, repair failures if needed, and merge once its checks pass and the reviewed commit is still current.",
+            (
+                "OpenHands factory is independently reviewing this pull request. It will "
+                "run verification, repair failures if needed, and merge once its checks "
+                "pass and the reviewed commit is still current."
+            ),
         )
-        if not self._verify_or_schedule_quality_repair(job, self._workflow(worktree)):
+        if not self._verify_or_schedule_quality_repair(
+            job,
+            self._workflow(worktree),
+        ):
             return
         job.state = JobState.REVIEWING
 
     def _refresh_pull_request_for_review(self, job: Job, worktree: Path) -> None:
+        """Invalidate stale review provenance and rebuild at the current remote head."""
         if job.pull_request is None:
             raise FactoryError("Pull request number is missing")
         if job.branch is None:
             raise FactoryError("Pull request branch is missing")
-        self.github.remove_issue_labels(job.pull_request, ("factory-reviewed", "factory-review"))
+
+        # Remove the merge-eligibility label before touching the worktree. The
+        # independent-review status is SHA-scoped too, but clearing both labels
+        # makes the invalidation explicit to every merge path and operator.
+        self.github.remove_issue_labels(
+            job.pull_request,
+            ("factory-reviewed", "factory-review"),
+        )
+
         workflow = self._workflow(self.config.repository)
         if worktree.exists():
             inspection = self._workflow(worktree)
@@ -937,32 +1159,50 @@ class FactoryPipeline:
                 )
                 workflow.archive_worktree(worktree, recovery)
             workflow.remove_worktree(worktree, force=dirty)
+
         workflow.prepare_pull_request_worktree(worktree, job.branch)
         job.head_sha = self._workflow(worktree).head_sha()
-        self.github.publish_review_pending(job.head_sha, detail="Factory pull request refresh in progress")
+        self.github.publish_review_pending(
+            job.head_sha,
+            detail="Factory pull request refresh in progress",
+        )
         job.review_findings.clear()
-        if not self._verify_or_schedule_quality_repair(job, self._workflow(worktree)):
+        if not self._verify_or_schedule_quality_repair(
+            job,
+            self._workflow(worktree),
+        ):
             return
         job.state = JobState.REVIEWING
 
     def _refresh_pull_request_if_changed(self, job: Job, worktree: Path) -> bool:
+        """Refresh PR evidence before using or pushing it against a changed head."""
         if job.pull_request is None:
             return False
+
         status = self._status(job)
         if status.state == "MERGED":
             job.state = JobState.MERGED
             return True
         if job.head_sha == status.head_sha:
             return False
+
         self._refresh_pull_request_for_review(job, worktree)
         return True
 
     def _update_pull_request_branch(self, job: Job, status: PullRequestStatus) -> None:
+        """Refresh a behind head without weakening reviewed-SHA protection."""
+
         if job.pull_request is None:
             raise FactoryError("Pull request number is missing")
-        self.github.remove_issue_labels(job.pull_request, ("factory-reviewed", "factory-review"))
+        self.github.remove_issue_labels(
+            job.pull_request,
+            ("factory-reviewed", "factory-review"),
+        )
         if job.head_sha is not None:
-            self.github.publish_review_pending(job.head_sha, detail="Factory base branch update in progress")
+            self.github.publish_review_pending(
+                job.head_sha,
+                detail="Factory base branch update in progress",
+            )
         self.github.update_pull_request_branch(job.pull_request, status.head_sha)
 
     @staticmethod
@@ -986,6 +1226,12 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed)
+        # Only commands that bind a fixed host port (frontend-e2e's dev server)
+        # need to be serialized across workers; everything else - lint, build,
+        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
+        # port) - is safe to run at full worker parallelism. Running the shared
+        # commands first also means a cheap, fast-failing check (lint, a broken
+        # build) is judged before spending minutes on the exclusive one.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
         run_verification(shared)
@@ -997,7 +1243,12 @@ class FactoryPipeline:
         with self.verification_slots:
             run_verification(exclusive)
 
-    def _verify_or_schedule_quality_repair(self, job: Job, workflow: GitWorkflow) -> bool:
+    def _verify_or_schedule_quality_repair(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+    ) -> bool:
+        """Route deterministic verification failures into bounded agent repair."""
         try:
             self._verify(workflow)
         except VerificationFailed as error:
@@ -1013,6 +1264,12 @@ class FactoryPipeline:
         return True
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
+        # README.md deliberately excluded: it embeds the full feature-spec
+        # document (tens of KB), sent unconditionally on every implementation
+        # call regardless of task scope. AGENTS.md carries the actual
+        # enforceable constraints (i18n, RTL, Spartan, British English) that
+        # every task needs; the issue body already carries whatever
+        # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
         for relative in (Path("AGENTS.md"), Path("TODO.md")):
             path = worktree / relative
@@ -1066,6 +1323,7 @@ class FactoryPipeline:
         )
 
     def architect_due(self) -> bool:
+        """Whether enough time has passed to run another weekly gap-analysis cycle."""
         state = read_json(self._architect_state_path(), {})
         if not isinstance(state, dict):
             return True
@@ -1080,11 +1338,20 @@ class FactoryPipeline:
         return elapsed.total_seconds() / 3600 >= self.config.architect_interval_hours
 
     def run_architect_cycle(self) -> None:
+        """Best-effort weekly gap analysis: propose new issues and roadmap updates.
+
+        Unlike issue and pull request work, this is not modeled as a durable retried
+        Job - a single bounded conversation either finds something worth proposing or
+        it does not. If it fails or times out, the cooldown already recorded below
+        means it simply tries again next interval rather than hot-looping.
+        """
         attempted_at = datetime.now(UTC)
         self._write_architect_state(
             {
                 "last_attempt_at": attempted_at.isoformat(),
-                "next_attempt_at": (attempted_at + timedelta(seconds=self.config.provider_cooldown_seconds)).isoformat(),
+                "next_attempt_at": (
+                    attempted_at + timedelta(seconds=self.config.provider_cooldown_seconds)
+                ).isoformat(),
             }
         )
         worktree = self.config.worktree_dir / "architect"
@@ -1095,7 +1362,10 @@ class FactoryPipeline:
         task = Task(
             identifier=cycle_id,
             title="Weekly gap analysis",
-            body="Compare AGENTS.md, FEATURES_SPEC.md, README.md and ROADMAP.md against the current codebase.",
+            body=(
+                "Compare AGENTS.md, FEATURES_SPEC.md, README.md and ROADMAP.md against the "
+                "current codebase."
+            ),
             source="github-architect",
             priority=10,
         )
@@ -1110,13 +1380,16 @@ class FactoryPipeline:
         def defer_after(error: Exception) -> None:
             retry_seconds = (
                 error.retry_after_seconds
-                if isinstance(error, ProviderCapacityUnavailable) and error.retry_after_seconds is not None
+                if isinstance(error, ProviderCapacityUnavailable)
+                and error.retry_after_seconds is not None
                 else self.config.provider_cooldown_seconds
             )
             self._write_architect_state(
                 {
                     "last_attempt_at": attempted_at.isoformat(),
-                    "next_attempt_at": (datetime.now(UTC) + timedelta(seconds=max(retry_seconds, 1))).isoformat(),
+                    "next_attempt_at": (
+                        datetime.now(UTC) + timedelta(seconds=max(retry_seconds, 1))
+                    ).isoformat(),
                     "last_error": f"{type(error).__name__}: {error}"[-1000:],
                     "provider_history": job.provider_history,
                 }
@@ -1124,7 +1397,11 @@ class FactoryPipeline:
 
         try:
             self._recover_architect_worktree(worktree)
-            branch = workflow.prepare_worktree(worktree, cycle_id, "weekly gap analysis")
+            branch = workflow.prepare_worktree(
+                worktree,
+                cycle_id,
+                "weekly gap analysis",
+            )
             self._run_agent(
                 job,
                 worktree,
@@ -1146,11 +1423,16 @@ class FactoryPipeline:
                 pull_request = self.github.create_pull_request(
                     branch,
                     f"docs: weekly gap analysis ({date_id})",
-                    "Automated ROADMAP/spec update from the weekly architect cycle. Independently reviewed like any other pull request before merging.",
+                    "Automated ROADMAP/spec update from the weekly architect cycle. "
+                    "Independently reviewed like any other pull request before merging.",
                 )
                 self.github.add_comment(
                     pull_request,
-                    "OpenHands factory architect opened this pull request from its weekly gap analysis. It will be independently reviewed like any other pull request before merging.",
+                    (
+                        "OpenHands factory architect opened this pull request from its weekly "
+                        "gap analysis. It will be independently reviewed like any other pull "
+                        "request before merging."
+                    ),
                 )
                 self.jobs.save_job(
                     Job(
@@ -1181,13 +1463,24 @@ class FactoryPipeline:
             )
 
     def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:
-        existing = {" ".join(title.split()).lower() for title in self.github.list_all_open_issue_titles()}
+        """Create proposed issues, skipping anything that already exists.
+
+        This check is deliberately not delegated to the LLM: bulk-created near-
+        duplicate issues from an earlier, unchecked version of this idea are what
+        caused the swarm/factory collision quarantine spike this factory recovered
+        from, so the dedup is enforced here in trusted code.
+        """
+        existing = {
+            " ".join(title.split()).lower() for title in self.github.list_all_open_issue_titles()
+        }
         created: list[int] = []
         for proposal in proposals[: self.config.architect_max_new_issues]:
             normalized = " ".join(proposal.title.split()).lower()
             if normalized in existing:
                 continue
-            number = self.github.create_issue(proposal.title, proposal.body, ("architect-proposed",))
+            number = self.github.create_issue(
+                proposal.title, proposal.body, ("architect-proposed",)
+            )
             created.append(number)
             existing.add(normalized)
         return created
@@ -1223,14 +1516,19 @@ class FactoryPipeline:
             except RepositorySafetyError:
                 dirty = True
         if dirty:
-            recovery = self.config.recovery_dir / f"architect-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}"
+            recovery = self.config.recovery_dir / (
+                f"architect-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}"
+            )
             workflow.archive_worktree(worktree, recovery)
         workflow.remove_worktree(worktree, force=dirty)
 
     def _triage_task(self, task: Task) -> frozenset[str]:
+        """Classify worker sizing deterministically without bypassing AgentRouter."""
         content = f"{task.title}\n{task.body}".lower()
         if any(marker in content for marker in ("ci", "pipeline", "build failure", "lint")):
             return frozenset({"ci-fix"})
-        if any(marker in content for marker in ("refactor", "architecture", "migration", "redesign")):
+        if any(
+            marker in content for marker in ("refactor", "architecture", "migration", "redesign")
+        ):
             return frozenset({"deep-refactor"})
         return frozenset({"terminal-task"})
