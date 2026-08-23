@@ -105,13 +105,15 @@ export class AdminAuditService {
     const rpcClient = client as unknown as {
       rpc?: (
         functionName: string,
-      ) => Promise<{ data: unknown; error: unknown | null }>;
+      ) => Promise<{ data: unknown; error: unknown }>;
     };
     if (typeof rpcClient.rpc !== 'function') return;
 
     try {
       const { error } = await rpcClient.rpc('prune_admin_audit_events');
-      if (error) throw error;
+      if (error) {
+        throw new Error('Admin audit retention RPC failed');
+      }
     } catch (error) {
       this.logger.error(
         JSON.stringify({

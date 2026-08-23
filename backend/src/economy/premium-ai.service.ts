@@ -396,7 +396,8 @@ export class PremiumAiService {
     name: string,
     args: Record<string, unknown>,
   ): PromiseLike<{ data: unknown; error: PremiumAiRpcError | null }> {
-    const client = this.supabaseService.getClient() as unknown as PremiumAiRpcClient;
+    const client =
+      this.supabaseService.getClient() as unknown as PremiumAiRpcClient;
     return client.rpc(name, args);
   }
 }

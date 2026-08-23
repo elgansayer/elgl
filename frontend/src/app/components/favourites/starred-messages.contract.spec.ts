@@ -18,10 +18,13 @@ describe('starred messages retrieval contract', () => {
   });
 
   it('keeps starred text messages as a first-class retrieval filter', () => {
-    const componentPrototype = FavouritesComponent.prototype as unknown as Record<string, unknown>;
+    const componentPrototype = FavouritesComponent.prototype as unknown as Record<
+      string,
+      unknown
+    >;
 
-    expect(typeof componentPrototype.setTab).toBe('function');
-    expect(typeof componentPrototype.loadFavourites).toBe('function');
-    expect(typeof componentPrototype.deleteFavourite).toBe('function');
+    expect(typeof componentPrototype['setTab']).toBe('function');
+    expect(typeof componentPrototype['loadFavourites']).toBe('function');
+    expect(typeof componentPrototype['deleteFavourite']).toBe('function');
   });
 });
