@@ -16,9 +16,8 @@ describe('ChatMediaMessageService', () => {
     maybeSingle,
   };
   const from = jest.fn(() => query);
-  const supabaseService = {
-    getClient: jest.fn(() => ({ from })),
-  } as unknown as SupabaseService;
+  const getClient = jest.fn(() => ({ from }));
+  const supabaseService = { getClient } as unknown as SupabaseService;
   const publicUrlForKey = jest.fn(
     (key: string) => `https://cdn.example/${key}`,
   );
@@ -30,10 +29,13 @@ describe('ChatMediaMessageService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    maybeSingle.mockReset();
+    sendMessage.mockReset();
+    publicUrlForKey.mockReset();
     query.select.mockReturnThis();
     query.eq.mockReturnThis();
     from.mockReturnValue(query);
-    supabaseService.getClient = jest.fn(() => ({ from })) as never;
+    getClient.mockReturnValue({ from });
     publicUrlForKey.mockImplementation(
       (key: string) => `https://cdn.example/${key}`,
     );
@@ -82,7 +84,7 @@ describe('ChatMediaMessageService', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
-    expect(supabaseService.getClient).not.toHaveBeenCalled();
+    expect(getClient).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalled();
   });
 
