@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { User } from '@supabase/supabase-js';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ChatPinsController } from './chat-pins.controller';
 import { ChatPinsService } from './chat-pins.service';
 
@@ -17,7 +18,10 @@ describe('ChatPinsController', () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [ChatPinsController],
       providers: [{ provide: ChatPinsService, useValue: service }],
-    }).compile();
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .compile();
     controller = moduleRef.get(ChatPinsController);
   });
 
@@ -29,7 +33,9 @@ describe('ChatPinsController', () => {
 
   it('forwards a typed pin mutation with the authenticated user id', async () => {
     service.setPinned.mockResolvedValue({ room_id: roomId, is_pinned: true });
-    await expect(controller.setPinned(user, roomId, { is_pinned: true })).resolves.toEqual({
+    await expect(
+      controller.setPinned(user, roomId, { is_pinned: true }),
+    ).resolves.toEqual({
       room_id: roomId,
       is_pinned: true,
     });
