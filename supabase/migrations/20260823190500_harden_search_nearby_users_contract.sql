@@ -49,8 +49,6 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-    search_point public.geography;
 BEGIN
     -- Keep the database boundary aligned with SearchQueryDto. Do not rely on
     -- HTTP validation alone because SECURITY DEFINER functions are privileged.
@@ -86,8 +84,6 @@ BEGIN
             USING ERRCODE = '22023';
     END IF;
 
-    search_point := ST_SetSRID(ST_MakePoint(search_lon, search_lat), 4326)::public.geography;
-
     RETURN QUERY
     SELECT
         u.id,
@@ -109,11 +105,18 @@ BEGIN
         u.country,
         u.city,
         u.interests,
-        ST_Distance(u.location, search_point) AS distance
+        ST_Distance(
+            u.location,
+            ST_SetSRID(ST_MakePoint(search_lon, search_lat), 4326)
+        ) AS distance
     FROM public.users AS u
     WHERE
         u.location IS NOT NULL
-        AND ST_DWithin(u.location, search_point, radius_m)
+        AND ST_DWithin(
+            u.location,
+            ST_SetSRID(ST_MakePoint(search_lon, search_lat), 4326),
+            radius_m
+        )
         AND (exclude_user_id IS NULL OR u.id <> exclude_user_id)
         AND u.privacy_hide_from_search = false
         AND COALESCE(u.is_deletion_pending, false) = false
