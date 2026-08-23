@@ -50,10 +50,7 @@ interface ReminderStateResult {
 }
 
 interface ReminderStateEqBuilder {
-  eq(
-    column: 'status',
-    value: 'pending',
-  ): PromiseLike<ReminderStateResult>;
+  eq(column: 'status', value: 'pending'): PromiseLike<ReminderStateResult>;
 }
 
 interface ReminderStateInBuilder {
@@ -157,9 +154,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
     if (!Array.isArray(data)) return [];
 
-    return data.filter(
-      (value): value is EventReminderClaim =>
-        this.isValidReminderClaim(value),
+    return data.filter((value): value is EventReminderClaim =>
+      this.isValidReminderClaim(value),
     );
   }
 
@@ -250,7 +246,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getReminderStateClient(): ReminderStateClient {
-    return this.supabaseService.getClient() as unknown as ReminderStateClient;
+    const client: unknown = this.supabaseService.getClient();
+    return client as ReminderStateClient;
   }
 
   private async markReminderBatchSent(reminderIds: string[]): Promise<void> {
