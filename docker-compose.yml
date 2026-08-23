@@ -80,8 +80,8 @@ services:
       - 'LIVEKIT_KEYS=${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_SECRET:?LIVEKIT_SECRET is required}'
       - 'LIVEKIT_TURN_ENABLED=true'
       - 'LIVEKIT_TURN_DOMAIN=${LIVEKIT_TURN_DOMAIN:?LIVEKIT_TURN_DOMAIN is required}'
-      - 'LIVEKIT_TURN_TLS_PORT=${LIVEKIT_TURN_TLS_PORT:-443}'
-      - 'LIVEKIT_TURN_UDP_PORT=${LIVEKIT_TURN_UDP_PORT:-3478}'
+      - 'LIVEKIT_TURN_TLS_PORT=443'
+      - 'LIVEKIT_TURN_UDP_PORT=3478'
       - 'LIVEKIT_TURN_EXTERNAL_TLS=false'
       - 'LIVEKIT_TURN_CERT_FILE=/run/secrets/livekit_turn_cert'
       - 'LIVEKIT_TURN_KEY_FILE=/run/secrets/livekit_turn_key'
@@ -89,8 +89,8 @@ services:
     ports:
       - '7880:7880'
       - '7881:7881'
-      - '${LIVEKIT_TURN_UDP_PORT:-3478}:${LIVEKIT_TURN_UDP_PORT:-3478}/udp'
-      - '${LIVEKIT_TURN_TLS_PORT:-443}:${LIVEKIT_TURN_TLS_PORT:-443}'
+      - '3478:3478/udp'
+      - '443:443'
       - '58000-58100:58000-58100/udp'
     volumes:
       - ./config/livekit:/livekit:ro
@@ -110,7 +110,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.libraries=/etc/prometheus/consoles'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     ports:
