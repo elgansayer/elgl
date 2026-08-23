@@ -2,10 +2,10 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  NestInterceptor,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
 import { Observable, catchError, from, map, mergeMap, throwError } from 'rxjs';
 import {
   ADMIN_ACTION_REASON_CODES,
@@ -16,15 +16,22 @@ import { AdminAuditService } from './admin-audit.service';
 import { AdminCapability } from './admin-capabilities';
 import { ADMIN_CAPABILITIES_METADATA_KEY } from './decorators/require-admin-capabilities.decorator';
 
-type AdminRequest = Request & {
+type AdminRequest = {
+  method: string;
+  baseUrl?: string;
+  path?: string;
+  route?: { path?: string };
   user?: { id?: string; sub?: string };
   body?: Record<string, unknown>;
+  headers: Record<string, string | string[] | undefined>;
+  params?: Record<string, string | string[] | undefined>;
 };
 
 const ADMIN_PREFIX = '/admin';
 const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{1,200}$/;
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const ADMIN_REASON_CODES = new Set<string>(ADMIN_ACTION_REASON_CODES);
+const USERS_PATH = /(?:^|\/)users(?:\/|$)/;
 
 // These reads already produce richer, semantic audit events in their controller.
 // Keying by controller + handler is independent of global prefixes and Express
@@ -79,10 +86,12 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         [handler, controller],
       ) ?? [];
     const capabilityKey = capabilities[0];
-    const routePath = request.route?.path ?? request.path;
+    const routePath = request.route?.path ?? request.path ?? '';
 
     const requestId = request.headers['x-request-id'];
-    const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const rawCorrelationId = Array.isArray(requestId)
+      ? requestId[0]
+      : requestId;
     const correlationId =
       typeof rawCorrelationId === 'string' &&
       SAFE_CORRELATION_ID.test(rawCorrelationId)
@@ -103,10 +112,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         ? candidateTargetId
         : undefined;
     const targetType = this.resolveTargetType(request, targetId);
-    const action = `${method.toLowerCase()} ${request.baseUrl ?? ''}${routePath ?? ''}`.slice(
-      0,
-      160,
-    );
+    const actionPath = `${request.baseUrl ?? ''}${routePath}`;
+    const action = `${method.toLowerCase()} ${actionPath}`.slice(0, 160);
 
     const reasonCode = this.getReasonCode(request.body);
     // Validate the only free-text field before a mutation can run. This avoids
@@ -139,12 +146,15 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         },
       });
 
+    // Handle operation failures before the success-audit stage. This prevents
+    // a failed success-audit write from being misclassified and retried as a
+    // second "failed" audit event.
     return next.handle().pipe(
-      mergeMap((value) =>
-        from(record('success', value)).pipe(map(() => value)),
-      ),
       catchError((error: unknown) =>
         from(record('failed')).pipe(mergeMap(() => throwError(() => error))),
+      ),
+      mergeMap((value) =>
+        from(record('success', value)).pipe(map(() => value)),
       ),
     );
   }
@@ -162,7 +172,9 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     if (request.params?.blockId) return 'block';
     if (request.params?.assignmentId) return 'role-assignment';
     if (request.params?.roleId) return 'admin-role';
-    if (targetId && `${request.baseUrl}${request.path}`.includes('/users/')) {
+
+    const resourcePath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (targetId && USERS_PATH.test(resourcePath)) {
       return 'user';
     }
     return 'admin-resource';
