@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatListComponent } from './chat-list.component';
 import { ChatService } from '../../services/chat.service';
+import { ChatPinsService } from '../../services/chat-pins.service';
 import { GroupsService } from '../../services/groups.service';
 import * as toast from '../../services/toast.service';
 import { provideRouter } from '@angular/router';
@@ -18,10 +19,28 @@ describe('ChatListComponent', () => {
     unlockChat: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
   };
+  let mockChatPinsService: {
+    getPinnedRoomIds: ReturnType<typeof vi.fn>;
+    setPinned: ReturnType<typeof vi.fn>;
+  };
   let mockGroupsService: {
     getDiscoverableGroups: ReturnType<typeof vi.fn>;
     joinGroup: ReturnType<typeof vi.fn>;
   };
+
+  const preview = (id: string, isPinned = false, lastMessageAt = '2026-08-22T20:00:00Z') => ({
+    id,
+    title: `Room ${id}`,
+    subtitle: 'Language practice',
+    avatar: '',
+    isOnline: false,
+    isPinned,
+    isVip: false,
+    flagEmoji: null,
+    lastMessageText: 'Hello',
+    lastMessageAt,
+    unreadCount: 0,
+  });
 
   beforeEach(async () => {
     mockChatService = {
@@ -33,7 +52,13 @@ describe('ChatListComponent', () => {
       unlockChat: vi.fn().mockResolvedValue(undefined),
       getMessages: vi.fn().mockResolvedValue([]),
     };
-
+    mockChatPinsService = {
+      getPinnedRoomIds: vi.fn().mockResolvedValue([]),
+      setPinned: vi.fn().mockImplementation(async (roomId: string, isPinned: boolean) => ({
+        room_id: roomId,
+        is_pinned: isPinned,
+      })),
+    };
     mockGroupsService = {
       getDiscoverableGroups: vi.fn().mockResolvedValue([]),
       joinGroup: vi.fn().mockResolvedValue({ success: true }),
@@ -43,6 +68,7 @@ describe('ChatListComponent', () => {
       imports: [ChatListComponent],
       providers: [
         { provide: ChatService, useValue: mockChatService },
+        { provide: ChatPinsService, useValue: mockChatPinsService },
         { provide: GroupsService, useValue: mockGroupsService },
         provideRouter([]),
       ],
@@ -51,6 +77,7 @@ describe('ChatListComponent', () => {
     fixture = TestBed.createComponent(ChatListComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -63,7 +90,15 @@ describe('ChatListComponent', () => {
 
   it('should switch to groups tab and load groups', async () => {
     const mockGroups = [
-      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+      {
+        id: 'g1',
+        name: 'Spanish Learners',
+        owner_id: 'u1',
+        max_members: 10,
+        member_count: 5,
+        is_member: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
     ];
     mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
 
@@ -76,7 +111,15 @@ describe('ChatListComponent', () => {
 
   it('should not reload groups on switchTab if already loaded', async () => {
     const mockGroups = [
-      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+      {
+        id: 'g1',
+        name: 'Spanish Learners',
+        owner_id: 'u1',
+        max_members: 10,
+        member_count: 5,
+        is_member: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
     ];
     component.groups.set(mockGroups);
 
@@ -89,7 +132,15 @@ describe('ChatListComponent', () => {
 
   it('should handle join group', async () => {
     const mockGroups = [
-      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
+      {
+        id: 'g1',
+        name: 'Spanish Learners',
+        owner_id: 'u1',
+        max_members: 10,
+        member_count: 5,
+        is_member: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
     ];
     mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
 
@@ -102,6 +153,58 @@ describe('ChatListComponent', () => {
   it('notImplemented should show toast', () => {
     component.notImplemented();
     expect(toast.toastsSignal().length).toBeGreaterThan(0);
+  });
+
+  describe('priority pins', () => {
+    it('sorts pinned chats ahead of newer unpinned chats while keeping relative recency order', () => {
+      component.previews.set([
+        preview('newest', false, '2026-08-22T23:00:00Z'),
+        preview('pinned-new', true, '2026-08-22T22:00:00Z'),
+        preview('pinned-old', true, '2026-08-22T21:00:00Z'),
+      ]);
+
+      expect(component.regularAndPinnedPreviews().map((room) => room.id)).toEqual([
+        'pinned-new',
+        'pinned-old',
+        'newest',
+      ]);
+    });
+
+    it('pins a chat only after the server confirms the mutation', async () => {
+      const room = preview('room-1');
+      component.previews.set([room]);
+      const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as Event;
+
+      await component.toggleRoomPin(event, room);
+
+      expect(mockChatPinsService.setPinned).toHaveBeenCalledWith('room-1', true);
+      expect(component.previews()[0].isPinned).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(component.isPinPending('room-1')).toBe(false);
+    });
+
+    it('unpins a chat without changing its state when the request fails', async () => {
+      const room = preview('room-1', true);
+      component.previews.set([room]);
+      mockChatPinsService.setPinned.mockRejectedValueOnce(new Error('network error'));
+      const event = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as unknown as Event;
+
+      await component.toggleRoomPin(event, room);
+
+      expect(component.previews()[0].isPinned).toBe(true);
+      expect(toast.toastsSignal().some((item) => item.type === 'error')).toBe(true);
+    });
+
+    it('does not let unavailable pin state inherit the legacy room-wide pin value', async () => {
+      mockChatPinsService.getPinnedRoomIds.mockRejectedValueOnce(new Error('unavailable'));
+      component.previews.set([preview('room-1', true)]);
+
+      await component.ngOnInit();
+
+      expect(component.pinStateUnavailable()).toBe(true);
+      expect(component.previews().every((room) => !room.isPinned)).toBe(true);
+    });
   });
 
   describe('toggleRoomLock', () => {
