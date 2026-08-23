@@ -27,10 +27,9 @@ function hasSafePlaywrightContext(lines, index, path) {
   const context = lines.slice(start, end).join('\n');
 
   return (
-    /(?:^|[;&|(]\s*cd\s+(?:\.\/)?e2e(?:\s|&&|\)|$)/m.test(context) ||
+    /(?:^|[;&|(]\s*cd\s+(?:\.\/)?e2e(?:\s|&&|\)|$))/m.test(context) ||
     /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(context) ||
-    /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context) ||
-    /playwright\s+test[^\n]*--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context)
+    /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context)
   );
 }
 
