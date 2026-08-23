@@ -7,15 +7,20 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { User } from '@supabase/supabase-js';
-import { Request } from 'express';
 import { AdminAuditService } from '../admin-audit.service';
 import { AdminAuthorizationService } from '../admin-authorization.service';
 import { AdminCapability } from '../admin-capabilities';
 import { ADMIN_CAPABILITIES_METADATA_KEY } from '../decorators/require-admin-capabilities.decorator';
 
-interface AuthenticatedRequest extends Request {
+type AuthenticatedRequest = {
   user?: User;
-}
+  method?: string;
+  baseUrl?: string;
+  path?: string;
+  route?: { path?: string };
+  headers?: Record<string, string | string[] | undefined>;
+  params?: Record<string, string | string[] | undefined>;
+};
 
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const SAFE_TARGET_ID = /^[A-Za-z0-9_-]{1,200}$/;
@@ -69,7 +74,9 @@ export class AdminCapabilityGuard implements CanActivate {
     outcome: 'denied' | 'failed',
   ): Promise<void> {
     const requestId = request.headers?.['x-request-id'];
-    const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const rawCorrelationId = Array.isArray(requestId)
+      ? requestId[0]
+      : requestId;
     const correlationId =
       typeof rawCorrelationId === 'string' &&
       SAFE_CORRELATION_ID.test(rawCorrelationId)
@@ -85,11 +92,12 @@ export class AdminCapabilityGuard implements CanActivate {
       SAFE_TARGET_ID.test(candidateTargetId)
         ? candidateTargetId
         : undefined;
+    const actionPath = `${request.baseUrl ?? ''}${routePath}`;
 
     try {
       await this.audit.record({
         actorUserId,
-        action: `${request.method?.toLowerCase() ?? 'request'} ${request.baseUrl ?? ''}${routePath}`.slice(
+        action: `${request.method?.toLowerCase() ?? 'request'} ${actionPath}`.slice(
           0,
           160,
         ),
