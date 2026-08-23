@@ -19,10 +19,10 @@ function handler(value: unknown): CallHandler {
 describe('DisappearingMessagesInterceptor', () => {
   const interceptor = new DisappearingMessagesInterceptor();
 
-  it('removes expired message-shaped records from chat arrays', async () => {
+  it('removes expired message-shaped records from globally-prefixed chat arrays', async () => {
     const result = await firstValueFrom(
       interceptor.intercept(
-        contextFor('/chat/messages/room-1'),
+        contextFor('/api/chat/messages/room-1'),
         handler([
           {
             id: 'expired',
@@ -80,6 +80,46 @@ describe('DisappearingMessagesInterceptor', () => {
     );
 
     expect(result).toEqual({ results: [] });
+  });
+
+  it('removes favourite snapshots once their underlying message is expired', async () => {
+    const result = await firstValueFrom(
+      interceptor.intercept(
+        contextFor('/api/chat/favourites'),
+        handler([
+          {
+            id: 'favourite-1',
+            item_type: 'message',
+            item_payload: {
+              id: 'message-1',
+              room_id: 'room-1',
+              sender_id: 'user-1',
+              expires_at: '2000-01-01T00:00:00.000Z',
+            },
+          },
+        ]),
+      ),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('strips legacy synthetic history after a real conversation becomes empty', async () => {
+    const result = await firstValueFrom(
+      interceptor.intercept(
+        contextFor('/api/chat/messages/room-1'),
+        handler([
+          {
+            id: 'mock-msg-1',
+            room_id: 'room-1',
+            sender_id: 'mock-user-1',
+            message_type: 'text',
+          },
+        ]),
+      ),
+    );
+
+    expect(result).toEqual([]);
   });
 
   it('does not alter non-chat endpoints', async () => {
