@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from filelock import FileLock
+
 from openhands_factory.state import atomic_write_json, read_json
 
 _STATE_VERSION = 1
@@ -44,6 +46,7 @@ class DurableAdmissionGate:
         if max_admissions <= 0:
             raise ValueError("admissions per interval must be positive")
         self.path = path
+        self.lock = FileLock(str(path) + ".lock")
         self.interval = timedelta(seconds=interval_seconds)
         self.max_admissions = max_admissions
 
@@ -56,8 +59,9 @@ class DurableAdmissionGate:
 
         if not self.enabled:
             return None
-        active = self._active_admissions(now or datetime.now(UTC))
-        return max(0, self.max_admissions - len(active))
+        with self.lock:
+            active = self._active_admissions(now or datetime.now(UTC))
+            return max(0, self.max_admissions - len(active))
 
     def admit(self, task_id: str, now: datetime | None = None) -> bool:
         """Persist an admission before worker submission."""
@@ -65,12 +69,13 @@ class DurableAdmissionGate:
         if not self.enabled:
             return True
         current = now or datetime.now(UTC)
-        active = self._active_admissions(current)
-        if len(active) >= self.max_admissions:
-            return False
-        active.append(Admission(task_id=task_id, admitted_at=current))
-        self._write(active)
-        return True
+        with self.lock:
+            active = self._active_admissions(current)
+            if len(active) >= self.max_admissions:
+                return False
+            active.append(Admission(task_id=task_id, admitted_at=current))
+            self._write(active)
+            return True
 
     def snapshot(self, now: datetime | None = None) -> dict[str, object]:
         current = now or datetime.now(UTC)
@@ -83,27 +88,28 @@ class DurableAdmissionGate:
                 "next_available_at": None,
                 "active_admissions": [],
             }
-        active = self._active_admissions(current)
-        available = max(0, self.max_admissions - len(active))
-        next_available_at = None
-        if available == 0 and active:
-            next_available_at = min(item.admitted_at for item in active) + self.interval
-        return {
-            "enabled": True,
-            "interval_seconds": int(self.interval.total_seconds()),
-            "max_admissions": self.max_admissions,
-            "available_slots": available,
-            "next_available_at": (
-                next_available_at.isoformat() if next_available_at is not None else None
-            ),
-            "active_admissions": [
-                {
-                    "task_id": item.task_id,
-                    "admitted_at": item.admitted_at.isoformat(),
-                }
-                for item in active
-            ],
-        }
+        with self.lock:
+            active = self._active_admissions(current)
+            available = max(0, self.max_admissions - len(active))
+            next_available_at = None
+            if available == 0 and active:
+                next_available_at = min(item.admitted_at for item in active) + self.interval
+            return {
+                "enabled": True,
+                "interval_seconds": int(self.interval.total_seconds()),
+                "max_admissions": self.max_admissions,
+                "available_slots": available,
+                "next_available_at": (
+                    next_available_at.isoformat() if next_available_at is not None else None
+                ),
+                "active_admissions": [
+                    {
+                        "task_id": item.task_id,
+                        "admitted_at": item.admitted_at.isoformat(),
+                    }
+                    for item in active
+                ],
+            }
 
     def _active_admissions(self, now: datetime) -> list[Admission]:
         payload = read_json(
@@ -167,4 +173,18 @@ class IssueAdmissionGate(DurableAdmissionGate):
 
 
 class ReviewAdmissionGate(DurableAdmissionGate):
-    """Rate-limit independent PR review attempts without delaying CI/merge polling."""
+    """Rate-limit independent PR reviews and suppress same-SHA repeat reviews."""
+
+    def admit(self, task_id: str, now: datetime | None = None) -> bool:
+        if not self.enabled:
+            return True
+        current = now or datetime.now(UTC)
+        with self.lock:
+            active = self._active_admissions(current)
+            if any(item.task_id == task_id for item in active):
+                return False
+            if len(active) >= self.max_admissions:
+                return False
+            active.append(Admission(task_id=task_id, admitted_at=current))
+            self._write(active)
+            return True
