@@ -123,8 +123,7 @@ export class AdminAuditService {
     this.logger.error(
       JSON.stringify({
         event: 'admin_audit_retention_failed',
-        errorType:
-          error instanceof Error ? error.name : 'AuditRetentionError',
+        errorType: error instanceof Error ? error.name : 'AuditRetentionError',
       }),
     );
   }
