@@ -71,7 +71,7 @@ describe('EventsService', () => {
         },
       ]);
       supabaseService.getClient.mockReturnValue(client);
-      notificationsService.sendPushNotification.mockResolvedValue(undefined);
+      notificationsService.sendPushNotification.mockResolvedValue('sent');
 
       await reminderService().checkReminders();
 
@@ -104,7 +104,7 @@ describe('EventsService', () => {
       expect(client.finalizeIn).toHaveBeenCalledWith('id', ['reminder-1']);
     });
 
-    it('releases failed dispatches for a bounded retry instead of marking them sent', async () => {
+    it('releases retryable dispatches instead of marking them sent', async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
       const client = createReminderClient([
@@ -118,9 +118,7 @@ describe('EventsService', () => {
         },
       ]);
       supabaseService.getClient.mockReturnValue(client);
-      notificationsService.sendPushNotification.mockRejectedValueOnce(
-        new Error('provider unavailable'),
-      );
+      notificationsService.sendPushNotification.mockResolvedValue('retry');
 
       await reminderService().checkReminders();
 
@@ -131,6 +129,30 @@ describe('EventsService', () => {
         updated_at: '2026-08-23T10:00:00.000Z',
       });
       expect(client.finalizeIn).toHaveBeenCalledWith('id', ['reminder-2']);
+    });
+
+    it('treats intentional push suppression as terminal without retrying', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-suppressed',
+          event_id: 'event-suppressed',
+          user_id: 'user-suppressed',
+          event_title: 'Quiet Event',
+          event_date_time: '2026-08-23T10:10:00.000Z',
+          attempt_count: 1,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+      notificationsService.sendPushNotification.mockResolvedValue('suppressed');
+
+      await reminderService().checkReminders();
+
+      expect(client.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'sent', next_attempt_at: null }),
+      );
+      expect(client.update).toHaveBeenCalledTimes(1);
     });
 
     it('ignores malformed claim rows rather than sending untrusted reminder data', async () => {
@@ -175,7 +197,7 @@ describe('EventsService', () => {
         },
       ]);
       supabaseService.getClient.mockReturnValue(client);
-      notificationsService.sendPushNotification.mockResolvedValue(undefined);
+      notificationsService.sendPushNotification.mockResolvedValue('sent');
 
       await reminderService().checkReminders();
 
