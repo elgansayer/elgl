@@ -19,6 +19,7 @@ interface ChatMediaUploadTicket {
 
 export interface UploadedChatMedia {
   url: string;
+  objectKey: string;
   kind: ChatMediaKind;
   quality: ChatMediaQuality;
 }
@@ -88,7 +89,12 @@ export class ChatMediaService {
       }),
     );
 
-    return { url: ticket.mediaUrl, kind, quality };
+    return {
+      url: ticket.mediaUrl,
+      objectKey: ticket.objectKey,
+      kind,
+      quality,
+    };
   }
 
   private prepareImage(file: File, quality: ChatMediaQuality): Promise<File> {
