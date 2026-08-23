@@ -1,30 +1,341 @@
 {
   "schemaVersion": 1,
-  "project": {"name": "HelloTalk Design System", "projectId": "9bc8b570-f656-4b2e-b23c-bdc776f974b1"},
+  "project": {
+    "name": "HelloTalk Design System",
+    "projectId": "9bc8b570-f656-4b2e-b23c-bdc776f974b1"
+  },
   "policy": "docs/claude-design-two-way-sync.md",
   "items": [
-    {"id":"relay.foundation.tokens","kind":"foundation","ownerLayer":"relay","repositoryPaths":["DESIGN.md","frontend/src/styles.scss","frontend/src/app/services/theme.service.ts"],"previewPaths":["frontend/design-preview/foundations/tokens.html"],"claudeDesignPath":"foundations/tokens.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23","requiredStates":["light","dark","forced-colours","accent-override"]},
-    {"id":"relay.primitives.buttons","kind":"primitive","ownerLayer":"relay","repositoryPaths":["frontend/src/app/components/primitives/button-primary","frontend/src/app/components/primitives/button-secondary","frontend/src/app/components/primitives/gradient-button"],"previewPaths":["frontend/design-preview/components/primitives/buttons.html"],"claudeDesignPath":"components/primitives/buttons.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","focus-visible","disabled","390px","rtl"]},
-    {"id":"relay.primitives.card-inputs","kind":"primitive","ownerLayer":"relay","repositoryPaths":["frontend/src/app/components/primitives/card","frontend/src/app/components/primitives/input","frontend/src/app/components/primitives/textarea"],"previewPaths":["frontend/design-preview/components/primitives/card-inputs.html"],"claudeDesignPath":"components/primitives/card-inputs.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22","requiredStates":["light","dark","focus-visible","error","390px","rtl"]},
-    {"id":"relay.primitives.chips-pills-badges","kind":"primitive","ownerLayer":"relay","repositoryPaths":["frontend/src/app/components/primitives/chip","frontend/src/app/components/primitives/pill"],"previewPaths":["frontend/design-preview/components/primitives/chip-pill-badges.html"],"claudeDesignPath":"components/primitives/chip-pill-badges.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","rtl"]},
-    {"id":"relay.primitives.feedback-states","kind":"primitive","ownerLayer":"relay","repositoryPaths":["frontend/src/app/components/primitives"],"previewPaths":["frontend/design-preview/components/primitives/feedback-states.html"],"claudeDesignPath":"components/primitives/feedback-states.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18","requiredStates":["light","dark","error","loading","empty","rtl"]},
-    {"id":"relay.primitives.indicators-media","kind":"primitive","ownerLayer":"relay","repositoryPaths":["frontend/src/app/components/primitives"],"previewPaths":["frontend/design-preview/components/primitives/indicators-media.html"],"claudeDesignPath":"components/primitives/indicators-media.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18","requiredStates":["light","dark","reduced-motion"]},
-    {"id":"spartan.overlays-menus","kind":"primitive","ownerLayer":"spartan-helm","repositoryPaths":["frontend/src/app/components/ui/dialog"],"previewPaths":["frontend/design-preview/components/primitives/overlays-menus.html"],"claudeDesignPath":"components/primitives/overlays-menus.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","focus-visible","keyboard","390px","rtl","400%-zoom"]},
-    {"id":"spartan.component-system","kind":"primitive","ownerLayer":"spartan-helm","repositoryPaths":["frontend/src/app/components"],"previewPaths":["frontend/design-preview/components/component-system.html"],"claudeDesignPath":"components/component-system.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-6144-distance-slider-native-control-2026-08-21; quests-retry-hlmbtn-spartan-contract-2026-08-22","requiredStates":["light","dark","focus-visible","disabled","error","390px","rtl","400%-zoom","forced-colours","reduced-motion"]},
-    {"id":"screen.shell","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app"],"previewPaths":["frontend/design-preview/screens/shell.html"],"claudeDesignPath":"screens/shell.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.home","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/home"],"previewPaths":["frontend/design-preview/screens/home.html"],"claudeDesignPath":"screens/home.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.chat","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/chat-room","frontend/src/app/pages/chat"],"previewPaths":["frontend/design-preview/screens/chat.html"],"claudeDesignPath":"screens/chat.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23","requiredStates":["light","dark","390px","wide","rtl","400%-zoom"]},
-    {"id":"screen.discovery","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/discovery"],"previewPaths":["frontend/design-preview/screens/discovery.html"],"claudeDesignPath":"screens/discovery.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.profile","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/profile"],"previewPaths":["frontend/design-preview/screens/profile.html"],"claudeDesignPath":"screens/profile.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.settings","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/settings","frontend/src/app/pages/settings","frontend/src/app/pages/chat-settings","frontend/src/app/pages/data-storage","frontend/src/app/pages/language-settings","frontend/src/app/pages/settings/message-filter-settings"],"previewPaths":["frontend/design-preview/screens/settings.html"],"claudeDesignPath":"screens/settings.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.monetisation","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/escrow","frontend/src/app/pages/escrow-detail","frontend/src/app/pages/my-subscription","frontend/src/app/pages/subscription","frontend/src/app/pages/vip","frontend/src/app/pages/vip-subscription"],"previewPaths":["frontend/design-preview/screens/monetisation.html"],"claudeDesignPath":"screens/monetisation.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.moderation","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/admin","frontend/src/app/pages/block-management"],"previewPaths":["frontend/design-preview/screens/moderation.html"],"claudeDesignPath":"screens/moderation.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.calls","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/call-logs","frontend/src/app/pages/voiceroom-preview"],"previewPaths":["frontend/design-preview/screens/calls.html"],"claudeDesignPath":"screens/calls.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.onboarding","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/onboarding"],"previewPaths":["frontend/design-preview/screens/onboarding.html"],"claudeDesignPath":"screens/onboarding.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-1032-dynamic-diagnostic-onboarding-2026-08-22","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.social","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/components/communities","frontend/src/app/pages/join-group"],"previewPaths":["frontend/design-preview/screens/social.html","frontend/design-preview/components/communities.html"],"claudeDesignPath":"screens/social.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16; issue-6058-communities-relay-tokens-2026-08-19","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"screen.vocabulary","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/lessons"],"previewPaths":["frontend/design-preview/screens/vocabulary.html"],"claudeDesignPath":"screens/vocabulary.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl","400%-zoom"]},
-    {"id":"screen.more","kind":"screen","ownerLayer":"feature","repositoryPaths":["frontend/src/app/pages/help-about","frontend/src/app/pages/help-centre","frontend/src/app/pages/legal","frontend/src/app/pages/support-centre"],"previewPaths":["frontend/design-preview/screens/more.html"],"claudeDesignPath":"screens/more.html","syncDirection":"reconcile","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","implementationAudit":"ux-full-tree-spartan-convergence-2026-08-16","requiredStates":["light","dark","390px","wide","rtl"]},
-    {"id":"relay.foundation.focus-ring","kind":"foundation","ownerLayer":"relay","repositoryPaths":["frontend/src/styles.scss"],"previewPaths":["frontend/design-preview/foundations/focus-ring.html"],"claudeDesignPath":"foundations/focus-ring.html","syncDirection":"code-first","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","requiredStates":["focus-visible","light","dark"]},
-    {"id":"relay.foundation.reduced-motion","kind":"foundation","ownerLayer":"relay","repositoryPaths":["frontend/src/styles.scss"],"previewPaths":["frontend/design-preview/foundations/reduced-motion.html"],"claudeDesignPath":"foundations/reduced-motion.html","syncDirection":"code-first","lastReconciledCommit":"747e10455b282239a589e96ed208d3d78bc79d91","requiredStates":["reduced-motion","light","dark"]}
+    {
+      "id": "relay.foundation.tokens",
+      "kind": "foundation",
+      "ownerLayer": "relay",
+      "repositoryPaths": [
+        "DESIGN.md",
+        "frontend/src/styles.scss",
+        "frontend/src/app/services/theme.service.ts"
+      ],
+      "previewPaths": ["frontend/design-preview/foundations/tokens.html"],
+      "claudeDesignPath": "foundations/tokens.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23",
+      "requiredStates": ["light", "dark", "forced-colours", "accent-override"]
+    },
+    {
+      "id": "relay.primitives.buttons",
+      "kind": "primitive",
+      "ownerLayer": "relay",
+      "repositoryPaths": [
+        "frontend/src/app/components/primitives/button-primary",
+        "frontend/src/app/components/primitives/button-secondary",
+        "frontend/src/app/components/primitives/gradient-button"
+      ],
+      "previewPaths": ["frontend/design-preview/components/primitives/buttons.html"],
+      "claudeDesignPath": "components/primitives/buttons.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "focus-visible", "disabled", "390px", "rtl"]
+    },
+    {
+      "id": "relay.primitives.card-inputs",
+      "kind": "primitive",
+      "ownerLayer": "relay",
+      "repositoryPaths": [
+        "frontend/src/app/components/primitives/card",
+        "frontend/src/app/components/primitives/input",
+        "frontend/src/app/components/primitives/textarea"
+      ],
+      "previewPaths": ["frontend/design-preview/components/primitives/card-inputs.html"],
+      "claudeDesignPath": "components/primitives/card-inputs.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22",
+      "requiredStates": ["light", "dark", "focus-visible", "error", "390px", "rtl"]
+    },
+    {
+      "id": "relay.primitives.chips-pills-badges",
+      "kind": "primitive",
+      "ownerLayer": "relay",
+      "repositoryPaths": [
+        "frontend/src/app/components/primitives/chip",
+        "frontend/src/app/components/primitives/pill"
+      ],
+      "previewPaths": ["frontend/design-preview/components/primitives/chip-pill-badges.html"],
+      "claudeDesignPath": "components/primitives/chip-pill-badges.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "rtl"]
+    },
+    {
+      "id": "relay.primitives.feedback-states",
+      "kind": "primitive",
+      "ownerLayer": "relay",
+      "repositoryPaths": ["frontend/src/app/components/primitives"],
+      "previewPaths": ["frontend/design-preview/components/primitives/feedback-states.html"],
+      "claudeDesignPath": "components/primitives/feedback-states.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18",
+      "requiredStates": ["light", "dark", "error", "loading", "empty", "rtl"]
+    },
+    {
+      "id": "relay.primitives.indicators-media",
+      "kind": "primitive",
+      "ownerLayer": "relay",
+      "repositoryPaths": ["frontend/src/app/components/primitives"],
+      "previewPaths": ["frontend/design-preview/components/primitives/indicators-media.html"],
+      "claudeDesignPath": "components/primitives/indicators-media.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18",
+      "requiredStates": ["light", "dark", "reduced-motion"]
+    },
+    {
+      "id": "spartan.overlays-menus",
+      "kind": "primitive",
+      "ownerLayer": "spartan-helm",
+      "repositoryPaths": ["frontend/src/app/components/ui/dialog"],
+      "previewPaths": ["frontend/design-preview/components/primitives/overlays-menus.html"],
+      "claudeDesignPath": "components/primitives/overlays-menus.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "focus-visible", "keyboard", "390px", "rtl", "400%-zoom"]
+    },
+    {
+      "id": "spartan.component-system",
+      "kind": "primitive",
+      "ownerLayer": "spartan-helm",
+      "repositoryPaths": ["frontend/src/app/components"],
+      "previewPaths": ["frontend/design-preview/components/component-system.html"],
+      "claudeDesignPath": "components/component-system.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-6144-distance-slider-native-control-2026-08-21; quests-retry-hlmbtn-spartan-contract-2026-08-22",
+      "requiredStates": [
+        "light",
+        "dark",
+        "focus-visible",
+        "disabled",
+        "error",
+        "390px",
+        "rtl",
+        "400%-zoom",
+        "forced-colours",
+        "reduced-motion"
+      ]
+    },
+    {
+      "id": "screen.shell",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app"],
+      "previewPaths": ["frontend/design-preview/screens/shell.html"],
+      "claudeDesignPath": "screens/shell.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.home",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/pages/home"],
+      "previewPaths": ["frontend/design-preview/screens/home.html"],
+      "claudeDesignPath": "screens/home.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.chat",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/chat-room", "frontend/src/app/pages/chat"],
+      "previewPaths": ["frontend/design-preview/screens/chat.html"],
+      "claudeDesignPath": "screens/chat.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
+    },
+    {
+      "id": "screen.discovery",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/discovery"],
+      "previewPaths": ["frontend/design-preview/screens/discovery.html"],
+      "claudeDesignPath": "screens/discovery.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.profile",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/profile"],
+      "previewPaths": ["frontend/design-preview/screens/profile.html"],
+      "claudeDesignPath": "screens/profile.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.settings",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/settings",
+        "frontend/src/app/pages/settings",
+        "frontend/src/app/pages/chat-settings",
+        "frontend/src/app/pages/data-storage",
+        "frontend/src/app/pages/language-settings",
+        "frontend/src/app/pages/settings/message-filter-settings"
+      ],
+      "previewPaths": ["frontend/design-preview/screens/settings.html"],
+      "claudeDesignPath": "screens/settings.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.monetisation",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/pages/escrow",
+        "frontend/src/app/pages/escrow-detail",
+        "frontend/src/app/pages/my-subscription",
+        "frontend/src/app/pages/subscription",
+        "frontend/src/app/pages/vip",
+        "frontend/src/app/pages/vip-subscription"
+      ],
+      "previewPaths": ["frontend/design-preview/screens/monetisation.html"],
+      "claudeDesignPath": "screens/monetisation.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.moderation",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/pages/admin",
+        "frontend/src/app/pages/block-management"
+      ],
+      "previewPaths": ["frontend/design-preview/screens/moderation.html"],
+      "claudeDesignPath": "screens/moderation.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.calls",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/pages/call-logs",
+        "frontend/src/app/pages/voiceroom-preview"
+      ],
+      "previewPaths": ["frontend/design-preview/screens/calls.html"],
+      "claudeDesignPath": "screens/calls.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.onboarding",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/components/onboarding"],
+      "previewPaths": ["frontend/design-preview/screens/onboarding.html"],
+      "claudeDesignPath": "screens/onboarding.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1032-dynamic-diagnostic-onboarding-2026-08-22",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.social",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/components/communities",
+        "frontend/src/app/pages/join-group"
+      ],
+      "previewPaths": [
+        "frontend/design-preview/screens/social.html",
+        "frontend/design-preview/components/communities.html"
+      ],
+      "claudeDesignPath": "screens/social.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6058-communities-relay-tokens-2026-08-19",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "screen.vocabulary",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/pages/lessons"],
+      "previewPaths": ["frontend/design-preview/screens/vocabulary.html"],
+      "claudeDesignPath": "screens/vocabulary.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
+    },
+    {
+      "id": "screen.more",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": [
+        "frontend/src/app/pages/help-about",
+        "frontend/src/app/pages/help-centre",
+        "frontend/src/app/pages/legal",
+        "frontend/src/app/pages/support-centre"
+      ],
+      "previewPaths": ["frontend/design-preview/screens/more.html"],
+      "claudeDesignPath": "screens/more.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
+    },
+    {
+      "id": "relay.foundation.focus-ring",
+      "kind": "foundation",
+      "ownerLayer": "relay",
+      "repositoryPaths": ["frontend/src/styles.scss"],
+      "previewPaths": ["frontend/design-preview/foundations/focus-ring.html"],
+      "claudeDesignPath": "foundations/focus-ring.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "requiredStates": ["focus-visible", "light", "dark"]
+    },
+    {
+      "id": "relay.foundation.reduced-motion",
+      "kind": "foundation",
+      "ownerLayer": "relay",
+      "repositoryPaths": ["frontend/src/styles.scss"],
+      "previewPaths": ["frontend/design-preview/foundations/reduced-motion.html"],
+      "claudeDesignPath": "foundations/reduced-motion.html",
+      "syncDirection": "code-first",
+      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "requiredStates": ["reduced-motion", "light", "dark"]
+    }
   ]
 }
