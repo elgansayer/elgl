@@ -15,6 +15,9 @@ export class ChatMediaMessageService {
     const token = this.auth.getAccessToken();
     if (!token) throw new Error('Sign in before sending chat media');
     if (!roomId || !media.objectKey) throw new Error('Chat media message is incomplete');
+    if (media.presentation === 'instant_video' && media.kind !== 'video') {
+      throw new Error('Instant video presentation requires a video upload');
+    }
 
     await firstValueFrom(
       this.http.post(
@@ -23,6 +26,7 @@ export class ChatMediaMessageService {
           roomId,
           mediaKind: media.kind,
           objectKey: media.objectKey,
+          ...(media.presentation ? { presentation: media.presentation } : {}),
         },
         { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) },
       ),
