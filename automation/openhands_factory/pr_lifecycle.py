@@ -132,7 +132,9 @@ class PullRequestLifecycleTracker:
             due: list[str] = []
             for key, raw in sorted(
                 events.items(),
-                key=lambda item: str(item[1].get("recorded_at") if isinstance(item[1], dict) else ""),
+                key=lambda item: str(
+                    item[1].get("recorded_at") if isinstance(item[1], dict) else ""
+                ),
             ):
                 if not isinstance(raw, dict) or raw.get("notification_sent_at") is not None:
                     continue
