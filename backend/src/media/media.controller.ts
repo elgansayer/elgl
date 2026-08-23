@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { MediaService } from './media.service';
+import { ChatMediaQuality, MediaService } from './media.service';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 
 @Controller('media')
@@ -36,6 +36,23 @@ export class MediaController {
       throw new BadRequestException('No audio file uploaded');
     }
     return this.mediaService.uploadAndCompressVoiceNote(req.user.id, file);
+  }
+
+  @Post('chat')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 100 * 1024 * 1024 },
+    }),
+  )
+  async uploadChatMedia(
+    @Req() req: { user: { id: string } },
+    @UploadedFile() file: Express.Multer.File,
+    @Body('quality') quality: ChatMediaQuality = 'standard',
+  ): Promise<{ url: string; mediaType: 'image' | 'video'; quality: ChatMediaQuality }> {
+    if (!file) {
+      throw new BadRequestException('No media file uploaded');
+    }
+    return this.mediaService.uploadChatMedia(req.user.id, file, quality);
   }
 
   @Post('cover/confirm')
@@ -69,6 +86,7 @@ export class MediaController {
     }
     return this.mediaService.uploadAndSetAvatarImage(req.user.id, file);
   }
+
   @Post('view-once/mark-viewed')
   async markMediaAsViewed(
     @Req() req: { user: { id: string } },
