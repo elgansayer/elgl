@@ -15,6 +15,8 @@ const MEDIA_MESSAGE_TYPES = [
   'voice',
   'doodle',
   'sticker',
+  'image',
+  'video',
   'view_once_media',
 ] as const;
 
@@ -77,6 +79,8 @@ export class SendMessageDto {
     'correction',
     'doodle',
     'sticker',
+    'image',
+    'video',
     'correction_request',
     'status_reply',
     'view_once_media',
