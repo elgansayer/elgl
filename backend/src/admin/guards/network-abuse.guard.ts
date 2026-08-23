@@ -29,7 +29,7 @@ export class NetworkAbuseGuard implements CanActivate {
   }
 
   private requestScope(request: Request): AdminNetworkBlockScope {
-    if (/^\/auth(?:\/|$)/.test(request.path)) return 'auth';
+    if (/^\/(?:api\/)?auth(?:\/|$)/.test(request.path)) return 'auth';
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase())) {
       return 'write';
     }
@@ -49,10 +49,10 @@ export class NetworkAbuseGuard implements CanActivate {
 
   private isExemptPath(path: string): boolean {
     return (
-      /^\/admin(?:\/|$)/.test(path) ||
-      /^\/docs(?:\/|$)/.test(path) ||
+      /^\/(?:api\/)?admin(?:\/|$)/.test(path) ||
+      /^\/(?:api\/)?docs(?:\/|$)/.test(path) ||
       path === '/' ||
-      path === '/health'
+      /^\/(?:api\/)?health\/?$/.test(path)
     );
   }
 }
