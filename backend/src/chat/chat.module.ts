@@ -11,7 +11,9 @@ import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatSearchController } from './chat-search.controller';
+import { ChatFoldersController } from './chat-folders.controller';
 import { ChatService } from './chat.service';
+import { ChatFoldersService } from './chat-folders.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -37,6 +39,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   controllers: [
     ChatController,
     ChatSearchController,
+    ChatFoldersController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -48,6 +51,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatFoldersService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
@@ -61,6 +65,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatFoldersService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
