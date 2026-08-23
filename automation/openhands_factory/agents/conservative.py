@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from threading import BoundedSemaphore
 from typing import Any
@@ -32,21 +33,33 @@ _CODE_MUTATING_PHASES = {
 }
 
 
-class ConservativeAgentRouter(AgentRouter):
-    """Bound expensive execution without weakening the existing Factory pipeline.
+def conservative_policy_enabled() -> bool:
+    """Enable the agent budget alongside the existing issue-admission policy.
 
-    The scheduler may keep multiple cheap GitHub/CI state transitions in flight,
-    while this router limits the expensive part of those workers: at most two agent
-    executions globally, one independent review at a time, two newly admitted PR
-    review SHAs per hour, and at most one provider fallback candidate per phase.
+    Production already configures a non-zero issue interval. Keeping the wrapper
+    dormant when that interval is disabled preserves historical local/test behavior
+    while making the deployed Factory conservative without another rollout switch.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    explicit = os.environ.get("FACTORY_CONSERVATIVE_RESOURCE_POLICY")
+    if explicit is not None:
+        return explicit.strip().lower() in {"1", "true", "yes"}
+    try:
+        return int(os.environ.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")) > 0
+    except ValueError:
+        return False
+
+
+class ConservativeAgentRouter(AgentRouter):
+    """Bound expensive execution without weakening the existing Factory pipeline."""
+
+    def __init__(self, *args: Any, enabled: bool | None = None, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.conservative_enabled = conservative_policy_enabled() if enabled is None else enabled
         self._global_agent_slots = BoundedSemaphore(MAX_GLOBAL_AGENT_CONCURRENCY)
         self._review_slots = BoundedSemaphore(MAX_REVIEW_CONCURRENCY)
         self._review_admission: ReviewAdmissionGate | None = None
-        if self.capacity_store is not None:
+        if self.conservative_enabled and self.capacity_store is not None:
             self._review_admission = ReviewAdmissionGate(
                 self.capacity_store.path.parent / "review-admissions.json",
                 interval_seconds=REVIEW_INTERVAL_SECONDS,
@@ -59,6 +72,8 @@ class ConservativeAgentRouter(AgentRouter):
         job: Job,
     ) -> tuple[list[str], dict[str, ProviderHealth]]:
         candidates, health = super()._candidate_names(phase, job)
+        if not self.conservative_enabled:
+            return candidates, health
 
         # Preserve independent review when possible before applying the provider
         # budget. Without this reorder, capping a route could retain the original
@@ -89,6 +104,8 @@ class ConservativeAgentRouter(AgentRouter):
         job: Job,
         exclude: set[str] | None = None,
     ) -> AgentResult:
+        if not self.conservative_enabled:
+            return super().run(request, job, exclude=exclude)
         if self._stopping.is_set():
             raise ProviderCapacityUnavailable("Agent routing is stopping")
         if not self._global_agent_slots.acquire(blocking=False):
