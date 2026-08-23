@@ -21,13 +21,19 @@ The backend verifies current `chat_room_members` membership before every mutatio
 
 ## Data and privacy
 
-`chat_room_pins` stores only `user_id`, `room_id`, and `created_at`. It contains no message content, profile text, tokens, or provider data. Rows cascade when either the user or room is deleted.
+`chat_room_pins` stores only `user_id`, `room_id`, and `created_at`. It contains no message content, profile text, tokens, or provider data. Rows cascade when either the user or room is deleted, and the composite membership foreign key removes a pin automatically when that learner leaves the room.
 
 RLS permits an authenticated learner to read, insert, or delete only their own rows. Read and insert policies additionally require current membership in the referenced room. Anonymous access is revoked. The API also performs membership verification because the backend service-role client bypasses RLS.
 
 The historical `chat_rooms.is_pinned` field is deliberately left intact for mixed-version compatibility. During migration, existing shared pins are copied once to each current room member with `ON CONFLICT DO NOTHING`. New application code writes only `chat_room_pins`.
 
-No pin action logs message contents or other private conversation data.
+No pin action logs message contents, user identifiers, room identifiers, or other private conversation data.
+
+## Observability
+
+Database/provider failures emit a structured `chat_pin_store_failure` warning from `ChatPinsService` with only the operation (`list`, `membership`, `pin`, or `unpin`) and the provider error code. These diagnostics intentionally omit user IDs, room IDs, messages, and provider error text. Normal successful pin actions are not logged because the persisted row is sufficient state and logging every preference change would add privacy-sensitive noise.
+
+The existing API request instrumentation supplies endpoint latency and status-code telemetry. A dedicated high-cardinality pin metric is not required for this low-volume preference feature. Operators can correlate elevated 5xx responses with the sanitized `chat_pin_store_failure` event without direct database access.
 
 ## Failure and recovery
 
@@ -36,6 +42,7 @@ No pin action logs message contents or other private conversation data.
 - Duplicate pin: the upsert leaves a single `(user_id, room_id)` row.
 - Duplicate unpin: deleting an absent row remains successful and the authoritative result is unpinned.
 - Mutation database failure: the frontend leaves the existing visible state unchanged so retry is safe.
+- Membership removal: the composite foreign key deletes the user's stale pin automatically.
 
 ## Rollout
 
@@ -45,6 +52,7 @@ No pin action logs message contents or other private conversation data.
 4. Smoke-test two users in the same room and confirm one user's pin does not change the other's ordering.
 5. Confirm a repeated pin and repeated unpin produce one row and no error.
 6. Confirm a non-member cannot create a pin for another room.
+7. Remove a member from a test room and confirm their pin row is deleted automatically.
 
 The migration is additive and replay safe. Old application versions continue to read the existing room model during a mixed-version deployment.
 
