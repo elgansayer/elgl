@@ -12,10 +12,13 @@ function createService(options?: {
     error: options?.rpcError ?? null,
   });
   const redis = {
-    get: vi.fn().mockResolvedValue(options?.cached ?? null),
+    get: vi.fn().mockImplementation((key: string) =>
+      Promise.resolve(
+        key === 'network-abuse:v1:epoch' ? '0' : (options?.cached ?? null),
+      ),
+    ),
     set: vi.fn().mockResolvedValue('OK'),
-    keys: vi.fn().mockResolvedValue([]),
-    del: vi.fn().mockResolvedValue(0),
+    incr: vi.fn().mockResolvedValue(1),
   };
   const service = new AdminNetworkAbuseService({
     getClient: vi.fn().mockReturnValue({ rpc }),
@@ -54,10 +57,10 @@ describe('AdminNetworkAbuseService', () => {
       true,
     );
 
-    expect(redis.get).toHaveBeenCalledTimes(1);
-    const [cacheKey] = redis.get.mock.calls[0] as [string];
+    expect(redis.get).toHaveBeenCalledTimes(2);
+    const [cacheKey] = redis.get.mock.calls[1] as [string];
     expect(cacheKey).not.toContain('8.8.8.8');
-    expect(cacheKey).toMatch(/^network-abuse:v1:[a-f0-9]{24}:write$/);
+    expect(cacheKey).toMatch(/^network-abuse:v1:0:[a-f0-9]{24}:write$/);
     expect(redis.set).toHaveBeenCalledWith(cacheKey, '1', 'EX', 30);
   });
 
