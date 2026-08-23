@@ -18,35 +18,30 @@ export class FavouritesService {
   }> {
     const supabase = this.supabaseService.getClient();
 
-    // Fetch the canonical message. The database trigger performs the final
-    // room-membership authorization check even for service-role writes.
-    const messageResponse = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('id', dto.message_id)
-      .single();
+    // Use the historical relational columns as the write contract. The
+    // database trigger canonicalises the snapshot, validates membership, and
+    // turns a retried insert into an idempotent update.
+    const { error: insertError } = await supabase.from('favourites').insert({
+      user_id: userId,
+      message_id: dto.message_id,
+      note_text: dto.note_text ?? null,
+    });
 
-    if (messageResponse.error || !messageResponse.data) {
-      throw new Error('Message not found');
-    }
-
-    const message = messageResponse.data as Record<string, unknown>;
-
-    const insertResponse = await supabase
-      .from('favourites')
-      .insert({
-        user_id: userId,
-        item_type: 'message' as const,
-        item_payload: message,
-        notes: dto.note_text ?? null,
-      })
-      .select()
-      .single();
-
-    if (insertResponse.error || !insertResponse.data) {
+    if (insertError) {
       throw new Error('Failed to add favourite');
     }
-    return insertResponse.data;
+
+    const { data, error: readError } = await supabase
+      .from('favourites')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('message_id', dto.message_id)
+      .single();
+
+    if (readError || !data) {
+      throw new Error('Failed to load saved favourite');
+    }
+    return data;
   }
 
   async removeFavourite(
