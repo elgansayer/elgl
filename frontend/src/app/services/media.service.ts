@@ -13,6 +13,14 @@ export interface VoiceNoteUploadResponse {
   url: string;
 }
 
+export type ChatMediaQuality = 'standard' | 'hd';
+
+export interface ChatMediaUploadResponse {
+  url: string;
+  mediaType: 'image' | 'video';
+  quality: ChatMediaQuality;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -44,6 +52,28 @@ export class MediaService {
 
     return firstValueFrom(
       this.http.post<VoiceNoteUploadResponse>(`${this.baseUrl}/voice-note`, formData),
+    );
+  }
+
+  async uploadChatMedia(
+    file: File,
+    quality: ChatMediaQuality = 'standard',
+  ): Promise<ChatMediaUploadResponse> {
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      throw new Error('Unsupported chat media type');
+    }
+
+    const maxBytes = file.type.startsWith('image/') ? 20 * 1024 * 1024 : 100 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error('Chat media exceeds the upload limit');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('quality', quality);
+
+    return firstValueFrom(
+      this.http.post<ChatMediaUploadResponse>(`${this.baseUrl}/chat`, formData),
     );
   }
 
