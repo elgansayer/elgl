@@ -31,6 +31,8 @@ BEGIN
 
   base_time := COALESCE(NEW.created_at, now());
 
+  -- Always derive expiry from the authenticated sender's persisted preference.
+  -- Caller-provided expires_at values are deliberately ignored.
   NEW.expires_at := CASE retention_setting
     WHEN '24h' THEN base_time + INTERVAL '24 hours'
     WHEN '7d' THEN base_time + INTERVAL '7 days'
@@ -48,9 +50,50 @@ BEFORE INSERT ON public.chat_messages
 FOR EACH ROW
 EXECUTE FUNCTION public.apply_chat_message_expiry();
 
--- Authenticated/browser clients must not be able to invoke the trigger helper
--- directly. It is executed only by PostgreSQL as part of message insertion.
+CREATE OR REPLACE FUNCTION public.purge_expired_chat_messages(p_limit INTEGER DEFAULT 500)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  deleted_count INTEGER := 0;
+  safe_limit INTEGER := LEAST(GREATEST(COALESCE(p_limit, 500), 1), 1000);
+BEGIN
+  WITH victims AS (
+    SELECT id
+      FROM public.chat_messages
+     WHERE expires_at IS NOT NULL
+       AND expires_at <= now()
+     ORDER BY expires_at ASC, id ASC
+     LIMIT safe_limit
+     FOR UPDATE SKIP LOCKED
+  ), deleted_snapshots AS (
+    DELETE FROM public.favourites AS f
+     USING victims AS v
+     WHERE f.item_type = 'message'
+       AND f.item_payload ->> 'id' = v.id::TEXT
+     RETURNING f.id
+  ), deleted_messages AS (
+    DELETE FROM public.chat_messages AS m
+     USING victims AS v
+     WHERE m.id = v.id
+     RETURNING m.id
+  )
+  SELECT count(*)::INTEGER INTO deleted_count FROM deleted_messages;
+
+  RETURN deleted_count;
+END;
+$$;
+
+-- Authenticated/browser clients must not be able to invoke retention helpers
+-- directly. The trigger runs inside PostgreSQL and cleanup is backend-only.
 REVOKE ALL ON FUNCTION public.apply_chat_message_expiry() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.apply_chat_message_expiry() FROM anon;
 REVOKE ALL ON FUNCTION public.apply_chat_message_expiry() FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_chat_message_expiry() TO service_role;
+
+REVOKE ALL ON FUNCTION public.purge_expired_chat_messages(INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_expired_chat_messages(INTEGER) FROM anon;
+REVOKE ALL ON FUNCTION public.purge_expired_chat_messages(INTEGER) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.purge_expired_chat_messages(INTEGER) TO service_role;
