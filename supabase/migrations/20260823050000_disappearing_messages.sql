@@ -31,8 +31,8 @@ BEGIN
 
   base_time := COALESCE(NEW.created_at, now());
 
-  -- Always derive expiry from the authenticated sender's persisted preference.
-  -- Caller-provided expires_at values are deliberately ignored.
+  -- Always derive expiry from the sender's persisted preference. Caller-provided
+  -- expires_at values are deliberately ignored.
   NEW.expires_at := CASE retention_setting
     WHEN '24h' THEN base_time + INTERVAL '24 hours'
     WHEN '7d' THEN base_time + INTERVAL '7 days'
@@ -51,21 +51,21 @@ FOR EACH ROW
 EXECUTE FUNCTION public.apply_chat_message_expiry();
 
 CREATE OR REPLACE FUNCTION public.purge_expired_chat_messages(p_limit INTEGER DEFAULT 500)
-RETURNS INTEGER
+RETURNS TABLE(message_id UUID, room_id TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  deleted_count INTEGER := 0;
   safe_limit INTEGER := LEAST(GREATEST(COALESCE(p_limit, 500), 1), 1000);
 BEGIN
+  RETURN QUERY
   WITH victims AS (
-    SELECT id
-      FROM public.chat_messages
-     WHERE expires_at IS NOT NULL
-       AND expires_at <= now()
-     ORDER BY expires_at ASC, id ASC
+    SELECT m.id, m.room_id
+      FROM public.chat_messages AS m
+     WHERE m.expires_at IS NOT NULL
+       AND m.expires_at <= now()
+     ORDER BY m.expires_at ASC, m.id ASC
      LIMIT safe_limit
      FOR UPDATE SKIP LOCKED
   ), deleted_snapshots AS (
@@ -78,11 +78,9 @@ BEGIN
     DELETE FROM public.chat_messages AS m
      USING victims AS v
      WHERE m.id = v.id
-     RETURNING m.id
+     RETURNING m.id, m.room_id
   )
-  SELECT count(*)::INTEGER INTO deleted_count FROM deleted_messages;
-
-  RETURN deleted_count;
+  SELECT d.id, d.room_id FROM deleted_messages AS d;
 END;
 $$;
 
