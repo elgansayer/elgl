@@ -51,6 +51,7 @@ describe('ChatSettingsService', () => {
         autoTranslate: false,
         readReceipts: false,
         enterToSend: false,
+        disappearingMessagesTtl: 'off',
       });
     });
 
@@ -70,6 +71,7 @@ describe('ChatSettingsService', () => {
         autoTranslate: false,
         readReceipts: false,
         enterToSend: false,
+        disappearingMessagesTtl: 'off',
       });
     });
 
@@ -82,6 +84,7 @@ describe('ChatSettingsService', () => {
             chat_preferences: {
               autoTranslate: true,
               enterToSend: true,
+              disappearingMessagesTtl: '7d',
             },
           },
           error: null,
@@ -95,6 +98,27 @@ describe('ChatSettingsService', () => {
         autoTranslate: true,
         readReceipts: false,
         enterToSend: true,
+        disappearingMessagesTtl: '7d',
+      });
+    });
+
+    it('should fail closed to off for an invalid stored retention value', async () => {
+      const chain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: {
+            chat_preferences: {
+              disappearingMessagesTtl: '1m',
+            },
+          },
+          error: null,
+        }),
+      };
+      mockFrom.mockReturnValue(chain);
+
+      await expect(service.getSettings(userId)).resolves.toMatchObject({
+        disappearingMessagesTtl: 'off',
       });
     });
   });
@@ -110,6 +134,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: true,
               readReceipts: false,
               enterToSend: false,
+              disappearingMessagesTtl: '24h',
             },
           },
           error: null,
@@ -123,12 +148,14 @@ describe('ChatSettingsService', () => {
 
       const result = await service.updateSettings(userId, {
         readReceipts: true,
+        disappearingMessagesTtl: '90d',
       });
 
       expect(result).toEqual({
         autoTranslate: true,
         readReceipts: true,
         enterToSend: false,
+        disappearingMessagesTtl: '90d',
       });
       expect(updateChain.update).toHaveBeenCalledWith({
         chat_preferences: result,
@@ -146,6 +173,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: false,
               readReceipts: false,
               enterToSend: false,
+              disappearingMessagesTtl: 'off',
             },
           },
           error: null,
@@ -172,6 +200,7 @@ describe('ChatSettingsService', () => {
               autoTranslate: true,
               readReceipts: true,
               enterToSend: true,
+              disappearingMessagesTtl: '7d',
             },
           },
           error: null,
@@ -190,6 +219,7 @@ describe('ChatSettingsService', () => {
       expect(result.autoTranslate).toBe(false);
       expect(result.readReceipts).toBe(true);
       expect(result.enterToSend).toBe(true);
+      expect(result.disappearingMessagesTtl).toBe('7d');
     });
   });
 });
