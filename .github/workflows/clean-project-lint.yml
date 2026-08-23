@@ -61,6 +61,7 @@ jobs:
         working-directory: ${{ matrix.project }}
 
       - name: Assert lint leaves the tracked project clean
+        if: always()
         env:
           PROJECT: ${{ matrix.project }}
         run: |
