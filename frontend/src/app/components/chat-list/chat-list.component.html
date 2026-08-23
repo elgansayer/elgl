@@ -165,6 +165,12 @@
   <!-- Chats tab content -->
   @if (activeTab() === 'chats') {
     <main class="flex-1 overflow-y-auto divide-y divide-surface-200">
+      @if (pinStateUnavailable()) {
+        <p role="status" class="px-4 py-2 text-xs text-text-secondary">
+          {{ 'common.error_generic' | t }}
+        </p>
+      }
+
       @if (isLoading()) {
         <app-empty-state [title]="'chatList.loading' | t" [customClass]="'py-16'">
         </app-empty-state>
@@ -211,10 +217,15 @@
                 <h3 class="text-[15px] font-bold text-text-primary truncate">
                   {{ preview.title }}
                 </h3>
-                <span
-                  class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
-                  >{{ 'discovery.vipBadge' | t }}</span
-                >
+                @if (preview.isPinned) {
+                  <span aria-hidden="true" class="text-xs">📌</span>
+                }
+                @if (preview.isVip) {
+                  <span
+                    class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
+                    >{{ 'discovery.vipBadge' | t }}</span
+                  >
+                }
               </div>
               <span class="text-xs text-text-secondary shrink-0 ms-2">
                 @if (preview.lastMessageAt) {
@@ -239,8 +250,20 @@
           <button
             hlmBtn
             type="button"
+            (click)="toggleRoomPin($event, preview)"
+            class="shrink-0 text-text-muted hover:text-text-primary p-1 min-w-11 min-h-11"
+            [attr.aria-label]="pinActionLabel(preview)"
+            [attr.aria-pressed]="preview.isPinned"
+            [disabled]="isPinPending(preview.id)"
+          >
+            <span aria-hidden="true" class="text-sm">{{ preview.isPinned ? '📌' : '📍' }}</span>
+          </button>
+
+          <button
+            hlmBtn
+            type="button"
             (click)="toggleRoomLock($event, preview.id)"
-            class="shrink-0 text-text-muted hover:text-text-primary p-1"
+            class="shrink-0 text-text-muted hover:text-text-primary p-1 min-w-11 min-h-11"
             [attr.aria-label]="'chatList.lockChat' | t"
             [attr.title]="'chatList.lockChat' | t"
           >
@@ -288,10 +311,15 @@
                     <h3 class="text-[15px] font-bold text-text-primary truncate">
                       {{ preview.title }}
                     </h3>
-                    <span
-                      class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
-                      >{{ 'discovery.vipBadge' | t }}</span
-                    >
+                    @if (preview.isPinned) {
+                      <span aria-hidden="true" class="text-xs">📌</span>
+                    }
+                    @if (preview.isVip) {
+                      <span
+                        class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
+                        >{{ 'discovery.vipBadge' | t }}</span
+                      >
+                    }
                   </div>
                   <span class="text-xs text-text-secondary shrink-0 ms-2">
                     @if (preview.lastMessageAt) {
@@ -316,8 +344,20 @@
               <button
                 hlmBtn
                 type="button"
+                (click)="toggleRoomPin($event, preview)"
+                class="shrink-0 text-text-muted hover:text-text-primary p-1 min-w-11 min-h-11"
+                [attr.aria-label]="pinActionLabel(preview)"
+                [attr.aria-pressed]="preview.isPinned"
+                [disabled]="isPinPending(preview.id)"
+              >
+                <span aria-hidden="true" class="text-sm">{{ preview.isPinned ? '📌' : '📍' }}</span>
+              </button>
+
+              <button
+                hlmBtn
+                type="button"
                 (click)="toggleRoomLock($event, preview.id)"
-                class="shrink-0 text-text-muted hover:text-text-primary p-1"
+                class="shrink-0 text-text-muted hover:text-text-primary p-1 min-w-11 min-h-11"
                 [attr.aria-label]="'chatList.unlockChat' | t"
                 [attr.title]="'chatList.unlockChat' | t"
               >
