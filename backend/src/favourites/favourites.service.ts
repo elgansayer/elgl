@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
 
 @Injectable()
 export class FavouritesService {
@@ -7,7 +8,7 @@ export class FavouritesService {
 
   async addFavourite(
     userId: string,
-    dto: { message_id: string; note_text?: string },
+    dto: AddFavouriteDto,
   ): Promise<{
     id: string;
     user_id: string;
@@ -17,7 +18,8 @@ export class FavouritesService {
   }> {
     const supabase = this.supabaseService.getClient();
 
-    // Fetch the message to store as payload
+    // Fetch the canonical message. The database trigger performs the final
+    // room-membership authorization check even for service-role writes.
     const messageResponse = await supabase
       .from('chat_messages')
       .select('*')
@@ -41,11 +43,16 @@ export class FavouritesService {
       .select()
       .single();
 
-    if (insertResponse.error) throw insertResponse.error;
+    if (insertResponse.error || !insertResponse.data) {
+      throw new Error('Failed to add favourite');
+    }
     return insertResponse.data;
   }
 
-  async removeFavourite(userId: string, favouriteId: string) {
+  async removeFavourite(
+    userId: string,
+    favouriteId: string,
+  ): Promise<{ success: true }> {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('favourites')
@@ -53,7 +60,7 @@ export class FavouritesService {
       .eq('id', favouriteId)
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (error) throw new Error('Failed to remove favourite');
     return { success: true };
   }
 
@@ -63,9 +70,10 @@ export class FavouritesService {
       .from('favourites')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
-    if (error) throw error;
+    if (error) throw new Error('Failed to load favourites');
     return data ?? [];
   }
 }
