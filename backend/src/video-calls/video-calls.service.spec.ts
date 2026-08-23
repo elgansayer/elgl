@@ -32,7 +32,8 @@ vi.mock('crypto', async () => {
   const actual = await vi.importActual<typeof import('crypto')>('crypto');
   return {
     ...actual,
-    randomUUID: () => `00000000-0000-4000-8000-${String(counter++).padStart(12, '0')}`,
+    randomUUID: () =>
+      `00000000-0000-4000-8000-${String(counter++).padStart(12, '0')}`,
   };
 });
 
@@ -94,7 +95,9 @@ describe('VideoCallsService', () => {
     mockDegradationService.cacheToken.mockClear();
     mockDegradationService.getCachedToken.mockClear().mockReturnValue(null);
     mockDegradationService.recordDegradationEvent.mockClear();
-    mockEncryptionService.createSession.mockClear().mockResolvedValue('room-e2ee-key');
+    mockEncryptionService.createSession
+      .mockClear()
+      .mockResolvedValue('room-e2ee-key');
     mockEncryptionService.getKeyForParticipant
       .mockClear()
       .mockResolvedValue('room-e2ee-key');
@@ -204,7 +207,9 @@ describe('VideoCallsService', () => {
     });
 
     it('should preserve E2EE when LiveKit control-plane creation degrades', async () => {
-      mockCreateRoom.mockRejectedValueOnce(new Error('LiveKit connection refused'));
+      mockCreateRoom.mockRejectedValueOnce(
+        new Error('LiveKit connection refused'),
+      );
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
         async (
           _service: string,
@@ -234,7 +239,8 @@ describe('VideoCallsService', () => {
     it('should track token generation failures', async () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
-        async (_service: string, operation: () => Promise<unknown>) => operation(),
+        async (_service: string, operation: () => Promise<unknown>) =>
+          operation(),
       );
 
       await expect(service.createRoom(callerId, remoteUserId)).rejects.toThrow(
