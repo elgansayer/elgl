@@ -28,4 +28,4 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Build production backend image
-        run: docker build --target production --tag elgl-api-ci:${GITHUB_SHA} backend
+        run: docker build --target production --tag "elgl-api-ci:${GITHUB_SHA}" backend
