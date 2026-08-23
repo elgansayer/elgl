@@ -202,9 +202,15 @@ describe('AdminMutationAuditInterceptor', () => {
 
     await firstValueFrom(
       interceptor.intercept(
-        contextFor('GET', '/api/admin', '/users', { sub: 'admin-user' }, {
-          requestId: 'Bearer secret-token-value',
-        }),
+        contextFor(
+          'GET',
+          '/api/admin',
+          '/users',
+          { sub: 'admin-user' },
+          {
+            requestId: 'Bearer secret-token-value',
+          },
+        ),
         next,
       ),
     );

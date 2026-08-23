@@ -44,7 +44,10 @@ const MAX_BYTES: Record<ChatMediaKind, Record<ChatMediaQuality, number>> = {
 export class ChatMediaUploadService {
   constructor(private readonly r2ObjectService: R2ObjectService) {}
 
-  createUploadTicket(userId: string, dto: ChatMediaUploadDto): ChatMediaUploadTicket {
+  createUploadTicket(
+    userId: string,
+    dto: ChatMediaUploadDto,
+  ): ChatMediaUploadTicket {
     const contentType = this.normaliseContentType(dto.contentType);
     const mediaKind = this.mediaKindFor(contentType);
     const maxBytes = MAX_BYTES[mediaKind][dto.quality];
@@ -55,10 +58,16 @@ export class ChatMediaUploadService {
       );
     }
 
-    const extension = (mediaKind === 'image' ? IMAGE_TYPES : VIDEO_TYPES).get(contentType)!;
+    const extension = (mediaKind === 'image' ? IMAGE_TYPES : VIDEO_TYPES).get(
+      contentType,
+    )!;
     const nonce = randomBytes(12).toString('hex');
     const objectKey = `chat-media/${userId}/${mediaKind}/${dto.quality}/${Date.now()}-${nonce}.${extension}`;
-    const upload = this.r2ObjectService.createUploadUrl(objectKey, contentType, maxBytes);
+    const upload = this.r2ObjectService.createUploadUrl(
+      objectKey,
+      contentType,
+      maxBytes,
+    );
 
     return {
       uploadUrl: upload.uploadUrl,

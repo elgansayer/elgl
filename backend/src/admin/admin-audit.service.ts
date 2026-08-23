@@ -103,7 +103,9 @@ export class AdminAuditService {
     this.nextRetentionSweepAt = now + RETENTION_SWEEP_INTERVAL_MS;
 
     const rpcClient = client as unknown as {
-      rpc?: (functionName: string) => Promise<{ data: unknown; error: unknown }>;
+      rpc?: (
+        functionName: string,
+      ) => Promise<{ data: unknown; error: unknown }>;
     };
     if (typeof rpcClient.rpc !== 'function') return;
 
