@@ -114,6 +114,11 @@ export const learningRoutes: Routes = [
   },
   {
     path: 'language',
+    redirectTo: 'settings/language',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/language',
     loadComponent: () =>
       import('../pages/language-settings/language-settings.component').then(
         (m) => m.LanguageSettingsComponent,
