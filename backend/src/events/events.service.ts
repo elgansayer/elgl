@@ -45,6 +45,29 @@ interface ReminderRpcClient {
   ): PromiseLike<ReminderRpcResult>;
 }
 
+interface ReminderStateResult {
+  error: { message?: string } | null;
+}
+
+interface ReminderStateEqBuilder {
+  eq(
+    column: 'status',
+    value: 'pending',
+  ): PromiseLike<ReminderStateResult>;
+}
+
+interface ReminderStateInBuilder {
+  in(column: 'id', values: string[]): ReminderStateEqBuilder;
+}
+
+interface ReminderStateTable {
+  update(values: Record<string, string | null>): ReminderStateInBuilder;
+}
+
+interface ReminderStateClient {
+  from(table: 'event_reminders_sent'): ReminderStateTable;
+}
+
 const REMINDER_BATCH_SIZE = 200;
 const REMINDER_MAX_BATCHES_PER_TICK = 5;
 const REMINDER_LEASE_SECONDS = 120;
@@ -96,11 +119,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     let processed = 0;
 
     try {
-      for (
-        let batch = 0;
-        batch < REMINDER_MAX_BATCHES_PER_TICK;
-        batch += 1
-      ) {
+      for (let batch = 0; batch < REMINDER_MAX_BATCHES_PER_TICK; batch += 1) {
         const claims = await this.claimDueReminders();
         if (claims.length === 0) break;
 
@@ -230,12 +249,15 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     return normalized.slice(0, REMINDER_TITLE_MAX_LENGTH);
   }
 
+  private getReminderStateClient(): ReminderStateClient {
+    return this.supabaseService.getClient() as unknown as ReminderStateClient;
+  }
+
   private async markReminderBatchSent(reminderIds: string[]): Promise<void> {
     if (reminderIds.length === 0) return;
 
     const now = new Date().toISOString();
-    const { error } = await this.supabaseService
-      .getClient()
+    const { error } = await this.getReminderStateClient()
       .from('event_reminders_sent')
       .update({
         status: 'sent',
@@ -260,8 +282,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     if (reminderIds.length === 0) return;
 
     const now = new Date();
-    const { error } = await this.supabaseService
-      .getClient()
+    const { error } = await this.getReminderStateClient()
       .from('event_reminders_sent')
       .update({
         claimed_at: null,
