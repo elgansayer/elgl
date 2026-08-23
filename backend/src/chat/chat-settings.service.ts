@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   ChatSettingsDto,
@@ -34,7 +34,13 @@ export class ChatSettingsService {
       .eq('id', userId)
       .single();
 
-    if (error || !data?.chat_preferences) {
+    if (error) {
+      throw new ServiceUnavailableException(
+        'Chat settings are temporarily unavailable',
+      );
+    }
+
+    if (!data?.chat_preferences) {
       return { ...this.defaultSettings };
     }
 
@@ -71,7 +77,9 @@ export class ChatSettingsService {
       .eq('id', userId);
 
     if (error) {
-      throw new Error(`Failed to update chat settings: ${error.message}`);
+      throw new ServiceUnavailableException(
+        'Chat settings could not be updated',
+      );
     }
 
     return merged;
