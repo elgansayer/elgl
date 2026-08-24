@@ -17,6 +17,8 @@ import { showErrorToast, showToast } from '../../services/toast.service';
 
 const FLASHCARD_TRANSLATION_MAX_LENGTH = 500;
 
+type SegmenterConstructor = typeof Intl.Segmenter;
+
 export interface TokenSegment {
   segment: string;
   isWordLike: boolean;
@@ -26,6 +28,41 @@ export interface TokenSegment {
 interface ParsedTokens {
   tokens: TokenSegment[];
   transliteration: string;
+}
+
+/**
+ * Tokenises text with the browser's native word segmenter. If the API is not
+ * available, or both the requested and default locale fail, the original text
+ * is preserved as a non-interactive segment instead of crashing the message.
+ */
+export function tokeniseText(
+  text: string,
+  language: string,
+  Segmenter: SegmenterConstructor | undefined =
+    typeof Intl === 'undefined' ? undefined : Intl.Segmenter,
+): TokenSegment[] {
+  if (!text) return [];
+  if (!Segmenter) return [{ segment: text, isWordLike: false, index: 0 }];
+
+  const toTokens = (locale?: string): TokenSegment[] => {
+    const segmenter = new Segmenter(locale, { granularity: 'word' });
+    return [...segmenter.segment(text)].map((item) => ({
+      segment: item.segment,
+      isWordLike: item.isWordLike ?? false,
+      index: item.index,
+    }));
+  };
+
+  const locale = language.trim() || undefined;
+  try {
+    return toTokens(locale);
+  } catch {
+    try {
+      return toTokens();
+    } catch {
+      return [{ segment: text, isWordLike: false, index: 0 }];
+    }
+  }
 }
 
 @Component({
@@ -38,6 +75,7 @@ interface ParsedTokens {
       [selectionContext]="text()"
       (flashcardSelection)="openFlashcardSelection($event)"
       class="inline leading-relaxed select-text font-medium text-base"
+      dir="auto"
     >
       @for (token of tokens(); track token.index) {
         <span
@@ -152,25 +190,20 @@ export class TokenisedTextComponent {
   });
 
   private readonly parsed = computed<ParsedTokens>(() => {
-    if (typeof Intl === 'undefined' || !Intl.Segmenter) {
-      throw new Error(this.i18n.translate('errors.intlSegmenterUnavailable'));
-    }
+    const text = this.text();
+    const language = this.language();
 
-    const segments: TokenSegment[] = [];
-    const segmenter = new Intl.Segmenter(this.language(), { granularity: 'word' });
-    const rawSegments = segmenter.segment(this.text());
-
-    for (const item of rawSegments) {
-      segments.push({
-        segment: item.segment,
-        isWordLike: item.isWordLike ?? false,
-        index: item.index,
-      });
+    let transliteration = '';
+    try {
+      transliteration = this.transliterationService.transliterate(text, language);
+    } catch {
+      // Transliteration is progressive enhancement. Token rendering must remain
+      // available when a script provider or browser capability is unavailable.
     }
 
     return {
-      tokens: segments,
-      transliteration: this.transliterationService.transliterate(this.text(), this.language()),
+      tokens: tokeniseText(text, language),
+      transliteration,
     };
   });
 
