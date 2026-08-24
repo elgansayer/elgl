@@ -322,8 +322,7 @@ export class AudioRoomArchivesService {
     if (
       room.host_id === userId ||
       room.co_host_id === userId ||
-      (room.speakers ?? []).includes(userId) ||
-      (room.invited_user_ids ?? []).includes(userId)
+      (room.speakers ?? []).includes(userId)
     ) {
       return;
     }
