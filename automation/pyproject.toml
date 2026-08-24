@@ -10,8 +10,8 @@ requires-python = ">=3.12"
 dependencies = [
   "filelock==3.32.3",
   "httpx==0.28.1",
-  "openhands-sdk==1.42.1",
-  "openhands-tools==1.42.1",
+  "openhands-sdk==1.43.1",
+  "openhands-tools==1.43.1",
   "pydantic==2.13.4",
 ]
 
@@ -20,7 +20,7 @@ development = [
   "mypy==2.3.1",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
-  "ruff==0.16.3",
+  "ruff==0.16.4",
 ]
 
 [project.scripts]
