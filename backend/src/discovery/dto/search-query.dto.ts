@@ -168,7 +168,7 @@ export class SearchQueryDto {
       'Only return partners currently hosting a public active LiveKit audio room.',
     example: true,
   })
-  @IsOptional()
+  @ValidateIf((_query: SearchQueryDto, value: unknown) => value !== undefined)
   @Transform(transformOptionalBoolean)
   @IsBoolean()
   voice_room_active?: boolean;
