@@ -14,7 +14,9 @@ describe('scheduled Event -> Language Party migration (#1331)', () => {
   });
 
   it('enforces one generated room per event without deleting historical rooms', () => {
-    expect(sql).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS audio_rooms_event_id_unique/);
+    expect(sql).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS audio_rooms_event_id_unique/,
+    );
     expect(sql).toMatch(/ON public\.audio_rooms \(event_id\)/);
     expect(sql).toMatch(/WHERE event_id IS NOT NULL/);
     expect(sql).toMatch(/SET event_id = NULL/);
