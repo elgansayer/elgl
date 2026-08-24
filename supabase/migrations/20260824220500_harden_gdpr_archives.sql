@@ -89,3 +89,29 @@ BEGIN
   END LOOP;
 END
 $$;
+
+-- The existing automated deletion worker removes public.users after the 30-day
+-- grace period. public.users references auth.users in the opposite direction,
+-- so deleting only the profile would otherwise leave a login-capable auth row.
+-- This AFTER DELETE trigger makes permanent deletion include the Supabase Auth
+-- principal in the same database transaction. Deleting auth.users cascades back
+-- to public.users, where the row is already gone, so there is no recursion loop.
+CREATE OR REPLACE FUNCTION public.delete_auth_principal_after_profile_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.delete_auth_principal_after_profile_delete() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS delete_auth_principal_after_profile_delete ON public.users;
+CREATE TRIGGER delete_auth_principal_after_profile_delete
+AFTER DELETE ON public.users
+FOR EACH ROW
+EXECUTE FUNCTION public.delete_auth_principal_after_profile_delete();
