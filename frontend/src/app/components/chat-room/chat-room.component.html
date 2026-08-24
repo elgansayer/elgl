@@ -336,6 +336,7 @@
                     <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                   </div>
                 }
+                <app-chat-media-message [message]="msg"></app-chat-media-message>
                 @if (msg.message_type === 'doodle' && msg.media_url) {
                   <img
                     loading="lazy"
@@ -504,7 +505,7 @@
           (cancelReply)="cancelReply()"
         ></app-reply-preview>
       }
-      <div class="mb-2 flex items-center gap-2">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
           (clicked)="showCorrectionForm.set(!showCorrectionForm())"
           customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
@@ -526,6 +527,7 @@
         >
           {{ 'chatRoom.voiceBtn' | t }}
         </app-button-secondary>
+        <app-chat-media-share [roomId]="roomId"></app-chat-media-share>
         <app-button-secondary
           (clicked)="showStickerDrawer.set(!showStickerDrawer())"
           customClass="bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"

@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { GlobalSearchComponent } from './global-search.component';
 import { I18nService } from '../../../services/i18n.service';
+import { RecommendationsService } from '../../../services/recommendations.service';
 import { ALL_LANGUAGE_CODES } from '../../primitives/language-picker/language-picker.component';
 
 describe('GlobalSearchComponent', () => {
@@ -43,7 +45,14 @@ describe('GlobalSearchComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [GlobalSearchComponent],
-      providers: [{ provide: I18nService, useValue: mockI18n }],
+      providers: [
+        provideRouter([]),
+        { provide: I18nService, useValue: mockI18n },
+        {
+          provide: RecommendationsService,
+          useValue: { getDiscoveryRecommendations: vi.fn().mockResolvedValue([]) },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GlobalSearchComponent);
@@ -101,7 +110,7 @@ describe('GlobalSearchComponent', () => {
     ]);
   });
 
-  it('should emit false for the audio intro filter when it is not selected', () => {
+  it('should omit the audio intro requirement when it is not selected', () => {
     const emitted: unknown[] = [];
     component.searchFilters.subscribe((f) => emitted.push(f));
 
@@ -112,7 +121,7 @@ describe('GlobalSearchComponent', () => {
         native_languages: undefined,
         target_language: undefined,
         proficiency_level: undefined,
-        has_audio_intro: false,
+        has_audio_intro: undefined,
       },
     ]);
   });
@@ -132,6 +141,22 @@ describe('GlobalSearchComponent', () => {
         has_audio_intro: true,
       },
     ]);
+  });
+
+  it('should remove the audio intro requirement when toggled off again', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((f) => emitted.push(f));
+
+    component.toggleHasAudioIntro();
+    component.toggleHasAudioIntro();
+
+    expect(component.hasAudioIntro()).toBe(false);
+    expect(emitted.at(-1)).toEqual({
+      native_languages: undefined,
+      target_language: undefined,
+      proficiency_level: undefined,
+      has_audio_intro: undefined,
+    });
   });
 
   it('should render an associated audio intro checkbox label', () => {
@@ -198,7 +223,6 @@ describe('GlobalSearchComponent', () => {
 
     const secondLanguages = component.availableLanguages();
     expect(secondLanguages.length).toBe(ALL_LANGUAGE_CODES.length);
-    // The translated names should differ when UI language changes
     expect(secondLanguages[0].translatedName).not.toBe(firstLanguage);
   });
 });

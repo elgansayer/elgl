@@ -1,51 +1,27 @@
-# Product Information Architecture Audit
+# Partner Discovery Ranking Signals Audit
 
-## Route Duplication and Consolidation
+This document explains the recommended ranking signals for the "Best Match" partner discovery sorting, beyond basic language pairing.
 
-Currently, `app.routes.ts` defines almost all application routes flatly at the root level. Simultaneously, there are multiple domain-specific route files inside `frontend/src/app/routes/` which duplicate these same routes.
+## 1. Complementary Languages
+**Why:** The core of language exchange is mutual benefit. A user who natively speaks the language you are learning, and is learning the language you natively speak, is the ideal partner.
 
-The domain-specific files found are:
-- `admin.routes.ts`
-- `auth.routes.ts`
-- `chat.routes.ts`
-- `commerce.routes.ts`
-- `learning.routes.ts`
-- `media.routes.ts`
-- `settings.routes.ts`
-- `social.routes.ts`
+## 2. Proficiency Level Gap
+**Why:** Conversations flow best when both users have a similar ability to communicate, or when the gap is complementary (e.g., an advanced speaker helping a beginner). Two A1 speakers might struggle to maintain a conversation.
 
-These domain route files are currently not being imported and used via `loadChildren` in `app.routes.ts`, leading to duplication and a lack of clear separation of concerns at the routing level.
+## 3. Timezone / Active Hours Overlap
+**Why:** Language exchange fails if users are awake at completely different times. Explicit timezone overlap scoring eliminates the friction of manual availability blocks.
 
-## Redundant / Legacy Navigation Paths
+## 4. Interest & Hobby Overlap
+**Why:** Shared interests provide immediate conversation starters and increase the likelihood of a long-term connection, transitioning from a hard filter to a weighted scoring system.
 
-The flat route structure in `app.routes.ts` contains many redirect routes (aliases) that point to their new canonical locations. These aliases are kept to preserve deep links and legacy navigation paths.
+## 5. Response Behaviour
+**Why:** Users get frustrated when they send messages and receive no reply. We should promote users who actively engage in new conversations (high reply rate).
 
-*   **Settings Namespace:**
-    *   `/notification-preferences` -> `settings/notification`
-    *   `/language` -> `settings/language`
-    *   `/blocks` -> `settings/blocks`
-    *   `/message-filters` -> `settings/message-filters`
-    *   `/chat-settings` -> `settings/chat`
-    *   `/data-storage` -> `settings/data-storage`
-    *   `/my-subscription` -> `settings/subscription`
-*   **Community Namespace:**
-    *   `/groups` -> `community/groups`
-    *   `/groups/create` -> `community/groups/create`
-    *   `/communities` -> `community`
-    *   `/language-islands` -> `community/language-islands`
-    *   `/language-parties` -> `community/language-parties`
-*   **Profile Namespace:**
-    *   `/visitors` -> `profile/visitors`
-*   **Support Namespace:**
-    *   `/help-about` -> `support`
+## 6. Correction Behaviour
+**Why:** Users highly value corrections. By scaling the correction ratio alongside the corrector score, helpful users are elevated.
 
-## Consolidation Strategy
+## 7. Learning Seriousness
+**Why:** Casual learners often drop off, frustrating serious learners. Integrating study streak days ensures dedicated users are matched appropriately.
 
-Instead of maintaining the same component routes twice (once in `app.routes.ts` and once in `frontend/src/app/routes/*.ts`), we will consolidate the routing architecture to make `app.routes.ts` a composer of domain modules.
-
-1.  **Refactor `app.routes.ts`** to remove individual component `loadComponent` entries that belong to a specific domain.
-2.  **Use `loadChildren`** (or modern equivalent like `...domainRoutes` if keeping flat structure, or nested lazy loading if prefixing) to compose the domain-specific routes. Given the requirement to preserve existing paths, spreading the route arrays (`...socialRoutes`, etc.) or keeping them at the root level via `loadChildren: () => import('./routes/...').then(m => m.routes)` if they define their own full paths is the best approach.
-
-Wait, the prompt says "consolidate the product information architecture so every major capability has a clear purpose, entry point and relationship to the rest of the app." and "A prompt directive to 'consolidate the product information architecture' constitutes an explicit instruction to modify the codebase (e.g., refactoring routing files using redirects). Do not treat it as a documentation-only mapping or audit task."
-
-Therefore, I need to modify `app.routes.ts` to actually import and use these domain route files, removing the duplicated raw route definitions from `app.routes.ts`, while ensuring legacy redirects remain to preserve deep links!
+## 8. Conversation Compatibility
+**Why:** If a user tends to have long, successful conversations with users from a specific country or age group, the algorithm should learn and prioritise this preference.
