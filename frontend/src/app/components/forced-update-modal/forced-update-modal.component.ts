@@ -15,8 +15,6 @@ const DEFAULT_UPDATE_URL = 'https://github.com/elgansayer/elgl/releases/latest';
   template: `
     <div
       class="fixed inset-0 z-[11000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      (click)="$event.stopPropagation()"
-      (keydown.escape)="blockEscape($event)"
     >
       <div
         appFocusTrap
