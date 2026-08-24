@@ -1,3 +1,4 @@
+import { InternalServerErrorException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlocksService } from './blocks.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -13,7 +14,10 @@ describe('BlocksService', () => {
     mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
       in: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       match: vi.fn().mockReturnThis(),
       then: vi.fn((resolve: any) => resolve(mockQueryBuilder._response)),
@@ -24,13 +28,7 @@ describe('BlocksService', () => {
     };
 
     mockMetricsService = {
-      recordTsReportSubmitted: vi.fn(),
-      recordTsBlockCreated: vi.fn(),
       recordTsBlockRemoved: vi.fn(),
-      setTsPendingReports: vi.fn(),
-      setTsActiveBlocksTotal: vi.fn(),
-      recordTsModerationAction: vi.fn(),
-      recordTsDatingRiskScore: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -56,183 +54,129 @@ describe('BlocksService', () => {
     vi.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('getBlockedUsers', () => {
-    it('should return empty array when user has no blocks', async () => {
-      mockQueryBuilder._response = {
-        data: [],
-        error: null,
-      };
+    it('returns an empty bounded page when the user has no blocks', async () => {
+      mockQueryBuilder._response = { data: [], error: null };
 
       const result = await service.getBlockedUsers('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocked_id');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 99);
       expect(result).toEqual([]);
     });
 
-    it('should return blocked user details when blocks exist', async () => {
-      const mockBlocksBuilder = {
+    it('preserves block recency order when profile query order differs', async () => {
+      const blocksBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        then: vi.fn(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        then: vi.fn((resolve: any) =>
+          resolve({
+            data: [{ blocked_id: 'blocked-2' }, { blocked_id: 'blocked-1' }],
+            error: null,
+          }),
+        ),
       };
-
-      mockBlocksBuilder.then.mockImplementation((resolve: any) =>
-        resolve({
-          data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
-          error: null,
-        }),
-      );
-
-      const mockUsersBuilder = {
+      const usersBuilder = {
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
-        then: vi.fn(),
+        then: vi.fn((resolve: any) =>
+          resolve({
+            data: [
+              {
+                id: 'blocked-1',
+                display_name: 'User One',
+                avatar_url: null,
+                native_language: 'en',
+                target_languages: ['es'],
+              },
+              {
+                id: 'blocked-2',
+                display_name: 'User Two',
+                avatar_url: null,
+                native_language: 'fr',
+                target_languages: ['de'],
+              },
+            ],
+            error: null,
+          }),
+        ),
       };
 
-      mockUsersBuilder.then.mockImplementation((resolve: any) =>
-        resolve({
-          data: [
-            {
-              id: 'blocked-1',
-              display_name: 'User One',
-              avatar_url: null,
-              native_language: 'en',
-              target_languages: ['es'],
-            },
-            {
-              id: 'blocked-2',
-              display_name: 'User Two',
-              avatar_url: '/img.png',
-              native_language: 'fr',
-              target_languages: ['de'],
-            },
-          ],
-          error: null,
-        }),
+      mockSupabaseClient.from.mockImplementation((table: string) =>
+        table === 'blocks' ? blocksBuilder : usersBuilder,
       );
 
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'blocks') return mockBlocksBuilder;
-        if (table === 'users') return mockUsersBuilder;
-        return mockQueryBuilder;
-      });
+      const result = await service.getBlockedUsers('user-1', 25, 50);
 
-      const result = await service.getBlockedUsers('user-1');
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        id: 'blocked-1',
-        display_name: 'User One',
-        avatar_url: null,
-        native_language: 'en',
-        target_languages: ['es'],
-      });
+      expect(blocksBuilder.range).toHaveBeenCalledWith(50, 74);
+      expect(usersBuilder.in).toHaveBeenCalledWith('id', ['blocked-2', 'blocked-1']);
+      expect(result.map((user) => user.id)).toEqual(['blocked-2', 'blocked-1']);
     });
 
-    it('should throw error when blocks query fails', async () => {
-      mockQueryBuilder._response = {
-        data: null,
-        error: { message: 'db error' },
-      };
+    it('clamps internal callers to the maximum page size and non-negative offset', async () => {
+      mockQueryBuilder._response = { data: [], error: null };
 
-      await expect(service.getBlockedUsers('user-1')).rejects.toThrow(
-        'Failed to fetch blocked users: db error',
-      );
+      await service.getBlockedUsers('user-1', 1000, -40);
+
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 99);
     });
 
-    it('should throw error when users query fails', async () => {
-      const mockBlocksBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        then: vi.fn(),
-      };
+    it('fails with a sanitised error when either database query fails', async () => {
+      mockQueryBuilder._response = { data: null, error: { message: 'private database detail' } };
 
-      mockBlocksBuilder.then.mockImplementation((resolve: any) =>
-        resolve({ data: [{ blocked_id: 'blocked-1' }], error: null }),
+      await expect(service.getBlockedUsers('user-1')).rejects.toBeInstanceOf(
+        InternalServerErrorException,
       );
+      await expect(service.getBlockedUsers('user-1')).rejects.toThrow('Unable to load blocked users');
+    });
+  });
 
-      const mockUsersBuilder = {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        then: vi.fn(),
-      };
+  describe('blockUser', () => {
+    it('uses an idempotent upsert for retry-safe block creation', async () => {
+      mockQueryBuilder._response = { error: null };
 
-      mockUsersBuilder.then.mockImplementation((resolve: any) =>
-        resolve({ data: null, error: { message: 'user fetch error' } }),
+      const result = await service.blockUser('user-1', 'blocked-user');
+
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+        { blocker_id: 'user-1', blocked_id: 'blocked-user' },
+        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
       );
-
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'blocks') return mockBlocksBuilder;
-        if (table === 'users') return mockUsersBuilder;
-        return mockQueryBuilder;
-      });
-
-      await expect(service.getBlockedUsers('user-1')).rejects.toThrow(
-        'Failed to fetch user details: user fetch error',
-      );
+      expect(result).toEqual({ success: true });
     });
 
-    it('should return empty array when users response data is null', async () => {
-      const mockBlocksBuilder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        then: vi.fn(),
-      };
-
-      mockBlocksBuilder.then.mockImplementation((resolve: any) =>
-        resolve({ data: [{ blocked_id: 'blocked-1' }], error: null }),
-      );
-
-      const mockUsersBuilder = {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        then: vi.fn(),
-      };
-
-      mockUsersBuilder.then.mockImplementation((resolve: any) =>
-        resolve({ data: null, error: null }),
-      );
-
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'blocks') return mockBlocksBuilder;
-        if (table === 'users') return mockUsersBuilder;
-        return mockQueryBuilder;
-      });
-
-      const result = await service.getBlockedUsers('user-1');
-      expect(result).toEqual([]);
+    it('rejects self-blocking without touching persistence', async () => {
+      expect(await service.blockUser('user-1', 'user-1')).toEqual({ success: false });
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
   });
 
   describe('unblockUser', () => {
-    it('should delete the block record and return success', async () => {
+    it('is retry-safe and records the successful removal metric', async () => {
       mockQueryBuilder._response = { error: null };
 
       const result = await service.unblockUser('user-1', 'blocked-user');
 
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.delete).toHaveBeenCalled();
       expect(mockQueryBuilder.match).toHaveBeenCalledWith({
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
       });
+      expect(mockMetricsService.recordTsBlockRemoved).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ success: true });
     });
 
-    it('should throw error when delete fails', async () => {
-      mockQueryBuilder._response = {
-        error: { message: 'delete failed' },
-      };
+    it('does not expose database error details when delete fails', async () => {
+      mockQueryBuilder._response = { error: { message: 'delete failed: private detail' } };
 
-      await expect(
-        service.unblockUser('user-1', 'blocked-user'),
-      ).rejects.toThrow('Failed to unblock user: delete failed');
+      await expect(service.unblockUser('user-1', 'blocked-user')).rejects.toThrow(
+        'Unable to update block state',
+      );
+      expect(mockMetricsService.recordTsBlockRemoved).not.toHaveBeenCalled();
     });
   });
 });
