@@ -1,8 +1,5 @@
 export type AudioRoomSummaryStatus =
-  | 'pending'
-  | 'processing'
-  | 'ready'
-  | 'failed';
+  'pending' | 'processing' | 'ready' | 'failed';
 
 export interface AudioRoomArchiveSummary {
   room_id: string;
