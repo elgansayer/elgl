@@ -1886,48 +1886,49 @@ export class ChatService {
       membersByRoom.get(member.room_id)!.push({ user_id: member.user_id });
     }
 
-    for (const targetRoomId of validMembershipRoomIds) {
-      const targetRoomMembers = membersByRoom.get(targetRoomId) || [];
+    // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+    // Promise.allSettled mapped execution to drastically reduce database latency during fan-out inserts.
+    // Expected impact: N sequential database roundtrips become 1 concurrent block.
+    const forwardPromises = Array.from(validMembershipRoomIds).map(
+      async (targetRoomId) => {
+        const targetRoomMembers = membersByRoom.get(targetRoomId) || [];
 
-      let blocked = false;
-      if (targetRoomMembers && targetRoomMembers.length > 0) {
-        // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
-        // Promise.all batch map to drastically reduce network latency during fan-out block checks.
-        // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
-        const blockedIdArrays = await Promise.all(
-          targetRoomMembers.map((member) =>
-            this.safetyService.getBlockedAndBlockerIds(member.user_id),
-          ),
-        );
-        blocked = blockedIdArrays.some((blockedIds) =>
-          blockedIds.includes(userId),
-        );
-      }
+        let blocked = false;
+        if (targetRoomMembers && targetRoomMembers.length > 0) {
+          const blockedIdArrays = await Promise.all(
+            targetRoomMembers.map((member) =>
+              this.safetyService.getBlockedAndBlockerIds(member.user_id),
+            ),
+          );
+          blocked = blockedIdArrays.some((blockedIds) =>
+            blockedIds.includes(userId),
+          );
+        }
 
-      if (blocked) {
-        continue; // Skip rooms where sender is blocked
-      }
+        if (blocked) {
+          return; // Skip rooms where sender is blocked
+        }
 
-      const insertPayload = {
-        room_id: targetRoomId,
-        sender_id: userId,
-        message_type: originalMsg.message_type,
-        text_content: originalMsg.text_content ?? null,
-        media_url: originalMsg.media_url ?? null,
-        correction_payload: originalMsg.correction_payload ?? null,
-        reply_to_id: null, // Forwarded messages start fresh threads
-        correction_request_payload:
-          originalMsg.correction_request_payload ?? null,
-        status_reply_payload: originalMsg.status_reply_payload ?? null,
-        is_view_once: false, // Never preserve view-once on forward
-        is_forwarded: true,
-      };
+        const insertPayload = {
+          room_id: targetRoomId,
+          sender_id: userId,
+          message_type: originalMsg.message_type,
+          text_content: originalMsg.text_content ?? null,
+          media_url: originalMsg.media_url ?? null,
+          correction_payload: originalMsg.correction_payload ?? null,
+          reply_to_id: null, // Forwarded messages start fresh threads
+          correction_request_payload:
+            originalMsg.correction_request_payload ?? null,
+          status_reply_payload: originalMsg.status_reply_payload ?? null,
+          is_view_once: false, // Never preserve view-once on forward
+          is_forwarded: true,
+        };
 
-      const insertResponse = await supabase
-        .from('chat_messages')
-        .insert(insertPayload)
-        .select(
-          `
+        const insertResponse = await supabase
+          .from('chat_messages')
+          .insert(insertPayload)
+          .select(
+            `
           *,
           sender:users!chat_messages_sender_id_fkey (
             id,
@@ -1935,51 +1936,66 @@ export class ChatService {
             avatar_url
           )
         `,
-        )
-        .single();
+          )
+          .single();
 
-      if (insertResponse.error || !insertResponse.data) {
-        continue; // Skip on insert failure
-      }
+        if (insertResponse.error || !insertResponse.data) {
+          return; // Skip on insert failure
+        }
 
-      const forwardedMsg = insertResponse.data as ChatMessage;
+        const forwardedMsg = insertResponse.data as ChatMessage;
 
-      // Publish to Centrifugo channel for the target room
-      await this.centrifugoService.publish(`chat:${targetRoomId}`, {
-        message: forwardedMsg,
-      });
+        // Publish to Centrifugo channel for the target room
+        await this.centrifugoService.publish(`chat:${targetRoomId}`, {
+          message: forwardedMsg,
+        });
 
-      // Emit push notification for the target room members
-      const preview = originalMsg.text_content
-        ? originalMsg.text_content.substring(0, 120)
-        : originalMsg.message_type === 'voice'
-          ? '🎤 Voice message'
-          : originalMsg.message_type === 'correction'
-            ? '📝 Correction'
-            : originalMsg.message_type === 'doodle'
-              ? '🎨 Doodle'
-              : '';
+        // Emit push notification for the target room members
+        const preview = originalMsg.text_content
+          ? originalMsg.text_content.substring(0, 120)
+          : originalMsg.message_type === 'voice'
+            ? '🎤 Voice message'
+            : originalMsg.message_type === 'correction'
+              ? '📝 Correction'
+              : originalMsg.message_type === 'doodle'
+                ? '🎨 Doodle'
+                : '';
 
-      const receiverId =
-        targetRoomMembers && targetRoomMembers.length > 0
-          ? targetRoomMembers[0].user_id
-          : undefined;
+        const receiverId =
+          targetRoomMembers && targetRoomMembers.length > 0
+            ? targetRoomMembers[0].user_id
+            : undefined;
 
-      if (receiverId) {
-        this.eventEmitter.emit(
-          'chat.message',
-          new ChatMessageEvent(
-            userId,
-            receiverId,
-            targetRoomId,
-            originalMsg.message_type,
-            preview,
-          ),
-        );
-      }
+        if (receiverId) {
+          this.eventEmitter.emit(
+            'chat.message',
+            new ChatMessageEvent(
+              userId,
+              receiverId,
+              targetRoomId,
+              originalMsg.message_type,
+              preview,
+            ),
+          );
+        }
 
-      forwardedMessages.push(forwardedMsg);
+        return forwardedMsg;
+      },
+    );
+
+    const results = await Promise.allSettled(forwardPromises);
+    const failures = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failures.length > 0) {
+      throw failures[0].reason;
     }
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        forwardedMessages.push(result.value);
+      }
+    });
 
     if (forwardedMessages.length === 0) {
       throw new BadRequestException(
