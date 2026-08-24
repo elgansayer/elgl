@@ -15,15 +15,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
 import type { User } from '@supabase/supabase-js';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ImportAnkiTsvDto } from './dto/anki-import.dto';
-import {
-  AnkiImportResult,
-  AnkiiIntegrationService,
-} from './ankii-integration.service';
+import { AnkiiIntegrationService } from './ankii-integration.service';
+import type { AnkiImportResult } from './ankii-integration.service';
 
 @ApiTags('Anki interoperability')
 @ApiBearerAuth()
@@ -56,7 +54,8 @@ export class AnkiiIntegrationController {
   @Post('import')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Import an Anki-compatible TSV file into the authenticated user flashcards',
+    summary:
+      'Import an Anki-compatible TSV file into the authenticated user flashcards',
     description:
       'Imports 2 to 4 tab-separated columns: Front, Back, optional Context, optional Definition. Existing SRS scheduling is preserved when a Front value already exists.',
   })
