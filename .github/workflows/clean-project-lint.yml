@@ -9,7 +9,7 @@ on:
     types: [checks_requested]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: clean-project-lint-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
@@ -44,8 +44,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -61,22 +59,6 @@ jobs:
       - name: Run project lint command
         run: npm run lint
         working-directory: ${{ matrix.project }}
-
-      - name: Commit deterministic backend lint fixes
-        if: matrix.project == 'backend' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          PR_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- backend; then
-            echo "No backend lint changes needed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend
-          git commit -m "style(backend): apply lint fixes"
-          git push origin "HEAD:${PR_BRANCH}"
 
       - name: Assert lint leaves the tracked project clean
         if: always()
