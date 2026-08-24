@@ -24,6 +24,8 @@ import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
+import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -39,6 +41,8 @@ export class NlpController {
   constructor(
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
+    private readonly grammarCheckService: GrammarCheckService,
+    private readonly grammarExplanationService: GrammarExplanationService,
   ) {}
 
   /**
@@ -97,11 +101,8 @@ export class NlpController {
   ): Promise<GrammarCheckResult | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    return await this.nlpService.grammarCheck(
-      user.id,
-      profile?.is_vip ?? false,
-      dto,
-    );
+    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
+    return await this.grammarCheckService.check(dto);
   }
 
   /**
@@ -121,11 +122,8 @@ export class NlpController {
   } | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    return await this.nlpService.explainGrammar(
-      user.id,
-      profile?.is_vip ?? false,
-      dto,
-    );
+    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
+    return await this.grammarExplanationService.explain(dto);
   }
 
   /**
