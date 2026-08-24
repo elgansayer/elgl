@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -16,6 +16,9 @@ export interface BlockedUserResponse {
 interface UnblockResponse {
   success: boolean;
 }
+
+const BLOCKS_PAGE_SIZE = 100;
+const MAX_BLOCKED_USERS = 500;
 
 @Injectable({
   providedIn: 'root',
@@ -55,7 +58,9 @@ export class BlockedUsersService {
     if (typeof value !== 'string' || value.length > 2048) return undefined;
     try {
       const parsed = new URL(value);
-      return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : undefined;
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+        ? parsed.toString()
+        : undefined;
     } catch {
       return undefined;
     }
@@ -72,7 +77,7 @@ export class BlockedUsersService {
 
     const result: BlockedUserResponse[] = [];
     const seen = new Set<string>();
-    for (const candidate of value.slice(0, 500)) {
+    for (const candidate of value.slice(0, MAX_BLOCKED_USERS)) {
       if (!candidate || typeof candidate !== 'object') continue;
       const row = candidate as Record<string, unknown>;
       if (typeof row['id'] !== 'string' || !row['id'] || seen.has(row['id'])) continue;
@@ -96,19 +101,33 @@ export class BlockedUsersService {
     return result;
   }
 
-  /** Fetches blocked-account details. Existing data is retained during transient failures. */
+  /** Fetches blocked-account details in bounded pages and retains stale data on failure. */
   async loadBlockedUsers(): Promise<void> {
     const generation = ++this.loadGeneration;
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
     try {
-      const users = await firstValueFrom(
-        this.http.get<unknown>(`${this.apiUrl}/blocks`, {
-          headers: this.getHeaders(),
-        }),
-      );
+      const headers = this.getHeaders();
+      const collected: unknown[] = [];
+
+      for (let offset = 0; offset < MAX_BLOCKED_USERS; offset += BLOCKS_PAGE_SIZE) {
+        const params = new HttpParams()
+          .set('limit', BLOCKS_PAGE_SIZE.toString())
+          .set('offset', offset.toString());
+        const page = await firstValueFrom(
+          this.http.get<unknown>(`${this.apiUrl}/blocks`, { headers, params }),
+        );
+        if (generation !== this.loadGeneration) return;
+        if (!Array.isArray(page)) {
+          throw new Error('Invalid blocked-user response');
+        }
+
+        collected.push(...page);
+        if (page.length < BLOCKS_PAGE_SIZE) break;
+      }
+
       if (generation !== this.loadGeneration) return;
-      this.blockedUsersSignal.set(this.parseBlockedUsers(users));
+      this.blockedUsersSignal.set(this.parseBlockedUsers(collected));
     } catch {
       if (generation !== this.loadGeneration) return;
       this.errorSignal.set('Failed to load blocked users');
