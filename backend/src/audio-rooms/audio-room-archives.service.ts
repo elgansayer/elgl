@@ -186,8 +186,8 @@ export class AudioRoomArchivesService {
 
   async listArchives(userId: string): Promise<AudioRoomArchiveListItem[]> {
     const supabase = this.client();
-    const [{ data: participantRows }, { data: hostedRows }] =
-      await Promise.all([
+    const [{ data: participantRows }, { data: hostedRows }] = await Promise.all(
+      [
         supabase
           .from('audio_room_participants')
           .select('room_id')
@@ -201,7 +201,8 @@ export class AudioRoomArchivesService {
           .eq('is_active', false)
           .order('created_at', { ascending: false })
           .limit(100),
-      ]);
+      ],
+    );
 
     const roomIds = Array.from(
       new Set([
