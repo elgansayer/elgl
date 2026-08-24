@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { R2ObjectService } from '../cloudflare-r2/r2-object.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -75,6 +76,48 @@ describe('ChatMediaMessageService', () => {
     expect(result.id).toBe('message-1');
   });
 
+  it('persists instant video uploads as the dedicated video_note message type', async () => {
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    sendMessage.mockResolvedValue({
+      id: 'video-note-1',
+      room_id: 'room-1',
+      sender_id: 'user-1',
+      message_type: 'video_note',
+      media_url:
+        'https://cdn.example/chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+    });
+
+    await service.send('user-1', {
+      roomId: 'room-1',
+      mediaKind: 'video',
+      presentation: 'instant_video',
+      objectKey:
+        'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith('user-1', {
+      room_id: 'room-1',
+      message_type: 'video_note',
+      media_url:
+        'https://cdn.example/chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+    });
+  });
+
+  it('rejects instant-video presentation for non-video uploads before persistence', async () => {
+    await expect(
+      service.send('user-1', {
+        roomId: 'room-1',
+        mediaKind: 'image',
+        presentation: 'instant_video',
+        objectKey:
+          'chat-media/user-1/image/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+
+    expect(getClient).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it('rejects another users object before persistence', async () => {
     await expect(
       service.send('user-1', {
@@ -108,6 +151,51 @@ describe('ChatMediaMessageService', () => {
 
     expect(result.id).toBe('message-existing');
     expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns an existing matching instant video without charging another send', async () => {
+    maybeSingle.mockResolvedValue({
+      data: {
+        id: 'video-note-existing',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        message_type: 'video_note',
+      },
+      error: null,
+    });
+
+    const result = await service.send('user-1', {
+      roomId: 'room-1',
+      mediaKind: 'video',
+      presentation: 'instant_video',
+      objectKey:
+        'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+    });
+
+    expect(result.id).toBe('video-note-existing');
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects reusing a normal video upload as an instant video note', async () => {
+    maybeSingle.mockResolvedValue({
+      data: {
+        id: 'message-existing',
+        room_id: 'room-1',
+        sender_id: 'user-1',
+        message_type: 'video',
+      },
+      error: null,
+    });
+
+    await expect(
+      service.send('user-1', {
+        roomId: 'room-1',
+        mediaKind: 'video',
+        presentation: 'instant_video',
+        objectKey:
+          'chat-media/user-1/video/standard/1-aaaaaaaaaaaaaaaaaaaaaaaa.webm',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('rejects reuse of an uploaded object in another room', async () => {
