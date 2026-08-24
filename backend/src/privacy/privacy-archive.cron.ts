@@ -17,9 +17,8 @@ export class PrivacyArchiveCron {
 
     try {
       for (let batch = 0; batch < MAX_BATCHES_PER_RUN; batch += 1) {
-        const purged = await this.privacyService.purgeExpiredArchives(
-          CLEANUP_BATCH_SIZE,
-        );
+        const purged =
+          await this.privacyService.purgeExpiredArchives(CLEANUP_BATCH_SIZE);
         totalPurged += purged;
         if (purged < CLEANUP_BATCH_SIZE) break;
       }
