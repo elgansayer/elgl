@@ -89,7 +89,7 @@ export class CentrifugoService implements OnModuleInit {
       if (!apiKey) {
         throw new Error('CENTRIFUGO_API_KEY must be configured in production');
       }
-      if (!secret) {
+      if (!secret?.trim()) {
         throw new Error('CENTRIFUGO_SECRET must be configured in production');
       }
     }
@@ -211,20 +211,39 @@ export class CentrifugoService implements OnModuleInit {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
 
+  /**
+   * Require a non-empty signing secret at the point a connection credential is
+   * issued. Production startup already validates this configuration; this
+   * runtime check protects tests, local misconfiguration, and mixed-version
+   * deploys from ever emitting a token signed with an empty credential.
+   */
+  private requireTokenSecret(): string {
+    const secret = this.tokenSecret?.trim();
+    if (!secret) {
+      this.logger.error('Centrifugo token signing is unavailable.');
+      throw new Error('Centrifugo token signing is unavailable.');
+    }
+    return secret;
+  }
+
   generateConnectionToken(userId: string): { token: string } {
     const payload = {
       sub: userId,
       exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 hours
     };
-    const token = jwt.sign(payload, this.tokenSecret);
+    const token = jwt.sign(payload, this.requireTokenSecret());
     return { token };
   }
 
   /**
-   * Signs an arbitrary JWT payload using the Centrifugo token secret.
+   * Signs an arbitrary JWT payload using the Centrifugo token secret. The
+   * connection-token path pins HS256 explicitly so configuration or library
+   * defaults cannot silently change the Centrifugo verification contract.
    */
   signJwt(payload: Record<string, unknown>): Promise<string> {
-    return Promise.resolve(jwt.sign(payload, this.tokenSecret));
+    return Promise.resolve(
+      jwt.sign(payload, this.requireTokenSecret(), { algorithm: 'HS256' }),
+    );
   }
 
   async publish(
