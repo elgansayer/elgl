@@ -92,11 +92,13 @@ describe('FlashcardReviewComponent', () => {
     const fixture = TestBed.createComponent(FlashcardReviewComponent);
     fixture.componentRef.setInput('cards', MOCK_CARDS);
     fixture.detectChanges();
-    await Promise.resolve();
-    fixture.detectChanges();
+
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[role="progressbar"]')).toBeTruthy();
+    });
 
     const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement;
-    expect(progressBar).toBeTruthy();
     expect(progressBar.getAttribute('aria-valuemin')).toBe('0');
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });

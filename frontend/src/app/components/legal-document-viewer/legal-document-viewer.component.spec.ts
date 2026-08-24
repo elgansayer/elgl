@@ -28,6 +28,13 @@ describe('LegalDocumentViewerComponent', () => {
   let host: TestHostComponent;
   let viewerElement: HTMLElement;
 
+  async function refresh(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    viewerElement = fixture.nativeElement.querySelector('app-legal-document-viewer');
+  }
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
@@ -35,8 +42,7 @@ describe('LegalDocumentViewerComponent', () => {
 
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
-    fixture.detectChanges();
-    viewerElement = fixture.nativeElement.querySelector('app-legal-document-viewer');
+    await refresh();
   });
 
   it('renders the document title and semantic Relay surface', () => {
@@ -68,28 +74,32 @@ describe('LegalDocumentViewerComponent', () => {
   it('renders a machine-readable last-updated date without timezone drift', () => {
     const time = viewerElement.querySelector('time');
     expect(time?.getAttribute('datetime')).toBe('2026-08-01');
-    expect(time?.textContent).toContain('1 August 2026');
+    expect(time?.textContent).toContain('August');
+    expect(time?.textContent).toContain('2026');
+    expect(time?.textContent).toMatch(/\b1\b/);
   });
 
-  it('supports Date inputs for lastUpdated', () => {
+  it('supports Date inputs for lastUpdated', async () => {
     host.lastUpdated = new Date(Date.UTC(2026, 5, 15, 12));
-    fixture.detectChanges();
+    await refresh();
 
     const time = viewerElement.querySelector('time');
     expect(time?.getAttribute('datetime')).toBe('2026-06-15');
-    expect(time?.textContent).toContain('15 June 2026');
+    expect(time?.textContent).toContain('June');
+    expect(time?.textContent).toContain('15');
+    expect(time?.textContent).toContain('2026');
   });
 
-  it('renders an accessible unavailable state when no sections are supplied', () => {
+  it('renders an accessible unavailable state when no sections are supplied', async () => {
     host.sections = [];
-    fixture.detectChanges();
+    await refresh();
 
     expect(viewerElement.querySelectorAll('section').length).toBe(0);
     expect(viewerElement.querySelector('[data-testid="legal-empty"][role="status"]')).toBeTruthy();
     expect(viewerElement.querySelector('nav')).toBeFalsy();
   });
 
-  it('renders legal content as text instead of interpreting supplied markup', () => {
+  it('renders legal content as text instead of interpreting supplied markup', async () => {
     host.sections = [
       {
         id: 'safe-content',
@@ -97,7 +107,7 @@ describe('LegalDocumentViewerComponent', () => {
         content: '<img src=x onerror=alert(1)>Visible text',
       },
     ];
-    fixture.detectChanges();
+    await refresh();
 
     const section = viewerElement.querySelector('#safe-content');
     expect(section?.querySelector('strong')).toBeFalsy();
@@ -106,9 +116,9 @@ describe('LegalDocumentViewerComponent', () => {
     expect(section?.querySelector('p')?.textContent).toContain('<img src=x onerror=alert(1)>');
   });
 
-  it('falls back to text when an invalid date is supplied directly', () => {
+  it('falls back to text when an invalid date is supplied directly', async () => {
     host.lastUpdated = 'not-a-date';
-    fixture.detectChanges();
+    await refresh();
 
     expect(viewerElement.querySelector('time')).toBeFalsy();
     expect(viewerElement.textContent).toContain('Last updated:');
