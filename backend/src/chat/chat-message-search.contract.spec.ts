@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = resolve(process.cwd(), '..');
-const chatService = readFileSync(resolve(process.cwd(), 'src/chat/chat.service.ts'), 'utf8');
+const chatService = readFileSync(
+  resolve(process.cwd(), 'src/chat/chat.service.ts'),
+  'utf8',
+);
 const searchController = readFileSync(
   resolve(process.cwd(), 'src/chat/chat-search.controller.ts'),
   'utf8',
@@ -40,8 +43,12 @@ describe('chat message search production contract', () => {
   });
 
   it('uses bounded trigram-indexable substring matching and newest-first results', () => {
-    expect(chatService).toMatch(/\.ilike\('text_content', `%\$\{trimmedTerm\}%`\)/);
-    expect(chatService).toMatch(/\.order\('created_at', \{ ascending: false \}\)/);
+    expect(chatService).toMatch(
+      /\.ilike\('text_content', `%\$\{trimmedTerm\}%`\)/,
+    );
+    expect(chatService).toMatch(
+      /\.order\('created_at', \{ ascending: false \}\)/,
+    );
     expect(chatService).toMatch(/\.limit\(limit\)/);
     expect(searchDto).toMatch(/@MinLength\(2\)/);
     expect(searchDto).toMatch(/@MaxLength\(200\)/);
@@ -50,9 +57,13 @@ describe('chat message search production contract', () => {
 
   it('preserves privacy filters for blocked and deleted messages', () => {
     expect(chatService).toMatch(/getBlockedAndBlockerIds\(userId\)/);
-    expect(chatService).toMatch(/query = query\.not\('sender_id', 'in', blockedIds\)/);
+    expect(chatService).toMatch(
+      /query = query\.not\('sender_id', 'in', blockedIds\)/,
+    );
     expect(chatService).toMatch(/if \(msg\.is_deleted\) return false/);
-    expect(chatService).toMatch(/msg\.deleted_for_user_ids\.includes\(userId\)/);
+    expect(chatService).toMatch(
+      /msg\.deleted_for_user_ids\.includes\(userId\)/,
+    );
   });
 
   it('keeps the public search endpoint authenticated and rate limited', () => {
