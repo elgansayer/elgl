@@ -120,7 +120,8 @@ describe('AudioRoomArchivesService', () => {
           useValue: {
             get: vi.fn((key: string) => {
               if (key === 'AUDIO_ROOM_SUMMARY_MAX_ATTEMPTS') return '4';
-              if (key === 'AUDIO_ROOM_SUMMARY_MAX_TRANSCRIPT_CHARS') return '8000';
+              if (key === 'AUDIO_ROOM_SUMMARY_MAX_TRANSCRIPT_CHARS')
+                return '8000';
               if (key === 'AUDIO_ROOM_SUMMARY_CHUNK_CHARS') return '1000';
               return undefined;
             }),
@@ -152,9 +153,9 @@ describe('AudioRoomArchivesService', () => {
   });
 
   it('denies archived transcript access to non-participants', async () => {
-    await expect(service.assertCanAccess('stranger-1', room.id)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.assertCanAccess('stranger-1', room.id),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('allows an authenticated recorded participant to read the archive', async () => {
