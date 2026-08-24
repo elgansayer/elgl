@@ -25,6 +25,7 @@ import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
 import { TranscribeAudioDto } from './dto/transcribe-audio.dto';
 import { GrammarCheckService } from './grammar-check.service';
+import { GrammarExplanationService } from './grammar-explanation.service';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
@@ -41,6 +42,7 @@ export class NlpController {
     private readonly nlpService: NlpService,
     private readonly usersService: UsersService,
     private readonly grammarCheckService: GrammarCheckService,
+    private readonly grammarExplanationService: GrammarExplanationService,
   ) {}
 
   /**
@@ -120,11 +122,8 @@ export class NlpController {
   } | null> {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
-    return await this.nlpService.explainGrammar(
-      user.id,
-      profile?.is_vip ?? false,
-      dto,
-    );
+    await this.nlpService.checkRateLimit(user.id, profile?.is_vip ?? false);
+    return await this.grammarExplanationService.explain(dto);
   }
 
   /**

@@ -110,7 +110,7 @@ describe('GlobalSearchComponent', () => {
     ]);
   });
 
-  it('should emit false for the audio intro filter when it is not selected', () => {
+  it('should omit the audio intro requirement when it is not selected', () => {
     const emitted: unknown[] = [];
     component.searchFilters.subscribe((f) => emitted.push(f));
 
@@ -121,7 +121,7 @@ describe('GlobalSearchComponent', () => {
         native_languages: undefined,
         target_language: undefined,
         proficiency_level: undefined,
-        has_audio_intro: false,
+        has_audio_intro: undefined,
       },
     ]);
   });
@@ -141,6 +141,22 @@ describe('GlobalSearchComponent', () => {
         has_audio_intro: true,
       },
     ]);
+  });
+
+  it('should remove the audio intro requirement when toggled off again', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((f) => emitted.push(f));
+
+    component.toggleHasAudioIntro();
+    component.toggleHasAudioIntro();
+
+    expect(component.hasAudioIntro()).toBe(false);
+    expect(emitted.at(-1)).toEqual({
+      native_languages: undefined,
+      target_language: undefined,
+      proficiency_level: undefined,
+      has_audio_intro: undefined,
+    });
   });
 
   it('should render an associated audio intro checkbox label', () => {

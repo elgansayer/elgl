@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const readMigration = (name: string) =>
-  readFileSync(resolve(process.cwd(), '..', 'supabase', 'migrations', name), 'utf8');
+  readFileSync(
+    resolve(process.cwd(), '..', 'supabase', 'migrations', name),
+    'utf8',
+  );
 
 const initialSchema = readMigration('001_initial_schema.sql');
 const chatAndFavourites = readMigration('003_chat_and_favourites.sql');
@@ -18,12 +21,16 @@ describe('003_chat_and_favourites migration contract', () => {
     expect(chatAndFavourites).toMatch(
       /sender_id UUID NOT NULL REFERENCES public\.users\(id\) ON DELETE CASCADE/,
     );
-    expect(chatAndFavourites).toMatch(/message_type VARCHAR\(50\) NOT NULL DEFAULT 'text'/);
+    expect(chatAndFavourites).toMatch(
+      /message_type VARCHAR\(50\) NOT NULL DEFAULT 'text'/,
+    );
     expect(chatAndFavourites).toMatch(/text_content TEXT/);
     expect(chatAndFavourites).toMatch(/media_url TEXT/);
     expect(chatAndFavourites).toMatch(/correction_payload JSONB/);
     expect(chatAndFavourites).toMatch(/is_read BOOLEAN NOT NULL DEFAULT false/);
-    expect(chatAndFavourites).toMatch(/created_at TIMESTAMPTZ NOT NULL DEFAULT now\(\)/);
+    expect(chatAndFavourites).toMatch(
+      /created_at TIMESTAMPTZ NOT NULL DEFAULT now\(\)/,
+    );
   });
 
   it('creates bounded-query indexes for room history, sender lookup, and text search', () => {
@@ -58,8 +65,10 @@ describe('003_chat_and_favourites migration contract', () => {
   });
 
   it('keeps the historical migration replay-safe and non-destructive', () => {
-    const tableCreates = chatAndFavourites.match(/CREATE TABLE IF NOT EXISTS/g) ?? [];
-    const indexCreates = chatAndFavourites.match(/CREATE INDEX IF NOT EXISTS/g) ?? [];
+    const tableCreates =
+      chatAndFavourites.match(/CREATE TABLE IF NOT EXISTS/g) ?? [];
+    const indexCreates =
+      chatAndFavourites.match(/CREATE INDEX IF NOT EXISTS/g) ?? [];
 
     expect(tableCreates).toHaveLength(2);
     expect(indexCreates).toHaveLength(4);
@@ -68,11 +77,15 @@ describe('003_chat_and_favourites migration contract', () => {
   });
 
   it('has defence-in-depth RLS for the tables established by the migration', () => {
-    expect(rowLevelSecurity).toContain('ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;');
+    expect(rowLevelSecurity).toContain(
+      'ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;',
+    );
     expect(rowLevelSecurity).toMatch(
       /CREATE POLICY chat_messages_insert_own[\s\S]*?WITH CHECK \(auth\.uid\(\) = sender_id\)/,
     );
-    expect(rowLevelSecurity).toContain('ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;');
+    expect(rowLevelSecurity).toContain(
+      'ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;',
+    );
     expect(rowLevelSecurity).toMatch(
       /CREATE POLICY favourites_select_own[\s\S]*?USING \(auth\.uid\(\) = user_id\)/,
     );
