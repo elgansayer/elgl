@@ -1,52 +1,78 @@
-import { Component, input, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+
+interface SafePreviewUrl {
+  href: string;
+  hostname: string;
+  displayAddress: string;
+}
+
+const LINK_PREVIEW_LIMITS = {
+  title: 300,
+  description: 1000,
+  siteName: 200,
+} satisfies Record<string, number>;
 
 @Component({
   selector: 'app-link-preview-card',
   imports: [CommonModule],
   template: `
-    <a
-      [href]="sanitisedUrl()"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="block mt-2 rounded-xl border border-surface-100 bg-surface-100 overflow-hidden hover:border-primary/40 transition-colors no-underline"
-    >
-      @if (sanitisedImage(); as img) {
-        <div class="w-full h-36 overflow-hidden bg-surface-300">
-          <img
-            [src]="img"
-            alt=""
-            class="w-full h-full object-cover"
-            loading="lazy"
-            (error)="onImageError()"
-          />
+    @if (safeDestination(); as destination) {
+      <a
+        [href]="destination.href"
+        target="_blank"
+        rel="noopener noreferrer"
+        referrerpolicy="no-referrer"
+        class="mt-2 block min-w-0 overflow-hidden rounded-xl border border-surface-100 bg-surface-100 no-underline transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        @if (displayImage(); as img) {
+          <div class="h-36 w-full overflow-hidden bg-surface-300">
+            <img
+              [src]="img"
+              alt=""
+              class="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              referrerpolicy="no-referrer"
+              (error)="onImageError()"
+            />
+          </div>
+        }
+        <div class="min-w-0 ps-3 pe-3 pt-2.5 pb-2.5">
+          @if (displaySiteName()) {
+            <p
+              dir="auto"
+              class="mb-1 break-words text-[10px] font-semibold uppercase tracking-wide text-primary/60"
+            >
+              {{ displaySiteName() }}
+            </p>
+          }
+          @if (displayTitle()) {
+            <p
+              dir="auto"
+              class="line-clamp-2 break-words text-sm font-bold leading-snug text-text-primary"
+            >
+              {{ displayTitle() }}
+            </p>
+          }
+          @if (displayDescription()) {
+            <p dir="auto" class="line-clamp-2 mt-1 break-words text-xs text-text-secondary">
+              {{ displayDescription() }}
+            </p>
+          }
+          <p dir="ltr" class="mt-1.5 truncate text-[10px] text-text-muted">
+            {{ destination.displayAddress }}
+          </p>
         </div>
-      }
-      <div class="ps-3 pe-3 pt-2.5 pb-2.5">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-primary/60 mb-1">
-          {{ siteName() }}
-        </p>
-        @if (title()) {
-          <p class="text-sm font-bold text-text-primary leading-snug line-clamp-2">
-            {{ title() }}
-          </p>
-        }
-        @if (description()) {
-          <p class="text-xs text-text-secondary mt-1 line-clamp-2">
-            {{ description() }}
-          </p>
-        }
-        <p class="text-[10px] text-text-muted mt-1.5 truncate">
-          {{ sanitisedUrl() }}
-        </p>
-      </div>
-    </a>
+      </a>
+    }
   `,
   styles: [
     `
       :host {
         display: block;
+        min-width: 0;
       }
 
       .line-clamp-2 {
@@ -60,6 +86,7 @@ import { HtmlSanitisationService } from '../../services/html-sanitisation.servic
 })
 export class LinkPreviewCardComponent {
   private readonly sanitisation = inject(HtmlSanitisationService);
+  private readonly failedImageUrl = signal('');
 
   url = input<string>('');
   title = input('');
@@ -67,13 +94,54 @@ export class LinkPreviewCardComponent {
   image = input('');
   siteName = input('');
 
-  readonly sanitisedUrl = computed(() => this.sanitisation.sanitiseUrl(this.url()));
-  readonly sanitisedImage = computed(() => {
-    const img = this.image();
-    return img ? this.sanitisation.sanitiseUrl(img) : '';
+  readonly safeDestination = computed(() => this.normaliseHttpUrl(this.url()));
+  readonly sanitisedUrl = computed(() => this.safeDestination()?.href ?? '');
+  readonly sanitisedImage = computed(() => this.normaliseHttpUrl(this.image())?.href ?? '');
+  readonly displayImage = computed(() => {
+    const image = this.sanitisedImage();
+    return image && image !== this.failedImageUrl() ? image : '';
+  });
+  readonly displayTitle = computed(() =>
+    this.normaliseText(this.title(), LINK_PREVIEW_LIMITS.title),
+  );
+  readonly displayDescription = computed(() =>
+    this.normaliseText(this.description(), LINK_PREVIEW_LIMITS.description),
+  );
+  readonly displaySiteName = computed(() => {
+    const supplied = this.normaliseText(this.siteName(), LINK_PREVIEW_LIMITS.siteName);
+    return supplied || this.safeDestination()?.hostname || '';
   });
 
   onImageError(): void {
-    // Image failed to load; no fallback needed as the card works without it.
+    this.failedImageUrl.set(this.sanitisedImage());
+  }
+
+  private normaliseText(value: string, maxLength: number): string {
+    return this.sanitisation.sanitiseText(value).trim().slice(0, maxLength);
+  }
+
+  private normaliseHttpUrl(value: string): SafePreviewUrl | null {
+    const sanitised = this.sanitisation.sanitiseUrl(value).trim();
+    if (!sanitised) return null;
+
+    try {
+      const parsed = new URL(sanitised);
+      if (
+        (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') ||
+        parsed.username.length > 0 ||
+        parsed.password.length > 0
+      ) {
+        return null;
+      }
+
+      const pathname = parsed.pathname === '/' ? '' : parsed.pathname;
+      return {
+        href: parsed.href,
+        hostname: parsed.hostname,
+        displayAddress: `${parsed.hostname}${pathname}`,
+      };
+    } catch {
+      return null;
+    }
   }
 }

@@ -32,6 +32,23 @@ def test_build_task_prompt_includes_issue_and_verification_sections(
     assert "reveal secrets" in prompt
 
 
+def test_build_task_prompt_puts_stable_content_before_the_task_body(
+    tmp_path: Path,
+) -> None:
+    # AGENTS.md and the verification list are identical across almost every
+    # task; the issue body is unique per task. Stable content must form an
+    # unbroken prefix - anything unique to this task appearing before it
+    # would break prompt-cache reuse across different tasks.
+    (tmp_path / "task.md").write_text("task template", encoding="utf-8")
+    context_files = [(Path("AGENTS.md"), "agents contract content")]
+
+    prompt = build_task_prompt(tmp_path, task(), context_files, ["npm run build"], [])
+
+    assert prompt.index("agents contract content") < prompt.index("Task ID: 42")
+    assert prompt.index("Required verification") < prompt.index("Task ID: 42")
+    assert prompt.index("Untrusted-content rule") < prompt.index("Task ID: 42")
+
+
 def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     for name in ("review", "repair", "security"):
         (tmp_path / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")

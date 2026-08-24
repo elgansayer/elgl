@@ -7,6 +7,10 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
+  DiscoveryRecommendationDto,
+  DiscoveryRecommendationsService,
+} from './discovery-recommendations.service';
+import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
@@ -24,7 +28,77 @@ interface AuthenticatedRequest {
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
+    private readonly discoveryRecommendationsService: DiscoveryRecommendationsService,
   ) {}
+
+  /**
+   * GET /recommendations/discovery
+   *
+   * Returns the stable, bounded recommendation set used by the Discovery
+   * "Recommended for You" carousel. Candidate IDs can be seeded from the
+   * existing daily cache, but current privacy/deletion/block state is always
+   * revalidated before a profile is returned.
+   */
+  @Get('discovery')
+  @ApiOperation({
+    summary: 'Get privacy-safe Discovery carousel recommendations',
+    description:
+      'Returns up to 10 language partners ranked by reciprocal language compatibility, shared interests and bounded activity signals. Cached IDs are always revalidated against current privacy, deletion and block state. Raw activity timestamps and internal ranking scores are not exposed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Up to 10 explainable, currently eligible recommendations.',
+    schema: {
+      type: 'array',
+      maxItems: 10,
+      items: {
+        type: 'object',
+        required: [
+          'id',
+          'display_name',
+          'native_languages',
+          'target_languages',
+          'shared_interest_count',
+          'recommendation_reasons',
+        ],
+        properties: {
+          id: { type: 'string' },
+          display_name: { type: 'string' },
+          avatar_url: { type: 'string', nullable: true },
+          native_languages: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+          target_languages: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+          shared_interest_count: { type: 'number', minimum: 0, maximum: 3 },
+          recommendation_reasons: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'language_exchange',
+                'shared_interests',
+                'active_recently',
+                'study_streak',
+              ],
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
+  async getDiscoveryRecommendations(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<DiscoveryRecommendationDto[]> {
+    return this.discoveryRecommendationsService.getForDiscovery(req.user!.id);
+  }
 
   /**
    * GET /recommendations/for-you
