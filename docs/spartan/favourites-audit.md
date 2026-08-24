@@ -4,51 +4,51 @@ Issue: #6197 (`Spartan UI 0411`)
 
 Target: `frontend/src/app/components/favourites`
 
-Program dependency: #5462 (`Spartan UI 0001`), completed before this audit.
+Program dependency: #5462 (`Spartan UI 0001`)
 
 ## Scope
 
-This document is the implementation baseline for migrating and maintaining `FavouritesComponent` under the repository's Spartan Brain / Spartan Helm / Relay architecture.
+This document records the current implementation baseline for `FavouritesComponent` and the remaining work needed to converge the surface on the repository-owned Spartan Helm and Relay boundaries.
 
-The audit inventories every control, derived state, asynchronous transition, nested action, API side effect and presentation primitive currently reachable from the `/favourites` surface. It is behaviour-neutral. Follow-up implementation must preserve the existing favourites contract while moving reusable interaction and visual ownership into the approved Spartan and Relay layers.
+The audit is behaviour-neutral. It documents existing product behaviour, identifies remaining ownership and accessibility gaps, and defines the contract for follow-up implementation. It does not change runtime behaviour, APIs, persistence, routes, analytics or visual output.
 
-The component is already partly converged. Page and item surfaces use `AppCardComponent`, command buttons use Spartan Helm Button, and the primary colours are mostly semantic Relay tokens. The largest ownership gaps are the hand-managed five-way filter selector, static item-type badges rendered through an interactive chip component, feature-owned audio playback state, incomplete destructive/error handling, and duplicated favourites API ownership between `ChatService` and `FavouriteService`.
+This audit was refreshed against the current PR base after several Favourites hardening changes had already landed. Earlier observations that load errors were silent, delete requests were unguarded, audio was not cleaned up on destroy, audio state was set before `play()` resolved, static badges were interactive chips, and the Play button always exposed a Pause label are no longer true. The current state below is authoritative.
 
-No dialog, popover, menu, drag interaction, route navigation action or analytics hook is owned directly by `FavouritesComponent` today. Correction rows can, however, expose nested translation and flashcard actions through `VisualDiffComponent`, so those controls are part of the effective interaction surface and are included below.
+## Reviewed implementation
 
-## Discovery summary
+The effective surface currently spans:
 
-The reviewed implementation consists of:
-
-- `frontend/src/app/components/favourites/favourites.component.ts`, which owns loading, filter state, deletion, audio playback and payload narrowing;
-- `frontend/src/app/components/favourites/favourites.component.html`, which renders the heading, five filters, loading/empty states, favourite cards, delete/audio controls and nested correction actions;
-- `frontend/src/app/components/favourites/favourites.component.scss`, which contains a legacy hard-coded purple `.app-chip-active` rule that is not referenced by the current template;
-- `frontend/src/app/components/favourites/favourites.component.spec.ts`, which covers loading, filter derivation, empty-state keys and successful deletion but not the rendered interaction/accessibility contract;
-- `frontend/src/app/services/chat.service.ts`, which currently supplies `FavouriteRecord` plus favourites requests used by this component;
-- `frontend/src/app/services/favourite.service.ts`, a second dedicated client exposing the same `GET`, `POST` and `DELETE /chat/favourites` API family;
-- `frontend/src/app/components/visual-diff/visual-diff.component.ts`, whose `showActions=true` mode adds translation and flashcard actions inside correction favourites;
-- `frontend/src/app/components/primitives/chip/chip.component.ts`, which always renders a Spartan-backed button and exposes `aria-pressed`;
-- `frontend/src/app/components/primitives/pill/pill.component.ts`, which is the existing static Relay status/tag primitive;
-- `frontend/src/app/components/primitives/card/card.component.ts`, which owns Relay surface/radius/elevation styling;
+- `frontend/src/app/components/favourites/favourites.component.ts`;
+- `frontend/src/app/components/favourites/favourites.component.html`;
+- `frontend/src/app/components/favourites/favourites.component.scss`;
+- `frontend/src/app/components/favourites/favourites.component.spec.ts`;
+- `frontend/src/app/services/chat.service.ts`;
+- `frontend/src/app/services/favourite.service.ts`;
+- `frontend/src/app/components/visual-diff/visual-diff.component.ts`;
+- `frontend/src/app/components/primitives/chip/chip.component.ts`;
+- `frontend/src/app/components/primitives/pill/pill.component.ts`;
+- `frontend/src/app/components/primitives/card/card.component.ts`;
 - the lazy `/favourites` route in `frontend/src/app/routes/social.routes.ts`;
-- authenticated NestJS `GET /chat/favourites` and `DELETE /chat/favourites/:id` endpoints in `backend/src/chat/chat.controller.ts`.
+- authenticated favourites endpoints in `backend/src/chat/chat.controller.ts`.
 
-The backend `ChatController` is protected at controller scope by `SupabaseAuthGuard`. The favourites component does not need to reproduce authorization in the browser, but migration must not bypass the authenticated backend contract.
+`FavouritesComponent` still uses `ChatService` for its favourites requests. A dedicated `FavouriteService` also exists for the same API family, so service ownership remains duplicated.
 
 ## Current product contract
 
-### Initial load
+### Initial load and retry
 
-The component starts with:
+The component starts with an empty favourites signal, `isLoading=true`, no load error, the `all` filter selected, no pending deletes and no active audio item.
 
-- `favourites = []`;
-- `isLoading = true`;
-- `activeTab = 'all'`;
-- no active audio item.
+Construction starts `loadFavourites()`. The loader uses a generation counter so an older request cannot overwrite state from a newer retry or from component destruction. It clears the prior load error, requests the collection, replaces local state on the latest successful response and exposes a translated retryable error state on failure.
 
-The constructor immediately calls `loadFavourites()`. That method requests the authenticated favourites collection, replaces the signal on success, logs failures to the console, and always clears loading state.
+The template now distinguishes:
 
-There is currently no distinct failure signal. A failed initial request therefore becomes visually indistinguishable from a successfully loaded empty collection after loading completes.
+- loading, announced with `role="status"` and `aria-live="polite"`;
+- loaded with items;
+- loaded empty;
+- failed load, announced with `role="alert"` and a retry button.
+
+The error copy is generic and translated rather than exposing backend exception text.
 
 ### Filter model
 
@@ -60,9 +60,9 @@ The surface exposes five local-only filters:
 4. Audio
 5. Moments
 
-Changing a filter does not issue a network request. `filteredFavourites` derives the visible list from the already loaded collection.
+Changing a filter performs no network request. `filteredFavourites` derives the visible list from the already loaded collection.
 
-The current classification rules are:
+Current classification rules are:
 
 - Messages: `item_type === 'message'` and payload `message_type === 'text'`;
 - Corrections: payload `message_type === 'correction'` or `item_type === 'correction'`;
@@ -70,428 +70,386 @@ The current classification rules are:
 - Moments: `item_type === 'moment'`;
 - All: every loaded favourite.
 
-Preserve these rules unless a separate API/data-contract change deliberately normalises favourite types.
+These rules are part of the current product contract and should not change incidentally during UI migration.
 
 ### Delete
 
-Each item exposes a delete button. Activating it calls `DELETE /chat/favourites/:id`. Only after a successful request is the item removed from local state.
+Delete remains an authenticated `DELETE /chat/favourites/:id` mutation through `ChatService`.
 
-Failure is logged to the console and otherwise silent. There is no pending state, duplicate-click guard, confirmation, retry affordance or user-facing failure message.
+The current component already prevents duplicate requests per favourite ID with `pendingDeleteIds`. The affected button is disabled and exposes `aria-busy` while the request is pending. The row is removed only after a successful response. If the deleted row owns current audio playback, playback is stopped before local removal.
+
+Delete failure keeps the row and displays a translated generic alert. The remaining weakness is that `deleteError` is one page-level boolean rather than row-scoped state, so the UI cannot identify which mutation failed and a later delete clears the same global error.
+
+There is still no explicit confirmation or undo contract. Follow-up work should make a deliberate product decision rather than add either mechanism accidentally.
 
 ### Audio playback
 
-Audio/voice favourites with `media_url` expose one play/pause action.
+Audio and voice favourites with `media_url` expose one Helm button.
 
-Activating a stopped item:
+Starting playback:
 
-1. stops any currently tracked audio;
-2. constructs `new Audio(media_url)`;
-3. installs an `onended` callback;
-4. calls `play()`;
-5. stores the element and marks the favourite as playing.
+1. stops any tracked previous audio;
+2. creates `new Audio(media_url)`;
+3. installs an `onended` callback guarded against stale elements;
+4. invokes `play()`;
+5. marks the favourite as playing only after the play promise resolves successfully.
 
-Activating the same item again pauses it, resets `currentTime` to zero and clears active state. Activating a different audio item stops the previous item first.
+Pausing the active row calls the shared `stopAudio()` path, resets `currentTime`, clears the element reference and clears active state. Starting a second row stops the first. `ngOnDestroy()` invalidates outstanding loads and stops current audio, so navigation no longer leaves tracked playback running.
 
-A rejected `play()` clears active state but produces no visible error. There is no component-destroy cleanup, so follow-up work must verify that playback cannot continue after the surface is destroyed or navigated away from.
+The visible text and accessible label both switch correctly between translated Play and Pause strings.
+
+A rejected `play()` clears local media state, but still has no user-facing playback failure message. That remains a follow-up feedback gap.
 
 ### Correction actions
 
-Correction favourites use `VisualDiffComponent` with `showActions=true`. This means the effective favourites surface also exposes:
+Correction favourites render `VisualDiffComponent` with `showActions=true`. The effective Favourites surface therefore includes nested translation and flashcard actions.
 
-- Translate explanation, when an explanation exists;
-- Create flashcard.
-
-Those actions are already Spartan Helm buttons inside `VisualDiffComponent`. Translation uses the shared chat translation path and translation cache. Flashcard creation uses `FlashcardService`. Their loading/error/toast behaviour belongs to `VisualDiffComponent`; `FavouritesComponent` must not duplicate those state machines.
+Those actions are already owned by `VisualDiffComponent`. Favourites should continue passing correction data without duplicating its translation, flashcard, pending or feedback state machines.
 
 ### Route contract
 
-The route is `/favourites`, lazy-loaded from `social.routes.ts`.
+The route remains `/favourites`, lazy-loaded from the social routes.
 
-The component itself currently has no Router dependency and no profile, message, moment or chat navigation action. A migration should not make whole cards clickable or invent destinations merely to create an interactive visual treatment.
+The component itself has no Router dependency and does not currently provide sender-profile, chat, message or moment navigation. Favourite cards must therefore remain non-interactive unless a separate product change introduces a real destination.
 
-## Existing control and state inventory
+## Current control and state inventory
 
-| Element / state | Current implementation | Current owner | Target owner | Required action |
-| --- | --- | --- | --- | --- |
-| Page heading | Native `h1` in `AppCardComponent` | Feature + Relay card | Native semantics + Relay | Preserve |
-| Subtitle | Native paragraph | Feature | Relay typography | Preserve |
-| Filter container | `nav` plus horizontal flex row | Feature | Feature layout + Spartan selection semantics | Keep scroll/reflow, improve group semantics |
-| All filter | `AppChipComponent` button | Feature signal + Relay chip/Helm Button | Spartan Tabs or approved single-selection primitive | Migrate selection semantics |
-| Messages filter | `AppChipComponent` button | Feature signal + Relay chip/Helm Button | Spartan Tabs or approved single-selection primitive | Migrate selection semantics |
-| Corrections filter | `AppChipComponent` button | Feature signal + Relay chip/Helm Button | Spartan Tabs or approved single-selection primitive | Migrate selection semantics |
-| Audio filter | `AppChipComponent` button | Feature signal + Relay chip/Helm Button | Spartan Tabs or approved single-selection primitive | Migrate selection semantics |
-| Moments filter | `AppChipComponent` button | Feature signal + Relay chip/Helm Button | Spartan Tabs or approved single-selection primitive | Migrate selection semantics |
-| All count | Text inside All filter | Feature-derived state | Feature content | Preserve, ensure label remains understandable |
-| Initial loading | Plain text empty-state block | Feature request state | Relay loading/status presentation | Add explicit accessible status |
-| Loaded empty | Plain translated empty-state block | Feature-derived state | Relay empty-state primitive/presentation | Converge if visual contract matches |
-| Per-tab empty | Computed translation key | Feature-derived state | Feature + Relay empty presentation | Preserve distinctions |
-| Favourite item surface | `AppCardComponent` | Relay | Relay card | Preserve non-interactive ownership |
-| Sender avatar | Native `img` plus remote placeholder fallback | Feature | Relay avatar/native image | Replace generic fallback with approved avatar treatment |
-| Sender name | Native text | Feature data | Native content | Preserve |
-| Created date | Angular `DatePipe` | Feature presentation | Locale-aware presentation | Verify locale ownership |
-| Delete action | `<button hlmBtn>` with feature classes | Helm Button + feature mutation | Helm/Relay destructive action | Add pending/error/confirmation contract |
-| Voice type badge | `AppChipComponent` | Interactive Relay chip | Static `AppPillComponent` | Replace false button semantics |
-| Moment type badge | `AppChipComponent` | Interactive Relay chip | Static `AppPillComponent` | Replace false button semantics |
-| Correction type badge | `AppChipComponent` | Interactive Relay chip | Static `AppPillComponent` | Replace false button semantics |
-| Text content | Native paragraph on Relay surface tokens | Feature presentation | Native/Relay | Preserve |
-| Correction diff | `VisualDiffComponent` | Shared feature component | Existing shared component | Preserve |
-| Translate explanation | Nested Helm icon button | `VisualDiffComponent` | `VisualDiffComponent` | Do not duplicate in favourites |
-| Create flashcard | Nested Helm outline button | `VisualDiffComponent` | `VisualDiffComponent` | Do not duplicate in favourites |
-| Audio play/pause | `<button hlmBtn>` plus feature audio state | Helm Button + feature media state | Helm Button + dedicated/shared media state | Preserve one-active-item contract, harden lifecycle |
-| Audio transcript | Native text | Feature data | Native content | Preserve |
-| Moment content | Native paragraph | Feature data | Native/Relay | Preserve |
-| Legacy correction fallback | Native spans | Feature presentation | Native/Relay or shared diff | Converge without changing data semantics |
-| Notes callout | Hand-composed warning surface | Feature presentation | Relay callout/content surface | Use semantic role appropriate to a note, not warning by default |
-| Load failure | Console error only | Feature | Feature state + Relay error/retry presentation | Add explicit failure state |
-| Delete failure | Console error only | Feature | Feature state + Relay feedback | Add recoverable feedback |
-| Audio failure | Silent state reset | Feature | Feature state + Relay feedback | Add non-technical failure feedback |
+| Element / state | Current implementation | Current owner | Target / remaining action |
+| --- | --- | --- | --- |
+| Page heading | Native `h1` inside `AppCardComponent` | Native semantics + Relay card | Preserve |
+| Subtitle | Native paragraph | Feature + Relay typography | Preserve |
+| Filter group | labelled `nav` containing five `AppChipComponent` buttons | Feature selection + Relay/Helm chip | Prefer repository-owned Spartan single-selection/Tabs semantics |
+| All count | Text inside All chip | Feature-derived state | Preserve |
+| Loading | translated status block | Feature state + native ARIA | Preserve |
+| Load failure | translated alert plus Helm retry button | Feature state + Helm | Preserve and test retry races |
+| Empty state | translated per-filter block | Feature presentation | Preserve or converge on Relay empty-state presentation if available |
+| Favourite collection | `role="list"` with `role="listitem"` card hosts | Feature semantics + Relay card | Preserve while reviewing shared card semantics separately |
+| Sender avatar | native image with empty alt and third-party placeholder URL fallback | Feature | Keep decorative alt; replace third-party placeholder with approved local/Relay avatar fallback |
+| Sender name | native text | Feature data | Preserve |
+| Created date | Angular `DatePipe` | Feature presentation | Verify active application locale ownership |
+| Delete action | Helm ghost icon-touch button | Helm + feature mutation state | Keep pending guard; improve repeated-control naming and row-scoped failure feedback |
+| Voice type badge | static styled `span` | Feature presentation | Converge on `AppPillComponent` rather than hand-composed pill classes |
+| Moment type badge | static styled `span` | Feature presentation | Converge on `AppPillComponent` |
+| Correction type badge | static styled `span` | Feature presentation | Converge on `AppPillComponent` |
+| Text content | native text on Relay tokens | Feature | Preserve |
+| Correction diff | `VisualDiffComponent` | Shared component | Preserve |
+| Translate explanation | nested Helm action | `VisualDiffComponent` | Do not duplicate |
+| Create flashcard | nested Helm action | `VisualDiffComponent` | Do not duplicate |
+| Audio play/pause | Helm secondary touch button | Helm + feature media state | Preserve state machine; add bounded playback-failure feedback |
+| Audio transcript | native text | Feature | Preserve |
+| Moment content | native text | Feature | Preserve |
+| Notes callout | hand-composed warning-token surface | Feature presentation | Use an informational Relay treatment unless product semantics are genuinely warning-level |
+| Delete pending | per-ID set | Feature state | Preserve |
+| Delete failure | page-level boolean alert | Feature state | Prefer row-scoped or operation-scoped recoverable feedback |
+| Audio failure | silent state reset | Feature state | Add translated non-technical feedback |
 
 ## Spartan ownership decisions
 
 ### Five-way filter selection
 
-The five filters are one mutually exclusive view selection, not five unrelated commands. `AppChipComponent` improves on raw clickable elements by using a native Spartan-backed button and `aria-pressed`, but the page still owns the selection model manually and places command buttons inside a `nav` element without tab semantics.
+The five filters form one mutually exclusive view selector, not five unrelated commands. `AppChipComponent` provides native button semantics and selected state, but the feature still owns the five-way selection model and wraps it in navigation semantics.
 
-The preferred target is the repository-owned Spartan Tabs boundary when available. A current open developer-dashboard migration is establishing Helm Tabs ownership, so follow-up #6198 should reuse that adapter once merged rather than importing Spartan Brain directly from feature code.
-
-If Tabs is unavailable on the implementation base, verify the installed Spartan version and use the approved single-selection primitive already owned by the repository. Do not hand-build roving tabindex, arrow-key logic or `role=tab` behaviour in `FavouritesComponent`.
+The preferred follow-up is the repository-owned Spartan Tabs or approved single-selection boundary, if that boundary is available on the implementation base. Feature code should not import Spartan Brain directly or hand-build roving tabindex and arrow-key behaviour.
 
 Required behaviour:
 
 - exactly one filter is selected;
-- the selected value is programmatically exposed;
-- keyboard behaviour is primitive-owned;
-- activation changes only local filtering and performs no network request;
-- focus remains stable when the list content changes;
-- the control remains horizontally usable at 390px and high zoom without trapping page scroll;
-- selection is not communicated by colour alone.
-
-The filter labels include emoji. Emoji are decorative and must not become the only accessible identification of a filter.
+- selected state is exposed programmatically;
+- primitive-owned keyboard behaviour is used when a tab/single-selection primitive owns the interaction;
+- activation changes only local filtering;
+- focus remains stable when result content changes;
+- the group remains usable at 390px and high zoom;
+- horizontal filter overflow does not trap vertical page scrolling;
+- selection is not communicated by colour alone;
+- emoji remain decorative supplements to translated labels.
 
 ### Static type badges
 
-The item-type badges currently use `AppChipComponent`. That component always renders a button, so Voice Note, Moment and Correction badges are currently focusable controls even though no click handler or action exists.
+The current base has already removed the previous false-control bug: Voice Note, Moment and Correction labels are now static spans rather than `AppChipComponent` buttons.
 
-These are status labels and should use the static Relay `AppPillComponent` or an equivalent non-interactive text treatment. Do not add click behaviour solely to justify the existing chip semantics.
+The remaining issue is visual ownership. The spans hand-compose pill radius, fill and text classes. Where the established Relay `AppPillComponent` matches the required semantics and appearance, use it so feature code does not recreate the status/tag primitive.
 
 ### Delete action
 
-Delete is a real command and should remain a native Spartan Helm button or the approved Relay destructive wrapper. Interaction mechanics, focus-visible styling, disabled state and touch sizing belong to Helm/Relay. The feature owns the mutation and row state.
+Delete is a real command and correctly remains a native Helm button. Focus behaviour, disabled state and touch sizing should continue to come from Helm/Relay.
 
-Because removing a favourite changes saved user data, follow-up work should define an explicit product decision for confirmation or immediately reversible feedback. At minimum it must prevent duplicate requests, expose pending state and surface failure without removing the local row prematurely.
+The feature should retain ownership of the mutation and pending set. Remaining work is primarily feedback and naming:
 
-Do not use a clickable icon-only span or feature-owned keyboard handlers.
+- preserve one in-flight request per favourite ID;
+- keep unrelated rows usable;
+- preserve the row on failure;
+- move from one ambiguous page-level delete error toward operation-scoped feedback;
+- give repeated delete controls enough accessible context to identify the target without reading sensitive favourite content into the accessible name;
+- decide confirmation versus undo as an explicit product requirement.
 
 ### Audio play/pause
 
-Play/pause is a command button. Keep native button semantics and use an approved Helm variant/size rather than recreating hover/focus/disabled behaviour with utility classes.
+Play/pause is correctly a Helm button and the current state transition reflects successful `play()` resolution. Keep the one-active-item and destroy-cleanup contracts.
 
-The actual media lifecycle remains feature/application responsibility. Spartan does not own `HTMLAudioElement`, media permissions or playback promises.
-
-A reusable media controller may be appropriate if other voice-note surfaces already own the same one-at-a-time playback contract. Do not introduce a new shared abstraction unless it replaces real duplicated behaviour.
+Spartan does not own `HTMLAudioElement` lifecycle. If a shared media controller already exists elsewhere, convergence may be useful, but a new abstraction should only be introduced if it replaces real duplication.
 
 ### Cards
 
-Favourite rows are presentation containers, not actions. Keep them non-interactive. Do not use `AppCardComponent`'s `interactive` variant without a real destination or activation contract.
+Favourite rows are presentation containers, not actions. Do not use an interactive card variant without a real navigation/action contract.
 
-`AppCardComponent` currently gives every non-interactive card `role="region"`. Repeating many unnamed regions can create screen-reader landmark noise. The implementation stage should verify whether these repeated rows should remain card components with that host role, or whether the Relay card primitive should be adjusted separately. Do not solve a shared primitive semantic issue with per-row fake labels.
+Any semantic concern created by shared `AppCardComponent` host roles belongs at the shared primitive boundary and must be reviewed across consumers rather than patched with fake per-row labels in Favourites.
 
-### Nested correction actions
+## Side-effect map
 
-`VisualDiffComponent` owns its own Spartan actions, translation state, flashcard mutation and feedback. Favourites should pass correction data and avoid reaching into those actions.
+| Trigger | Request / side effect | Local mutation | Navigation | Analytics |
+| --- | --- | --- | --- | --- |
+| Component construction / Retry | `GET /chat/favourites` | collection, loading, load error | None | None |
+| Select filter | None | `activeTab` | None | None |
+| Delete favourite | `DELETE /chat/favourites/:id` | pending set, list or delete error | None | None |
+| Play audio | browser `Audio.play()` against `media_url` | active media state | None | None |
+| Pause/stop audio | browser `pause()` plus reset | clear active media state | None | None |
+| Destroy | browser audio stop plus load-generation invalidation | clear/guard state | None | None |
+| Translate correction explanation | shared Visual Diff request | nested shared state/cache | None | None |
+| Create correction flashcard | shared `FlashcardService` request | server flashcard collection | None | None |
 
-Any accessibility or stale-response defects inside Visual Diff should be fixed at that shared component boundary so all consumers benefit.
-
-## Data and side-effect map
-
-| Trigger | Request / side effect | Mutation | Navigation | Analytics | Contract |
-| --- | --- | --- | --- | --- | --- |
-| Component construction | `GET /chat/favourites` | Local list replacement | None | None | Load authenticated saved items |
-| Select filter | None | `activeTab` only | None | None | Client-only view filtering |
-| Delete favourite | `DELETE /chat/favourites/:id` | Remove local item after success | None | None | Persist removal then update UI |
-| Play audio | Browser `Audio.play()` against `media_url` | Active playback state | None | None | One tracked item at a time |
-| Pause audio | Browser `pause()` and `currentTime=0` | Clear active playback state | None | None | Stop and reset current item |
-| Translate correction explanation | Shared translation request from `VisualDiffComponent` | Nested translated explanation state/cache | None | None | Shared correction action |
-| Create correction flashcard | Shared `FlashcardService` request | Server flashcard collection | None | None | Shared correction action |
-
-There is no direct component analytics call in the reviewed code.
+No direct Favourites analytics call is present in the reviewed implementation.
 
 ## Service ownership and API boundary
 
-There are currently two frontend owners for the same favourites endpoints:
+The frontend still has two owners for the favourites API family:
 
 - favourites methods on the broad `ChatService`;
-- dedicated `FavouriteService` methods.
+- a dedicated `FavouriteService`.
 
-`FavouritesComponent` injects `ChatService`, while `FavouriteService` independently exposes add/remove/get calls.
+`FavouritesComponent` currently injects `ChatService`. Follow-up should determine the canonical boundary by inspecting all consumers and auth/header behaviour, then converge rather than allowing DTOs and error behaviour to drift.
 
-Follow-up #6198 should choose one canonical client boundary and remove feature-level ambiguity. Prefer the dedicated service if it is the repository's intended bounded ownership, but first verify other consumers and authentication/header behaviour so convergence does not silently change the API contract.
-
-Do not keep both clients indefinitely with divergent DTOs, error handling or auth behaviour.
-
-The backend endpoints are protected by `SupabaseAuthGuard` at `ChatController` scope and scope reads/deletes to the authenticated user through `ChatService`. The UI migration must not move favourites reads directly to Supabase or trust a client-provided user ID.
+The backend contract remains authenticated and user-scoped. UI migration must not move favourites reads directly to the data store, trust a client-provided user ID as ownership proof or weaken the existing authenticated controller/service path.
 
 ## Async, concurrency and lifecycle audit
 
-### Initial load failure
+### Load races
 
-`loadFavourites()` catches the request and only logs it. After `finally`, `isLoading=false` and the empty list renders an ordinary empty message.
+The generation counter is a meaningful hardening already present in the current base. A late response from a superseded retry does not overwrite current state, and destruction invalidates the active generation.
 
-Target state model:
-
-- initial loading;
-- loaded with items;
-- loaded empty;
-- failed to load with retry;
-- retry pending.
-
-Failure copy must be translated and non-technical. Do not render raw backend exception text.
+Regression tests should explicitly cover an older request resolving after a newer request, not only the successful initial load.
 
 ### Delete concurrency
 
-There is no per-item pending set. Multiple rapid activations can send duplicate DELETE requests. The row remains interactive until the first request resolves.
+Per-ID duplicate suppression is already implemented and unit-tested. Remaining test coverage should include:
 
-Target behaviour:
-
-- one in-flight delete per favourite ID;
-- affected action disabled/busy while pending;
-- unrelated rows remain usable;
-- row removed only after authoritative success;
-- failure preserves the row and exposes retryable feedback.
-
-If confirmation is adopted, confirmation state must not permit duplicate mutation dispatch.
+- failure keeps the row;
+- pending state clears after failure;
+- unrelated rows can still delete while one row is pending;
+- deleting the currently playing row stops playback;
+- a successful later delete clears or supersedes prior operation feedback appropriately.
 
 ### Audio lifecycle
 
-The component owns one `HTMLAudioElement`, but it does not implement destroy cleanup. Follow-up should stop playback when the component is destroyed and clear callbacks/references so navigation cannot leave orphaned playback.
+Destroy cleanup, successful-play state and one-at-a-time playback are implemented. Remaining cases worth locking down are:
 
-The UI also marks an item as playing immediately after initiating `play()`. A rejected promise later clears it. Prefer state that reflects successful playback, while retaining quick feedback and avoiding a stale paused/playing label.
-
-When switching items, stopping the prior audio before starting the new item is correct and should be preserved.
-
-### Nested async actions
-
-Translation and flashcard creation are nested inside `VisualDiffComponent`. Their pending/error states must remain isolated from delete/audio state for the favourite row. One nested action must not disable the entire collection.
+- rejected `play()` does not leave stale active state;
+- `onended` from an old audio object cannot clear state for a newer object;
+- switching rows pauses and resets the previous object;
+- deleting the playing row stops playback;
+- playback failure feedback, once introduced, remains bounded to the relevant operation.
 
 ## Accessibility audit
 
-### Filter semantics and naming
+### Filter group
 
-The five filter controls have translated accessible labels, but the surrounding `nav` has no label and the controls represent content views rather than destinations.
+The current `nav` now has an accessible label, which is an improvement over an unnamed group. The conceptual mismatch remains: these controls select local content views rather than navigate to destinations.
 
-A Tabs/single-selection primitive should expose the group relationship and selected item correctly. Avoid manually layering both `aria-pressed` and tab roles.
+If migrated to Tabs/single-selection, rely on that primitive's semantics rather than layering custom tab roles over `aria-pressed` buttons.
 
-### Static badges are false controls
+### Static badges
 
-Voice Note, Moment and Correction badges are `AppChipComponent` instances and therefore buttons. Screen-reader and keyboard users can focus them but activation does nothing. This is a concrete semantic defect. Replace with `AppPillComponent` or static text.
+The previous keyboard/screen-reader defect from no-op interactive chips is resolved in the current base. Static type labels are no longer focusable buttons.
 
 ### Delete naming
 
-Every delete button currently uses the same translated `favourites.delete` accessible name. In a repeated list, users need enough context to understand which saved item will be removed.
+Every row still uses the same translated `favourites.delete` accessible label. In a repeated list, the user needs enough context to distinguish targets. Add safe sender/type context while avoiding full private message text in accessible names.
 
-Use a translated contextual label based on safe visible context such as sender/type, while avoiding sensitive text content in accessible names where it would create excessive verbosity.
+### Audio naming
 
-### Audio naming defect
-
-The audio button's `aria-label` is always bound to `favourites.audioPause`, even when the visible action is Play. This creates a mismatch between visible and accessible names in the stopped state.
-
-The accessible label must follow the actual command state and include row context when necessary to distinguish repeated play controls.
+The current base correctly switches both visible and accessible labels between translated Play and Pause. Preserve this behaviour.
 
 ### Avatar alternative text
 
-The current hard-coded `alt="avatar"` is untranslated and gives no useful identity. If the adjacent visible sender name already conveys identity, the avatar should generally be decorative (`alt=""`). If the image is intended to carry identity, use translated/contextual alternative text. Do not leave generic English `avatar` on every row.
+Avatar images now use `alt=""`, which is appropriate when the adjacent visible sender name already conveys identity. Preserve the decorative treatment.
 
-The `https://via.placeholder.com/80` fallback also introduces a third-party request for missing avatars. Prefer the repository's local/Relay avatar fallback rather than sending a browser request to an unrelated host.
+The fallback still points at `https://via.placeholder.com/80`, which creates an unnecessary third-party request when identity media is absent. Replace it with the approved local or Relay avatar fallback.
 
-### Loading and failure announcements
+### Status and alerts
 
-Initial loading should expose concise `status` semantics. Failed loading/deletion/audio playback should be announced through a bounded status/alert pattern where appropriate, without turning the whole list into a live region.
+Loading is announced as status. Load and delete failures use alert semantics. Avoid turning the entire collection into a live region.
 
-### Touch and keyboard
+If audio failure feedback is added, use a bounded translated status/alert pattern and do not expose raw browser/backend errors.
 
-Delete and audio controls must satisfy the repository touch target contract at the 390px baseline. The current custom padding should not be assumed to satisfy it merely because `hlmBtn` is present.
+### Touch, keyboard and focus
 
-Keyboard focus order should remain:
+Helm `touch` and `icon-touch` sizes are already used for retry, audio and delete actions. Preserve the repository touch-target contract.
+
+Expected focus order remains:
 
 1. filter selection controls;
 2. row actions in document order;
 3. nested Visual Diff actions when present.
 
-Do not make non-interactive card content focusable.
-
-### Heading and region structure
-
-The page contains one `h1`. Favourite rows currently contain sender names as paragraphs, not headings. Preserve a coherent page hierarchy if row headings are added later.
-
-Repeated unnamed `role=region` hosts from `AppCardComponent` should be assessed at the shared primitive boundary as noted above.
+Do not make non-interactive cards or static badges focusable.
 
 ## Internationalisation, RTL and locale audit
 
-All primary Favourites UI copy is translated through `TranslatePipe`, which is correct. Remaining issues include:
+Primary Favourites copy is translated through `TranslatePipe`. Remaining review points are:
 
-- hard-coded `alt="avatar"`;
-- emoji that must remain decorative rather than substitute for translated names;
-- Angular `DatePipe` must be verified against the app's active locale rather than assumed to follow `I18nService` automatically;
-- `VisualDiffComponent` fallback toast strings contain English fallback text, owned by that shared component;
-- the static `AppPillComponent` replacement must not hard-code English type names.
+- emoji are decorative and must not replace translated control names;
+- Angular `DatePipe` should be verified against the app's active locale rather than assumed to follow `I18nService` automatically;
+- type-pill migration must continue using translation keys;
+- error feedback must stay generic, translated and non-technical;
+- long notes, transcripts and translated labels must wrap without document-level horizontal overflow.
 
-The template mostly uses logical spacing utilities (`ms`, `me`, `ps`, `pe`) and direction-neutral flex alignment. Preserve that contract. The horizontal filter scroller must work in RTL without custom `left`/`right` positioning or transform assumptions.
-
-Long translations and user-provided notes/transcripts must wrap without forcing horizontal page overflow at 390px or high zoom.
+The template predominantly uses logical spacing utilities. Preserve that contract and avoid left/right positioning assumptions in RTL.
 
 ## Theme and token audit
 
-Most current styling uses Relay roles such as:
+Most runtime styling already uses semantic Relay roles such as surface, text, primary, secondary, warning, danger and `rounded-card` tokens.
 
-- `surface-100`, `surface-200`, `surface-300`;
-- `text-primary`, `text-muted`, `text-secondary`;
-- `primary`, `secondary`, `warning`, `danger`, `success`;
-- `rounded-card`.
+The component SCSS still contains an unused `.app-chip-active` rule with a literal purple gradient, literal white and a literal rgba shadow. It is not referenced by the current template and should be removed in follow-up styling work rather than preserved as dead off-token CSS.
 
-The component SCSS still contains an unused hard-coded purple gradient and rgba shadow in `.app-chip-active`. Remove this stale rule during the styling stage rather than preserving dead off-token CSS.
+Other remaining ownership concerns:
 
-Additional risks:
+- static type badges hand-compose semantic fills instead of using the Relay pill primitive;
+- delete adds feature hover colour on top of Helm Button;
+- notes always use warning treatment even though user notes are informational by default.
 
-- Delete adds custom hover colour on top of Helm Button instead of relying on an approved destructive/ghost role.
-- Audio play/pause hand-builds rounded/surface/hover styling around Helm Button.
-- Notes are always styled as warning content even though user notes are informational, not necessarily warnings.
-- Type badges hand-compose colour-opacity classes through an interactive chip instead of using the static Relay pill colour contract.
-
-Follow-up styling must preserve light/dark themes and per-user primary accent behaviour. Do not introduce literal colour values.
+Follow-up must preserve light/dark themes and per-user primary accent behaviour. Do not introduce new raw colour literals.
 
 ## Responsive and high-zoom contract
 
-The current page relies on `.app-screen`, cards with horizontal margins, and a horizontally scrollable filter row.
+Required behaviour remains:
 
-Required implementation contract:
-
-- 390px remains the mobile baseline;
-- filter controls may scroll horizontally without causing document-level overflow;
-- users can still vertically scroll the page when touching the filter strip;
-- sender identity, date and delete action do not collapse into unreadable widths;
-- long notes, transcripts and corrections wrap with `min-width: 0` where required;
-- audio controls and transcript content wrap or stack rather than overflow;
-- 200% and 400% zoom preserve all required actions;
-- no fixed height may clip translated copy or nested Visual Diff actions.
-
-Tablet/desktop changes should be intentional composition improvements, not assumptions that larger widths hide mobile overflow defects.
+- 390px is the mobile baseline;
+- filter controls may scroll horizontally without creating page-level overflow;
+- the filter strip must not trap vertical touch scrolling;
+- sender identity, date and delete action remain usable at narrow widths;
+- long notes, transcripts and correction content wrap using `min-width: 0` where needed;
+- audio controls and transcript content wrap or stack instead of overflowing;
+- 200% and 400% zoom preserve access to all required controls;
+- no fixed height clips translated or nested Visual Diff content.
 
 ## Security and privacy review
 
-The favourites surface displays user-owned saved content and sender metadata. Migration must preserve these boundaries:
+Preserve these boundaries:
 
-- all collection/delete requests remain authenticated;
-- never accept a user ID from the UI as ownership proof;
-- never log favourite payload text, correction content, notes, media URLs or auth credentials merely to diagnose UI failures;
-- render message, moment, correction and note content through Angular text interpolation, not trusted HTML;
-- treat `media_url` as untrusted remote data and preserve the repository's media URL policy;
-- do not expose private item content in analytics events or overly verbose accessible labels;
-- do not reintroduce third-party placeholder image requests for missing identity data.
+- collection and delete requests remain authenticated;
+- client-provided user identity is never treated as ownership proof;
+- favourite payload text, correction content, notes, media URLs and credentials are not logged for ordinary UI failures;
+- user content continues to render through Angular text interpolation rather than trusted HTML;
+- `media_url` remains untrusted remote data and follows repository media policy;
+- private favourite content is not copied into analytics or overly verbose accessible labels;
+- missing avatars should not trigger unrelated third-party placeholder requests.
 
-The current component uses Angular interpolation for user content, which should be preserved.
+## Remaining migration risks
 
-## Migration risks and prerequisites
+### 1. Filter primitive ownership
 
-### 1. Tabs ownership depends on the repository-owned adapter
+The filter selector still uses feature-managed `AppChipComponent` state. Confirm the approved repository-owned Tabs/single-selection boundary on the implementation base before changing semantics.
 
-A current developer-dashboard migration is introducing the owned Helm Tabs boundary. #6198 should reuse it once available or verify the installed Spartan capability before choosing an alternative. Do not import Brain directly into feature code.
+### 2. Duplicate API service ownership
 
-### 2. Interactive chip and static pill semantics must be separated
+`ChatService` and `FavouriteService` still overlap. Converge carefully after checking all consumers and auth behaviour.
 
-`AppChipComponent` is a button. It is suitable only for genuinely interactive chip behaviour. Status/type labels need `AppPillComponent` or static content.
+### 3. Delete feedback is global
 
-### 3. Duplicate service ownership can drift
+Duplicate request prevention is solved, but the error model is one page-level boolean. Row or operation scoped feedback would be clearer and less ambiguous.
 
-`ChatService` and `FavouriteService` both expose favourites operations. Converge on one canonical API client before adding more favourites behaviour.
+### 4. Audio failure is still silent
 
-### 4. Destructive-state design is incomplete
+Lifecycle correctness is substantially improved, but rejected playback has no user-facing explanation.
 
-Delete has no pending, confirmation, failure or retry UI. Define this explicitly rather than hiding failures behind console logging.
+### 5. Static badges are semantically fixed but not primitive-owned
 
-### 5. Audio is browser lifecycle state
+The no-op button defect is resolved. The remaining concern is Relay visual ownership through `AppPillComponent` or equivalent.
 
-Destroy cleanup and failed playback need tests. Avoid creating server-render-time browser globals. `new Audio()` must remain user-action/browser-only.
+### 6. Avatar fallback still makes a third-party request
 
-### 6. Visual Diff is a nested interaction surface
+Use the repository's approved local/Relay identity fallback.
 
-Do not accidentally remove translation/flashcard actions while migrating correction rendering. Regression tests must include a correction row with `showActions=true`.
+### 7. Dead hard-coded SCSS remains
 
-### 7. Shared card semantics may need separate primitive work
+Remove `.app-chip-active` rather than carrying literal colours forward.
 
-Repeated non-interactive `AppCardComponent` instances currently become unnamed `region` elements. If that is changed, do it at the shared primitive with cross-consumer review, not as a Favourites-only semantic hack.
+## Recommended follow-up sequence
 
-## Recommended implementation sequence
-
-1. Confirm the canonical favourites API client and remove duplicate ownership where safe.
-2. Move five-way filtering to the approved Spartan Tabs/single-selection boundary without changing filter results.
-3. Replace static type `AppChipComponent` instances with `AppPillComponent`.
-4. Normalize delete and audio buttons to documented Helm/Relay variants and touch sizes.
-5. Add explicit load/delete/audio failure and pending state, including retry behaviour.
-6. Add component-destroy audio cleanup and successful-play state handling.
-7. Replace generic/third-party avatar fallback with the approved local/Relay identity treatment.
-8. Remove stale `.app-chip-active` hard-coded CSS and converge notes/type badges on semantic Relay roles.
-9. Verify RTL, locale-aware dates, long translations, 390px layout and 200%/400% zoom.
-10. Lock the result with focused tests and mapped design-preview states in the follow-up regression ticket.
+1. Confirm the canonical favourites API client and converge duplicate service ownership safely.
+2. Move the five-way filter selector to the approved Spartan Tabs/single-selection boundary without changing classification rules.
+3. Move static item-type labels to `AppPillComponent` or the approved equivalent.
+4. Replace the remote avatar placeholder with the approved local/Relay fallback.
+5. Make delete failure feedback operation-scoped and improve repeated delete accessible names.
+6. Add translated audio-playback failure feedback while preserving the current lifecycle state machine.
+7. Remove stale `.app-chip-active` literal-colour SCSS and review the warning treatment used for notes.
+8. Verify active-locale dates, RTL, long translations, 390px layout and 200%/400% zoom.
+9. Lock the final contract with focused component and regression-preview coverage.
 
 ## Regression coverage required by follow-up tickets
 
 At minimum cover:
 
-1. initial loading state;
-2. successful collection load;
+1. initial loading status;
+2. successful load;
 3. loaded empty state;
 4. failed load plus retry;
-5. all five filter selections and exact classification rules;
-6. selected filter semantics and keyboard operation;
-7. static type labels are not focusable controls;
-8. All count updates after deletion;
-9. successful delete removes only the target row;
-10. failed delete preserves the row;
-11. duplicate delete activation is suppressed while pending;
-12. contextual delete accessible name;
-13. audio play starts the requested item;
-14. audio pause resets the active item;
-15. starting a second audio item stops the first;
-16. rejected playback exposes failure and does not leave stale playing state;
-17. destroy stops active audio;
-18. Play/Pause accessible name matches visible state;
-19. correction row retains Translate Explanation action;
-20. correction row retains Create Flashcard action;
-21. message, correction, audio and moment presentation all remain text-safe;
-22. avatar fallback causes no third-party placeholder request;
-23. translated labels and long user content wrap at 390px;
-24. 200% and 400% zoom preserve actions and no document overflow;
-25. RTL keeps logical spacing and usable horizontal filter navigation;
-26. light and dark themes preserve semantic contrast;
-27. user primary accent continues to flow through primary token roles;
-28. no new raw colour literals or feature-owned keyboard handlers are introduced.
+5. stale earlier load cannot overwrite a later retry;
+6. all five filter selections and exact classification rules;
+7. selected filter semantics and keyboard operation after primitive migration;
+8. static type labels remain non-interactive;
+9. All count updates after deletion;
+10. successful delete removes only the target row;
+11. failed delete preserves the row and clears pending state;
+12. duplicate delete activation is suppressed per ID;
+13. unrelated rows remain actionable during another row's delete;
+14. delete accessible name distinguishes repeated controls safely;
+15. audio play marks state only after successful playback;
+16. audio pause resets active playback;
+17. starting a second audio item stops the first;
+18. rejected playback does not leave stale playing state;
+19. stale `onended` callbacks cannot clear newer playback;
+20. destroy stops active audio;
+21. deleting the playing favourite stops its audio;
+22. Play/Pause accessible name matches visible action state;
+23. correction rows retain Translate Explanation;
+24. correction rows retain Create Flashcard;
+25. avatar fallback causes no unrelated third-party request;
+26. translated labels and long user content wrap at 390px;
+27. 200% and 400% zoom preserve actions without document overflow;
+28. RTL keeps logical spacing and usable filter navigation;
+29. light and dark themes preserve semantic contrast;
+30. user primary accent continues to flow through semantic token roles;
+31. no new raw colour literals or feature-owned keyboard handlers are introduced.
 
 ## Design-preview requirements
 
-This audit does not change the runtime or visual contract, so no design-preview modification is required here.
+This audit itself changes documentation only, so no design-preview change is required in this PR.
 
-The final regression/design-preview stage should represent at least:
+The implementation/regression stage should represent at least:
 
 - light theme, 390px, populated All view;
 - dark theme, wider viewport, populated Corrections view;
 - light theme, 390px, Audio view with one playing item;
 - loaded empty state for a non-All filter;
 - load failure with Retry;
-- delete pending/failure state if that product state is introduced;
+- delete pending and delete failure states;
+- audio playback failure if new feedback is introduced;
 - long translated copy/high-zoom-safe wrapping;
 - RTL filter ordering/alignment.
 
-Correction preview coverage must retain the nested Visual Diff actions if the production surface renders them.
+Correction preview coverage must retain nested Visual Diff actions when the production surface renders them.
 
 ## Completion checklist for #6197
 
-- Every direct filter/button and nested correction action is inventoried.
-- Loading, empty, failure, deletion and audio states are recorded.
+- Direct filter, delete, retry and audio controls are inventoried.
+- Nested correction translation and flashcard actions are included in the effective surface.
+- Loading, empty, failure, deletion and audio states reflect the current implementation rather than an older snapshot.
 - `/favourites`, authenticated API and side-effect contracts are documented.
+- Already-landed hardening is explicitly distinguished from remaining work.
 - Spartan ownership is defined for filters and command buttons.
-- Relay ownership is defined for cards, static pills, feedback and visual roles.
-- Accessibility defects are identified, including false-control badges and the Play/Pause label mismatch.
+- Relay ownership is defined for cards, pills, feedback and visual roles.
+- Remaining accessibility issues are identified without repeating defects already fixed on the base.
 - RTL, locale, light/dark, accent, mobile and high-zoom requirements are recorded.
-- Duplicate API-service ownership and shared-card semantic risk are identified.
+- Duplicate API-service ownership, global delete feedback, remote avatar fallback and stale literal-colour SCSS are identified.
 - Migration sequencing and regression requirements are explicit.
 - No runtime or visual behaviour is changed by this audit.
