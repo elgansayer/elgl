@@ -84,7 +84,9 @@ describe('POST /chat/token contract', () => {
       res.value,
     );
 
-    expect(chatService.generateConnectionToken).toHaveBeenCalledWith('user-123');
+    expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
+      'user-123',
+    );
     expect(result).toEqual({ token: 'signed-token' });
     expect(res.json).toHaveBeenCalledWith({ token: 'signed-token' });
   });
@@ -140,7 +142,9 @@ describe('POST /chat/token contract', () => {
       statusCode: 503,
       message: 'Realtime authentication is temporarily unavailable.',
     });
-    expect(JSON.stringify(res.json.mock.calls)).not.toContain('raw signer detail');
+    expect(JSON.stringify(res.json.mock.calls)).not.toContain(
+      'raw signer detail',
+    );
   });
 
   it('never returns an empty connection token as a successful response', async () => {
