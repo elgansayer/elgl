@@ -598,7 +598,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       );
       if (dueEvents.length === 0) return;
 
-      const roomNames = dueEvents.map((event) => this.roomNameForEvent(event.id));
+      const roomNames = dueEvents.map((event) =>
+        this.roomNameForEvent(event.id),
+      );
       const { data: existingRooms, error: roomsError } = await supabase
         .from('audio_rooms')
         .select('id, room_name, event_id, party_type')
@@ -772,7 +774,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async linkRoomToEvent(roomId: string, eventId: string): Promise<void> {
+  private async linkRoomToEvent(
+    roomId: string,
+    eventId: string,
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase
       .from('audio_rooms')
