@@ -23,7 +23,9 @@ describe('historical migration: 005_moments (#1345)', () => {
 
   it('creates the moments, moment_comments, and moment_likes tables', () => {
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.moments \(/);
-    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.moment_comments \(/);
+    expect(sql).toMatch(
+      /CREATE TABLE IF NOT EXISTS public\.moment_comments \(/,
+    );
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.moment_likes \(/);
   });
 
