@@ -264,9 +264,9 @@ describe('CentrifugoService', () => {
       const exp = Math.floor(Date.now() / 1000) + 3600;
       (jwt.sign as Mock).mockReturnValue('signed-token');
 
-      await expect(
-        service.signJwt({ sub: 'user-1', exp }),
-      ).resolves.toBe('signed-token');
+      await expect(service.signJwt({ sub: 'user-1', exp })).resolves.toBe(
+        'signed-token',
+      );
       expect(jwt.sign).toHaveBeenCalledWith(
         { sub: 'user-1', exp },
         'test-secret',
