@@ -93,15 +93,14 @@ describe('FlashcardReviewComponent', () => {
     fixture.componentRef.setInput('cards', MOCK_CARDS);
     fixture.detectChanges();
 
-    let progressBar: HTMLElement | null = null;
     await vi.waitFor(() => {
       fixture.detectChanges();
-      progressBar = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement | null;
-      expect(progressBar).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('[role="progressbar"]')).toBeTruthy();
     });
 
-    expect(progressBar?.getAttribute('aria-valuemin')).toBe('0');
-    expect(progressBar?.getAttribute('aria-valuemax')).toBe('100');
+    const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]') as HTMLElement;
+    expect(progressBar.getAttribute('aria-valuemin')).toBe('0');
+    expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
 
   it('flips the current card without grading it', () => {

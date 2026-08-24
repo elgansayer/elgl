@@ -241,9 +241,12 @@ def test_final_merge_gate_respects_human_requested_changes() -> None:
     assert '.reviewDecision != "CHANGES_REQUESTED"' in workflow
     assert "headRefOid" in workflow
     assert '--match-head-commit "$head_sha"' in workflow
-    assert '== "factory/independent-review")] | length) >= 1' in workflow
+    assert "--label factory-reviewed" in workflow
     assert '== "CI / required")] | length) >= 1' in workflow
-    assert workflow.count("| not))] | length) == 0") == 2
+    assert '!= "factory/independent-review"' in workflow
+    assert 'expected_marker="<!-- factory/independent-review state=approved head=${head_sha} -->"' in workflow
+    assert 'if [ "$latest_review_marker" != "$expected_marker" ]; then' in workflow
+    assert workflow.count("| not))] | length) == 0") == 1
     assert "--auto" not in workflow
     assert "--admin" not in workflow
 
