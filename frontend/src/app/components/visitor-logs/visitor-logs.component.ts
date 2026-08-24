@@ -17,6 +17,7 @@ export class VisitorLogsComponent {
   readonly visitors = signal<VisitorLog[]>([]);
   readonly profile = signal<UserProfile | null>(null);
   readonly isLoading = signal<boolean>(true);
+  readonly loadError = signal<boolean>(false);
   readonly hideBlurred = signal<boolean>(false);
 
   readonly visibleVisitorsCount = computed(
@@ -28,22 +29,32 @@ export class VisitorLogsComponent {
   readonly filteredVisitors = computed(() =>
     this.hideBlurred() ? this.visitors().filter((v) => !v.is_blurred) : this.visitors(),
   );
+  readonly showUpgrade = computed(
+    () => this.profile()?.is_vip === false || this.blurredVisitorsCount() > 0,
+  );
 
   constructor() {
-    this.loadData();
+    void this.reload();
   }
 
-  private async loadData(): Promise<void> {
+  async reload(): Promise<void> {
     this.isLoading.set(true);
+    this.loadError.set(false);
+
     try {
-      const [profileData, logs] = await Promise.all([
+      const [profileResult, visitorsResult] = await Promise.allSettled([
         this.userService.getMyProfile(),
         this.userService.getMyVisitors(),
       ]);
-      this.profile.set(profileData);
-      this.visitors.set(logs);
-    } catch {
-      // Silently handle - data may not be available yet
+
+      this.profile.set(profileResult.status === 'fulfilled' ? profileResult.value : null);
+
+      if (visitorsResult.status === 'fulfilled') {
+        this.visitors.set(visitorsResult.value);
+      } else {
+        this.visitors.set([]);
+        this.loadError.set(true);
+      }
     } finally {
       this.isLoading.set(false);
     }

@@ -34,7 +34,7 @@ jobs:
           cache-dependency-path: admin-portal/package-lock.json
       - name: Install admin portal dependencies
         working-directory: admin-portal
-        run: npm ci --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Lint admin portal
         working-directory: admin-portal
         run: npm run lint:check
@@ -52,7 +52,7 @@ jobs:
           cache-dependency-path: admin-portal/package-lock.json
       - name: Install admin portal dependencies
         working-directory: admin-portal
-        run: npm ci --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Test admin portal
         working-directory: admin-portal
         run: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
@@ -78,7 +78,7 @@ jobs:
           cache-dependency-path: admin-portal/package-lock.json
       - name: Install admin portal dependencies
         working-directory: admin-portal
-        run: npm ci --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Build admin portal
         working-directory: admin-portal
         run: npm run build

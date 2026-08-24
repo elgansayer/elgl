@@ -5,58 +5,38 @@
     <meta charset="utf-8" />
     <title>Relay - Screens · Discovery</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
-      rel="stylesheet"
-    />
     <style>
       :root {
-        --surface-50: 255, 255, 255;
         --surface-100: 228, 231, 237;
         --surface-200: 253, 253, 254;
         --surface-300: 241, 243, 247;
         --surface-400: 233, 235, 241;
         --surface-500: 246, 247, 250;
         --surface-600: 219, 223, 230;
-        --surface-700: 199, 204, 214;
-        --surface-800: 154, 161, 175;
-        --surface-900: 18, 21, 28;
         --text-primary: 18, 21, 28;
         --text-secondary: 74, 81, 99;
         --text-muted: 107, 113, 130;
         --primary: 198, 82, 48;
         --secondary: 26, 132, 120;
-        --danger: 217, 58, 58;
         --success: 25, 134, 84;
         --warning: 161, 108, 9;
         --vip: 153, 111, 16;
         --on-fill: 255, 255, 255;
         --shadow: 16, 19, 28;
         --accent: 204, 72, 60;
-        --neon-violet: 139, 108, 240;
-        --neon-pink: 232, 87, 143;
-        --neon-cyan: 47, 198, 217;
-        --neon-blue: 91, 141, 239;
-        --neon-orange: 240, 149, 74;
       }
       html.dark {
-        --surface-50: 58, 65, 82;
         --surface-100: 46, 52, 68;
         --surface-200: 30, 35, 48;
         --surface-300: 35, 40, 56;
         --surface-400: 25, 29, 40;
         --surface-500: 18, 21, 28;
         --surface-600: 13, 15, 21;
-        --surface-700: 10, 12, 17;
-        --surface-800: 6, 7, 10;
-        --surface-900: 0, 0, 0;
         --text-primary: 243, 244, 247;
         --text-secondary: 180, 186, 201;
         --text-muted: 126, 132, 148;
         --primary: 255, 122, 82;
         --secondary: 53, 214, 192;
-        --danger: 255, 107, 107;
         --success: 52, 211, 153;
         --warning: 242, 179, 61;
         --vip: 232, 184, 75;
@@ -68,590 +48,424 @@
       }
       body {
         margin: 0;
-        padding: 40px 20px 80px;
+        padding: 32px 16px 72px;
         background: rgb(var(--surface-600));
         color: rgb(var(--text-primary));
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        transition:
-          background 0.2s ease,
-          color 0.2s ease;
       }
-      .display {
-        font-family:
-          'Instrument Sans',
-          -apple-system,
-          sans-serif;
+      button {
+        font: inherit;
       }
       .page-head {
-        max-width: 390px;
-        margin: 0 auto 20px;
+        width: min(100%, 760px);
+        margin: 0 auto 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
       }
       .page-head h1 {
-        font-family: 'Instrument Sans', sans-serif;
-        font-size: 20px;
-        font-weight: 700;
         margin: 0;
+        font-size: 20px;
       }
       .page-head p {
-        margin: 2px 0 0;
+        margin: 3px 0 0;
+        color: rgb(var(--text-secondary));
         font-size: 12px;
-        color: rgb(var(--text-secondary));
       }
-      .toggle {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px;
+      .theme-toggle {
+        display: flex;
+        padding: 4px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
         background: rgb(var(--surface-200));
-        border: 1px solid rgb(var(--surface-600) / 0.5);
-        border-radius: 999px;
-        font-size: 13px;
-        font-weight: 600;
       }
-      .toggle button {
-        border: none;
+      .theme-toggle button {
+        border: 0;
+        border-radius: 999px;
+        padding: 7px 12px;
         background: transparent;
-        padding: 7px 14px;
-        border-radius: 999px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
         color: rgb(var(--text-secondary));
-        font-family: inherit;
+        cursor: pointer;
       }
-      .toggle button.active {
-        background: rgb(var(--primary));
+      .theme-toggle button.active {
+        background: rgb(var(--accent));
         color: rgb(var(--on-fill));
       }
-
-      .phone {
-        width: 390px;
+      .viewport {
+        width: min(100%, 760px);
         margin: 0 auto;
-        background: rgb(var(--surface-500));
-        border-radius: 28px;
         overflow: hidden;
-        border: 1px solid rgb(var(--surface-700) / 0.4);
-        box-shadow:
-          0 1px 2px rgb(var(--shadow) / 0.06),
-          0 24px 48px rgb(var(--shadow) / 0.28);
-        max-height: 820px;
-        overflow-y: auto;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 24px;
+        background: rgb(var(--surface-500));
+        box-shadow: 0 20px 50px rgb(var(--shadow) / 0.2);
       }
-
-      .offline-banner {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
+      .offline {
+        padding: 7px 14px;
+        text-align: center;
         background: rgb(var(--warning));
         color: rgb(var(--on-fill));
         font-size: 11px;
-        font-weight: 700;
-        padding: 7px 12px;
+        font-weight: 800;
       }
-
-      header.disc {
+      header {
+        padding: 16px 14px 12px;
+        border-bottom: 1px solid rgb(var(--surface-100));
         background: rgb(var(--surface-400));
-        border-bottom: 1px solid rgb(var(--surface-200));
-        padding: 16px 0 10px;
       }
-      .disc-top {
+      .header-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 14px 12px;
+        margin-bottom: 12px;
       }
-      .disc-top h1 {
+      .header-row h2 {
         margin: 0;
         font-size: 19px;
-        font-weight: 900;
-        letter-spacing: -0.01em;
       }
-      .disc-top .bell {
-        font-size: 18px;
-      }
-
-      .scroll-row {
+      .filters {
         display: flex;
-        gap: 6px;
-        overflow-x: auto;
-        padding: 0 14px;
-        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 7px;
       }
-      .scroll-row::-webkit-scrollbar {
-        display: none;
-      }
-      .pill {
-        flex-shrink: 0;
-        white-space: nowrap;
-        border-radius: 999px;
+      .filter {
         border: 1px solid rgb(var(--surface-100));
-        font-size: 11px;
-        font-weight: 700;
-        padding: 6px 12px;
+        border-radius: 999px;
         background: rgb(var(--surface-300));
         color: rgb(var(--text-primary));
+        padding: 7px 11px;
+        font-size: 11px;
+        font-weight: 750;
       }
-      .pill.on {
-        background: rgb(var(--surface-200));
-      }
-      .pill.accent-on {
+      .filter.active {
+        border-color: transparent;
         background: rgb(var(--accent));
         color: rgb(var(--on-fill));
-        border-color: transparent;
       }
-      .pill.muted {
-        color: rgb(var(--text-secondary));
-        background: rgb(var(--surface-200));
-      }
-
-      .label-inline {
-        align-self: center;
-        font-size: 10px;
-        font-weight: 700;
-        color: rgb(var(--text-secondary));
-        white-space: nowrap;
-        margin-inline-end: 4px;
-      }
-
-      .controls-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-        padding: 0 14px;
-        margin-bottom: 10px;
-      }
-      .select-fake {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 10px;
-        color: rgb(var(--text-secondary));
-        font-weight: 700;
-      }
-      .select-fake .box {
-        background: rgb(var(--surface-200));
+      .search {
+        margin-top: 10px;
         border: 1px solid rgb(var(--surface-100));
         border-radius: 999px;
-        padding: 5px 10px;
-        font-size: 11px;
-        color: rgb(var(--text-primary));
-        font-weight: 700;
-      }
-      .vip-note {
-        font-size: 10px;
-        font-weight: 700;
-        color: rgb(var(--vip));
-        background: rgb(var(--vip) / 0.1);
-        border-radius: 6px;
-        padding: 3px 7px;
-      }
-
-      .toggle-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        padding: 4px 14px 12px;
-      }
-      .toggle-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 10px;
-        font-weight: 700;
-        color: rgb(var(--text-secondary));
-      }
-      .switch {
-        width: 14px;
-        height: 14px;
-        border: 1px solid rgb(var(--surface-300));
-        border-radius: 4px;
         background: rgb(var(--surface-200));
-        display: inline-block;
-      }
-      .switch.checked {
-        background: rgb(var(--accent));
-        border-color: rgb(var(--accent));
-      }
-
-      .banner {
-        margin: 8px 14px 14px;
-        border-radius: 12px;
-        padding: 12px 14px;
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(
-          115deg,
-          rgb(var(--vip)) 0%,
-          rgb(var(--accent)) 55%,
-          rgb(var(--neon-orange)) 100%
-        );
-        color: #fff;
-      }
-      .banner h3 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 900;
-      }
-      .banner p {
-        margin: 2px 0 0;
-        font-size: 10px;
-        font-weight: 600;
-        opacity: 0.92;
-      }
-      .banner .view-btn {
-        position: absolute;
-        top: 12px;
-        right: 14px;
-        background: #fff;
-        color: rgb(var(--accent));
-        font-size: 10px;
-        font-weight: 900;
-        text-transform: uppercase;
-        border-radius: 999px;
-        padding: 5px 10px;
-      }
-
-      .search-fake {
-        margin: 0 14px 12px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgb(var(--surface-200));
-        border: 1px solid rgb(var(--surface-100));
-        border-radius: 999px;
-        padding: 8px 12px;
-        font-size: 12px;
         color: rgb(var(--text-muted));
+        padding: 9px 12px;
+        font-size: 12px;
       }
-
-      .match-list {
-        display: flex;
-        flex-direction: column;
+      main {
+        padding: 14px;
       }
-      .match-card {
+      .recommended {
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-400));
+        padding: 13px;
+      }
+      .recommended-head {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
-        gap: 10px;
-        padding: 12px 14px;
-        border-top: 1px solid rgb(var(--surface-200));
+        gap: 12px;
       }
-      .match-left {
+      .recommended h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+      .recommended-head p {
+        margin: 4px 0 0;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+        line-height: 1.45;
+      }
+      .carousel-controls {
         display: flex;
-        align-items: center;
+        gap: 5px;
+      }
+      .carousel-controls button {
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+      }
+      .carousel {
+        display: flex;
+        gap: 9px;
+        margin-top: 11px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 4px;
+      }
+      .recommendation-card {
+        flex: 0 0 210px;
+        scroll-snap-align: start;
+        display: flex;
         gap: 10px;
+        align-items: center;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 13px;
+        background: rgb(var(--surface-300));
+        padding: 10px;
+      }
+      .avatar {
+        width: 48px;
+        height: 48px;
+        flex: 0 0 48px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: rgb(var(--secondary));
+        color: rgb(var(--on-fill));
+        font-weight: 900;
+      }
+      .recommendation-card:nth-child(2) .avatar {
+        background: rgb(var(--primary));
+      }
+      .recommendation-card:nth-child(3) .avatar {
+        background: rgb(var(--vip));
+      }
+      .card-copy {
         min-width: 0;
       }
-      .m-avatar-wrap {
-        position: relative;
-        flex-shrink: 0;
+      .card-name {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 900;
       }
-      .m-avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
+      .languages {
+        margin: 2px 0 5px;
+        color: rgb(var(--text-secondary));
+        font-size: 9px;
+        font-weight: 800;
+      }
+      .reasons {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 18px;
-        color: rgb(var(--on-fill));
-      }
-      .m-online {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: rgb(var(--success));
-        border: 2px solid rgb(var(--surface-500));
-      }
-      .m-name-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
         flex-wrap: wrap;
-        margin-bottom: 3px;
-      }
-      .m-name {
-        font-size: 14px;
-        font-weight: 900;
-        color: rgb(var(--text-primary));
-      }
-      .badge-vip {
-        border-radius: 4px;
-        background: rgb(var(--vip));
-        color: rgb(var(--on-fill));
-        font-size: 8px;
-        font-weight: 900;
-        text-transform: uppercase;
-        font-style: italic;
-        padding: 2px 5px;
-      }
-      .badge-week {
-        border-radius: 4px;
-        background: rgb(var(--accent));
-        color: rgb(var(--on-fill));
-        font-size: 8px;
-        font-weight: 900;
-        text-transform: uppercase;
-        padding: 2px 5px;
-      }
-      .badge-mbti {
-        border-radius: 4px;
-        background: rgb(var(--surface-200));
-        color: rgb(var(--text-secondary));
-        font-size: 8px;
-        font-weight: 700;
-        padding: 2px 5px;
-      }
-      .fluency {
-        font-size: 10px;
-        font-weight: 700;
-        color: rgb(var(--text-secondary));
-        margin-bottom: 3px;
-      }
-      .fluency .flag {
-        margin-right: 2px;
-      }
-      .m-bio {
-        font-size: 11px;
-        color: rgb(var(--text-secondary));
-        margin-bottom: 3px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 190px;
-      }
-      .m-status-row {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 4px;
-      }
-      .m-active {
-        font-size: 9px;
-        font-weight: 700;
-        color: rgb(var(--success));
-      }
-      .m-distance {
-        font-size: 9px;
-        color: rgb(var(--text-muted));
-      }
-      .m-interests {
-        display: flex;
         gap: 4px;
-        flex-wrap: wrap;
       }
-      .m-interest {
+      .reason {
         border-radius: 999px;
         background: rgb(var(--surface-200));
-        font-size: 9px;
-        font-weight: 600;
         color: rgb(var(--text-secondary));
-        padding: 2px 7px;
+        padding: 3px 6px;
+        font-size: 8px;
+        font-weight: 700;
       }
-      .m-action {
-        flex-shrink: 0;
+      .see-all {
+        display: block;
+        margin-top: 8px;
+        text-align: right;
+        color: rgb(var(--accent));
+        font-size: 10px;
+        font-weight: 850;
+      }
+      .results-title {
+        margin: 18px 0 7px;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+        font-weight: 850;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .result-list {
+        display: grid;
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 14px;
+        background: rgb(var(--surface-100));
+      }
+      .result {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        background: rgb(var(--surface-500));
+        padding: 11px;
+      }
+      .result .avatar {
+        width: 52px;
+        height: 52px;
+        flex-basis: 52px;
+      }
+      .result-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .result-copy strong {
+        display: block;
+        font-size: 13px;
+      }
+      .result-copy span {
+        display: block;
+        margin-top: 2px;
+        color: rgb(var(--text-secondary));
+        font-size: 10px;
+      }
+      .wave {
         width: 40px;
         height: 40px;
+        border: 0;
         border-radius: 999px;
-        background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--accent)));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 17px;
-        box-shadow: 0 4px 10px rgb(var(--primary) / 0.35);
+        background: rgb(var(--accent));
+        color: rgb(var(--on-fill));
       }
-
       .caption {
-        max-width: 390px;
-        margin: 18px auto 0;
-        font-size: 12px;
+        width: min(100%, 760px);
+        margin: 16px auto 0;
         color: rgb(var(--text-secondary));
-        line-height: 1.6;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      @media (max-width: 420px) {
+        body {
+          padding-inline: 0;
+          padding-top: 0;
+        }
+        .page-head {
+          display: none;
+        }
+        .viewport {
+          border-inline: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .recommendation-card {
+          flex-basis: min(250px, 82vw);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
       }
     </style>
   </head>
   <body>
     <div class="page-head">
       <div>
-        <h1 class="display">Discovery</h1>
-        <p>discovery.component.html - match grid, filters, VIP gating</p>
+        <h1>Discovery</h1>
+        <p>Recommended-for-you, filters and ordinary partner results</p>
       </div>
-      <div class="toggle" id="toggle">
-        <button id="btn-light" class="active">Light</button>
-        <button id="btn-dark">Dark</button>
+      <div class="theme-toggle" aria-label="Preview theme">
+        <button id="light" class="active">Light</button>
+        <button id="dark">Dark</button>
       </div>
     </div>
 
-    <div class="phone">
-      <div class="offline-banner">
-        <span aria-hidden="true">📡</span> You're offline - showing cached results
-      </div>
-
-      <header class="disc">
-        <div class="disc-top">
-          <h1>Connect</h1>
-          <span class="bell">🔔</span>
+    <div class="viewport">
+      <div class="offline">You're offline · showing cached search results</div>
+      <header>
+        <div class="header-row">
+          <h2>Connect</h2>
+          <span aria-hidden="true">🔔</span>
         </div>
-
-        <div class="scroll-row">
-          <span class="pill on">Nearby</span>
-          <span class="pill">New today</span>
-          <span class="pill">Same interests</span>
-          <span class="pill">Online now</span>
+        <div class="filters">
+          <button class="filter active">Nearby</button>
+          <button class="filter">New today</button>
+          <button class="filter">Same interests</button>
+          <button class="filter">Serious learner</button>
+          <button class="filter">Has audio intro</button>
         </div>
-
-        <div class="scroll-row">
-          <span class="pill on">🇬🇧 English</span>
-          <span class="pill">🇯🇵 Japanese</span>
-          <span class="pill">🇰🇷 Korean</span>
-          <span class="pill muted">Any</span>
-        </div>
-
-        <div class="scroll-row">
-          <span class="label-inline">Interests</span>
-          <span class="pill accent-on">Any</span>
-          <span class="pill">Travel</span>
-          <span class="pill">Music</span>
-          <span class="pill">Cooking</span>
-          <span class="pill">Anime</span>
-        </div>
-
-        <div class="controls-row">
-          <div class="select-fake">Sort <span class="box">Nearby first</span></div>
-          <div class="select-fake">
-            Gender <span class="box" style="opacity: 0.5">Any</span>
-            <span class="vip-note">VIP only</span>
-          </div>
-        </div>
-
-        <div class="toggle-row">
-          <div class="toggle-item"><span class="switch checked"></span> Serious learner mode</div>
-          <div class="toggle-item"><span class="switch"></span> Voice room active</div>
-          <div class="toggle-item"><span class="switch checked"></span> Has audio intro</div>
-        </div>
+        <div class="search">Search by name, language or interest</div>
       </header>
 
-      <div class="banner">
-        <span class="view-btn">View</span>
-        <h3>Go VIP</h3>
-        <p>Unlock gender filter, distance radius &amp; more matches</p>
-      </div>
-
-      <div class="search-fake">🔍 Search by name, language or interest</div>
-
-      <div class="match-list">
-        <article class="match-card">
-          <div class="match-left">
-            <div class="m-avatar-wrap">
-              <div class="m-avatar" style="background: rgb(var(--secondary))">陈</div>
-              <span class="m-online"></span>
-            </div>
+      <main>
+        <section class="recommended" aria-labelledby="recommended-title">
+          <div class="recommended-head">
             <div>
-              <div class="m-name-row">
-                <span class="m-name">Chén Wěi</span>
-                <span class="badge-vip">VIP</span>
-                <span class="badge-mbti">ENFP</span>
-              </div>
-              <div class="fluency">
-                <span class="flag">🇨🇳</span>Native ⇄ <span class="flag">🇬🇧</span>Learning
-              </div>
-              <p class="m-bio">Looking for a patient English partner for daily chats</p>
-              <div class="m-status-row">
-                <span class="m-active">Active now</span>
-                <span class="m-distance">2.4 km away</span>
-              </div>
-              <div class="m-interests">
-                <span class="m-interest">travel</span>
-                <span class="m-interest">badminton</span>
-                <span class="m-interest">+2</span>
-              </div>
+              <h3 id="recommended-title">Recommended for You</h3>
+              <p>Language partners matched to your interests and learning activity.</p>
+            </div>
+            <div class="carousel-controls" aria-label="Carousel controls">
+              <button aria-label="Previous recommendations">←</button>
+              <button aria-label="Next recommendations">→</button>
             </div>
           </div>
-          <div class="m-action">👋</div>
-        </article>
 
-        <article class="match-card">
-          <div class="match-left">
-            <div class="m-avatar-wrap">
-              <div class="m-avatar" style="background: rgb(var(--primary))">S</div>
-              <span class="m-online"></span>
-            </div>
-            <div>
-              <div class="m-name-row">
-                <span class="m-name">Sofia Almeida</span>
-                <span class="badge-week">Partner of the week</span>
+          <div class="carousel">
+            <article class="recommendation-card">
+              <div class="avatar">愛</div>
+              <div class="card-copy">
+                <p class="card-name">Aiko</p>
+                <p class="languages">JA → EN</p>
+                <div class="reasons">
+                  <span class="reason">Language match</span>
+                  <span class="reason">2 shared interests</span>
+                  <span class="reason">Recently active</span>
+                </div>
               </div>
-              <div class="fluency">
-                <span class="flag">🇵🇹</span>Native ⇄ <span class="flag">🇯🇵</span>Learning
+            </article>
+            <article class="recommendation-card">
+              <div class="avatar">M</div>
+              <div class="card-copy">
+                <p class="card-name">Mateo</p>
+                <p class="languages">ES → EN</p>
+                <div class="reasons">
+                  <span class="reason">Language match</span>
+                  <span class="reason">Active learner</span>
+                </div>
               </div>
-              <p class="m-bio">Portuguese teacher, loves swapping voice notes</p>
-              <div class="m-status-row">
-                <span class="m-active">Active now</span>
-                <span class="m-distance">6.1 km away</span>
+            </article>
+            <article class="recommendation-card">
+              <div class="avatar">서</div>
+              <div class="card-copy">
+                <p class="card-name">Seo-yeon</p>
+                <p class="languages">KO → EN</p>
+                <div class="reasons">
+                  <span class="reason">3 shared interests</span>
+                  <span class="reason">Recently active</span>
+                </div>
               </div>
-              <div class="m-interests">
-                <span class="m-interest">music</span>
-                <span class="m-interest">cooking</span>
-              </div>
-            </div>
+            </article>
           </div>
-          <div class="m-action">👋</div>
-        </article>
+          <span class="see-all">See all partners</span>
+        </section>
 
-        <article class="match-card">
-          <div class="match-left">
-            <div class="m-avatar-wrap">
-              <div class="m-avatar" style="background: rgb(var(--neon-blue))">J</div>
+        <p class="results-title">All partners</p>
+        <div class="result-list">
+          <article class="result">
+            <div class="avatar">陈</div>
+            <div class="result-copy">
+              <strong>Chén Wěi</strong>
+              <span>Chinese native · learning English · travel, badminton</span>
             </div>
-            <div>
-              <div class="m-name-row">
-                <span class="m-name">Jonas Weber</span>
-              </div>
-              <div class="fluency">
-                <span class="flag">🇩🇪</span>Native ⇄ <span class="flag">🇬🇧</span>Learning
-              </div>
-              <p class="m-bio">Software engineer practising business English</p>
-              <div class="m-status-row">
-                <span class="m-distance">11 km away</span>
-              </div>
-              <div class="m-interests">
-                <span class="m-interest">tech</span>
-                <span class="m-interest">hiking</span>
-                <span class="m-interest">+1</span>
-              </div>
+            <button class="wave" aria-label="Wave to Chén Wěi">👋</button>
+          </article>
+          <article class="result">
+            <div class="avatar">S</div>
+            <div class="result-copy">
+              <strong>Sofia Almeida</strong>
+              <span>Portuguese native · learning Japanese · music, cooking</span>
             </div>
-          </div>
-          <div class="m-action">👋</div>
-        </article>
-      </div>
+            <button class="wave" aria-label="Wave to Sofia Almeida">👋</button>
+          </article>
+        </div>
+      </main>
     </div>
 
     <p class="caption">
-      Offline banner is shown here for reference even though it's a conditional top-of-screen state
-      - real usage only renders it while the connection is actually down. Filter controls include
-      the audio-intro-only state shown above. Omitted: loading skeleton grid, empty-state illustration,
-      and the age-range / distance slider widgets (interactive range controls, better suited to a
-      future form-controls primitives page than a static screen mock).
+      The Discovery visual contract includes the new bounded Recommended for You carousel, stable
+      card order, explainable reason chips, touch-friendly horizontal scrolling and ordinary partner
+      results beneath it. Production loading, empty and retryable error states use the same surface
+      and spacing tokens.
     </p>
 
     <script>
-      document.getElementById('btn-light').addEventListener('click', () => {
+      const light = document.getElementById('light');
+      const dark = document.getElementById('dark');
+      light.addEventListener('click', () => {
         document.documentElement.classList.remove('dark');
-        document.getElementById('btn-light').classList.add('active');
-        document.getElementById('btn-dark').classList.remove('active');
+        light.classList.add('active');
+        dark.classList.remove('active');
       });
-      document.getElementById('btn-dark').addEventListener('click', () => {
+      dark.addEventListener('click', () => {
         document.documentElement.classList.add('dark');
-        document.getElementById('btn-dark').classList.add('active');
-        document.getElementById('btn-light').classList.remove('active');
+        dark.classList.add('active');
+        light.classList.remove('active');
       });
     </script>
   </body>
