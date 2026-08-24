@@ -158,6 +158,17 @@ describe('AudioRoomArchivesService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('does not grant archive access merely because a user was invited', async () => {
+    audioRooms.single.mockResolvedValue({
+      data: { ...room, invited_user_ids: ['invited-1'] },
+      error: null,
+    });
+
+    await expect(
+      service.assertCanAccess('invited-1', room.id),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('allows an authenticated recorded participant to read the archive', async () => {
     participants.maybeSingle.mockResolvedValue({
       data: { room_id: room.id },
