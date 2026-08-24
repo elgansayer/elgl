@@ -1,4 +1,4 @@
-# Factory allowance and efficiency audit — 2026-08-24
+# Factory allowance and efficiency audit - 2026-08-24
 
 ## Goal
 
