@@ -66,3 +66,8 @@
 **Vulnerability:** Monetisation service `EconomyService` relied on weak development fallback values for critical secrets (`STRIPE_SECRET_KEY`) when environment variables were missing.
 **Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, avoiding startup crashes but preventing secure operations.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123`), preventing the backend from initializing insecurely.
+## 2026-08-25 - [Strict Secrets Validation in Production for STRIPE_SECRET_KEY in StripeService]
+
+**Vulnerability:** Stripe service `StripeService` was missing strict secret validation and could potentially use default configurations or weak keys without failing if environment variables weren't carefully enforced.
+**Learning:** Default fallbacks or missing explicit strict validation for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, preventing secure operations.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123` or `sk_test`), preventing the backend from initializing insecurely.
