@@ -91,14 +91,15 @@ export class TimelineWorker {
           .from('user_follows')
           .select('follower_id')
           .eq('following_id', authorId)
-          .order('follower_id', { ascending: true })
-          .limit(TimelineWorker.FOLLOWER_BATCH_SIZE);
+          .order('follower_id', { ascending: true });
 
         if (afterFollowerId !== null) {
           query = query.gt('follower_id', afterFollowerId);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.limit(
+          TimelineWorker.FOLLOWER_BATCH_SIZE,
+        );
 
         if (!error) {
           return data ?? [];
