@@ -22,6 +22,17 @@ for (const [key, width] of requiredTabletViewports) {
   }
 }
 
+const requiredDesktopViewports = [
+  ['viewportTabletLgBoundary', 1024],
+  ['viewportWide', 1280],
+];
+for (const [key, width] of requiredDesktopViewports) {
+  const viewport = matrix.rendering?.[key];
+  if (!viewport || viewport.width !== width || !Number.isInteger(viewport.height) || viewport.height <= 0) {
+    failures.push(`${key}: visual matrix must define the ${width}px desktop verification viewport with a positive integer height`);
+  }
+}
+
 const manifestById = new Map(manifest.items.map((item) => [item.id, item]));
 const ids = new Set();
 const tabletRepresentatives = new Set([
@@ -37,6 +48,20 @@ const requiredTabletStates = [
   'tablet-768-text-200',
   'tablet-1024-light',
   'tablet-1024-dark',
+];
+const desktopRepresentatives = new Set([
+  'screen.discovery',
+  'screen.chat',
+  'screen.vocabulary',
+  'screen.moderation',
+]);
+const requiredDesktopStates = [
+  'desktop-1024-light',
+  'desktop-1024-dark',
+  'desktop-1024-rtl',
+  'desktop-1024-text-200',
+  'desktop-1280-light',
+  'desktop-1280-dark',
 ];
 
 for (const contract of matrix.contracts ?? []) {
@@ -75,6 +100,14 @@ for (const contract of matrix.contracts ?? []) {
     for (const state of requiredTabletStates) {
       if (!contract.states.includes(state)) {
         failures.push(`${contract.designSyncId}: tablet responsive gate is missing state: ${state}`);
+      }
+    }
+  }
+
+  if (desktopRepresentatives.has(contract.designSyncId)) {
+    for (const state of requiredDesktopStates) {
+      if (!contract.states.includes(state)) {
+        failures.push(`${contract.designSyncId}: desktop responsive gate is missing state: ${state}`);
       }
     }
   }
