@@ -3,12 +3,16 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
-import { FontScaleService } from '../../../services/font-scale.service';
+import {
+  ChatTextSizePreference,
+  FontScaleService,
+  TextSizePreference,
+} from '../../../services/font-scale.service';
 import { Theme, ThemeService } from '../../../services/theme.service';
 import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
+import { ChatSettingsService } from '../../../services/chat-settings.service';
 import { FormsModule } from '@angular/forms';
-import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 import { AppSelectComponent } from '../../../components/primitives/select/select.component';
 import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
@@ -20,7 +24,6 @@ import { AppButtonPrimaryComponent } from '../../../components/primitives/button
     HlmButton,
     TranslatePipe,
     FormsModule,
-    FontScaleSliderComponent,
     AppSelectComponent,
     AppButtonPrimaryComponent,
   ],
@@ -30,6 +33,7 @@ export class AppearanceSettingsComponent {
   readonly fontScaleService = inject(FontScaleService);
   readonly themeService = inject(ThemeService);
   private userService = inject(UserService);
+  private chatSettingsService = inject(ChatSettingsService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -40,8 +44,12 @@ export class AppearanceSettingsComponent {
   readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
   readonly currentTheme = this.themeService.currentTheme;
+  readonly currentTextSize = this.fontScaleService.textSizePreference;
+  readonly currentChatTextSize = this.fontScaleService.chatTextSize;
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
+  readonly textSizeOptions: readonly TextSizePreference[] = ['small', 'normal', 'large'];
+  readonly chatTextSizeOptions: readonly ChatTextSizePreference[] = ['small', 'medium', 'large'];
 
   readonly primaryAccentColor = signal<string | null>(null);
   readonly isVip = signal(false);
@@ -58,6 +66,8 @@ export class AppearanceSettingsComponent {
 
   private profileResource = resource<UserProfile | null, void>({
     loader: async () => {
+      await this.loadChatTextPreference();
+
       try {
         const profile = await this.userService.getMyProfile();
         if (profile) {
@@ -88,6 +98,14 @@ export class AppearanceSettingsComponent {
     this.themeService.setTheme(theme);
   }
 
+  setTextSize(size: TextSizePreference): void {
+    this.fontScaleService.setTextSizePreference(size);
+  }
+
+  setChatTextSize(size: ChatTextSizePreference): void {
+    this.fontScaleService.setChatTextSize(size);
+  }
+
   setAccentColor(color: string): void {
     if (!this.isVip()) return;
     this.primaryAccentColor.set(color);
@@ -107,6 +125,7 @@ export class AppearanceSettingsComponent {
 
     try {
       const accent = this.isVip() ? this.primaryAccentColor() : null;
+      const chatTextSize = this.currentChatTextSize();
       await this.userService.updateMyProfile(
         this.isVip()
           ? {
@@ -114,6 +133,12 @@ export class AppearanceSettingsComponent {
             }
           : {},
       );
+
+      const chatSaved = await this.chatSettingsService.updateSetting('textSize', chatTextSize);
+      if (!chatSaved) {
+        this.fontScaleService.setChatTextSize(this.chatSettingsService.textSize());
+        throw new Error('Chat text size was not persisted');
+      }
 
       if (accent) {
         this.themeService.setPrimaryAccentColor(accent);
@@ -138,5 +163,12 @@ export class AppearanceSettingsComponent {
 
   goBack(): void {
     this.location.back();
+  }
+
+  private async loadChatTextPreference(): Promise<void> {
+    const loaded = await this.chatSettingsService.loadSettings();
+    if (loaded) {
+      this.fontScaleService.setChatTextSize(this.chatSettingsService.textSize());
+    }
   }
 }
