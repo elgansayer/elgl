@@ -111,6 +111,7 @@
 **Action:** Pre-process inner-loop data structure outside loop. If generating JSON subsets where an item needs to be excluded, map and stringify elements just once, and string-manipulate the full string using `.replace` instead of re-evaluating arrays.
 
 ## 2026-08-17 - [Optimize Sequential Updates and Creation via Bulk Operations]
+
 **Learning:** In `backend/src/quests/quests.service.ts`, iterating through arrays to sequentially fetch and insert missing default quests, or update existing active quests (`await supabase.from...update()`), causes significant N+1 network latency. Sequential I/O inside a loop severely degrades API route response times.
 **Action:** Replace single sequential reads/inserts in `ensureDefaults` with a single bulk `.select()` followed by an in-memory difference calculation using a `Set`, culminating in one bulk `.insert()`. When updating independent rows inside a loop like `incrementProgress`, replace the sequential `await` operations with a mapped array of promises passed to `Promise.allSettled()` to allow parallel concurrent execution.
 
@@ -128,10 +129,6 @@
 
 **Learning:** In the backend `moments.service.ts`, `getLifetimeCounts` sequentially queried three independent counts (`moments`, `moment_comments`, and `translations`). In an isolated benchmark simulating network delay, fetching these sequentially took ~160ms, whereas fetching them concurrently via `Promise.all` reduced the execution time to ~50ms.
 **Action:** When a function requires multiple independent database lookups or calculations, always group them into a single concurrent `Promise.all` operation rather than executing them sequentially to mitigate additive network latency.
-
-## 2026-08-20 - [Avoid Silent Error Swallowing with Promise.allSettled]
-**Learning:** When using `Promise.allSettled` to execute concurrent tasks (like database inserts or remote service calls in `chat.service.ts`), simply awaiting the call without capturing the result completely swallows any `PromiseRejectedResult`. This leads to silent failures in production, meaning failed network requests, blocked exceptions, or connection timeouts will not propagate or alert the system, leading to code review rejection.
-**Action:** When utilizing `Promise.allSettled` for concurrent execution, always capture and inspect the returned array of results. Explicitly filter for and handle rejections (e.g., by throwing the first `.reason` or logging aggressively) to preserve system visibility and prevent silent error swallowing.
 
 ## 2026-08-21 - [Optimize full achievements lookup via Promise.all]
 
