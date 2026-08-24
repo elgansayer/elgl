@@ -84,16 +84,25 @@ describe('DiscoveryComponent Nearby GPS search', () => {
 
     const fixture = TestBed.createComponent(DiscoveryComponent);
     const component = fixture.componentInstance;
-    return { fixture, component, findPartners, getCurrentPosition, online };
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const startupGeolocationCalls = getCurrentPosition.mock.calls.length;
+    findPartners.mockClear();
+    getCurrentPosition.mockClear();
+    return {
+      fixture,
+      component,
+      findPartners,
+      getCurrentPosition,
+      online,
+      startupGeolocationCalls,
+    };
   }
 
   it('does not request location during ordinary component startup', async () => {
-    const { fixture, getCurrentPosition } = await setup();
+    const { startupGeolocationCalls } = await setup();
 
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(startupGeolocationCalls).toBe(0);
   });
 
   it('requests location only after Nearby is selected and sends a nearest spatial query', async () => {

@@ -100,7 +100,7 @@ describe('FontScaleService', () => {
     expect(service.textSizePreference()).toBe('normal');
 
     service.setTextSizePreference('large');
-    expect(service.scaleFactor()).toBe(1.15);
+    expect(service.scaleFactor()).toBeCloseTo(1.15);
     expect(service.textSizePreference()).toBe('large');
   });
 

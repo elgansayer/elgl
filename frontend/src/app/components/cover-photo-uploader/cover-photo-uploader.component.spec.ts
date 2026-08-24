@@ -79,8 +79,8 @@ describe('CoverPhotoUploaderComponent', () => {
     const trigger = fixture.nativeElement.querySelector('.group button') as HTMLButtonElement;
     const image = fixture.nativeElement.querySelector('.group img') as HTMLImageElement;
 
-    expect(trigger.textContent).toContain('coverPhoto.changeCover');
-    expect(image.alt).toBe('coverPhoto.previewAlt');
+    expect(trigger.textContent).toContain('Change Cover Photo');
+    expect(image.alt).toBe('Cover preview');
   });
 
   it('stores the selected file and reads a local preview without starting crop mode', async () => {
@@ -146,7 +146,7 @@ describe('CoverPhotoUploaderComponent', () => {
     fixture.detectChanges();
 
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
-    const upload = buttons.find((button) => button.textContent?.includes('common.upload'));
+    const upload = buttons.find((button) => button.textContent?.includes('Upload'));
 
     expect(upload).toBeTruthy();
     expect(upload?.disabled).toBe(true);
@@ -220,9 +220,7 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.croppedPreviewUrl()).toBe('blob:cover-preview');
     expect(component.uploadError()).toBe(true);
     expect(component.isUploading()).toBe(false);
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
-      'common.error',
-    );
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Error');
     fetchSpy.mockRestore();
   });
 
