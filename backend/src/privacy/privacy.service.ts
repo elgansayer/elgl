@@ -98,21 +98,19 @@ export class PrivacyService {
 
     const { error: insertError } = await supabase
       .from('archive_requests')
-      .insert(
-        {
-          id: requestId,
-          user_id: userId,
-          requested_at: now.toISOString(),
-          status: 'processing',
-          object_key: null,
-          expires_at: expiresAt,
-          archive_url: null,
-          failure_code: null,
-          updated_at: now.toISOString(),
-          receipt_id: dto.receipt_id ?? null,
-          app_store: dto.app_store ?? null,
-        } as never,
-      );
+      .insert({
+        id: requestId,
+        user_id: userId,
+        requested_at: now.toISOString(),
+        status: 'processing',
+        object_key: null,
+        expires_at: expiresAt,
+        archive_url: null,
+        failure_code: null,
+        updated_at: now.toISOString(),
+        receipt_id: dto.receipt_id ?? null,
+        app_store: dto.app_store ?? null,
+      } as never);
 
     if (insertError) {
       // A concurrent request may have won the one-processing-row constraint.
@@ -155,16 +153,14 @@ export class PrivacyService {
       const fulfilledAt = new Date().toISOString();
       const { error: readyError } = await supabase
         .from('archive_requests')
-        .update(
-          {
-            status: 'ready',
-            object_key: objectKey,
-            archive_url: null,
-            fulfilled_at: fulfilledAt,
-            failure_code: null,
-            updated_at: fulfilledAt,
-          } as never,
-        )
+        .update({
+          status: 'ready',
+          object_key: objectKey,
+          archive_url: null,
+          fulfilled_at: fulfilledAt,
+          failure_code: null,
+          updated_at: fulfilledAt,
+        } as never)
         .eq('id', requestId)
         .eq('user_id', userId);
 
@@ -188,14 +184,12 @@ export class PrivacyService {
 
       await supabase
         .from('archive_requests')
-        .update(
-          {
-            status: 'failed',
-            object_key: null,
-            failure_code: this.archiveFailureCode(error),
-            updated_at: new Date().toISOString(),
-          } as never,
-        )
+        .update({
+          status: 'failed',
+          object_key: null,
+          failure_code: this.archiveFailureCode(error),
+          updated_at: new Date().toISOString(),
+        } as never)
         .eq('id', requestId)
         .eq('user_id', userId);
 
@@ -212,7 +206,7 @@ export class PrivacyService {
     const { data: rowsRaw, error } = await supabase
       .from('archive_requests')
       .select('*')
-      .eq('status' as never, 'ready' as never)
+      .eq('status' as never, 'ready')
       .lte('expires_at' as never, new Date().toISOString() as never)
       .order('expires_at' as never, { ascending: true })
       .limit(boundedLimit);
@@ -237,19 +231,18 @@ export class PrivacyService {
 
       const { error: updateError } = await supabase
         .from('archive_requests')
-        .update(
-          {
-            status: 'expired',
-            object_key: null,
-            archive_url: null,
-            updated_at: new Date().toISOString(),
-          } as never,
-        )
+        .update({
+          status: 'expired',
+          object_key: null,
+          archive_url: null,
+          updated_at: new Date().toISOString(),
+        } as never)
         .eq('id', row.id);
       if (!updateError) purged += 1;
     }
 
-    if (purged > 0) this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
+    if (purged > 0)
+      this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
     return purged;
   }
 
@@ -278,7 +271,9 @@ export class PrivacyService {
 
     if (error) {
       this.logger.error('gdpr_account_deletion_schedule_failed');
-      throw new ServiceUnavailableException('Failed to initiate account deletion');
+      throw new ServiceUnavailableException(
+        'Failed to initiate account deletion',
+      );
     }
 
     await this.safetyCacheService.invalidateUserCaches(userId);
@@ -298,7 +293,9 @@ export class PrivacyService {
 
     if (error) {
       this.logger.error('gdpr_account_deletion_cancel_failed');
-      throw new ServiceUnavailableException('Failed to cancel account deletion');
+      throw new ServiceUnavailableException(
+        'Failed to cancel account deletion',
+      );
     }
 
     this.logger.log('gdpr_account_deletion_cancelled');
@@ -480,11 +477,12 @@ export class PrivacyService {
       }),
     ]);
 
-    const { data: readingProgress, error: readingProgressError } = await supabase
-      .from('reading_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: readingProgress, error: readingProgressError } =
+      await supabase
+        .from('reading_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
     if (readingProgressError) {
       this.logger.error('gdpr_archive_dataset_failed dataset=reading_progress');
       throw new Error('dataset_unavailable');
@@ -497,15 +495,18 @@ export class PrivacyService {
     const deckFlashcards: unknown[] = [];
     for (let offset = 0; offset < deckIds.length; offset += 100) {
       const ids = deckIds.slice(offset, offset + 100);
-      const chunk = await this.fetchPaged('deck_flashcards', async (from, to) => {
-        const result = await supabase
-          .from('deck_flashcards')
-          .select('*')
-          .in('deck_id', ids)
-          .order('added_at', { ascending: false })
-          .range(from, to);
-        return { data: result.data as unknown[] | null, error: result.error };
-      });
+      const chunk = await this.fetchPaged(
+        'deck_flashcards',
+        async (from, to) => {
+          const result = await supabase
+            .from('deck_flashcards')
+            .select('*')
+            .in('deck_id', ids)
+            .order('added_at', { ascending: false })
+            .range(from, to);
+          return { data: result.data as unknown[] | null, error: result.error };
+        },
+      );
       deckFlashcards.push(...chunk);
       if (deckFlashcards.length > MAX_ROWS_PER_DATASET) {
         throw new Error('dataset_too_large');
