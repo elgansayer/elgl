@@ -294,29 +294,29 @@ export class PronunciationScoringService {
     const words = best?.Words ?? [];
 
     if (overallScore === null || words.length === 0) {
-      this.logger.warn(
-        { region, recognitionStatus: result.RecognitionStatus },
-        'Azure pronunciation response did not contain assessment scores',
-      );
-      throw new ServiceUnavailableException(
-        'Pronunciation scoring is temporarily unavailable',
-      );
+      this.failIncompleteAssessment(region, result.RecognitionStatus);
     }
 
-    const breakdown: WordBreakdownItem[] = words.map((word, wordIndex) => {
+    const breakdown: WordBreakdownItem[] = words.map((word) => {
+      const wordText = word.Word?.trim();
       const wordScore = this.normaliseScore(
         word.PronunciationAssessment?.AccuracyScore,
       );
-      const safeWordScore = wordScore ?? 0;
-      const errorType = word.PronunciationAssessment?.ErrorType;
       const phonemes: PhonemeScore[] = (word.Phonemes ?? [])
         .map((phoneme) => this.toPhonemeScore(phoneme))
         .filter((phoneme): phoneme is PhonemeScore => phoneme !== null);
 
+      if (!wordText || wordScore === null || phonemes.length === 0) {
+        this.failIncompleteAssessment(region, result.RecognitionStatus);
+      }
+
       return {
-        word: (word.Word || `word ${wordIndex + 1}`).slice(0, 128),
-        score: safeWordScore,
-        feedback: this.wordFeedback(safeWordScore, errorType),
+        word: wordText.slice(0, 128),
+        score: wordScore,
+        feedback: this.wordFeedback(
+          wordScore,
+          word.PronunciationAssessment?.ErrorType,
+        ),
         phonemes,
       };
     });
@@ -328,6 +328,19 @@ export class PronunciationScoringService {
       detected_language: language,
       transcription: result.DisplayText?.slice(0, 2_000),
     };
+  }
+
+  private failIncompleteAssessment(
+    region: string,
+    recognitionStatus: string | number | undefined,
+  ): never {
+    this.logger.warn(
+      { region, recognitionStatus },
+      'Azure pronunciation response did not contain complete assessment scores',
+    );
+    throw new ServiceUnavailableException(
+      'Pronunciation scoring is temporarily unavailable',
+    );
   }
 
   private toPhonemeScore(phoneme: {
