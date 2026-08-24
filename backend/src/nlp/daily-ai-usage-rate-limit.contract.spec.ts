@@ -55,7 +55,9 @@ describe('NlpService daily AI usage contract (#1340)', () => {
     redis.get.mockResolvedValue('9');
     redis.incr.mockResolvedValue(10);
 
-    await expect(service.checkRateLimit('free-user', false)).resolves.toBeUndefined();
+    await expect(
+      service.checkRateLimit('free-user', false),
+    ).resolves.toBeUndefined();
 
     expect(redis.incr).toHaveBeenCalledWith(
       'daily_ai_usage:free-user:2026-08-24',
@@ -79,13 +81,17 @@ describe('NlpService daily AI usage contract (#1340)', () => {
     expect(httpError.getResponse()).toMatchObject({
       statusCode: HttpStatus.TOO_MANY_REQUESTS,
     });
-    expect(JSON.stringify(httpError.getResponse())).toContain('8 UKP / $10 USD');
+    expect(JSON.stringify(httpError.getResponse())).toContain(
+      '8 UKP / $10 USD',
+    );
     expect(redis.incr).not.toHaveBeenCalled();
     expect(redis.expire).not.toHaveBeenCalled();
   });
 
   it('does not consume Redis quota for VIP users', async () => {
-    await expect(service.checkRateLimit('vip-user', true)).resolves.toBeUndefined();
+    await expect(
+      service.checkRateLimit('vip-user', true),
+    ).resolves.toBeUndefined();
 
     expect(supabase.getRedisClient).not.toHaveBeenCalled();
     expect(redis.get).not.toHaveBeenCalled();
