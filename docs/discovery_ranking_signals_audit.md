@@ -1,6 +1,6 @@
 # Partner Discovery Ranking Signals Audit
 
-This document explains the recommended ranking signals for the "Best Match" partner discovery sorting, beyond basic language pairing.
+This document outlines recommended ranking signals for the "Best Match" partner discovery sorting, beyond basic language pairing.
 
 ## 1. Complementary Languages
 **Why:** The core of language exchange is mutual benefit. A user who natively speaks the language you are learning, and is learning the language you natively speak, is the ideal partner.
@@ -11,7 +11,7 @@ This document explains the recommended ranking signals for the "Best Match" part
 ## 3. Timezone / Active Hours Overlap
 **Why:** Language exchange fails if users are awake at completely different times. Explicit timezone overlap scoring eliminates the friction of manual availability blocks.
 
-## 4. Interest & Hobby Overlap
+## 4. Interests
 **Why:** Shared interests provide immediate conversation starters and increase the likelihood of a long-term connection, transitioning from a hard filter to a weighted scoring system.
 
 ## 5. Response Behaviour
