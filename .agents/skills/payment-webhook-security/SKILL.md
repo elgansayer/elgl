@@ -7,13 +7,15 @@ description: 'Secure payment, webhook, and in-app-purchase (IAP) endpoints for S
 
 ## Why This Skill Exists
 
-A 2026-07-22 audit found three critical, currently-unfixed vulnerabilities in this exact codebase (see `AGENTS.md` Section 8.1):
+A 2026-07-22 audit found three critical vulnerabilities in this exact codebase, all fixed as of 2026-07-29:
 
-1. `POST /monetisation/webhooks/stripe` never verifies the Stripe signature - anyone can forge a `checkout.session.completed` body and grant free VIP to any `userId`.
-2. `POST /monetisation/upgrade` sets `is_vip: true` for any authenticated caller with zero payment check.
-3. `POST /economy/purchase-coins` credits `coins_balance` using a client-supplied `amount` with no receipt verification - infinite free coins.
+1. `POST /monetisation/webhooks/stripe` didn't verify the Stripe signature - anyone could forge a `checkout.session.completed` body and grant free VIP to any `userId`. Fixed: `handleStripeWebhook` now uses `stripe.webhooks.constructEvent()` with signature verification.
+2. `POST /monetisation/upgrade` set `is_vip: true` for any authenticated caller with zero payment check. Fixed: the endpoint was removed; `updateVipStatus()` is now `private`, only callable via `updateVipStatusFromWebhook()` from verified webhook handlers.
+3. `POST /economy/purchase-coins` credited `coins_balance` using a client-supplied `amount` with no receipt verification. Fixed: `purchaseCoins()` now verifies receipts via Apple/Google/Stripe APIs, derives the coin amount server-side from `COIN_PACKAGES`, and checks for duplicate transaction IDs.
 
-Treat every rule below as mandatory whenever you touch `backend/src/monetisation/` or `backend/src/economy/`, or add a new payment-adjacent module.
+These fixes are why the rules below exist - treat every one of them as mandatory whenever you touch
+`backend/src/monetisation/` or `backend/src/economy/`, or add a new payment-adjacent module, so this class of bug
+doesn't reopen.
 
 ## Core Rules
 

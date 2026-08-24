@@ -72,6 +72,32 @@ describe('AdminAuditService', () => {
     );
   });
 
+  it('replaces unsafe correlation IDs and drops unsafe target identifiers', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const service = new AdminAuditService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ insert }),
+      }),
+    } as unknown as SupabaseService);
+
+    await service.record({
+      actorUserId: 'admin-1',
+      action: 'users.read',
+      targetType: 'user',
+      targetId: 'Bearer secret-target',
+      outcome: 'success',
+      correlationId: 'Bearer secret-request-id',
+    });
+
+    const row = insert.mock.calls[0][0];
+    expect(row.target_id).toBeNull();
+    expect(row.correlation_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(JSON.stringify(row)).not.toContain('secret-request-id');
+    expect(JSON.stringify(row)).not.toContain('secret-target');
+  });
+
   it('persists a structured reason and normalized private operator note', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const service = new AdminAuditService({
@@ -115,6 +141,62 @@ describe('AdminAuditService', () => {
       }),
     ).rejects.toThrow('appears to contain a secret');
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('applies configured retention opportunistically at most once per day', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: 4, error: null });
+    const service = new AdminAuditService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ insert }),
+        rpc,
+      }),
+    } as unknown as SupabaseService);
+
+    await service.record({
+      actorUserId: 'admin-1',
+      action: 'users.read',
+      outcome: 'success',
+    });
+    await service.record({
+      actorUserId: 'admin-1',
+      action: 'users.read',
+      outcome: 'success',
+    });
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('prune_admin_audit_events');
+  });
+
+  it('does not fail a completed audit write when retention cleanup fails', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error('retention unavailable'),
+    });
+    const errorLog = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const service = new AdminAuditService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ insert }),
+        rpc,
+      }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      service.record({
+        actorUserId: 'admin-1',
+        action: 'users.read',
+        outcome: 'success',
+      }),
+    ).resolves.toBeUndefined();
+
+    const logged = errorLog.mock.calls
+      .map((call) => String(call[0]))
+      .join('\n');
+    expect(logged).toContain('admin_audit_retention_failed');
+    expect(logged).not.toContain('retention unavailable');
   });
 
   it('fails closed and logs only sanitized audit persistence context', async () => {

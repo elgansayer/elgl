@@ -32,6 +32,7 @@ from openhands_factory.generation import (
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
+from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
@@ -466,6 +467,16 @@ class FactoryDaemon:
                                 "Recovered abandoned Factory attempt for task %s; "
                                 "retry is backed off",
                                 task_id,
+                            )
+                        pruned = prune_recovery_archives(
+                            self.config.recovery_dir,
+                            timedelta(hours=self.config.recovery_retention_hours),
+                        )
+                        if pruned:
+                            LOGGER.info(
+                                "Pruned %d recovery archive(s) older than %sh",
+                                len(pruned),
+                                self.config.recovery_retention_hours,
                             )
                         if recovered:
                             jobs = self.pipeline.jobs.load()
