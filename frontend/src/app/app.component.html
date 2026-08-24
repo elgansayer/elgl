@@ -2,7 +2,7 @@
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
   @if (versionCheckService.isDeprecated()) {
-    <app-forced-update-modal [storeUrl]="'https://yourapp.com/update'" />
+    <app-forced-update-modal [storeUrl]="versionCheckService.updateUrl()" />
   }
   <app-no-network-banner />
   @if (authService.appLocked()) {
