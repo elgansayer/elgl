@@ -88,13 +88,24 @@ export class LanguageChallengesService {
   async joinChallenge(userId: string, challengeId: string) {
     const supabase = this.supabase;
 
-    // fetch challenge
-    const { data: challenge, error: fetchError } = await supabase
-      .from('language_challenges')
-      .select('*')
-      .eq('id', challengeId)
-      .returns<LanguageChallenge[]>()
-      .single();
+    // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
+    const [challengeRes, existingRes] = await Promise.all([
+      supabase
+        .from('language_challenges')
+        .select('*')
+        .eq('id', challengeId)
+        .returns<LanguageChallenge[]>()
+        .single(),
+      supabase
+        .from('language_challenge_participants')
+        .select('id')
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
+
+    const { data: challenge, error: fetchError } = challengeRes;
+    const { data: existing } = existingRes;
 
     if (fetchError || !challenge) {
       throw new NotFoundException('Challenge not found');
@@ -103,14 +114,6 @@ export class LanguageChallengesService {
     if (challenge.status !== 'open') {
       throw new BadRequestException('Challenge is not open for joining');
     }
-
-    // ensure not already a participant
-    const { data: existing } = await supabase
-      .from('language_challenge_participants')
-      .select('id')
-      .eq('challenge_id', challengeId)
-      .eq('user_id', userId)
-      .maybeSingle();
 
     if (existing) {
       throw new BadRequestException('You have already joined this challenge');

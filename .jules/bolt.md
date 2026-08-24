@@ -138,3 +138,6 @@
 ## 2024-05-24 - [Replaced sequential safety checks with Promise.all in chat.service.ts]
 **Learning:** Found sequential calls to `getBlockedAndBlockerIds` for sender and receiver in both `sendMessage` and `sendContact` functions of `chat.service.ts`. These independent queries cause unnecessary additive network latency.
 **Action:** Used `Promise.all` to fetch both `receiverBlockedIds` and `senderBlockedIds` concurrently to optimize the database query execution and reduce wait times.
+## 2026-08-24 - Optimize joinChallenge with Promise.all
+**Learning:** Sequential, independent database queries in user-facing endpoints (like joining a challenge) add unnecessary network latency. The `joinChallenge` method sequentially fetched the challenge and then the existing participant.
+**Action:** Always group independent database lookups using a single concurrent `Promise.all` batch fetch to mitigate additive network latency. Remember to update the corresponding tests to mock the newly concurrent queries correctly (e.g. chaining `maybeSingle` mocks).
