@@ -358,6 +358,7 @@ jobs:
         with:
           name: supabase-start-failure-${{ github.sha }}
           path: test-results/supabase-start.log
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Rebuild database from zero using repository migration SQL
@@ -438,6 +439,7 @@ jobs:
     steps:
       - name: Summarize canonical CI groups
         env:
+          IMPACT_RESULT: ${{ needs.changes.result }}
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
@@ -456,6 +458,7 @@ jobs:
           }
 
           failed=0
+          [ "$IMPACT_RESULT" = "success" ] || failed=$((failed + 1))
           group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=$((failed + 1))
           group_ok "$CONSTITUTION_RESULT" true || failed=$((failed + 1))
           group_ok "$DATABASE_RESULT" true || failed=$((failed + 1))
@@ -466,6 +469,7 @@ jobs:
             echo
             echo "| Group | Required for this PR | Result |"
             echo "| --- | --- | --- |"
+            echo "| impact-classification | true | $IMPACT_RESULT |"
             echo "| application-checks | $RUN_APPLICATION | $APPLICATION_CHECKS_RESULT |"
             echo "| constitution | true | $CONSTITUTION_RESULT |"
             echo "| database | true | $DATABASE_RESULT |"
@@ -476,6 +480,7 @@ jobs:
 
       - name: Require every relevant canonical CI group to pass
         env:
+          IMPACT_RESULT: ${{ needs.changes.result }}
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
@@ -494,6 +499,7 @@ jobs:
           }
 
           failed=0
+          [ "$IMPACT_RESULT" = "success" ] || failed=1
           group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=1
           group_ok "$CONSTITUTION_RESULT" true || failed=1
           group_ok "$DATABASE_RESULT" true || failed=1
@@ -501,6 +507,7 @@ jobs:
 
           if [ "$failed" -ne 0 ]; then
             echo "Canonical CI did not fully pass for the relevant change groups."
+            echo "impact-classification=$IMPACT_RESULT required=true"
             echo "application-checks=$APPLICATION_CHECKS_RESULT required=$RUN_APPLICATION"
             echo "constitution=$CONSTITUTION_RESULT required=true"
             echo "database=$DATABASE_RESULT required=true"
