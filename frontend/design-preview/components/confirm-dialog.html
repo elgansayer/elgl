@@ -1,0 +1,205 @@
+<!-- @dsCard group="Components" name="Confirm dialog" subtitle="Spartan dialog · Relay tokens · responsive decisions" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relay + Spartan - Confirm dialog</title>
+    <style>
+      :root {
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-500: 246, 247, 250;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --primary: 198, 82, 48;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+      }
+
+      .dark {
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-500: 18, 21, 28;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --primary: 255, 122, 82;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: rgb(var(--surface-100));
+        color: rgb(var(--text-primary));
+        font-family: system-ui, sans-serif;
+      }
+
+      .states {
+        display: grid;
+        grid-template-columns: minmax(0, 390px) minmax(0, 720px);
+        gap: 24px;
+        align-items: start;
+        justify-content: center;
+      }
+
+      .label {
+        margin: 0 0 8px;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .viewport {
+        min-height: 430px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        overflow: hidden;
+        border-radius: 20px;
+        background: rgb(var(--surface-500));
+      }
+
+      .backdrop {
+        width: 100%;
+        min-height: 398px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        border-radius: 16px;
+        background: rgb(0 0 0 / 0.56);
+      }
+
+      .dialog {
+        width: 100%;
+        max-width: 384px;
+        max-height: calc(100dvh - 2rem);
+        overflow-y: auto;
+        padding: 24px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 20px;
+        background: rgb(var(--surface-200));
+        box-shadow:
+          0 12px 32px rgb(var(--shadow) / 0.16),
+          0 4px 10px rgb(var(--shadow) / 0.08);
+      }
+
+      .message {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+        color: rgb(var(--text-primary));
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      button {
+        min-height: 44px;
+        width: 100%;
+        min-width: 0;
+        border-radius: 12px;
+        padding: 10px 16px;
+        font: inherit;
+        font-weight: 700;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      button:focus-visible {
+        outline: 3px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+
+      .secondary {
+        border: 1px solid rgb(var(--surface-100));
+        background: transparent;
+        color: rgb(var(--text-primary));
+      }
+
+      .primary {
+        border: 1px solid transparent;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      @media (min-width: 640px) {
+        .desktop .actions {
+          flex-direction: row;
+          justify-content: flex-end;
+        }
+
+        .desktop button {
+          width: auto;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .states {
+          grid-template-columns: minmax(0, 390px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dialog {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="states" aria-label="Confirm dialog design states">
+      <section>
+        <p class="label">Light · 390px mobile · stacked touch actions</p>
+        <div class="viewport">
+          <div class="backdrop">
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-light-title">
+              <h2 id="confirm-light-title" class="message">
+                Remove this language partner? You can reconnect later from Discovery.
+              </h2>
+              <div class="actions">
+                <button type="button" class="secondary">Cancel</button>
+                <button type="button" class="primary">Confirm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <p class="label">Dark · tablet / desktop · expanded translation</p>
+        <div class="viewport dark desktop">
+          <div class="backdrop">
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dark-title">
+              <h2 id="confirm-dark-title" class="message">
+                この操作を続けますか？ Your current primary accent remains the Spartan action colour,
+                while the dialog surface and text stay on Relay semantic theme tokens.
+              </h2>
+              <div class="actions">
+                <button type="button" class="secondary">キャンセル</button>
+                <button type="button" class="primary">確認する</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

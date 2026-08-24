@@ -51,19 +51,41 @@ describe('ConfirmDialogComponent', () => {
     expect(component.dialogState()).toBe('closed');
   });
 
-  it('should render native touch-sized Spartan actions', () => {
+  it('should not render dialog content without an active confirmation', () => {
+    expect(component.dialogState()).toBe('closed');
+    expect(fixture.debugElement.query(By.css('[data-slot="dialog-content"]'))).toBeNull();
+    expect(actionButtons()).toHaveLength(0);
+  });
+
+  it('should render native touch-sized Spartan actions in deterministic order', () => {
     openConfirmation();
 
     const buttons = actionButtons();
 
     expect(buttons).toHaveLength(2);
+    expect(buttons[0].nativeElement.textContent.trim()).not.toBe('');
+    expect(buttons[1].nativeElement.textContent.trim()).not.toBe('');
+    expect(buttons[0].nativeElement.textContent.trim()).not.toBe(
+      buttons[1].nativeElement.textContent.trim(),
+    );
     for (const button of buttons) {
       expect(button.nativeElement.tagName).toBe('BUTTON');
       expect(button.nativeElement.type).toBe('button');
       expect(button.nativeElement.getAttribute('data-slot')).toBe('button');
       expect(button.nativeElement.classList.contains('min-h-11')).toBe(true);
-      expect(button.nativeElement.textContent.trim()).not.toBe('');
+      expect(button.nativeElement.classList.contains('whitespace-normal')).toBe(true);
+      expect(button.nativeElement.classList.contains('break-words')).toBe(true);
+      expect(button.nativeElement.getAttribute('tabindex')).not.toBe('-1');
     }
+  });
+
+  it('should render caller-provided confirmation copy without treating it as a translation key', () => {
+    openConfirmation('Delete 日本語 draft?\nThis cannot be undone.');
+
+    const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
+
+    expect(title.nativeElement.textContent).toContain('Delete 日本語 draft?');
+    expect(title.nativeElement.textContent).toContain('This cannot be undone.');
   });
 
   it('should resolve false when the Cancel action is activated', async () => {
@@ -125,16 +147,38 @@ describe('ConfirmDialogComponent', () => {
     expect(confirmService.confirmState()).toBeNull();
   });
 
-  it('should keep a valid accessible relationship to the confirmation message', () => {
+  it('should use the Spartan dialog title contract without fixed ids', () => {
     openConfirmation('Delete this draft?');
 
     const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
-    const message = fixture.debugElement.query(By.css('#confirm-message'));
+    const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
+    const renderedHtml = dialogContent.nativeElement.outerHTML;
 
     expect(dialogContent).not.toBeNull();
-    expect(message).not.toBeNull();
-    expect(dialogContent.nativeElement.getAttribute('aria-labelledby')).toBe('confirm-message');
-    expect(message.nativeElement.textContent).toContain('Delete this draft?');
+    expect(title).not.toBeNull();
+    expect(title.nativeElement.textContent).toContain('Delete this draft?');
+    expect(title.nativeElement.id).toBeTruthy();
+    expect(dialogContent.nativeElement.getAttribute('aria-labelledby')).toBe(title.nativeElement.id);
+    expect(renderedHtml).not.toContain('confirm-message');
+  });
+
+  it('should keep required content scrollable at high zoom and narrow viewport heights', () => {
+    openConfirmation();
+
+    const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
+
+    expect(dialogContent.nativeElement.classList.contains('max-h-[calc(100dvh-2rem)]')).toBe(true);
+    expect(dialogContent.nativeElement.classList.contains('overflow-y-auto')).toBe(true);
+    expect(dialogContent.nativeElement.classList.contains('w-full')).toBe(true);
+    expect(dialogContent.nativeElement.classList.contains('max-w-sm')).toBe(true);
+  });
+
+  it('should suppress dialog animation when reduced motion is requested', () => {
+    openConfirmation();
+
+    const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
+
+    expect(dialogContent.nativeElement.classList.contains('motion-reduce:animate-none')).toBe(true);
   });
 
   it('should preserve direction-neutral, reflow-safe action layout', () => {
@@ -144,8 +188,6 @@ describe('ConfirmDialogComponent', () => {
     const actionRow = dialogContent.query(By.css('div.flex'));
     const renderedHtml = dialogContent.nativeElement.outerHTML;
 
-    expect(dialogContent.nativeElement.classList.contains('w-full')).toBe(true);
-    expect(dialogContent.nativeElement.classList.contains('max-w-sm')).toBe(true);
     expect(actionRow.nativeElement.classList.contains('gap-3')).toBe(true);
     expect(actionRow.nativeElement.classList.contains('sm:justify-end')).toBe(true);
     expect(renderedHtml).not.toMatch(/\b(?:ml|mr|pl|pr|left|right)-/);
