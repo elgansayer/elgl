@@ -1,4 +1,11 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class SendChatMediaMessageDto {
   @IsString()
@@ -13,7 +20,9 @@ export class SendChatMediaMessageDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(1024)
-  @Matches(/^chat-media\/[0-9A-Za-z_-]+\/(image|video)\/(standard|hd)\/[0-9]+-[a-f0-9]{24}\.(jpg|png|webp|mp4|webm|mov)$/)
+  @Matches(
+    /^chat-media\/[0-9A-Za-z_-]+\/(image|video)\/(standard|hd)\/[0-9]+-[a-f0-9]{24}\.(jpg|png|webp|mp4|webm|mov)$/,
+  )
   objectKey!: string;
 
   @IsOptional()

@@ -2,6 +2,7 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  NestInterceptor,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -26,15 +27,23 @@ const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{1,200}$/;
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const ADMIN_REASON_CODES = new Set<string>(ADMIN_ACTION_REASON_CODES);
 
-// These reads already produce richer, semantic audit events in their controller.
-// Keying by controller + handler is independent of global prefixes and Express
-// router mounting, so the same operation is never double-audited.
+// These operations already produce richer, semantic audit events in their
+// controllers. Keying by controller + handler is independent of global prefixes
+// and Express router mounting, so an operation is never double-audited.
 const MANUALLY_AUDITED_HANDLERS = new Set([
   'AdminV1Controller.getSystemHealth',
   'AdminV1Controller.listAudit',
   'AdminV1Controller.listModerationReports',
   'AdminV1Controller.getUserLoginHistory',
   'AdminOperationalEventsV1Controller.list',
+  'AdminNetworkAbuseV1Controller.lookup',
+  'AdminNetworkAbuseV1Controller.impact',
+  'AdminNetworkAbuseV1Controller.listBlocks',
+  'AdminNetworkAbuseV1Controller.listAllowlist',
+  'AdminNetworkAbuseV1Controller.createBlock',
+  'AdminNetworkAbuseV1Controller.revokeBlock',
+  'AdminNetworkAbuseV1Controller.createAllowlist',
+  'AdminNetworkAbuseV1Controller.revokeAllowlist',
 ]);
 
 /**
@@ -82,7 +91,9 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     const routePath = request.route?.path ?? request.path;
 
     const requestId = request.headers['x-request-id'];
-    const rawCorrelationId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const rawCorrelationId = Array.isArray(requestId)
+      ? requestId[0]
+      : requestId;
     const correlationId =
       typeof rawCorrelationId === 'string' &&
       SAFE_CORRELATION_ID.test(rawCorrelationId)
@@ -103,10 +114,11 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         ? candidateTargetId
         : undefined;
     const targetType = this.resolveTargetType(request, targetId);
-    const action = `${method.toLowerCase()} ${request.baseUrl ?? ''}${routePath ?? ''}`.slice(
-      0,
-      160,
-    );
+    const action =
+      `${method.toLowerCase()} ${request.baseUrl ?? ''}${routePath ?? ''}`.slice(
+        0,
+        160,
+      );
 
     const reasonCode = this.getReasonCode(request.body);
     // Validate the only free-text field before a mutation can run. This avoids

@@ -20,7 +20,10 @@ export class ChatMediaMessageService {
     private readonly chatService: ChatService,
   ) {}
 
-  async send(userId: string, dto: SendChatMediaMessageDto): Promise<ChatMessage> {
+  async send(
+    userId: string,
+    dto: SendChatMediaMessageDto,
+  ): Promise<ChatMessage> {
     const messageType = this.resolveMessageType(dto);
     const mediaUrl = this.resolveOwnedMediaUrl(userId, dto);
     const existing = await this.findExisting(userId, mediaUrl);
@@ -33,7 +36,7 @@ export class ChatMediaMessageService {
         room_id: dto.roomId,
         message_type: messageType,
         media_url: mediaUrl,
-      } as SendMessageDto);
+      });
     } catch (cause) {
       // sendMessage persists before publishing to Centrifugo. If publication or
       // the response path fails after the insert, a retry must return the row
@@ -47,7 +50,9 @@ export class ChatMediaMessageService {
     }
   }
 
-  private resolveMessageType(dto: SendChatMediaMessageDto): 'image' | 'video' | 'video_note' {
+  private resolveMessageType(
+    dto: SendChatMediaMessageDto,
+  ): 'image' | 'video' | 'video_note' {
     if (dto.presentation === 'instant_video') {
       if (dto.mediaKind !== 'video') {
         throw new UnprocessableEntityException(
@@ -59,15 +64,23 @@ export class ChatMediaMessageService {
     return dto.mediaKind;
   }
 
-  private resolveOwnedMediaUrl(userId: string, dto: SendChatMediaMessageDto): string {
+  private resolveOwnedMediaUrl(
+    userId: string,
+    dto: SendChatMediaMessageDto,
+  ): string {
     const expectedPrefix = `chat-media/${userId}/${dto.mediaKind}/`;
     if (!dto.objectKey.startsWith(expectedPrefix)) {
-      throw new ForbiddenException('Chat media object does not belong to the authenticated user');
+      throw new ForbiddenException(
+        'Chat media object does not belong to the authenticated user',
+      );
     }
     return this.r2ObjectService.publicUrlForKey(dto.objectKey);
   }
 
-  private async findExisting(userId: string, mediaUrl: string): Promise<ChatMessage | null> {
+  private async findExisting(
+    userId: string,
+    mediaUrl: string,
+  ): Promise<ChatMessage | null> {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('chat_messages')
@@ -77,9 +90,11 @@ export class ChatMediaMessageService {
       .maybeSingle();
 
     if (error) {
-      throw new ServiceUnavailableException('Unable to verify chat media delivery state');
+      throw new ServiceUnavailableException(
+        'Unable to verify chat media delivery state',
+      );
     }
-    return (data as ChatMessage | null) ?? null;
+    return data ?? null;
   }
 
   private assertMatchingRetry(
@@ -87,8 +102,13 @@ export class ChatMediaMessageService {
     dto: SendChatMediaMessageDto,
     expectedMessageType: string,
   ): ChatMessage {
-    if (message.room_id !== dto.roomId || message.message_type !== expectedMessageType) {
-      throw new ConflictException('Uploaded chat media has already been used by another message');
+    if (
+      message.room_id !== dto.roomId ||
+      message.message_type !== expectedMessageType
+    ) {
+      throw new ConflictException(
+        'Uploaded chat media has already been used by another message',
+      );
     }
     return message;
   }

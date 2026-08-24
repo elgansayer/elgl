@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import SecretStr
 
+from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
@@ -27,6 +28,10 @@ from openhands_factory.jobs import JobStore
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.pr_lifecycle import (
+    PullRequestLifecycleEvent,
+    PullRequestLifecycleTracker,
+)
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
@@ -110,6 +115,11 @@ class FactoryPipeline:
             max_repeated_failures=config.max_consecutive_failures,
         )
         self.tasks = TaskStore(config.state_dir)
+        self.pr_lifecycle = PullRequestLifecycleTracker(
+            config.state_dir,
+            config.github_repository,
+            AlertService(config),
+        )
         self.prompt_dir = config.repository / "automation/prompts"
         self.system_prompt = build_system_prompt(self.prompt_dir)
         openhands_settings = config.agents.providers["openhands"]
@@ -625,6 +635,10 @@ class FactoryPipeline:
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
 
     def _advance(self, job: Job) -> None:
+        # Notification delivery is best-effort and never changes merge eligibility.
+        # Retry a small number of previously-recorded lifecycle events on ordinary
+        # Factory progress so a transient Telegram outage is eventually visible.
+        self.pr_lifecycle.flush_pending()
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
         # Control prompts must never come from the agent-modifiable worktree. The
         # dedicated Factory checkout is deployed from main and remains outside every
@@ -866,12 +880,26 @@ class FactoryPipeline:
                     "checks before merge."
                 ),
             )
+            self._record_pr_lifecycle(
+                job,
+                "reviewed",
+                (
+                    "Factory independent review accepted this exact commit, published the "
+                    "factory/independent-review success status, and applied factory-reviewed. "
+                    "Required GitHub checks must still pass before merge."
+                ),
+            )
             job.state = JobState.CI_PENDING
             return
 
         if job.state is JobState.CI_PENDING:
             status = self._status(job)
             if status.state == "MERGED":
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub already reports the reviewed pull request as merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -888,11 +916,19 @@ class FactoryPipeline:
                 and status.mergeable == "MERGEABLE"
                 and status.merge_state_status == "CLEAN"
             ):
-                # The scheduled merge workflow re-reads checks, head state, and
-                # human review immediately before merging. Do not arm GitHub's
-                # native auto-merge here: a later CHANGES_REQUESTED review could
-                # otherwise race the Factory gate when repository rules do not
-                # independently require that review decision.
+                # Persist a visible queue transition before the merge attempt. The
+                # MERGE_QUEUED worker re-reads GitHub immediately before using an
+                # exact-head merge. The scheduled workflow remains a recovery fallback
+                # if the daemon stops after review. Native auto-merge stays disabled so
+                # a later CHANGES_REQUESTED review cannot race the Factory gate.
+                self._record_pr_lifecycle(
+                    job,
+                    "merge-queued",
+                    (
+                        "All required checks passed, GitHub reports the reviewed head as clean "
+                        "and mergeable, and the Factory queued an exact-head squash merge."
+                    ),
+                )
                 job.state = JobState.MERGE_QUEUED
             else:
                 job.state = JobState.REPAIRING
@@ -961,8 +997,23 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.MERGE_QUEUED:
+            # Backfill lifecycle evidence for jobs that were already queued before
+            # this Factory version, and make retries/restarts idempotently visible.
+            self._record_pr_lifecycle(
+                job,
+                "merge-queued",
+                (
+                    "All required checks passed, GitHub reports the reviewed head as clean "
+                    "and mergeable, and the Factory queued an exact-head squash merge."
+                ),
+            )
             status = self._status(job)
             if status.state == "MERGED":
+                self._record_pr_lifecycle(
+                    job,
+                    "merged",
+                    "GitHub confirmed that the reviewed pull request was merged.",
+                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -980,9 +1031,32 @@ class FactoryPipeline:
                 or status.merge_state_status != "CLEAN"
             ):
                 job.state = JobState.REPAIRING
+            else:
+                if job.pull_request is None or job.head_sha is None:
+                    raise FactoryError("Merge-queued job is missing pull request provenance")
+                # The queue state was established on an earlier transition. Re-read
+                # status above, then ask GitHub to merge only this exact reviewed SHA.
+                # No --admin or auto-merge bypass is used, so GitHub rules remain
+                # authoritative and a changed head is rejected server-side.
+                self.github.merge_pull_request(job.pull_request, job.head_sha)
+                confirmed = self._status(job)
+                if confirmed.state == "MERGED":
+                    self._record_pr_lifecycle(
+                        job,
+                        "merged",
+                        "GitHub confirmed the Factory exact-head squash merge completed.",
+                    )
+                    job.state = JobState.MERGED
+                elif confirmed.head_sha != job.head_sha:
+                    self._refresh_pull_request_for_review(job, worktree)
             return
 
         if job.state is JobState.MERGED:
+            self._record_pr_lifecycle(
+                job,
+                "merged",
+                "GitHub confirmed that the reviewed pull request is merged.",
+            )
             if job.pull_request is not None:
                 self.github.add_comment(
                     job.pull_request,
@@ -995,6 +1069,24 @@ class FactoryPipeline:
             self._workflow(self.config.repository).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
+
+    def _record_pr_lifecycle(
+        self,
+        job: Job,
+        event: PullRequestLifecycleEvent,
+        detail: str,
+    ) -> None:
+        """Persist and notify significant PR lifecycle transitions idempotently."""
+
+        if job.pull_request is None or job.head_sha is None:
+            return
+        self.pr_lifecycle.record(
+            event,
+            pull_request=job.pull_request,
+            head_sha=job.head_sha,
+            title=job.task.title,
+            detail=detail,
+        )
 
     def _discover_pull_request(self, job: Job, worktree: Path) -> None:
         """Start independently reviewing a pull request the factory did not create.
