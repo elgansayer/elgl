@@ -44,7 +44,9 @@ describe('PrivacyArchiveCron', () => {
   });
 
   it('contains cleanup failures so the scheduler remains healthy', async () => {
-    purgeExpiredArchives.mockRejectedValue(new Error('private provider detail'));
+    purgeExpiredArchives.mockRejectedValue(
+      new Error('private provider detail'),
+    );
 
     await expect(cron.purgeExpiredArchives()).resolves.toBeUndefined();
   });
