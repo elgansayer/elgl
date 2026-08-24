@@ -358,15 +358,16 @@ export class ChatService {
         // This should never happen because we already checked the length above.
         throw new Error('Unable to determine receiver');
       }
+      // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
+      const [receiverBlockedIds, senderBlockedIds] = await Promise.all([
+        this.safetyService.getBlockedAndBlockerIds(receiverId),
+        this.safetyService.getBlockedAndBlockerIds(senderId),
+      ]);
       // Check if the receiver has blocked the sender
-      const receiverBlockedIds =
-        await this.safetyService.getBlockedAndBlockerIds(receiverId);
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send messages to this user.');
       }
       // Check if the sender has blocked the receiver
-      const senderBlockedIds =
-        await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
       }
@@ -1095,13 +1096,14 @@ export class ChatService {
         : undefined;
 
     if (receiverId) {
-      const receiverBlockedIds =
-        await this.safetyService.getBlockedAndBlockerIds(receiverId);
+      // ⚡ Bolt Optimization: Group independent database lookups with a single concurrent Promise.all batch fetch to mitigate additive network latency.
+      const [receiverBlockedIds, senderBlockedIds] = await Promise.all([
+        this.safetyService.getBlockedAndBlockerIds(receiverId),
+        this.safetyService.getBlockedAndBlockerIds(senderId),
+      ]);
       if (receiverBlockedIds.includes(senderId)) {
         throw new Error('You cannot send contact to this user.');
       }
-      const senderBlockedIds =
-        await this.safetyService.getBlockedAndBlockerIds(senderId);
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send contact to this user.');
       }
