@@ -1,4 +1,4 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { UploadedChatMedia } from '../../services/chat-media.service';
 import { ChatMediaMessageService } from '../../services/chat-media-message.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -68,13 +68,13 @@ import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker
   `,
 })
 export class ChatMediaShareComponent {
+  private readonly messages = inject(ChatMediaMessageService);
+
   readonly roomId = input.required<string>();
   readonly open = signal(false);
   readonly sendError = signal<string | null>(null);
   readonly pendingMedia = signal<UploadedChatMedia | null>(null);
   readonly isSending = signal(false);
-
-  constructor(private readonly messages: ChatMediaMessageService) {}
 
   async onUploaded(media: UploadedChatMedia): Promise<void> {
     this.open.set(false);

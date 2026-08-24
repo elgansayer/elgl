@@ -24,6 +24,54 @@ export interface EventWithHost {
   host?: { display_name: string | null; avatar_url: string | null };
 }
 
+interface EventReminderClaim {
+  reminder_id: string;
+  event_id: string;
+  user_id: string;
+  event_title: string;
+  event_date_time: string;
+  attempt_count: number;
+}
+
+interface ReminderRpcResult {
+  data: unknown;
+  error: { message?: string } | null;
+}
+
+interface ReminderRpcClient {
+  rpc(
+    functionName: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<ReminderRpcResult>;
+}
+
+interface ReminderStateResult {
+  error: { message?: string } | null;
+}
+
+interface ReminderStateEqBuilder {
+  eq(column: 'status', value: 'pending'): PromiseLike<ReminderStateResult>;
+}
+
+interface ReminderStateInBuilder {
+  in(column: 'id', values: string[]): ReminderStateEqBuilder;
+}
+
+interface ReminderStateTable {
+  update(values: Record<string, string | null>): ReminderStateInBuilder;
+}
+
+interface ReminderStateClient {
+  from(table: 'event_reminders_sent'): ReminderStateTable;
+}
+
+const REMINDER_BATCH_SIZE = 200;
+const REMINDER_MAX_BATCHES_PER_TICK = 5;
+const REMINDER_LEASE_SECONDS = 120;
+const REMINDER_SEND_CONCURRENCY = 25;
+const REMINDER_RETRY_DELAY_MS = 60_000;
+const REMINDER_TITLE_MAX_LENGTH = 80;
+
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsService.name);
@@ -37,7 +85,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    // Start background job that checks for upcoming event reminders every 60 seconds
+    // Run once at startup so a restart does not force users to wait for the
+    // first interval tick, then continue scanning every minute.
+    void this.checkReminders();
     this.intervalId = setInterval(() => void this.checkReminders(), 60_000);
 
     // Start background job that checks for events whose start time is happening now
@@ -57,148 +107,192 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Scans events whose start time is between 14.5 and 15.5 minutes from now
-   * and sends a push reminder to each user who RSVPed as 'attending'.
+   * Claims due reminder work atomically in Postgres and dispatches it in
+   * bounded batches. The database lease prevents duplicate work across API
+   * replicas while still allowing a crashed worker to be retried.
    */
   private async checkReminders(): Promise<void> {
+    const startedAt = Date.now();
+    let processed = 0;
+
     try {
-      const now = Date.now();
-      const minMillis = now + 14.5 * 60 * 1000; // 14.5 minutes ahead
-      const maxMillis = now + 15.5 * 60 * 1000; // 15.5 minutes ahead
+      for (let batch = 0; batch < REMINDER_MAX_BATCHES_PER_TICK; batch += 1) {
+        const claims = await this.claimDueReminders();
+        if (claims.length === 0) break;
 
-      const supabase = this.supabaseService.getClient();
+        processed += claims.length;
+        await this.dispatchReminderClaims(claims);
 
-      const { data: events, error } = await supabase
-        .from('events')
-        .select('id, title, host_id, language_pair')
-        .gte('date_time', new Date(minMillis).toISOString())
-        .lte('date_time', new Date(maxMillis).toISOString());
+        if (claims.length < REMINDER_BATCH_SIZE) break;
+      }
 
-      if (error) {
-        this.logger.error(
-          'Failed to fetch upcoming events for reminders',
-          error,
+      if (processed > 0) {
+        this.logger.log(
+          `Event reminder dispatch completed count=${processed} duration_ms=${Date.now() - startedAt}`,
         );
-        return;
       }
-
-      if (!events || events.length === 0) return;
-
-      const typedEvents: Array<{
-        id: string;
-        title: string;
-        host_id: string;
-        language_pair: string | null;
-      }> = events ?? [];
-
-      if (typedEvents.length === 0) return;
-
-      const eventIds = typedEvents.map((e) => e.id);
-
-      const { data: allRsvps, error: rsvpError } = await supabase
-        .from('event_rsvps')
-        .select('event_id, user_id')
-        .in('event_id', eventIds)
-        .eq('status', 'attending');
-
-      if (rsvpError) {
-        this.logger.warn(
-          'Could not fetch RSVPs for upcoming events',
-          rsvpError,
-        );
-        return;
-      }
-
-      if (!allRsvps) return;
-
-      const rsvpsByEventId = new Map<string, string[]>();
-      for (const rsvp of allRsvps) {
-        const users = rsvpsByEventId.get(rsvp.event_id) ?? [];
-        users.push(rsvp.user_id);
-        rsvpsByEventId.set(rsvp.event_id, users);
-      }
-
-      // ⚡ Bolt: Replaced sequential `for...of` loop with concurrent `Promise.allSettled`.
-      // Executing `sendRemindersBatch` concurrently mitigates N+1 database/network latency overheads.
-      const reminderResults = await Promise.allSettled(
-        typedEvents.map((event) => {
-          const userIds = rsvpsByEventId.get(event.id);
-          if (!userIds) return Promise.resolve();
-          return this.sendRemindersBatch(event.id, event.title, userIds);
-        }),
-      );
-
-      const failedReminders = reminderResults.filter(
-        (result): result is PromiseRejectedResult =>
-          result.status === 'rejected',
-      );
-      if (failedReminders.length > 0) {
-        throw failedReminders[0].reason;
-      }
-    } catch (err) {
-      this.logger.error('Unexpected error in checkReminders', err);
+    } catch {
+      // Keep scheduler ticks isolated: a database/provider outage must not
+      // terminate the process or stop future retry attempts.
+      this.logger.error('Event reminder dispatch tick failed');
     }
   }
 
-  /**
-   * Sends an actual push notification via Firebase or a similar service to a batch of users.
-   */
-  private async sendRemindersBatch(
-    eventId: string,
-    eventTitle: string,
-    userIds: string[],
-  ): Promise<void> {
-    if (userIds.length === 0) return;
+  private async claimDueReminders(): Promise<EventReminderClaim[]> {
+    const rpcClient =
+      this.supabaseService.getClient() as unknown as ReminderRpcClient;
+    const { data, error } = await rpcClient.rpc('claim_due_event_reminders', {
+      p_now: new Date().toISOString(),
+      p_limit: REMINDER_BATCH_SIZE,
+      p_lease_seconds: REMINDER_LEASE_SECONDS,
+    });
 
-    const supabase = this.supabaseService.getClient();
-
-    // Deduplicate: check if we already sent a reminder for this event to these users
-    const { data: existing, error: fetchErr } = await supabase
-      .from('event_reminders_sent')
-      .select('user_id')
-      .eq('event_id', eventId)
-      .in('user_id', userIds);
-
-    if (fetchErr) {
-      this.logger.warn('Could not check existing reminders', fetchErr);
-      return;
+    if (error) {
+      this.logger.warn('Could not claim due event reminders');
+      throw new Error('Unable to claim due event reminders');
     }
 
-    const existingUserIds = new Set(existing?.map((r) => r.user_id) ?? []);
-    const usersToNotify = userIds.filter((id) => !existingUserIds.has(id));
+    if (!Array.isArray(data)) return [];
 
-    if (usersToNotify.length === 0) {
-      // All users already notified
-      return;
-    }
-
-    // Send push notification using the existing NotificationsService
-    const title = `Event Reminder: ${eventTitle}`;
-    const body = `Your event "${eventTitle}" starts in 15 minutes.`;
-
-    await Promise.allSettled(
-      usersToNotify.map((userId) =>
-        this.notificationsService.sendPushNotification(userId, {
-          type: 'event_reminder',
-          title,
-          body,
-          category: 'groups',
-        }),
-      ),
+    return data.filter((value): value is EventReminderClaim =>
+      this.isValidReminderClaim(value),
     );
+  }
 
-    // Record that we sent the reminder to avoid duplicates
-    const recordsToInsert = usersToNotify.map((userId) => ({
-      event_id: eventId,
-      user_id: userId,
-    }));
+  private isValidReminderClaim(value: unknown): value is EventReminderClaim {
+    if (!value || typeof value !== 'object') return false;
+    const claim = value as Partial<EventReminderClaim>;
+    return (
+      typeof claim.reminder_id === 'string' &&
+      claim.reminder_id.length > 0 &&
+      typeof claim.event_id === 'string' &&
+      claim.event_id.length > 0 &&
+      typeof claim.user_id === 'string' &&
+      claim.user_id.length > 0 &&
+      typeof claim.event_title === 'string' &&
+      typeof claim.event_date_time === 'string' &&
+      Number.isFinite(Date.parse(claim.event_date_time)) &&
+      typeof claim.attempt_count === 'number' &&
+      Number.isInteger(claim.attempt_count) &&
+      claim.attempt_count >= 1
+    );
+  }
 
-    const { error: insertErr } = await supabase
+  private async dispatchReminderClaims(
+    claims: EventReminderClaim[],
+  ): Promise<void> {
+    for (
+      let offset = 0;
+      offset < claims.length;
+      offset += REMINDER_SEND_CONCURRENCY
+    ) {
+      const chunk = claims.slice(offset, offset + REMINDER_SEND_CONCURRENCY);
+      const results = await Promise.allSettled(
+        chunk.map(async (claim) => {
+          const eventTitle = this.formatReminderEventTitle(claim.event_title);
+          const minutesUntilStart = Math.max(
+            1,
+            Math.ceil(
+              (Date.parse(claim.event_date_time) - Date.now()) / 60_000,
+            ),
+          );
+          const minuteLabel = minutesUntilStart === 1 ? 'minute' : 'minutes';
+
+          const dispatchResult =
+            await this.notificationsService.sendPushNotification(
+              claim.user_id,
+              {
+                type: 'event_reminder',
+                title: `Event Reminder: ${eventTitle}`,
+                body: `Your event "${eventTitle}" starts in ${minutesUntilStart} ${minuteLabel}.`,
+                category: 'groups',
+                data: {
+                  eventId: claim.event_id,
+                  route: `/events/${claim.event_id}`,
+                  startsAt: claim.event_date_time,
+                },
+              },
+            );
+
+          if (dispatchResult === 'retry') {
+            throw new Error('Push dispatch requested retry');
+          }
+
+          return claim.reminder_id;
+        }),
+      );
+
+      const sentIds: string[] = [];
+      const retryIds: string[] = [];
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          sentIds.push(result.value);
+        } else {
+          retryIds.push(chunk[index].reminder_id);
+        }
+      });
+
+      await Promise.all([
+        this.markReminderBatchSent(sentIds),
+        this.releaseReminderBatchForRetry(retryIds),
+      ]);
+    }
+  }
+
+  private formatReminderEventTitle(title: string): string {
+    const normalized = title.replace(/\s+/g, ' ').trim();
+    if (!normalized) return 'Learning event';
+    return normalized.slice(0, REMINDER_TITLE_MAX_LENGTH);
+  }
+
+  private getReminderStateClient(): ReminderStateClient {
+    const client: unknown = this.supabaseService.getClient();
+    return client as ReminderStateClient;
+  }
+
+  private async markReminderBatchSent(reminderIds: string[]): Promise<void> {
+    if (reminderIds.length === 0) return;
+
+    const now = new Date().toISOString();
+    const { error } = await this.getReminderStateClient()
       .from('event_reminders_sent')
-      .insert<{ event_id: string; user_id: string }>(recordsToInsert);
+      .update({
+        status: 'sent',
+        sent_at: now,
+        claimed_at: null,
+        next_attempt_at: null,
+        updated_at: now,
+      })
+      .in('id', reminderIds)
+      .eq('status', 'pending');
 
-    if (insertErr) {
-      this.logger.warn('Failed to record sent reminders', insertErr);
+    if (error) {
+      // The lease will expire and the reminder will be retried. Avoid logging
+      // IDs or event content because this is internal per-user delivery state.
+      this.logger.warn('Could not finalize event reminder deliveries');
+    }
+  }
+
+  private async releaseReminderBatchForRetry(
+    reminderIds: string[],
+  ): Promise<void> {
+    if (reminderIds.length === 0) return;
+
+    const now = new Date();
+    const { error } = await this.getReminderStateClient()
+      .from('event_reminders_sent')
+      .update({
+        claimed_at: null,
+        next_attempt_at: new Date(
+          now.getTime() + REMINDER_RETRY_DELAY_MS,
+        ).toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .in('id', reminderIds)
+      .eq('status', 'pending');
+
+    if (error) {
+      this.logger.warn('Could not release failed event reminders for retry');
     }
   }
 

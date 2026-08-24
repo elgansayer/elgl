@@ -14,7 +14,9 @@ interface AuthenticatedRequest {
 @Controller('media/chat')
 @UseGuards(SupabaseAuthGuard)
 export class ChatMediaController {
-  constructor(private readonly chatMediaUploadService: ChatMediaUploadService) {}
+  constructor(
+    private readonly chatMediaUploadService: ChatMediaUploadService,
+  ) {}
 
   @Post('presigned-url')
   @Throttle({ default: { limit: 30, ttl: 60000 } })

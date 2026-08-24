@@ -12,49 +12,67 @@ interface SystemEventConfig {
 const MAX_SYSTEM_EVENT_PARAM_LENGTH = 500;
 const MAX_SYSTEM_EVENT_PARAMS = 12;
 
-const EVENT_CONFIGS: Record<string, SystemEventConfig> = {
-  profileUpdated: {
-    icon: '👤',
-    bgClass: 'bg-secondary/10',
-    borderClass: 'border-secondary/30',
-    textClass: 'text-secondary',
-    requiredParam: 'name',
-  },
-  missedCall: {
-    icon: '📞',
-    bgClass: 'bg-danger/10',
-    borderClass: 'border-danger/30',
-    textClass: 'text-danger',
-    requiredParam: 'name',
-  },
-  groupRenamed: {
-    icon: '✏️',
-    bgClass: 'bg-warning/10',
-    borderClass: 'border-warning/30',
-    textClass: 'text-warning',
-    requiredParam: 'name',
-  },
-  memberAdded: {
-    icon: '👋',
-    bgClass: 'bg-success/10',
-    borderClass: 'border-success/30',
-    textClass: 'text-success',
-    requiredParam: 'count',
-  },
-  memberRemoved: {
-    icon: '🚪',
-    bgClass: 'bg-surface-200',
-    borderClass: 'border-surface-100',
-    textClass: 'text-text-secondary',
-  },
-  announcement: {
-    icon: '📢',
-    bgClass: 'bg-accent/10',
-    borderClass: 'border-accent/30',
-    textClass: 'text-accent',
-    requiredParam: 'message',
-  },
-};
+const EVENT_CONFIGS = new Map<string, SystemEventConfig>([
+  [
+    'profileUpdated',
+    {
+      icon: '👤',
+      bgClass: 'bg-secondary/10',
+      borderClass: 'border-secondary/30',
+      textClass: 'text-secondary',
+      requiredParam: 'name',
+    },
+  ],
+  [
+    'missedCall',
+    {
+      icon: '📞',
+      bgClass: 'bg-danger/10',
+      borderClass: 'border-danger/30',
+      textClass: 'text-danger',
+      requiredParam: 'name',
+    },
+  ],
+  [
+    'groupRenamed',
+    {
+      icon: '✏️',
+      bgClass: 'bg-warning/10',
+      borderClass: 'border-warning/30',
+      textClass: 'text-warning',
+      requiredParam: 'name',
+    },
+  ],
+  [
+    'memberAdded',
+    {
+      icon: '👋',
+      bgClass: 'bg-success/10',
+      borderClass: 'border-success/30',
+      textClass: 'text-success',
+      requiredParam: 'count',
+    },
+  ],
+  [
+    'memberRemoved',
+    {
+      icon: '🚪',
+      bgClass: 'bg-surface-200',
+      borderClass: 'border-surface-100',
+      textClass: 'text-text-secondary',
+    },
+  ],
+  [
+    'announcement',
+    {
+      icon: '📢',
+      bgClass: 'bg-accent/10',
+      borderClass: 'border-accent/30',
+      textClass: 'text-accent',
+      requiredParam: 'message',
+    },
+  ],
+]);
 
 const DEFAULT_CONFIG: SystemEventConfig = {
   icon: '🔔',
@@ -90,7 +108,9 @@ export class ChatSystemBubbleComponent {
   readonly normalizedEventType = computed(() => this.eventType().trim());
 
   readonly displayParams = computed<Record<string, string | number | boolean | null>>(() => {
-    const result: Record<string, string | number | boolean | null> = {};
+    // A null-prototype dictionary ensures untrusted interpolation keys cannot
+    // inherit or shadow Object prototype members such as `constructor`.
+    const result = Object.create(null) as Record<string, string | number | boolean | null>;
 
     for (const [key, value] of Object.entries(this.params()).slice(0, MAX_SYSTEM_EVENT_PARAMS)) {
       if (key === 'type') continue;
@@ -110,7 +130,7 @@ export class ChatSystemBubbleComponent {
   });
 
   readonly hasRequiredParam = computed(() => {
-    const config = EVENT_CONFIGS[this.normalizedEventType()];
+    const config = EVENT_CONFIGS.get(this.normalizedEventType());
     if (!config?.requiredParam) return Boolean(config);
 
     const value = this.displayParams()[config.requiredParam];
@@ -126,6 +146,6 @@ export class ChatSystemBubbleComponent {
   });
 
   readonly config = computed<SystemEventConfig>(
-    () => EVENT_CONFIGS[this.normalizedEventType()] ?? DEFAULT_CONFIG,
+    () => EVENT_CONFIGS.get(this.normalizedEventType()) ?? DEFAULT_CONFIG,
   );
 }

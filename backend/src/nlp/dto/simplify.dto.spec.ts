@@ -32,10 +32,13 @@ describe('SimplifyDto', () => {
     expect(errors.some((error) => error.property === 'text')).toBe(true);
   });
 
-  it.each([null, undefined, 42, {}, []])('rejects non-string input %o', async (text) => {
-    const dto = plainToInstance(SimplifyDto, { text });
-    const errors = await validate(dto);
+  it.each([null, undefined, 42, {}, []])(
+    'rejects non-string input %o',
+    async (text) => {
+      const dto = plainToInstance(SimplifyDto, { text });
+      const errors = await validate(dto);
 
-    expect(errors.some((error) => error.property === 'text')).toBe(true);
-  });
+      expect(errors.some((error) => error.property === 'text')).toBe(true);
+    },
+  );
 });
