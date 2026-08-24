@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, inject, output, signal } from '@angular/core';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import {
   ChatMediaQuality,
   ChatMediaService,
@@ -15,6 +16,7 @@ const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,vid
   selector: 'app-chat-media-picker',
   imports: [
     CommonModule,
+    HlmCheckbox,
     TranslatePipe,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
@@ -78,11 +80,10 @@ const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,video/mp4,video/webm,vid
           <span class="block text-sm font-bold text-text-primary">HD quality</span>
           <span class="block text-xs text-text-secondary">Higher quality, larger upload</span>
         </span>
-        <input
-          type="checkbox"
-          class="h-5 w-5 accent-primary"
+        <hlm-checkbox
+          class="h-5 w-5"
           [checked]="quality() === 'hd'"
-          (change)="onQualityChanged($event)"
+          (change)="toggleQuality()"
           aria-label="Send in HD quality"
         />
       </label>
@@ -154,9 +155,8 @@ export class ChatMediaPickerComponent implements OnDestroy {
     this.error.set(null);
   }
 
-  onQualityChanged(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    this.quality.set(checked ? 'hd' : 'standard');
+  toggleQuality(): void {
+    this.quality.set(this.quality() === 'hd' ? 'standard' : 'hd');
     this.error.set(null);
   }
 

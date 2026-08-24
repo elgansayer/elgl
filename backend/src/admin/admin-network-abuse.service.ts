@@ -72,9 +72,12 @@ export class AdminNetworkAbuseService {
 
   async lookup(ipInput: string): Promise<AdminNetworkReputation> {
     const ip = this.normalizePublicIp(ipInput);
-    const { data, error } = await this.client().rpc('admin_network_reputation', {
-      p_ip: ip,
-    });
+    const { data, error } = await this.client().rpc(
+      'admin_network_reputation',
+      {
+        p_ip: ip,
+      },
+    );
     if (error) throw error;
     return this.mapReputation(data);
   }
@@ -107,15 +110,15 @@ export class AdminNetworkAbuseService {
     const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
     const { data, error } = await this.client()
       .from('admin_network_blocks')
-      .select('id, network, scope, reason_code, expires_at, created_at, revoked_at')
+      .select(
+        'id, network, scope, reason_code, expires_at, created_at, revoked_at',
+      )
       .is('revoked_at', null)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(boundedLimit);
     if (error) throw error;
-    return (data ?? []).map((row) =>
-      this.mapBlock(row as Record<string, unknown>),
-    );
+    return (data ?? []).map((row) => this.mapBlock(row));
   }
 
   async listAllowlist(limit = 50): Promise<AdminNetworkAllowlistEntry[]> {
@@ -128,9 +131,7 @@ export class AdminNetworkAbuseService {
       .order('created_at', { ascending: false })
       .limit(boundedLimit);
     if (error) throw error;
-    return (data ?? []).map((row) =>
-      this.mapAllowlist(row as Record<string, unknown>),
-    );
+    return (data ?? []).map((row) => this.mapAllowlist(row));
   }
 
   async createBlock(
@@ -157,11 +158,13 @@ export class AdminNetworkAbuseService {
         created_by: actorUserId,
         idempotency_key: input.idempotencyKey,
       })
-      .select('id, network, scope, reason_code, expires_at, created_at, revoked_at')
+      .select(
+        'id, network, scope, reason_code, expires_at, created_at, revoked_at',
+      )
       .single();
     if (error) this.throwCidrError(error);
     await this.invalidateDecisionCache();
-    return this.mapBlock(data as Record<string, unknown>);
+    return this.mapBlock(data);
   }
 
   async revokeBlock(
@@ -177,13 +180,13 @@ export class AdminNetworkAbuseService {
       .update({ revoked_at: now, revoked_by: actorUserId })
       .eq('id', blockId)
       .is('revoked_at', null)
-      .select('id, network, scope, reason_code, expires_at, created_at, revoked_at')
+      .select(
+        'id, network, scope, reason_code, expires_at, created_at, revoked_at',
+      )
       .maybeSingle();
     if (error) throw error;
     await this.invalidateDecisionCache();
-    return data
-      ? this.mapBlock(data as Record<string, unknown>)
-      : this.getBlock(blockId);
+    return data ? this.mapBlock(data) : this.getBlock(blockId);
   }
 
   async createAllowlist(
@@ -213,7 +216,7 @@ export class AdminNetworkAbuseService {
       .single();
     if (error) this.throwCidrError(error);
     await this.invalidateDecisionCache();
-    return this.mapAllowlist(data as Record<string, unknown>);
+    return this.mapAllowlist(data);
   }
 
   async revokeAllowlist(
@@ -233,9 +236,7 @@ export class AdminNetworkAbuseService {
       .maybeSingle();
     if (error) throw error;
     await this.invalidateDecisionCache();
-    return data
-      ? this.mapAllowlist(data as Record<string, unknown>)
-      : this.getAllowlist(entryId);
+    return data ? this.mapAllowlist(data) : this.getAllowlist(entryId);
   }
 
   async isRequestBlocked(
@@ -295,7 +296,9 @@ export class AdminNetworkAbuseService {
     const candidate = input.trim().replace(/^::ffff:/i, '');
     const version = isIP(candidate);
     if (version === 0 || this.isUnsafeAddress(candidate, version)) {
-      throw new BadRequestException('A public IPv4 or IPv6 address is required');
+      throw new BadRequestException(
+        'A public IPv4 or IPv6 address is required',
+      );
     }
     return candidate.toLowerCase();
   }
@@ -320,18 +323,20 @@ export class AdminNetworkAbuseService {
   }
 
   private client(): SupabaseClient {
-    return this.supabaseService.getClient() as unknown as SupabaseClient;
+    return this.supabaseService.getClient();
   }
 
   private async getBlock(id: string): Promise<AdminNetworkBlock> {
     const { data, error } = await this.client()
       .from('admin_network_blocks')
-      .select('id, network, scope, reason_code, expires_at, created_at, revoked_at')
+      .select(
+        'id, network, scope, reason_code, expires_at, created_at, revoked_at',
+      )
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;
     if (!data) throw new NotFoundException('Network block not found');
-    return this.mapBlock(data as Record<string, unknown>);
+    return this.mapBlock(data);
   }
 
   private async getAllowlist(id: string): Promise<AdminNetworkAllowlistEntry> {
@@ -342,7 +347,7 @@ export class AdminNetworkAbuseService {
       .maybeSingle();
     if (error) throw error;
     if (!data) throw new NotFoundException('Network allowlist entry not found');
-    return this.mapAllowlist(data as Record<string, unknown>);
+    return this.mapAllowlist(data);
   }
 
   private async findBlockByIdempotency(
@@ -351,12 +356,14 @@ export class AdminNetworkAbuseService {
   ): Promise<AdminNetworkBlock | null> {
     const { data, error } = await this.client()
       .from('admin_network_blocks')
-      .select('id, network, scope, reason_code, expires_at, created_at, revoked_at')
+      .select(
+        'id, network, scope, reason_code, expires_at, created_at, revoked_at',
+      )
       .eq('created_by', actorUserId)
       .eq('idempotency_key', key)
       .maybeSingle();
     if (error) throw error;
-    return data ? this.mapBlock(data as Record<string, unknown>) : null;
+    return data ? this.mapBlock(data) : null;
   }
 
   private async findAllowlistByIdempotency(
@@ -370,9 +377,7 @@ export class AdminNetworkAbuseService {
       .eq('idempotency_key', key)
       .maybeSingle();
     if (error) throw error;
-    return data
-      ? this.mapAllowlist(data as Record<string, unknown>)
-      : null;
+    return data ? this.mapAllowlist(data) : null;
   }
 
   private validateBlockExpiry(value: string): string {
@@ -504,7 +509,9 @@ export class AdminNetworkAbuseService {
 
   private async invalidateDecisionCache(): Promise<void> {
     try {
-      await this.supabaseService.getRedisClient().incr(DECISION_CACHE_EPOCH_KEY);
+      await this.supabaseService
+        .getRedisClient()
+        .incr(DECISION_CACHE_EPOCH_KEY);
     } catch {
       // Decisions expire after 30 seconds, so cache invalidation is best effort.
     }
@@ -513,7 +520,7 @@ export class AdminNetworkAbuseService {
   private throwCidrError(error: unknown): never {
     const message =
       typeof error === 'object' && error && 'message' in error
-        ? String((error as { message: unknown }).message)
+        ? String(error.message)
         : '';
     if (/cidr|network address|inet/i.test(message)) {
       throw new BadRequestException(

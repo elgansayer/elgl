@@ -9,26 +9,26 @@ import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatService } from './chat.service';
 
 describe('ChatMediaMessageService', () => {
-  const maybeSingle = jest.fn();
+  const maybeSingle = vi.fn();
   const query = {
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
     maybeSingle,
   };
-  const from = jest.fn(() => query);
-  const getClient = jest.fn(() => ({ from }));
+  const from = vi.fn(() => query);
+  const getClient = vi.fn(() => ({ from }));
   const supabaseService = { getClient } as unknown as SupabaseService;
-  const publicUrlForKey = jest.fn(
+  const publicUrlForKey = vi.fn(
     (key: string) => `https://cdn.example/${key}`,
   );
   const r2ObjectService = { publicUrlForKey } as unknown as R2ObjectService;
-  const sendMessage = jest.fn();
+  const sendMessage = vi.fn();
   const chatService = { sendMessage } as unknown as ChatService;
 
   let service: ChatMediaMessageService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     maybeSingle.mockReset();
     sendMessage.mockReset();
     publicUrlForKey.mockReset();

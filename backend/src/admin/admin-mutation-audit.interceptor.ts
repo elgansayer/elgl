@@ -26,6 +26,7 @@ const ADMIN_PREFIX = '/admin';
 const SAFE_IDENTIFIER = /^[A-Za-z0-9_-]{1,200}$/;
 const SAFE_CORRELATION_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const ADMIN_REASON_CODES = new Set<string>(ADMIN_ACTION_REASON_CODES);
+const USERS_PATH = /(?:^|\/)users(?:\/|$)/;
 
 // These operations already produce richer, semantic audit events in their
 // controllers. Keying by controller + handler is independent of global prefixes
@@ -152,11 +153,11 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
       });
 
     return next.handle().pipe(
-      mergeMap((value) =>
-        from(record('success', value)).pipe(map(() => value)),
-      ),
       catchError((error: unknown) =>
         from(record('failed')).pipe(mergeMap(() => throwError(() => error))),
+      ),
+      mergeMap((value) =>
+        from(record('success', value)).pipe(map(() => value)),
       ),
     );
   }
@@ -174,7 +175,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     if (request.params?.blockId) return 'block';
     if (request.params?.assignmentId) return 'role-assignment';
     if (request.params?.roleId) return 'admin-role';
-    if (targetId && `${request.baseUrl}${request.path}`.includes('/users/')) {
+    const resourcePath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (targetId && USERS_PATH.test(resourcePath)) {
       return 'user';
     }
     return 'admin-resource';

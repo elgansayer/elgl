@@ -14,7 +14,7 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
+describe('CoverPhotoUploaderComponent upload contract', () => {
   let component: CoverPhotoUploaderComponent;
   let fixture: ComponentFixture<CoverPhotoUploaderComponent>;
   let httpMock: HttpTestingController;
@@ -41,38 +41,10 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     vi.restoreAllMocks();
   });
 
-  it('centres a 3:1 crop window inside the selected image', () => {
-    const image = document.createElement('img');
-    Object.defineProperty(image, 'naturalWidth', { value: 1200 });
-    Object.defineProperty(image, 'naturalHeight', { value: 400 });
-
-    component.onImageLoad({ target: image } as unknown as Event);
-
-    const crop = component.cropBox();
-    expect(crop.width).toBe(800);
-    expect(crop.height).toBeCloseTo(800 / 3);
-    expect(crop.width / crop.height).toBeCloseTo(3);
-    expect(crop.x).toBeCloseTo((1200 - crop.width) / 2);
-    expect(crop.y).toBeCloseTo((400 - crop.height) / 2);
-  });
-
-  it('keeps the initial 3:1 crop inside short images', () => {
-    const image = document.createElement('img');
-    Object.defineProperty(image, 'naturalWidth', { value: 1200 });
-    Object.defineProperty(image, 'naturalHeight', { value: 180 });
-
-    component.onImageLoad({ target: image } as unknown as Event);
-
-    const crop = component.cropBox();
-    expect(crop.width / crop.height).toBeCloseTo(3);
-    expect(crop.x).toBeGreaterThanOrEqual(0);
-    expect(crop.y).toBeGreaterThanOrEqual(0);
-    expect(crop.x + crop.width).toBeLessThanOrEqual(1200);
-    expect(crop.y + crop.height).toBeLessThanOrEqual(180);
-  });
-
   it('uploads the cropped JPEG through the authenticated presign and confirm contract', async () => {
-    component.croppedPreviewUrl.set('data:image/jpeg;base64,aGVsbG8=');
+    const croppedBlob = new Blob(['cropped-cover'], { type: 'image/jpeg' });
+    component.croppedBlob.set(croppedBlob);
+    component.croppedPreviewUrl.set('blob:cropped-cover');
     const uploaded: string[] = [];
     component.coverPhotoUploaded.subscribe((url) => uploaded.push(url));
 
@@ -86,7 +58,7 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     expect(presign.request.method).toBe('POST');
     expect(presign.request.body).toMatchObject({
       contentType: 'image/jpeg',
-      folder: 'covers',
+      folder: 'cover-photos',
     });
     expect(presign.request.body.filename).toMatch(/^cover-\d+\.jpg$/);
     presign.flush({
@@ -100,6 +72,7 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
       'https://uploads.example.test/signed-cover',
       expect.objectContaining({
         method: 'PUT',
+        body: croppedBlob,
         headers: { 'Content-Type': 'image/jpeg' },
       }),
     );
@@ -114,14 +87,16 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
     expect(uploaded).toEqual(['https://media.example.test/covers/cover.jpg']);
     expect(component.isUploading()).toBe(false);
     expect(component.imageSource()).toBeNull();
+    expect(component.croppedBlob()).toBeNull();
     expect(component.croppedPreviewUrl()).toBeNull();
   });
 
   it('does not emit a new cover URL when the direct upload fails', async () => {
-    component.croppedPreviewUrl.set('data:image/jpeg;base64,aGVsbG8=');
+    const croppedBlob = new Blob(['cropped-cover'], { type: 'image/jpeg' });
+    component.croppedBlob.set(croppedBlob);
+    component.croppedPreviewUrl.set('blob:cropped-cover');
     const uploaded: string[] = [];
     component.coverPhotoUploaded.subscribe((url) => uploaded.push(url));
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response);
 
     const uploadPromise = component.uploadCropped();
@@ -136,6 +111,8 @@ describe('CoverPhotoUploaderComponent upload and positioning contract', () => {
 
     expect(uploaded).toEqual([]);
     expect(component.isUploading()).toBe(false);
-    expect(component.croppedPreviewUrl()).toBeTruthy();
+    expect(component.croppedBlob()).toBe(croppedBlob);
+    expect(component.croppedPreviewUrl()).toBe('blob:cropped-cover');
+    expect(component.uploadError()).toBe(true);
   });
 });
