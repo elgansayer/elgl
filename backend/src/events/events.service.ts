@@ -65,12 +65,34 @@ interface ReminderStateClient {
   from(table: 'event_reminders_sent'): ReminderStateTable;
 }
 
+interface ScheduledLanguagePartyEvent {
+  id: string;
+  title: string;
+  host_id: string;
+  language_pair: string;
+  date_time: string;
+}
+
+interface ScheduledLanguagePartyRoom {
+  id: string;
+  room_name: string;
+  event_id: string | null;
+  party_type: string | null;
+}
+
+type ScheduledLanguagePartyResult = 'created' | 'recovered';
+
 const REMINDER_BATCH_SIZE = 200;
 const REMINDER_MAX_BATCHES_PER_TICK = 5;
 const REMINDER_LEASE_SECONDS = 120;
 const REMINDER_SEND_CONCURRENCY = 25;
 const REMINDER_RETRY_DELAY_MS = 60_000;
 const REMINDER_TITLE_MAX_LENGTH = 80;
+
+const SCHEDULED_PARTY_POLL_INTERVAL_MS = 10_000;
+const SCHEDULED_PARTY_CATCHUP_MS = 30 * 60_000;
+const SCHEDULED_PARTY_BATCH_SIZE = 50;
+const SCHEDULED_PARTY_CONCURRENCY = 10;
 
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
@@ -90,9 +112,14 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     void this.checkReminders();
     this.intervalId = setInterval(() => void this.checkReminders(), 60_000);
 
-    // Start background job that checks for events whose start time is happening now
-    // and spins up a LiveKit audio room for them.
-    this.intervalId2 = setInterval(() => void this.checkStartEvents(), 10_000);
+    // Scheduled Language Parties use the same catch-up-on-startup pattern. The
+    // bounded catch-up window prevents a short deployment/provider outage from
+    // permanently missing an event whose exact start second elapsed.
+    void this.checkStartEvents();
+    this.intervalId2 = setInterval(
+      () => void this.checkStartEvents(),
+      SCHEDULED_PARTY_POLL_INTERVAL_MS,
+    );
   }
 
   onModuleDestroy() {
@@ -532,95 +559,244 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     return { success: true };
   }
 
+  /**
+   * Converts due audio-room events into discoverable Language Parties.
+   *
+   * The deterministic room name plus the database uniqueness constraints make
+   * this retry-safe across API replicas. A short catch-up window is deliberate:
+   * deployments and temporary provider outages may delay room creation, but an
+   * old event must not unexpectedly create a room hours or days later.
+   */
   private async checkStartEvents(): Promise<void> {
-    try {
-      const now = Date.now();
-      const tolerance = 5_000; // 5 seconds
-      const supabase = this.supabaseService.getClient();
+    const startedAt = Date.now();
+    const now = new Date();
+    const supabase = this.supabaseService.getClient();
 
+    try {
       const { data: events, error } = await supabase
         .from('events')
-        .select('id, title, host_id, language_pair, category')
+        .select('id, title, host_id, language_pair, date_time')
         .eq('is_cancelled', false)
+        .eq('category', 'audio_room')
         .not('language_pair', 'is', null)
-        .gte('date_time', new Date(now - tolerance).toISOString())
-        .lte('date_time', new Date(now + tolerance).toISOString());
+        .gte(
+          'date_time',
+          new Date(now.getTime() - SCHEDULED_PARTY_CATCHUP_MS).toISOString(),
+        )
+        .lte('date_time', now.toISOString())
+        .order('date_time', { ascending: true })
+        .limit(SCHEDULED_PARTY_BATCH_SIZE);
 
       if (error) {
-        this.logger.error('Failed to fetch events for room creation', error);
+        this.logger.warn('Scheduled Language Party event scan failed');
         return;
       }
 
-      if (!events || events.length === 0) return;
-
-      const typedEvents = (events ?? []) as unknown as Array<{
-        id: string;
-        title: string;
-        host_id: string;
-        language_pair: string;
-        category: string | null;
-      }>;
-
-      const roomNames = typedEvents.map(
-        (event) => `language_party-${event.id}`,
+      const dueEvents = (Array.isArray(events) ? events : []).filter(
+        (event): event is ScheduledLanguagePartyEvent =>
+          this.isValidScheduledLanguagePartyEvent(event),
       );
+      if (dueEvents.length === 0) return;
 
-      const { data: existingRooms, error: roomsCheckErr } = await supabase
+      const roomNames = dueEvents.map((event) => this.roomNameForEvent(event.id));
+      const { data: existingRooms, error: roomsError } = await supabase
         .from('audio_rooms')
-        .select('room_name')
+        .select('id, room_name, event_id, party_type')
         .in('room_name', roomNames);
 
-      if (roomsCheckErr) {
-        this.logger.warn('Could not check existing rooms', roomsCheckErr);
+      if (roomsError) {
+        this.logger.warn('Scheduled Language Party room lookup failed');
         return;
       }
 
-      const existingRoomNames = new Set(
-        existingRooms?.map((r) => r.room_name) ?? [],
-      );
+      const existingByName = new Map<string, ScheduledLanguagePartyRoom>();
+      for (const value of Array.isArray(existingRooms) ? existingRooms : []) {
+        if (this.isValidScheduledLanguagePartyRoom(value)) {
+          existingByName.set(value.room_name, value);
+        }
+      }
 
-      const eventsToCreateRoomsFor = typedEvents.filter(
-        (event) => !existingRoomNames.has(`language_party-${event.id}`),
-      );
+      let createdCount = 0;
+      let recoveredCount = 0;
+      let failedCount = 0;
 
-      await Promise.allSettled(
-        eventsToCreateRoomsFor.map(async (event) => {
-          try {
-            const roomName = `language_party-${event.id}`;
+      for (
+        let offset = 0;
+        offset < dueEvents.length;
+        offset += SCHEDULED_PARTY_CONCURRENCY
+      ) {
+        const chunk = dueEvents.slice(
+          offset,
+          offset + SCHEDULED_PARTY_CONCURRENCY,
+        );
+        const results = await Promise.allSettled(
+          chunk.map((event) =>
+            this.ensureScheduledLanguageParty(event, existingByName),
+          ),
+        );
 
-            // Create the LiveKit audio room via the dedicated service
-            const room = await this.audioRoomsService.createRoom(
-              event.host_id,
-              {
-                title: event.title,
-                target_language:
-                  event.language_pair.split('-')[1] ?? event.language_pair,
-                language_pair: event.language_pair,
-                topic_tag: event.category ?? event.language_pair,
-                is_video_stream: false,
-              },
-              roomName,
-            );
-
-            // Mark the room as a Language Party and link it to the event
-            await supabase
-              .from('audio_rooms')
-              .update({ party_type: 'language_party', event_id: event.id })
-              .eq('id', room.id);
-
-            this.logger.log(
-              `Audio room created for event ${event.id} (${event.title})`,
-            );
-          } catch (err) {
-            this.logger.error(
-              `Failed to create audio room for event ${event.id}`,
-              err,
-            );
+        for (const result of results) {
+          if (result.status === 'rejected') {
+            failedCount += 1;
+          } else if (result.value === 'created') {
+            createdCount += 1;
+          } else {
+            recoveredCount += 1;
           }
-        }),
-      );
-    } catch (err) {
-      this.logger.error('Unexpected error in checkStartEvents', err);
+        }
+      }
+
+      if (createdCount + recoveredCount + failedCount > 0) {
+        this.logger.log(
+          `Scheduled Language Party tick created=${createdCount} recovered=${recoveredCount} failed=${failedCount} duration_ms=${Date.now() - startedAt}`,
+        );
+      }
+    } catch {
+      // Never let one scheduler tick terminate the process. The next tick can
+      // retry while the event remains inside the bounded catch-up window.
+      this.logger.error('Scheduled Language Party tick failed');
     }
+  }
+
+  private isValidScheduledLanguagePartyEvent(
+    value: unknown,
+  ): value is ScheduledLanguagePartyEvent {
+    if (!value || typeof value !== 'object') return false;
+    const event = value as Partial<ScheduledLanguagePartyEvent>;
+    return (
+      typeof event.id === 'string' &&
+      event.id.length > 0 &&
+      typeof event.title === 'string' &&
+      event.title.trim().length > 0 &&
+      typeof event.host_id === 'string' &&
+      event.host_id.length > 0 &&
+      typeof event.language_pair === 'string' &&
+      event.language_pair.trim().length > 0 &&
+      typeof event.date_time === 'string' &&
+      Number.isFinite(Date.parse(event.date_time))
+    );
+  }
+
+  private isValidScheduledLanguagePartyRoom(
+    value: unknown,
+  ): value is ScheduledLanguagePartyRoom {
+    if (!value || typeof value !== 'object') return false;
+    const room = value as Partial<ScheduledLanguagePartyRoom>;
+    return (
+      typeof room.id === 'string' &&
+      room.id.length > 0 &&
+      typeof room.room_name === 'string' &&
+      room.room_name.length > 0 &&
+      (room.event_id === null || typeof room.event_id === 'string') &&
+      (room.party_type === null || typeof room.party_type === 'string')
+    );
+  }
+
+  private roomNameForEvent(eventId: string): string {
+    return `language_party-${eventId}`;
+  }
+
+  private async ensureScheduledLanguageParty(
+    event: ScheduledLanguagePartyEvent,
+    existingByName: Map<string, ScheduledLanguagePartyRoom>,
+  ): Promise<ScheduledLanguagePartyResult> {
+    const roomName = this.roomNameForEvent(event.id);
+    const existing = existingByName.get(roomName);
+
+    if (existing) {
+      await this.reconcileScheduledLanguageParty(existing, event.id);
+      return 'recovered';
+    }
+
+    try {
+      const room = await this.audioRoomsService.createLanguageParty(
+        event.host_id,
+        {
+          title: event.title,
+          language_pair: event.language_pair,
+          topic_tag: event.language_pair,
+          is_video_stream: false,
+        },
+        roomName,
+      );
+
+      await this.linkRoomToEvent(room.id, event.id);
+      existingByName.set(roomName, {
+        id: room.id,
+        room_name: roomName,
+        event_id: event.id,
+        party_type: 'language_party',
+      });
+      return 'created';
+    } catch {
+      // Another API replica may have won the deterministic room-name race, or
+      // creation may have succeeded just before a transient response failure.
+      // Recover only a room with the exact event-derived name.
+      const recovered = await this.findRoomByName(roomName);
+      if (!recovered) {
+        throw new Error('Scheduled Language Party creation failed');
+      }
+
+      await this.reconcileScheduledLanguageParty(recovered, event.id);
+      existingByName.set(roomName, {
+        ...recovered,
+        event_id: event.id,
+        party_type: 'language_party',
+      });
+      return 'recovered';
+    }
+  }
+
+  private async reconcileScheduledLanguageParty(
+    room: ScheduledLanguagePartyRoom,
+    eventId: string,
+  ): Promise<void> {
+    // A deterministic room name linked to a different event is corrupted state.
+    // Never silently transfer it between events.
+    if (room.event_id && room.event_id !== eventId) {
+      throw new Error('Scheduled Language Party room ownership conflict');
+    }
+
+    if (room.event_id === eventId && room.party_type === 'language_party') {
+      return;
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ event_id: eventId, party_type: 'language_party' })
+      .eq('id', room.id);
+
+    if (error) {
+      throw new Error('Scheduled Language Party reconciliation failed');
+    }
+  }
+
+  private async linkRoomToEvent(roomId: string, eventId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('audio_rooms')
+      .update({ event_id: eventId, party_type: 'language_party' })
+      .eq('id', roomId);
+
+    if (error) {
+      throw new Error('Scheduled Language Party link failed');
+    }
+  }
+
+  private async findRoomByName(
+    roomName: string,
+  ): Promise<ScheduledLanguagePartyRoom | null> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('audio_rooms')
+      .select('id, room_name, event_id, party_type')
+      .eq('room_name', roomName)
+      .maybeSingle();
+
+    if (error || !this.isValidScheduledLanguagePartyRoom(data)) {
+      return null;
+    }
+    return data;
   }
 }
