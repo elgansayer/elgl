@@ -75,22 +75,49 @@ export class ChatController {
     const allowed =
       typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
     if (!allowed) {
+      const configuredWindowMs =
+        this.centrifugoService.getRateWindowSec() * 1000;
+      const retryAfterMs =
+        typeof rateLimit === 'boolean' ||
+        !Number.isFinite(rateLimit.retryAfterMs) ||
+        rateLimit.retryAfterMs <= 0
+          ? configuredWindowMs
+          : rateLimit.retryAfterMs;
+      const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
       const exception = new HttpException(
         'Too many WebSocket connection attempts. Please wait before reconnecting.',
         HttpStatus.TOO_MANY_REQUESTS,
       );
-      response.header('Retry-After', '30').status(429).json({
-        statusCode: 429,
+      response
+        .header('Retry-After', retryAfterSeconds.toString())
+        .status(HttpStatus.TOO_MANY_REQUESTS)
+        .json({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: exception.message,
+        });
+      return null;
+    }
+
+    try {
+      const token = await this.chatService.generateConnectionToken(user.id);
+      if (!token || token.trim().length === 0) {
+        throw new Error('Empty Centrifugo connection token');
+      }
+
+      const result = { token };
+      response.json(result);
+      return result;
+    } catch {
+      const exception = new HttpException(
+        'Realtime authentication is temporarily unavailable.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+      response.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
         message: exception.message,
       });
       return null;
     }
-
-    const token =
-      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
-    const result = { token };
-    response.json(result);
-    return result;
   }
 
   @Post('messages')
