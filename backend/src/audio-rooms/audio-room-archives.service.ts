@@ -186,21 +186,22 @@ export class AudioRoomArchivesService {
 
   async listArchives(userId: string): Promise<AudioRoomArchiveListItem[]> {
     const supabase = this.client();
-    const [{ data: participantRows }, { data: hostedRows }] = await Promise.all([
-      supabase
-        .from('audio_room_participants')
-        .select('room_id')
-        .eq('user_id', userId)
-        .order('joined_at', { ascending: false })
-        .limit(100),
-      supabase
-        .from('audio_rooms')
-        .select('id')
-        .eq('host_id', userId)
-        .eq('is_active', false)
-        .order('created_at', { ascending: false })
-        .limit(100),
-    ]);
+    const [{ data: participantRows }, { data: hostedRows }] =
+      await Promise.all([
+        supabase
+          .from('audio_room_participants')
+          .select('room_id')
+          .eq('user_id', userId)
+          .order('joined_at', { ascending: false })
+          .limit(100),
+        supabase
+          .from('audio_rooms')
+          .select('id')
+          .eq('host_id', userId)
+          .eq('is_active', false)
+          .order('created_at', { ascending: false })
+          .limit(100),
+      ]);
 
     const roomIds = Array.from(
       new Set([
@@ -237,16 +238,18 @@ export class AudioRoomArchivesService {
       statuses.set(row.room_id, row.summary_status);
     }
 
-    return ((rooms ?? []) as Array<{
-      id: string;
-      title: string;
-      language_pair?: string | null;
-      topic_tag?: string | null;
-      host_id: string;
-      is_private?: boolean | null;
-      recording_url?: string | null;
-      created_at: string;
-    }>).map((room) => ({
+    return (
+      (rooms ?? []) as Array<{
+        id: string;
+        title: string;
+        language_pair?: string | null;
+        topic_tag?: string | null;
+        host_id: string;
+        is_private?: boolean | null;
+        recording_url?: string | null;
+        created_at: string;
+      }>
+    ).map((room) => ({
       id: room.id,
       title: room.title,
       language_pair: room.language_pair ?? null,
@@ -446,7 +449,11 @@ export class AudioRoomArchivesService {
   private async generateSummary(transcript: string): Promise<ChunkSummary> {
     const bounded = transcript.slice(0, this.maxLlmTranscriptChars);
     const chunks: string[] = [];
-    for (let offset = 0; offset < bounded.length; offset += this.llmChunkChars) {
+    for (
+      let offset = 0;
+      offset < bounded.length;
+      offset += this.llmChunkChars
+    ) {
       chunks.push(bounded.slice(offset, offset + this.llmChunkChars));
     }
 
@@ -605,7 +612,7 @@ export class AudioRoomArchivesService {
       )
       .eq('room_id', roomId)
       .maybeSingle();
-    return data ? (data as SummaryJobRow) : null;
+    return data ? data : null;
   }
 
   private async getRoomRow(roomId: string): Promise<ArchiveRoomRow> {
@@ -617,19 +624,24 @@ export class AudioRoomArchivesService {
       .eq('id', roomId)
       .single();
     if (error || !data) throw new NotFoundException('Audio room not found');
-    return data as ArchiveRoomRow;
+    return data;
   }
 
-  private async upsertParticipation(userId: string, roomId: string): Promise<void> {
-    const { error } = await this.client().from('audio_room_participants').upsert(
-      { room_id: roomId, user_id: userId },
-      { onConflict: 'room_id,user_id' },
-    );
+  private async upsertParticipation(
+    userId: string,
+    roomId: string,
+  ): Promise<void> {
+    const { error } = await this.client()
+      .from('audio_room_participants')
+      .upsert(
+        { room_id: roomId, user_id: userId },
+        { onConflict: 'room_id,user_id' },
+      );
     if (error) throw new Error('Failed to record audio room participation');
   }
 
   private client(): SupabaseClient {
-    return this.supabaseService.getClient() as unknown as SupabaseClient;
+    return this.supabaseService.getClient();
   }
 
   private readBoundedInteger(
