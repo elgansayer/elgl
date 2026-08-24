@@ -33,12 +33,16 @@ const followingMoment = {
 
 describe('Moments Flow (Mocked)', () => {
   beforeEach(() => {
-    // The app shell loads the bidirectional block graph before feature routes render.
-    // Keep that shared safety boundary deterministic so Moments failures remain actionable.
+    // The app shell loads shared safety/economy state before feature routes render.
+    // Keep those boundaries deterministic so Moments failures remain actionable.
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
     cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] });
     cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] });
     cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] });
+    cy.intercept('POST', '**/api/economy/daily-check-in', {
+      statusCode: 200,
+      body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
+    }).as('dailyCheckIn');
 
     cy.intercept('GET', '**/api/moments/feed*', (req) => {
       const filter = new URL(req.url).searchParams.get('filter');
