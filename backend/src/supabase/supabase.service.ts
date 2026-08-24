@@ -2252,10 +2252,20 @@ export class SupabaseService implements OnModuleDestroy {
     const supabaseKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
     );
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
         'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required',
       );
+    }
+
+    if (env === 'production') {
+      if (supabaseKey === 'test-service-role-key') {
+        throw new Error(
+          'SUPABASE_SERVICE_ROLE_KEY must be securely configured in production',
+        );
+      }
     }
     this.client = createClient<Database>(supabaseUrl, supabaseKey);
 
