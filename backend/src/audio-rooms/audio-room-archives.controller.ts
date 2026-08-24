@@ -78,7 +78,8 @@ export class AudioRoomArchivesController {
   @Post(':id/finalize')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
-    summary: 'Archive a hosted room and enqueue transcript/session summary work',
+    summary:
+      'Archive a hosted room and enqueue transcript/session summary work',
   })
   async finalize(
     @CurrentUser() user: AuthUser | null,
