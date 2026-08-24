@@ -47,6 +47,8 @@ function parseDailyCheckInRow(value: unknown): DailyCheckInRpcRow | null {
   const { claimed, coins_rewarded: reward, new_balance: balance } = candidate;
   if (
     typeof claimed !== 'boolean' ||
+    typeof reward !== 'number' ||
+    typeof balance !== 'number' ||
     !Number.isSafeInteger(reward) ||
     !Number.isSafeInteger(balance) ||
     balance < 0
@@ -146,7 +148,9 @@ export class AtomicEconomyService extends EconomyService {
         'daily_checkin',
         (Date.now() - startedAt) / 1000,
       );
-      this.dailyCheckInLogger.warn('Daily check-in reward is temporarily unavailable');
+      this.dailyCheckInLogger.warn(
+        'Daily check-in reward is temporarily unavailable',
+      );
 
       return {
         claimed: false,
