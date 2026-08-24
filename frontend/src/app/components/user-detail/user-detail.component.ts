@@ -86,7 +86,7 @@ export class UserDetailComponent {
 
   get displayBio(): string {
     const p = this.profile();
-    if (!p?.bio_text) return '';
+    if (!p?.bio_text?.trim()) return '';
     if (this.showTranslated() && this.translatedBioText()) {
       return this.translatedBioText();
     }
@@ -98,13 +98,23 @@ export class UserDetailComponent {
     return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
   }
 
+  get translationActionLabel(): string {
+    const action = this.i18n.translate(this.translationLabelKey);
+    const displayName = this.profile()?.display_name?.trim();
+    return displayName ? `${action}: ${displayName}` : action;
+  }
+
+  translationBioId(): string {
+    return `user-detail-bio-${this.userId()}`;
+  }
+
   translationStatusId(): string {
     return `user-detail-bio-translation-status-${this.userId()}`;
   }
 
   async toggleTranslation(): Promise<void> {
     const p = this.profile();
-    if (!p?.bio_text) return;
+    if (!p?.bio_text?.trim()) return;
 
     if (this.isTranslating()) return;
 

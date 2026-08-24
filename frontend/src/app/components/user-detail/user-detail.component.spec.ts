@@ -118,6 +118,46 @@ describe('UserDetailComponent bio translation', () => {
     expect(translateBio).toHaveBeenCalledTimes(1);
   });
 
+  it('links the translation action to a live mixed-direction bio region', async () => {
+    translateBio.mockResolvedValue('مرحبا من ملفي الشخصي');
+
+    const initialButton = fixture.nativeElement.querySelector(
+      `button[aria-controls="${component.translationBioId()}"]`,
+    ) as HTMLButtonElement;
+    const bio = fixture.nativeElement.querySelector(`#${component.translationBioId()}`) as HTMLElement;
+
+    expect(initialButton.getAttribute('aria-label')).toBe('profile.translateBio: Partner user-1');
+    expect(initialButton.getAttribute('aria-pressed')).toBe('false');
+    expect(initialButton.classList.contains('min-h-11')).toBe(true);
+    expect(bio.getAttribute('dir')).toBe('auto');
+    expect(bio.getAttribute('aria-live')).toBe('polite');
+
+    await component.toggleTranslation();
+    fixture.detectChanges();
+
+    const translatedButton = fixture.nativeElement.querySelector(
+      `button[aria-controls="${component.translationBioId()}"]`,
+    ) as HTMLButtonElement;
+    const translatedBio = fixture.nativeElement.querySelector(
+      `#${component.translationBioId()}`,
+    ) as HTMLElement;
+    expect(translatedButton.getAttribute('aria-pressed')).toBe('true');
+    expect(translatedButton.getAttribute('aria-label')).toBe('profile.showOriginal: Partner user-1');
+    expect(translatedBio.getAttribute('aria-atomic')).toBe('true');
+    expect(translatedBio.textContent).toContain('مرحبا من ملفي الشخصي');
+  });
+
+  it('does not offer or request translation for a blank bio', async () => {
+    component.profile.set(makeProfile('user-1', '   '));
+    fixture.detectChanges();
+
+    expect(component.displayBio).toBe('');
+    expect(fixture.nativeElement.querySelector(`button[aria-controls="${component.translationBioId()}"]`)).toBeNull();
+
+    await component.toggleTranslation();
+    expect(translateBio).not.toHaveBeenCalled();
+  });
+
   it('resets cached translation when the UI language changes', async () => {
     translateBio.mockResolvedValue('Translated in English');
     await component.toggleTranslation();

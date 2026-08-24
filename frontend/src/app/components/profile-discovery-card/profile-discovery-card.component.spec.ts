@@ -85,6 +85,43 @@ describe('ProfileDiscoveryCardComponent bio translation', () => {
     expect(translateBio).toHaveBeenCalledTimes(1);
   });
 
+  it('exposes translation state, target and mixed-direction text accessibly', async () => {
+    translateBio.mockResolvedValue('مرحبا من ملفي الشخصي');
+
+    const initialButton = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const bio = fixture.nativeElement.querySelector(`#${component.translationBioId()}`) as HTMLElement;
+
+    expect(initialButton.getAttribute('aria-label')).toBe('profile.translateBio: Partner user-1');
+    expect(initialButton.getAttribute('aria-controls')).toBe(bio.id);
+    expect(initialButton.getAttribute('aria-pressed')).toBe('false');
+    expect(initialButton.classList.contains('min-h-11')).toBe(true);
+    expect(bio.getAttribute('dir')).toBe('auto');
+    expect(bio.getAttribute('aria-live')).toBe('polite');
+
+    await component.toggleTranslation(new Event('click'));
+    fixture.detectChanges();
+
+    const translatedButton = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const translatedBio = fixture.nativeElement.querySelector(
+      `#${component.translationBioId()}`,
+    ) as HTMLElement;
+    expect(translatedButton.getAttribute('aria-pressed')).toBe('true');
+    expect(translatedButton.getAttribute('aria-label')).toBe('profile.showOriginal: Partner user-1');
+    expect(translatedBio.getAttribute('aria-atomic')).toBe('true');
+    expect(translatedBio.textContent).toContain('مرحبا من ملفي الشخصي');
+  });
+
+  it('does not offer or request translation for a blank bio', async () => {
+    fixture.componentRef.setInput('profile', makeProfile('user-1', '   '));
+    fixture.detectChanges();
+
+    expect(component.displayBio()).toBeNull();
+    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+
+    await component.toggleTranslation(new Event('click'));
+    expect(translateBio).not.toHaveBeenCalled();
+  });
+
   it('resets cached translation when the card is reused for another profile', async () => {
     translateBio.mockResolvedValue('Translated user one');
     await component.toggleTranslation(new Event('click'));
