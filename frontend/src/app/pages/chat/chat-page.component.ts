@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService, Scenario } from './ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
+import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
 
 interface AiChatMessage {
   id: string;
@@ -20,7 +21,7 @@ interface AiChatMessage {
 
 @Component({
   selector: 'app-chat-page',
-  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective],
+  imports: [HlmInput, HlmButton, FormsModule, DatePipe, TranslatePipe, A11yClickableDirective, VisualDiffComponent],
   template: `
     <div class="flex h-full">
       <!-- Room List -->
@@ -243,19 +244,12 @@ interface AiChatMessage {
                           </button>
                         </div>
                       } @else if (msg.message_type === 'correction' && msg.correction_payload) {
-                        <div class="space-y-1">
-                          <p class="text-xs line-through opacity-70">
-                            {{ msg.correction_payload.original }}
-                          </p>
-                          <p class="text-success font-medium">
-                            {{ msg.correction_payload.corrected }}
-                          </p>
-                          @if (msg.correction_payload.explanation) {
-                            <p class="text-xs text-text-muted mt-1 italic">
-                              {{ msg.correction_payload.explanation }}
-                            </p>
-                          }
-                        </div>
+                        <app-visual-diff
+                          [original]="msg.correction_payload.original"
+                          [corrected]="msg.correction_payload.corrected"
+                          [explanation]="msg.correction_payload.explanation"
+                          [showActions]="true"
+                        ></app-visual-diff>
                       } @else if (
                         msg.message_type === 'correction_request' && msg.correction_request_payload
                       ) {

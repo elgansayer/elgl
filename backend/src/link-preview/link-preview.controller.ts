@@ -1,4 +1,11 @@
-import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -6,15 +13,18 @@ import {
   ApiOkResponse,
   ApiBadRequestResponse,
 } from '@nestjs/swagger';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkPreviewService } from './link-preview.service';
 import { LinkPreview } from './interfaces/link-preview.interface';
 
 @ApiTags('Link Preview')
 @Controller('link-preview')
+@UseGuards(SupabaseAuthGuard)
 export class LinkPreviewController {
   constructor(private readonly linkPreviewService: LinkPreviewService) {}
 
   @Get()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: 'Fetch an OpenGraph link preview',
     description:
