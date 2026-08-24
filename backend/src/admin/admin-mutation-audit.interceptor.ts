@@ -174,7 +174,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     if (request.params?.blockId) return 'block';
     if (request.params?.assignmentId) return 'role-assignment';
     if (request.params?.roleId) return 'admin-role';
-    if (targetId && `${request.baseUrl}${request.path}`.includes('/users/')) {
+    const requestPath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (targetId && /(?:^|\/)users(?:\/|$)/.test(requestPath)) {
       return 'user';
     }
     return 'admin-resource';

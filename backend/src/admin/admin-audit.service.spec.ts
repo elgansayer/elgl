@@ -3,6 +3,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AdminAuditService } from './admin-audit.service';
 
 describe('AdminAuditService', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('persists an allow-listed, scrubbed audit event', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn().mockReturnValue({ insert });
