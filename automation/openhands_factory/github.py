@@ -10,14 +10,15 @@ import time
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.failure_attribution import failed_check_names
 from openhands_factory.models import Task
 from openhands_factory.repository_guard import ProcessResult, run_process
 
-REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
+REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required"})
+_LEGACY_REVIEW_CHECK = "factory/independent-review"
 _PENDING_CHECK_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING", "EXPECTED"})
 _ALLOWED_TERMINAL_CONCLUSIONS = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
 _GITHUB_ENVIRONMENT_ALLOWLIST = {
@@ -679,39 +680,56 @@ class GitHubClient:
         self.add_issue_labels(pull_request, ("factory-review",))
 
     def publish_review_status(self, head_sha: str, *, approved: bool, detail: str) -> None:
-        self._publish_review_status(
+        self._publish_review_comment(
             head_sha,
-            state="success" if approved else "failure",
+            state="approved" if approved else "rejected",
             detail=detail,
         )
 
     def publish_review_pending(self, head_sha: str, *, detail: str) -> None:
         """Invalidate an earlier approval while the same head is being reconsidered."""
 
-        self._publish_review_status(head_sha, state="pending", detail=detail)
+        self._publish_review_comment(head_sha, state="pending", detail=detail)
 
-    def _publish_review_status(
-        self,
-        head_sha: str,
-        *,
-        state: Literal["failure", "pending", "success"],
-        detail: str,
-    ) -> None:
-        self._run(
+    def _pull_request_for_head_sha(self, head_sha: str) -> int:
+        output = self._run(
             (
                 "gh",
-                "api",
-                "--method",
-                "POST",
-                f"repos/{self.repository}/statuses/{head_sha}",
-                "-f",
-                f"state={state}",
-                "-f",
-                "context=factory/independent-review",
-                "-f",
-                f"description={detail[:140]}",
+                "pr",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--limit",
+                "1000",
+                "--json",
+                "number,headRefOid",
             )
         )
+        matches = [
+            int(item["number"])
+            for item in json.loads(output)
+            if isinstance(item, dict)
+            and item.get("headRefOid") == head_sha
+            and isinstance(item.get("number"), int)
+        ]
+        if len(matches) != 1:
+            raise FactoryError(
+                "Could not bind independent review comment to exactly one open pull request"
+            )
+        return matches[0]
+
+    def _publish_review_comment(self, head_sha: str, *, state: str, detail: str) -> None:
+        pull_request = self._pull_request_for_head_sha(head_sha)
+        marker = f"<!-- factory/independent-review state={state} head={head_sha} -->"
+        body = (
+            f"{marker}\n"
+            f"**factory/independent-review:** {state}\n\n"
+            f"{detail[:2_000]}\n\n"
+            f"Reviewed head: `{head_sha}`"
+        )
+        self.add_comment(pull_request, body)
 
     def close_issue(self, issue: int) -> None:
         self._run(
@@ -742,7 +760,11 @@ class GitHubClient:
             )
         )
         item = json.loads(output)
-        check_rollup = item.get("statusCheckRollup", [])
+        check_rollup = [
+            check
+            for check in item.get("statusCheckRollup", [])
+            if str(check.get("name") or check.get("context") or "") != _LEGACY_REVIEW_CHECK
+        ]
         review_decision = str(item.get("reviewDecision") or "")
         human_review_blocked = review_decision.upper() == "CHANGES_REQUESTED"
         conclusions: list[str] = []

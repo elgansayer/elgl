@@ -213,11 +213,11 @@ def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
     payload = [{"number": 30}, {"number": 31}]
     runner = Runner(
         [
-            ProcessResult(0, json.dumps(payload), ""),  # list quarantined
-            ProcessResult(0, "", ""),  # remove labels from #30
-            ProcessResult(0, "", ""),  # comment on #30
-            ProcessResult(0, "", ""),  # remove labels from #31
-            ProcessResult(0, "", ""),  # comment on #31
+            ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
         ]
     )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
@@ -393,9 +393,6 @@ def test_collect_open_pull_requests_excludes_drafts_own_and_explicitly_skipped(
     assert [task.identifier for task in tasks] == ["40", "43", "45"]
     assert tasks[0].source == "github-pull-request"
     assert tasks[0].pr_branch == "bolt/optimize-quests"
-    # Above ordinary issue work (10) so a review-only task doesn't sit behind
-    # a long backlog of fresh issue implementations at equal priority, but
-    # below guardian-alert issues (0), which stay most urgent.
     assert tasks[0].priority == 5
     assert tasks[1].priority == 1
     assert tasks[2].pr_branch == "factory/architect-2026-w34-cycle"
@@ -716,7 +713,7 @@ def test_pull_request_status_treats_missing_canonical_gate_as_pending(tmp_path: 
     assert status.failed_checks == frozenset()
 
 
-def test_pull_request_status_requires_independent_review_success(tmp_path: Path) -> None:
+def test_pull_request_status_ignores_legacy_independent_review_status(tmp_path: Path) -> None:
     payload = {
         "number": 42,
         "state": "OPEN",
@@ -734,9 +731,9 @@ def test_pull_request_status_requires_independent_review_success(tmp_path: Path)
 
     status = client.pull_request_status(42)
 
-    assert not status.checks_passed
-    assert status.checks_pending
-    assert status.failed_checks == frozenset({"factory/independent-review"})
+    assert status.checks_passed
+    assert not status.checks_pending
+    assert status.failed_checks == frozenset()
 
 
 @pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
@@ -787,7 +784,7 @@ def test_pull_request_status_exposes_terminal_failed_check_names(tmp_path: Path)
 
     assert not status.checks_passed
     assert status.checks_pending
-    assert status.failed_checks == frozenset({"backend / unit", "factory/independent-review"})
+    assert status.failed_checks == frozenset({"backend / unit"})
 
 
 def test_pull_request_status_does_not_mark_terminal_required_failure_as_pending(
@@ -840,28 +837,51 @@ def test_pull_request_status_never_merges_over_requested_human_changes(
     assert status.review_decision == "CHANGES_REQUESTED"
 
 
-def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+def test_review_comment_is_anchored_to_head_sha(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"number": 42, "headRefOid": "abc123"}]), ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     client.publish_review_status("abc123", approved=True, detail="Review passed")
 
-    call = runner.calls[0]
-    assert "repos/owner/repo/statuses/abc123" in call
-    assert "context=factory/independent-review" in call
-    assert "state=success" in call
+    assert runner.calls[0][:3] == ("gh", "pr", "list")
+    comment_call = runner.calls[1]
+    assert comment_call[:4] == ("gh", "issue", "comment", "42")
+    body = comment_call[comment_call.index("--body") + 1]
+    assert body.splitlines()[0] == "<!-- factory/independent-review state=approved head=abc123 -->"
+    assert "Review passed" in body
+    assert "Reviewed head: `abc123`" in body
 
 
-def test_pending_review_status_invalidates_same_head_approval(tmp_path: Path) -> None:
-    runner = Runner([ProcessResult(0, "", "")])
+def test_pending_review_comment_invalidates_same_head_approval(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps([{"number": 42, "headRefOid": "abc123"}]), ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
 
     client.publish_review_pending("abc123", detail="Review in progress")
 
-    call = runner.calls[0]
-    assert "repos/owner/repo/statuses/abc123" in call
-    assert "context=factory/independent-review" in call
-    assert "state=pending" in call
+    comment_call = runner.calls[1]
+    assert comment_call[:4] == ("gh", "issue", "comment", "42")
+    body = comment_call[comment_call.index("--body") + 1]
+    assert body.splitlines()[0] == "<!-- factory/independent-review state=pending head=abc123 -->"
+
+
+def test_review_comment_fails_closed_when_head_is_not_unique(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "[]", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    with pytest.raises(FactoryError, match="exactly one open pull request"):
+        client.publish_review_status("abc123", approved=True, detail="Review passed")
+
+    assert len(runner.calls) == 1
 
 
 def test_transient_github_failure_is_retried(
