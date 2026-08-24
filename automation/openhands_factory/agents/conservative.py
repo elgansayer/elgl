@@ -180,7 +180,7 @@ class ConservativeAgentRouter(AgentRouter):
             now = datetime.now(UTC)
             route_gate = self._agent_route_admission
             route_slots = route_gate.available_slots(now) if route_gate is not None else None
-            if route_slots == 0:
+            if route_gate is not None and route_slots == 0:
                 raise ProviderCapacityUnavailable(
                     "Global conservative agent-route budget is exhausted",
                     retry_after_seconds=_gate_retry_seconds(route_gate, now),
