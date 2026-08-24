@@ -75,14 +75,12 @@ export class ChatController {
     const allowed =
       typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
     if (!allowed) {
-      const configuredWindowMs =
-        this.centrifugoService.getRateWindowSec() * 1000;
       const retryAfterMs =
-        typeof rateLimit === 'boolean' ||
-        !Number.isFinite(rateLimit.retryAfterMs) ||
-        rateLimit.retryAfterMs <= 0
-          ? configuredWindowMs
-          : rateLimit.retryAfterMs;
+        typeof rateLimit !== 'boolean' &&
+        Number.isFinite(rateLimit.retryAfterMs) &&
+        rateLimit.retryAfterMs > 0
+          ? rateLimit.retryAfterMs
+          : this.centrifugoService.getRateWindowSec() * 1000;
       const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
       const exception = new HttpException(
         'Too many WebSocket connection attempts. Please wait before reconnecting.',
