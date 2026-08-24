@@ -1,6 +1,6 @@
-import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
 @Pipe({ name: 't' })
@@ -16,6 +16,7 @@ describe('ForcedUpdateModalComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+    document.body.style.overflow = '';
 
     await TestBed.configureTestingModule({
       imports: [ForcedUpdateModalComponent],
@@ -31,99 +32,65 @@ describe('ForcedUpdateModalComponent', () => {
   });
 
   afterEach(() => {
+    if (!fixture.componentRef.hostView.destroyed) fixture.destroy();
+    document.body.style.overflow = '';
+    vi.restoreAllMocks();
     TestBed.resetTestingModule();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('uses a real HTTPS update destination by default', () => {
+    expect(component.storeUrl()).toBe('https://github.com/elgansayer/elgl/releases/latest');
+    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
+    expect(anchor?.getAttribute('href')).toBe('https://github.com/elgansayer/elgl/releases/latest');
   });
 
-  it('should have a default storeUrl', () => {
-    expect(component.storeUrl()).toBe('https://yourapp.com/update');
-  });
-
-  it('should render the update link', () => {
+  it('renders a non-dismissible accessible alert dialog', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const anchor = compiled.querySelector('a');
-    expect(anchor).toBeTruthy();
-    expect(anchor?.getAttribute('target')).toBe('_blank');
-  });
-
-  it('should render link with default storeUrl', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const anchor = compiled.querySelector('a');
-    expect(anchor?.getAttribute('href')).toBe('https://yourapp.com/update');
-  });
-
-  it('should render title text', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
+    const dialog = compiled.querySelector('[role="alertdialog"]');
+    expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(dialog?.getAttribute('aria-labelledby')).toBe('forced-update-title');
+    expect(dialog?.getAttribute('aria-describedby')).toBe('forced-update-message');
     expect(compiled.textContent).toContain('forcedUpdateModal.title');
-  });
-
-  it('should render message text', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('forcedUpdateModal.message');
   });
 
-  it('should render update button text', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('forcedUpdateModal.updateButton');
+  it('renders the update link with safe new-tab isolation', () => {
+    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
+    expect(anchor?.getAttribute('target')).toBe('_blank');
+    expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(anchor?.textContent).toContain('forcedUpdateModal.updateButton');
   });
 
-  it('should block click events', () => {
-    const event = new Event('click');
-    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.onDocumentClick(event);
-    expect(stopPropagationSpy).toHaveBeenCalled();
-    expect(preventDefaultSpy).toHaveBeenCalled();
-  });
-
-  it('should block scroll events', () => {
-    const event = new Event('scroll');
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.preventScroll(event);
-    expect(preventDefaultSpy).toHaveBeenCalled();
-  });
-
-  it('should block events inside the modal wrapper', () => {
-    const event = new Event('touchmove');
-    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.blockEvent(event);
-    expect(stopPropagationSpy).toHaveBeenCalled();
-    expect(preventDefaultSpy).toHaveBeenCalled();
-  });
-
-  it('should lock body scroll on init', () => {
-    expect(document.body.style.overflow).toBe('hidden');
-  });
-
-  it('should restore body scroll on destroy', () => {
+  it('locks body scrolling while mounted and restores the previous value', () => {
     fixture.destroy();
-    expect(document.body.style.overflow).toBe('');
+    document.body.style.overflow = 'clip';
+
+    fixture = TestBed.createComponent(ForcedUpdateModalComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    fixture.destroy();
+    expect(document.body.style.overflow).toBe('clip');
   });
 
-  it('should block Escape key', () => {
-    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+  it('prevents Escape from dismissing the gate', () => {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
     const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.onKeydown(event);
+
+    component.blockEscape(event);
+
     expect(stopPropagationSpy).toHaveBeenCalled();
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
 
-  it('should block Esc key alias', () => {
-    const event = new KeyboardEvent('keydown', { key: 'Esc' });
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.onKeydown(event);
-    expect(preventDefaultSpy).toHaveBeenCalled();
-  });
+  it('does not cancel keyboard activation of the update link', () => {
+    const anchor = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
 
-  it('should block other keyboard keys', () => {
-    const event = new KeyboardEvent('keydown', { key: 'Tab' });
-    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-    component.onKeydown(event);
-    expect(preventDefaultSpy).toHaveBeenCalled();
+    anchor.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
   });
 });
