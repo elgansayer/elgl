@@ -1,5 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ForcedUpdateModalComponent } from './forced-update-modal.component';
 
@@ -32,7 +32,7 @@ describe('ForcedUpdateModalComponent', () => {
   });
 
   afterEach(() => {
-    if (!fixture.destroyed) fixture.destroy();
+    if (!fixture.componentRef.hostView.destroyed) fixture.destroy();
     document.body.style.overflow = '';
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
