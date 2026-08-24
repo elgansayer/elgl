@@ -24,9 +24,9 @@ describe('SearchQueryDto voice_room_active', () => {
     async (input) => {
       const errors = await validate(transform(input));
 
-      expect(errors.some((error) => error.property === 'voice_room_active')).toBe(
-        true,
-      );
+      expect(
+        errors.some((error) => error.property === 'voice_room_active'),
+      ).toBe(true);
     },
   );
 
