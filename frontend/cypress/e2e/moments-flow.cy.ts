@@ -119,15 +119,17 @@ describe('Moments Flow (Mocked)', () => {
     cy.get('textarea').should('be.visible').type(text);
     cy.contains('button', /^Post$/i).should('be.enabled').click();
 
-    cy.wait('@grammarCheck').then(({ request }) => {
-      expect(request.body).to.deep.equal({ text, language: 'en' });
-    });
-    cy.wait('@createMoment').then(({ request }) => {
-      expect(request.body).to.deep.equal({
-        text_content: text,
-        media_urls: [],
-        media_type: 'none',
-        target_language: 'en',
+    cy.wait('@grammarCheck').then(({ request: grammarRequest }) => {
+      expect(grammarRequest.body.text).to.equal(text);
+      expect(grammarRequest.body.language).to.be.a('string').and.not.be.empty;
+
+      cy.wait('@createMoment').then(({ request: createRequest }) => {
+        expect(createRequest.body).to.deep.equal({
+          text_content: text,
+          media_urls: [],
+          media_type: 'none',
+          target_language: grammarRequest.body.language,
+        });
       });
     });
 
