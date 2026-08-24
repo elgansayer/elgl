@@ -191,7 +191,10 @@ describe('EventsService scheduled Language Parties (#1331)', () => {
       event_id: null,
       party_type: null,
     };
-    const fake = buildClient({ events: [event], existingRooms: [existingRoom] });
+    const fake = buildClient({
+      events: [event],
+      existingRooms: [existingRoom],
+    });
     const createLanguageParty = vi.fn();
     const service = makeService(fake.client, createLanguageParty);
 
