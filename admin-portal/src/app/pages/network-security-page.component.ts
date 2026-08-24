@@ -16,10 +16,11 @@ import {
   NetworkImpactPreview,
   NetworkReputation,
 } from '../admin-network-security.service';
+import { NetworkProviderSecurityComponent } from './network-provider-security.component';
 
 @Component({
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, NetworkProviderSecurityComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel" aria-labelledby="network-security-title">
@@ -176,6 +177,8 @@ import {
           </ul>
         }
       </section>
+
+      <app-network-provider-security />
     </section>
   `,
   styles: [`
