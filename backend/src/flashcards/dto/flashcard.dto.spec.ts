@@ -123,9 +123,9 @@ describe('CreateFlashcardDto', () => {
     });
 
     const errors = await validate(dto);
-    expect(
-      errors.some((error) => error.property === 'pronunciation_url'),
-    ).toBe(true);
+    expect(errors.some((error) => error.property === 'pronunciation_url')).toBe(
+      true,
+    );
   });
 
   it('should enforce bounded user-controlled text fields', async () => {
