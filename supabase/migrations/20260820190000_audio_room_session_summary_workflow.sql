@@ -95,7 +95,6 @@ CREATE POLICY "Room participants can view transcripts"
           room.host_id = auth.uid()
           OR room.co_host_id = auth.uid()
           OR auth.uid() = ANY(COALESCE(room.speakers, ARRAY[]::UUID[]))
-          OR auth.uid() = ANY(COALESCE(room.invited_user_ids, ARRAY[]::UUID[]))
           OR EXISTS (
             SELECT 1
             FROM public.audio_room_participants participant
