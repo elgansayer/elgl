@@ -121,16 +121,25 @@
         <h3 class="text-text-secondary text-xs font-bold uppercase mb-3">
           {{ 'profile.about' | t }}
         </h3>
-        <p class="text-sm whitespace-pre-wrap leading-relaxed">
+        <p
+          [id]="translationBioId()"
+          class="text-sm whitespace-pre-wrap leading-relaxed"
+          dir="auto"
+          aria-live="polite"
+          [attr.aria-atomic]="showTranslated() ? 'true' : null"
+        >
           {{ displayBio || ('discovery.partnerBioFallback' | t) }}
         </p>
-        @if (profile()?.bio_text) {
+        @if (displayBio) {
           <button
             hlmBtn
             type="button"
-            class="mt-2 text-xs text-accent-400 hover:text-accent-300 transition-colors"
+            class="mt-2 -ms-3 min-h-11 px-3 text-xs text-accent-400 hover:text-accent-300 transition-colors"
             [disabled]="isTranslating()"
             [attr.aria-busy]="isTranslating() ? 'true' : null"
+            [attr.aria-pressed]="showTranslated()"
+            [attr.aria-controls]="translationBioId()"
+            [attr.aria-label]="translationActionLabel"
             [attr.aria-describedby]="translationErrorKey() ? translationStatusId() : null"
             (click)="toggleTranslation()"
           >
