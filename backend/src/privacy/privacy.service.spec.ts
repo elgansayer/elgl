@@ -85,7 +85,8 @@ describe('PrivacyService', () => {
               : null,
         error: queryErrors.get(table) ?? null,
       })),
-      then: (resolve, reject) => Promise.resolve(resolveResult()).then(resolve, reject),
+      then: (resolve, reject) =>
+        Promise.resolve(resolveResult()).then(resolve, reject),
     };
 
     return query;
