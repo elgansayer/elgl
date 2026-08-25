@@ -155,7 +155,12 @@ describe('User Profiles OpenAPI architecture contract', () => {
       }),
     );
     expect(offset?.['schema']).toEqual(
-      expect.objectContaining({ type: 'integer', minimum: 0, default: 0 }),
+      expect.objectContaining({
+        type: 'integer',
+        minimum: 0,
+        maximum: 10_000,
+        default: 0,
+      }),
     );
 
     const searchParameters = contract.paths['/users/search']?.['get']
