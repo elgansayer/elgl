@@ -25,11 +25,18 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      throw new Error('Invalid password reset token');
+    }
+
     const frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
       'http://localhost:4200',
     );
     const resetUrl = new URL('/reset-password', frontendUrl);
+    if (resetUrl.protocol !== 'http:' && resetUrl.protocol !== 'https:') {
+      throw new Error('Invalid password reset frontend URL');
+    }
     resetUrl.searchParams.set('token', token);
     const resetHref = resetUrl.toString();
     const subject = 'Reset your HelloTalk password';
