@@ -1,5 +1,16 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { firstValueFrom } from 'rxjs';
 
@@ -13,7 +24,7 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
   selector: 'app-cover-photo-uploader',
   imports: [HlmButton, TranslatePipe, CoverPhotoCropperComponent],
   template: `
-    <div class="relative mx-auto w-full max-w-2xl">
+    <div class="relative mx-auto w-full min-w-0 max-w-2xl">
       <input
         #fileInput
         type="file"
@@ -37,14 +48,15 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
           }
 
           <button
+            #fileTrigger
             hlmBtn
             type="button"
             variant="ghost"
             size="touch"
-            class="absolute inset-0 h-full w-full rounded-card bg-surface-500/90 text-text-primary opacity-100 transition-opacity duration-base ease-app focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+            class="absolute inset-0 h-full w-full max-w-full rounded-card bg-surface-500/90 text-text-primary opacity-100 transition-opacity duration-base ease-app whitespace-normal break-words text-center focus-visible:opacity-100 motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             (click)="fileInput.click()"
           >
-            <span class="text-center">
+            <span class="min-w-0 text-center">
               <svg
                 aria-hidden="true"
                 focusable="false"
@@ -68,6 +80,10 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             </span>
           </button>
         </div>
+
+        @if (uploadError()) {
+          <p role="alert" class="mt-2 break-words text-sm text-danger">{{ 'common.error' | t }}</p>
+        }
       } @else {
         <div
           class="overflow-hidden rounded-card border border-surface-100 bg-surface-200 shadow-card"
@@ -79,26 +95,28 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
           />
         </div>
 
-        <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div class="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
+            #cropButton
             hlmBtn
             type="button"
             variant="secondary"
             size="touch"
             (click)="startCropping()"
             [disabled]="isUploading()"
-            class="w-full sm:w-auto"
+            class="w-full max-w-full whitespace-normal break-words text-center sm:w-auto"
           >
             {{ 'common.crop' | t }}
           </button>
           <button
+            #uploadButton
             hlmBtn
             type="button"
             size="touch"
             (click)="uploadCropped()"
             [disabled]="isUploading() || !croppedBlob()"
             [attr.aria-busy]="isUploading() ? 'true' : null"
-            class="w-full sm:w-auto"
+            class="w-full max-w-full whitespace-normal break-words text-center sm:w-auto"
           >
             {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
           </button>
@@ -109,7 +127,7 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             size="touch"
             (click)="reset()"
             [disabled]="isUploading()"
-            class="w-full sm:w-auto"
+            class="w-full max-w-full whitespace-normal break-words text-center sm:w-auto"
           >
             {{ 'common.cancel' | t }}
           </button>
@@ -120,7 +138,7 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
           }
           @if (uploadError()) {
-            <p role="alert" class="text-danger">{{ 'common.error' | t }}</p>
+            <p role="alert" class="break-words text-danger">{{ 'common.error' | t }}</p>
           }
         </div>
       }
@@ -135,8 +153,14 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
     </div>
   `,
 })
-export class CoverPhotoUploaderComponent implements OnDestroy {
+export class CoverPhotoUploaderComponent {
   private readonly http = inject(HttpClient);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+  private readonly fileTrigger = viewChild<ElementRef<HTMLButtonElement>>('fileTrigger');
+  private readonly cropButton = viewChild<ElementRef<HTMLButtonElement>>('cropButton');
+  private readonly uploadButton = viewChild<ElementRef<HTMLButtonElement>>('uploadButton');
 
   readonly currentCoverUrl = input<string>('');
   readonly coverPhotoUploaded = output<string>();
@@ -151,12 +175,21 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
 
   private previewObjectUrl: string | null = null;
 
+  constructor() {
+    this.destroyRef.onDestroy(() => this.clearCroppedPreview());
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target;
     if (!(input instanceof HTMLInputElement) || !input.files?.length) return;
 
     const file = input.files[0];
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) return;
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      this.uploadError.set(true);
+      this.clearFileInput();
+      this.focusAfterRender(this.fileTrigger);
+      return;
+    }
 
     this.selectedFile.set(file);
     this.isCropping.set(false);
@@ -168,12 +201,15 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
       const result = loadEvent.target?.result;
       if (typeof result === 'string') {
         this.imageSource.set(result);
+        this.focusAfterRender(this.cropButton);
       }
     };
     reader.onerror = () => {
       this.selectedFile.set(null);
       this.imageSource.set(null);
       this.uploadError.set(true);
+      this.clearFileInput();
+      this.focusAfterRender(this.fileTrigger);
     };
     reader.readAsDataURL(file);
   }
@@ -207,6 +243,7 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
 
     this.isUploading.set(true);
     this.uploadError.set(false);
+    let failed = false;
 
     try {
       const contentType = ALLOWED_IMAGE_TYPES.has(blob.type) ? blob.type : 'image/webp';
@@ -251,9 +288,13 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
       this.coverPhotoUploaded.emit(confirmResponse.coverUrl);
       this.reset();
     } catch {
+      failed = true;
       this.uploadError.set(true);
     } finally {
       this.isUploading.set(false);
+      if (failed) {
+        this.focusAfterRender(this.uploadButton);
+      }
     }
   }
 
@@ -264,10 +305,8 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
     this.isUploading.set(false);
     this.uploadError.set(false);
     this.clearCroppedPreview();
-  }
-
-  ngOnDestroy(): void {
-    this.clearCroppedPreview();
+    this.clearFileInput();
+    this.focusAfterRender(this.fileTrigger);
   }
 
   private clearCroppedPreview(): void {
@@ -277,6 +316,22 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
     }
     this.croppedBlob.set(null);
     this.croppedPreviewUrl.set(null);
+  }
+
+  private clearFileInput(): void {
+    const input = this.fileInput()?.nativeElement;
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  private focusAfterRender(target: () => ElementRef<HTMLButtonElement> | undefined): void {
+    afterNextRender(
+      () => {
+        target()?.nativeElement.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
   }
 
   private extensionFor(contentType: string): string {
