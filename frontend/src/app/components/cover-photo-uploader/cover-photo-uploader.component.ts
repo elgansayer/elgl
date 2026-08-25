@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import {
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
-  OnDestroy,
   afterNextRender,
   inject,
   input,
@@ -153,9 +153,10 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
     </div>
   `,
 })
-export class CoverPhotoUploaderComponent implements OnDestroy {
+export class CoverPhotoUploaderComponent {
   private readonly http = inject(HttpClient);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
   private readonly fileTrigger = viewChild<ElementRef<HTMLButtonElement>>('fileTrigger');
   private readonly cropButton = viewChild<ElementRef<HTMLButtonElement>>('cropButton');
@@ -173,6 +174,10 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
   readonly uploadError = signal(false);
 
   private previewObjectUrl: string | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.clearCroppedPreview());
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target;
@@ -302,10 +307,6 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
     this.clearCroppedPreview();
     this.clearFileInput();
     this.focusAfterRender(this.fileTrigger);
-  }
-
-  ngOnDestroy(): void {
-    this.clearCroppedPreview();
   }
 
   private clearCroppedPreview(): void {
