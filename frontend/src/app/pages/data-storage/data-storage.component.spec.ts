@@ -18,7 +18,6 @@ describe('DataStorageComponent', () => {
   beforeEach(async () => {
     dataStorageServiceMock = {
       cellularAutoDownload: signal(true),
-      clearLocalCache: vi.fn(),
       toggleCellularAutoDownload: vi.fn(),
       estimateCacheSize: vi.fn().mockResolvedValue(2048),
     };
@@ -91,14 +90,13 @@ describe('DataStorageComponent', () => {
     expect(component.formattedCacheSize()).toBe('');
   });
 
-  it('should compute cache size on init', async () => {
+  it('should compute cache size on init', () => {
     expect(dataStorageServiceMock.estimateCacheSize).toHaveBeenCalled();
   });
 
   it('should clear cache and show success', async () => {
     await component.clearCache();
-    expect(dataStorageServiceMock.clearLocalCache).toHaveBeenCalled();
-    expect(cacheServiceMock.clearCache).toHaveBeenCalled();
+    expect(cacheServiceMock.clearCache).toHaveBeenCalledTimes(1);
     expect(component.successMessage()).toBe('dataStorage.cacheCleared');
     expect(component.isClearingCache()).toBe(false);
   });
@@ -122,5 +120,25 @@ describe('DataStorageComponent', () => {
     await component.deleteOldMedia();
     expect(component.errorMessage()).toBe('Failed to delete old media');
     expect(component.isDeletingOldMedia()).toBe(false);
+  });
+
+  it('should suppress conflicting storage mutations while cache clearing is in flight', async () => {
+    let finishClear: (() => void) | undefined;
+    (cacheServiceMock.clearCache as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishClear = resolve;
+        }),
+    );
+
+    const clearPromise = component.clearCache();
+    await component.deleteOldMedia();
+
+    expect(component.hasStorageMutationInFlight()).toBe(true);
+    expect(cacheServiceMock.deleteOldMedia).not.toHaveBeenCalled();
+
+    finishClear?.();
+    await clearPromise;
+    expect(component.hasStorageMutationInFlight()).toBe(false);
   });
 });

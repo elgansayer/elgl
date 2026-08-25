@@ -22,6 +22,9 @@ export class DataStorageComponent {
   readonly errorMessage = signal('');
   readonly cacheSize = signal<number | null>(null);
   readonly isComputingSize = signal(false);
+  readonly hasStorageMutationInFlight = computed(
+    () => this.isClearingCache() || this.isDeletingOldMedia(),
+  );
 
   readonly cellularAutoDownload = this.dataStorageService.cellularAutoDownload;
 
@@ -35,7 +38,6 @@ export class DataStorageComponent {
 
   constructor() {
     effect(() => {
-      // Trigger size computation on init
       void this.computeCacheSize();
     });
   }
@@ -53,11 +55,14 @@ export class DataStorageComponent {
   }
 
   async clearCache(): Promise<void> {
+    if (this.hasStorageMutationInFlight()) {
+      return;
+    }
+
     this.isClearingCache.set(true);
     this.successMessage.set('');
     this.errorMessage.set('');
     try {
-      this.dataStorageService.clearLocalCache();
       await this.cacheService.clearCache();
       this.successMessage.set('dataStorage.cacheCleared');
       await this.computeCacheSize();
@@ -69,6 +74,10 @@ export class DataStorageComponent {
   }
 
   async deleteOldMedia(): Promise<void> {
+    if (this.hasStorageMutationInFlight()) {
+      return;
+    }
+
     this.isDeletingOldMedia.set(true);
     this.successMessage.set('');
     this.errorMessage.set('');

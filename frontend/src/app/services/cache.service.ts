@@ -1,33 +1,43 @@
 import { Injectable } from '@angular/core';
 
+const APP_CACHE_DATABASES = ['hellotalk_cache', 'mediaCache', 'offlineCache'] as const;
+
+function deleteIndexedDbDatabase(name: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(new Error('Unable to clear local cache'));
+    request.onblocked = () => reject(new Error('Unable to clear local cache'));
+  });
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class CacheService {
+  /**
+   * Removes app-owned cache stores without touching authentication, drafts, or preferences
+   * persisted in Web Storage.
+   */
   async clearCache(): Promise<void> {
-    // Clear localStorage
-    localStorage.clear();
-    // Clear sessionStorage
-    sessionStorage.clear();
+    const results = await Promise.allSettled(APP_CACHE_DATABASES.map(deleteIndexedDbDatabase));
+    const failures = results.filter((result) => result.status === 'rejected');
 
-    // Clear IndexedDB databases used by the application
-    const dbNames = ['hellotalk_cache', 'mediaCache', 'offlineCache'];
-    for (const dbName of dbNames) {
-      try {
-        await indexedDB.deleteDatabase(dbName);
-      } catch {
-        // ignore if database does not exist
-      }
-    }
-
-    // Clear Cache Storage (Service Worker / Cache API)
-    if ('caches' in window) {
+    if (typeof caches !== 'undefined') {
       try {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
       } catch {
-        // ignore if Cache API is unavailable
+        failures.push({ status: 'rejected', reason: new Error('Cache API unavailable') });
       }
+    }
+
+    if (failures.length > 0) {
+      throw new Error('Unable to clear local cache');
     }
   }
 
@@ -53,11 +63,7 @@ export class CacheService {
             const ageDays = (function isTimestamp(
               val: unknown,
             ): val is { timestamp: number } {
-              return (
-                typeof val === 'object' &&
-                val !== null &&
-                'timestamp' in val
-              );
+              return typeof val === 'object' && val !== null && 'timestamp' in val;
             })(entry)
               ? (Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24)
               : Infinity;

@@ -37,45 +37,27 @@ async function responseSize(response: Response): Promise<number> {
 export class DataStorageService {
   readonly cellularAutoDownload = signal<boolean>(loadCellularPreference());
 
-  clearLocalCache(): void {
-    localStorage.clear();
-    sessionStorage.clear();
-    if ('caches' in window) {
-      caches.keys().then((keys) => {
-        keys.forEach((key) => caches.delete(key));
-      });
-    }
-    // Re-persist the cellular preference since localStorage was cleared
-    persistCellularPreference(this.cellularAutoDownload());
-  }
-
+  /** Estimate cache storage only; authentication, drafts and preferences are user data, not cache. */
   async estimateCacheSize(): Promise<number> {
-    let total = 0;
-    // Estimate from Cache API
-    if ('caches' in window) {
-      try {
-        const cacheNames = await caches.keys();
-        const cacheSizes = await Promise.all(
-          cacheNames.map(async (cacheName) => {
-            const cache = await caches.open(cacheName);
-            const responses = await cache.matchAll();
-            const responseSizes = await Promise.all(responses.map(responseSize));
-            return responseSizes.reduce((sum, size) => sum + size, 0);
-          }),
-        );
-        total += cacheSizes.reduce((a, b) => a + b, 0);
-      } catch {
-        // Cache API estimation unavailable
-      }
+    if (typeof caches === 'undefined') {
+      return 0;
     }
-    // Estimate from localStorage and sessionStorage
+
     try {
-      total += new Blob([JSON.stringify(localStorage)]).size;
-      total += new Blob([JSON.stringify(sessionStorage)]).size;
+      const cacheNames = await caches.keys();
+      const cacheSizes = await Promise.all(
+        cacheNames.map(async (cacheName) => {
+          const cache = await caches.open(cacheName);
+          const responses = await cache.matchAll();
+          const responseSizes = await Promise.all(responses.map(responseSize));
+          return responseSizes.reduce((sum, size) => sum + size, 0);
+        }),
+      );
+      return cacheSizes.reduce((total, size) => total + size, 0);
     } catch {
-      // Storage estimation unavailable
+      // Cache API estimation unavailable
+      return 0;
     }
-    return total;
   }
 
   toggleCellularAutoDownload(): void {

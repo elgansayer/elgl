@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataStorageService } from './data-storage.service';
 
-function storageSize(): number {
-  return (
-    new Blob([JSON.stringify(localStorage)]).size + new Blob([JSON.stringify(sessionStorage)]).size
-  );
-}
-
 function cacheWith(responses: Response[]): Cache {
   return {
     matchAll: vi.fn().mockResolvedValue(responses),
@@ -15,16 +9,14 @@ function cacheWith(responses: Response[]): Cache {
 
 function installCacheStorage(cachesByName: Map<string, Cache>): {
   open: ReturnType<typeof vi.fn>;
-  delete: ReturnType<typeof vi.fn>;
 } {
   const open = vi.fn((name: string) => Promise.resolve(cachesByName.get(name)));
-  const deleteCache = vi.fn().mockResolvedValue(true);
   vi.stubGlobal('caches', {
     keys: vi.fn().mockResolvedValue([...cachesByName.keys()]),
     open,
-    delete: deleteCache,
+    delete: vi.fn().mockResolvedValue(true),
   } as unknown as CacheStorage);
-  return { open, delete: deleteCache };
+  return { open };
 }
 
 describe('DataStorageService', () => {
@@ -52,27 +44,6 @@ describe('DataStorageService', () => {
     expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
   });
 
-  it('clears browser storage and every named cache while preserving the preference', async () => {
-    localStorage.setItem('temporary', 'value');
-    sessionStorage.setItem('temporary', 'value');
-    const cacheStorage = installCacheStorage(
-      new Map([
-        ['application', cacheWith([])],
-        ['media', cacheWith([])],
-      ]),
-    );
-    const service = new DataStorageService();
-
-    service.clearLocalCache();
-    await vi.waitFor(() => expect(cacheStorage.delete).toHaveBeenCalledTimes(2));
-
-    expect(localStorage.getItem('temporary')).toBeNull();
-    expect(sessionStorage.getItem('temporary')).toBeNull();
-    expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
-    expect(cacheStorage.delete).toHaveBeenCalledWith('application');
-    expect(cacheStorage.delete).toHaveBeenCalledWith('media');
-  });
-
   it('estimates named caches concurrently from valid content-length headers', async () => {
     const first = new Response('ignored', { headers: { 'content-length': '12' } });
     const second = new Response('ignored', { headers: { 'content-length': '30' } });
@@ -90,7 +61,7 @@ describe('DataStorageService', () => {
 
     const size = await service.estimateCacheSize();
 
-    expect(size).toBe(storageSize() + 42);
+    expect(size).toBe(42);
     expect(cacheStorage.open).toHaveBeenCalledTimes(2);
     expect(applicationCache.matchAll).toHaveBeenCalledTimes(1);
     expect(mediaCache.matchAll).toHaveBeenCalledTimes(1);
@@ -108,7 +79,7 @@ describe('DataStorageService', () => {
 
       const size = await service.estimateCacheSize();
 
-      expect(size).toBe(storageSize() + 4);
+      expect(size).toBe(4);
       expect(clone).toHaveBeenCalledTimes(1);
     },
   );
@@ -121,17 +92,27 @@ describe('DataStorageService', () => {
 
     const size = await service.estimateCacheSize();
 
-    expect(size).toBe(storageSize() + 8);
+    expect(size).toBe(8);
     expect(clone).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the storage estimate available when the Cache API fails', async () => {
+  it('returns zero when the Cache API is unavailable without counting user Web Storage as cache', async () => {
+    localStorage.setItem('sb-project-auth-token', 'secret-session');
+    sessionStorage.setItem('chat-draft', 'unsent message');
+    vi.stubGlobal('caches', undefined);
+    const service = new DataStorageService();
+
+    await expect(service.estimateCacheSize()).resolves.toBe(0);
+    expect(localStorage.getItem('sb-project-auth-token')).toBe('secret-session');
+    expect(sessionStorage.getItem('chat-draft')).toBe('unsent message');
+  });
+
+  it('returns zero when cache estimation fails', async () => {
     vi.stubGlobal('caches', {
       keys: vi.fn().mockRejectedValue(new Error('cache unavailable')),
     } as unknown as CacheStorage);
-    localStorage.setItem('saved', 'value');
     const service = new DataStorageService();
 
-    await expect(service.estimateCacheSize()).resolves.toBe(storageSize());
+    await expect(service.estimateCacheSize()).resolves.toBe(0);
   });
 });
