@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ChatMediaPickerComponent } from './chat-media-picker.component';
 import { ChatMediaService, UploadedChatMedia } from '../../services/chat-media.service';
+import { HlmCheckbox } from '../ui/checkbox/src';
 
 describe('ChatMediaPickerComponent HD quality contract', () => {
   const chatMedia = { upload: vi.fn() };
@@ -18,11 +20,11 @@ describe('ChatMediaPickerComponent HD quality contract', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    const checkbox = fixture.nativeElement.querySelector('brn-checkbox');
+    const checkbox = fixture.debugElement.query(By.directive(HlmCheckbox))
+      .componentInstance as HlmCheckbox;
 
     expect(component.quality()).toBe('standard');
-    expect(checkbox).not.toBeNull();
-    expect(checkbox.getAttribute('aria-label')).toBe('Send in HD quality');
+    expect(checkbox.ariaLabel()).toBe('Send in HD quality');
   });
 
   it('switches between standard and HD without changing the selected media', () => {
