@@ -24,42 +24,41 @@ const mentionListener = readFileSync(
 );
 
 describe('Moment comment @mention contract', () => {
-  it('wires comment typing and keyboard navigation into the autocomplete controller', () => {
-    expect(template).toContain('(input)="onCommentInput($event, moment.id)"');
-    expect(template).toContain('(keydown)="onCommentKeydown($event, moment)"');
-    expect(template).not.toContain('(keyup.enter)="submitComment(moment)"');
+  it('delegates comment keyboard, focus, and selection state to Spartan autocomplete', () => {
+    expect(component).toContain(
+      "import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete'",
+    );
+    expect(component).toContain('...HlmAutocompleteImports');
+    expect(template).toContain('<hlm-autocomplete-search');
+    expect(template).toContain('<hlm-autocomplete-input');
+    expect(template).toContain('(inputEvent)="onCommentInput($event, moment.id)"');
+    expect(template).toContain('(keyDown)="onCommentKeydown($event, moment)"');
+    expect(template).toContain('autoHighlight');
+    expect(template).not.toContain('role="combobox"');
+    expect(template).not.toContain('[attr.aria-activedescendant]');
+    expect(component).not.toContain("event.key === 'ArrowDown'");
+    expect(component).not.toContain("event.key === 'ArrowUp'");
+  });
 
-    for (const key of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
-      expect(component).toContain(`event.key === '${key}'`);
-    }
+  it('renders server-backed suggestions as touch-sized Spartan options', () => {
+    expect(template).toContain('mentionSuggestionsMap()[moment.id]');
+    expect(template).toContain('<hlm-autocomplete-content *hlmAutocompletePortal>');
+    expect(template).toContain('hlmAutocompleteList');
+    expect(template).toContain('<hlm-autocomplete-item');
+    expect(template).toContain('[value]="suggestion"');
+    expect(template).toContain('min-h-11');
+    expect(template).toContain('[itemToString]="mentionItemToStringFor(moment.id)"');
+    expect(template).toContain('(valueChange)="onMentionSelected(moment.id, $event)"');
+    expect(component).toContain('mentionItemToStringFor(momentId: string)');
+  });
+
+  it('ignores stale async searches and closes safely through the primitive', () => {
     expect(component).toContain('this.userService.searchUsers(query, 5)');
     expect(component).toContain('mentionRequestVersionMap');
     expect(component).toContain('this.mentionRequestVersionMap[momentId] !== requestVersion');
     expect(component).toContain('this.mentionQueryMap()[momentId] !== query');
+    expect(template).toContain('(closed)="closeMentionSuggestions(moment.id)"');
     expect(component).toContain('this.closeMentionSuggestions(momentId)');
-  });
-
-  it('renders server-backed suggestions as an accessible, touch-sized combobox', () => {
-    expect(template).toContain('mentionSuggestionsMap()[moment.id]');
-    expect(template).toContain(
-      '(click)="selectMention(moment.id, suggestion, commentInput)"',
-    );
-    expect(template).toContain('hlmBtn');
-    expect(template).toContain('min-h-11');
-    expect(template).toContain('role="combobox"');
-    expect(template).toContain('aria-autocomplete="list"');
-    expect(template).toContain('role="listbox"');
-    expect(template).toContain('role="option"');
-    expect(template).toContain('[attr.aria-activedescendant]');
-    expect(template).toContain('[attr.aria-selected]');
-  });
-
-  it('returns focus and the caret to the comment input after selecting a mention', () => {
-    expect(template).toContain('#commentInput');
-    expect(template).toContain('(mousedown)="$event.preventDefault()"');
-    expect(component).toContain('queueMicrotask');
-    expect(component).toContain('input.focus()');
-    expect(component).toContain('input.setSelectionRange(cursorPosition, cursorPosition)');
   });
 
   it('parses submitted mentions on the server and excludes self/author notifications', () => {
