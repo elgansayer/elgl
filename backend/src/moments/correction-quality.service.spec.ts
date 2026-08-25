@@ -53,13 +53,17 @@ describe('CorrectionQualityService', () => {
     const client = { from, rpc };
 
     service = new CorrectionQualityService(
-      { getClient: vi.fn().mockReturnValue(client) } as unknown as SupabaseService,
+      {
+        getClient: vi.fn().mockReturnValue(client),
+      } as unknown as SupabaseService,
       { getBlockedAndBlockerIds } as unknown as SafetyService,
     );
   });
 
   it('returns server-authoritative counts and current vote', async () => {
-    await expect(service.vote(userId, momentId, commentId, 'up')).resolves.toEqual({
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).resolves.toEqual({
       commentId,
       vote: 'up',
       upVotes: 3,
@@ -76,11 +80,14 @@ describe('CorrectionQualityService', () => {
   });
 
   it('rejects missing corrections without invoking the mutation', async () => {
-    single.mockResolvedValueOnce({ data: null, error: { message: 'not found' } });
+    single.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'not found' },
+    });
 
-    await expect(service.vote(userId, momentId, commentId, 'up')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(rpc).not.toHaveBeenCalled();
   });
 
@@ -95,9 +102,9 @@ describe('CorrectionQualityService', () => {
       error: null,
     });
 
-    await expect(service.vote(userId, momentId, commentId, 'down')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'down'),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(rpc).not.toHaveBeenCalled();
   });
 
@@ -112,27 +119,30 @@ describe('CorrectionQualityService', () => {
       error: null,
     });
 
-    await expect(service.vote(userId, momentId, commentId, 'up')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rpc).not.toHaveBeenCalled();
   });
 
   it('rejects ratings across an active block boundary', async () => {
     getBlockedAndBlockerIds.mockResolvedValueOnce([authorId]);
 
-    await expect(service.vote(userId, momentId, commentId, 'up')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rpc).not.toHaveBeenCalled();
   });
 
   it('fails closed when the atomic mutation fails', async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: { message: 'database unavailable' } });
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'database unavailable' },
+    });
 
-    await expect(service.vote(userId, momentId, commentId, 'up')).rejects.toBeInstanceOf(
-      InternalServerErrorException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 
   it('fails closed on malformed aggregate data', async () => {
@@ -148,8 +158,8 @@ describe('CorrectionQualityService', () => {
       error: null,
     });
 
-    await expect(service.vote(userId, momentId, commentId, 'up')).rejects.toBeInstanceOf(
-      InternalServerErrorException,
-    );
+    await expect(
+      service.vote(userId, momentId, commentId, 'up'),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 });
