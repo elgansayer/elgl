@@ -58,9 +58,7 @@ export class UsersController {
         maximum === undefined
           ? `at least ${minimum}`
           : `between ${minimum} and ${maximum}`;
-      throw new BadRequestException(
-        `${name} must be an integer ${range}`,
-      );
+      throw new BadRequestException(`${name} must be an integer ${range}`);
     }
 
     return parsed;
@@ -299,11 +297,7 @@ export class UsersController {
       1,
       100,
     );
-    return this.usersService.searchUsers(
-      query.trim(),
-      user.id,
-      boundedLimit,
-    );
+    return this.usersService.searchUsers(query.trim(), user.id, boundedLimit);
   }
 
   @Get('me/badges')
@@ -366,12 +360,7 @@ export class UsersController {
       1,
       100,
     );
-    const boundedOffset = this.parsePaginationInteger(
-      offset,
-      'offset',
-      0,
-      0,
-    );
+    const boundedOffset = this.parsePaginationInteger(offset, 'offset', 0, 0);
     return this.usersService.getFollowers(
       id,
       boundedLimit,
@@ -394,12 +383,7 @@ export class UsersController {
       1,
       100,
     );
-    const boundedOffset = this.parsePaginationInteger(
-      offset,
-      'offset',
-      0,
-      0,
-    );
+    const boundedOffset = this.parsePaginationInteger(offset, 'offset', 0, 0);
     return this.usersService.getFollowing(
       id,
       boundedLimit,
