@@ -11,7 +11,9 @@ describe('20260825080500_harden_moment_correction_votes', () => {
   );
 
   it('keeps correction vote toggling inside one database transaction', () => {
-    expect(migration).toContain('CREATE OR REPLACE FUNCTION public.rate_moment_correction');
+    expect(migration).toContain(
+      'CREATE OR REPLACE FUNCTION public.rate_moment_correction',
+    );
     expect(migration).toContain('FOR UPDATE');
     expect(migration).toContain("IF p_vote NOT IN ('up', 'down')");
     expect(migration).toContain('IF v_comment.correction_payload IS NULL');
