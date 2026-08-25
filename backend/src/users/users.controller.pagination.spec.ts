@@ -42,23 +42,13 @@ describe('UsersController pagination boundary', () => {
   it('uses documented follower pagination defaults', async () => {
     await controller.getFollowers('profile-1', undefined, undefined, user);
 
-    expect(getFollowers).toHaveBeenCalledWith(
-      'profile-1',
-      20,
-      0,
-      'user-1',
-    );
+    expect(getFollowers).toHaveBeenCalledWith('profile-1', 20, 0, 'user-1');
   });
 
   it('parses bounded following pagination values', async () => {
     await controller.getFollowing('profile-1', '25', '4', user);
 
-    expect(getFollowing).toHaveBeenCalledWith(
-      'profile-1',
-      25,
-      4,
-      'user-1',
-    );
+    expect(getFollowing).toHaveBeenCalledWith('profile-1', 25, 4, 'user-1');
   });
 
   it.each([
@@ -67,13 +57,10 @@ describe('UsersController pagination boundary', () => {
     ['limit', '1.5', '0'],
     ['offset', '20', '-1'],
     ['offset', '20', '1.5'],
-  ])(
-    'rejects an invalid %s value',
-    async (_name, limit, offset) => {
-      await expect(
-        controller.getFollowers('profile-1', limit, offset, user),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(getFollowers).not.toHaveBeenCalled();
-    },
-  );
+  ])('rejects an invalid %s value', async (_name, limit, offset) => {
+    await expect(
+      controller.getFollowers('profile-1', limit, offset, user),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(getFollowers).not.toHaveBeenCalled();
+  });
 });
