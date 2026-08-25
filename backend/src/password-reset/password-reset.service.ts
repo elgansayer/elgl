@@ -23,7 +23,7 @@ export class PasswordResetService {
 
   async requestPasswordReset(dto: RequestPasswordResetDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const normalisedEmail = dto.email.toLowerCase();
+    const normalisedEmail = dto.email.trim().toLowerCase();
     let userId: string | null = null;
 
     // Supabase Auth does not expose a get-by-email admin method. Paginate the
@@ -100,7 +100,7 @@ export class PasswordResetService {
     try {
       // Only the raw one-time token leaves the service. The database stores its
       // SHA-256 digest so a token-table leak does not expose reset credentials.
-      await this.emailService.sendPasswordResetEmail(dto.email, token);
+      await this.emailService.sendPasswordResetEmail(normalisedEmail, token);
     } catch {
       const { error: invalidateError } = await supabase
         .from('password_reset_tokens')
