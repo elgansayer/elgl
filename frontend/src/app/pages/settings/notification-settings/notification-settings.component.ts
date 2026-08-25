@@ -40,6 +40,7 @@ export class NotificationSettingsComponent {
 
   readonly prefs = signal<LegacyNotificationPreferences | null>(null);
   readonly saving = signal(false);
+  readonly pendingToggle = signal<string | null>(null);
   readonly saved = signal(false);
   readonly error = signal<string | null>(null);
   readonly loadError = signal<string | null>(null);
@@ -58,6 +59,8 @@ export class NotificationSettingsComponent {
     },
   });
 
+  readonly isLoading = this.prefsResource.isLoading;
+
   constructor() {
     this.prefsResource.reload();
   }
@@ -72,9 +75,21 @@ export class NotificationSettingsComponent {
     return `notification_settings.channel.${ch}`;
   }
 
+  isTogglePending(cat: LegacyCategory, ch: LegacyChannel): boolean {
+    return this.pendingToggle() === `${cat}:${ch}`;
+  }
+
+  retryLoad(): void {
+    if (this.isLoading()) return;
+    this.error.set(null);
+    this.saved.set(false);
+    this.prefsResource.reload();
+  }
+
   async toggle(cat: LegacyCategory, ch: LegacyChannel): Promise<void> {
     const p = this.prefs();
-    if (!p) return;
+    if (!p || this.saving()) return;
+
     const current = p[cat][ch];
     const update = {
       [cat]: {
@@ -82,12 +97,24 @@ export class NotificationSettingsComponent {
         badge: ch === 'badge' ? !current : p[cat].badge,
       },
     };
+
+    this.error.set(null);
+    this.saved.set(false);
+    this.saving.set(true);
+    this.pendingToggle.set(`${cat}:${ch}`);
+
     try {
       const result = await this.prefsService.updateLegacyPreferences(update);
+      if (!result.success) {
+        throw new Error('Notification preference update was not persisted');
+      }
       this.prefs.set(result.preferences);
       this.saved.set(true);
     } catch {
       this.error.set(this.i18n.translate('common.error_generic'));
+    } finally {
+      this.pendingToggle.set(null);
+      this.saving.set(false);
     }
   }
 }

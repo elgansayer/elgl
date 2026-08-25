@@ -1,7 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { NotificationSettingsComponent } from './notification-settings.component';
-import { NotificationPreferencesService } from '../../../services/notification-preferences.service';
+import {
+  LegacyNotificationPreferences,
+  NotificationPreferencesService,
+} from '../../../services/notification-preferences.service';
 import { I18nService } from '../../../services/i18n.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
@@ -13,13 +16,23 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('NotificationSettingsComponent', () => {
   let component: NotificationSettingsComponent;
   let fixture: ComponentFixture<NotificationSettingsComponent>;
   let getLegacyPrefsSpy: ReturnType<typeof vi.fn>;
   let updateLegacyPrefsSpy: ReturnType<typeof vi.fn>;
 
-  const mockLegacyPrefs = {
+  const mockLegacyPrefs: LegacyNotificationPreferences = {
     userId: 'user-1',
     direct_messages: { push: true, badge: true },
     groups: { push: true, badge: false },
@@ -102,11 +115,74 @@ describe('NotificationSettingsComponent', () => {
     });
 
     await component.toggle('direct_messages', 'push');
+
     expect(updateLegacyPrefsSpy).toHaveBeenCalledWith({
       direct_messages: { push: false, badge: true },
     });
     expect(component.prefs()!.direct_messages.push).toBe(false);
     expect(component.saved()).toBe(true);
+    expect(component.error()).toBeNull();
+  });
+
+  it('should preserve the current preferences and expose an error when saving fails', async () => {
+    await fixture.whenStable();
+    updateLegacyPrefsSpy.mockRejectedValueOnce(new Error('Network error'));
+
+    await component.toggle('groups', 'badge');
+
+    expect(component.prefs()).toEqual(mockLegacyPrefs);
+    expect(component.error()).toBe('common.error_generic');
+    expect(component.saved()).toBe(false);
+    expect(component.saving()).toBe(false);
+    expect(component.pendingToggle()).toBeNull();
+  });
+
+  it('should treat a non-success response as a failed save', async () => {
+    await fixture.whenStable();
+    updateLegacyPrefsSpy.mockResolvedValueOnce({
+      success: false,
+      preferences: {
+        ...mockLegacyPrefs,
+        likes: { push: true, badge: true },
+      },
+    });
+
+    await component.toggle('likes', 'push');
+
+    expect(component.prefs()).toEqual(mockLegacyPrefs);
+    expect(component.error()).toBe('common.error_generic');
+    expect(component.saved()).toBe(false);
+  });
+
+  it('should serialize preference mutations so concurrent clicks cannot overwrite newer state', async () => {
+    await fixture.whenStable();
+    const pending = deferred<{ success: boolean; preferences: LegacyNotificationPreferences }>();
+    const updatedPrefs = {
+      ...mockLegacyPrefs,
+      direct_messages: { push: false, badge: true },
+    };
+    updateLegacyPrefsSpy.mockReturnValueOnce(pending.promise);
+
+    const first = component.toggle('direct_messages', 'push');
+    const second = component.toggle('groups', 'badge');
+
+    expect(component.saving()).toBe(true);
+    expect(component.isTogglePending('direct_messages', 'push')).toBe(true);
+    expect(updateLegacyPrefsSpy).toHaveBeenCalledTimes(1);
+
+    fixture.detectChanges();
+    const pendingSwitch = fixture.nativeElement.querySelector(
+      'button[role="switch"][aria-busy="true"]',
+    ) as HTMLButtonElement | null;
+    expect(pendingSwitch).not.toBeNull();
+    expect(pendingSwitch?.disabled).toBe(true);
+
+    pending.resolve({ success: true, preferences: updatedPrefs });
+    await Promise.all([first, second]);
+
+    expect(component.prefs()).toEqual(updatedPrefs);
+    expect(component.saving()).toBe(false);
+    expect(component.pendingToggle()).toBeNull();
   });
 
   it('should display load error when getLegacyPreferences fails', async () => {
@@ -116,7 +192,10 @@ describe('NotificationSettingsComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
+
     expect(component.loadError()).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
   });
 
   it('should return correct channel label', () => {
@@ -124,11 +203,27 @@ describe('NotificationSettingsComponent', () => {
     expect(component.channelLabel('badge')).toBe('notification_settings.channel.badge');
   });
 
-  it('should render all four category rows', async () => {
+  it('should render all four category rows with two accessible switch controls each', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    const rows = element.querySelectorAll('[role="switch"]');
-    expect(rows.length).toBe(8); // 4 categories * 2 channels
+    const switches = Array.from(
+      element.querySelectorAll<HTMLButtonElement>('button[role="switch"]'),
+    );
+    expect(switches.length).toBe(8);
+    expect(switches.every((control) => control.getAttribute('size') === 'icon-touch')).toBe(true);
+    expect(switches.every((control) => control.hasAttribute('aria-checked'))).toBe(true);
+    expect(switches.every((control) => Boolean(control.getAttribute('aria-label')))).toBe(true);
+  });
+
+  it('should expose successful persistence through a polite status message', async () => {
+    await fixture.whenStable();
+
+    await component.toggle('voice_rooms', 'badge');
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('[role="status"]') as HTMLElement | null;
+    expect(status).not.toBeNull();
+    expect(status?.getAttribute('aria-live')).toBe('polite');
   });
 });
