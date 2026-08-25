@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { I18nService } from '../../services/i18n.service';
@@ -27,16 +27,26 @@ function findAnswerInput(root: HTMLElement): HTMLInputElement {
   return input;
 }
 
-async function submitTypedAnswer(
-  fixture: ReturnType<typeof TestBed.createComponent<FlashcardReviewComponent>>,
+async function renderReview(): Promise<ComponentFixture<FlashcardReviewComponent>> {
+  const fixture = TestBed.createComponent(FlashcardReviewComponent);
+  fixture.componentRef.setInput('cards', [CARD, SECOND_CARD]);
+  fixture.detectChanges();
+  await vi.waitFor(() => expect(fixture.componentInstance.isLoading()).toBe(false));
+  fixture.detectChanges();
+  return fixture;
+}
+
+function submitTypedAnswer(
+  fixture: ComponentFixture<FlashcardReviewComponent>,
   answer: string,
-): Promise<void> {
+): void {
   const input = findAnswerInput(fixture.nativeElement);
   input.value = answer;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   fixture.detectChanges();
 
-  const form = fixture.nativeElement.querySelector('app-flashcard-answer-check form') as HTMLFormElement;
+  const form = fixture.nativeElement.querySelector('app-flashcard-answer-check form');
+  if (!(form instanceof HTMLFormElement)) throw new Error('answer form missing');
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   fixture.detectChanges();
 }
@@ -77,11 +87,8 @@ describe('FlashcardReviewComponent partial-credit recall', () => {
   });
 
   it('maps a minor typo to partial credit and the Good SRS transition', async () => {
-    const fixture = TestBed.createComponent(FlashcardReviewComponent);
-    fixture.componentRef.setInput('cards', [CARD, SECOND_CARD]);
-    fixture.detectChanges();
-
-    await submitTypedAnswer(fixture, 'abundnat');
+    const fixture = await renderReview();
+    submitTypedAnswer(fixture, 'abundnat');
 
     expect(fixture.componentInstance.isFlipped()).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('review.goodAriaLabel');
@@ -98,11 +105,8 @@ describe('FlashcardReviewComponent partial-credit recall', () => {
   });
 
   it('maps an exact answer to Known while preserving manual override controls', async () => {
-    const fixture = TestBed.createComponent(FlashcardReviewComponent);
-    fixture.componentRef.setInput('cards', [CARD, SECOND_CARD]);
-    fixture.detectChanges();
-
-    await submitTypedAnswer(fixture, 'ABUNDANT!');
+    const fixture = await renderReview();
+    submitTypedAnswer(fixture, 'ABUNDANT!');
 
     expect(fixture.nativeElement.textContent).toContain('review.knownAriaLabel');
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeTruthy();
@@ -117,11 +121,8 @@ describe('FlashcardReviewComponent partial-credit recall', () => {
   });
 
   it('maps a materially wrong answer to Again', async () => {
-    const fixture = TestBed.createComponent(FlashcardReviewComponent);
-    fixture.componentRef.setInput('cards', [CARD, SECOND_CARD]);
-    fixture.detectChanges();
-
-    await submitTypedAnswer(fixture, 'scarce');
+    const fixture = await renderReview();
+    submitTypedAnswer(fixture, 'scarce');
 
     expect(fixture.nativeElement.textContent).toContain('review.againAriaLabel');
     const suggestedButton = fixture.nativeElement.querySelector(
@@ -133,11 +134,8 @@ describe('FlashcardReviewComponent partial-credit recall', () => {
     expect(updateSrsLevel).toHaveBeenCalledWith('card-1', 0);
   });
 
-  it('keeps legacy reveal-and-self-grade review available without typing', () => {
-    const fixture = TestBed.createComponent(FlashcardReviewComponent);
-    fixture.componentRef.setInput('cards', [CARD, SECOND_CARD]);
-    fixture.detectChanges();
-
+  it('keeps legacy reveal-and-self-grade review available without typing', async () => {
+    const fixture = await renderReview();
     fixture.componentInstance.flipCard();
     fixture.detectChanges();
 
