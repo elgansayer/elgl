@@ -2474,12 +2474,12 @@ export class I18nService {
   private readonly document = inject(DOCUMENT);
 
   private applyDocumentRtlAndLocale(lang: string): void {
-    const root = this.document?.documentElement;
-    if (!root) return;
+    const document = this.document;
+    if (!document?.documentElement) return;
 
-    root.lang = lang;
+    document.documentElement.lang = lang;
     const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-    root.dir = isRtlLang ? 'rtl' : 'ltr';
+    document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
   }
 
   async setLanguage(langCode: string): Promise<void> {
