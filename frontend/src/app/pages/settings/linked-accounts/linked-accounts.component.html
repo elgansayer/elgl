@@ -1,78 +1,121 @@
 <div class="app-screen bg-surface-50 min-h-dvh">
   <header class="app-header">
     <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">&larr;</span>
+      <span class="text-xl" aria-hidden="true">&larr;</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.linkedAccounts.title' | t }}</h1>
-    <div class="w-10"></div>
+    <div class="w-10" aria-hidden="true"></div>
   </header>
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
     @if (errorMessage()) {
-      <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+      <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
         {{ errorMessage() | t }}
       </div>
     }
     @if (successMessage()) {
-      <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
+      <div role="status" aria-live="polite" class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
         {{ successMessage() | t }}
       </div>
     }
 
-    <section class="space-y-3">
+    <section class="space-y-3" [attr.aria-busy]="linkedAccountsResource.isLoading() || loading()">
       <p class="text-sm text-text-secondary">
         {{ 'settings.linkedAccounts.subtitle' | t }}
       </p>
 
-      <div
-        class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
-      >
-        @for (provider of supportedProviders; track provider.id) {
-          <div class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors">
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex items-center justify-center w-10 h-10 rounded-full text-on-fill font-bold text-sm"
-                [style.background-color]="provider.colour"
-                >{{ provider.icon }}</span
-              >
-              <div>
-                <span class="text-sm font-medium text-text-primary">{{
-                  provider.labelKey | t
-                }}</span>
-                @if (isLinked(provider.id)) {
-                  <span class="block text-xs text-success">
-                    {{ 'settings.linkedAccounts.active' | t }}
-                  </span>
-                }
+      @if (linkedAccountsResource.error()) {
+        <div role="alert" class="rounded-card border border-danger/30 bg-danger/10 p-4 space-y-3">
+          <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+          <app-button-secondary (clicked)="retryLoad()" [disabled]="linkedAccountsResource.isLoading()">
+            {{ 'common.retry' | t }}
+          </app-button-secondary>
+        </div>
+      } @else {
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+        >
+          @for (provider of supportedProviders; track provider.id) {
+            <div class="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-surface-200 transition-colors">
+              <div class="flex min-w-0 items-center gap-3">
+                <span
+                  class="inline-flex shrink-0 items-center justify-center w-10 h-10 rounded-full text-on-fill font-bold text-sm"
+                  [style.background-color]="provider.colour"
+                  aria-hidden="true"
+                  >{{ provider.icon }}</span
+                >
+                <div class="min-w-0">
+                  <span class="text-sm font-medium text-text-primary">{{ provider.labelKey | t }}</span>
+                  @if (isLinked(provider.id)) {
+                    <span class="block text-xs text-success">
+                      {{ 'settings.linkedAccounts.active' | t }}
+                    </span>
+                  } @else {
+                    <span class="block text-xs text-text-secondary">
+                      {{ 'settings.linkedAccounts.inactive' | t }}
+                    </span>
+                  }
+                </div>
               </div>
+
+              @if (isLinkable(provider)) {
+                @if (isLinked(provider.id)) {
+                  <button
+                    hlmBtn
+                    (click)="requestUnlink(provider.id)"
+                    class="min-h-11 text-sm font-semibold text-danger hover:text-danger/80 transition-colors disabled:opacity-40"
+                    [disabled]="loading() || !canUnlink(provider.id)"
+                    [attr.aria-label]="('settings.linkedAccounts.unlink' | t) + ' ' + (provider.labelKey | t)"
+                  >
+                    {{ 'settings.linkedAccounts.unlink' | t }}
+                  </button>
+                } @else {
+                  <app-button-secondary
+                    (clicked)="link(provider.id)"
+                    customClass="min-h-11 text-sm px-3 rounded-lg disabled:opacity-40"
+                    [disabled]="loading()"
+                    [ariaLabel]="provider.labelKey | t"
+                  >
+                    {{ 'settings.linkBtn' | t }}
+                  </app-button-secondary>
+                }
+              }
             </div>
-            @if (isLinked(provider.id)) {
-              <button
-                hlmBtn
-                (click)="unlink(provider.id)"
-                class="text-xs font-semibold text-danger hover:text-danger/80 transition-colors disabled:opacity-40"
-                [disabled]="loading() || !canUnlink(provider.id)"
-                [attr.aria-label]="('settings.linkedAccounts.unlink' | t) + ' ' + provider.id"
-              >
-                {{ 'settings.linkedAccounts.unlink' | t }}
-              </button>
-            } @else {
-              <app-button-secondary
-                (clicked)="link(provider.id)"
-                customClass="text-xs py-1 px-3 rounded-lg disabled:opacity-40"
-                [disabled]="loading()"
-                [ariaLabel]="provider.labelKey | t"
-              >
-                {{ 'settings.linkBtn' | t }}
-              </app-button-secondary>
-            }
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     </section>
 
+    @if (pendingUnlinkProvider(); as provider) {
+      <section
+        class="rounded-card border border-danger/30 bg-surface-100 p-4 space-y-3"
+        role="group"
+        aria-labelledby="unlink-confirmation-title"
+      >
+        <h2 id="unlink-confirmation-title" class="font-semibold text-text-primary">
+          {{ 'settings.linkedAccounts.unlink' | t }} {{ provider }}?
+        </h2>
+        <p class="text-sm text-text-secondary">
+          {{ 'settings.linkedAccounts.subtitle' | t }}
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <app-button-secondary (clicked)="cancelUnlink()" [disabled]="loading()">
+            {{ 'common.cancel' | t }}
+          </app-button-secondary>
+          <button
+            hlmBtn
+            (click)="confirmUnlink()"
+            class="min-h-11 rounded-lg bg-danger px-4 text-sm font-semibold text-on-fill disabled:opacity-40"
+            [disabled]="loading()"
+          >
+            {{ 'settings.linkedAccounts.unlink' | t }}
+          </button>
+        </div>
+      </section>
+    }
+
     @if (linkedAccountsResource.isLoading()) {
-      <div class="flex justify-center py-6">
+      <div role="status" aria-live="polite" class="flex justify-center py-6">
         <span class="text-text-secondary text-sm">{{ 'common.loading' | t }}</span>
       </div>
     }
