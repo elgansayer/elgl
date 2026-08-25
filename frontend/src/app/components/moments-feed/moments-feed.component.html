@@ -418,7 +418,7 @@
                         <div
                           class="mt-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary"
                           role="group"
-                          aria-label="Correction quality"
+                          [attr.aria-label]="'moments.correctBtn' | t"
                         >
                           <button
                             hlmBtn
@@ -427,7 +427,7 @@
                             class="min-h-11 min-w-11 gap-1 rounded-full px-3"
                             [class.text-primary]="comment.userVote === 'up'"
                             [attr.aria-pressed]="comment.userVote === 'up'"
-                            aria-label="Mark correction helpful"
+                            [attr.aria-label]="('moments.correctBtn' | t) + ' 👍'"
                             (click)="voteOnCorrection(moment.id, comment, 'up')"
                           >
                             <span aria-hidden="true">👍</span>
@@ -440,7 +440,7 @@
                             class="min-h-11 min-w-11 gap-1 rounded-full px-3"
                             [class.text-danger]="comment.userVote === 'down'"
                             [attr.aria-pressed]="comment.userVote === 'down'"
-                            aria-label="Mark correction not helpful"
+                            [attr.aria-label]="('moments.correctBtn' | t) + ' 👎'"
                             (click)="voteOnCorrection(moment.id, comment, 'down')"
                           >
                             <span aria-hidden="true">👎</span>
