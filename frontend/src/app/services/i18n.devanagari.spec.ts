@@ -47,14 +47,14 @@ describe('Devanagari and complex-script rendering contract', () => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('hellotalk_dict_hi', JSON.stringify({}));
 
-    await service.setLanguage('hi');
+    const languageChange = service.setLanguage('hi');
+    expect(document.documentElement.classList.contains('dark')).toBe(darkMode);
+    await languageChange;
 
     expect(service.currentLang()).toBe('hi');
     expect(service.direction()).toBe('ltr');
     expect(document.documentElement.lang).toBe('hi');
     expect(document.documentElement.dir).toBe('ltr');
-    expect(document.documentElement.classList.contains('dark')).toBe(darkMode);
-
     const hindi = service.availableLanguages.find((language) => language.code === 'hi');
     expect(hindi).toMatchObject({ nativeName: 'हिन्दी', isRtl: false });
   });

@@ -38,16 +38,15 @@ describe('I18nService Arabic rendering contract', () => {
   ])('keeps Arabic language and RTL semantics intact in %s mode', async (_mode, darkMode) => {
     localStorage.setItem('hellotalk_dict_ar', JSON.stringify({}));
 
-    await service.setLanguage('ar');
     document.documentElement.classList.toggle('dark', darkMode);
-    await service.setLanguage('ar');
+    const languageChange = service.setLanguage('ar');
+    expect(document.documentElement.classList.contains('dark')).toBe(darkMode);
+    await languageChange;
 
     expect(service.currentLang()).toBe('ar');
     expect(service.direction()).toBe('rtl');
     expect(document.documentElement.lang).toBe('ar');
     expect(document.documentElement.dir).toBe('rtl');
-    expect(document.documentElement.classList.contains('dark')).toBe(darkMode);
-
     const arabic = service.availableLanguages.find((language) => language.code === 'ar');
     expect(arabic).toMatchObject({ nativeName: 'العربية', isRtl: true });
   });
