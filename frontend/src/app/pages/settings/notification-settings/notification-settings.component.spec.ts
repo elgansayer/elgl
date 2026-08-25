@@ -211,7 +211,7 @@ describe('NotificationSettingsComponent', () => {
       element.querySelectorAll<HTMLButtonElement>('button[role="switch"]'),
     );
     expect(switches.length).toBe(8);
-    expect(switches.every((control) => control.getAttribute('size') === 'icon-touch')).toBe(true);
+    expect(switches.every((control) => control.classList.contains('size-11'))).toBe(true);
     expect(switches.every((control) => control.hasAttribute('aria-checked'))).toBe(true);
     expect(switches.every((control) => Boolean(control.getAttribute('aria-label')))).toBe(true);
   });
