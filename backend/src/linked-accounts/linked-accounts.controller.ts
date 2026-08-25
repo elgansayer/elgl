@@ -1,4 +1,10 @@
-import { Controller, Get, GoneException, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  GoneException,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { User } from '@supabase/supabase-js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
