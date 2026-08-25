@@ -90,10 +90,6 @@ export class MomentsFeedService {
 
       seen.add(moment.id);
       result.push(moment);
-
-      if (result.length >= MAX_FEED_ITEMS) {
-        break;
-      }
     }
 
     return result;
