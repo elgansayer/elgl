@@ -29,7 +29,7 @@ describe('UsersController pagination boundary', () => {
     expect(searchUsers).toHaveBeenCalledWith('learner', 'user-1', 100);
   });
 
-  it.each(['0', '101', '1.5', 'not-a-number'])(
+  it.each(['0', '101', '1.5', '1e2', ' ', 'not-a-number'])(
     'rejects an invalid search limit of %s',
     async (limit) => {
       await expect(
@@ -57,6 +57,9 @@ describe('UsersController pagination boundary', () => {
     ['limit', '1.5', '0'],
     ['offset', '20', '-1'],
     ['offset', '20', '1.5'],
+    ['offset', '20', '1e2'],
+    ['offset', '20', ' '],
+    ['offset', '20', '10001'],
   ])('rejects an invalid %s value', async (_name, limit, offset) => {
     await expect(
       controller.getFollowers('profile-1', limit, offset, user),
