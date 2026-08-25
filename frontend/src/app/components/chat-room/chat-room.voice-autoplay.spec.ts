@@ -86,6 +86,7 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       translateWordOrSentence: vi.fn(),
       saveWord: vi.fn(),
       updateSrsLevel: vi.fn(),
+      getWordStatus: vi.fn().mockReturnValue(undefined),
       checkGrammar: vi.fn().mockResolvedValue({
         original: '',
         corrected: '',
@@ -122,8 +123,8 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads the persisted autoplay preference for the signed-in user', () => {
-    expect(getMyProfile).toHaveBeenCalled();
+  it('loads the persisted autoplay preference for the signed-in user', async () => {
+    await vi.waitFor(() => expect(getMyProfile).toHaveBeenCalled());
     expect(component.autoPlayVoiceNotes()).toBe(true);
   });
 
