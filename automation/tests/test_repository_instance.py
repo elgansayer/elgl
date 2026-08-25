@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from openhands_factory.exceptions import VerificationFailed
 from openhands_factory.repository_instance import (
     assert_workout_agent_single_owner,
     workout_agent_commands_for,
@@ -56,7 +57,7 @@ def test_cross_cutting_change_runs_both_stacks(tmp_path: Path) -> None:
 
 
 def test_workout_agent_profile_requires_prepared_backend_environment(tmp_path: Path) -> None:
-    with pytest.raises(Exception, match="backend environment is missing"):
+    with pytest.raises(VerificationFailed, match="backend environment is missing"):
         workout_agent_commands_for(tmp_path, {Path("backend/main.py")})
 
 
@@ -77,6 +78,18 @@ def test_autonomous_retired_workflow_trigger_fails_closed(tmp_path: Path) -> Non
     workflow.write_text(
         "name: Unsafe dispatcher\non:\n  workflow_dispatch:\n  schedule:\n"
         "    - cron: '0 * * * *'\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="not manual-only"):
+        assert_workout_agent_single_owner(tmp_path)
+
+
+def test_inline_autonomous_trigger_fails_closed(tmp_path: Path) -> None:
+    workflow = tmp_path / ".github/workflows/architect.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text(
+        "name: Unsafe architect\non: [workflow_dispatch, schedule]\n",
         encoding="utf-8",
     )
 
