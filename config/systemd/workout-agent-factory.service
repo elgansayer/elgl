@@ -1,0 +1,47 @@
+[Unit]
+Description=Workout Agent OpenHands Autonomous Development Factory
+After=network-online.target hellotalk-factory.service
+Wants=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=dev
+Group=dev
+WorkingDirectory=/var/lib/hellotalk-factory/repository
+EnvironmentFile=/etc/hellotalk-factory/factory.env
+EnvironmentFile=/etc/hellotalk-factory/runtime.env
+EnvironmentFile=/etc/workout-agent-factory/factory.env
+Environment=HOME=/home/dev
+Environment=PATH=/home/dev/.local/bin:/home/dev/.opencode/bin:/home/dev/.npm-global/bin:/opt/hellotalk-factory/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+ExecStartPre=/opt/hellotalk-factory/venv/bin/python -m openhands_factory.repository_instance providers check
+ExecStart=/opt/hellotalk-factory/venv/bin/python -m openhands_factory.repository_instance daemon
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=120
+KillSignal=SIGTERM
+UMask=0077
+PrivateTmp=true
+ProtectProc=ptraceable
+PrivateDevices=false
+ProtectSystem=full
+ProtectHome=false
+BindPaths=/run/user
+ProtectKernelTunables=false
+ProtectKernelModules=true
+Delegate=yes
+ProtectControlGroups=false
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/workout-agent-factory /var/log/workout-agent-factory
+LimitNOFILE=4096
+LimitNPROC=512
+TasksMax=512
+MemoryHigh=3G
+MemoryMax=4G
+
+[Install]
+WantedBy=multi-user.target
