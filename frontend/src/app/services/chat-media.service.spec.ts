@@ -72,6 +72,16 @@ describe('ChatMediaService', () => {
     });
   });
 
+  it('does not request an R2 upload ticket when image compression fails', async () => {
+    const original = new File(['original'], 'photo.png', { type: 'image/png' });
+    compressImage.mockRejectedValue(new Error('Image compression is unavailable in this browser'));
+
+    await expect(service.upload(original, 'standard')).rejects.toThrow(
+      'Image compression is unavailable in this browser',
+    );
+    httpMock.expectNone(`${environment.apiUrl}/media/chat/presigned-url`);
+  });
+
   it('keeps HD video bytes intact and asks for an HD ticket', async () => {
     const video = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
     const uploadPromise = service.upload(video, 'hd');
