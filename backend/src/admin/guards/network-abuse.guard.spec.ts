@@ -128,9 +128,9 @@ describe('NetworkAbuseGuard', () => {
       throw new Error('Expected rate-limit failure');
     } catch (error) {
       expect(error).toBeInstanceOf(HttpException);
-      expect(JSON.stringify((error as HttpException).getResponse())).not.toContain(
-        'internal-control-id',
-      );
+      expect(
+        JSON.stringify((error as HttpException).getResponse()),
+      ).not.toContain('internal-control-id');
     }
   });
 
