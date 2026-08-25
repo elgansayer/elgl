@@ -44,9 +44,7 @@ export class LinkedAccountsService {
         (
           identity,
         ): identity is UserIdentity & { provider: LinkedAccountProvider } =>
-          VISIBLE_PROVIDERS.has(
-            identity.provider as LinkedAccountProvider,
-          ),
+          VISIBLE_PROVIDERS.has(identity.provider as LinkedAccountProvider),
       )
       .map((identity) => ({
         provider: identity.provider,
