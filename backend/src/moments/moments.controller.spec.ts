@@ -53,7 +53,9 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
-    correctionQualityService = module.get<CorrectionQualityService>(CorrectionQualityService);
+    correctionQualityService = module.get<CorrectionQualityService>(
+      CorrectionQualityService,
+    );
     usersService = module.get<UsersService>(UsersService);
   });
 
