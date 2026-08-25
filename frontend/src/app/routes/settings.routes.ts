@@ -7,6 +7,20 @@ export const settingsRoutes: Routes = [
       import('../components/settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    path: 'settings/chat',
+    loadComponent: () =>
+      import('../pages/chat-settings/chat-settings.component').then((m) => m.ChatSettingsComponent),
+    title: 'Chat Settings - HelloTalk',
+  },
+  {
+    path: 'settings/blocks',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Block Management - HelloTalk',
+  },
+  {
     path: 'settings/account',
     loadComponent: () =>
       import('../pages/settings/account/account.component').then((m) => m.AccountSettingsComponent),

@@ -107,9 +107,25 @@ export const socialRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'community/language-parties',
+    loadComponent: () =>
+      import('../components/language-parties/language-parties.component').then(
+        (m) => m.LanguagePartiesComponent,
+      ),
+    title: 'Language Parties - HelloTalk',
+  },
+  {
     path: 'language-islands',
     redirectTo: 'community/language-islands',
     pathMatch: 'full',
+  },
+  {
+    path: 'community/language-islands',
+    loadComponent: () =>
+      import('../pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
+    title: 'Language Islands - HelloTalk',
   },
   {
     path: 'business-profile',
