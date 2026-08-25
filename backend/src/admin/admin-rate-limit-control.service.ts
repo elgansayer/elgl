@@ -234,9 +234,7 @@ export class AdminRateLimitControlService {
       const cached = await redis.get(cacheKey);
       if (cached === 'none') return null;
       if (cached)
-        return this.mapControl(
-          JSON.parse(cached) as Record<string, unknown>,
-        );
+        return this.mapControl(JSON.parse(cached) as Record<string, unknown>);
     } catch {
       // Fall through to PostgreSQL.
     }
