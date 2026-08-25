@@ -70,8 +70,12 @@ describe('User Profiles OpenAPI architecture contract', () => {
   });
 
   it('keeps live Swagger metadata attached to UsersController', () => {
-    expect(usersModuleSource).toContain("ApiTags('User Profiles')(UsersController)");
-    expect(usersModuleSource).toContain("ApiBearerAuth('bearer')(UsersController)");
+    expect(usersModuleSource).toContain(
+      "ApiTags('User Profiles')(UsersController)",
+    );
+    expect(usersModuleSource).toContain(
+      "ApiBearerAuth('bearer')(UsersController)",
+    );
   });
 
   it('tags every documented operation as User Profiles', () => {
