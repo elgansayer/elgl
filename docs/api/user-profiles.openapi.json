@@ -104,7 +104,7 @@
       "get": { "tags": ["User Profiles"], "summary": "List supported interests", "responses": { "200": { "description": "Interest catalogue", "content": { "application/json": { "schema": { "type": "array", "items": { "type": "string" } } } } } } }
     },
     "/users/search": {
-      "get": { "tags": ["User Profiles"], "summary": "Search user profiles", "parameters": [{ "name": "q", "in": "query", "required": true, "schema": { "type": "string" } }, { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "default": 10 } }], "responses": { "200": { "description": "Bounded profile search results", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProfileSearchResult" } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "get": { "tags": ["User Profiles"], "summary": "Search user profiles", "parameters": [{ "name": "q", "in": "query", "required": true, "schema": { "type": "string" } }, { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 } }], "responses": { "200": { "description": "Bounded profile search results", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProfileSearchResult" } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/badges": {
       "get": { "tags": ["User Profiles"], "summary": "Get earned profile badges", "responses": { "200": { "description": "Badge list", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Badge" } } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
@@ -250,6 +250,6 @@
     "validation": "Global ValidationPipe with whitelist, transform, and forbidNonWhitelisted",
     "persistence": "Supabase/PostgreSQL remains authoritative; Redis or client caches must not broaden visibility",
     "privacy": "Profile visibility, block relationships, incognito/visitor masking, message filters, and contact-sharing rules remain server-authoritative",
-    "rollback": "Documentation/tagging changes are code-only. No schema migration or persisted-data rollback is required."
+    "rollback": "Documentation, tagging, and pagination validation changes are code-only. No schema migration or persisted-data rollback is required."
   }
 }
