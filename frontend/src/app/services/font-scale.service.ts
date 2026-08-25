@@ -67,7 +67,8 @@ export class FontScaleService {
 
     const stepCount = Math.round((next - MIN_SCALE) / STEP);
     const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + stepCount * STEP));
-    this.scaleFactor.set(clamped);
+    const rounded = Math.round(clamped * 100) / 100;
+    this.scaleFactor.set(rounded);
   }
 
   setTextSizePreference(size: TextSizePreference): void {

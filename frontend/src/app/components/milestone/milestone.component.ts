@@ -69,7 +69,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           size="touch"
           type="submit"
           [disabled]="!newTitle().trim() || creating()"
-          class="w-full rounded-app bg-primary text-on-fill transition-colors hover:bg-primary/90 sm:w-fit"
+          class="min-h-11 w-full rounded-app bg-primary text-on-fill transition-colors hover:bg-primary/90 sm:w-fit"
         >
           {{ 'milestones.addBtn' | t }}
         </button>
@@ -102,7 +102,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                       type="button"
                       (click)="complete(ms.id)"
                       [attr.aria-label]="'milestones.completeBtn' | t"
-                      class="w-full rounded-app bg-primary text-on-fill sm:w-auto"
+                      class="min-h-11 w-full rounded-app bg-primary text-on-fill sm:w-auto"
                     >
                       {{ 'milestones.completeBtn' | t }}
                     </button>
@@ -117,7 +117,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                     type="button"
                     (click)="remove(ms.id)"
                     [attr.aria-label]="'milestones.removeBtn' | t"
-                    class="w-full text-danger sm:w-auto"
+                    class="min-h-11 w-full text-danger sm:w-auto"
                   >
                     {{ 'milestones.removeBtn' | t }}
                   </button>
