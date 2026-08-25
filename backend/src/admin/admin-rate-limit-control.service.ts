@@ -104,7 +104,7 @@ export class AdminRateLimitControlService {
       .single();
     if (error) throw error;
     await this.invalidatePolicyCache();
-    return this.mapControl(data as Record<string, unknown>);
+    return this.mapControl(data);
   }
 
   async revoke(
@@ -126,9 +126,7 @@ export class AdminRateLimitControlService {
       .maybeSingle();
     if (error) throw error;
     await this.invalidatePolicyCache();
-    return data
-      ? this.mapControl(data as Record<string, unknown>)
-      : this.get(controlId);
+    return data ? this.mapControl(data) : this.get(controlId);
   }
 
   async inspect(
@@ -235,7 +233,10 @@ export class AdminRateLimitControlService {
     try {
       const cached = await redis.get(cacheKey);
       if (cached === 'none') return null;
-      if (cached) return this.mapControl(JSON.parse(cached) as Record<string, unknown>);
+      if (cached)
+        return this.mapControl(
+          JSON.parse(cached) as Record<string, unknown>,
+        );
     } catch {
       // Fall through to PostgreSQL.
     }
@@ -280,8 +281,9 @@ export class AdminRateLimitControlService {
       .eq('id', id)
       .maybeSingle();
     if (error) throw error;
-    if (!data) throw new NotFoundException('Network rate-limit control not found');
-    return this.mapControl(data as Record<string, unknown>);
+    if (!data)
+      throw new NotFoundException('Network rate-limit control not found');
+    return this.mapControl(data);
   }
 
   private async findByIdempotency(
@@ -297,10 +299,12 @@ export class AdminRateLimitControlService {
       .eq('idempotency_key', idempotencyKey)
       .maybeSingle();
     if (error) throw error;
-    return data ? this.mapControl(data as Record<string, unknown>) : null;
+    return data ? this.mapControl(data) : null;
   }
 
-  private mapControl(row: Record<string, unknown>): AdminNetworkRateLimitControl {
+  private mapControl(
+    row: Record<string, unknown>,
+  ): AdminNetworkRateLimitControl {
     const maxRequests = this.safeCount(row.max_requests ?? row.maxRequests);
     const windowSeconds = this.safeCount(
       row.window_seconds ?? row.windowSeconds,
