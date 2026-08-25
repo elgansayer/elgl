@@ -54,12 +54,13 @@ Datastore, media-provider, or downstream failures must fail closed. They must no
 
 `backend/src/users/user-profiles.openapi.contract.spec.ts` protects the minimum contract by verifying:
 
-- valid OpenAPI JSON and the `/api` server prefix;
+- valid OpenAPI 3.1 JSON and the `/api` server prefix;
 - the Bearer JWT scheme and global security requirement;
 - coverage of every current `UsersController` route family;
 - `User Profiles` tagging on every documented operation;
 - explicit 2FA markers on destructive/self-profile protected operations;
 - bounded follower/following/search parameters;
+- success response codes aligned with the existing Nest controller behavior;
 - privacy-sensitive schemas and sanitized failure responses;
 - live Swagger tagging/security metadata remains attached to `UsersController`.
 
