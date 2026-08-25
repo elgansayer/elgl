@@ -31,7 +31,7 @@ The existing `created_at` index supports recent-error operational queries. Alert
 
 ## Retention and deletion
 
-Crash rows should be retained only for the operational debugging window. The production data-retention job should delete `client_errors.created_at` older than 30 days. Because this PR does not introduce a new scheduler, operators must keep that existing database-retention job/configuration aligned with the 30-day target. Account deletion does not need a per-user cascade because the crash table intentionally stores no user ID.
+Crash rows should be retained only for the operational debugging window. The retention target is 30 days: production operations should schedule deletion of rows where `client_errors.created_at < now() - interval '30 days'`. This change intentionally does not introduce a second application scheduler solely for analytics retention; retention automation belongs with the deployment/database maintenance layer and must be configured before production rollout. Account deletion does not need a per-user cascade because the crash table intentionally stores no user ID.
 
 ## Verification
 
