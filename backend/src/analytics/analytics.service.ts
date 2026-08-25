@@ -12,11 +12,16 @@ function boundedString(value: unknown, maxLength: number): string | undefined {
   return typeof value === 'string' ? value.slice(0, maxLength) : undefined;
 }
 
-function sanitiseMetadata(metadata: Record<string, unknown> | undefined): SafeClientErrorMetadata | null {
+function sanitiseMetadata(
+  metadata: Record<string, unknown> | undefined,
+): SafeClientErrorMetadata | null {
   if (!metadata) return null;
 
   const result: SafeClientErrorMetadata = {};
-  if (typeof metadata['status'] === 'number' && Number.isFinite(metadata['status'])) {
+  if (
+    typeof metadata['status'] === 'number' &&
+    Number.isFinite(metadata['status'])
+  ) {
     result.status = Math.max(0, Math.min(999, Math.trunc(metadata['status'])));
   }
 
@@ -27,6 +32,17 @@ function sanitiseMetadata(metadata: Record<string, unknown> | undefined): SafeCl
   if (rawType) result.rawType = rawType;
 
   return Object.keys(result).length > 0 ? result : null;
+}
+
+function sanitiseUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return `${parsed.origin}${parsed.pathname}`.slice(0, 2048);
+  } catch {
+    return null;
+  }
 }
 
 @Injectable()
@@ -43,7 +59,7 @@ export class AnalyticsService {
         name: payload.name ?? 'Error',
         stack: payload.stack ?? null,
         component_stack: payload.componentStack ?? null,
-        url: payload.url ?? null,
+        url: sanitiseUrl(payload.url),
         user_agent: payload.userAgent ?? null,
         metadata: sanitiseMetadata(payload.metadata),
         stack_frames: payload.stackFrames ?? null,
@@ -52,7 +68,9 @@ export class AnalyticsService {
 
       if (error) {
         this.logger.warn('Failed to persist client crash analytics');
-        throw new ServiceUnavailableException('Client crash analytics unavailable');
+        throw new ServiceUnavailableException(
+          'Client crash analytics unavailable',
+        );
       }
     } catch (error: unknown) {
       if (error instanceof ServiceUnavailableException) throw error;
