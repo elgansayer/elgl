@@ -5,11 +5,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-distance-slider',
   imports: [TranslatePipe],
   template: `
-    <label class="flex w-full flex-col">
-      <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+    <label class="flex w-full min-w-0 flex-col gap-1.5">
+      <span class="text-xs font-semibold leading-5 text-text-secondary break-words">
         {{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}
       </span>
-      <span class="relative h-8">
+      <span class="relative flex min-h-11 items-center">
         <input
           type="range"
           [min]="effectiveMinKm()"
@@ -18,7 +18,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           [disabled]="disabled()"
           (input)="onChange($event)"
           step="1"
-          class="w-full h-8 appearance-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          class="h-11 w-full appearance-none cursor-pointer bg-transparent disabled:cursor-not-allowed disabled:opacity-40"
           [style.accent-color]="'var(--color-primary)'"
         />
       </span>
@@ -33,7 +33,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       input[type='range']::-webkit-slider-runnable-track {
         height: 6px;
         border-radius: 3px;
-        background: var(--color-surface-100);
+        background: rgb(var(--surface-100-rgb));
       }
       input[type='range']::-webkit-slider-thumb {
         -webkit-appearance: none;
@@ -41,23 +41,27 @@ import { TranslatePipe } from '../../services/translate.pipe';
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-primary);
+        background: rgb(var(--color-primary-rgb));
         cursor: pointer;
-        border: 2px solid var(--color-surface);
+        border: 2px solid rgb(var(--surface-500-rgb));
         margin-top: -8px;
       }
       input[type='range']::-moz-range-track {
         height: 6px;
         border-radius: 3px;
-        background: var(--color-surface-100);
+        background: rgb(var(--surface-100-rgb));
       }
       input[type='range']::-moz-range-thumb {
         height: 22px;
         width: 22px;
         border-radius: 50%;
-        background: var(--color-primary);
+        background: rgb(var(--color-primary-rgb));
         cursor: pointer;
-        border: 2px solid var(--color-surface);
+        border: 2px solid rgb(var(--surface-500-rgb));
+      }
+      input[type='range']:disabled::-webkit-slider-thumb,
+      input[type='range']:disabled::-moz-range-thumb {
+        cursor: not-allowed;
       }
     `,
   ],
