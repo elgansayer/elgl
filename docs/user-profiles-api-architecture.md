@@ -12,7 +12,7 @@ The contract covers authenticated self-profile reads and writes, profile media u
 
 All routes are under `/api/users` because NestJS applies the global `/api` prefix and `UsersController` uses `@Controller('users')`. `SupabaseAuthGuard` is applied at controller scope. The Swagger contract therefore declares a global HTTP Bearer JWT security scheme named `bearer`; callers must use a Supabase-issued access token in the `Authorization` header.
 
-The application-wide `ValidationPipe` uses `whitelist: true`, `transform: true`, and `forbidNonWhitelisted: true`. DTO-backed mutations must remain the source of truth for validation. The OpenAPI file describes the externally relevant bounds but does not replace runtime DTO validation.
+The application-wide `ValidationPipe` uses `whitelist: true`, `transform: true`, and `forbidNonWhitelisted: true`. DTO-backed mutations must remain the source of truth for validation. Query-string primitives are validated explicitly by `UsersController`; the OpenAPI file documents the same externally relevant bounds.
 
 Account deletion, permanent deletion, deletion restoration, and self-profile mutation retain the existing `TwoFactorGuard` policy where it is already enforced. Destructive deletion endpoints also retain their dedicated throttles. The OpenAPI contract marks these operations with `x-requires-2fa: true` so generated/internal documentation does not imply bearer authentication alone is sufficient.
 
@@ -38,7 +38,7 @@ The following rules are server-authoritative and must remain true even if a clie
 
 ## Pagination and bounded collections
 
-Follower and following endpoints accept `limit` and `offset`; the OpenAPI contract documents a maximum of 100 and a default of 20 as the external production bound. Search is documented as bounded and defaults to 10. New collection endpoints in this domain must use explicit bounds rather than unbounded table scans.
+Follower and following endpoints accept `limit` and `offset`; the controller enforces a maximum limit of 100 and a default of 20. Search enforces the same maximum and defaults to 10. Offsets must be non-negative integers. Invalid values fail with `400` before a Supabase query is issued. New collection endpoints in this domain must use explicit bounds rather than unbounded table scans.
 
 Visitor/status-viewer endpoints currently return arrays from existing service methods. If those datasets grow beyond their present product constraints, pagination must be added compatibly before removing the current array response shape.
 
@@ -77,7 +77,7 @@ A request/correlation ID may be used where the existing request pipeline support
 
 ## Rollout and rollback
 
-There is no schema migration or data backfill. Deploy normally with the backend. Existing clients are unchanged because route behavior and payloads are not intentionally changed; the runtime change is documentation metadata only.
+There is no schema migration or data backfill. Deploy normally with the backend. Valid existing clients are unchanged; invalid, fractional, negative, or over-limit pagination values now fail with `400` instead of reaching Supabase.
 
 Rollback is a normal code/documentation revert. No user data, Supabase rows, Redis keys, or media objects require cleanup. If runtime behavior and this document diverge during a future rollback, runtime authorization remains authoritative and the OpenAPI contract must be corrected before the next release.
 
@@ -87,7 +87,7 @@ Run the focused backend contract test and the normal backend verification suite:
 
 ```bash
 cd backend
-npm test -- src/users/user-profiles.openapi.contract.spec.ts
+npm test -- src/users/user-profiles.openapi.contract.spec.ts src/users/users.controller.pagination.spec.ts
 npm run build
 npm run lint:check
 ```
