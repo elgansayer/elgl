@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
+import { CorrectionQualityService } from './correction-quality.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -9,6 +10,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 describe('MomentsController', () => {
   let controller: MomentsController;
   let momentsService: MomentsService;
+  let correctionQualityService: CorrectionQualityService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -25,6 +27,12 @@ describe('MomentsController', () => {
             getComments: vi.fn(),
             pinMoment: vi.fn(),
             getLifetimeCounts: vi.fn(),
+          },
+        },
+        {
+          provide: CorrectionQualityService,
+          useValue: {
+            vote: vi.fn(),
           },
         },
         {
@@ -45,6 +53,7 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
+    correctionQualityService = module.get<CorrectionQualityService>(CorrectionQualityService);
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -158,6 +167,42 @@ describe('MomentsController', () => {
         dto,
       );
       expect(result).toEqual(comment);
+    });
+  });
+
+  describe('voteOnCorrection', () => {
+    it('returns null without an authenticated user', async () => {
+      const result = await controller.voteOnCorrection(null, 'm-1', 'c-1', {
+        vote: 'up',
+      });
+      expect(result).toBeNull();
+      expect(correctionQualityService.vote).not.toHaveBeenCalled();
+    });
+
+    it('binds the route moment and correction IDs to the authenticated voter', async () => {
+      const response = {
+        commentId: 'c-1',
+        vote: 'up',
+        upVotes: 4,
+        downVotes: 1,
+        userVote: 'up' as const,
+      };
+      (correctionQualityService.vote as Mock).mockResolvedValue(response);
+
+      const result = await controller.voteOnCorrection(
+        { id: 'user-1' } as any,
+        'm-1',
+        'c-1',
+        { vote: 'up' },
+      );
+
+      expect(correctionQualityService.vote).toHaveBeenCalledWith(
+        'user-1',
+        'm-1',
+        'c-1',
+        'up',
+      );
+      expect(result).toEqual(response);
     });
   });
 
