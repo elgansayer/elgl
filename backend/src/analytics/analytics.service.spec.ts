@@ -15,7 +15,9 @@ describe('AnalyticsService', () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     insertBuilder = { insert: vi.fn().mockResolvedValue({ error: null }) };
     mockSupabaseClient = { from: vi.fn().mockReturnValue(insertBuilder) };
-    mockSupabaseService = { getClient: vi.fn().mockReturnValue(mockSupabaseClient) };
+    mockSupabaseService = {
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +50,17 @@ describe('AnalyticsService', () => {
         url: 'https://example.com/page',
         client_timestamp: '2026-08-25T10:00:00.000Z',
       }),
+    );
+  });
+
+  it('redacts untrusted URL query strings, fragments, and credentials', async () => {
+    await service.recordClientError({
+      message: 'boom',
+      url: 'https://user:password@example.com/path?token=secret#private',
+    });
+
+    expect(insertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://example.com/path' }),
     );
   });
 
@@ -98,11 +111,13 @@ describe('AnalyticsService', () => {
       }),
     });
 
-    await expect(service.recordClientError({ message: 'boom' })).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.recordClientError({ message: 'boom' }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
 
-    const log = warnSpy.mock.calls.map(([message]) => String(message)).join('\n');
+    const log = warnSpy.mock.calls
+      .map(([message]) => String(message))
+      .join('\n');
     expect(log).toContain('Failed to persist client crash analytics');
     expect(log).not.toContain('secret=abc');
   });
@@ -112,8 +127,8 @@ describe('AnalyticsService', () => {
       insert: vi.fn().mockRejectedValue(new Error('password=secret')),
     });
 
-    await expect(service.recordClientError({ message: 'boom' })).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.recordClientError({ message: 'boom' }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });
