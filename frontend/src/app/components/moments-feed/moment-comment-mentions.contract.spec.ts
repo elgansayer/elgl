@@ -33,14 +33,33 @@ describe('Moment comment @mention contract', () => {
       expect(component).toContain(`event.key === '${key}'`);
     }
     expect(component).toContain('this.userService.searchUsers(query, 5)');
+    expect(component).toContain('mentionRequestVersionMap');
+    expect(component).toContain('this.mentionRequestVersionMap[momentId] !== requestVersion');
+    expect(component).toContain('this.mentionQueryMap()[momentId] !== query');
+    expect(component).toContain('this.closeMentionSuggestions(momentId)');
   });
 
-  it('renders server-backed suggestions as touch-sized Spartan actions', () => {
+  it('renders server-backed suggestions as an accessible, touch-sized combobox', () => {
     expect(template).toContain('mentionSuggestionsMap()[moment.id]');
-    expect(template).toContain('(click)="selectMention(moment.id, suggestion)"');
+    expect(template).toContain(
+      '(click)="selectMention(moment.id, suggestion, commentInput)"',
+    );
     expect(template).toContain('hlmBtn');
     expect(template).toContain('min-h-11');
+    expect(template).toContain('role="combobox"');
     expect(template).toContain('aria-autocomplete="list"');
+    expect(template).toContain('role="listbox"');
+    expect(template).toContain('role="option"');
+    expect(template).toContain('[attr.aria-activedescendant]');
+    expect(template).toContain('[attr.aria-selected]');
+  });
+
+  it('returns focus and the caret to the comment input after selecting a mention', () => {
+    expect(template).toContain('#commentInput');
+    expect(template).toContain('(mousedown)="$event.preventDefault()"');
+    expect(component).toContain('queueMicrotask');
+    expect(component).toContain('input.focus()');
+    expect(component).toContain('input.setSelectionRange(cursorPosition, cursorPosition)');
   });
 
   it('parses submitted mentions on the server and excludes self/author notifications', () => {
