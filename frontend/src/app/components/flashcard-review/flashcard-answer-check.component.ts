@@ -23,7 +23,7 @@ const MAX_ANSWER_LENGTH = 256;
         novalidate
       >
         <label class="mb-2 block text-sm font-bold text-text-primary" [for]="inputId()">
-          {{ 'review.typeAnswerLabel' | t }}
+          {{ 'review.answerLabel' | t }}
         </label>
         <div class="flex flex-col gap-2 sm:flex-row">
           <input
@@ -37,7 +37,7 @@ const MAX_ANSWER_LENGTH = 256;
             [maxlength]="maxAnswerLength"
             [value]="answer()"
             (input)="updateAnswer($event)"
-            [placeholder]="'review.typeAnswerPlaceholder' | t"
+            [placeholder]="'review.answerLabel' | t"
             class="min-h-11 min-w-0 flex-1"
             dir="auto"
           />
@@ -47,48 +47,50 @@ const MAX_ANSWER_LENGTH = 256;
             class="min-h-11 shrink-0"
             [disabled]="answer().trim().length === 0"
           >
-            {{ 'review.checkAnswerBtn' | t }}
+            {{ 'common.ok' | t }}
           </button>
         </div>
-        <p class="mt-2 text-xs text-text-muted">{{ 'review.typeAnswerHint' | t }}</p>
+        <p class="mt-2 text-xs text-text-muted">{{ 'review.tapToFlip' | t }}</p>
       </form>
     } @else if (assessment(); as result) {
       <section
-        class="rounded-sheet border p-4"
-        [class.border-success]="result.match === 'exact'"
-        [class.bg-success/10]="result.match === 'exact'"
-        [class.border-warning]="result.match === 'partial'"
-        [class.bg-warning/10]="result.match === 'partial'"
-        [class.border-danger]="result.match === 'incorrect'"
-        [class.bg-danger/10]="result.match === 'incorrect'"
-        [class.border-surface-100]="result.match === 'unavailable'"
-        [class.bg-surface-200]="result.match === 'unavailable'"
+        class="rounded-sheet border border-surface-100 bg-surface-200 p-4"
         role="status"
         aria-live="polite"
         aria-atomic="true"
       >
         @switch (result.match) {
           @case ('exact') {
-            <p class="font-bold text-success">{{ 'review.answerExact' | t }}</p>
+            <p class="font-bold text-success">✓ {{ 'review.knownAriaLabel' | t }}</p>
           }
           @case ('partial') {
             <p class="font-bold text-warning">
-              {{ 'review.answerPartial' | t: { score: result.score } }}
+              ≈ {{ result.score }}% · {{ 'review.goodAriaLabel' | t }}
             </p>
           }
           @case ('incorrect') {
             <p class="font-bold text-danger">
-              {{ 'review.answerIncorrect' | t: { score: result.score } }}
+              {{ result.score }}% · {{ 'review.againAriaLabel' | t }}
             </p>
           }
           @default {
-            <p class="font-bold text-text-primary">{{ 'review.answerUnavailable' | t }}</p>
+            <p class="font-bold text-text-primary">{{ 'common.error_generic' | t }}</p>
           }
         }
 
         @if (result.suggestedGrade; as grade) {
           <button hlmBtn type="button" class="mt-3 min-h-11" (click)="applySuggestedGrade(grade)">
-            {{ 'review.useSuggestedGrade' | t: { grade: gradeLabel(grade) } }}
+            @switch (grade) {
+              @case ('known') {
+                {{ 'review.knownBtn' | t }}
+              }
+              @case ('good') {
+                {{ 'review.goodBtn' | t }}
+              }
+              @case ('again') {
+                {{ 'review.againBtn' | t }}
+              }
+            }
           </button>
         }
       </section>
@@ -136,9 +138,5 @@ export class FlashcardAnswerCheckComponent {
 
   applySuggestedGrade(grade: FlashcardAnswerGrade): void {
     this.applyGrade.emit(grade);
-  }
-
-  gradeLabel(grade: FlashcardAnswerGrade): string {
-    return `review.${grade}Btn`;
   }
 }
