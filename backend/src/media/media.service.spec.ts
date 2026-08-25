@@ -152,6 +152,23 @@ describe('MediaService', () => {
     });
   });
 
+  it.each([
+    'covers/user-2/cover.png',
+    'covers/user-1/nested/cover.png',
+    'avatars/user-1/cover.png',
+    '',
+    `covers/user-1/${'x'.repeat(500)}`,
+  ])('rejects an unowned or malformed cover object key before reading R2: %s', async (objectKey) => {
+    await expect(service.confirmCoverUpload('user-1', objectKey)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+
+    expect(r2ObjectService.downloadObject).not.toHaveBeenCalled();
+    expect(imageCompressionService.compress).not.toHaveBeenCalled();
+    expect(r2ObjectService.uploadBytes).not.toHaveBeenCalled();
+    expect(usersUpdate).not.toHaveBeenCalled();
+  });
+
   it('uploads compressed avatar bytes without an AWS client', async () => {
     const file = {
       buffer: Buffer.from([1, 2, 3]),
