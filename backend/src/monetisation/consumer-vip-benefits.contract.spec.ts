@@ -2,7 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const backendRoot = existsSync(resolve(process.cwd(), 'src/users/users.service.ts'))
+const backendRoot = existsSync(
+  resolve(process.cwd(), 'src/users/users.service.ts'),
+)
   ? process.cwd()
   : resolve(process.cwd(), 'backend');
 
@@ -27,14 +29,14 @@ describe('consumer VIP API benefit contract (#1363)', () => {
     expect(nlpService).toContain('daily_ai_usage:${userId}:${today}');
 
     expect(aiConversationService).toContain('const DAILY_AI_LIMIT_FREE = 10;');
-    expect(aiConversationService).toContain("const REDIS_KEY_PREFIX = 'daily_ai_usage:';");
+    expect(aiConversationService).toContain(
+      "const REDIS_KEY_PREFIX = 'daily_ai_usage:';",
+    );
     expect(aiConversationService).toContain('if (isVip) return true;');
   });
 
   it('keeps the free-tier target-language limit at one and consumer VIP at three', () => {
-    expect(usersService).toContain(
-      'dto.target_languages.length > 1 && !isVip',
-    );
+    expect(usersService).toContain('dto.target_languages.length > 1 && !isVip');
     expect(usersService).toContain('dto.target_languages.length > 3');
     expect(usersService).toContain(
       "tier === 'pro' || tier === 'developer' ? 5 : 3",
