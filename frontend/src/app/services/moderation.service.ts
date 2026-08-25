@@ -1,5 +1,5 @@
 import { Injectable, inject, resource, ResourceRef, Signal } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { withRetry } from './http-retry';
@@ -71,11 +71,16 @@ export class ModerationService {
     });
   }
 
-  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
-    const params: Record<string, string> = { type };
-    if (status) {
-      params['status'] = status;
+  async getItems(
+    type: 'moment' | 'profile',
+    status?: string,
+  ): Promise<ModerationItem[]> {
+    let params = new HttpParams().set('type', type);
+    const normalizedStatus = status?.trim();
+    if (normalizedStatus) {
+      params = params.set('status', normalizedStatus);
     }
+
     try {
       return await withRetry(() =>
         firstValueFrom(
@@ -90,7 +95,10 @@ export class ModerationService {
     }
   }
 
-  async approveItem(itemId: string, type: string): Promise<ModerationActionResponse> {
+  async approveItem(
+    itemId: string,
+    type: string,
+  ): Promise<ModerationActionResponse> {
     try {
       return await withRetry(() =>
         firstValueFrom(
@@ -106,7 +114,11 @@ export class ModerationService {
     }
   }
 
-  async rejectItem(itemId: string, type: string, reason?: string): Promise<ModerationActionResponse> {
+  async rejectItem(
+    itemId: string,
+    type: string,
+    reason?: string,
+  ): Promise<ModerationActionResponse> {
     const body: Record<string, string> = { itemId, type };
     if (reason) {
       body['reason'] = reason;
@@ -154,9 +166,12 @@ export class ModerationService {
     try {
       return await withRetry(() =>
         firstValueFrom(
-          this.http.get<UserAnalysisResult>(`${this.baseUrl}/analyse/${userId}`, {
-            headers: this.getHeaders(),
-          }),
+          this.http.get<UserAnalysisResult>(
+            `${this.baseUrl}/analyse/${userId}`,
+            {
+              headers: this.getHeaders(),
+            },
+          ),
         ),
       );
     } catch {
