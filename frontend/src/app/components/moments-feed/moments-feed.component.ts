@@ -167,6 +167,7 @@ export class MomentsFeedComponent {
   readonly mentionActiveIndexMap = signal<Record<string, number>>({});
   private mentionRangeStartMap: Record<string, number> = {};
   private mentionRangeEndMap: Record<string, number> = {};
+  private mentionRequestVersionMap: Record<string, number> = {};
 
   // New Comment / Correction form states per momentId
   commentInputMap: Record<string, string> = {};
@@ -493,13 +494,21 @@ export class MomentsFeedComponent {
       this.mentionActiveIndexMap.update((m) => ({ ...m, [momentId]: 0 }));
       void this.loadMentionSuggestions(momentId);
     } else {
-      this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+      this.closeMentionSuggestions(momentId);
     }
   }
 
   onCommentKeydown(event: KeyboardEvent, moment: MomentRecord): void {
     const momentId = moment.id;
+    const input = event.currentTarget instanceof HTMLInputElement ? event.currentTarget : undefined;
     const suggestions = this.mentionSuggestionsMap()[momentId] ?? [];
+
+    if (event.key === 'Escape' && this.mentionQueryMap()[momentId] !== null) {
+      event.preventDefault();
+      this.closeMentionSuggestions(momentId);
+      return;
+    }
+
     if (suggestions.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -520,12 +529,7 @@ export class MomentsFeedComponent {
       if (event.key === 'Enter') {
         event.preventDefault();
         const idx = this.mentionActiveIndexMap()[momentId] ?? 0;
-        this.selectMention(momentId, suggestions[idx]);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+        this.selectMention(momentId, suggestions[idx], input);
         return;
       }
     }
@@ -537,27 +541,66 @@ export class MomentsFeedComponent {
 
   private async loadMentionSuggestions(momentId: string): Promise<void> {
     const query = this.mentionQueryMap()[momentId];
+    const requestVersion = (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionRequestVersionMap[momentId] = requestVersion;
+
     if (!query) {
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
       return;
     }
+
     try {
       const results = await this.userService.searchUsers(query, 5);
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: results }));
     } catch {
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
     }
   }
 
-  selectMention(momentId: string, member: MentionSuggestion | undefined): void {
+  private closeMentionSuggestions(momentId: string): void {
+    this.mentionRequestVersionMap[momentId] =
+      (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+    this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
+    this.mentionActiveIndexMap.update((m) => ({ ...m, [momentId]: 0 }));
+  }
+
+  selectMention(
+    momentId: string,
+    member: MentionSuggestion | undefined,
+    input?: HTMLInputElement,
+  ): void {
     const displayName = member?.display_name;
     if (!displayName) return;
+
+    const currentValue = this.commentInputMap[momentId] ?? '';
+    const rangeStart = this.mentionRangeStartMap[momentId] ?? currentValue.length;
+    const rangeEnd = this.mentionRangeEndMap[momentId] ?? currentValue.length;
     const mentionText = '@' + displayName + ' ';
+    const cursorPosition = rangeStart + mentionText.length;
+
     this.commentInputMap[momentId] =
-      (this.commentInputMap[momentId] ?? '').slice(0, this.mentionRangeStartMap[momentId]) +
-      mentionText +
-      (this.commentInputMap[momentId] ?? '').slice(this.mentionRangeEndMap[momentId]);
-    this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+      currentValue.slice(0, rangeStart) + mentionText + currentValue.slice(rangeEnd);
+    this.closeMentionSuggestions(momentId);
+
+    if (input) {
+      queueMicrotask(() => {
+        input.focus();
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      });
+    }
   }
 
   openGhostCorrection(moment: MomentRecord, textToCorrect?: string): void {
