@@ -1,0 +1,88 @@
+name: Frontend unit diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-unit-diagnostics-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-unit-diagnostics:
+    name: frontend / unit diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: frontend
+
+      - name: Run frontend unit tests
+        id: tests
+        continue-on-error: true
+        working-directory: frontend
+        run: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+
+      - name: Emit failing test details
+        if: always()
+        working-directory: frontend
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'test-results/unit.json';
+          if (!fs.existsSync(path)) {
+            console.error('::error::Frontend unit report was not produced');
+            process.exit(1);
+          }
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const results = report.testResults ?? [];
+          const failed = [];
+          for (const suite of results) {
+            const assertions = (suite.assertionResults ?? []).filter((test) => test.status === 'failed');
+            if (suite.status !== 'failed' && assertions.length === 0) continue;
+            const file = suite.name ?? 'unknown-suite';
+            if (assertions.length === 0) {
+              failed.push({ file, title: 'suite setup/load failure' });
+              continue;
+            }
+            for (const test of assertions) {
+              failed.push({
+                file,
+                title: [...(test.ancestorTitles ?? []), test.title].filter(Boolean).join(' > '),
+              });
+            }
+          }
+          const suites = report.numFailedTestSuites ?? report.numFailedTestFiles ?? 'n/a';
+          const tests = report.numFailedTests ?? failed.length;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Frontend unit failure inventory\n\nFailing suites: **${suites}**  \nFailing tests: **${tests}**\n\n`);
+          for (const item of failed) {
+            const relative = item.file.includes('/frontend/') ? item.file.split('/frontend/')[1] : item.file;
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- \`${relative}\`: ${item.title}\n`);
+            const message = `${relative}: ${item.title}`.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+            console.error(`::error::${message}`);
+          }
+          if (failed.length > 0 || Number(tests) > 0) process.exit(1);
+          NODE
+
+      - name: Upload frontend unit report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-unit-diagnostics-${{ github.sha }}
+          path: frontend/test-results/unit.json
+          if-no-files-found: error
+          retention-days: 14
