@@ -1,6 +1,5 @@
 import type { Mock } from 'vitest';
 import { AuthService } from './auth.service';
-import { EmailService } from '../email/email.service';
 
 describe('AuthService (unit)', () => {
   let service: AuthService;
@@ -10,7 +9,6 @@ describe('AuthService (unit)', () => {
     verifyToken: Mock;
     disable: Mock;
   };
-  let emailService: { sendPasswordResetEmail: Mock };
 
   beforeEach(() => {
     supabaseService = { getClient: vi.fn() };
@@ -19,175 +17,11 @@ describe('AuthService (unit)', () => {
       verifyToken: vi.fn(),
       disable: vi.fn(),
     };
-    emailService = { sendPasswordResetEmail: vi.fn() };
 
     service = new (AuthService as any)(
       supabaseService,
       twoFactorService,
-      emailService,
     ) as AuthService;
-  });
-
-  describe('requestPasswordReset', () => {
-    it('should send a password reset email when the user exists', async () => {
-      const mockClient = {
-        auth: {
-          admin: {
-            generateLink: vi.fn().mockResolvedValue({
-              error: null,
-              data: {
-                properties: {
-                  action_link:
-                    'https://example.com/#access_token=test-token-123&expires_in=3600',
-                },
-              },
-            }),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await service.requestPasswordReset('user@example.com');
-
-      expect(mockClient.auth.admin.generateLink).toHaveBeenCalledWith({
-        type: 'recovery',
-        email: 'user@example.com',
-        options: { redirectTo: '' },
-      });
-      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
-        'user@example.com',
-        'test-token-123',
-      );
-    });
-
-    it('should not send email when Supabase returns an error', async () => {
-      const mockClient = {
-        auth: {
-          admin: {
-            generateLink: vi.fn().mockResolvedValue({
-              error: { message: 'User not found' },
-              data: null,
-            }),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await service.requestPasswordReset('nonexistent@example.com');
-
-      expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
-    });
-
-    it('should not send email when action link is missing', async () => {
-      const mockClient = {
-        auth: {
-          admin: {
-            generateLink: vi.fn().mockResolvedValue({
-              error: null,
-              data: { properties: {} },
-            }),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await service.requestPasswordReset('user@example.com');
-
-      expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
-    });
-
-    it('should not throw when the email lookup fails', async () => {
-      const mockClient = {
-        auth: {
-          admin: {
-            generateLink: vi.fn().mockRejectedValue(new Error('Network error')),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await expect(
-        service.requestPasswordReset('user@example.com'),
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('resetPassword', () => {
-    it('should reset password using a valid token', async () => {
-      const mockClient = {
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            error: null,
-            data: { user: { id: 'user-123' } },
-          }),
-          admin: {
-            updateUserById: vi.fn().mockResolvedValue({ error: null }),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await service.resetPassword('valid-token', 'newPassword123');
-
-      expect(mockClient.auth.getUser).toHaveBeenCalledWith('valid-token');
-      expect(mockClient.auth.admin.updateUserById).toHaveBeenCalledWith(
-        'user-123',
-        { password: 'newPassword123' },
-      );
-    });
-
-    it('should throw BadRequestException for an invalid token', async () => {
-      const mockClient = {
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            error: { message: 'Invalid token' },
-            data: null,
-          }),
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await expect(
-        service.resetPassword('invalid-token', 'newPassword123'),
-      ).rejects.toThrow('Invalid or expired reset token');
-    });
-
-    it('should throw BadRequestException when user ID is missing', async () => {
-      const mockClient = {
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            error: null,
-            data: { user: {} },
-          }),
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await expect(
-        service.resetPassword('valid-token', 'newPassword123'),
-      ).rejects.toThrow('Invalid or expired reset token');
-    });
-
-    it('should throw BadRequestException when password update fails', async () => {
-      const mockClient = {
-        auth: {
-          getUser: vi.fn().mockResolvedValue({
-            error: null,
-            data: { user: { id: 'user-123' } },
-          }),
-          admin: {
-            updateUserById: vi
-              .fn()
-              .mockResolvedValue({ error: { message: 'Password too weak' } }),
-          },
-        },
-      };
-      supabaseService.getClient.mockReturnValue(mockClient);
-
-      await expect(
-        service.resetPassword('valid-token', 'weak'),
-      ).rejects.toThrow('Password too weak');
-    });
   });
 
   describe('changePassword', () => {
