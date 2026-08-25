@@ -37,7 +37,7 @@ describe('EmailService (unit)', () => {
   });
 
   describe('sendPasswordResetEmail', () => {
-    it('should send a password reset email with the correct fields', async () => {
+    it('sends a password reset email with the correct fields', async () => {
       await service.sendPasswordResetEmail('user@example.com', 'abc-token-xyz');
 
       expect(transporter.sendMail).toHaveBeenCalledTimes(1);
@@ -48,28 +48,30 @@ describe('EmailService (unit)', () => {
       expect(mailOptions.from).toContain('HelloTalk');
       expect(mailOptions.text).toContain('abc-token-xyz');
       expect(mailOptions.html).toContain('abc-token-xyz');
+      expect(mailOptions.text).toContain('expires after 30 minutes');
     });
 
-    it('should include the frontend URL and token in the reset link', async () => {
+    it('uses the canonical reset-password route and URL-encodes the token', async () => {
       configService.get = vi.fn((key: string, fallback: string) => {
-        if (key === 'FRONTEND_URL') return 'https://app.example.com';
+        if (key === 'FRONTEND_URL') return 'https://app.example.com/app/';
         return fallback;
       });
       const svc = new (EmailService as any)(configService) as EmailService;
       (svc as any).transporter = transporter;
 
-      await svc.sendPasswordResetEmail('user@example.com', 'my-token');
+      await svc.sendPasswordResetEmail('user@example.com', 'token + slash/');
 
       const mailOptions = transporter.sendMail.mock.calls[0][0];
       expect(mailOptions.text).toContain(
-        'https://app.example.com/forgot-password?token=my-token',
+        'https://app.example.com/reset-password?token=token+%2B+slash%2F',
       );
       expect(mailOptions.html).toContain(
-        'https://app.example.com/forgot-password?token=my-token',
+        'https://app.example.com/reset-password?token=token+%2B+slash%2F',
       );
+      expect(mailOptions.text).not.toContain('/forgot-password?token=');
     });
 
-    it('should use custom MAIL_FROM_NAME and MAIL_FROM_ADDRESS when configured', async () => {
+    it('uses custom MAIL_FROM_NAME and MAIL_FROM_ADDRESS when configured', async () => {
       configService.get = vi.fn((key: string, fallback: string) => {
         const overrides: Record<string, string> = {
           MAIL_FROM_NAME: 'HelloTalk Support',
