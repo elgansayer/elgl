@@ -124,6 +124,13 @@ describe('LinkPreviewService', () => {
     expect(httpService.get).not.toHaveBeenCalled();
   });
 
+  it('rejects canonical IPv4-mapped IPv6 loopback URLs', async () => {
+    await expect(
+      service.getPreview('http://[::ffff:7f00:1]/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(httpService.get).not.toHaveBeenCalled();
+  });
+
   it('rejects SSRF attempts via cloud metadata IPs', async () => {
     await expect(
       service.getPreview('http://169.254.169.254/latest/meta-data/'),
