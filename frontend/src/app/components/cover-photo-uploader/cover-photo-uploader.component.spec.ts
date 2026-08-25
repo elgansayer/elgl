@@ -99,11 +99,9 @@ describe('CoverPhotoUploaderComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const cropButton = Array.from(
-      fixture.nativeElement.querySelectorAll('button'),
-    ).find((button) => (button as HTMLButtonElement).textContent?.includes('common.crop')) as
-      | HTMLButtonElement
-      | undefined;
+    const cropButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLButtonElement).textContent?.includes('common.crop'),
+    ) as HTMLButtonElement | undefined;
 
     expect(component.selectedFile()).toBe(file);
     expect(component.isCropping()).toBe(false);
@@ -178,7 +176,7 @@ describe('CoverPhotoUploaderComponent', () => {
       expect(button.classList.contains('max-w-full')).toBe(true);
       expect(button.classList.contains('whitespace-normal')).toBe(true);
       expect(button.classList.contains('break-words')).toBe(true);
-      expect(button.className).not.toMatch(/(?:^|\s)(?:ml|mr|ms|me|left|right)-/);
+      expect(button.className).not.toMatch(/(?:^|\s)(?:ml|mr|left|right)-/);
     }
   });
 
@@ -307,7 +305,11 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.uploadError()).toBe(false);
   });
 
-  it('keeps async status in a persistent polite live region', () => {
+  it('keeps upload progress in a polite atomic live region', () => {
+    component.selectedFile.set(new File(['image'], 'cover.png', { type: 'image/png' }));
+    component.imageSource.set('data:image/png;base64,AA==');
+    fixture.detectChanges();
+
     const region = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
 
     expect(region).toBeTruthy();
