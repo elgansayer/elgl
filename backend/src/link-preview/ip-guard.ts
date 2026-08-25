@@ -20,6 +20,58 @@ function isIpv4(value: string): boolean {
   });
 }
 
+function parseIpv6Words(value: string): number[] | null {
+  let normalized = value.toLowerCase();
+  const zoneIndex = normalized.indexOf('%');
+  if (zoneIndex >= 0) {
+    normalized = normalized.slice(0, zoneIndex);
+  }
+
+  const lastColon = normalized.lastIndexOf(':');
+  const ipv4Tail = normalized.slice(lastColon + 1);
+  if (ipv4Tail.includes('.')) {
+    if (!isIpv4(ipv4Tail)) {
+      return null;
+    }
+    const octets = ipv4Tail.split('.').map(Number);
+    const high = ((octets[0] ?? 0) << 8) | (octets[1] ?? 0);
+    const low = ((octets[2] ?? 0) << 8) | (octets[3] ?? 0);
+    normalized = `${normalized.slice(0, lastColon)}:${high.toString(16)}:${low.toString(16)}`;
+  }
+
+  const halves = normalized.split('::');
+  if (halves.length > 2) {
+    return null;
+  }
+
+  const parseHalf = (half: string): number[] | null => {
+    if (!half) {
+      return [];
+    }
+    const parts = half.split(':');
+    if (parts.some((part) => !/^[0-9a-f]{1,4}$/.test(part))) {
+      return null;
+    }
+    return parts.map((part) => Number.parseInt(part, 16));
+  };
+
+  const left = parseHalf(halves[0] ?? '');
+  const right = parseHalf(halves[1] ?? '');
+  if (!left || !right) {
+    return null;
+  }
+
+  if (halves.length === 1) {
+    return left.length === 8 ? left : null;
+  }
+
+  const missingWords = 8 - left.length - right.length;
+  if (missingWords < 1) {
+    return null;
+  }
+  return [...left, ...Array<number>(missingWords).fill(0), ...right];
+}
+
 function isPrivateIpv4(ip: string): boolean {
   if (!isIpv4(ip)) {
     return false;
@@ -65,34 +117,32 @@ function isPrivateIpv4(ip: string): boolean {
 }
 
 function isPrivateIpv6(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  if (lower === '::') {
-    // Unspecified address
-    return true;
+  const words = parseIpv6Words(ip);
+  if (!words) {
+    return false;
   }
-  if (lower === '::1') {
-    // Loopback
-    return true;
+
+  const isIpv4Mapped =
+    words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff;
+  const isIpv4Compatible = words.slice(0, 6).every((word) => word === 0);
+  if (isIpv4Mapped || isIpv4Compatible) {
+    const high = words[6] ?? 0;
+    const low = words[7] ?? 0;
+    return isPrivateIpv4(
+      `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`,
+    );
   }
-  if (lower.startsWith('fc') || lower.startsWith('fd')) {
+
+  const first = words[0] ?? 0;
+  if ((first & 0xfe00) === 0xfc00) {
     // fc00::/7: unique local addresses
     return true;
   }
-  if (
-    lower.startsWith('fe8') ||
-    lower.startsWith('fe9') ||
-    lower.startsWith('fea') ||
-    lower.startsWith('feb')
-  ) {
+  if ((first & 0xffc0) === 0xfe80) {
     // fe80::/10: link-local addresses
     return true;
   }
-  if (
-    lower.startsWith('fec') ||
-    lower.startsWith('fed') ||
-    lower.startsWith('fee') ||
-    lower.startsWith('fef')
-  ) {
+  if ((first & 0xffc0) === 0xfec0) {
     // fec0::/10: deprecated site-local addresses, never publicly routable
     return true;
   }
