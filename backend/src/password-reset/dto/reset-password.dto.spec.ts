@@ -1,33 +1,49 @@
 import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { ResetPasswordDto } from './reset-password.dto';
 
+const VALID_TOKEN = 'a'.repeat(64);
+
 describe('ResetPasswordDto', () => {
-  it('should pass validation with valid token and password', async () => {
-    const dto = new ResetPasswordDto();
-    dto.token = 'abc123';
-    dto.newPassword = 'newPass123!';
+  it('passes validation with a generated reset token and bounded password', async () => {
+    const dto = plainToInstance(ResetPasswordDto, {
+      token: `  ${VALID_TOKEN}  `,
+      newPassword: 'newPass123!',
+    });
 
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+    expect(dto.token).toBe(VALID_TOKEN);
   });
 
-  it('should fail validation when token is empty', async () => {
-    const dto = new ResetPasswordDto();
-    dto.token = '';
-    dto.newPassword = 'newPass123!';
-
-    const errors = await validate(dto);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.property === 'token')).toBe(true);
+  it('rejects empty or malformed reset tokens', async () => {
+    for (const token of ['', 'abc123', 'g'.repeat(64), 'a'.repeat(65)]) {
+      const dto = plainToInstance(ResetPasswordDto, {
+        token,
+        newPassword: 'newPass123!',
+      });
+      const errors = await validate(dto);
+      expect(errors.some((error) => error.property === 'token')).toBe(true);
+    }
   });
 
-  it('should fail validation when newPassword is shorter than 8 characters', async () => {
-    const dto = new ResetPasswordDto();
-    dto.token = 'abc123';
-    dto.newPassword = 'short';
+  it('rejects passwords shorter than 8 characters', async () => {
+    const dto = plainToInstance(ResetPasswordDto, {
+      token: VALID_TOKEN,
+      newPassword: 'short',
+    });
 
     const errors = await validate(dto);
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.property === 'newPassword')).toBe(true);
+    expect(errors.some((error) => error.property === 'newPassword')).toBe(true);
+  });
+
+  it('rejects passwords longer than 128 characters', async () => {
+    const dto = plainToInstance(ResetPasswordDto, {
+      token: VALID_TOKEN,
+      newPassword: 'x'.repeat(129),
+    });
+
+    const errors = await validate(dto);
+    expect(errors.some((error) => error.property === 'newPassword')).toBe(true);
   });
 });
