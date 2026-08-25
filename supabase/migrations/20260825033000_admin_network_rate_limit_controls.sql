@@ -26,6 +26,10 @@ create index if not exists idx_admin_network_rate_limits_active
   on public.admin_network_rate_limits (expires_at desc, scope)
   where revoked_at is null;
 
+create index if not exists idx_admin_network_rate_limits_network
+  on public.admin_network_rate_limits using gist (network inet_ops)
+  where revoked_at is null;
+
 alter table public.admin_network_rate_limits enable row level security;
 revoke all on public.admin_network_rate_limits from anon, authenticated;
 
@@ -58,7 +62,7 @@ as $$
     where p_scope in ('all', 'auth', 'write')
       and r.revoked_at is null
       and r.expires_at > now()
-      and p_ip <<= r.network
+      and r.network >>= p_ip
       and (r.scope = 'all' or r.scope = p_scope)
     order by
       (r.max_requests::numeric / r.window_seconds::numeric) asc,
