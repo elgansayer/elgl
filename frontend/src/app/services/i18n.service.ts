@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -2469,14 +2470,16 @@ export class I18nService {
     }
   }
 
-  private authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
 
   private applyDocumentRtlAndLocale(lang: string): void {
-    if (typeof document !== 'undefined' && document.documentElement) {
-      document.documentElement.lang = lang;
-      const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-      document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
-    }
+    const root = this.document?.documentElement;
+    if (!root) return;
+
+    root.lang = lang;
+    const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
+    root.dir = isRtlLang ? 'rtl' : 'ltr';
   }
 
   async setLanguage(langCode: string): Promise<void> {
