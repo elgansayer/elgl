@@ -32,11 +32,11 @@ BEGIN
 
   -- Lock the correction row so vote mutation + aggregate counts are consistent
   -- even when multiple application replicas process votes concurrently.
-  SELECT *
+  SELECT mc.*
   INTO v_comment
-  FROM public.moment_comments
-  WHERE id = p_comment_id
-    AND moment_id = p_moment_id
+  FROM public.moment_comments AS mc
+  WHERE mc.id = p_comment_id
+    AND mc.moment_id = p_moment_id
   FOR UPDATE;
 
   IF NOT FOUND THEN
@@ -51,26 +51,26 @@ BEGIN
     RAISE EXCEPTION 'self_vote_not_allowed' USING ERRCODE = '42501';
   END IF;
 
-  SELECT vote
+  SELECT mcv.vote
   INTO v_existing_vote
-  FROM public.moment_comment_votes
-  WHERE comment_id = p_comment_id
-    AND user_id = p_user_id;
+  FROM public.moment_comment_votes AS mcv
+  WHERE mcv.comment_id = p_comment_id
+    AND mcv.user_id = p_user_id;
 
   IF v_existing_vote = p_vote THEN
-    DELETE FROM public.moment_comment_votes
-    WHERE comment_id = p_comment_id
-      AND user_id = p_user_id;
+    DELETE FROM public.moment_comment_votes AS mcv
+    WHERE mcv.comment_id = p_comment_id
+      AND mcv.user_id = p_user_id;
     v_existing_vote := NULL;
   ELSIF v_existing_vote IS NULL THEN
     INSERT INTO public.moment_comment_votes (comment_id, user_id, vote)
     VALUES (p_comment_id, p_user_id, p_vote);
     v_existing_vote := p_vote;
   ELSE
-    UPDATE public.moment_comment_votes
+    UPDATE public.moment_comment_votes AS mcv
     SET vote = p_vote
-    WHERE comment_id = p_comment_id
-      AND user_id = p_user_id;
+    WHERE mcv.comment_id = p_comment_id
+      AND mcv.user_id = p_user_id;
     v_existing_vote := p_vote;
   END IF;
 
