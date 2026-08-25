@@ -72,7 +72,10 @@ export class LinkedAccountsComponent {
     );
   }
 
-  canUnlink(provider: LinkableAccountProvider): boolean {
+  canUnlink(provider: LinkedAccountProvider): boolean {
+    if (!this.isLinkableProvider(provider)) {
+      return false;
+    }
     const accounts = this.linkedAccountsResource.value();
     if (!accounts || !this.isLinked(provider)) {
       return false;
@@ -80,12 +83,12 @@ export class LinkedAccountsComponent {
     return accounts.filter((account) => account.active).length > 1;
   }
 
-  isLinkable(provider: ProviderInfo): provider is ProviderInfo & { id: LinkableAccountProvider } {
-    return provider.linkable && provider.id !== 'email';
+  isLinkable(provider: ProviderInfo): boolean {
+    return provider.linkable && this.isLinkableProvider(provider.id);
   }
 
-  async link(provider: LinkableAccountProvider): Promise<void> {
-    if (this.loading()) {
+  async link(provider: LinkedAccountProvider): Promise<void> {
+    if (!this.isLinkableProvider(provider) || this.loading()) {
       return;
     }
     this.loading.set(true);
@@ -103,8 +106,8 @@ export class LinkedAccountsComponent {
     }
   }
 
-  requestUnlink(provider: LinkableAccountProvider): void {
-    if (this.loading() || !this.canUnlink(provider)) {
+  requestUnlink(provider: LinkedAccountProvider): void {
+    if (!this.isLinkableProvider(provider) || this.loading() || !this.canUnlink(provider)) {
       return;
     }
     this.errorMessage.set('');
@@ -146,5 +149,9 @@ export class LinkedAccountsComponent {
 
   goBack(): void {
     this.location.back();
+  }
+
+  private isLinkableProvider(provider: LinkedAccountProvider): provider is LinkableAccountProvider {
+    return provider === 'google' || provider === 'apple';
   }
 }
