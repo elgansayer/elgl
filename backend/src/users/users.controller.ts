@@ -50,10 +50,15 @@ export class UsersController {
   ): number {
     if (value === undefined || value === '') return defaultValue;
 
-    const parsed = typeof value === 'number' ? value : Number(value);
+    const parsed =
+      typeof value === 'number'
+        ? value
+        : /^\d+$/.test(value)
+          ? Number(value)
+          : Number.NaN;
     const outsideRange =
       parsed < minimum || (maximum !== undefined && parsed > maximum);
-    if (!Number.isInteger(parsed) || outsideRange) {
+    if (!Number.isSafeInteger(parsed) || outsideRange) {
       const range =
         maximum === undefined
           ? `at least ${minimum}`
@@ -360,7 +365,13 @@ export class UsersController {
       1,
       100,
     );
-    const boundedOffset = this.parsePaginationInteger(offset, 'offset', 0, 0);
+    const boundedOffset = this.parsePaginationInteger(
+      offset,
+      'offset',
+      0,
+      0,
+      10_000,
+    );
     return this.usersService.getFollowers(
       id,
       boundedLimit,
@@ -383,7 +394,13 @@ export class UsersController {
       1,
       100,
     );
-    const boundedOffset = this.parsePaginationInteger(offset, 'offset', 0, 0);
+    const boundedOffset = this.parsePaginationInteger(
+      offset,
+      'offset',
+      0,
+      0,
+      10_000,
+    );
     return this.usersService.getFollowing(
       id,
       boundedLimit,
