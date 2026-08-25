@@ -43,6 +43,12 @@ def test_explicit_logical_key_survives_substantial_retitle() -> None:
     assert first.logical_key == successor.logical_key == "explicit:discovery-overlay"
 
 
+def test_factory_task_key_marker_round_trips_a_generated_key() -> None:
+    generated = logical_task_key("Bound pull-request churn")
+
+    assert logical_task_key("Retitled successor", f"Factory-Task-Key: {generated}\n") == generated
+
+
 def test_priority_and_duplicate_lease_rejection(tmp_path: Path) -> None:
     store = TaskStore(tmp_path)
     lower = Task("issue-2", "Feature", "body", "github", 3)

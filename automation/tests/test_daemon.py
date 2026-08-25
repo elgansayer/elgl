@@ -9,6 +9,7 @@ import pytest
 from openhands_factory.agents.base import ProviderHealth, ProviderStatus
 from openhands_factory.daemon import (
     FactoryDaemon,
+    admission_slots_while_respecting_wip,
     await_refresh,
     provider_status_snapshot,
     queue_snapshot,
@@ -451,6 +452,126 @@ def test_storage_reserve_blocks_and_recovers_scheduling(
 
     assert daemon._storage_ready()
     assert not daemon.storage_blocked
+
+
+def test_admission_slots_while_respecting_wip_zeroes_only_when_paused() -> None:
+    assert admission_slots_while_respecting_wip(5, wip_paused=False) == 5
+    assert admission_slots_while_respecting_wip(5, wip_paused=True) == 0
+    assert admission_slots_while_respecting_wip(None, wip_paused=False) is None
+    assert admission_slots_while_respecting_wip(None, wip_paused=True) == 0
+
+
+def _build_wip_gated_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    pause_new_dispatch: bool,
+    discovered_job: Job,
+    admit_calls: list[tuple[str, object]],
+    architect_calls: list[bool],
+) -> FactoryDaemon:
+    """Build a FactoryDaemon that can run one real `_loop` iteration cheaply.
+
+    Every GitHub/filesystem/provider dependency the loop body touches is stubbed so
+    only the PR-WIP gating decision under test is real. `issue_admission.admit` and
+    `pipeline.architect_due` always return False/only record calls, so neither branch
+    ever reaches the heavyweight `FactoryPipeline`/`ThreadPoolExecutor` submission path
+    regardless of whether admission was attempted.
+    """
+
+    daemon = FactoryDaemon.__new__(FactoryDaemon)
+    daemon.config = SimpleNamespace(  # type: ignore[assignment]
+        max_parallel_jobs=1,
+        cooldown_seconds=0,
+        quarantine_recovery_minutes=5,
+        max_task_minutes=30,
+        recovery_dir=Path("/tmp/factory-wip-gate-test-recovery"),
+        recovery_retention_hours=1,
+        review_lane_first=True,
+        review_lane_max_concurrent=1,
+    )
+    daemon.stopping = False
+    daemon.storage_blocked = False
+    daemon.pipeline = SimpleNamespace(  # type: ignore[assignment]
+        router=SimpleNamespace(health_snapshot=lambda: {}),
+        jobs=SimpleNamespace(recover_abandoned_attempts=lambda *a, **k: [], load=lambda: {}),
+        pull_request_capacity=SimpleNamespace(pause_new_dispatch=pause_new_dispatch),
+        architect_due=lambda: architect_calls.append(True) or False,
+    )
+
+    def fake_admit(identifier: str, now: object) -> bool:
+        admit_calls.append((identifier, now))
+        return False
+
+    daemon.issue_admission = SimpleNamespace(available_slots=lambda now: 5, admit=fake_admit)  # type: ignore[assignment]
+
+    monkeypatch.setattr(daemon, "_assert_owner", lambda: None)
+    monkeypatch.setattr(daemon, "paused", lambda: False)
+    monkeypatch.setattr("openhands_factory.daemon.disk_space_checks", lambda config: [])
+    monkeypatch.setattr(
+        "openhands_factory.daemon.recover_due_quarantines",
+        lambda jobs, recovery_delay: [],
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.refresh_jobs",
+        lambda pipeline, active, now, cooldown: ({"1": discovered_job}, now + 3600),
+    )
+    monkeypatch.setattr(
+        "openhands_factory.daemon.prune_recovery_archives",
+        lambda recovery_dir, retention: [],
+    )
+
+    writes: list[str] = []
+
+    def record_state(
+        status: str,
+        active: object,
+        active_started_at: object | None = None,
+    ) -> None:
+        writes.append(status)
+        # Let exactly one full loop iteration run: stop only from its trailing write.
+        if status == "running" and len(writes) >= 2:
+            daemon.stopping = True
+
+    monkeypatch.setattr(daemon, "_write_daemon_state", record_state)
+    return daemon
+
+
+def test_loop_pauses_new_issue_and_architect_dispatch_when_pr_wip_exceeded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=True,
+        discovered_job=job("1", priority=5),
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    assert daemon._loop() == 0
+
+    assert admit_calls == []
+    assert architect_calls == []
+
+
+def test_loop_admits_new_issues_and_runs_architect_when_pr_wip_has_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admit_calls: list[tuple[str, object]] = []
+    architect_calls: list[bool] = []
+    daemon = _build_wip_gated_daemon(
+        monkeypatch,
+        pause_new_dispatch=False,
+        discovered_job=job("1", priority=5),
+        admit_calls=admit_calls,
+        architect_calls=architect_calls,
+    )
+
+    assert daemon._loop() == 0
+
+    assert [identifier for identifier, _now in admit_calls] == ["1"]
+    assert architect_calls == [True]
 
 
 def test_daemon_refuses_to_schedule_when_a_security_boundary_fails(

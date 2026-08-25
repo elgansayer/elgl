@@ -278,13 +278,104 @@ class GitWorkflow:
             digest.update(object_hash.stdout.strip().encode("ascii"))
         return digest.hexdigest()
 
+    def committed_change_fingerprint(self) -> str:
+        """Identify the resulting blobs for the branch diff, independent of rebases."""
+
+        paths = self.changed_paths()
+        if not paths:
+            raise RepositorySafetyError("No changed paths were found")
+        digest = hashlib.sha256()
+        for path in sorted(paths):
+            relative = path.as_posix()
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            result = self.runner(("git", "rev-parse", f"HEAD:{relative}"), self.repository)
+            if result.returncode == 0:
+                digest.update(result.stdout.strip().encode("ascii"))
+            else:
+                digest.update(b"<deleted>")
+            digest.update(b"\0")
+        return digest.hexdigest()
+
     def push(self, branch: str) -> None:
         ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)
         result = _run_with_lock_retry(
-            self.runner, ("git", "push", "--set-upstream", "origin", branch), self.repository
+            self.runner,
+            (
+                "git",
+                "push",
+                "--set-upstream",
+                "origin",
+                f"HEAD:refs/heads/{branch}",
+            ),
+            self.repository,
         )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
+
+    def sync_remote_branch(self, branch: str, expected_head_sha: str) -> None:
+        """Replace a Factory branch only while its inspected remote head is unchanged."""
+
+        ensure_push_target(branch, self.base_branch)
+        reference = f"refs/heads/{branch}"
+        remote = self.runner(("git", "ls-remote", "--heads", "origin", reference), self.repository)
+        if remote.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect remote branch: {remote.stderr}")
+        current_sha = ""
+        for line in remote.stdout.splitlines():
+            sha, separator, observed_ref = line.partition("\t")
+            if separator and observed_ref == reference:
+                current_sha = sha
+                break
+        if current_sha and current_sha != expected_head_sha:
+            raise RepositorySafetyError(
+                f"Remote branch {branch} moved after pull-request inspection"
+            )
+        result = _run_with_lock_retry(
+            self.runner,
+            (
+                "git",
+                "push",
+                f"--force-with-lease={reference}:{current_sha}",
+                "origin",
+                f"HEAD:{reference}",
+            ),
+            self.repository,
+        )
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not update canonical PR branch: {result.stderr}")
+
+    def delete_remote_branch(self, branch: str, expected_head_sha: str) -> None:
+        """Delete an exact Factory branch tip after another PR becomes canonical."""
+
+        ensure_push_target(branch, self.base_branch)
+        reference = f"refs/heads/{branch}"
+        remote = self.runner(("git", "ls-remote", "--heads", "origin", reference), self.repository)
+        if remote.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect remote branch: {remote.stderr}")
+        current_sha = ""
+        for line in remote.stdout.splitlines():
+            sha, separator, observed_ref = line.partition("\t")
+            if separator and observed_ref == reference:
+                current_sha = sha
+                break
+        if not current_sha:
+            return
+        if current_sha != expected_head_sha:
+            raise RepositorySafetyError(f"Remote branch {branch} moved before cleanup")
+        result = _run_with_lock_retry(
+            self.runner,
+            (
+                "git",
+                "push",
+                f"--force-with-lease={reference}:{expected_head_sha}",
+                "origin",
+                f":{reference}",
+            ),
+            self.repository,
+        )
+        if result.returncode != 0:
+            raise RepositorySafetyError(f"Could not delete duplicate branch: {result.stderr}")
 
     def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
         resolved_root = self.repository.parent.resolve()

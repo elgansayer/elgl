@@ -334,3 +334,113 @@ def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
     assert archived == recovery
     assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
     assert (recovery / "RECOVERY.txt").is_file()
+
+
+def test_committed_change_fingerprint_uses_resulting_blobs_and_deletion_markers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "automation/changed.py\nautomation/deleted.py\n", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "blob-changed\n", ""),
+            ProcessResult(1, "", "missing path"),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    fingerprint = workflow.committed_change_fingerprint()
+
+    assert len(fingerprint) == 64
+    assert runner.calls[-2:] == [
+        ("git", "rev-parse", "HEAD:automation/changed.py"),
+        ("git", "rev-parse", "HEAD:automation/deleted.py"),
+    ]
+
+
+def test_sync_remote_branch_is_bound_to_the_inspected_factory_head(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner(
+        [
+            ProcessResult(0, f"old-head\trefs/heads/{branch}\n", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.sync_remote_branch(branch, "old-head")
+
+    assert runner.calls[-1] == (
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/{branch}:old-head",
+        "origin",
+        f"HEAD:refs/heads/{branch}",
+    )
+
+
+def test_sync_remote_branch_refuses_a_head_that_moved_after_inspection(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner([ProcessResult(0, f"new-head\trefs/heads/{branch}\n", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    with pytest.raises(RepositorySafetyError, match="moved after"):
+        workflow.sync_remote_branch(branch, "old-head")
+
+    assert not any(call[:2] == ("git", "push") for call in runner.calls)
+
+
+def test_sync_remote_branch_can_restore_a_deleted_factory_branch_with_empty_lease(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-existing"
+    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.sync_remote_branch(branch, "old-head")
+
+    assert f"--force-with-lease=refs/heads/{branch}:" in runner.calls[-1]
+
+
+def test_delete_remote_branch_requires_the_exact_duplicate_tip(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    branch = "factory/42-replay"
+    runner = Runner(
+        [
+            ProcessResult(0, f"replay-head\trefs/heads/{branch}\n", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.delete_remote_branch(branch, "replay-head")
+
+    assert runner.calls[-1] == (
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/{branch}:replay-head",
+        "origin",
+        f":refs/heads/{branch}",
+    )
+
+
+def test_delete_remote_branch_is_idempotent_when_branch_is_already_absent(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner([ProcessResult(0, "", "")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.delete_remote_branch("factory/42-replay", "replay-head")
+
+    assert not any(call[:2] == ("git", "push") for call in runner.calls)

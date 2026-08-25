@@ -98,6 +98,22 @@ _REVIEW_STATE_ORDER = {
 }
 
 
+def admission_slots_while_respecting_wip(
+    interval_slots: int | None,
+    *,
+    wip_paused: bool,
+) -> int | None:
+    """Zero out new-issue admission while a configured PR WIP limit is exceeded.
+
+    Already-admitted jobs (implementation in progress, open PRs advancing through
+    review/CI/merge) still drain normally; only brand-new issue intake stops so the
+    queue cannot keep growing while GitHub Actions and reviewer capacity are already
+    saturated. Callers gate Architect dispatch on the same ``wip_paused`` flag.
+    """
+
+    return 0 if wip_paused else interval_slots
+
+
 def select_issue_admitted(
     candidates: list[Job],
     limit: int,
@@ -419,6 +435,7 @@ class FactoryDaemon:
                 active_task_ids = set(active.values())
                 capacity = self.config.max_parallel_jobs - len(active)
                 storage_ready = self._storage_ready()
+                wip_paused = self.pipeline.pull_request_capacity.pause_new_dispatch
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
@@ -483,7 +500,10 @@ class FactoryDaemon:
                     else:
                         jobs = self.pipeline.jobs.load()
                     scheduler_time = datetime.now(UTC)
-                    new_issue_slots = self.issue_admission.available_slots(scheduler_time)
+                    new_issue_slots = admission_slots_while_respecting_wip(
+                        self.issue_admission.available_slots(scheduler_time),
+                        wip_paused=wip_paused,
+                    )
                     for job in select_batch(
                         jobs,
                         capacity,
@@ -540,7 +560,7 @@ class FactoryDaemon:
                             architect_future.result()
                         except Exception:
                             LOGGER.exception("Architect cycle crashed")
-                    if self.pipeline.architect_due():
+                    if not wip_paused and self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(

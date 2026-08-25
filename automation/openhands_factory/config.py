@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
@@ -424,6 +425,24 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    max_open_pull_requests: int = 40
+    max_queued_ci: int = 12
+    pull_request_history_limit: int = 2_000
+    lane_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {"architect": 1, "dependency": 12, "factory": 8}
+    )
+    component_wip_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "admin-portal": 6,
+            "automation": 4,
+            "backend": 12,
+            "ci": 6,
+            "database": 4,
+            "docs": 6,
+            "frontend": 12,
+            "multi": 8,
+        }
+    )
     # Zero preserves the historical unlimited admission behaviour. Production can
     # set 3600/1 to admit exactly one newly discovered GitHub issue per hour while
     # allowing in-flight implementation, review, CI repair, and PR work to continue.
@@ -482,6 +501,9 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "max_open_pull_requests",
+        "max_queued_ci",
+        "pull_request_history_limit",
         "new_issues_per_interval",
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
@@ -495,6 +517,23 @@ class FactoryConfig(BaseModel):
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("factory limits must be positive")
+        return value
+
+    @field_validator("lane_wip_limits", "component_wip_limits")
+    @classmethod
+    def positive_wip_limits(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(
+            not name or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", name) or limit <= 0
+            for name, limit in value.items()
+        ):
+            raise ValueError("Factory WIP maps require safe names and positive limits")
+        return value
+
+    @field_validator("pull_request_history_limit")
+    @classmethod
+    def bounded_pull_request_history(cls, value: int) -> int:
+        if value > 10_000:
+            raise ValueError("pull request history limit cannot exceed 10000")
         return value
 
     @field_validator("new_issue_interval_seconds")
@@ -550,6 +589,21 @@ class FactoryConfig(BaseModel):
 
         def boolean(name: str, default: bool) -> bool:
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
+
+        def limit_map(name: str, default: Mapping[str, int]) -> dict[str, int]:
+            raw = env.get(name, "").strip()
+            if not raw:
+                return dict(default)
+            parsed: dict[str, int] = {}
+            for item in raw.split(","):
+                key, separator, limit = item.strip().partition("=")
+                if not separator or not key or not limit:
+                    raise ConfigurationError(f"Invalid {name} entry: {item!r}")
+                try:
+                    parsed[key.casefold()] = int(limit)
+                except ValueError as error:
+                    raise ConfigurationError(f"Invalid {name} limit: {limit!r}") from error
+            return parsed
 
         import json
 
@@ -640,6 +694,28 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                max_open_pull_requests=int(env.get("FACTORY_MAX_OPEN_PULL_REQUESTS", "40")),
+                max_queued_ci=int(env.get("FACTORY_MAX_QUEUED_CI", "12")),
+                pull_request_history_limit=int(
+                    env.get("FACTORY_PULL_REQUEST_HISTORY_LIMIT", "2000")
+                ),
+                lane_wip_limits=limit_map(
+                    "FACTORY_LANE_WIP_LIMITS",
+                    {"architect": 1, "dependency": 12, "factory": 8},
+                ),
+                component_wip_limits=limit_map(
+                    "FACTORY_COMPONENT_WIP_LIMITS",
+                    {
+                        "admin-portal": 6,
+                        "automation": 4,
+                        "backend": 12,
+                        "ci": 6,
+                        "database": 4,
+                        "docs": 6,
+                        "frontend": 12,
+                        "multi": 8,
+                    },
+                ),
                 new_issue_interval_seconds=int(env.get("FACTORY_NEW_ISSUE_INTERVAL_SECONDS", "0")),
                 new_issues_per_interval=int(env.get("FACTORY_NEW_ISSUES_PER_INTERVAL", "1")),
                 label_reconciliation_batch_size=int(

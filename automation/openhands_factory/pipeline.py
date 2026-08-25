@@ -9,6 +9,7 @@ from pathlib import Path
 from threading import Semaphore
 from typing import TYPE_CHECKING
 
+from filelock import FileLock
 from pydantic import SecretStr
 
 from openhands_factory.alerts import AlertService
@@ -28,10 +29,21 @@ from openhands_factory.jobs import JobStore
 from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.pr_convergence import (
+    ConvergenceAction,
+    PullRequestCapacity,
+    PullRequestIdentity,
+    PullRequestRecord,
+    calculate_capacity,
+    convergence_supersessions,
+    resolve_pull_request,
+    stack_parent,
+)
 from openhands_factory.pr_lifecycle import (
     PullRequestLifecycleEvent,
     PullRequestLifecycleTracker,
 )
+from openhands_factory.pr_metrics import PullRequestMetricsStore
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
@@ -119,6 +131,20 @@ class FactoryPipeline:
             config.state_dir,
             config.github_repository,
             AlertService(config),
+        )
+        config.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.pr_convergence_lock = FileLock(str(config.state_dir / "pr-convergence.lock"))
+        self.pr_metrics = PullRequestMetricsStore(
+            config.state_dir / "pull-request-metrics.json",
+            max_records=config.pull_request_history_limit,
+        )
+        self.pull_request_records: tuple[PullRequestRecord, ...] = ()
+        self.pull_request_capacity = calculate_capacity(
+            (),
+            max_open_pull_requests=config.max_open_pull_requests,
+            max_queued_ci=config.max_queued_ci,
+            lane_limits=config.lane_wip_limits,
+            component_limits=config.component_wip_limits,
         )
         self.prompt_dir = config.repository / "automation/prompts"
         self.system_prompt = build_system_prompt(self.prompt_dir)
@@ -328,6 +354,7 @@ class FactoryPipeline:
             self.github.ensure_factory_labels()
             self._reconcile_quarantine_labels()
             self.labels_ready = True
+        self._refresh_pull_request_inventory()
         if self.active_label_reconciliation_pending:
             self._reconcile_active_labels(protected_task_ids or set())
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
@@ -381,6 +408,49 @@ class FactoryPipeline:
             retired_jobs.append(job)
         self.jobs.save_reconciled_jobs(retired_jobs)
         return self.jobs.load()
+
+    def _calculate_pull_request_capacity(
+        self,
+        records: tuple[PullRequestRecord, ...],
+    ) -> PullRequestCapacity:
+        return calculate_capacity(
+            records,
+            max_open_pull_requests=self.config.max_open_pull_requests,
+            max_queued_ci=self.config.max_queued_ci,
+            lane_limits=self.config.lane_wip_limits,
+            component_limits=self.config.component_wip_limits,
+        )
+
+    def _refresh_pull_request_inventory(self) -> None:
+        """Converge proven duplicates, then publish capacity from fresh GitHub state."""
+
+        with self.pr_convergence_lock:
+            records = tuple(self.github.list_pull_requests(self.config.pull_request_history_limit))
+            supersessions = convergence_supersessions(records)
+            for supersession in supersessions:
+                self.github.supersede_pull_request(
+                    supersession.pull_request.number,
+                    canonical=supersession.canonical,
+                    reason=supersession.reason,
+                )
+                self.pr_metrics.record_supersession(
+                    supersession.pull_request.number,
+                    supersession.canonical,
+                    supersession.reason,
+                )
+            if supersessions:
+                records = tuple(
+                    self.github.list_pull_requests(self.config.pull_request_history_limit)
+                )
+            capacity = self._calculate_pull_request_capacity(records)
+            self.pr_metrics.observe_inventory(records, capacity)
+            self.pull_request_records = records
+            self.pull_request_capacity = capacity
+        if capacity.pause_new_dispatch:
+            LOGGER.warning(
+                "Factory WIP admission paused: %s",
+                "; ".join(capacity.blocked_reasons),
+            )
 
     def _reconcile_quarantine_labels(self) -> None:
         """Clear GitHub quarantine labels no longer backed by durable state.
@@ -616,7 +686,15 @@ class FactoryPipeline:
                 )
                 and isinstance(entry.get("provider"), str)
             }
-        result = self.router.run(request, job, exclude=excluded)
+        history_before = len(job.provider_history)
+        try:
+            result = self.router.run(request, job, exclude=excluded)
+        finally:
+            if agent_phase is AgentPhase.CODE_REVIEW and job.pull_request is not None:
+                self.pr_metrics.record_reviewer_invocations(
+                    job.pull_request,
+                    len(job.provider_history) - history_before,
+                )
 
         if agent_phase is AgentPhase.IMPLEMENTATION:
             job.implementation_provider = result.provider
@@ -633,6 +711,91 @@ class FactoryPipeline:
                     f"Agent provider '{result.provider}' failed: {result.failure.message}"
                 )
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
+
+    def _ensure_pull_request(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        *,
+        title: str,
+        body: str,
+    ) -> ConvergenceAction:
+        """Create, update, or retire one PR under the sole convergence lock."""
+
+        if job.branch is None:
+            raise FactoryError("Job branch is missing")
+        touched_paths = workflow.changed_paths()
+        identity = PullRequestIdentity.for_task(
+            job.task,
+            branch=job.branch,
+            base_ref=self.config.base_branch,
+            change_fingerprint=workflow.committed_change_fingerprint(),
+            touched_paths=touched_paths,
+        )
+        marked_body = f"{body.rstrip()}\n\n{identity.markers()}\n"
+        with self.pr_convergence_lock:
+            records = tuple(self.github.list_pull_requests(self.config.pull_request_history_limit))
+            resolution = resolve_pull_request(identity, records)
+            if resolution.action is ConvergenceAction.BLOCKED:
+                canonical_note = (
+                    f" Canonical candidate: #{resolution.canonical.number}."
+                    if resolution.canonical is not None
+                    else ""
+                )
+                raise FactoryError(
+                    f"Pull-request convergence blocked: {resolution.reason}.{canonical_note}"
+                )
+
+            for duplicate in resolution.superseded:
+                self.github.supersede_pull_request(
+                    duplicate.number,
+                    canonical=(
+                        resolution.canonical.number if resolution.canonical is not None else None
+                    ),
+                    reason=resolution.reason,
+                )
+                self.pr_metrics.record_supersession(
+                    duplicate.number,
+                    resolution.canonical.number if resolution.canonical is not None else None,
+                    resolution.reason,
+                )
+
+            canonical = resolution.canonical
+            if resolution.action is ConvergenceAction.ALREADY_MERGED:
+                if canonical is None:
+                    raise FactoryError("Merged convergence result is missing its canonical PR")
+                workflow.delete_remote_branch(
+                    job.branch,
+                    job.head_sha or workflow.head_sha(),
+                )
+                job.pull_request = canonical.number
+                job.branch = canonical.head_ref
+                job.head_sha = canonical.head_sha
+                return resolution.action
+
+            if resolution.action is ConvergenceAction.CREATE:
+                job.pull_request = self.github.create_pull_request(
+                    job.branch,
+                    title,
+                    marked_body,
+                )
+                return resolution.action
+
+            if canonical is None or not canonical.factory_owned:
+                raise FactoryError("Only a Factory-owned PR branch can be updated in place")
+            current_branch = job.branch
+            current_head = job.head_sha or workflow.head_sha()
+            if canonical.head_sha != current_head or canonical.head_ref != current_branch:
+                workflow.sync_remote_branch(canonical.head_ref, canonical.head_sha)
+            if resolution.action is ConvergenceAction.REOPEN:
+                self.github.reopen_pull_request(canonical.number)
+            self.github.update_pull_request(canonical.number, title=title, body=marked_body)
+            if canonical.head_ref != current_branch:
+                workflow.delete_remote_branch(current_branch, current_head)
+            job.pull_request = canonical.number
+            job.branch = canonical.head_ref
+            job.head_sha = workflow.head_sha()
+            return resolution.action
 
     def _advance(self, job: Job) -> None:
         # Notification delivery is best-effort and never changes merge eligibility.
@@ -778,17 +941,21 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.PR_DRAFT:
-            if job.branch is None:
-                raise FactoryError("Job branch is missing")
-            job.pull_request = self.github.create_pull_request(
-                job.branch,
-                f"Fixes #{job.task.identifier}: {job.task.title}",
-                self._pull_request_body(job),
+            action = self._ensure_pull_request(
+                job,
+                workflow,
+                title=f"Fixes #{job.task.identifier}: {job.task.title}",
+                body=self._pull_request_body(job),
             )
+            if action is ConvergenceAction.ALREADY_MERGED:
+                job.state = JobState.MERGED
+                return
+            if job.pull_request is None:
+                raise FactoryError("Pull-request convergence did not select a PR")
             self.github.add_comment(
                 job.pull_request,
                 (
-                    "OpenHands factory created this pull request. The factory will review the "
+                    "OpenHands factory selected this pull request. The factory will review the "
                     "same branch, repair verification failures, wait for required checks, and "
                     "merge only after the reviewed commit is still current."
                 ),
@@ -797,6 +964,12 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            if job.pull_request is not None and stack_parent(job.task.body) is not None:
+                if self._stack_parent_pending(job) is not None:
+                    self.github.add_issue_labels(job.pull_request, ("factory-stack-blocked",))
+                    return
+                self.github.remove_issue_labels(job.pull_request, ("factory-stack-blocked",))
+
             if self._refresh_pull_request_if_changed(job, worktree):
                 return
 
@@ -1221,6 +1394,23 @@ class FactoryPipeline:
             raise FactoryError("Pull request number is missing")
         return self.github.pull_request_status(job.pull_request)
 
+    def _stack_parent_pending(self, job: Job) -> int | None:
+        """Return the still-open stack-dependency PR number blocking full review.
+
+        Only an explicit Depends-On/Factory-Stack-Parent marker in the task body
+        creates a dependency; nothing here infers one from touched files or timing.
+        A parent that has merged or closed no longer blocks. A lookup failure (a
+        mistyped or deleted parent reference) propagates like any other GitHub
+        control-plane error rather than silently treating the child as unblocked,
+        so a broken dependency marker surfaces for repair instead of racing ahead.
+        """
+
+        parent = stack_parent(job.task.body)
+        if parent is None:
+            return None
+        status = self.github.pull_request_status(parent)
+        return parent if status.state == "OPEN" else None
+
     def _verify(self, workflow: GitWorkflow) -> None:
         changed = workflow.changed_paths()
         if not changed:
@@ -1420,16 +1610,35 @@ class FactoryPipeline:
                 review_workflow.stage_all()
                 review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
                 review_workflow.push(branch)
-                pull_request = self.github.create_pull_request(
-                    branch,
-                    f"docs: weekly gap analysis ({date_id})",
-                    "Automated ROADMAP/spec update from the weekly architect cycle. "
-                    "Independently reviewed like any other pull request before merging.",
+                job.branch = branch
+                job.head_sha = review_workflow.head_sha()
+                action = self._ensure_pull_request(
+                    job,
+                    review_workflow,
+                    title=f"docs: weekly gap analysis ({date_id})",
+                    body=(
+                        "Automated ROADMAP/spec update from the weekly architect cycle. "
+                        "Independently reviewed like any other pull request before merging."
+                    ),
                 )
+                if action is ConvergenceAction.ALREADY_MERGED:
+                    self._workflow(self.config.repository).remove_worktree(worktree)
+                    self._write_architect_state(
+                        {
+                            "last_attempt_at": attempted_at.isoformat(),
+                            "last_run_at": datetime.now(UTC).isoformat(),
+                            "next_attempt_at": None,
+                            "provider_history": job.provider_history,
+                            "convergence": "equivalent-change-already-merged",
+                        }
+                    )
+                    return
+                if job.pull_request is None or job.branch is None:
+                    raise FactoryError("Architect convergence did not select a pull request")
                 self.github.add_comment(
-                    pull_request,
+                    job.pull_request,
                     (
-                        "OpenHands factory architect opened this pull request from its weekly "
+                        "OpenHands factory architect selected this pull request for its weekly "
                         "gap analysis. It will be independently reviewed like any other pull "
                         "request before merging."
                     ),
@@ -1437,12 +1646,12 @@ class FactoryPipeline:
                 self.jobs.save_job(
                     Job(
                         task=Task(
-                            identifier=str(pull_request),
+                            identifier=str(job.pull_request),
                             title=f"docs: weekly gap analysis ({date_id})",
                             body="Automated ROADMAP/spec update from the weekly architect cycle.",
                             source="github-pull-request",
                             priority=10,
-                            pr_branch=branch,
+                            pr_branch=job.branch,
                         ),
                         provider_history=list(job.provider_history),
                     )

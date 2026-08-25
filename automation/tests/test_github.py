@@ -878,3 +878,89 @@ def test_transient_github_failure_is_retried(
 
     assert client.collect_open_issues() == []
     assert len(runner.calls) == 2
+
+
+def test_pull_request_inventory_includes_historical_identity_and_ci_runs(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 42,
+            "title": "Fixes #7: Bound churn",
+            "body": "Factory-Task-Key: explicit:bound-churn",
+            "state": "MERGED",
+            "isDraft": False,
+            "headRefName": "factory/7-bound-churn",
+            "headRefOid": "abc123",
+            "baseRefName": "main",
+            "isCrossRepository": False,
+            "labels": [{"name": "factory-reviewed"}],
+            "files": [{"path": "automation/x.py"}],
+            "createdAt": "2026-08-20T00:00:00Z",
+            "updatedAt": "2026-08-21T00:00:00Z",
+            "closedAt": "2026-08-21T00:00:00Z",
+            "mergedAt": "2026-08-21T00:00:00Z",
+            "mergeStateStatus": "UNKNOWN",
+            "statusCheckRollup": [
+                {
+                    "name": "CI / required",
+                    "status": "COMPLETED",
+                    "conclusion": "SUCCESS",
+                    "detailsUrl": "https://github.com/owner/repo/actions/runs/123/job/456",
+                },
+                {"context": "factory/independent-review", "state": "SUCCESS"},
+            ],
+        }
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    records = client.list_pull_requests()
+
+    assert len(records) == 1
+    assert records[0].number == 42
+    assert records[0].is_merged
+    assert records[0].files == ("automation/x.py",)
+    assert records[0].workflow_run_ids == frozenset({"123"})
+    assert "--state" in runner.calls[0] and "all" in runner.calls[0]
+    assert "files" in runner.calls[0][-1]
+
+
+def test_pull_request_inventory_fails_closed_on_malformed_identity(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, json.dumps([{"title": "missing number"}]), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    with pytest.raises(FactoryError, match="invalid identity"):
+        client.list_pull_requests()
+
+
+def test_pull_request_update_reopen_and_supersession_use_fixed_argv(tmp_path: Path) -> None:
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.update_pull_request(42, title="Canonical title", body="Canonical body")
+    client.reopen_pull_request(42)
+    client.supersede_pull_request(43, canonical=42, reason="duplicate active task")
+
+    assert runner.calls[0][:4] == ("gh", "pr", "edit", "42")
+    assert runner.calls[1][:4] == ("gh", "pr", "reopen", "42")
+    assert runner.calls[2][:4] == ("gh", "issue", "edit", "43")
+    assert "superseded" in runner.calls[2] and "duplicate" in runner.calls[2]
+    assert runner.calls[3][:4] == ("gh", "issue", "comment", "43")
+    assert runner.calls[4] == (
+        "gh",
+        "pr",
+        "close",
+        "43",
+        "--repo",
+        "owner/repo",
+        "--delete-branch",
+    )

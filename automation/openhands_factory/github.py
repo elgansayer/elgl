@@ -15,6 +15,7 @@ from typing import Literal, Protocol
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.failure_attribution import failed_check_names
 from openhands_factory.models import Task
+from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ProcessResult, run_process
 
 REQUIRED_FACTORY_MERGE_CHECKS = frozenset({"CI / required", "factory/independent-review"})
@@ -53,6 +54,7 @@ class PullRequestStatus:
     checks_pending: bool
     failed_checks: frozenset[str] = frozenset()
     merge_state_status: str = "CLEAN"
+    workflow_run_ids: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -300,6 +302,41 @@ class GitHubClient:
             )
         return tasks
 
+    def list_pull_requests(self, limit: int = 10_000) -> list[PullRequestRecord]:
+        """Return open and historical PR identity needed by the convergence owner."""
+
+        output = self._run(
+            (
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "all",
+                "--limit",
+                str(limit),
+                "--json",
+                "number,title,body,state,isDraft,headRefName,headRefOid,baseRefName,"
+                "isCrossRepository,labels,files,createdAt,updatedAt,closedAt,mergedAt,"
+                "mergeStateStatus,statusCheckRollup",
+            )
+        )
+        payload = json.loads(output)
+        if not isinstance(payload, list):
+            raise FactoryError("GitHub pull-request inventory is not a list")
+        records: list[PullRequestRecord] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                raise FactoryError("GitHub pull-request inventory contains a malformed entry")
+            try:
+                records.append(PullRequestRecord.from_payload(item))
+            except (TypeError, ValueError) as error:
+                raise FactoryError(
+                    "GitHub pull-request inventory contains invalid identity"
+                ) from error
+        return records
+
     def list_all_open_issue_titles(self, limit: int = 10_000) -> set[str]:
         """List every admitted open issue title for duplicate checking.
 
@@ -450,11 +487,14 @@ class GitHubClient:
             "factory-active": "0052cc",
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
+            "factory-stack-blocked": "fbca04",
             "factory-quarantined": "b60205",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
             "architect-proposed": "5319e7",
             "factory-status": "0969da",
+            "superseded": "6e7781",
+            "duplicate": "cfd3d7",
         }
         for name, colour in labels.items():
             self._run(
@@ -626,6 +666,53 @@ class GitHubClient:
         except ValueError as error:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
+    def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
+        self._run(
+            (
+                "gh",
+                "pr",
+                "edit",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--title",
+                title,
+                "--body",
+                body,
+            )
+        )
+
+    def reopen_pull_request(self, pull_request: int) -> None:
+        self._run(("gh", "pr", "reopen", str(pull_request), "--repo", self.repository))
+
+    def supersede_pull_request(
+        self,
+        pull_request: int,
+        *,
+        canonical: int | None,
+        reason: str,
+    ) -> None:
+        """Close and delete one non-canonical PR branch before replacement proceeds."""
+
+        self.add_issue_labels(pull_request, ("superseded", "duplicate"))
+        canonical_text = f" Canonical pull request: #{canonical}." if canonical is not None else ""
+        self.add_comment(
+            pull_request,
+            f"Factory convergence closed this non-canonical pull request: {reason}."
+            f"{canonical_text}",
+        )
+        self._run(
+            (
+                "gh",
+                "pr",
+                "close",
+                str(pull_request),
+                "--repo",
+                self.repository,
+                "--delete-branch",
+            )
+        )
+
     def mark_ready(self, pull_request: int) -> None:
         self._run(
             (
@@ -796,4 +883,5 @@ class GitHubClient:
             checks_pending=pending or human_review_blocked,
             failed_checks=failed_checks,
             merge_state_status=str(item.get("mergeStateStatus") or "UNKNOWN").upper(),
+            workflow_run_ids=PullRequestRecord.from_payload(item).workflow_run_ids,
         )

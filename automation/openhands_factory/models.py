@@ -38,7 +38,10 @@ def logical_task_key(title: str, body: str = "") -> str:
 
     marker = _TASK_KEY_MARKER.search(body)
     if marker:
-        return f"explicit:{marker.group(1).casefold()}"
+        value = marker.group(1).casefold()
+        if value.startswith(("explicit:", "title:")):
+            return value
+        return f"explicit:{value}"
     normalized = _normalise_task_title(title)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
     return f"title:{digest}"

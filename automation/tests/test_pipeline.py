@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
+from openhands_factory.pr_convergence import PullRequestRecord
 from openhands_factory.repository_guard import ensure_push_target
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -38,6 +40,11 @@ class GitHub:
         self.released_active_issues: list[list[int]] = []
         self.active_list_calls = 0
         self._next_issue_number = 200
+        self.inventory: list[PullRequestRecord] = []
+        self.created_pull_requests: list[tuple[str, str, str]] = []
+        self.updated_pull_requests: list[tuple[int, str, str]] = []
+        self.reopened_pull_requests: list[int] = []
+        self.superseded_pull_requests: list[tuple[int, int | None, str]] = []
 
     def ensure_factory_labels(self) -> None:
         return None
@@ -94,8 +101,37 @@ class GitHub:
     def add_comment(self, number: int, body: str) -> None:
         self.comments.append((number, body))
 
+    def list_pull_requests(self, limit: int = 10_000) -> list[PullRequestRecord]:
+        del limit
+        return list(self.inventory)
+
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
+        self.created_pull_requests.append((branch, title, body))
         return 99
+
+    def update_pull_request(self, pull_request: int, *, title: str, body: str) -> None:
+        self.updated_pull_requests.append((pull_request, title, body))
+        self.inventory = [
+            replace(item, title=title, body=body) if item.number == pull_request else item
+            for item in self.inventory
+        ]
+
+    def reopen_pull_request(self, pull_request: int) -> None:
+        self.reopened_pull_requests.append(pull_request)
+        self.inventory = [
+            replace(item, state="OPEN") if item.number == pull_request else item
+            for item in self.inventory
+        ]
+
+    def supersede_pull_request(
+        self,
+        pull_request: int,
+        *,
+        canonical: int | None,
+        reason: str,
+    ) -> None:
+        self.superseded_pull_requests.append((pull_request, canonical, reason))
+        self.inventory = [item for item in self.inventory if item.number != pull_request]
 
     def mark_ready(self, pull_request: int) -> None:
         return None
@@ -1051,6 +1087,97 @@ def test_review_report_is_removed_before_repository_change_detection(
     assert result.state is JobState.CI_PENDING
 
 
+def test_review_stays_draft_while_declared_stack_parent_is_still_open(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(90, "OPEN", False, "MERGEABLE", "", "parent-sha", True, False),
+    ]
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    _seed_prompts(worktree / "automation/prompts")
+    task = Task(
+        "77",
+        "Stacked child change",
+        "Depends-On: #90",
+        "github-pull-request",
+        10,
+        pr_branch="fix/x",
+    )
+    job = Job(
+        task=task,
+        state=JobState.REVIEWING,
+        branch="fix/x",
+        pull_request=77,
+        head_sha="abcdef1234567",
+    )
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+
+    def fail_if_reviewed(workflow: GitWorkflow) -> bool:
+        raise AssertionError("Review must not run while the stack parent is still open")
+
+    monkeypatch.setattr(GitWorkflow, "has_changes", fail_if_reviewed)
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.REVIEWING
+    assert github.labels == [(77, ("factory-stack-blocked",))]
+    assert github.removed_labels == []
+    assert github.statuses == []
+
+
+def test_review_proceeds_and_clears_stack_label_once_parent_merges(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.statuses = [
+        PullRequestStatus(90, "MERGED", False, "UNKNOWN", "", "parent-sha", True, False),
+        PullRequestStatus(77, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False),
+    ]
+    worktree = factory_config.worktree_dir / "issue-77"
+    worktree.mkdir(parents=True)
+    _seed_prompts(worktree / "automation/prompts")
+    task = Task(
+        "77",
+        "Stacked child change",
+        "Depends-On: #90",
+        "github-pull-request",
+        10,
+        pr_branch="fix/x",
+    )
+    job = Job(
+        task=task,
+        state=JobState.REVIEWING,
+        branch="fix/x",
+        pull_request=77,
+        head_sha="abcdef1234567",
+    )
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"77": job})
+
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "abcdef1234567")
+
+    result = pipeline.run_job("77")
+
+    assert result is not None
+    assert result.state is JobState.CI_PENDING
+    assert github.removed_labels[0] == (77, ("factory-stack-blocked",))
+
+
 def test_valid_rejected_review_routes_to_quality_repair(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1700,6 +1827,7 @@ def test_architect_cycle_opens_a_pull_request_when_docs_change(
     monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
     monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
     monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "architect-head")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
 
@@ -1789,3 +1917,68 @@ def test_failed_architect_cycle_is_retried_and_preserves_dirty_worktree(
     assert pipeline.architect_due() is False
     assert len(archived) == 1
     assert removed == [pipeline.config.worktree_dir / "architect"]
+
+
+def test_pull_request_convergence_never_closes_a_contributor_pull_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Superseding a pull request closes it and deletes its branch. Anyone may open a
+    pull request that says `Fixes #42`, so a shared issue reference must reuse the
+    Factory-owned pull request without touching the contributor's one.
+    """
+
+    factory_config = config(tmp_path)
+    github = GitHub()
+    github.inventory = [
+        PullRequestRecord(
+            number=99,
+            title="Fixes #42: Fix build",
+            body="Fixes #42",
+            state="OPEN",
+            is_draft=True,
+            head_ref="factory/42-fix-build",
+            head_sha="abcdef1234567",
+            base_ref="main",
+            created_at="2026-08-20T00:00:00Z",
+        ),
+        PullRequestRecord(
+            number=88,
+            title="Contributor fix for the same issue",
+            body="Fixes #42",
+            state="OPEN",
+            is_draft=False,
+            head_ref="contributor/fix-build",
+            head_sha="contributor-head",
+            base_ref="main",
+            created_at="2026-08-19T00:00:00Z",
+            is_cross_repository=True,
+        ),
+    ]
+    worktree = factory_config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    _seed_prompts(worktree / "automation/prompts")
+    job = Job(
+        task=Task("42", "Fix build", "", "github-issue", 0),
+        state=JobState.PR_DRAFT,
+        branch="factory/42-fix-build",
+        head_sha="abcdef1234567",
+    )
+    pipeline = FactoryPipeline(
+        factory_config,
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    pipeline.jobs.save({"42": job})
+
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
+    monkeypatch.setattr(GitWorkflow, "committed_change_fingerprint", lambda workflow: "change-42")
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "abcdef1234567")
+
+    result = pipeline.run_job("42")
+
+    assert result is not None
+    assert result.state is JobState.REVIEWING
+    assert result.pull_request == 99
+    assert github.superseded_pull_requests == []
+    assert github.created_pull_requests == []
+    assert [number for number, _title, _body in github.updated_pull_requests] == [99]
