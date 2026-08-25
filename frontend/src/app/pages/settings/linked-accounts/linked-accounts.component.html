@@ -86,14 +86,14 @@
       }
     </section>
 
-    @if (pendingUnlinkProvider(); as provider) {
+    @if (pendingUnlinkProvider()) {
       <section
         class="rounded-card border border-danger/30 bg-surface-100 p-4 space-y-3"
         role="group"
         aria-labelledby="unlink-confirmation-title"
       >
         <h2 id="unlink-confirmation-title" class="font-semibold text-text-primary">
-          {{ 'settings.linkedAccounts.unlink' | t }} {{ provider }}?
+          {{ 'settings.linkedAccounts.unlink' | t }}
         </h2>
         <p class="text-sm text-text-secondary">
           {{ 'settings.linkedAccounts.subtitle' | t }}
