@@ -101,7 +101,9 @@ export class LegalDocumentViewerComponent {
       return String(this.lastUpdated());
     }
 
-    return this.datePipe.transform(date, 'longDate') ?? String(this.lastUpdated());
+    return (
+      this.datePipe.transform(date, 'longDate', 'UTC', 'en-GB') ?? String(this.lastUpdated())
+    );
   });
 
   private parseDate(value: Date | string): Date | null {
@@ -122,12 +124,12 @@ export class LegalDocumentViewerComponent {
     const year = Number(yearText);
     const month = Number(monthText);
     const day = Number(dayText);
-    const date = new Date(year, month - 1, day);
+    const date = new Date(Date.UTC(year, month - 1, day));
 
     if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
     ) {
       return null;
     }
