@@ -8,6 +8,8 @@ vi.mock('nodemailer', () => ({
   }),
 }));
 
+const VALID_TOKEN = 'a'.repeat(64);
+
 describe('EmailService (unit)', () => {
   let service: EmailService;
   let configService: { get: Mock };
@@ -38,7 +40,7 @@ describe('EmailService (unit)', () => {
 
   describe('sendPasswordResetEmail', () => {
     it('sends a password reset email with the correct fields', async () => {
-      await service.sendPasswordResetEmail('user@example.com', 'abc-token-xyz');
+      await service.sendPasswordResetEmail('user@example.com', VALID_TOKEN);
 
       expect(transporter.sendMail).toHaveBeenCalledTimes(1);
       const mailOptions = transporter.sendMail.mock.calls[0][0];
@@ -46,12 +48,12 @@ describe('EmailService (unit)', () => {
       expect(mailOptions.to).toBe('user@example.com');
       expect(mailOptions.subject).toContain('password');
       expect(mailOptions.from).toContain('HelloTalk');
-      expect(mailOptions.text).toContain('abc-token-xyz');
-      expect(mailOptions.html).toContain('abc-token-xyz');
+      expect(mailOptions.text).toContain(VALID_TOKEN);
+      expect(mailOptions.html).toContain(VALID_TOKEN);
       expect(mailOptions.text).toContain('expires after 30 minutes');
     });
 
-    it('uses the canonical reset-password route and URL-encodes the token', async () => {
+    it('uses the canonical reset-password route', async () => {
       configService.get = vi.fn((key: string, fallback: string) => {
         if (key === 'FRONTEND_URL') return 'https://app.example.com/app/';
         return fallback;
@@ -59,16 +61,34 @@ describe('EmailService (unit)', () => {
       const svc = new (EmailService as any)(configService) as EmailService;
       (svc as any).transporter = transporter;
 
-      await svc.sendPasswordResetEmail('user@example.com', 'token + slash/');
+      await svc.sendPasswordResetEmail('user@example.com', VALID_TOKEN);
 
       const mailOptions = transporter.sendMail.mock.calls[0][0];
-      expect(mailOptions.text).toContain(
-        'https://app.example.com/reset-password?token=token+%2B+slash%2F',
-      );
-      expect(mailOptions.html).toContain(
-        'https://app.example.com/reset-password?token=token+%2B+slash%2F',
-      );
+      const expected = `https://app.example.com/reset-password?token=${VALID_TOKEN}`;
+      expect(mailOptions.text).toContain(expected);
+      expect(mailOptions.html).toContain(expected);
       expect(mailOptions.text).not.toContain('/forgot-password?token=');
+    });
+
+    it('rejects malformed tokens before dispatch', async () => {
+      await expect(
+        service.sendPasswordResetEmail('user@example.com', 'not-a-reset-token'),
+      ).rejects.toThrow('Invalid password reset token');
+      expect(transporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-http frontend URLs before dispatch', async () => {
+      configService.get = vi.fn((key: string, fallback: string) => {
+        if (key === 'FRONTEND_URL') return 'file:///tmp/app';
+        return fallback;
+      });
+      const svc = new (EmailService as any)(configService) as EmailService;
+      (svc as any).transporter = transporter;
+
+      await expect(
+        svc.sendPasswordResetEmail('user@example.com', VALID_TOKEN),
+      ).rejects.toThrow('Invalid password reset frontend URL');
+      expect(transporter.sendMail).not.toHaveBeenCalled();
     });
 
     it('uses custom MAIL_FROM_NAME and MAIL_FROM_ADDRESS when configured', async () => {
@@ -82,7 +102,7 @@ describe('EmailService (unit)', () => {
       const svc = new (EmailService as any)(configService) as EmailService;
       (svc as any).transporter = transporter;
 
-      await svc.sendPasswordResetEmail('user@example.com', 'tok');
+      await svc.sendPasswordResetEmail('user@example.com', VALID_TOKEN);
 
       const mailOptions = transporter.sendMail.mock.calls[0][0];
       expect(mailOptions.from).toBe(
@@ -97,13 +117,13 @@ describe('EmailService (unit)', () => {
 
       await service.sendPasswordResetEmail(
         'private-user@example.com',
-        'secret-reset-token',
+        VALID_TOKEN,
       );
 
       expect(logSpy).toHaveBeenCalledWith('Password reset email dispatched');
       const loggedText = logSpy.mock.calls.flat().join(' ');
       expect(loggedText).not.toContain('private-user@example.com');
-      expect(loggedText).not.toContain('secret-reset-token');
+      expect(loggedText).not.toContain(VALID_TOKEN);
     });
   });
 });
