@@ -80,6 +80,10 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             </span>
           </button>
         </div>
+
+        @if (uploadError()) {
+          <p role="alert" class="mt-2 break-words text-sm text-danger">{{ 'common.error' | t }}</p>
+        }
       } @else {
         <div
           class="overflow-hidden rounded-card border border-surface-100 bg-surface-200 shadow-card"
@@ -128,16 +132,16 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
             {{ 'common.cancel' | t }}
           </button>
         </div>
-      }
 
-      <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
-        @if (isUploading()) {
-          <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
-        }
-        @if (uploadError()) {
-          <p role="alert" class="break-words text-danger">{{ 'common.error' | t }}</p>
-        }
-      </div>
+        <div class="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
+          @if (isUploading()) {
+            <p class="text-text-muted">{{ 'common.uploading' | t }}</p>
+          }
+          @if (uploadError()) {
+            <p role="alert" class="break-words text-danger">{{ 'common.error' | t }}</p>
+          }
+        </div>
+      }
 
       @if (isCropping() && selectedFile()) {
         <app-cover-photo-cropper
@@ -320,9 +324,7 @@ export class CoverPhotoUploaderComponent implements OnDestroy {
     }
   }
 
-  private focusAfterRender(
-    target: () => ElementRef<HTMLButtonElement> | undefined,
-  ): void {
+  private focusAfterRender(target: () => ElementRef<HTMLButtonElement> | undefined): void {
     afterNextRender(
       () => {
         target()?.nativeElement.focus({ preventScroll: true });
