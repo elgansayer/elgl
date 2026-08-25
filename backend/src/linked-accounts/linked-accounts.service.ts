@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { UserIdentity } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -12,7 +16,11 @@ export interface LinkedAccount {
   identity_id?: string;
 }
 
-const VISIBLE_PROVIDERS = new Set<LinkedAccountProvider>(['email', 'google', 'apple']);
+const VISIBLE_PROVIDERS = new Set<LinkedAccountProvider>([
+  'email',
+  'google',
+  'apple',
+]);
 
 @Injectable()
 export class LinkedAccountsService {
@@ -26,12 +34,19 @@ export class LinkedAccountsService {
 
     if (error || !data.user) {
       this.logger.warn('linked_accounts_identity_lookup_failed');
-      throw new ServiceUnavailableException('Linked accounts are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Linked accounts are temporarily unavailable',
+      );
     }
 
     return (data.user.identities ?? [])
-      .filter((identity): identity is UserIdentity & { provider: LinkedAccountProvider } =>
-        VISIBLE_PROVIDERS.has(identity.provider as LinkedAccountProvider),
+      .filter(
+        (
+          identity,
+        ): identity is UserIdentity & { provider: LinkedAccountProvider } =>
+          VISIBLE_PROVIDERS.has(
+            identity.provider as LinkedAccountProvider,
+          ),
       )
       .map((identity) => ({
         provider: identity.provider,
@@ -49,7 +64,7 @@ export class LinkedAccountsService {
     }
 
     for (const key of ['email', 'full_name', 'name'] as const) {
-      const value = data[key];
+      const value: unknown = data[key];
       if (typeof value === 'string') {
         const trimmed = value.trim();
         if (trimmed) {
