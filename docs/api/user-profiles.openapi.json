@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "ELGL User Profiles API",
     "version": "1.0.0",
@@ -49,7 +49,7 @@
         "tags": ["User Profiles"],
         "summary": "Cancel a scheduled account deletion",
         "x-requires-2fa": true,
-        "responses": { "200": { "$ref": "#/components/responses/MessageResponse" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "429": { "$ref": "#/components/responses/TooManyRequests" } }
+        "responses": { "201": { "$ref": "#/components/responses/MessageResponse" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "429": { "$ref": "#/components/responses/TooManyRequests" } }
       }
     },
     "/users/me/export": {
@@ -70,7 +70,7 @@
         "tags": ["User Profiles"],
         "summary": "Persist a proficiency level from an assessment score",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProficiencyAssessmentRequest" } } } },
-        "responses": { "200": { "description": "Assigned proficiency level", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProficiencyAssessmentResponse" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
+        "responses": { "201": { "description": "Assigned proficiency level", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProficiencyAssessmentResponse" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } }
       }
     },
     "/users/me/greeting": {
@@ -80,10 +80,10 @@
       "patch": { "tags": ["User Profiles"], "summary": "Update away message", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["awayMessage"], "properties": { "awayMessage": { "type": "string" } } } } } }, "responses": { "200": { "$ref": "#/components/responses/ProfileResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/avatar/presigned-url": {
-      "post": { "tags": ["User Profiles"], "summary": "Create an avatar upload URL", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaPresignRequest" } } } }, "responses": { "200": { "$ref": "#/components/responses/MediaPresignResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "post": { "tags": ["User Profiles"], "summary": "Create an avatar upload URL", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaPresignRequest" } } } }, "responses": { "201": { "$ref": "#/components/responses/MediaPresignResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/cover-photo/presigned-url": {
-      "post": { "tags": ["User Profiles"], "summary": "Create a cover-photo upload URL", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaPresignRequest" } } } }, "responses": { "200": { "$ref": "#/components/responses/MediaPresignResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "post": { "tags": ["User Profiles"], "summary": "Create a cover-photo upload URL", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MediaPresignRequest" } } } }, "responses": { "201": { "$ref": "#/components/responses/MediaPresignResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/cover-photo": {
       "patch": { "tags": ["User Profiles"], "summary": "Persist the user's cover-photo URL", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["cover_photo_url"], "properties": { "cover_photo_url": { "type": "string", "format": "uri" } } } } } }, "responses": { "200": { "$ref": "#/components/responses/ProfileResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
@@ -122,15 +122,15 @@
       "get": { "tags": ["User Profiles"], "summary": "List followed profiles", "parameters": [{ "$ref": "#/components/parameters/UserId" }, { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" }], "responses": { "200": { "$ref": "#/components/responses/ProfilePageResponse" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/{id}/follow": {
-      "post": { "tags": ["User Profiles"], "summary": "Follow a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "204": { "description": "Follow relationship created or already satisfied" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
-      "delete": { "tags": ["User Profiles"], "summary": "Unfollow a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "204": { "description": "Follow relationship removed or already absent" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "post": { "tags": ["User Profiles"], "summary": "Follow a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "201": { "description": "Follow relationship created or already satisfied" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "delete": { "tags": ["User Profiles"], "summary": "Unfollow a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "200": { "description": "Follow relationship removed or already absent" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/block/{id}": {
-      "post": { "tags": ["User Profiles"], "summary": "Block a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "200": { "$ref": "#/components/responses/SuccessResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } },
+      "post": { "tags": ["User Profiles"], "summary": "Block a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "201": { "$ref": "#/components/responses/SuccessResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } },
       "delete": { "tags": ["User Profiles"], "summary": "Unblock a user", "parameters": [{ "$ref": "#/components/parameters/UserId" }], "responses": { "200": { "$ref": "#/components/responses/SuccessResponse" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/report": {
-      "post": { "tags": ["User Profiles"], "summary": "Report a user", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReportUserRequest" } } } }, "responses": { "200": { "description": "Report accepted", "content": { "application/json": { "schema": { "type": "object", "required": ["success", "message"], "properties": { "success": { "type": "boolean" }, "message": { "type": "string" } } } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "post": { "tags": ["User Profiles"], "summary": "Report a user", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReportUserRequest" } } } }, "responses": { "201": { "description": "Report accepted", "content": { "application/json": { "schema": { "type": "object", "required": ["success", "message"], "properties": { "success": { "type": "boolean" }, "message": { "type": "string" } } } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/privacy-settings": {
       "get": { "tags": ["User Profiles"], "summary": "Get privacy settings", "responses": { "200": { "description": "Current privacy settings", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PrivacySettings" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
@@ -140,7 +140,7 @@
     },
     "/users/me/message-filters": {
       "get": { "tags": ["User Profiles"], "summary": "Get inbound message filters", "responses": { "200": { "description": "Current message filters", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessageFilters" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } },
-      "put": { "tags": ["User Profiles"], "summary": "Replace inbound message filters", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessageFilters" } } } }, "responses": { "204": { "description": "Filters persisted" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+      "put": { "tags": ["User Profiles"], "summary": "Replace inbound message filters", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessageFilters" } } } }, "responses": { "200": { "description": "Filters persisted" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/business": {
       "get": { "tags": ["User Profiles"], "summary": "Get business-profile fields", "responses": { "200": { "description": "Business profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BusinessProfile" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } },
@@ -153,7 +153,7 @@
       "patch": { "tags": ["User Profiles"], "summary": "Update status visibility", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["status_visibility"], "properties": { "status_visibility": { "type": "string" } } } } } }, "responses": { "200": { "$ref": "#/components/responses/ProfileResponse" }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
     },
     "/users/me/contact-sharing": {
-      "post": { "tags": ["User Profiles"], "summary": "Share configured contact details with another user", "description": "Returns only contact fields the service authorizes for this relationship. Callers cannot select arbitrary profile columns.", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["target_user_id"], "properties": { "target_user_id": { "type": "string", "format": "uuid" } } } } } }, "responses": { "200": { "description": "Authorized contact fields", "content": { "application/json": { "schema": { "type": "object", "properties": { "phone_number": { "type": "string" }, "email": { "type": "string", "format": "email" } } } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } }
+      "post": { "tags": ["User Profiles"], "summary": "Share configured contact details with another user", "description": "Returns only contact fields the service authorizes for this relationship. Callers cannot select arbitrary profile columns.", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["target_user_id"], "properties": { "target_user_id": { "type": "string", "format": "uuid" } } } } } }, "responses": { "201": { "description": "Authorized contact fields", "content": { "application/json": { "schema": { "type": "object", "properties": { "phone_number": { "type": "string" }, "email": { "type": "string", "format": "email" } } } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } }
     },
     "/users/me/notification-preferences": {
       "get": { "tags": ["User Profiles"], "summary": "Get notification preferences", "responses": { "200": { "description": "Notification preferences", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationPreferences" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } },
