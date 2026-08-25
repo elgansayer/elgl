@@ -20,7 +20,9 @@ describe('ChatForwardController', () => {
   it('fails closed when the authenticated principal is absent', async () => {
     const dto: ForwardMessageDto = { room_ids: [ROOM_ID] };
 
-    await expect(controller.forwardMessage(null, MESSAGE_ID, dto)).resolves.toBeNull();
+    await expect(
+      controller.forwardMessage(null, MESSAGE_ID, dto),
+    ).resolves.toBeNull();
     expect(forwardMessage).not.toHaveBeenCalled();
   });
 
@@ -41,7 +43,9 @@ describe('ChatForwardController', () => {
     ];
     forwardMessage.mockResolvedValue(saved);
 
-    await expect(controller.forwardMessage(user, MESSAGE_ID, dto)).resolves.toEqual(saved);
+    await expect(
+      controller.forwardMessage(user, MESSAGE_ID, dto),
+    ).resolves.toEqual(saved);
     expect(forwardMessage).toHaveBeenCalledTimes(1);
     expect(forwardMessage).toHaveBeenCalledWith(user.id, MESSAGE_ID, [ROOM_ID]);
   });
@@ -49,10 +53,12 @@ describe('ChatForwardController', () => {
   it('preserves service authorization and abuse failures for the HTTP layer', async () => {
     const user = { id: 'user-1' } as User;
     const dto: ForwardMessageDto = { room_ids: [ROOM_ID] };
-    forwardMessage.mockRejectedValue(new BadRequestException('Cannot forward spam content.'));
-
-    await expect(controller.forwardMessage(user, MESSAGE_ID, dto)).rejects.toThrow(
-      'Cannot forward spam content.',
+    forwardMessage.mockRejectedValue(
+      new BadRequestException('Cannot forward spam content.'),
     );
+
+    await expect(
+      controller.forwardMessage(user, MESSAGE_ID, dto),
+    ).rejects.toThrow('Cannot forward spam content.');
   });
 });
