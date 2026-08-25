@@ -28,7 +28,7 @@ Focus is scheduled with Angular `afterNextRender`, so it targets the control tha
 
 The existing translated `coverPhoto.previewAlt` remains the accessible image description for current, selected and cropped cover previews.
 
-The async status region now remains present in both uploader modes. Upload progress is exposed through the translated status text and `aria-busy` on the Upload action. Local file rejection, file-read failure and upload failure use the existing translated `common.error` alert instead of failing silently. Provider responses, upload URLs, object keys and image data are not exposed in the message.
+Upload progress stays in the editor's polite atomic status region and is also exposed through `aria-busy` on the Upload action. Local file rejection and file-read failure now render the same translated `common.error` alert in file-selection mode, while upload failures retain the existing alert inside editor mode. Failures therefore remain perceivable without reserving new layout space during the normal idle state. Provider responses, upload URLs, object keys and image data are not exposed in the message.
 
 The native file input is cleared after a rejected/read-failed file and on reset. This preserves the ability to select the same file again after a recoverable failure or cancellation.
 
@@ -75,7 +75,7 @@ Focused Angular regression coverage now locks:
 - upload gating and the existing presign -> R2 PUT -> confirm sequence;
 - retryable upload failures with error announcement and focus returned to Upload;
 - reset focus restoration and object-URL cleanup;
-- a persistent polite async status region.
+- polite atomic upload-status semantics.
 
 Repository CI remains authoritative for frontend unit tests, static analysis, production build, RTL/logical-layout checks, Spartan ownership, translation safety, screen-reader naming, touch-target sizing, high-zoom/reflow governance and design-sync validation.
 
