@@ -20,36 +20,39 @@ export class CommentMentionNotificationListener {
         ? [payload.momentAuthorId]
         : [];
 
-    for (const recipientId of recipientIds) {
-      // Guard against self-mentions (commenter mentioning themselves)
-      if (recipientId === payload.commenterId) {
-        continue;
-      }
-
-      try {
-        const shouldSend =
-          await this.notificationPreferencesService.shouldSendNotification(
-            recipientId,
-            'moment_comment',
-            'push',
-          );
-        if (!shouldSend) {
-          continue;
+    // ⚡ Bolt: Optimize comment mention notifications via Promise.allSettled
+    await Promise.allSettled(
+      recipientIds.map(async (recipientId) => {
+        // Guard against self-mentions (commenter mentioning themselves)
+        if (recipientId === payload.commenterId) {
+          return;
         }
-      } catch (err) {
-        console.error(
-          `Failed to check notification preferences for user ${recipientId}:`,
-          err,
-        );
-      }
 
-      await this.notificationsService.createNotification(
-        recipientId,
-        payload.commenterId,
-        'mention_comment',
-        payload.momentId,
-        payload.commentPreview,
-      );
-    }
+        try {
+          const shouldSend =
+            await this.notificationPreferencesService.shouldSendNotification(
+              recipientId,
+              'moment_comment',
+              'push',
+            );
+          if (!shouldSend) {
+            return;
+          }
+        } catch (err) {
+          console.error(
+            `Failed to check notification preferences for user ${recipientId}:`,
+            err,
+          );
+        }
+
+        await this.notificationsService.createNotification(
+          recipientId,
+          payload.commenterId,
+          'mention_comment',
+          payload.momentId,
+          payload.commentPreview,
+        );
+      }),
+    );
   }
 }
