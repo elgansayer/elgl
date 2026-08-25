@@ -33,7 +33,7 @@
       (pointerup)="stopDrawing($event)"
       (pointercancel)="stopDrawing($event)"
       (pointerleave)="stopDrawing($event)"
-      class="h-auto max-w-full cursor-crosshair bg-surface-200"
+      class="h-auto max-w-full touch-none cursor-crosshair bg-surface-200"
     ></canvas>
   </div>
 
@@ -53,7 +53,7 @@
         @for (color of colors; track color; let index = $index) {
           <label
             [class]="
-              'inline-flex size-10 cursor-pointer items-center justify-center rounded-full border-2 focus-within:ring-2 focus-within:ring-primary/50 ' +
+              'inline-flex size-11 cursor-pointer items-center justify-center rounded-full border-2 focus-within:ring-2 focus-within:ring-primary/50 ' +
               (currentColor === color
                 ? 'border-primary ring-2 ring-primary/40'
                 : 'border-surface-100')
@@ -90,7 +90,7 @@
         @for (width of brushWidths; track width) {
           <label
             [class]="
-              'inline-flex min-h-10 cursor-pointer items-center rounded-lg px-2.5 py-1 text-xs font-bold focus-within:ring-2 focus-within:ring-primary/50 ' +
+              'inline-flex min-h-11 min-w-11 cursor-pointer items-center rounded-lg px-2.5 py-1 text-xs font-bold focus-within:ring-2 focus-within:ring-primary/50 ' +
               (brushWidth === width
                 ? 'bg-primary text-on-fill shadow'
                 : 'bg-surface-100 text-text-primary hover:bg-surface-100')
