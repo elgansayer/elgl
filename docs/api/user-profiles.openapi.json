@@ -168,7 +168,7 @@
       "UserId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
       "StatusId": { "name": "statusId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
       "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
-      "Offset": { "name": "offset", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "default": 0 } }
+      "Offset": { "name": "offset", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "maximum": 10000, "default": 0 } }
     },
     "schemas": {
       "UserProfile": {
