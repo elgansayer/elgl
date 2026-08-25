@@ -166,6 +166,17 @@ describe('User Profiles OpenAPI architecture contract', () => {
         expect.objectContaining({ name: 'limit', in: 'query' }),
       ]),
     );
+    const searchLimit = searchParameters.find(
+      (parameter) => parameter['name'] === 'limit',
+    );
+    expect(searchLimit?.['schema']).toEqual(
+      expect.objectContaining({
+        type: 'integer',
+        minimum: 1,
+        maximum: 100,
+        default: 10,
+      }),
+    );
   });
 
   it('documents privacy-sensitive profile projections and stable failures', () => {
