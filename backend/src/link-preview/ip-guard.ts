@@ -156,10 +156,6 @@ function isPrivateIpv6(ip: string): boolean {
 export function isPrivateIp(ip: string): boolean {
   const normalized = ip.toLowerCase();
   if (normalized.includes(':')) {
-    if (normalized.startsWith('::ffff:')) {
-      // IPv4-mapped IPv6 addresses are evaluated using the embedded IPv4.
-      return isPrivateIpv4(normalized.substring(7));
-    }
     return isPrivateIpv6(normalized);
   }
   return isPrivateIpv4(normalized);
