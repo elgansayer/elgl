@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsDateString,
   IsInt,
   IsObject,
   IsOptional,
@@ -85,7 +86,6 @@ export class ClientErrorDto {
   stackFrames?: ClientErrorStackFrameDto[];
 
   @IsOptional()
-  @IsString()
-  @MaxLength(40)
+  @IsDateString({ strict: true })
   timestamp?: string;
 }
