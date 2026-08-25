@@ -106,8 +106,7 @@ def test_repeated_agent_phases_use_smaller_task_context_budgets(tmp_path: Path) 
     large_task = Task("99", "Large task", body, "github-issue", 0)
 
     prompts = {
-        phase: build_phase_prompt(tmp_path, phase, large_task)
-        for phase in PHASE_TASK_BODY_LIMITS
+        phase: build_phase_prompt(tmp_path, phase, large_task) for phase in PHASE_TASK_BODY_LIMITS
     }
 
     for phase, prompt in prompts.items():
