@@ -18,7 +18,7 @@ describe('ChatMediaPickerComponent HD quality contract', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    const checkbox = fixture.nativeElement.querySelector('hlm-checkbox');
+    const checkbox = fixture.nativeElement.querySelector('brn-checkbox');
 
     expect(component.quality()).toBe('standard');
     expect(checkbox).not.toBeNull();
