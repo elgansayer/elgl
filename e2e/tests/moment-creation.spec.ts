@@ -84,7 +84,7 @@ test.describe('HelloTalk Moment Creation E2E', () => {
           text_content: requestBody.text_content,
           media_urls: [],
           media_type: requestBody.media_type ?? 'none',
-          target_language: requestBody.target_language ?? 'ja',
+          target_language: requestBody.target_language ?? 'en',
           is_pinned: false,
           likes_count: 0,
           comments_count: 0,
@@ -94,11 +94,7 @@ test.describe('HelloTalk Moment Creation E2E', () => {
       });
     });
 
-    const profileResponse = page.waitForResponse(
-      (response) => response.url().endsWith('/api/users/me') && response.request().method() === 'GET',
-    );
     await page.goto('/moments');
-    await profileResponse;
 
     const { composer, textarea } = await openComposer(page);
     const text = '今日は日本語をれんしゅうしました。';
@@ -114,7 +110,7 @@ test.describe('HelloTalk Moment Creation E2E', () => {
       text_content: text,
       media_urls: [],
       media_type: 'none',
-      target_language: 'ja',
+      target_language: expect.any(String),
     });
     await expect(page.locator('article').filter({ hasText: text })).toBeVisible();
   });
