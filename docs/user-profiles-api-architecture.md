@@ -38,7 +38,7 @@ The following rules are server-authoritative and must remain true even if a clie
 
 ## Pagination and bounded collections
 
-Follower and following endpoints accept `limit` and `offset`; the controller enforces a maximum limit of 100 and a default of 20. Search enforces the same maximum and defaults to 10. Offsets must be non-negative integers. Invalid values fail with `400` before a Supabase query is issued. New collection endpoints in this domain must use explicit bounds rather than unbounded table scans.
+Follower and following endpoints accept `limit` and `offset`; the controller enforces a maximum limit of 100 and a default of 20. Search enforces the same maximum and defaults to 10. Offsets must be decimal integers between 0 and 10,000. Pagination values use strict decimal parsing; whitespace, fractional, exponential, negative, unsafe, and over-limit values fail with `400` before a Supabase query is issued. New collection endpoints in this domain must use explicit bounds rather than unbounded table scans.
 
 Visitor/status-viewer endpoints currently return arrays from existing service methods. If those datasets grow beyond their present product constraints, pagination must be added compatibly before removing the current array response shape.
 
