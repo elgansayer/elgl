@@ -18,8 +18,11 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups',
-    redirectTo: 'community/groups',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../components/groups-discovery/groups-discovery.component').then(
+        (m) => m.GroupsDiscoveryComponent,
+      ),
+    title: 'Groups Discovery - HelloTalk',
   },
   {
     path: 'groups/create',
