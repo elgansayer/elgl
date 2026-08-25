@@ -6,6 +6,7 @@ from openhands_factory.models import Task
 from openhands_factory.prompts import (
     MAX_PHASE_EXTRA_CHARS,
     MAX_TASK_BODY_CHARS,
+    PHASE_TASK_BODY_LIMITS,
     build_phase_prompt,
     build_system_prompt,
     build_task_prompt,
@@ -96,6 +97,28 @@ def test_build_phase_prompt_bounds_large_evidence(tmp_path: Path) -> None:
     assert "-EVIDENCE-TAIL" in prompt
     assert "Factory prompt budget omitted" in prompt
     assert len(prompt) < len(evidence) + 2_000
+
+
+def test_repeated_agent_phases_use_smaller_task_context_budgets(tmp_path: Path) -> None:
+    for name in PHASE_TASK_BODY_LIMITS:
+        (tmp_path / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
+    body = "HEAD-" + ("z" * (MAX_TASK_BODY_CHARS * 2)) + "-TAIL"
+    large_task = Task("99", "Large task", body, "github-issue", 0)
+
+    prompts = {
+        phase: build_phase_prompt(tmp_path, phase, large_task)
+        for phase in PHASE_TASK_BODY_LIMITS
+    }
+
+    for phase, prompt in prompts.items():
+        assert "HEAD-" in prompt, phase
+        assert "-TAIL" in prompt, phase
+        assert "Factory prompt budget omitted" in prompt, phase
+        assert prompt.count("z") <= PHASE_TASK_BODY_LIMITS[phase], phase
+
+    assert prompts["repair"].count("z") < prompts["review"].count("z")
+    assert prompts["quality_repair"].count("z") < prompts["security"].count("z")
+    assert prompts["review"].count("z") < prompts["architect"].count("z")
 
 
 def test_build_phase_prompt_rejects_unknown_phase(tmp_path: Path) -> None:
