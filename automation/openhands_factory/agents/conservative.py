@@ -122,11 +122,12 @@ class ConservativeAgentRouter(AgentRouter):
         self._review_slots = BoundedSemaphore(MAX_REVIEW_CONCURRENCY)
         self._review_admission: ReviewAdmissionGate | None = None
         self._agent_route_admission: DurableAdmissionGate | None = None
-        self._agent_routes_per_task_interval = _positive_int_environment(
-            "FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL",
-            AGENT_ROUTES_PER_TASK_PER_INTERVAL,
-        )
+        self._agent_routes_per_task_interval = AGENT_ROUTES_PER_TASK_PER_INTERVAL
         if self.conservative_enabled:
+            self._agent_routes_per_task_interval = _positive_int_environment(
+                "FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL",
+                AGENT_ROUTES_PER_TASK_PER_INTERVAL,
+            )
             # Retrying the same subscription immediately doubles the cost of one
             # provider-side failure. The conservative policy instead permits one
             # distinct fallback provider; a durable scheduler retry can revisit the
