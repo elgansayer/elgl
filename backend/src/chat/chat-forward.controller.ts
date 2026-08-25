@@ -33,6 +33,10 @@ export class ChatForwardController {
   ): Promise<ChatMessage[] | null> {
     if (!user) return null;
 
-    return await this.chatService.forwardMessage(user.id, messageId, dto.room_ids);
+    return await this.chatService.forwardMessage(
+      user.id,
+      messageId,
+      dto.room_ids,
+    );
   }
 }
