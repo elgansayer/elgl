@@ -22,7 +22,10 @@ describe('AdminRateLimitControlService', () => {
     expire: ReturnType<typeof vi.fn>;
     ttl: ReturnType<typeof vi.fn>;
   };
-  let supabase: { getRedisClient: ReturnType<typeof vi.fn>; getClient: ReturnType<typeof vi.fn> };
+  let supabase: {
+    getRedisClient: ReturnType<typeof vi.fn>;
+    getClient: ReturnType<typeof vi.fn>;
+  };
   let networkAbuse: {
     normalizePublicIp: ReturnType<typeof vi.fn>;
     normalizeCidr: ReturnType<typeof vi.fn>;
