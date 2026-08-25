@@ -11,14 +11,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <hlm-dialog-content
         *hlmDialogPortal
         [showCloseButton]="false"
-        class="max-h-[90vh] w-full max-w-sm space-y-4 overflow-y-auto rounded-2xl border border-surface-100 bg-surface-200 p-6 text-center shadow-2xl sm:rounded-3xl"
+        class="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-sm space-y-4 overflow-y-auto rounded-sheet border border-surface-100 bg-surface-200 p-5 text-center shadow-lift sm:p-6"
         [attr.aria-labelledby]="dialogTitleId"
       >
         <div class="text-6xl" aria-hidden="true">🎁</div>
-        <h3 [id]="dialogTitleId" class="text-2xl font-black text-text-primary">
+        <h3 [id]="dialogTitleId" class="break-words text-2xl font-black text-text-primary">
           {{ 'dailyLoginModal.title' | t }}
         </h3>
-        <p class="text-text-secondary" aria-live="polite">
+        <p class="break-words text-text-secondary" aria-live="polite">
           {{ 'dailyLoginModal.body' | t: { coins: coins() } }}
         </p>
         <button
@@ -26,7 +26,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           hlmDialogClose
           type="button"
           size="touch"
-          class="mt-4 w-full"
+          class="mt-4 w-full whitespace-normal text-center"
           [attr.aria-label]="
             ('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })
           "
