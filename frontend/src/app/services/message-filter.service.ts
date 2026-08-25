@@ -26,7 +26,7 @@ export class MessageFilterService {
   }
 
   async save(filters: MessageFilters): Promise<void> {
-    return firstValueFrom(
+    await firstValueFrom(
       this.http.put<void>(this.url, filters, {
         headers: this.getHeaders(),
       }),
