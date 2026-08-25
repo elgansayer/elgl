@@ -6,6 +6,7 @@ on:
       - '.github/workflows/**'
       - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
+      - 'scripts/deploy-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
   push:
@@ -14,6 +15,7 @@ on:
       - '.github/workflows/**'
       - 'config/systemd/**'
       - 'scripts/audit-workflows.mjs'
+      - 'scripts/deploy-workflow-contract.test.mjs'
       - 'scripts/deploy-and-start-factory.sh'
       - 'scripts/maintain-factory-host-storage.sh'
   workflow_dispatch:
@@ -35,6 +37,9 @@ jobs:
 
       - name: Inventory workflow dependencies and enforce trigger policy
         run: node scripts/audit-workflows.mjs
+
+      - name: Verify deploy workflow safety contract
+        run: node --test scripts/deploy-workflow-contract.test.mjs
 
       - name: Install actionlint
         env:
