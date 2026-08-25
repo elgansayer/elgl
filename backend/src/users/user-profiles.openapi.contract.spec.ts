@@ -52,7 +52,7 @@ const documentedOperations = Object.values(contract.paths).flatMap((path) =>
 
 describe('User Profiles OpenAPI architecture contract', () => {
   it('is a versioned OpenAPI document served below the application API prefix', () => {
-    expect(contract.openapi).toMatch(/^3\./);
+    expect(contract.openapi).toBe('3.1.0');
     expect(contract.servers).toEqual(
       expect.arrayContaining([expect.objectContaining({ url: '/api' })]),
     );
@@ -183,6 +183,24 @@ describe('User Profiles OpenAPI architecture contract', () => {
       }),
     );
   });
+
+  it.each([
+    ['post', '/users/me/restore', '201'],
+    ['post', '/users/me/assess-proficiency', '201'],
+    ['post', '/users/me/avatar/presigned-url', '201'],
+    ['post', '/users/me/cover-photo/presigned-url', '201'],
+    ['post', '/users/{id}/follow', '201'],
+    ['delete', '/users/{id}/follow', '200'],
+    ['post', '/users/block/{id}', '201'],
+    ['post', '/users/report', '201'],
+    ['put', '/users/me/message-filters', '200'],
+    ['post', '/users/me/contact-sharing', '201'],
+  ] as const)(
+    'documents the existing Nest success status for %s %s',
+    (method, path, status) => {
+      expect(contract.paths[path]?.[method]?.responses).toHaveProperty(status);
+    },
+  );
 
   it('documents privacy-sensitive profile projections and stable failures', () => {
     expect(contract.components?.schemas?.['PrivacySettings']).toBeDefined();
