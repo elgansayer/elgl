@@ -86,7 +86,7 @@ describe('ChatRoomComponent sequential voice-note autoplay', () => {
       translateWordOrSentence: vi.fn(),
       saveWord: vi.fn(),
       updateSrsLevel: vi.fn(),
-      getWordStatus: vi.fn().mockReturnValue(undefined),
+      getWordStatus: vi.fn().mockReturnValue({ colourClass: '' }),
       checkGrammar: vi.fn().mockResolvedValue({
         original: '',
         corrected: '',
