@@ -21,7 +21,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 END
-$;
+$$;
 
 -- Establish a database-enforced preflight before the narrowing cast. NOT VALID
 -- constraints protect new writes immediately; validation also checks legacy
