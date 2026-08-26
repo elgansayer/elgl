@@ -29,19 +29,14 @@ export function resolveMockFixtureSeed(
     return DEFAULT_MOCK_FIXTURE_SEED;
   }
 
-  const normalized =
-    typeof rawSeed === 'number' ? String(rawSeed) : rawSeed;
+  const normalized = typeof rawSeed === 'number' ? String(rawSeed) : rawSeed;
   if (typeof normalized !== 'string' || !/^\d{1,10}$/.test(normalized.trim())) {
-    throw new Error(
-      'MOCK_BACKEND_SEED must be an unsigned 32-bit integer',
-    );
+    throw new Error('MOCK_BACKEND_SEED must be an unsigned 32-bit integer');
   }
 
   const seed = Number(normalized.trim());
   if (!Number.isInteger(seed) || seed < 0 || seed > UINT32_MAX) {
-    throw new Error(
-      'MOCK_BACKEND_SEED must be an unsigned 32-bit integer',
-    );
+    throw new Error('MOCK_BACKEND_SEED must be an unsigned 32-bit integer');
   }
 
   return seed;

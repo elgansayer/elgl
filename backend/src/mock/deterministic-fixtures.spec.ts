@@ -33,24 +33,27 @@ describe('deterministic mock fixture generator', () => {
     );
   });
 
-  it('replays UUID, timestamp, coordinate and counter values byte-for-byte', () => {
-    expect(sampleFixturePrimitives(42)).toBe(sampleFixturePrimitives(42));
+  it(
+    'replays UUID, timestamp, coordinate and counter values byte-for-byte',
+    () => {
+      expect(sampleFixturePrimitives(42)).toBe(sampleFixturePrimitives(42));
 
-    const parsed = JSON.parse(sampleFixturePrimitives(42)) as {
-      uuid: string;
-      coordinates: { latitude: number; longitude: number };
-      counter: number;
-    };
-    expect(parsed.uuid).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    );
-    expect(parsed.coordinates.latitude).toBeGreaterThanOrEqual(-90);
-    expect(parsed.coordinates.latitude).toBeLessThanOrEqual(90);
-    expect(parsed.coordinates.longitude).toBeGreaterThanOrEqual(-180);
-    expect(parsed.coordinates.longitude).toBeLessThanOrEqual(180);
-    expect(parsed.counter).toBeGreaterThanOrEqual(0);
-    expect(parsed.counter).toBeLessThanOrEqual(10_000);
-  });
+      const parsed = JSON.parse(sampleFixturePrimitives(42)) as {
+        uuid: string;
+        coordinates: { latitude: number; longitude: number };
+        counter: number;
+      };
+      expect(parsed.uuid).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(parsed.coordinates.latitude).toBeGreaterThanOrEqual(-90);
+      expect(parsed.coordinates.latitude).toBeLessThanOrEqual(90);
+      expect(parsed.coordinates.longitude).toBeGreaterThanOrEqual(-180);
+      expect(parsed.coordinates.longitude).toBeLessThanOrEqual(180);
+      expect(parsed.counter).toBeGreaterThanOrEqual(0);
+      expect(parsed.counter).toBeLessThanOrEqual(10_000);
+    },
+  );
 
   it('produces distinct valid fixture streams for different seeds', () => {
     expect(sampleFixturePrimitives(42)).not.toBe(sampleFixturePrimitives(43));

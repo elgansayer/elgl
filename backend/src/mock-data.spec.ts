@@ -64,20 +64,27 @@ describe('offline mock fixtures', () => {
     const alternateUsers = buildMockUsers(7933);
 
     expect(alternateUsers).toHaveLength(defaultUsers.length);
-    expect(JSON.stringify(alternateUsers)).not.toBe(JSON.stringify(defaultUsers));
-    expect(alternateUsers.every((user) => user.id.startsWith('fake-'))).toBe(true);
+    expect(JSON.stringify(alternateUsers)).not.toBe(
+      JSON.stringify(defaultUsers),
+    );
+    expect(
+      alternateUsers.every((user) => user.id.startsWith('fake-')),
+    ).toBe(true);
   });
 
-  it('recreates the exact initial state after a consumer mutates its snapshot', () => {
-    const pristine = JSON.stringify(buildMockFixtureSnapshot(7932));
-    const mutable = buildMockFixtureSnapshot(7932);
-    const firstUser = mutable.users[0];
-    if (!firstUser) throw new Error('Expected seeded users');
+  it(
+    'recreates the exact initial state after a consumer mutates its snapshot',
+    () => {
+      const pristine = JSON.stringify(buildMockFixtureSnapshot(7932));
+      const mutable = buildMockFixtureSnapshot(7932);
+      const firstUser = mutable.users[0];
+      if (!firstUser) throw new Error('Expected seeded users');
 
-    firstUser.display_name = 'mutated locally';
+      firstUser.display_name = 'mutated locally';
 
-    expect(JSON.stringify(buildMockFixtureSnapshot(7932))).toBe(pristine);
-  });
+      expect(JSON.stringify(buildMockFixtureSnapshot(7932))).toBe(pristine);
+    },
+  );
 
   it('exposes the active seed in test diagnostics', () => {
     expect(MOCK_FIXTURE_DIAGNOSTICS).toMatchObject({
