@@ -48,7 +48,7 @@ def _workflow_triggers(text: str) -> set[str]:
 
     lines = text.splitlines()
     for index, line in enumerate(lines):
-        match = re.fullmatch(r"\\s*on\\s*:\\s*(.*)", line)
+        match = re.fullmatch(r"\s*on\s*:\s*(.*)", line)
         if match is None:
             continue
         inline = match.group(1).strip()
@@ -70,7 +70,7 @@ def _workflow_triggers(text: str) -> set[str]:
             indent = len(candidate) - len(candidate.lstrip())
             if indent == 0:
                 break
-            event = re.match(r"^\\s+([A-Za-z_][A-Za-z0-9_-]*)\\s*:", candidate)
+            event = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_-]*)\s*:", candidate)
             if event is None:
                 continue
             if event_indent is None:
@@ -176,7 +176,7 @@ def workout_agent_commands_for(
                         "compileall",
                         "-q",
                         "-x",
-                        r"(^|/)\\.venv/",
+                        r"(^|/)\.venv/",
                         "backend",
                     ),
                     repository,

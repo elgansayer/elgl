@@ -31,7 +31,7 @@ def test_workout_agent_backend_change_runs_backend_build_and_tests(tmp_path: Pat
     ]
     assert commands[1].arguments[0] == str(python)
     assert commands[1].arguments[-1] == "backend"
-    assert r"(^|/)\\.venv/" in commands[1].arguments
+    assert r"(^|/)\.venv/" in commands[1].arguments
     assert commands[2].arguments[-1] == "backend/tests"
     assert all(command.workspace == tmp_path for command in commands)
 
