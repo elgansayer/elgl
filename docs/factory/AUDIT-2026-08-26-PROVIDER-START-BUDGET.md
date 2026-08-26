@@ -1,4 +1,4 @@
-# Factory provider-start allowance audit — 2026-08-26
+# Factory provider-start allowance audit - 2026-08-26
 
 ## Finding
 

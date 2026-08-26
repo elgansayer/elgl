@@ -1,8 +1,8 @@
 ## 2026-08-03 - Dynamic ARIA Labels in Angular Loops
 
-**Learning:** When assigning `aria-label` within Angular `@for` loops (like iterating over colors in `doodle-pad.component.html`), using a static label (e.g., `aria-label="Select color"`) causes screen readers to announce identical labels for all options, failing to provide distinguishable context to the user.
+**Learning:** When assigning `aria-label` within Angular `@for` loops (like iterating over colours in `doodle-pad.component.html`), using a static label (e.g., `aria-label="Select colour"`) causes screen readers to announce identical labels for all options, failing to provide distinguishable context to the user.
 
-**Action:** Always use property binding `[attr.aria-label]` to generate dynamic and descriptive text (e.g., `[attr.aria-label]="'Select ' + color"`) for looped elements.
+**Action:** Always use property binding `[attr.aria-label]` to generate dynamic and descriptive text (e.g., `[attr.aria-label]="'Select ' + colour"`) for looped elements.
 
 ## 2026-07-30 - Adding aria-labels to icon buttons
 **Learning:** It's important to only add aria-labels to buttons that are truly icon-only. If a button already has translated text content (e.g. `{{ 'common.close' | t }}`), adding a hardcoded aria-label overrides the localized text with English for screen reader users, breaking accessibility for non-English users.
