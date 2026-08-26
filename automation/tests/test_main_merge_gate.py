@@ -1,6 +1,6 @@
 import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from openhands_factory.main_merge_gate import MainBranchMergeGate, gate_merge_batch
 from openhands_factory.models import Job, JobState, Task
@@ -19,7 +19,8 @@ class Runner:
 
 
 def _job(identifier: str, state: JobState) -> Job:
-    return Job(Task(identifier, f"Task {identifier}", "Body", "github-pull-request", 5), state=state)
+    task = Task(identifier, f"Task {identifier}", "Body", "github-pull-request", 5)
+    return Job(task, state=state)
 
 
 def test_current_main_ci_requires_success_for_exact_head(tmp_path: Path) -> None:
