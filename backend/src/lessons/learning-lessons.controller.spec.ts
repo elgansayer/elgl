@@ -65,11 +65,16 @@ describe('LearningLessonsController', () => {
   it('loads progress only for the authenticated user', async () => {
     const user = { id: 'user-1' } as User;
 
-    await expect(controller.getProgress(user, 'lesson-1')).resolves.toMatchObject({
+    await expect(
+      controller.getProgress(user, 'lesson-1'),
+    ).resolves.toMatchObject({
       segment_index: 1,
       completed: false,
     });
-    expect(service.getLessonProgress).toHaveBeenCalledWith('user-1', 'lesson-1');
+    expect(service.getLessonProgress).toHaveBeenCalledWith(
+      'user-1',
+      'lesson-1',
+    );
   });
 
   it('persists bounded progress for the authenticated user', async () => {
