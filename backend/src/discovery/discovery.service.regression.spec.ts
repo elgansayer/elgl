@@ -220,11 +220,7 @@ describe('DiscoveryService regression boundaries', () => {
           error: null,
         });
 
-        const result = await service.searchPartners(
-          'viewer-user',
-          null,
-          query,
-        );
+        const result = await service.searchPartners('viewer-user', null, query);
 
         expect(supabaseClient.rpc).not.toHaveBeenCalled();
         expect(queryBuilder.limit).toHaveBeenCalledWith(50);
