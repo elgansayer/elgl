@@ -9,6 +9,7 @@ import { AtomicEconomyService } from './atomic-economy.service';
 
 function buildService() {
   const rpc = vi.fn();
+  const redisDel = vi.fn(() => Promise.resolve(1));
   const logger = {
     warn: vi.fn(),
     error: vi.fn(),
@@ -17,7 +18,7 @@ function buildService() {
   } as unknown as PinoLogger;
   const supabase = {
     getClient: vi.fn(() => ({ rpc })),
-    getRedisClient: vi.fn(),
+    getRedisClient: vi.fn(() => ({ del: redisDel })),
   } as unknown as SupabaseService;
   const users = {} as UsersService;
   const centrifugo = {} as CentrifugoService;
@@ -49,12 +50,13 @@ function buildService() {
     logger,
     metrics,
     supabase,
+    redisDel,
   };
 }
 
 describe('AtomicEconomyService daily check-in', () => {
   it('returns the authoritative atomic claim and chooses a reward between 5 and 10', async () => {
-    const { service, rpc, metrics } = buildService();
+    const { service, rpc, metrics, redisDel } = buildService();
     rpc.mockImplementation(
       (_name: string, params: { p_reward: number }) =>
         Promise.resolve({
@@ -83,6 +85,7 @@ describe('AtomicEconomyService daily check-in', () => {
       }),
     );
     expect(metrics.recordDailyCheckInClaim).toHaveBeenCalledWith(true);
+    expect(redisDel).toHaveBeenCalledWith('economy:sticker_packs:user-1');
   });
 
   it('treats a repeated UTC-day claim as an idempotent no-op', async () => {

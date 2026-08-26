@@ -133,6 +133,7 @@ export class AtomicEconomyService extends EconomyService {
         'daily_checkin',
         (Date.now() - startedAt) / 1000,
       );
+      this.invalidateUserEconomyCaches(userId);
 
       return result;
     } catch {
