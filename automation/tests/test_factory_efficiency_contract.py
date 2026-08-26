@@ -22,7 +22,7 @@ def test_factory_merge_workflow_is_an_hourly_recovery_fallback() -> None:
     assert "CI / required" in workflow
 
 
-def test_self_healing_monitor_does_not_start_recovery_jobs_for_pull_requests() -> None:
+def test_self_healing_monitor_avoids_pull_request_and_issue_list_churn() -> None:
     workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "on-failure.yml").read_text(
         encoding="utf-8"
     )
@@ -31,3 +31,6 @@ def test_self_healing_monitor_does_not_start_recovery_jobs_for_pull_requests() -
     assert workflow.count(exclusion) == 2
     assert "conclusion == 'failure'" in workflow
     assert "conclusion == 'success'" in workflow
+    assert workflow.count('--search "\\"${INCIDENT_TITLE}\\" in:title"') == 2
+    assert workflow.count("--limit 10") == 2
+    assert "--limit 1000" not in workflow
