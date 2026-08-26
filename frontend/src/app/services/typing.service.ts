@@ -1,4 +1,7 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { CentrifugeService } from './centrifuge.service';
 import { AuthService } from './auth.service';
 import type { TypingUser } from '../components/primitives/typing-indicator/typing-indicator.component';
@@ -7,8 +10,9 @@ import type { TypingUser } from '../components/primitives/typing-indicator/typin
   providedIn: 'root',
 })
 export class TypingService {
-  private centrifugeService = inject(CentrifugeService);
-  private authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly centrifugeService = inject(CentrifugeService);
+  private readonly authService = inject(AuthService);
 
   readonly typingUsers = signal<TypingUser[]>([]);
 
@@ -69,10 +73,10 @@ export class TypingService {
   }
 
   sendTyping(isTyping: boolean): void {
-    if (!this.currentRoomId) return;
-
+    const roomId = this.currentRoomId;
     const user = this.authService.currentUser();
-    if (!user?.id) return;
+    const accessToken = this.authService.getAccessToken();
+    if (!roomId || !user?.id || !accessToken) return;
 
     const now = Date.now();
     if (isTyping) {
@@ -84,14 +88,18 @@ export class TypingService {
       this.lastPublishTime = 0;
     }
 
-    this.centrifugeService.publish(`chat:${this.currentRoomId}:typing`, {
-      userId: user.id.slice(0, this.MAX_USER_ID_LENGTH),
-      displayName: String(user.user_metadata?.['display_name'] ?? '').
-        trim()
-        .slice(0, this.MAX_DISPLAY_NAME_LENGTH),
-      avatarUrl: this.safeAvatarUrl(String(user.user_metadata?.['avatar_url'] ?? '')),
-      typing: isTyping,
-      timestamp: now,
+    // The backend verifies room membership and owns identity metadata before
+    // publishing to Centrifugo. Clients never get to assert another user's
+    // typing identity directly on the realtime transport.
+    void firstValueFrom(
+      this.http.post<{ success: true }>(
+        `${environment.apiUrl}/chat/typing`,
+        { room_id: roomId, is_typing: isTyping },
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      ),
+    ).catch(() => {
+      // Typing state is intentionally ephemeral. Provider/network failure must
+      // not block composing or sending a real message.
     });
   }
 
