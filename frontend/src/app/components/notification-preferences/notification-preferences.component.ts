@@ -242,7 +242,11 @@ export class NotificationPreferencesComponent {
     const p = this.prefs();
     if (!p) return;
     this.service
-      .updatePreferences(p)
+      .updatePreferences({
+        do_not_disturb: this.doNotDisturb(),
+        quiet_hours_start: this.quietStart(),
+        quiet_hours_end: this.quietEnd(),
+      })
       .then((updated) => {
         this.prefs.set(updated);
         this.doNotDisturb.set(updated.do_not_disturb);

@@ -90,4 +90,29 @@ describe('NotificationPreferencesComponent', () => {
     );
     expect(component.channelEnabled('new_message', 'badge')).toBe(true);
   });
+
+  it('persists edited quiet hours when saving the DND schedule', async () => {
+    const updated = {
+      ...preferences,
+      do_not_disturb: true,
+      quiet_hours_start: '23:15',
+      quiet_hours_end: '06:45',
+    };
+    service.updatePreferences.mockResolvedValue(updated);
+    component.doNotDisturb.set(true);
+    component.quietStart.set('23:15');
+    component.quietEnd.set('06:45');
+
+    component.save();
+    await fixture.whenStable();
+
+    expect(service.updatePreferences).toHaveBeenCalledWith({
+      do_not_disturb: true,
+      quiet_hours_start: '23:15',
+      quiet_hours_end: '06:45',
+    });
+    expect(component.doNotDisturb()).toBe(true);
+    expect(component.quietStart()).toBe('23:15');
+    expect(component.quietEnd()).toBe('06:45');
+  });
 });
