@@ -17,6 +17,7 @@ const autocompletePath = join(
 );
 const canonicalTestId = 'chat-message-input';
 const deprecatedTestId = 'message-input';
+const playwrightTestFilePattern = /\.(?:spec|test)\.(?:[cm]?[jt]sx?)$/;
 
 async function collectPlaywrightSpecs(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -26,7 +27,7 @@ async function collectPlaywrightSpecs(directory) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await collectPlaywrightSpecs(path)));
-    } else if (entry.isFile() && entry.name.endsWith('.spec.ts')) {
+    } else if (entry.isFile() && playwrightTestFilePattern.test(entry.name)) {
       files.push(path);
     }
   }
@@ -41,6 +42,37 @@ function usesTestId(source, testId) {
     new RegExp(`getByTestId\\(\\s*["']${escaped}["']\\s*\\)`),
   ].some((pattern) => pattern.test(source));
 }
+
+test('spec discovery follows Playwright test-file suffixes', () => {
+  for (const file of [
+    'chat.spec.ts',
+    'chat.test.ts',
+    'chat.spec.js',
+    'chat.test.mjs',
+    'chat.spec.cjs',
+    'chat.test.tsx',
+  ]) {
+    assert.match(file, playwrightTestFilePattern);
+  }
+
+  for (const file of ['chat.ts', 'chat.test.mjs.map', 'chat.spec.md']) {
+    assert.doesNotMatch(file, playwrightTestFilePattern);
+  }
+});
+
+test('stale locator matching recognises Playwright selector forms', () => {
+  assert.equal(
+    usesTestId(
+      `page.locator('[data-testid="${deprecatedTestId}"]')`,
+      deprecatedTestId,
+    ),
+    true,
+  );
+  assert.equal(
+    usesTestId(`page.getByTestId('${deprecatedTestId}')`, deprecatedTestId),
+    true,
+  );
+});
 
 test('chat composer exposes the canonical Playwright locator on a native input', async () => {
   const [template, autocomplete] = await Promise.all([
