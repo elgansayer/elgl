@@ -111,14 +111,15 @@ export class TypingService {
     if (!this.isTypingPayload(data)) return;
     if (
       typeof data['userId'] !== 'string' ||
-      data['userId'].trim().length === 0 ||
-      data['userId'].length > this.MAX_USER_ID_LENGTH ||
       typeof data['timestamp'] !== 'number' ||
       !Number.isFinite(data['timestamp']) ||
       typeof data['typing'] !== 'boolean'
     ) {
       return;
     }
+
+    const userId = data['userId'].trim();
+    if (!userId || userId.length > this.MAX_USER_ID_LENGTH) return;
 
     const now = Date.now();
     const timestamp = data['timestamp'];
@@ -127,9 +128,7 @@ export class TypingService {
     }
 
     const currentUserId = this.authService.currentUser()?.id;
-    if (data['userId'] === currentUserId) return;
-
-    const userId = data['userId'].trim();
+    if (userId === currentUserId) return;
 
     if (this.typingTimers.has(userId)) {
       clearTimeout(this.typingTimers.get(userId));
