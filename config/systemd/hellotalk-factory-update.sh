@@ -102,8 +102,10 @@ VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
     --project "$REPOSITORY/automation"
-# uv sync ran as root - restore ownership so the factory service (runs as dev) can execute.
+# All git and uv operations ran as root - restore dev ownership on everything
+# we touched so the factory service (User=dev) can read and execute them.
 chown -R dev:dev "$FACTORY_VENV"
+chown -R dev:dev "$REPOSITORY"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # 6. Restart and verify.
