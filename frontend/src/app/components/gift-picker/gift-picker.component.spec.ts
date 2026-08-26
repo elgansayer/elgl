@@ -44,7 +44,7 @@ function createMockEconomyStore(
     buyCoins: vi.fn().mockResolvedValue(undefined),
     sendGift: vi.fn().mockResolvedValue(true),
     triggerGiftAnimation: vi.fn(),
-  } as unknown as EconomyStore;
+  };
 }
 
 describe('GiftPickerComponent', () => {
@@ -58,7 +58,7 @@ describe('GiftPickerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [GiftPickerComponent],
       providers: [
-        { provide: EconomyStore, useValue: mockStore },
+        { provide: EconomyStore, useValue: mockStore as unknown as EconomyStore },
         { provide: I18nService, useClass: MockI18nService },
       ],
     }).compileComponents();
