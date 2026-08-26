@@ -55,9 +55,11 @@ export class FavouriteService {
     if (
       !response ||
       !Array.isArray(response.items) ||
+      response.items.length > limit ||
       typeof response.has_more !== 'boolean' ||
-      (response.next_offset !== null &&
-        (!Number.isInteger(response.next_offset) || response.next_offset < 0))
+      (response.has_more
+        ? response.next_offset !== offset + limit
+        : response.next_offset !== null)
     ) {
       throw new Error('Invalid starred messages response');
     }
