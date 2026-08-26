@@ -11,6 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
+import { EventCreationPolicyService } from './event-creation-policy.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 import { RsvpDto } from './dto/rsvp.dto';
@@ -19,13 +20,17 @@ import type { AuthenticatedRequest } from '../auth/authenticated-request.interfa
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly eventCreationPolicy: EventCreationPolicyService,
+  ) {}
 
   @UseGuards(SupabaseAuthGuard)
   @Post()
   async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateEventDto) {
     if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
+    await this.eventCreationPolicy.assertCanCreate(userId, dto);
     return this.eventsService.createEvent(userId, dto);
   }
 

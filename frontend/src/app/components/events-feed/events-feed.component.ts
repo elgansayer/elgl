@@ -1,4 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -7,6 +8,7 @@ import { AppSelectComponent } from '../primitives/select/select.component';
 import { EventsService, Event } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 
 const PAGE_SIZE = 20;
 
@@ -16,15 +18,39 @@ const PAGE_SIZE = 20;
     HlmButton,
     HlmRadio,
     HlmRadioGroup,
+    ...HlmDialogImports,
     CommonModule,
     TranslatePipe,
     DatePipe,
     AppSelectComponent,
+    CreateEventModalComponent,
   ],
   template: `
-    <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">{{ 'events.title' | t }}</h1>
 
-    <!-- Filter bar -->
+      <hlm-dialog>
+        <button hlmBtn hlmDialogTrigger type="button" size="touch">
+          {{ 'events.createTitle' | t }}
+        </button>
+        <hlm-dialog-content class="sm:max-w-xl">
+          <app-create-event-modal
+            (created)="onEventCreated($event)"
+            (dismiss)="createEventClose.click()"
+          />
+          <button
+            #createEventClose
+            hlmBtn
+            hlmDialogClose
+            type="button"
+            tabindex="-1"
+            aria-hidden="true"
+            class="sr-only"
+          ></button>
+        </hlm-dialog-content>
+      </hlm-dialog>
+    </div>
+
     <div class="flex gap-2 mb-4 items-center flex-wrap">
       <hlm-radio-group
         name="events-status"
@@ -62,7 +88,6 @@ const PAGE_SIZE = 20;
       </div>
     </div>
 
-    <!-- Event list -->
     @if (isLoading() && events().length === 0) {
       <p role="status">{{ 'loading' | t }}</p>
     } @else if (error() && events().length === 0) {
@@ -155,6 +180,19 @@ export class EventsFeedComponent implements OnInit {
 
   ngOnInit(): void {
     void this.loadEvents(true);
+  }
+
+  onEventCreated(event: Event): void {
+    if (this.status() !== 'upcoming' || event.is_cancelled) return;
+    const languagePair = this.languagePair();
+    if (languagePair && event.language_pair !== languagePair) return;
+
+    this.events.update((current) =>
+      [...current.filter((candidate) => candidate.id !== event.id), event].sort(
+        (left, right) =>
+          new Date(left.date_time).getTime() - new Date(right.date_time).getTime(),
+      ),
+    );
   }
 
   private languageDisplayName(code: string, displayNames: Intl.DisplayNames | undefined): string {
