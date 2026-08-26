@@ -128,6 +128,26 @@ describe('UserDetailComponent', () => {
     expect(component.profile()?.id).toBe('user-1');
   });
 
+  it('ignores a stale profile response after the route target changes', async () => {
+    const stale = createDeferred<UserProfile | null>();
+    getUserProfile.mockReturnValueOnce(stale.promise);
+    getUserProfile.mockResolvedValueOnce(makeProfile('user-fast'));
+
+    fixture.componentRef.setInput('userId', 'user-slow');
+    fixture.detectChanges();
+    fixture.componentRef.setInput('userId', 'user-fast');
+    fixture.detectChanges();
+    await Promise.resolve();
+
+    stale.resolve(makeProfile('user-slow'));
+    await stale.promise;
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component.profile()?.id).toBe('user-fast');
+    expect(component.isLoading()).toBe(false);
+  });
+
   it('translates into the active UI language and can show the original again', async () => {
     translateBio.mockResolvedValue('Biografía traducida');
 

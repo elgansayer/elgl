@@ -76,6 +76,8 @@ export class UserDetailComponent {
       this.translationErrorKey.set('');
       this.followErrorKey.set('');
       this.chatErrorKey.set('');
+      this.isFollowingPending.set(false);
+      this.isOpeningChat.set(false);
     });
   }
 
@@ -88,6 +90,7 @@ export class UserDetailComponent {
     this.errorMessage.set('');
     try {
       const data = await this.userService.getUserProfile(id);
+      if (id !== this.userId()) return;
       if (data) {
         this.profile.set(data);
         this.isFollowing.set(data.is_followed_by_me || false);
@@ -96,10 +99,13 @@ export class UserDetailComponent {
         this.errorMessage.set(this.i18n.translate('userProfile.notFound'));
       }
     } catch (e: unknown) {
+      if (id !== this.userId()) return;
       const message = e instanceof Error ? e.message : String(e);
       this.errorMessage.set(message || this.i18n.translate('userProfile.loadError'));
     } finally {
-      this.isLoading.set(false);
+      if (id === this.userId()) {
+        this.isLoading.set(false);
+      }
     }
   }
 
@@ -175,6 +181,7 @@ export class UserDetailComponent {
     const p = this.profile();
     if (!p || this.isOwnProfile() || this.isFollowingPending()) return;
 
+    const profileId = p.id;
     const currentlyFollowing = this.isFollowing();
     this.followErrorKey.set('');
     this.isFollowingPending.set(true);
@@ -187,10 +194,14 @@ export class UserDetailComponent {
         await this.relationshipService.follow(p.id);
       }
     } catch {
-      this.isFollowing.set(currentlyFollowing);
-      this.followErrorKey.set('common.error_generic');
+      if (this.profile()?.id === profileId) {
+        this.isFollowing.set(currentlyFollowing);
+        this.followErrorKey.set('common.error_generic');
+      }
     } finally {
-      this.isFollowingPending.set(false);
+      if (this.profile()?.id === profileId) {
+        this.isFollowingPending.set(false);
+      }
     }
   }
 
@@ -198,18 +209,24 @@ export class UserDetailComponent {
     const p = this.profile();
     if (!p || this.isOwnProfile() || this.isOpeningChat()) return;
 
+    const profileId = p.id;
     this.chatErrorKey.set('');
     this.isOpeningChat.set(true);
     try {
-      const roomId = await this.directConversationService.openOrCreate(p.id);
+      const roomId = await this.directConversationService.openOrCreate(profileId);
+      if (this.profile()?.id !== profileId) return;
       const navigated = await this.router.navigate(['/chat', roomId]);
       if (!navigated) {
         throw new Error('Unable to navigate to conversation');
       }
     } catch {
-      this.chatErrorKey.set('common.error_generic');
+      if (this.profile()?.id === profileId) {
+        this.chatErrorKey.set('common.error_generic');
+      }
     } finally {
-      this.isOpeningChat.set(false);
+      if (this.profile()?.id === profileId) {
+        this.isOpeningChat.set(false);
+      }
     }
   }
 

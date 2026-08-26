@@ -27,7 +27,9 @@ export class DirectConversationService {
 
   async openOrCreate(userId: string, targetUserId: string): Promise<string> {
     if (userId === targetUserId) {
-      throw new BadRequestException('You cannot start a conversation with yourself');
+      throw new BadRequestException(
+        'You cannot start a conversation with yourself',
+      );
     }
 
     const blockedUserIds =
@@ -44,7 +46,9 @@ export class DirectConversationService {
       .maybeSingle();
 
     if (targetError) {
-      throw new Error(`Failed to validate conversation target: ${targetError.message}`);
+      throw new Error(
+        `Failed to validate conversation target: ${targetError.message}`,
+      );
     }
     if (!targetUser) {
       throw new NotFoundException('User not found');
@@ -73,7 +77,9 @@ export class DirectConversationService {
     );
 
     if (roomError) {
-      throw new Error(`Failed to create direct conversation: ${roomError.message}`);
+      throw new Error(
+        `Failed to create direct conversation: ${roomError.message}`,
+      );
     }
 
     const { error: memberError } = await supabase
@@ -87,7 +93,9 @@ export class DirectConversationService {
       );
 
     if (memberError) {
-      throw new Error(`Failed to add conversation members: ${memberError.message}`);
+      throw new Error(
+        `Failed to add conversation members: ${memberError.message}`,
+      );
     }
 
     return roomId;
@@ -119,7 +127,9 @@ export class DirectConversationService {
       .in('room_id', myRoomIds);
 
     if (mutualError) {
-      throw new Error(`Failed to load mutual conversations: ${mutualError.message}`);
+      throw new Error(
+        `Failed to load mutual conversations: ${mutualError.message}`,
+      );
     }
 
     const mutualRoomIds = (mutualMemberships ?? []).map(
@@ -133,7 +143,9 @@ export class DirectConversationService {
       .in('id', mutualRoomIds);
 
     if (directRoomsError) {
-      throw new Error(`Failed to validate direct conversations: ${directRoomsError.message}`);
+      throw new Error(
+        `Failed to validate direct conversations: ${directRoomsError.message}`,
+      );
     }
 
     const directRoomIds = new Set(
@@ -143,14 +155,18 @@ export class DirectConversationService {
     );
     if (directRoomIds.size === 0) return undefined;
 
-    const candidates = mutualRoomIds.filter((roomId) => directRoomIds.has(roomId));
+    const candidates = mutualRoomIds.filter((roomId) =>
+      directRoomIds.has(roomId),
+    );
     const { data: members, error: membersError } = await supabase
       .from('chat_room_members')
       .select('room_id, user_id')
       .in('room_id', candidates);
 
     if (membersError) {
-      throw new Error(`Failed to validate conversation members: ${membersError.message}`);
+      throw new Error(
+        `Failed to validate conversation members: ${membersError.message}`,
+      );
     }
 
     const roomCounts = new Map<string, number>();
@@ -164,7 +180,10 @@ export class DirectConversationService {
 
   private directRoomId(userId: string, targetUserId: string): string {
     const key = [userId, targetUserId].sort().join(':');
-    const bytes = createHash('sha256').update(`direct:${key}`).digest().subarray(0, 16);
+    const bytes = createHash('sha256')
+      .update(`direct:${key}`)
+      .digest()
+      .subarray(0, 16);
     bytes[6] = (bytes[6] & 0x0f) | 0x50;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     const hex = bytes.toString('hex');

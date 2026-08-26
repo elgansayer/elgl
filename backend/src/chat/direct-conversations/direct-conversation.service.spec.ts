@@ -80,9 +80,18 @@ describe('DirectConversationService', () => {
     const directRoomId = '33333333-3333-4333-8333-333333333333';
     const groupRoomId = '44444444-4444-4444-8444-444444444444';
     const queries = [
-      makeQuery({ data: { id: targetUserId, is_deletion_pending: false }, error: null }),
-      makeQuery({ data: [{ room_id: directRoomId }, { room_id: groupRoomId }], error: null }),
-      makeQuery({ data: [{ room_id: directRoomId }, { room_id: groupRoomId }], error: null }),
+      makeQuery({
+        data: { id: targetUserId, is_deletion_pending: false },
+        error: null,
+      }),
+      makeQuery({
+        data: [{ room_id: directRoomId }, { room_id: groupRoomId }],
+        error: null,
+      }),
+      makeQuery({
+        data: [{ room_id: directRoomId }, { room_id: groupRoomId }],
+        error: null,
+      }),
       makeQuery({
         data: [
           { id: directRoomId, admin_id: null },
@@ -112,11 +121,17 @@ describe('DirectConversationService', () => {
     const secondRoomUpsert = makeQuery({ error: null });
     const secondMemberUpsert = makeQuery({ error: null });
     const queries = [
-      makeQuery({ data: { id: targetUserId, is_deletion_pending: false }, error: null }),
+      makeQuery({
+        data: { id: targetUserId, is_deletion_pending: false },
+        error: null,
+      }),
       makeQuery({ data: [], error: null }),
       firstRoomUpsert,
       firstMemberUpsert,
-      makeQuery({ data: { id: targetUserId, is_deletion_pending: false }, error: null }),
+      makeQuery({
+        data: { id: targetUserId, is_deletion_pending: false },
+        error: null,
+      }),
       makeQuery({ data: [], error: null }),
       secondRoomUpsert,
       secondMemberUpsert,
@@ -127,7 +142,9 @@ describe('DirectConversationService', () => {
     const second = await service.openOrCreate(userId, targetUserId);
 
     expect(first).toBe(second);
-    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(first).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     expect(firstRoomUpsert.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ id: first }),
       { onConflict: 'id', ignoreDuplicates: true },
