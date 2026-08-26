@@ -1,5 +1,6 @@
-import { ErrorHandler, Injectable, inject } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ErrorHandler, Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { ApiService } from './api.service';
 
 interface ClientErrorStackFrame {
@@ -22,138 +23,173 @@ interface ClientErrorPayload {
   stackFrames?: ClientErrorStackFrame[];
 }
 
-/**
- * Regex matching a single stack-frame line, typically from V8/SpiderMonkey engines.
- * Handles both the verbose form `at functionName (file:line:col)` and the
- * compact form `    at file:line:col`.
- */
+const MAX_MESSAGE_LENGTH = 1000;
+const MAX_NAME_LENGTH = 120;
+const MAX_STACK_LENGTH = 12000;
+const MAX_URL_LENGTH = 2048;
+const MAX_USER_AGENT_LENGTH = 512;
+const MAX_STACK_FRAMES = 30;
+const MAX_FRAME_TEXT_LENGTH = 512;
 const STACK_FRAME_RE =
   /^\s*at\s+(?:(?<functionName>[^\s(]+)\s*\(?\s*(?<source>[^)]+)?\)?|(?<sourceOnly>[^\s(]+))$/;
+
+function bounded(value: unknown, limit: number, fallback = ''): string {
+  if (typeof value !== 'string') return fallback;
+  return value.slice(0, limit);
+}
+
+function privacySafeUrl(rawUrl: string): string {
+  if (!rawUrl) return '';
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return bounded(`${parsed.origin}${parsed.pathname}`, MAX_URL_LENGTH);
+  } catch {
+    return '';
+  }
+}
 
 function parseStackFrames(stack: string): ClientErrorStackFrame[] {
   return stack
     .split('\n')
-    .slice(1) // skip the first line (message)
+    .slice(1, MAX_STACK_FRAMES + 1)
     .map((line): ClientErrorStackFrame | null => {
-      const m = STACK_FRAME_RE.exec(line);
-      if (!m) return null;
+      const match = STACK_FRAME_RE.exec(line);
+      if (!match) return null;
 
-      const fnName = m.groups?.['functionName'];
-      const rawSource = m.groups?.['source'] ?? m.groups?.['sourceOnly'];
+      const functionName = bounded(match.groups?.['functionName'], MAX_FRAME_TEXT_LENGTH) || undefined;
+      const rawSource = match.groups?.['source'] ?? match.groups?.['sourceOnly'];
+      if (!rawSource) return functionName ? { functionName } : null;
 
-      if (!rawSource) {
-        return fnName ? { functionName: fnName } : null;
-      }
-
-      // V8-style source: "file:///app.component.ts:42:10" or just "/app.component.ts:42:10"
-      const sourceMatch = /^(.*?)(?::(\d+))?(?::(\d+))?$/.exec(rawSource);
+      const source = bounded(rawSource, MAX_FRAME_TEXT_LENGTH);
+      const sourceMatch = /^(.*?)(?::(\d+))?(?::(\d+))?$/.exec(source);
       return {
-        functionName: fnName ?? '<anonymous>',
-        fileName: sourceMatch?.[1] || rawSource,
+        functionName: functionName ?? '<anonymous>',
+        fileName: bounded(sourceMatch?.[1] || source, MAX_FRAME_TEXT_LENGTH),
         lineNumber: sourceMatch?.[2] ? Number(sourceMatch[2]) : undefined,
         columnNumber: sourceMatch?.[3] ? Number(sourceMatch[3]) : undefined,
-        source: rawSource,
+        source,
       };
     })
-    .filter((f): f is ClientErrorStackFrame => f !== null);
+    .filter((frame): frame is ClientErrorStackFrame => frame !== null);
 }
 
 @Injectable({ providedIn: 'root' })
 export class GlobalErrorHandler implements ErrorHandler {
-  private apiService = inject(ApiService);
+  private readonly apiService = inject(ApiService);
+  private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly inFlightFingerprints = new Set<string>();
 
   handleError(err: unknown): void {
-    // Always attempt to report; rethrow HttpErrorResponse
-    // to preserve Angular's built-in behaviour.
-    if (err instanceof Error) {
-      this.reportError(err);
-    } else if (typeof err === 'string') {
-      this.reportStringError(err);
-    } else if (err instanceof HttpErrorResponse) {
-      this.reportHttpError(err);
-      throw err;
-    } else {
-      this.reportUnknown(err);
+    try {
+      if (err instanceof HttpErrorResponse) {
+        this.reportHttpError(err);
+      } else if (err instanceof Error) {
+        this.reportError(err);
+      } else if (typeof err === 'string') {
+        this.reportStringError(err);
+      } else {
+        this.reportUnknown(err);
+      }
+    } catch {
+      // Error reporting must never turn one application failure into another.
     }
 
-    // Preserve Angular's default: rethrow non-Error throwables
-    // that aren't HttpErrorResponse.
-    if (!(err instanceof Error) && !(err instanceof HttpErrorResponse) && typeof err === 'object') {
-      throw err;
-    }
+    if (err instanceof HttpErrorResponse) throw err;
+    if (!(err instanceof Error) && typeof err === 'object' && err !== null) throw err;
   }
 
   private reportError(error: Error): void {
+    const stack = bounded(error.stack, MAX_STACK_LENGTH) || undefined;
     this.sendPayload(
       {
-        message: error.message || 'Unknown client error',
-        name: error.name || 'Error',
-        stack: error.stack,
-        url: typeof window !== 'undefined' ? window.location.href : '',
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        message: bounded(error.message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
+        name: bounded(error.name, MAX_NAME_LENGTH, 'Error'),
+        stack,
+        url: this.currentUrl(),
+        userAgent: this.userAgent(),
         timestamp: new Date().toISOString(),
       },
-      error.stack,
+      stack,
     );
   }
 
   private reportStringError(message: string): void {
     this.sendPayload({
-      message,
+      message: bounded(message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
       name: 'UncaughtString',
-      url: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
     });
   }
 
   private reportHttpError(error: HttpErrorResponse): void {
     this.sendPayload({
-      message: `HTTP ${error.status}: ${error.message}`,
+      message: bounded(`HTTP ${error.status}: ${error.message}`, MAX_MESSAGE_LENGTH),
       name: 'HttpError',
-      url: error.url ?? (typeof window !== 'undefined' ? window.location.href : ''),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: privacySafeUrl(error.url ?? '') || this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
-      metadata: { status: error.status, statusText: error.statusText },
+      metadata: {
+        status: Number.isFinite(error.status) ? error.status : 0,
+        statusText: bounded(error.statusText, MAX_NAME_LENGTH),
+      },
     });
   }
 
   private reportUnknown(err: unknown): void {
-    let message: string;
-    let metadata: Record<string, unknown> | undefined;
+    let message = 'Unknown client error';
+    let rawType = typeof err;
 
     if (typeof err === 'object' && err !== null) {
-      const obj: Record<string, unknown> = Object(err);
-      const objStr = obj['toString'];
-      message = String(
-        obj['message'] ?? (typeof objStr === 'function' ? objStr() : 'Unknown error object'),
-      );
-      metadata = { rawType: obj.constructor?.name ?? typeof err };
-    } else {
+      try {
+        const record = err as Record<string, unknown>;
+        if (typeof record['message'] === 'string') message = record['message'];
+        const constructor = record['constructor'];
+        if (typeof constructor === 'function' && constructor.name) rawType = constructor.name;
+      } catch {
+        // A thrown Proxy/getter must not break global error reporting.
+      }
+    } else if (err !== undefined && err !== null) {
       message = String(err);
     }
 
     this.sendPayload({
-      message,
+      message: bounded(message, MAX_MESSAGE_LENGTH, 'Unknown client error'),
       name: 'UnknownThrowable',
-      url: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: this.currentUrl(),
+      userAgent: this.userAgent(),
       timestamp: new Date().toISOString(),
-      metadata,
+      metadata: { rawType: bounded(rawType, MAX_NAME_LENGTH, 'unknown') },
     });
   }
 
+  private currentUrl(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    return privacySafeUrl(this.document.defaultView?.location?.href ?? '');
+  }
+
+  private userAgent(): string {
+    if (!isPlatformBrowser(this.platformId)) return '';
+    return bounded(this.document.defaultView?.navigator?.userAgent ?? '', MAX_USER_AGENT_LENGTH);
+  }
+
   private sendPayload(payload: Omit<ClientErrorPayload, 'stackFrames'>, rawStack?: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const fullPayload: ClientErrorPayload = {
       ...payload,
       stackFrames: rawStack ? parseStackFrames(rawStack) : undefined,
     };
+    const fingerprint = `${fullPayload.name}\u0000${fullPayload.message}\u0000${fullPayload.url}`;
+    if (this.inFlightFingerprints.has(fingerprint)) return;
+    this.inFlightFingerprints.add(fingerprint);
 
-    // Fire-and-forget: do not block the error propagation
-    this.apiService
+    void this.apiService
       .post('/api/analytics/client-error', fullPayload, { requireAuth: false })
-      .catch(() => {
-        // Silently ignore: we cannot log a logging failure
-      });
+      .catch(() => undefined)
+      .finally(() => this.inFlightFingerprints.delete(fingerprint));
   }
 }
