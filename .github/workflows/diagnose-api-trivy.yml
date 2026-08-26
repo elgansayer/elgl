@@ -22,9 +22,12 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Regenerate backend lockfile
+      - name: Regenerate backend lockfile from scratch
         working-directory: backend
-        run: npm install --package-lock-only --legacy-peer-deps
+        run: |
+          set -euo pipefail
+          rm package-lock.json
+          npm install --package-lock-only --legacy-peer-deps
 
       - name: Verify deterministic backend install
         working-directory: backend
