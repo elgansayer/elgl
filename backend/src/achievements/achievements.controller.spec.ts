@@ -93,9 +93,9 @@ describe('AchievementsController', () => {
     });
 
     it('throws UnauthorizedException when req.user is missing', async () => {
-      await expect(controller.getMyAchievements({} as any)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.getMyAchievements({} as any),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 
@@ -118,10 +118,7 @@ describe('AchievementsController', () => {
     it('keeps the compatibility route for self evaluation', async () => {
       const req = { user: { id: 'user-1' } };
 
-      const result = await controller.evaluateForUser(
-        'user-1',
-        req as any,
-      );
+      const result = await controller.evaluateForUser('user-1', req as any);
 
       expect(service.evaluateAchievements).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ evaluated: true });
