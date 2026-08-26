@@ -21,7 +21,23 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 END
-$$;
+$;
+
+-- Establish a database-enforced preflight before the narrowing cast. NOT VALID
+-- constraints protect new writes immediately; validation also checks legacy
+-- rows, closing the race between the diagnostic precheck and schema changes.
+ALTER TABLE public.users
+  DROP CONSTRAINT IF EXISTS users_proficiency_level_preflight_check;
+
+ALTER TABLE public.users
+  ADD CONSTRAINT users_proficiency_level_preflight_check
+  CHECK (
+    proficiency_level IS NULL
+    OR upper(btrim(proficiency_level)) IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
+  ) NOT VALID;
+
+ALTER TABLE public.users
+  VALIDATE CONSTRAINT users_proficiency_level_preflight_check;
 
 ALTER TABLE public.users
   DROP CONSTRAINT IF EXISTS users_proficiency_level_check;
@@ -45,6 +61,9 @@ ALTER TABLE public.users
 
 ALTER TABLE public.users
   VALIDATE CONSTRAINT users_proficiency_level_check;
+
+ALTER TABLE public.users
+  DROP CONSTRAINT users_proficiency_level_preflight_check;
 
 COMMENT ON COLUMN public.users.proficiency_level IS
   'Optional canonical CEFR proficiency level: A1, A2, B1, B2, C1, or C2.';
