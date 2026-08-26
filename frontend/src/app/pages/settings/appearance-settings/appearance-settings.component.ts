@@ -126,13 +126,13 @@ export class AppearanceSettingsComponent {
     try {
       const accent = this.isVip() ? this.primaryAccentColor() : null;
       const chatTextSize = this.currentChatTextSize();
-      await this.userService.updateMyProfile(
-        this.isVip()
-          ? {
-              primary_accent_color: accent ?? undefined,
-            }
-          : {},
-      );
+      if (this.isVip()) {
+        await this.userService.updateMyProfile({
+          primary_accent_color: accent ?? undefined,
+        });
+      } else {
+        await this.userService.updateMyProfile({});
+      }
 
       const chatSaved = await this.chatSettingsService.updateSetting('textSize', chatTextSize);
       if (!chatSaved) {
