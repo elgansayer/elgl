@@ -18,7 +18,7 @@ describe('DocumentViewerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DocumentViewerComponent],
+      imports: [DocumentViewerComponent, ProjectedContentHostComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DocumentViewerComponent);
@@ -77,12 +77,7 @@ describe('DocumentViewerComponent', () => {
     expect(host.querySelector('[tabindex]')).toBeNull();
   });
 
-  it('leaves projected link and button semantics owned by the caller', async () => {
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [ProjectedContentHostComponent],
-    }).compileComponents();
-
+  it('leaves projected link and button semantics owned by the caller', () => {
     const hostFixture = TestBed.createComponent(ProjectedContentHostComponent);
     hostFixture.detectChanges();
 
