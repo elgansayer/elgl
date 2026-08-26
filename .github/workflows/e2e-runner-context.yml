@@ -16,8 +16,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  impact:
+    name: e2e / impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_e2e: ${{ steps.impact.outputs.run_e2e }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect application impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          run_e2e=true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+            run_e2e=false
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              case "$path" in
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                  ;;
+                *)
+                  run_e2e=true
+                  ;;
+              esac
+            done <<< "$changed"
+          fi
+          echo "run_e2e=$run_e2e" >> "$GITHUB_OUTPUT"
+          echo "E2E runner discovery required: $run_e2e"
+
   playwright-discovery:
     name: e2e / playwright-discovery
+    needs: impact
+    if: needs.impact.outputs.run_e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

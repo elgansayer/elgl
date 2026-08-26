@@ -203,6 +203,39 @@ def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     assert ("git", "branch", "-D", branch) in runner.calls
 
 
+def test_prepare_claimed_worktree_reuses_canonical_branch_and_initial_base(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    workflow.prepare_claimed_worktree(
+        worktree,
+        "factory/12-canonical",
+        "initial-base-sha",
+    )
+
+    assert runner.calls[0] == ("git", "fetch", "origin", "main")
+    assert runner.calls[2] == (
+        "git",
+        "worktree",
+        "add",
+        "-b",
+        "factory/12-canonical",
+        str(worktree),
+        "initial-base-sha",
+    )
+
+
 def test_prepare_pull_request_worktree_checks_out_the_existing_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()

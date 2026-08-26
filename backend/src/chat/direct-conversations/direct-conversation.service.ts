@@ -10,7 +10,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 interface DirectRoomRow {
   id: string;
-  type?: string | null;
+  admin_id?: string | null;
 }
 
 interface RoomMembershipRow {
@@ -63,7 +63,6 @@ export class DirectConversationService {
     const { error: roomError } = await supabase.from('chat_rooms').upsert(
       {
         id: roomId,
-        type: 'direct',
         title: 'Direct message',
         subtitle: '',
         avatar: '',
@@ -130,7 +129,7 @@ export class DirectConversationService {
 
     const { data: directRooms, error: directRoomsError } = await supabase
       .from('chat_rooms')
-      .select('id, type')
+      .select('id, admin_id')
       .in('id', mutualRoomIds);
 
     if (directRoomsError) {
@@ -139,7 +138,7 @@ export class DirectConversationService {
 
     const directRoomIds = new Set(
       (directRooms ?? [])
-        .filter((room: DirectRoomRow) => !room.type || room.type === 'direct')
+        .filter((room: DirectRoomRow) => room.admin_id == null)
         .map((room: DirectRoomRow) => room.id),
     );
     if (directRoomIds.size === 0) return undefined;

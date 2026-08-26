@@ -85,8 +85,8 @@ describe('DirectConversationService', () => {
       makeQuery({ data: [{ room_id: directRoomId }, { room_id: groupRoomId }], error: null }),
       makeQuery({
         data: [
-          { id: directRoomId, type: 'direct' },
-          { id: groupRoomId, type: 'group' },
+          { id: directRoomId, admin_id: null },
+          { id: groupRoomId, admin_id: userId },
         ],
         error: null,
       }),
@@ -129,7 +129,7 @@ describe('DirectConversationService', () => {
     expect(first).toBe(second);
     expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(firstRoomUpsert.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: first, type: 'direct' }),
+      expect.objectContaining({ id: first }),
       { onConflict: 'id', ignoreDuplicates: true },
     );
     expect(firstMemberUpsert.upsert).toHaveBeenCalledWith(

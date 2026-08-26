@@ -1,4 +1,10 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../../auth/current-user.decorator';
@@ -18,8 +24,8 @@ export class DirectConversationController {
   async openOrCreate(
     @CurrentUser() user: User | null,
     @Body() dto: OpenDirectConversationDto,
-  ): Promise<{ roomId: string } | null> {
-    if (!user) return null;
+  ): Promise<{ roomId: string }> {
+    if (!user) throw new UnauthorizedException();
     const roomId = await this.directConversationService.openOrCreate(
       user.id,
       dto.targetUserId,
