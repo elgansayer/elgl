@@ -54,6 +54,14 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
         )
         if not any(job.state is JobState.MERGE_QUEUED for job in batch):
             return batch
+
+        excluded = excluded_task_ids or set()
+        merge_in_flight = any(
+            task_id in jobs and jobs[task_id].state is JobState.MERGE_QUEUED
+            for task_id in excluded
+        )
+        if merge_in_flight:
+            return gate_merge_batch(batch, main_ci_green=False)
         return gate_merge_batch(batch, main_ci_green=self.main_merge_gate.is_green())
 
     def _loop(self) -> int:
