@@ -129,8 +129,10 @@ describe('ConfirmDialogComponent', () => {
     expect(confirmService.confirmState()).toBeNull();
   });
 
-  it('should use the Spartan dialog title contract without fixed ids', () => {
+  it('should use the Spartan dialog title contract without fixed ids', async () => {
     openConfirmation('Delete this draft?');
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
     const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
