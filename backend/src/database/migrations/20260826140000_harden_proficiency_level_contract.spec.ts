@@ -38,6 +38,7 @@ describe('profile proficiency level migration (#1458)', () => {
     expect(sql).toMatch(/RAISE EXCEPTION/);
     expect(sql).toMatch(/unsupported values/);
     expect(sql).toMatch(/ERRCODE = '23514'/);
+    expect(sql).toMatch(/DO \$\$[\s\S]*END\n\$\$;/);
   });
 
   it('validates a database guard before narrowing the column', () => {
