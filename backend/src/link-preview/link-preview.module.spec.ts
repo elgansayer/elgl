@@ -19,7 +19,9 @@ describe('LinkPreviewModule', () => {
       LinkPreviewModule,
     ) as unknown[];
 
-    expect(imports).toEqual(expect.arrayContaining([HttpModule, SupabaseModule]));
+    expect(imports).toEqual(
+      expect.arrayContaining([HttpModule, SupabaseModule]),
+    );
   });
 
   it('registers the public controller and scraper service', () => {
