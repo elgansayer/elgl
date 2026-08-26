@@ -4,7 +4,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { MessageFilterService } from '../../../services/message-filter.service';
+import { UserService } from '../../../services/user.service';
 
 interface LanguageOption {
   code: string;
@@ -54,11 +54,10 @@ const GENDER_OPTIONS: LanguageOption[] = [
   imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
 })
 export class MessageFilterSettingsComponent implements OnInit {
-  private readonly messageFilterService = inject(MessageFilterService);
+  private readonly userService = inject(UserService);
   private readonly location = inject(Location);
 
   readonly isLoading = signal(true);
-  readonly loadFailed = signal(false);
   readonly isSaving = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
@@ -81,22 +80,20 @@ export class MessageFilterSettingsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.loadFilters();
-  }
-
-  async loadFilters(): Promise<void> {
-    this.isLoading.set(true);
-    this.loadFailed.set(false);
-    this.errorMessage.set('');
-
     try {
-      const filters = await this.messageFilterService.load();
-      this.ageMin.set(filters.age_min ?? null);
-      this.ageMax.set(filters.age_max ?? null);
-      this.selectedLanguages.set(filters.allowed_native_languages ?? []);
-      this.selectedGenders.set(filters.allowed_genders ?? []);
+      const filters = await this.userService.getMessageFilters();
+      if (filters) {
+        if (filters.age_min !== undefined) this.ageMin.set(filters.age_min);
+        if (filters.age_max !== undefined) this.ageMax.set(filters.age_max);
+        if (filters.allowed_native_languages) {
+          this.selectedLanguages.set(filters.allowed_native_languages);
+        }
+        if (filters.allowed_genders) {
+          this.selectedGenders.set(filters.allowed_genders);
+        }
+      }
     } catch {
-      this.loadFailed.set(true);
+      // Keep defaults
     } finally {
       this.isLoading.set(false);
     }
@@ -115,14 +112,12 @@ export class MessageFilterSettingsComponent implements OnInit {
   }
 
   async saveFilters(): Promise<void> {
-    if (this.loadFailed() || this.isSaving()) return;
-
     this.errorMessage.set('');
     this.successMessage.set('');
     this.isSaving.set(true);
 
     try {
-      await this.messageFilterService.save({
+      await this.userService.setMessageFilters({
         age_min: this.ageMin() ?? undefined,
         age_max: this.ageMax() ?? undefined,
         allowed_native_languages:

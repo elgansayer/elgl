@@ -1,27 +1,23 @@
-# Partner Discovery Ranking Signals Audit
+# Product Information Architecture Audit
 
-This document explains the recommended ranking signals for the "Best Match" partner discovery sorting, beyond basic language pairing.
+## Route Duplication and Consolidation
 
-## 1. Complementary Languages
-**Why:** The core of language exchange is mutual benefit. A user who natively speaks the language you are learning, and is learning the language you natively speak, is the ideal partner.
+Currently, `app.routes.ts` defines almost all application routes flatly at the root level. Simultaneously, there are multiple domain-specific route files inside `frontend/src/app/routes/` which duplicate these same routes.
 
-## 2. Proficiency Level Gap
-**Why:** Conversations flow best when both users have a similar ability to communicate, or when the gap is complementary (e.g., an advanced speaker helping a beginner). Two A1 speakers might struggle to maintain a conversation.
+The domain-specific files found are:
+- `admin.routes.ts`
+- `auth.routes.ts`
+- `chat.routes.ts`
+- `commerce.routes.ts`
+- `learning.routes.ts`
+- `media.routes.ts`
+- `settings.routes.ts`
+- `social.routes.ts`
 
-## 3. Timezone / Active Hours Overlap
-**Why:** Language exchange fails if users are awake at completely different times. Explicit timezone overlap scoring eliminates the friction of manual availability blocks.
+These domain route files are currently not being imported and used via `loadChildren` in `app.routes.ts`, leading to duplication and a lack of clear separation of concerns at the routing level.
 
-## 4. Interest & Hobby Overlap
-**Why:** Shared interests provide immediate conversation starters and increase the likelihood of a long-term connection, transitioning from a hard filter to a weighted scoring system.
+## Proposed Migration Plan
 
-## 5. Response Behaviour
-**Why:** Users get frustrated when they send messages and receive no reply. We should promote users who actively engage in new conversations (high reply rate).
-
-## 6. Correction Behaviour
-**Why:** Users highly value corrections. By scaling the correction ratio alongside the corrector score, helpful users are elevated.
-
-## 7. Learning Seriousness
-**Why:** Casual learners often drop off, frustrating serious learners. Integrating study streak days ensures dedicated users are matched appropriately.
-
-## 8. Conversation Compatibility
-**Why:** If a user tends to have long, successful conversations with users from a specific country or age group, the algorithm should learn and prioritise this preference.
+1.  **Remove Duplicates**: We will remove individual component route definitions in `app.routes.ts` that belong to specific domains.
+2.  **Spread Domain Routes**: To keep the paths at the root level (maintaining backwards compatibility and avoiding changes to router links), we will use the spread operator (`...domainRoutes`) to register these routes in `app.routes.ts`.
+3.  **Preserve Legacy Links**: We will explicitly keep redirect alias rules (e.g., `path: 'visitors', redirectTo: 'profile/visitors'`) to ensure legacy navigation paths and bookmarks continue working.

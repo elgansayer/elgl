@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 from pydantic import SecretStr
 
-from openhands_factory.alerts import AlertService
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
@@ -25,13 +24,8 @@ from openhands_factory.exceptions import (
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
-from openhands_factory.mechanical_repair import attempt_mechanical_repair
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, JobState, Task
-from openhands_factory.pr_lifecycle import (
-    PullRequestLifecycleEvent,
-    PullRequestLifecycleTracker,
-)
 from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
@@ -51,43 +45,6 @@ CODE_MUTATING_AGENT_PHASES = {
     "quality-repair",
     "ci-repair",
 }
-
-# A path in one of these categories can never introduce the vulnerability
-# classes security.md's checklist scans for (hardcoded secrets, webhook/
-# payment trust, privileged-state handling, authz, injection, security
-# config) - it has no runtime execution surface at all. Translation content
-# files are included deliberately: a locale JSON's *values* are rendered
-# strings, never executed or trusted as privileged input.
-#
-# Test files are deliberately NOT exempt: a test fixture can accidentally
-# carry a real secret or credential, and no separate deterministic
-# secret-scanner gate covers that class of change, so a hardcoded-secrets
-# check still needs to run on them.
-_SECURITY_EXEMPT_SUFFIXES = (".md", ".txt")
-_SECURITY_EXEMPT_DIR_PARTS = ("i18n", "locales")
-_SECURITY_EXEMPT_PATH_PREFIXES = (Path(".agents/skills"),)
-
-
-def _is_security_review_exempt(changed_paths: set[Path]) -> bool:
-    """Whether every changed path is provably outside security.md's scope.
-
-    Deliberately conservative: any single path that isn't docs, translation
-    content, or a skill file forces a real security-review agent call.
-    False negatives here (running the agent when it wasn't strictly needed)
-    are cheap; false positives (skipping a review a diff actually needed)
-    are not, so this only skips when every path matches.
-    """
-    if not changed_paths:
-        return False
-    for path in changed_paths:
-        if path.suffix in _SECURITY_EXEMPT_SUFFIXES:
-            continue
-        if set(path.parts) & set(_SECURITY_EXEMPT_DIR_PARTS):
-            continue
-        if any(str(path).startswith(str(prefix)) for prefix in _SECURITY_EXEMPT_PATH_PREFIXES):
-            continue
-        return False
-    return True
 
 
 class FactoryPipeline:
@@ -115,11 +72,6 @@ class FactoryPipeline:
             max_repeated_failures=config.max_consecutive_failures,
         )
         self.tasks = TaskStore(config.state_dir)
-        self.pr_lifecycle = PullRequestLifecycleTracker(
-            config.state_dir,
-            config.github_repository,
-            AlertService(config),
-        )
         self.prompt_dir = config.repository / "automation/prompts"
         self.system_prompt = build_system_prompt(self.prompt_dir)
         openhands_settings = config.agents.providers["openhands"]
@@ -635,10 +587,6 @@ class FactoryPipeline:
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
 
     def _advance(self, job: Job) -> None:
-        # Notification delivery is best-effort and never changes merge eligibility.
-        # Retry a small number of previously-recorded lifecycle events on ordinary
-        # Factory progress so a transient Telegram outage is eventually visible.
-        self.pr_lifecycle.flush_pending()
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
         # Control prompts must never come from the agent-modifiable worktree. The
         # dedicated Factory checkout is deployed from main and remains outside every
@@ -695,15 +643,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.SECURITY_REVIEW:
-            try:
-                exempt = _is_security_review_exempt(workflow.changed_paths())
-            except RepositorySafetyError:
-                # Can't prove the diff is out of scope, so fall through to a
-                # real review rather than crash the job or skip it blind.
-                exempt = False
-            if exempt:
-                job.state = JobState.VERIFYING
-                return
             self._run_agent(
                 job,
                 worktree,
@@ -880,26 +819,12 @@ class FactoryPipeline:
                     "checks before merge."
                 ),
             )
-            self._record_pr_lifecycle(
-                job,
-                "reviewed",
-                (
-                    "Factory independent review accepted this exact commit, published the "
-                    "factory/independent-review success status, and applied factory-reviewed. "
-                    "Required GitHub checks must still pass before merge."
-                ),
-            )
             job.state = JobState.CI_PENDING
             return
 
         if job.state is JobState.CI_PENDING:
             status = self._status(job)
             if status.state == "MERGED":
-                self._record_pr_lifecycle(
-                    job,
-                    "merged",
-                    "GitHub already reports the reviewed pull request as merged.",
-                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -916,19 +841,11 @@ class FactoryPipeline:
                 and status.mergeable == "MERGEABLE"
                 and status.merge_state_status == "CLEAN"
             ):
-                # Persist a visible queue transition before the merge attempt. The
-                # MERGE_QUEUED worker re-reads GitHub immediately before using an
-                # exact-head merge. The scheduled workflow remains a recovery fallback
-                # if the daemon stops after review. Native auto-merge stays disabled so
-                # a later CHANGES_REQUESTED review cannot race the Factory gate.
-                self._record_pr_lifecycle(
-                    job,
-                    "merge-queued",
-                    (
-                        "All required checks passed, GitHub reports the reviewed head as clean "
-                        "and mergeable, and the Factory queued an exact-head squash merge."
-                    ),
-                )
+                # The scheduled merge workflow re-reads checks, head state, and
+                # human review immediately before merging. Do not arm GitHub's
+                # native auto-merge here: a later CHANGES_REQUESTED review could
+                # otherwise race the Factory gate when repository rules do not
+                # independently require that review decision.
                 job.state = JobState.MERGE_QUEUED
             else:
                 job.state = JobState.REPAIRING
@@ -958,28 +875,16 @@ class FactoryPipeline:
                 f"Failed checks:\n{evidence}\n"
                 f"Mergeability: {status.mergeable}"
             )
-            # A large share of CI repairs are a workspace's own formatter or
-            # auto-fixable lint rule drifting, not something that needs an
-            # agent's judgement. Try that for free first; only spend an LLM
-            # call if the worktree is still unchanged afterwards.
-            attempt_mechanical_repair(worktree)
-            mechanically_repaired = workflow.has_changes()
-            if not mechanically_repaired:
-                self._run_agent(
-                    job,
-                    worktree,
-                    "repair",
-                    build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
-                    require_repository_change=True,
-                )
+            self._run_agent(
+                job,
+                worktree,
+                "repair",
+                build_phase_prompt(prompt_dir, "repair", job.task, extra=repair_context),
+                require_repository_change=True,
+            )
             self._verify(workflow)
             workflow.stage_all()
-            commit_subject = (
-                "fix: apply automatic formatting for"
-                if mechanically_repaired
-                else "fix: repair CI for"
-            )
-            workflow.commit(f"{commit_subject} {self._subject(job)} {job.task.identifier}")
+            workflow.commit(f"fix: repair CI for {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -997,23 +902,8 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.MERGE_QUEUED:
-            # Backfill lifecycle evidence for jobs that were already queued before
-            # this Factory version, and make retries/restarts idempotently visible.
-            self._record_pr_lifecycle(
-                job,
-                "merge-queued",
-                (
-                    "All required checks passed, GitHub reports the reviewed head as clean "
-                    "and mergeable, and the Factory queued an exact-head squash merge."
-                ),
-            )
             status = self._status(job)
             if status.state == "MERGED":
-                self._record_pr_lifecycle(
-                    job,
-                    "merged",
-                    "GitHub confirmed that the reviewed pull request was merged.",
-                )
                 job.state = JobState.MERGED
             elif job.head_sha != status.head_sha:
                 self._refresh_pull_request_for_review(job, worktree)
@@ -1031,32 +921,9 @@ class FactoryPipeline:
                 or status.merge_state_status != "CLEAN"
             ):
                 job.state = JobState.REPAIRING
-            else:
-                if job.pull_request is None or job.head_sha is None:
-                    raise FactoryError("Merge-queued job is missing pull request provenance")
-                # The queue state was established on an earlier transition. Re-read
-                # status above, then ask GitHub to merge only this exact reviewed SHA.
-                # No --admin or auto-merge bypass is used, so GitHub rules remain
-                # authoritative and a changed head is rejected server-side.
-                self.github.merge_pull_request(job.pull_request, job.head_sha)
-                confirmed = self._status(job)
-                if confirmed.state == "MERGED":
-                    self._record_pr_lifecycle(
-                        job,
-                        "merged",
-                        "GitHub confirmed the Factory exact-head squash merge completed.",
-                    )
-                    job.state = JobState.MERGED
-                elif confirmed.head_sha != job.head_sha:
-                    self._refresh_pull_request_for_review(job, worktree)
             return
 
         if job.state is JobState.MERGED:
-            self._record_pr_lifecycle(
-                job,
-                "merged",
-                "GitHub confirmed that the reviewed pull request is merged.",
-            )
             if job.pull_request is not None:
                 self.github.add_comment(
                     job.pull_request,
@@ -1069,24 +936,6 @@ class FactoryPipeline:
             self._workflow(self.config.repository).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
-
-    def _record_pr_lifecycle(
-        self,
-        job: Job,
-        event: PullRequestLifecycleEvent,
-        detail: str,
-    ) -> None:
-        """Persist and notify significant PR lifecycle transitions idempotently."""
-
-        if job.pull_request is None or job.head_sha is None:
-            return
-        self.pr_lifecycle.record(
-            event,
-            pull_request=job.pull_request,
-            head_sha=job.head_sha,
-            title=job.task.title,
-            detail=detail,
-        )
 
     def _discover_pull_request(self, job: Job, worktree: Path) -> None:
         """Start independently reviewing a pull request the factory did not create.
@@ -1264,14 +1113,8 @@ class FactoryPipeline:
         return True
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
-        # README.md deliberately excluded: it embeds the full feature-spec
-        # document (tens of KB), sent unconditionally on every implementation
-        # call regardless of task scope. AGENTS.md carries the actual
-        # enforceable constraints (i18n, RTL, Spartan, British English) that
-        # every task needs; the issue body already carries whatever
-        # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md")):
+        for relative in (Path("AGENTS.md"), Path("TODO.md"), Path("README.md")):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))

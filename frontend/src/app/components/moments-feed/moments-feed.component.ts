@@ -270,8 +270,7 @@ export class MomentsFeedComponent {
   }
 
   async submitMoment(): Promise<void> {
-    const text = this.newText().trim();
-    if (!text && this.newMediaUrls().length === 0) return;
+    if (!this.newText().trim() && this.newMediaUrls().length === 0) return;
     if (
       this.newMediaType() === 'audio' &&
       this.newVoiceDurationSec !== null &&
@@ -284,22 +283,10 @@ export class MomentsFeedComponent {
       );
       return;
     }
-
     this.isCreating.set(true);
     try {
-      if (text) {
-        const grammar = await this.vocabStore.checkGrammar(text, this.newTargetLanguage());
-        const corrected = grammar.corrected.trim();
-        if (grammar.errors_found > 0 && corrected && corrected !== text) {
-          this.newText.set(corrected);
-          this.saveMomentDraft();
-          showToast(grammar.explanation);
-          return;
-        }
-      }
-
       await this.momentsStore.createMoment({
-        text_content: text || undefined,
+        text_content: this.newText().trim() || undefined,
         media_urls: this.newMediaUrls(),
         media_type: this.newMediaType(),
         target_language: this.newTargetLanguage(),
