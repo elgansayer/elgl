@@ -2274,6 +2274,7 @@ export class SupabaseService implements OnModuleDestroy {
     this.redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
+      // Preserve ioredis 5 response shapes while adopting v6 fixes.
       protocol: 2,
     });
     this.redisClient.on('error', (err) => {
