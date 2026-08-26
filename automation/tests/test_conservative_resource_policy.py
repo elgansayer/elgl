@@ -120,6 +120,56 @@ def test_conservative_router_limits_one_phase_to_primary_plus_one_fallback(
     assert third.calls == 0
 
 
+def test_conservative_router_disables_immediate_same_provider_retry(tmp_path: Path) -> None:
+    first = Provider("first", AgentFailureKind.PROVIDER_TRANSPORT)
+    second = Provider("second")
+    task = Task("42", "Issue", "Body", "github-issue", 0)
+    request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
+    router = ConservativeAgentRouter(
+        [first, second],
+        policy=OrderedPolicy(["first", "second"]),
+        same_provider_retries=1,
+        enabled=True,
+    )
+
+    assert router.run(request, Job(task)).provider == "second"
+    assert router.same_provider_retries == 0
+    assert first.calls == 1
+    assert second.calls == 1
+
+
+def test_conservative_router_enforces_global_hourly_agent_route_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "2")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 1},
+        enabled=True,
+    )
+
+    for identifier in ("40", "41"):
+        task = Task(identifier, "Issue", "Body", "github-issue", 0)
+        request = AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path)
+        assert router.run(request, Job(task)).success
+
+    blocked_task = Task("42", "Issue", "Body", "github-issue", 0)
+    blocked_request = AgentRequest(
+        AgentPhase.IMPLEMENTATION,
+        blocked_task,
+        "implement",
+        tmp_path,
+    )
+    with pytest.raises(ProviderCapacityUnavailable, match="agent-route budget is exhausted"):
+        router.run(blocked_request, Job(blocked_task))
+
+    assert provider.calls == 2
+
+
 def test_conservative_router_preserves_independent_review_before_candidate_cap(
     tmp_path: Path,
 ) -> None:
