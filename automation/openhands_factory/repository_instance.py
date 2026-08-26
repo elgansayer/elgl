@@ -34,11 +34,51 @@ _ORIGINAL_ADD_WORKTREE = cast(
 )
 _INSTALLED = False
 
-_FORBIDDEN_AUTONOMOUS_TRIGGER = re.compile(
-    r"(?mi)(?:^\s*(?:schedule|issues|pull_request|pull_request_target|workflow_run|"
-    r"repository_dispatch)\s*:|^\s*on\s*:\s*\[[^\]]*\b(?:schedule|issues|"
-    r"pull_request|pull_request_target|workflow_run|repository_dispatch)\b)"
+WORKOUT_AGENT_RETIRED_SWARM_WORKFLOWS = (
+    *architecture_guard.RETIRED_SWARM_WORKFLOWS,
+    ".github/workflows/agent-daily.yml",
+    ".github/workflows/agent-hourly.yml",
+    ".github/workflows/agent-weekly.yml",
+    ".github/workflows/on-failure.yml",
 )
+
+
+def _workflow_triggers(text: str) -> set[str]:
+    """Read the top-level workflow triggers without accepting a partial denylist."""
+
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        match = re.fullmatch(r"\\s*on\\s*:\\s*(.*)", line)
+        if match is None:
+            continue
+        inline = match.group(1).strip()
+        if inline:
+            if inline.startswith("[") and inline.endswith("]"):
+                return {
+                    item.strip()
+                    for item in inline[1:-1].split(",")
+                    if item.strip()
+                }
+            return {inline}
+
+        triggers: set[str] = set()
+        event_indent: int | None = None
+        for candidate in lines[index + 1 :]:
+            stripped = candidate.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            indent = len(candidate) - len(candidate.lstrip())
+            if indent == 0:
+                break
+            event = re.match(r"^\\s+([A-Za-z_][A-Za-z0-9_-]*)\\s*:", candidate)
+            if event is None:
+                continue
+            if event_indent is None:
+                event_indent = indent
+            if indent == event_indent:
+                triggers.add(event.group(1))
+        return triggers
+    return set()
 
 
 def _active_profile() -> str:
@@ -66,15 +106,16 @@ def assert_workout_agent_single_owner(repository: Path) -> None:
     is therefore not a competing owner; any autonomous trigger is.
     """
 
-    for relative in architecture_guard.RETIRED_SWARM_WORKFLOWS:
+    for relative in WORKOUT_AGENT_RETIRED_SWARM_WORKFLOWS:
         workflow = repository / relative
         if not workflow.is_file():
             continue
         text = workflow.read_text(encoding="utf-8")
-        if "workflow_dispatch" not in text or _FORBIDDEN_AUTONOMOUS_TRIGGER.search(text):
+        triggers = _workflow_triggers(text)
+        if triggers != {"workflow_dispatch"}:
             raise RuntimeError(
                 "OpenHands Factory single-owner invariant violated: retired workflow "
-                f"is not manual-only: {relative}"
+                f"is not manual-only: {relative}; triggers={sorted(triggers)}"
             )
 
 
@@ -129,7 +170,15 @@ def workout_agent_commands_for(
             [
                 VerificationCommand(
                     "workout-agent-backend-build",
-                    (str(python), "-m", "compileall", "-q", "backend"),
+                    (
+                        str(python),
+                        "-m",
+                        "compileall",
+                        "-q",
+                        "-x",
+                        r"(^|/)\\.venv/",
+                        "backend",
+                    ),
                     repository,
                     timeout=900,
                 ),
@@ -140,8 +189,7 @@ def workout_agent_commands_for(
                         "-m",
                         "pytest",
                         "-q",
-                        "tests/backend",
-                        "tests/integration",
+                        "backend/tests",
                     ),
                     repository,
                     timeout=2400,
@@ -160,7 +208,7 @@ def workout_agent_commands_for(
                 ),
                 VerificationCommand(
                     "workout-agent-frontend-tests",
-                    ("npm", "run", "test:ci"),
+                    ("npm", "test", "--", "--watch=false"),
                     repository / "frontend",
                     timeout=2400,
                 ),
@@ -218,11 +266,11 @@ def install_repository_profile() -> None:
         raise RuntimeError(f"Unsupported repository Factory profile: {profile or '<empty>'}")
 
     _control_repository()
-    setattr(pipeline, "commands_for", _profiled_commands_for)
-    setattr(pipeline, "build_system_prompt", _profiled_build_system_prompt)
-    setattr(pipeline.FactoryPipeline, "__init__", _profiled_pipeline_init)
-    setattr(git_workflow.GitWorkflow, "_add_worktree", _profiled_add_worktree)
-    setattr(architecture_guard, "assert_single_owner", assert_workout_agent_single_owner)
+    pipeline.commands_for = _profiled_commands_for
+    pipeline.build_system_prompt = _profiled_build_system_prompt
+    pipeline.FactoryPipeline.__init__ = _profiled_pipeline_init  # type: ignore[method-assign]
+    git_workflow.GitWorkflow._add_worktree = _profiled_add_worktree  # type: ignore[method-assign]
+    architecture_guard.assert_single_owner = assert_workout_agent_single_owner
     _INSTALLED = True
 
 

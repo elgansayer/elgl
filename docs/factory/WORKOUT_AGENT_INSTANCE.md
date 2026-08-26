@@ -60,6 +60,10 @@ To pause only Workout Agent without stopping the primary Factory:
 sudo systemctl stop workout-agent-factory.service
 ```
 
+The daily primary-Factory updater checks both daemon heartbeats and stops/restarts
+both services around the shared Python environment update. A failed pull, package
+sync, or restart restores every service that was active before the update.
+
 After dependency-lock changes in Workout Agent, rerun the installer. It refuses
 a dirty canonical checkout and fast-forwards only, so dependency preparation can
 never silently overwrite task work.
