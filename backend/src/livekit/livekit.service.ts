@@ -25,23 +25,8 @@ export class LivekitService {
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
 
-    const env = this.configService.get<string>('NODE_ENV') || 'development';
-
     if (!apiKey || !apiSecret) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
-    }
-
-    if (env === 'production') {
-      if (
-        apiKey === 'test-livekit-api-key' ||
-        apiKey === 'dev_livekit_key_test_value_123' ||
-        apiSecret === 'test-livekit-secret' ||
-        apiSecret === 'dev_livekit_secret_test_value_123'
-      ) {
-        throw new Error(
-          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
-        );
-      }
     }
 
     const at = new AccessToken(apiKey, apiSecret, {
@@ -97,24 +82,10 @@ export class LivekitService {
         'LIVEKIT_TURN_PASSWORD',
       );
 
-      const env = this.configService.get<string>('NODE_ENV') || 'development';
-
       if (!turnDomain || !turnUsername || !turnPassword) {
         throw new Error(
           'LIVEKIT_TURN_DOMAIN, LIVEKIT_TURN_USERNAME, and LIVEKIT_TURN_PASSWORD must be configured when LIVEKIT_TURN_ENABLED is true',
         );
-      }
-
-      if (env === 'production') {
-        if (
-          turnDomain === 'turn.example.com' ||
-          turnUsername === 'guest' ||
-          turnPassword === 'somepassword'
-        ) {
-          throw new Error(
-            'LIVEKIT_TURN_DOMAIN, LIVEKIT_TURN_USERNAME, and LIVEKIT_TURN_PASSWORD must be securely configured in production',
-          );
-        }
       }
 
       // UDP TURN

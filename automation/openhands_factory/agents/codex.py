@@ -7,23 +7,9 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHealth, ProviderStatus
+from openhands_factory.agents.base import AgentRequest, ProviderHealth, ProviderStatus
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
-
-# Keep maximum reasoning for quality-critical work where broader exploration can
-# materially improve the implementation or security outcome. Review/repair phases
-# are intentionally bounded by an existing diff, failed checks, or validated Factory
-# artefacts, and run inside deterministic verification/re-review loops. Medium effort
-# preserves a strong reasoning floor there without spending the maximum reasoning
-# budget on every routine iteration.
-_REASONING_EFFORT_BY_PHASE: dict[AgentPhase, str] = {
-    AgentPhase.QUALITY_REPAIR: "medium",
-    AgentPhase.CODE_REVIEW: "medium",
-    AgentPhase.CI_REPAIR: "medium",
-    AgentPhase.GENERAL_ACTION: "medium",
-}
-_DEFAULT_REASONING_EFFORT = "max"
 
 
 class CodexProvider(CLIProvider):
@@ -75,17 +61,13 @@ class CodexProvider(CLIProvider):
         prompt_path: Path | None,
     ) -> Sequence[str]:
         del prompt_path
-        reasoning_effort = _REASONING_EFFORT_BY_PHASE.get(
-            request.phase,
-            _DEFAULT_REASONING_EFFORT,
-        )
         command = [
             *self._prefix(),
             "exec",
             "-m",
             model,
             "-c",
-            f'model_reasoning_effort="{reasoning_effort}"',
+            'model_reasoning_effort="max"',
             # Codex applies workspace-write when --approve-for-me is selected.
             # Passing an explicit sandbox as well is rejected by current CLIs.
             "--approve-for-me",

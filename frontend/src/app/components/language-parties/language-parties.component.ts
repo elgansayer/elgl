@@ -184,18 +184,6 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
               </div>
             }
           </div>
-        } @else if (partiesResource.error()) {
-          <div class="app-empty-state" role="alert">
-            <p class="text-lg font-bold text-text-primary">{{ 'common.error' | t }}</p>
-            <button
-              hlmBtn
-              type="button"
-              (click)="retryParties()"
-              class="mt-4 min-h-11 rounded-app bg-primary px-5 py-2.5 font-bold text-on-fill"
-            >
-              {{ 'common.retry' | t }}
-            </button>
-          </div>
         } @else {
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             @for (party of parties(); track party.id) {
@@ -371,27 +359,29 @@ export class LanguagePartiesComponent {
       level: this.filterLevel(),
     }),
     loader: async ({ params: filterParams }) => {
-      const queryParams = new URLSearchParams();
-      queryParams.set('type', 'language_party');
-      if (filterParams.topic) queryParams.set('topic', filterParams.topic);
-      if (filterParams.level) queryParams.set('level', filterParams.level);
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.set('party_type', 'language_party');
+        if (filterParams.topic) queryParams.set('topic', filterParams.topic);
+        if (filterParams.level) queryParams.set('level', filterParams.level);
 
-      const parties = await firstValueFrom(
-        this.http.get<LanguageParty[]>(
-          `${environment.apiUrl}/audio-rooms/list?${queryParams.toString()}`,
-        ),
-      );
+        const parties = await firstValueFrom(
+          this.http.get<LanguageParty[]>(
+            `${environment.apiUrl}/audio-rooms/list?${queryParams.toString()}`,
+          ),
+        );
 
-      if (filterParams.languagePair) {
-        return parties.filter((p) => p.language_pair === filterParams.languagePair);
+        if (filterParams.languagePair) {
+          return parties.filter((p) => p.language_pair === filterParams.languagePair);
+        }
+        return parties;
+      } catch {
+        return [];
       }
-      return parties;
     },
   });
 
-  readonly parties = computed(() =>
-    this.partiesResource.hasValue() ? this.partiesResource.value() : [],
-  );
+  readonly parties = computed(() => this.partiesResource.value() ?? []);
 
   readonly activeFilterCount = computed(() => {
     let count = 0;
@@ -407,10 +397,6 @@ export class LanguagePartiesComponent {
 
   closeCreateModal(): void {
     this.showCreateModal.set(false);
-  }
-
-  retryParties(): void {
-    this.partiesResource.reload();
   }
 
   async onCreateParty(payload: {

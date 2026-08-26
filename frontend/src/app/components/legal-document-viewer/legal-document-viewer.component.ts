@@ -1,7 +1,11 @@
-import { Component, computed, input } from '@angular/core';
-import type { LegalSection } from '../../services/legal.service';
+import { Component, input, computed } from '@angular/core';
+import { DatePipe } from '@angular/common';
 
-const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+export interface LegalSection {
+  id: string;
+  heading: string;
+  content: string;
+}
 
 @Component({
   selector: 'app-legal-document-viewer',
@@ -10,70 +14,28 @@ const ISO_CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
     class: 'block min-h-screen bg-surface-500 text-text-secondary',
   },
   template: `
-    <main class="mx-auto max-w-3xl px-4 py-8" aria-labelledby="legal-document-title">
-      <header class="mb-8">
-        <h1 id="legal-document-title" class="text-3xl font-extrabold text-text-primary">
-          {{ title() }}
-        </h1>
-        <p class="mt-3 text-sm text-text-secondary">
-          Last updated:
-          @if (dateTimeValue()) {
-            <time [attr.datetime]="dateTimeValue()">{{ formattedDate() }}</time>
-          } @else {
-            <span>{{ formattedDate() }}</span>
-          }
-        </p>
-      </header>
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <h1 class="text-3xl font-extrabold mb-8 text-text-primary">
+        {{ title() }}
+      </h1>
 
-      @if (sections().length > 0) {
-        <nav
-          class="mb-8 rounded-2xl border border-surface-200 bg-surface-100 p-5"
-          aria-label="Document sections"
-        >
-          <p class="text-sm font-bold text-text-primary">On this page</p>
-          <ol class="mt-3 space-y-2">
-            @for (section of sections(); track section.id) {
-              <li>
-                <a
-                  class="inline-flex min-h-11 items-center text-sm text-text-primary underline decoration-current underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  [attr.href]="'#' + section.id"
-                >
-                  {{ section.heading }}
-                </a>
-              </li>
-            }
-          </ol>
-        </nav>
+      <div class="space-y-8">
+        @for (section of sections(); track section.id) {
+          <section class="rounded-2xl bg-surface-100 border border-surface-200 p-5">
+            <h2 class="text-lg font-bold mb-3 text-text-primary">
+              {{ section.heading }}
+            </h2>
+            <p class="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+              {{ section.content }}
+            </p>
+          </section>
+        }
+      </div>
 
-        <div class="space-y-8">
-          @for (section of sections(); track section.id) {
-            <section
-              class="scroll-mt-6 rounded-2xl border border-surface-200 bg-surface-100 p-5"
-              [attr.id]="section.id"
-              [attr.aria-labelledby]="section.id + '-heading'"
-            >
-              <h2
-                class="mb-3 text-lg font-bold text-text-primary"
-                [attr.id]="section.id + '-heading'"
-              >
-                {{ section.heading }}
-              </h2>
-              <p class="whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
-                {{ section.content }}
-              </p>
-            </section>
-          }
-        </div>
-      } @else {
-        <p
-          class="rounded-2xl border border-surface-200 bg-surface-100 p-5 text-sm text-text-secondary"
-          role="status"
-          data-testid="legal-empty"
-        >
-          This document is currently unavailable.
-        </p>
-      }
-    </main>
+      <footer class="mt-10 pt-6 border-t border-surface-200 text-sm text-text-secondary">
+        Last updated: {{ formattedDate() }}
+      </footer>
+    </div>
   `,
 })
 export class LegalDocumentViewerComponent {
@@ -81,59 +43,11 @@ export class LegalDocumentViewerComponent {
   readonly lastUpdated = input.required<Date | string>();
   readonly sections = input.required<LegalSection[]>();
 
-  private readonly longDateFormatter = new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  });
-  private readonly parsedDate = computed(() => this.parseDate(this.lastUpdated()));
-
-  readonly dateTimeValue = computed(() => {
-    const value = this.lastUpdated();
-    if (typeof value === 'string' && ISO_CALENDAR_DATE_PATTERN.test(value)) {
-      return value;
-    }
-
-    const date = this.parsedDate();
-    return date ? date.toISOString().slice(0, 10) : null;
-  });
+  private readonly datePipe = new DatePipe('en-GB');
 
   readonly formattedDate = computed(() => {
-    const date = this.parsedDate();
-    if (!date) {
-      return String(this.lastUpdated());
-    }
-
-    return this.longDateFormatter.format(date);
+    const value = this.lastUpdated();
+    const date = value instanceof Date ? value : new Date(value);
+    return this.datePipe.transform(date, 'longDate') ?? String(value);
   });
-
-  private parseDate(value: Date | string): Date | null {
-    if (value instanceof Date) {
-      return Number.isNaN(value.getTime()) ? null : value;
-    }
-
-    const match = ISO_CALENDAR_DATE_PATTERN.exec(value);
-    if (!match) {
-      return null;
-    }
-
-    const [, yearText, monthText, dayText] = match;
-    if (!yearText || !monthText || !dayText) {
-      return null;
-    }
-
-    const year = Number(yearText);
-    const month = Number(monthText);
-    const day = Number(dayText);
-    const date = new Date(Date.UTC(year, month - 1, day));
-
-    if (
-      date.getUTCFullYear() !== year ||
-      date.getUTCMonth() !== month - 1 ||
-      date.getUTCDate() !== day
-    ) {
-      return null;
-    }
-
-    return date;
-  }
 }

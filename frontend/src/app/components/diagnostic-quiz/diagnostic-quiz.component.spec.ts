@@ -1,180 +1,332 @@
-import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import type { DiagnosticQuizResult, QuizQuestion } from '../../services/quiz.service';
-import { QuizService } from '../../services/quiz.service';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { DiagnosticQuizComponent } from './diagnostic-quiz.component';
 
-const questions: QuizQuestion[] = [
-  {
-    id: 'q1',
-    text: 'How well can you introduce yourself?',
-    skill: 'speaking',
-    category: 'self_assessment',
-    options: [
-      { id: 'low', text: 'I struggle.' },
-      { id: 'high', text: 'I can do it fluently.' },
-    ],
-  },
-  {
-    id: 'q2',
-    text: 'How well can you understand speech?',
-    skill: 'listening',
-    category: 'comprehension',
-    options: [
-      { id: 'low', text: 'Not well.' },
-      { id: 'high', text: 'Very well.' },
-    ],
-  },
-];
-
-const result: DiagnosticQuizResult = {
-  score: 5,
-  maxScore: 8,
-  percentage: 63,
-  suggestedCefr: 'B2',
-  skillBreakdown: {
-    speaking: { score: 4, max: 4, percentage: 100 },
-    listening: { score: 1, max: 4, percentage: 25 },
-  },
-  description: 'Upper Intermediate',
-};
-
 describe('DiagnosticQuizComponent', () => {
-  let fixture: ComponentFixture<DiagnosticQuizComponent>;
   let component: DiagnosticQuizComponent;
-  let quizService: {
-    getQuestions: ReturnType<typeof vi.fn>;
-    submitResults: ReturnType<typeof vi.fn>;
-  };
+  let fixture: ComponentFixture<DiagnosticQuizComponent>;
+  let httpTesting: HttpTestingController;
+
+  const mockQuestions = [
+    {
+      id: 'q1',
+      text: 'How well can you introduce yourself?',
+      options: [
+        { id: 'o1', text: 'I struggle.', points: 1 },
+        { id: 'o2', text: 'I can do it slowly.', points: 2 },
+        { id: 'o3', text: 'I can do it easily.', points: 3 },
+        { id: 'o4', text: 'I can do it fluently.', points: 4 },
+      ],
+    },
+    {
+      id: 'q2',
+      text: 'How well can you understand speech?',
+      options: [
+        { id: 'o1', text: 'Not well.', points: 1 },
+        { id: 'o2', text: 'Reasonably well.', points: 2 },
+        { id: 'o3', text: 'Very well.', points: 3 },
+        { id: 'o4', text: 'Perfectly.', points: 4 },
+      ],
+    },
+  ];
 
   beforeEach(async () => {
-    quizService = {
-      getQuestions: vi.fn().mockResolvedValue(questions),
-      submitResults: vi.fn().mockResolvedValue(result),
-    };
-
     await TestBed.configureTestingModule({
-      imports: [DiagnosticQuizComponent],
-      providers: [
-        provideHttpClient(),
-        { provide: QuizService, useValue: quizService },
-      ],
+      imports: [DiagnosticQuizComponent, TranslatePipe],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DiagnosticQuizComponent);
     component = fixture.componentInstance;
+    httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  async function load(): Promise<void> {
+  afterEach(() => {
+    httpTesting.verify();
+  });
+
+  it('should create', () => {
     fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    expect(component).toBeTruthy();
+  });
+
+  it('should show loading state initially', () => {
+    fixture.detectChanges();
+    expect(component.loading()).toBe(true);
+    const status = fixture.nativeElement.querySelector('[role="status"]');
+    expect(status).toBeTruthy();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+  });
+
+  it('should render quiz content after questions load', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
     await fixture.whenStable();
     fixture.detectChanges();
-  }
 
-  it('loads a target-language question set and exposes one labelled radio group', async () => {
-    await load();
-
-    expect(quizService.getQuestions).toHaveBeenCalledWith('en');
-    expect(component.questions()).toHaveLength(2);
-    const group = fixture.nativeElement.querySelector('hlm-radio-group');
-    expect(group.getAttribute('aria-labelledby')).toBe('diagnostic-question-0');
-    expect(group.querySelectorAll('hlm-radio')).toHaveLength(2);
+    expect(component.loading()).toBe(false);
+    expect(component.questions().length).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('How well can you introduce yourself?');
   });
 
-  it('stores opaque option identifiers rather than client-visible point values', async () => {
-    await load();
+  it('should expose each question as one labelled Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    component.selectOption('q1', 'high');
-    expect(component.answers()).toEqual({ q1: 'high' });
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group).toBeTruthy();
+    expect(group.getAttribute('aria-labelledby')).toBe('diagnostic-question-0');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+    expect(group.querySelector('[aria-pressed]')).toBeNull();
+  });
+
+  it('should store numeric values emitted by the Spartan radio group', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const group = fixture.nativeElement.querySelector('hlm-radio-group');
+    expect(group.querySelectorAll('hlm-radio').length).toBe(4);
+
+    component.selectOption('q1', 2);
+    fixture.detectChanges();
+
+    expect(component.answers()).toEqual({ q1: 2 });
     expect(component.canProceed()).toBe(true);
   });
 
-  it('ignores unknown, non-string, and cross-question option values', async () => {
-    await load();
+  it('should ignore malformed non-numeric answer values', () => {
+    component.selectOption('q1', '2');
+    component.selectOption('q1', Number.NaN);
 
-    component.selectOption('q1', 4);
-    component.selectOption('q1', 'forged');
-    component.selectOption('missing', 'high');
     expect(component.answers()).toEqual({});
   });
 
-  it('preserves answers while moving backwards and forwards', async () => {
-    await load();
+  it('should show error state when API fails', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.error(new ErrorEvent('Network error'));
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    component.selectOption('q1', 'high');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+  });
+
+  it('should show empty state when no questions returned', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.questions().length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('No questions available');
+  });
+
+  it('should navigate to next question', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.currentIndex()).toBe(0);
+
+    component.selectOption('q1', 2);
     component.next();
+    fixture.detectChanges();
+
     expect(component.currentIndex()).toBe(1);
+  });
+
+  it('should guard against proceeding without selection in next()', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.canProceed()).toBe(false);
+    component.next();
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should enable next button after selecting an option', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.selectOption('q1', 2);
+    fixture.detectChanges();
+
+    expect(component.canProceed()).toBe(true);
+  });
+
+  it('should navigate to previous question', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.selectOption('q1', 2);
+    component.next();
+    fixture.detectChanges();
+    expect(component.currentIndex()).toBe(1);
+
+    component.previous();
+    fixture.detectChanges();
+    expect(component.currentIndex()).toBe(0);
+  });
+
+  it('should not go back from first question', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.isFirstQuestion()).toBe(true);
     component.previous();
     expect(component.currentIndex()).toBe(0);
-    expect(component.answers()).toEqual({ q1: 'high' });
   });
 
-  it('does not advance an unanswered question', async () => {
-    await load();
-    component.next();
-    expect(component.currentIndex()).toBe(0);
-  });
+  it('should emit quizCompleted on finish', async () => {
+    let emitted: { score: number; suggestedLevel: string; maxScore: number } | null = null;
+    component.quizCompleted.subscribe((v) => (emitted = v));
 
-  it('submits answer ids and emits only the server-authoritative result', async () => {
-    let emitted: DiagnosticQuizResult | null = null;
-    component.quizCompleted.subscribe((value) => (emitted = value));
-    await load();
-
-    component.selectOption('q1', 'high');
-    component.next();
-    component.selectOption('q2', 'low');
-    component.next();
-    await fixture.whenStable();
-
-    expect(quizService.submitResults).toHaveBeenCalledWith({
-      targetLanguage: 'en',
-      answers: { q1: 'high', q2: 'low' },
-    });
-    expect(emitted).toEqual(result);
-  });
-
-  it('fails closed when result persistence fails', async () => {
-    quizService.submitResults.mockRejectedValueOnce(new Error('offline'));
-    let emitted: DiagnosticQuizResult | null = null;
-    component.quizCompleted.subscribe((value) => (emitted = value));
-    await load();
-
-    component.selectOption('q1', 'high');
-    component.next();
-    component.selectOption('q2', 'low');
-    component.next();
-    await fixture.whenStable();
-
-    expect(component.submitError()).toBe(true);
-    expect(component.isSubmitting()).toBe(false);
-    expect(emitted).toBeNull();
-  });
-
-  it('resets stale answers when the target language changes', async () => {
-    await load();
-    component.selectOption('q1', 'high');
-    expect(component.answers()).toEqual({ q1: 'high' });
-
-    fixture.componentRef.setInput('targetLanguage', 'ja');
     fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.selectOption('q1', 3);
+    component.next();
+    fixture.detectChanges();
+
+    component.selectOption('q2', 2);
+    fixture.detectChanges();
+
+    expect(component.isLastQuestion()).toBe(true);
+    component.next();
+
+    const resultsReq = httpTesting.expectOne('/api/quiz/results');
+    resultsReq.flush({ received: true });
     await fixture.whenStable();
 
-    expect(quizService.getQuestions).toHaveBeenCalledWith('ja');
-    expect(component.answers()).toEqual({});
-    expect(component.currentIndex()).toBe(0);
+    expect(emitted).toBeTruthy();
+    expect(emitted!.score).toBe(5);
   });
 
-  it('shows retryable load and empty states', async () => {
-    quizService.getQuestions.mockRejectedValueOnce(new Error('unavailable'));
-    await load();
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+  it('should compute progress percentage', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    quizService.getQuestions.mockResolvedValueOnce([]);
+    expect(component.progressPercentage()).toBe(0);
+    component.selectOption('q1', 1);
+    component.next();
+    fixture.detectChanges();
+    expect(component.progressPercentage()).toBe(50);
+  });
+
+  it('should compute correct progress bar attributes', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]');
+    expect(progressBar).toBeTruthy();
+    expect(progressBar.getAttribute('aria-valuenow')).toBe('0');
+    expect(progressBar.getAttribute('aria-valuemin')).toBe('0');
+    expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
+  });
+
+  it('should reload questions and reset state', async () => {
+    fixture.detectChanges();
+    const req1 = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req1.flush(mockQuestions);
+    await fixture.whenStable();
+
+    component.selectOption('q1', 2);
+    component.next();
+    fixture.detectChanges();
+    expect(component.currentIndex()).toBe(1);
+
     component.reloadQuestions();
     fixture.detectChanges();
+    const req2 = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req2.flush(mockQuestions);
+    await fixture.whenStable();
+
+    expect(component.currentIndex()).toBe(0);
+    expect(component.answers()).toEqual({});
+  });
+
+  it('should suggest correct CEFR levels based on score percentage', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(component.questions()).toEqual([]);
-    expect(fixture.nativeElement.textContent).toContain('No questions available');
+
+    let emitted: { suggestedLevel: string } | null = null;
+    component.quizCompleted.subscribe((v) => (emitted = v));
+
+    // Score 8/8 = 100% >= 90% → C2
+    component.selectOption('q1', 4);
+    component.next();
+    fixture.detectChanges();
+    component.selectOption('q2', 4);
+    fixture.detectChanges();
+    component.next();
+
+    const resultsReq = httpTesting.expectOne('/api/quiz/results');
+    resultsReq.flush({ received: true });
+    await fixture.whenStable();
+
+    expect(emitted!.suggestedLevel).toBe('C2');
+  });
+
+  it('should handle submit results API failure gracefully', async () => {
+    fixture.detectChanges();
+    const req = httpTesting.expectOne('/api/quiz/questions?language=en');
+    req.flush(mockQuestions);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    let emitted: { suggestedLevel: string } | null = null;
+    component.quizCompleted.subscribe((v) => (emitted = v));
+
+    component.selectOption('q1', 3);
+    component.next();
+    fixture.detectChanges();
+    component.selectOption('q2', 2);
+    fixture.detectChanges();
+    component.next();
+
+    const resultsReq = httpTesting.expectOne('/api/quiz/results');
+    resultsReq.error(new ErrorEvent('Network error'));
+    await fixture.whenStable();
+
+    expect(emitted).toBeTruthy();
   });
 });

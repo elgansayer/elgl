@@ -1,4 +1,4 @@
-import { Controller, Get, Header } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { VersionService } from './version.service';
 
@@ -39,7 +39,6 @@ export class VersionController {
   }
 
   @Get('minimum')
-  @Header('Cache-Control', 'no-store')
   @ApiOperation({
     summary: 'Get minimum supported app version',
     description:

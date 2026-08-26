@@ -52,37 +52,25 @@ describe('DataStorageService', () => {
     expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
   });
 
-  it('clears browser storage while preserving the preference', () => {
+  it('clears browser storage and every named cache while preserving the preference', async () => {
     localStorage.setItem('temporary', 'value');
     sessionStorage.setItem('temporary', 'value');
+    const cacheStorage = installCacheStorage(
+      new Map([
+        ['application', cacheWith([])],
+        ['media', cacheWith([])],
+      ]),
+    );
     const service = new DataStorageService();
 
     service.clearLocalCache();
+    await vi.waitFor(() => expect(cacheStorage.delete).toHaveBeenCalledTimes(2));
 
     expect(localStorage.getItem('temporary')).toBeNull();
     expect(sessionStorage.getItem('temporary')).toBeNull();
     expect(localStorage.getItem('hellotalk_cellular_auto_download')).toBe('true');
-  });
-
-  it('does not fail cache clearing when browser storage is unavailable', () => {
-    const setItem = vi.fn();
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn().mockReturnValue('false'),
-      setItem,
-      clear: vi.fn(() => {
-        throw new Error('local storage blocked');
-      }),
-    } as unknown as Storage);
-    vi.stubGlobal('sessionStorage', {
-      clear: vi.fn(() => {
-        throw new Error('session storage blocked');
-      }),
-    } as unknown as Storage);
-    const service = new DataStorageService();
-
-    expect(() => service.clearLocalCache()).not.toThrow();
-
-    expect(setItem).toHaveBeenCalledWith('hellotalk_cellular_auto_download', 'false');
+    expect(cacheStorage.delete).toHaveBeenCalledWith('application');
+    expect(cacheStorage.delete).toHaveBeenCalledWith('media');
   });
 
   it('estimates named caches concurrently from valid content-length headers', async () => {

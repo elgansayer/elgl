@@ -12,6 +12,7 @@ import {
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SuggestFlashcardsService, SuggestResult } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
+import { AuthService } from '../../services/auth.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import {
   SrsErrorBoundaryComponent,
@@ -48,26 +49,24 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
           />
           <app-button-primary
             (clicked)="manualSuggest()"
-            [disabled]="!messageInput().trim() || loading()"
+            [disabled]="!messageInput()"
             customClass="text-xs font-bold"
           >
             {{ 'suggest_flashcards.suggest_button' | t }}
           </app-button-primary>
           @if (loading()) {
-            <p class="app-muted" role="status" aria-live="polite">
-              {{ 'suggest_flashcards.loading' | t }}
-            </p>
+            <p class="app-muted">{{ 'suggest_flashcards.loading' | t }}</p>
           }
           @if (suggestions().length > 0) {
             <ul class="mt-4 divide-y divide-surface-700">
               @for (word of suggestions(); track word) {
-                <li class="flex items-center justify-between gap-3 py-2.5">
-                  <span class="min-w-0 break-words text-sm font-medium text-text-primary" dir="auto">{{ word }}</span>
+                <li class="flex items-center justify-between py-2.5">
+                  <span class="text-sm font-medium text-text-primary">{{ word }}</span>
                   <button
                     hlmBtn
                     (click)="addWordToDeck(word)"
                     [disabled]="addingWords().has(word) || addedWords().has(word)"
-                    class="min-h-11 shrink-0 rounded-lg border border-neon-primary px-3 py-1 text-xs font-semibold text-neon-primary transition-colors hover:bg-neon-primary/10 disabled:border-surface-500 disabled:text-surface-400"
+                    class="rounded-lg border border-neon-primary px-3 py-1 text-xs font-semibold text-neon-primary transition-colors hover:bg-neon-primary/10 disabled:border-surface-500 disabled:text-surface-400"
                   >
                     @if (addingWords().has(word)) {
                       {{ 'suggest_flashcards.loading' | t }}
@@ -82,10 +81,10 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
             </ul>
           }
           @if (suggestions().length === 0 && !loading() && hasAttempted()) {
-            <p class="text-sm text-text-muted" role="status">{{ 'suggest_flashcards.noWordsFound' | t }}</p>
+            <p class="text-sm text-text-muted">{{ 'suggest_flashcards.noWordsFound' | t }}</p>
           }
           @if (error()) {
-            <p class="mt-2 text-xs font-bold text-danger" role="alert">{{ error() }}</p>
+            <p class="mt-2 text-xs font-bold text-danger">{{ error() }}</p>
           }
         </app-card>
       </div>
@@ -95,12 +94,13 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 export class SuggestFlashcardsComponent {
   private suggestService = inject(SuggestFlashcardsService);
   private i18n = inject(I18nService);
+  private authService = inject(AuthService);
   private vocabStore = inject(VocabularyStore);
   private errorHandler = inject(ErrorHandler);
-  private suggestionRequestId = 0;
 
-  /** Optional external message to auto-suggest (e.g. from chat). */
+  /** Optional external message to auto‑suggest (e.g., from chat) */
   externalMessage = input<string>('');
+  externalUserId = input<string | undefined>(undefined);
   externalTargetLanguage = input<string | undefined>(undefined);
 
   messageInput = signal<string>('');
@@ -124,87 +124,80 @@ export class SuggestFlashcardsComponent {
 
   constructor() {
     effect(() => {
-      const message = this.externalMessage().trim();
-      if (message) {
-        this.messageInput.set(message);
-        void this.runSuggest(message, this.externalTargetLanguage());
+      const msg = this.externalMessage();
+      if (msg && msg.trim()) {
+        this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
       }
     });
   }
 
   handleRetry(): void {
     this.error.set(null);
-    const message = this.messageInput().trim();
-    if (message) {
-      void this.runSuggest(message, this.externalTargetLanguage());
+    const msg = this.messageInput().trim();
+    if (msg) {
+      this.runSuggest(msg);
     }
   }
 
   async manualSuggest(): Promise<void> {
-    const message = this.messageInput().trim();
-    if (!message || this.loading()) return;
-    await this.runSuggest(message, this.externalTargetLanguage());
+    const msg = this.messageInput().trim();
+    if (!msg) return;
+    this.runSuggest(msg);
   }
 
   async addWordToDeck(word: string): Promise<void> {
     if (this.addedWords().has(word) || this.addingWords().has(word)) return;
-    this.addingWords.update((set) => new Set(set).add(word));
+    this.addingWords.update((s) => new Set(s).add(word));
     try {
       await this.vocabStore.saveWord({
         word_token: word,
         translation: '',
         original_context: this.messageInput().trim(),
       });
-      this.addedWords.update((set) => new Set(set).add(word));
-    } catch (error) {
-      this.handleError(error, 'addWordToDeck');
+      this.addedWords.update((s) => new Set(s).add(word));
+    } catch {
+      /* silently handled -- no toast to avoid spamming */
     } finally {
-      this.addingWords.update((set) => {
-        const next = new Set(set);
+      this.addingWords.update((s) => {
+        const next = new Set(s);
         next.delete(word);
         return next;
       });
     }
   }
 
-  private async runSuggest(message: string, targetLanguage?: string): Promise<void> {
-    const requestId = ++this.suggestionRequestId;
+  private async runSuggest(
+    message: string,
+    userId?: string,
+    targetLanguage?: string,
+  ): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     this.suggestions.set([]);
     this.hasAttempted.set(false);
     this.addedWords.set(new Set());
-
     try {
       const result: SuggestResult = await this.suggestService.suggestFromMessage(
         message,
+        userId,
         targetLanguage,
         true,
       );
-      if (requestId !== this.suggestionRequestId) return;
       this.suggestions.set(result.suggestions);
       this.hasAttempted.set(true);
-    } catch (error) {
-      if (requestId !== this.suggestionRequestId) return;
+    } catch (err) {
       this.error.set(this.i18n.translate('suggest_flashcards.error'));
-      this.handleError(error, 'runSuggest');
+      this.handleError(err, 'runSuggest');
     } finally {
-      if (requestId === this.suggestionRequestId) {
-        this.loading.set(false);
-      }
+      this.loading.set(false);
     }
   }
 
-  private handleError(error: unknown, operation: string): void {
-    const normalized = error instanceof Error ? error : new Error(String(error));
-    const boundary = this.errorBoundary();
-    if (boundary) {
-      boundary.captureError(normalized, undefined, {
-        operation,
-        messageLength: this.messageInput().length,
-      });
-    } else {
-      this.errorHandler.handleError(normalized);
-    }
+  private handleError(err: unknown, operation: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.errorBoundary()?.captureError(error, undefined, {
+      operation,
+      messageLength: this.messageInput().length,
+    });
   }
 }

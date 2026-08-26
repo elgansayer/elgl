@@ -1,49 +1,32 @@
 import { Injectable } from '@angular/core';
 
-function deleteIndexedDatabase(dbName: string): Promise<void> {
-  return new Promise((resolve) => {
-    try {
-      const request = indexedDB.deleteDatabase(dbName);
-      request.onsuccess = () => resolve();
-      request.onerror = () => resolve();
-      request.onblocked = () => resolve();
-    } catch {
-      resolve();
-    }
-  });
-}
-
 @Injectable({
   providedIn: 'root',
 })
 export class CacheService {
   async clearCache(): Promise<void> {
-    try {
-      localStorage.clear();
-    } catch {
-      // Browser storage may be unavailable in restricted/private contexts.
+    // Clear localStorage
+    localStorage.clear();
+    // Clear sessionStorage
+    sessionStorage.clear();
+
+    // Clear IndexedDB databases used by the application
+    const dbNames = ['hellotalk_cache', 'mediaCache', 'offlineCache'];
+    for (const dbName of dbNames) {
+      try {
+        await indexedDB.deleteDatabase(dbName);
+      } catch {
+        // ignore if database does not exist
+      }
     }
 
-    try {
-      sessionStorage.clear();
-    } catch {
-      // Browser storage may be unavailable in restricted/private contexts.
-    }
-
-    // Clear IndexedDB databases used by the application. One blocked or broken
-    // database must not prevent the rest of the cleanup from completing.
-    if ('indexedDB' in globalThis) {
-      const dbNames = ['hellotalk_cache', 'mediaCache', 'offlineCache'];
-      await Promise.all(dbNames.map(deleteIndexedDatabase));
-    }
-
-    // Clear Cache Storage (Service Worker / Cache API).
+    // Clear Cache Storage (Service Worker / Cache API)
     if ('caches' in window) {
       try {
         const cacheNames = await caches.keys();
-        await Promise.allSettled(cacheNames.map((name) => caches.delete(name)));
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
       } catch {
-        // Cache API may be unavailable even when exposed by the browser.
+        // ignore if Cache API is unavailable
       }
     }
   }

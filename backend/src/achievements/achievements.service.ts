@@ -1,104 +1,74 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { FullAchievementDto } from './dto/full-achievement.dto';
 import { AchievementDto } from './dto/achievement.dto';
 import { UserAchievementDto } from './dto/user-achievement.dto';
 
-type MilestoneSource = 'messages' | 'streak';
-
-interface MilestoneDefinition {
-  readonly code: string;
-  readonly name: string;
-  readonly description: string;
-  readonly source: MilestoneSource;
-  readonly required: number;
-}
-
-const MILESTONES: readonly MilestoneDefinition[] = [
-  {
-    code: 'first_message',
-    name: 'First Message',
-    description: 'Send your first message in a chat.',
-    source: 'messages',
-    required: 1,
-  },
-  {
-    code: '100_messages',
-    name: '100 Messages',
-    description: 'Send 100 messages in chats.',
-    source: 'messages',
-    required: 100,
-  },
-  {
-    code: '500_messages',
-    name: '500 Messages',
-    description: 'Send 500 messages in chats.',
-    source: 'messages',
-    required: 500,
-  },
-  {
-    code: '7_day_streak',
-    name: '7-Day Streak',
-    description: 'Keep a 7‑day study streak.',
-    source: 'streak',
-    required: 7,
-  },
-  {
-    code: '30_day_streak',
-    name: '30-Day Streak',
-    description: 'Keep a 30‑day study streak.',
-    source: 'streak',
-    required: 30,
-  },
-];
-
-const MESSAGE_MILESTONES = MILESTONES.filter(
-  (milestone) => milestone.source === 'messages',
-);
-const STREAK_MILESTONES = MILESTONES.filter(
-  (milestone) => milestone.source === 'streak',
-);
-const UNAVAILABLE_MESSAGE = 'Achievements are temporarily unavailable';
-
 @Injectable()
 export class AchievementsService implements OnModuleInit {
   private readonly logger = new Logger(AchievementsService.name);
 
+  // Define milestone checks
+  private readonly milestones = [
+    {
+      code: 'first_message',
+      name: 'First Message',
+      description: 'Send your first message in a chat.',
+    },
+    {
+      code: '100_messages',
+      name: '100 Messages',
+      description: 'Send 100 messages in chats.',
+    },
+    {
+      code: '500_messages',
+      name: '500 Messages',
+      description: 'Send 500 messages in chats.',
+    },
+    {
+      code: '7_day_streak',
+      name: '7-Day Streak',
+      description: 'Keep a 7‑day study streak.',
+    },
+    {
+      code: '30_day_streak',
+      name: '30-Day Streak',
+      description: 'Keep a 30‑day study streak.',
+    },
+  ];
+
+  private readonly messageMilestoneCodes: readonly string[] = [
+    'first_message',
+    '100_messages',
+    '500_messages',
+  ];
+
+  private readonly streakMilestoneCodes: readonly string[] = [
+    '7_day_streak',
+    '30_day_streak',
+  ];
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async onModuleInit(): Promise<void> {
-    if (await this.seedAchievements()) {
-      this.logger.log('achievements.seed_complete');
-    }
+    await this.seedAchievements();
+    this.logger.log('Achievements seeded (if missing)');
   }
 
-  private async seedAchievements(): Promise<boolean> {
-    const achievements = MILESTONES.map((milestone) => ({
+  private async seedAchievements(): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const achievements = this.milestones.map((milestone) => ({
       code: milestone.code,
       name: milestone.name,
       description: milestone.description,
     }));
+    const { error } = await supabase
+      .from('achievements')
+      .upsert(achievements, { onConflict: 'code' });
 
-    try {
-      const { error } = await this.supabaseService
-        .getClient()
-        .from('achievements')
-        .upsert(achievements, { onConflict: 'code' });
-
-      if (error) {
-        this.logger.warn('achievements.seed_failed');
-        return false;
-      }
-      return true;
-    } catch {
-      this.logger.warn('achievements.seed_failed');
-      return false;
+    if (error) {
+      this.logger.warn(`Failed to bulk upsert achievements: ${error.message}`);
     }
   }
 
@@ -108,42 +78,28 @@ export class AchievementsService implements OnModuleInit {
   ): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    let achievementLookup;
-    try {
-      achievementLookup = await supabase
-        .from('achievements')
-        .select('id')
-        .eq('code', achievementCode)
-        .single();
-    } catch {
-      this.failUnavailable('definition_lookup');
-    }
-
-    if (achievementLookup.error) {
-      this.failUnavailable('definition_lookup');
-    }
-    if (!achievementLookup.data) {
-      this.logger.warn(
-        `achievements.definition_missing code=${achievementCode}`,
-      );
+    // Look up achievement id
+    const { data: ach } = await supabase
+      .from('achievements')
+      .select('id')
+      .eq('code', achievementCode)
+      .single();
+    if (!ach) {
+      this.logger.warn(`Achievement code "${achievementCode}" not found.`);
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('user_achievements')
-        .upsert(
-          { user_id: userId, achievement_id: achievementLookup.data.id },
-          { onConflict: 'user_id,achievement_id' },
-        );
-      if (error) {
-        this.failUnavailable('award_write');
-      }
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('award_write');
+    // Insert user_achievement (ignore duplicate)
+    const { error } = await supabase
+      .from('user_achievements')
+      .upsert(
+        { user_id: userId, achievement_id: ach.id },
+        { onConflict: 'user_id,achievement_id' },
+      );
+    if (error) {
+      this.logger.error(
+        `Failed to award achievement ${achievementCode} to ${userId}: ${error.message}`,
+      );
     }
   }
 
@@ -152,136 +108,53 @@ export class AchievementsService implements OnModuleInit {
     achievementCode: string,
   ): Promise<boolean> {
     const supabase = this.supabaseService.getClient();
-    let achievementLookup;
-    try {
-      achievementLookup = await supabase
-        .from('achievements')
-        .select('id')
-        .eq('code', achievementCode)
-        .single();
-    } catch {
-      this.failUnavailable('definition_lookup');
-    }
-
-    if (achievementLookup.error) {
-      this.failUnavailable('definition_lookup');
-    }
-    if (!achievementLookup.data) return false;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_achievements')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('achievement_id', achievementLookup.data.id)
-        .single();
-      if (error && error.code !== 'PGRST116') {
-        this.failUnavailable('earned_lookup');
-      }
-      return !!data;
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('earned_lookup');
-    }
+    const { data: ach } = await supabase
+      .from('achievements')
+      .select('id')
+      .eq('code', achievementCode)
+      .single();
+    if (!ach) return false;
+    const { data } = await supabase
+      .from('user_achievements')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('achievement_id', ach.id)
+      .single();
+    return !!data;
   }
 
   async listAchievements(): Promise<AchievementDto[]> {
-    try {
-      const { data, error } = await this.supabaseService
-        .getClient()
-        .from('achievements')
-        .select('*')
-        .returns<AchievementDto[]>();
-      if (error) {
-        this.failUnavailable('catalogue_read');
-      }
-      return data ?? [];
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('catalogue_read');
-    }
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('achievements')
+      .select('*')
+      .returns<AchievementDto[]>();
+    return data ?? [];
   }
 
   async getUserAchievements(userId: string): Promise<UserAchievementDto[]> {
-    try {
-      const { data, error } = await this.supabaseService
-        .getClient()
-        .from('user_achievements')
-        .select('achievements(*)')
-        .eq('user_id', userId)
-        .returns<UserAchievementDto[]>();
-      if (error) {
-        this.failUnavailable('earned_read');
-      }
-      return data ?? [];
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('earned_read');
-    }
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('user_achievements')
+      .select('achievements(*)')
+      .eq('user_id', userId)
+      .returns<UserAchievementDto[]>();
+    return data ?? [];
   }
 
   async getFullAchievements(userId: string): Promise<FullAchievementDto[]> {
     const supabase = this.supabaseService.getClient();
-    let definitionResult;
-    try {
-      definitionResult = await supabase
-        .from('achievements')
-        .select('code, name, description')
-        .order('code', { ascending: true })
-        .returns<Pick<AchievementDto, 'code' | 'name' | 'description'>[]>();
-    } catch {
-      this.failUnavailable('catalogue_read');
-    }
 
-    if (definitionResult.error) {
-      this.failUnavailable('catalogue_read');
-    }
-    const definitions = definitionResult.data;
+    const { data: definitions } = await supabase
+      .from('achievements')
+      .select('code, name, description')
+      .order('code', { ascending: true })
+      .returns<Pick<AchievementDto, 'code' | 'name' | 'description'>[]>();
     if (!definitions) {
       return [];
     }
 
-    const [earnedRows, messageCount, streakDays] = await Promise.all([
-      this.getUserAchievements(userId),
-      this.getUserMessageCount(userId),
-      this.getStudyStreakDays(userId),
-    ]);
-
-    const earnedCodes = new Set<string>();
-    for (const row of earnedRows) {
-      const code = row.achievements?.code;
-      if (code) earnedCodes.add(code);
-    }
-
-    return definitions.map((definition) => {
-      const milestone = MILESTONES.find(
-        (candidate) => candidate.code === definition.code,
-      );
-      const current =
-        milestone?.source === 'messages'
-          ? messageCount
-          : milestone?.source === 'streak'
-            ? streakDays
-            : 0;
-
-      return {
-        code: definition.code,
-        name: definition.name,
-        description: definition.description ?? '',
-        current,
-        required: milestone?.required ?? 0,
-        earned: earnedCodes.has(definition.code),
-      };
-    });
-  }
-
-  async evaluateAchievements(userId: string): Promise<void> {
+    // get already earned codes
     const earnedRows = await this.getUserAchievements(userId);
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
@@ -289,14 +162,64 @@ export class AchievementsService implements OnModuleInit {
       if (code) earnedCodes.add(code);
     }
 
-    const messageMilestonesComplete = MESSAGE_MILESTONES.every((milestone) =>
-      earnedCodes.has(milestone.code),
+    const msgCount = await this.getUserMessageCount(userId);
+    const streakDays = await this.getStudyStreakDays(userId);
+
+    const thresholds: Record<string, { required: number }> = {
+      first_message: { required: 1 },
+      '100_messages': { required: 100 },
+      '500_messages': { required: 500 },
+      '7_day_streak': { required: 7 },
+      '30_day_streak': { required: 30 },
+    };
+
+    return definitions.map((def) => {
+      let current = 0;
+      const threshold = thresholds[def.code];
+      if (threshold) {
+        if (
+          def.code === 'first_message' ||
+          def.code === '100_messages' ||
+          def.code === '500_messages'
+        ) {
+          current = msgCount;
+        } else if (
+          def.code === '7_day_streak' ||
+          def.code === '30_day_streak'
+        ) {
+          current = streakDays;
+        }
+      }
+      return {
+        code: def.code,
+        name: def.name,
+        description: def.description ?? '',
+        current,
+        required: threshold?.required ?? 0,
+        earned: earnedCodes.has(def.code),
+      };
+    });
+  }
+
+  async evaluateAchievements(userId: string): Promise<void> {
+    // The earned-state lookup is bounded by the small achievement catalogue. Once a
+    // milestone family is complete, skip its potentially growing source query on
+    // every subsequent event. This keeps message.sent cheap for long-lived users.
+    const earnedRows = await this.getUserAchievements(userId);
+    const earnedCodes = new Set<string>();
+    for (const row of earnedRows) {
+      const code = row.achievements?.code;
+      if (code) earnedCodes.add(code);
+    }
+
+    const messageMilestonesComplete = this.messageMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
     );
-    const streakMilestonesComplete = STREAK_MILESTONES.every((milestone) =>
-      earnedCodes.has(milestone.code),
+    const streakMilestonesComplete = this.streakMilestoneCodes.every((code) =>
+      earnedCodes.has(code),
     );
 
-    const [messageCount, streakDays] = await Promise.all([
+    const [msgCount, streakDays] = await Promise.all([
       messageMilestonesComplete
         ? Promise.resolve(0)
         : this.getUserMessageCount(userId),
@@ -305,93 +228,65 @@ export class AchievementsService implements OnModuleInit {
         : this.getStudyStreakDays(userId),
     ]);
 
-    const dueMilestones = MILESTONES.filter((milestone) => {
-      if (earnedCodes.has(milestone.code)) return false;
-      const current =
-        milestone.source === 'messages' ? messageCount : streakDays;
-      return current >= milestone.required;
-    });
+    const newAwards: Promise<void>[] = [];
 
-    if (dueMilestones.length === 0) return;
+    // Award milestones based on thresholds
+    if (msgCount >= 1 && !earnedCodes.has('first_message')) {
+      newAwards.push(this.awardAchievement(userId, 'first_message'));
+    }
+    if (msgCount >= 100 && !earnedCodes.has('100_messages')) {
+      newAwards.push(this.awardAchievement(userId, '100_messages'));
+    }
+    if (msgCount >= 500 && !earnedCodes.has('500_messages')) {
+      newAwards.push(this.awardAchievement(userId, '500_messages'));
+    }
+    if (streakDays >= 7 && !earnedCodes.has('7_day_streak')) {
+      newAwards.push(this.awardAchievement(userId, '7_day_streak'));
+    }
+    if (streakDays >= 30 && !earnedCodes.has('30_day_streak')) {
+      newAwards.push(this.awardAchievement(userId, '30_day_streak'));
+    }
 
-    const results = await Promise.allSettled(
-      dueMilestones.map((milestone) =>
-        this.awardAchievement(userId, milestone.code),
-      ),
-    );
-    const failedAwards = results.filter(
-      (result) => result.status === 'rejected',
-    ).length;
-
-    if (failedAwards > 0) {
-      this.logger.error(
-        `achievements.award_batch_failed count=${failedAwards}`,
-      );
-      throw new ServiceUnavailableException(UNAVAILABLE_MESSAGE);
+    if (newAwards.length > 0) {
+      await Promise.all(newAwards);
     }
   }
 
   @OnEvent('achievements.evaluate')
   async handleEvaluationEvent(payload: { userId: string }): Promise<void> {
-    await this.evaluateFromEvent(payload.userId);
+    await this.evaluateAchievements(payload.userId);
   }
 
   @OnEvent('message.sent')
   async handleMessageSent(payload: { userId: string }): Promise<void> {
-    await this.evaluateFromEvent(payload.userId);
-  }
-
-  private async evaluateFromEvent(userId: string): Promise<void> {
-    try {
-      await this.evaluateAchievements(userId);
-    } catch {
-      // Event delivery is best-effort. The next message/streak event safely retries
-      // because user_achievements has a unique (user_id, achievement_id) constraint.
-      this.logger.warn('achievements.event_evaluation_failed');
-    }
+    await this.evaluateAchievements(payload.userId);
   }
 
   private async getUserMessageCount(userId: string): Promise<number> {
-    try {
-      const { count, error } = await this.supabaseService
-        .getClient()
-        .from('chat_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('sender_id', userId);
-      if (error) {
-        this.failUnavailable('message_count');
-      }
-      return count ?? 0;
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('message_count');
+    const supabase = this.supabaseService.getClient();
+    const { count, error } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('sender_id', userId);
+    if (error) {
+      this.logger.error(
+        `Failed to get message count for user ${userId}: ${error.message}`,
+      );
+      return 0;
     }
+    return count ?? 0;
   }
 
   private async getStudyStreakDays(userId: string): Promise<number> {
-    try {
-      const { data, error } = await this.supabaseService
-        .getClient()
-        .from('users')
-        .select('study_streak_days')
-        .eq('id', userId)
-        .single<{ study_streak_days: number | null }>();
-      if (error) {
-        this.failUnavailable('streak_read');
-      }
-      return data?.study_streak_days ?? 0;
-    } catch (error) {
-      if (error instanceof ServiceUnavailableException) {
-        throw error;
-      }
-      this.failUnavailable('streak_read');
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('study_streak_days')
+      .eq('id', userId)
+      .single<{ study_streak_days: number | null }>();
+    if (error || !data) {
+      return 0;
     }
-  }
-
-  private failUnavailable(operation: string): never {
-    this.logger.error(`achievements.${operation}_failed`);
-    throw new ServiceUnavailableException(UNAVAILABLE_MESSAGE);
+    return data.study_streak_days ?? 0;
   }
 }

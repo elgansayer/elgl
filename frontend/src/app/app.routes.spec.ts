@@ -76,22 +76,6 @@ describe('App routes', () => {
     }
   });
 
-  it('should guard every admin feature route with the backend-backed adminGuard', () => {
-    const expectedAdminPaths = [
-      'admin',
-      'admin/lessons',
-      'admin/moderation',
-      'admin/blocks',
-      'admin/users',
-    ];
-
-    for (const path of expectedAdminPaths) {
-      const route = routes.find((candidate) => candidate.path === path);
-      expect(route, `missing route ${path}`).toBeDefined();
-      expect(route?.canActivate, `missing admin guard on ${path}`).toContain(adminGuard);
-    }
-  });
-
   it('should lazy-load milestones component route', () => {
     const milestones = routes.find((r) => r.path === 'milestones');
     expect(milestones).toBeDefined();

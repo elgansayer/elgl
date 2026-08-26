@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 
@@ -7,130 +7,97 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
   selector: 'app-chat-settings',
   imports: [HlmButton, TranslatePipe],
   template: `
-    <div
-      class="mx-auto min-h-screen max-w-md space-y-6 bg-surface-500 p-4"
-      [attr.aria-busy]="!loaded() || saving()"
-    >
+    <div class="p-4 max-w-md mx-auto space-y-6 bg-surface-500 min-h-screen">
       <h2 class="text-xl font-semibold text-text-primary">{{ 'chat_settings.title' | t }}</h2>
 
       @if (!loaded()) {
-        <div class="py-8 text-center text-text-secondary" role="status" aria-live="polite">
-          {{ 'common.loading' | t }}
-        </div>
-      } @else if (loadFailed()) {
-        <div
-          class="space-y-3 rounded-card border border-danger/30 bg-danger/10 p-4 text-text-primary"
-          role="alert"
-        >
-          <p>{{ 'common.error' | t }}</p>
-          <button hlmBtn type="button" class="min-h-11" (click)="retryLoad()">
-            {{ 'common.retry' | t }}
-          </button>
-        </div>
+        <div class="text-text-secondary text-center py-8">{{ 'common.loading' | t }}</div>
       } @else {
-        @if (saveFailed()) {
-          <p
-            class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-text-primary"
-            role="alert"
-          >
-            {{ 'common.error' | t }}
-          </p>
-        }
-
-        <div class="flex flex-col gap-3 rounded-card bg-surface-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="min-w-0 flex-1">
-            <span class="block break-words text-base text-text-primary">{{
+        <!-- Auto-Translate -->
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="text-text-primary text-base">{{
               'chat_settings.auto_translate' | t
             }}</span>
-            <span class="block break-words text-sm text-text-secondary">{{
+            <span class="text-text-secondary text-sm">{{
               'chat_settings.auto_translate_desc' | t
             }}</span>
           </div>
           <button
             hlmBtn
-            type="button"
             role="switch"
             [attr.aria-checked]="autoTranslate()"
             [attr.aria-label]="'chat_settings.auto_translate' | t"
-            [disabled]="saving()"
-            class="relative inline-flex h-11 w-14 shrink-0 items-center rounded-full px-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-            [class.justify-end]="autoTranslate()"
-            [class.justify-start]="!autoTranslate()"
+            class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
             [class.bg-primary]="autoTranslate()"
             [class.bg-surface-300]="!autoTranslate()"
             (click)="toggleAutoTranslate()"
           >
-            <span class="block h-6 w-6 rounded-full bg-on-fill shadow" aria-hidden="true"></span>
+            <span
+              class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
+              [class.translate-x-6]="autoTranslate()"
+              [class.translate-x-1]="!autoTranslate()"
+            ></span>
           </button>
         </div>
 
-        <div class="flex flex-col gap-3 rounded-card bg-surface-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="min-w-0 flex-1">
-            <span class="block break-words text-base text-text-primary">{{
-              'chat_settings.read_receipts' | t
-            }}</span>
-            <span class="block break-words text-sm text-text-secondary">{{
+        <!-- Read Receipts -->
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="text-text-primary text-base">{{ 'chat_settings.read_receipts' | t }}</span>
+            <span class="text-text-secondary text-sm">{{
               'chat_settings.read_receipts_desc' | t
             }}</span>
           </div>
           <button
             hlmBtn
-            type="button"
             role="switch"
             [attr.aria-checked]="readReceipts()"
             [attr.aria-label]="'chat_settings.read_receipts' | t"
-            [disabled]="saving()"
-            class="relative inline-flex h-11 w-14 shrink-0 items-center rounded-full px-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-            [class.justify-end]="readReceipts()"
-            [class.justify-start]="!readReceipts()"
+            class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
             [class.bg-primary]="readReceipts()"
             [class.bg-surface-300]="!readReceipts()"
             (click)="toggleReadReceipts()"
           >
-            <span class="block h-6 w-6 rounded-full bg-on-fill shadow" aria-hidden="true"></span>
+            <span
+              class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
+              [class.translate-x-6]="readReceipts()"
+              [class.translate-x-1]="!readReceipts()"
+            ></span>
           </button>
         </div>
 
-        <div class="flex flex-col gap-3 rounded-card bg-surface-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div class="min-w-0 flex-1">
-            <span class="block break-words text-base text-text-primary">{{
-              'chat_settings.enter_to_send' | t
-            }}</span>
-            <span class="block break-words text-sm text-text-secondary">{{
+        <!-- Enter-to-Send -->
+        <div class="bg-surface-100 rounded-xl p-4 flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="text-text-primary text-base">{{ 'chat_settings.enter_to_send' | t }}</span>
+            <span class="text-text-secondary text-sm">{{
               'chat_settings.enter_to_send_desc' | t
             }}</span>
           </div>
           <button
             hlmBtn
-            type="button"
             role="switch"
             [attr.aria-checked]="enterToSend()"
             [attr.aria-label]="'chat_settings.enter_to_send' | t"
-            [disabled]="saving()"
-            class="relative inline-flex h-11 w-14 shrink-0 items-center rounded-full px-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-            [class.justify-end]="enterToSend()"
-            [class.justify-start]="!enterToSend()"
+            class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
             [class.bg-primary]="enterToSend()"
             [class.bg-surface-300]="!enterToSend()"
             (click)="toggleEnterToSend()"
           >
-            <span class="block h-6 w-6 rounded-full bg-on-fill shadow" aria-hidden="true"></span>
+            <span
+              class="inline-block h-5 w-5 rounded-full bg-on-fill shadow transition-all"
+              [class.translate-x-6]="enterToSend()"
+              [class.translate-x-1]="!enterToSend()"
+            ></span>
           </button>
         </div>
 
-        @if (saving()) {
-          <p class="text-center text-sm text-text-secondary" role="status" aria-live="polite">
-            {{ 'common.saving' | t }}
-          </p>
-        }
-
+        <!-- Reset to defaults -->
         <div class="mt-8 text-center">
           <button
             hlmBtn
-            type="button"
-            data-testid="reset-chat-settings"
-            class="min-h-11 text-sm text-primary underline decoration-primary disabled:cursor-not-allowed disabled:opacity-60"
-            [disabled]="saving()"
+            class="text-primary text-sm underline decoration-primary"
             (click)="resetToDefaults()"
           >
             {{ 'chat_settings.reset_defaults' | t }}
@@ -141,49 +108,30 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
   `,
 })
 export class ChatSettingsComponent {
-  private readonly settingsService = inject(ChatSettingsService);
+  private settingsService = inject(ChatSettingsService);
 
   readonly autoTranslate = this.settingsService.autoTranslate;
   readonly readReceipts = this.settingsService.readReceipts;
   readonly enterToSend = this.settingsService.enterToSend;
   readonly loaded = this.settingsService.loaded;
-  readonly loadFailed = this.settingsService.loadFailed;
-  readonly saving = this.settingsService.saving;
-  readonly saveFailed = signal(false);
 
   constructor() {
-    void this.settingsService.loadSettings();
+    this.settingsService.loadSettings();
   }
 
-  async retryLoad(): Promise<void> {
-    this.saveFailed.set(false);
-    await this.settingsService.loadSettings();
+  toggleAutoTranslate(): void {
+    this.settingsService.updateSetting('autoTranslate', !this.autoTranslate());
   }
 
-  async toggleAutoTranslate(): Promise<void> {
-    await this.updateSetting('autoTranslate', !this.autoTranslate());
+  toggleReadReceipts(): void {
+    this.settingsService.updateSetting('readReceipts', !this.readReceipts());
   }
 
-  async toggleReadReceipts(): Promise<void> {
-    await this.updateSetting('readReceipts', !this.readReceipts());
+  toggleEnterToSend(): void {
+    this.settingsService.updateSetting('enterToSend', !this.enterToSend());
   }
 
-  async toggleEnterToSend(): Promise<void> {
-    await this.updateSetting('enterToSend', !this.enterToSend());
-  }
-
-  async resetToDefaults(): Promise<void> {
-    this.saveFailed.set(false);
-    const saved = await this.settingsService.resetToDefaults();
-    this.saveFailed.set(!saved);
-  }
-
-  private async updateSetting(
-    key: 'autoTranslate' | 'readReceipts' | 'enterToSend',
-    value: boolean,
-  ): Promise<void> {
-    this.saveFailed.set(false);
-    const saved = await this.settingsService.updateSetting(key, value);
-    this.saveFailed.set(!saved);
+  resetToDefaults(): void {
+    this.settingsService.resetToDefaults();
   }
 }

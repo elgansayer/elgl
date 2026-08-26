@@ -14,7 +14,6 @@ resolver, reviewer, provider router, or direct provider merge implementation.
 eligible GitHub issues and external pull requests
   -> Factory daemon reconciles durable jobs
   -> worker pool selects the highest-priority runnable job
-  -> worker-distinct logical task claim and equivalent-PR reconciliation
   -> isolated task worktree
   -> phase-specific AgentRouter selection
        Claude Code, Codex CLI, Google agent, OpenCode, OpenHands emergency
@@ -62,8 +61,6 @@ the current head to review.
 - Retry classes, deterministic jittered backoff, provider circuits, provider history, and worktree state survive
   daemon restart.
 - Corrupt future or overlong provider and task leases cannot suppress scheduling indefinitely.
-- Logical task claims retain canonical branch, PR and provenance after an expiring worker lease is released.
-- Concurrent equivalent dispatches converge on one owner and one canonical active implementation PR.
 - A watchdog can recover abandoned execution states but cannot start an LLM or modify the base checkout.
 - Review avoids every provider that may have mutated the code when another healthy provider is available.
 - `.factory-review.json` and `.factory-architect.json` are fresh, validated, authoritative control artefacts and

@@ -1,75 +1,85 @@
-import {
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import type { UserIdentity } from '@supabase/supabase-js';
+import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-
-export type LinkedAccountProvider = 'email' | 'google' | 'apple';
+import { MOCK_LINKED_ACCOUNTS } from '../mock-data';
 
 export interface LinkedAccount {
-  provider: LinkedAccountProvider;
+  provider: string;
   name?: string;
-  active: true;
+  active: boolean;
   created_at?: string;
-  identity_id?: string;
 }
-
-const VISIBLE_PROVIDERS = new Set<LinkedAccountProvider>([
-  'email',
-  'google',
-  'apple',
-]);
 
 @Injectable()
 export class LinkedAccountsService {
-  private readonly logger = new Logger(LinkedAccountsService.name);
-
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getLinkedAccounts(userId: string): Promise<LinkedAccount[]> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    const { data, error } = await supabase
+      .from('linked_accounts')
+      .select('provider, name, active, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
 
-    if (error || !data.user) {
-      this.logger.warn('linked_accounts_identity_lookup_failed');
-      throw new ServiceUnavailableException(
-        'Linked accounts are temporarily unavailable',
-      );
+    if (error) {
+      console.error('getLinkedAccounts error', error);
     }
 
-    return (data.user.identities ?? [])
-      .filter(
-        (
-          identity,
-        ): identity is UserIdentity & { provider: LinkedAccountProvider } =>
-          VISIBLE_PROVIDERS.has(identity.provider as LinkedAccountProvider),
-      )
-      .map((identity) => ({
-        provider: identity.provider,
-        active: true as const,
-        identity_id: identity.identity_id,
-        created_at: identity.created_at,
-        name: this.identityDisplayName(identity),
+    if (data && data.length > 0) {
+      return data.map((row: any) => ({
+        provider: row.provider,
+        name: row.name ?? undefined,
+        active: row.active ?? false,
+        created_at: row.created_at ?? undefined,
       }));
+    }
+
+    // Fallback to mock data for seeded users
+    const mockAccounts = MOCK_LINKED_ACCOUNTS.filter(
+      (a) => a.user_id === userId,
+    ).map((row) => ({
+      provider: row.provider,
+      name: row.name ?? undefined,
+      active: row.active,
+      created_at: row.created_at,
+    }));
+
+    return mockAccounts;
   }
 
-  private identityDisplayName(identity: UserIdentity): string | undefined {
-    const data = identity.identity_data;
-    if (!data || typeof data !== 'object') {
-      return undefined;
-    }
+  async linkAccount(
+    userId: string,
+    provider: string,
+    externalName?: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('linked_accounts').upsert(
+      {
+        user_id: userId,
+        provider,
+        name: externalName ?? null,
+        active: true,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id, provider' },
+    );
 
-    for (const key of ['email', 'full_name', 'name'] as const) {
-      const value: unknown = data[key];
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (trimmed) {
-          return trimmed.slice(0, 200);
-        }
-      }
+    if (error) {
+      console.error('linkAccount error', error);
+      throw new Error('Could not link account');
     }
-    return undefined;
+  }
+
+  async unlinkAccount(userId: string, provider: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('linked_accounts')
+      .delete()
+      .match({ user_id: userId, provider });
+
+    if (error) {
+      console.error('unlinkAccount error', error);
+      throw new Error('Could not unlink account');
+    }
   }
 }

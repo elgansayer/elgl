@@ -436,88 +436,20 @@
                 }
 
                 <!-- Write Comment -->
-                <div class="flex gap-2 items-start">
-                  <div class="relative min-w-0 flex-1">
-                    <input
-                      hlmInput
-                      type="text"
-                      [(ngModel)]="commentInputMap[moment.id]"
-                      (input)="onCommentInput($event, moment.id)"
-                      (keydown)="onCommentKeydown($event, moment)"
-                      [placeholder]="
-                        replyingToMap[moment.id]
-                          ? ('moments.commentReplyPlaceholder' | t)
-                          : ('moments.commentPlaceholder' | t)
-                      "
-                      class="w-full bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-primary outline-none"
-                      [attr.aria-label]="
-                        replyingToMap[moment.id]
-                          ? ('moments.commentReplyPlaceholder' | t)
-                          : ('moments.commentPlaceholder' | t)
-                      "
-                      role="combobox"
-                      aria-autocomplete="list"
-                      autocomplete="off"
-                      [attr.aria-expanded]="
-                        mentionQueryMap()[moment.id] !== null &&
-                        (mentionSuggestionsMap()[moment.id]?.length ?? 0) > 0
-                      "
-                      [attr.aria-controls]="'moment-mention-list-' + moment.id"
-                      [attr.aria-activedescendant]="
-                        mentionQueryMap()[moment.id] !== null &&
-                        (mentionSuggestionsMap()[moment.id]?.length ?? 0) > 0
-                          ? 'moment-mention-option-' +
-                            moment.id +
-                            '-' +
-                            (mentionActiveIndexMap()[moment.id] ?? 0)
-                          : null
-                      "
-                    />
-                    @if (
-                      mentionQueryMap()[moment.id] !== null &&
-                      (mentionSuggestionsMap()[moment.id]?.length ?? 0) > 0
-                    ) {
-                      <div
-                        [id]="'moment-mention-list-' + moment.id"
-                        role="listbox"
-                        class="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-card border border-surface-100 bg-surface-400 p-1"
-                      >
-                        @for (
-                          suggestion of mentionSuggestionsMap()[moment.id] ?? [];
-                          track suggestion.id;
-                          let i = $index
-                        ) {
-                          <button
-                            hlmBtn
-                            type="button"
-                            role="option"
-                            [id]="'moment-mention-option-' + moment.id + '-' + i"
-                            [attr.aria-selected]="
-                              (mentionActiveIndexMap()[moment.id] ?? 0) === i
-                            "
-                            (mousedown)="$event.preventDefault()"
-                            (click)="selectMention(moment.id, suggestion)"
-                            class="flex min-h-11 w-full items-center gap-2 rounded-app px-3 py-2 text-start text-xs text-text-primary hover:bg-surface-300 focus-visible:ring-2 focus-visible:ring-primary"
-                            [class.bg-surface-300]="
-                              (mentionActiveIndexMap()[moment.id] ?? 0) === i
-                            "
-                          >
-                            @if (suggestion.avatar_url) {
-                              <img
-                                [src]="suggestion.avatar_url"
-                                alt=""
-                                loading="lazy"
-                                class="h-7 w-7 shrink-0 rounded-full object-cover"
-                              />
-                            }
-                            <span dir="auto" class="min-w-0 truncate">{{
-                              suggestion.display_name
-                            }}</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
+                <div class="flex gap-2 items-center">
+                  <input
+                    hlmInput
+                    type="text"
+                    [(ngModel)]="commentInputMap[moment.id]"
+                    (keyup.enter)="submitComment(moment)"
+                    [placeholder]="
+                      replyingToMap[moment.id]
+                        ? ('moments.commentReplyPlaceholder' | t)
+                        : ('moments.commentPlaceholder' | t)
+                    "
+                    class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-primary outline-none"
+                    [attr.aria-label]="'text input'"
+                  />
                   <button
                     hlmBtn
                     aria-label="Submit comment"

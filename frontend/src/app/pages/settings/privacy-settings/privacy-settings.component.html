@@ -1,12 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button
-      hlmBtn
-      type="button"
-      (click)="goBack()"
-      class="app-button-icon"
-      [attr.aria-label]="'common.back' | t"
-    >
+    <button hlmBtn (click)="goBack()" class="app-button-icon" aria-label="Back">
       <span class="text-xl" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'privacy.hub.title' | t }}</h1>
@@ -15,151 +9,6 @@
 
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
     <p class="text-xs text-text-secondary">{{ 'privacy.hub.subtitle' | t }}</p>
-
-    <section class="space-y-3" aria-labelledby="profile-visibility-heading">
-      <div class="space-y-1">
-        <h2 id="profile-visibility-heading" class="text-sm font-bold text-text-primary">
-          {{ 'privacy.profileVisibility.title' | t }}
-        </h2>
-        <p class="text-xs text-text-secondary">
-          {{ 'privacy.profileVisibility.description' | t }}
-        </p>
-      </div>
-
-      <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
-        @if (profileVisibilityResource.isLoading()) {
-          <p class="p-4 text-sm text-text-secondary" role="status">
-            {{ 'common.loading' | t }}
-          </p>
-        } @else if (profileVisibilityResource.error()) {
-          <div class="p-4 flex flex-col items-start gap-3" role="alert">
-            <p class="text-sm text-danger">{{ 'privacy.profileVisibility.loadError' | t }}</p>
-            <button
-              hlmBtn
-              type="button"
-              variant="secondary"
-              size="touch"
-              (click)="retryProfileVisibilityLoad()"
-            >
-              {{ 'common.retry' | t }}
-            </button>
-          </div>
-        } @else {
-          <hlm-radio-group
-            name="profile-visibility"
-            [value]="profileVisibility()"
-            (valueChange)="updateProfileVisibility($event)"
-            [attr.aria-labelledby]="'profile-visibility-heading'"
-            [attr.aria-busy]="isVisibilitySaving() ? 'true' : null"
-            class="grid gap-1 p-2"
-          >
-            @for (option of profileVisibilityOptions; track option.value) {
-              <hlm-radio
-                [value]="option.value"
-                [disabled]="isVisibilitySaving()"
-                class="min-h-11 w-full cursor-pointer rounded-app border border-transparent p-3 text-start transition-colors data-[checked=true]:border-primary data-[checked=true]:bg-primary/10"
-              >
-                <span class="flex min-w-0 flex-col gap-1">
-                  <span class="text-sm font-medium text-text-primary">{{ option.labelKey | t }}</span>
-                  <span class="text-xs text-text-secondary break-words">{{
-                    option.descriptionKey | t
-                  }}</span>
-                </span>
-              </hlm-radio>
-            }
-          </hlm-radio-group>
-
-          @if (isVisibilitySaving()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-text-secondary" role="status">
-              {{ 'common.saving' | t }}
-            </p>
-          } @else if (visibilitySaveError()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-danger" role="alert">
-              {{ 'privacy.profileVisibility.saveError' | t }}
-            </p>
-          } @else if (visibilitySaveSuccess()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-success" role="status">
-              {{ 'privacy.profileVisibility.saved' | t }}
-            </p>
-          }
-        }
-      </div>
-    </section>
-
-    <section class="space-y-3" aria-labelledby="presence-privacy-heading">
-      <div class="space-y-1">
-        <h2 id="presence-privacy-heading" class="text-sm font-bold text-text-primary">
-          {{ 'settings.privacySection' | t }}
-        </h2>
-      </div>
-
-      <div class="rounded-card border border-surface-200 bg-surface-100 overflow-hidden shadow-sm">
-        @if (presencePrivacyResource.isLoading()) {
-          <p class="p-4 text-sm text-text-secondary" role="status">
-            {{ 'common.loading' | t }}
-          </p>
-        } @else if (presencePrivacyResource.error()) {
-          <div class="p-4 flex flex-col items-start gap-3" role="alert">
-            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
-            <button
-              hlmBtn
-              type="button"
-              variant="secondary"
-              size="touch"
-              (click)="retryPresencePrivacyLoad()"
-            >
-              {{ 'common.retry' | t }}
-            </button>
-          </div>
-        } @else {
-          <div
-            class="divide-y divide-surface-200"
-            [attr.aria-busy]="presencePrivacySaving() ? 'true' : null"
-          >
-            <label class="flex min-h-11 cursor-pointer items-center justify-between gap-4 p-4">
-              <span class="min-w-0 text-sm font-medium text-text-primary break-words">
-                {{ 'settings.hideOnlineStatus' | t }}
-              </span>
-              <hlm-checkbox
-                name="hideOnlineStatus"
-                class="size-5 shrink-0"
-                [checked]="hideOnlineStatus()"
-                [disabled]="presencePrivacySaving() !== null"
-                [aria-label]="'settings.hideOnlineStatus' | t"
-                (checkedChange)="updatePresencePrivacy('privacy_hide_online_status', $event)"
-              />
-            </label>
-            <label class="flex min-h-11 cursor-pointer items-center justify-between gap-4 p-4">
-              <span class="min-w-0 text-sm font-medium text-text-primary break-words">
-                {{ 'settings.hideVipStatus' | t }}
-              </span>
-              <hlm-checkbox
-                name="hideVipStatus"
-                class="size-5 shrink-0"
-                [checked]="hideVipStatus()"
-                [disabled]="presencePrivacySaving() !== null"
-                [aria-label]="'settings.hideVipStatus' | t"
-                (checkedChange)="updatePresencePrivacy('privacy_hide_vip_status', $event)"
-              />
-            </label>
-          </div>
-
-          @if (presencePrivacySaving()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-text-secondary" role="status">
-              {{ 'common.saving' | t }}
-            </p>
-          } @else if (presencePrivacySaveError()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-danger" role="alert">
-              {{ 'common.error_generic' | t }}
-            </p>
-          } @else if (presencePrivacySaveSuccess()) {
-            <p class="ps-4 pe-4 pb-3 text-xs text-success" role="status">
-              {{ 'notification_settings.saved_message' | t }}
-            </p>
-          }
-        }
-      </div>
-    </section>
 
     <!-- Hub Navigation Cards -->
     <div
@@ -209,7 +58,6 @@
           />
           <button
             hlmBtn
-            type="button"
             (click)="addMutedWord()"
             class="px-4 py-2 rounded-lg bg-primary text-on-fill text-sm font-medium hover:bg-primary/90 transition-colors"
             [attr.aria-label]="'privacy.hub.addMutedWord' | t"
@@ -231,7 +79,6 @@
                 <span class="text-sm text-text-primary">{{ word }}</span>
                 <button
                   hlmBtn
-                  type="button"
                   (click)="removeMutedWord(word)"
                   class="text-danger hover:text-danger/80 text-sm font-medium transition-colors"
                   [attr.aria-label]="'privacy.hub.removeMutedWordAria' | t: { word: word }"

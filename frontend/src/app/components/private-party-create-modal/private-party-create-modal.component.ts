@@ -85,22 +85,14 @@ export class PrivatePartyCreateModalComponent implements OnInit {
   friendSearchQuery = signal<string>('');
   friends = signal<FriendProfile[]>([]);
   isLoadingFriends = signal<boolean>(false);
-  friendsLoadError = signal<boolean>(false);
 
-  readonly isValid = computed(() => {
-    const selectedFriendIds = this.selectedFriendIds();
-    const availableFriendIds = new Set(this.friends().map((friend) => friend.id));
-
-    return (
+  readonly isValid = computed(
+    () =>
       this.title().trim().length > 0 &&
       this.languagePair().length > 0 &&
       this.topicTag().length > 0 &&
-      !this.isLoadingFriends() &&
-      !this.friendsLoadError() &&
-      selectedFriendIds.length > 0 &&
-      selectedFriendIds.every((id) => availableFriendIds.has(id))
-    );
-  });
+      this.selectedFriendIds().length > 0,
+  );
 
   readonly filteredFriends = computed(() => {
     const query = this.friendSearchQuery().toLowerCase().trim();
@@ -109,28 +101,18 @@ export class PrivatePartyCreateModalComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    void this.loadFriends();
-  }
-
-  async retryFriends(): Promise<void> {
-    await this.loadFriends();
+    this.loadFriends();
   }
 
   private async loadFriends(): Promise<void> {
     const currentUser = this.authService.currentUser();
     if (!currentUser?.id) return;
-
     this.isLoadingFriends.set(true);
-    this.friendsLoadError.set(false);
     try {
       const result = await this.userService.getFollowing(currentUser.id, 50, 0);
       this.friends.set(result.data);
-      const availableFriendIds = new Set(result.data.map((friend) => friend.id));
-      this.selectedFriendIds.update((ids) => ids.filter((id) => availableFriendIds.has(id)));
     } catch {
       this.friends.set([]);
-      this.selectedFriendIds.set([]);
-      this.friendsLoadError.set(true);
     } finally {
       this.isLoadingFriends.set(false);
     }
@@ -172,6 +154,5 @@ export class PrivatePartyCreateModalComponent implements OnInit {
     this.isVideoStream.set(false);
     this.selectedFriendIds.set([]);
     this.friendSearchQuery.set('');
-    this.friendsLoadError.set(false);
   }
 }

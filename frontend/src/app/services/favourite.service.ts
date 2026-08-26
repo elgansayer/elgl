@@ -9,10 +9,6 @@ export interface AddFavouriteDto {
   note_text?: string;
 }
 
-export interface FavouriteMutationResponse {
-  success: boolean;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -20,18 +16,12 @@ export class FavouriteService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/chat`;
 
-  addFavourite(dto: AddFavouriteDto): Promise<FavouriteMutationResponse> {
-    return firstValueFrom(
-      this.http.post<FavouriteMutationResponse>(`${this.baseUrl}/favourites`, dto),
-    );
+  addFavourite(dto: AddFavouriteDto): Promise<unknown> {
+    return firstValueFrom(this.http.post(`${this.baseUrl}/favourites`, dto));
   }
 
-  removeFavourite(favouriteId: string): Promise<FavouriteMutationResponse> {
-    return firstValueFrom(
-      this.http.delete<FavouriteMutationResponse>(
-        `${this.baseUrl}/favourites/${encodeURIComponent(favouriteId)}`,
-      ),
-    );
+  removeFavourite(favouriteId: string): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`${this.baseUrl}/favourites/${favouriteId}`));
   }
 
   getFavourites(): Promise<FavouriteRecord[]> {

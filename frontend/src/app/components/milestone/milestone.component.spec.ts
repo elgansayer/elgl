@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MilestoneComponent } from './milestone.component';
 import { MilestoneService, Milestone, MilestoneProgress } from '../../services/milestone.service';
 
@@ -23,7 +23,7 @@ describe('MilestoneComponent', () => {
   };
 
   const mockMilestones: Milestone[] = [
-    { id: '1', title: 'Complete 10 flashcards', description: 'Keep a steady pace', completed: false },
+    { id: '1', title: 'Complete 10 flashcards', completed: false },
   ];
   const mockProgress: MilestoneProgress = { total: 1, completed: 0, percentage: 0 };
 
@@ -55,19 +55,14 @@ describe('MilestoneComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  async function renderLoadedState(): Promise<HTMLElement> {
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
-  }
-
   it('should create the component', () => {
     expect(component).toBeTruthy();
   });
 
   it('loads milestones and progress on init', async () => {
-    await renderLoadedState();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     expect(serviceMock.getMilestones).toHaveBeenCalledTimes(1);
     expect(serviceMock.getProgress).toHaveBeenCalledTimes(1);
@@ -76,41 +71,12 @@ describe('MilestoneComponent', () => {
   });
 
   it('renders the milestone list', async () => {
-    const element = await renderLoadedState();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
+    const element: HTMLElement = fixture.nativeElement;
     expect(element.textContent).toContain('Complete 10 flashcards');
-    expect(element.textContent).toContain('Keep a steady pace');
-  });
-
-  it('uses Relay card, radius and surface roles without generic rounded utilities', async () => {
-    const element = await renderLoadedState();
-    const progressbar = element.querySelector<HTMLElement>('[role="progressbar"]');
-    const card = element.querySelector<HTMLElement>('article');
-    const inputs = Array.from(element.querySelectorAll<HTMLElement>('input'));
-
-    expect(progressbar?.classList.contains('rounded-pill')).toBe(true);
-    expect(progressbar?.classList.contains('rounded-full')).toBe(false);
-    expect(card?.classList.contains('rounded-card')).toBe(true);
-    expect(card?.classList.contains('bg-surface-200')).toBe(true);
-    expect(card?.classList.contains('shadow-card')).toBe(true);
-    expect(inputs).toHaveLength(2);
-    expect(inputs.every((input) => input.classList.contains('rounded-app'))).toBe(true);
-    expect(element.innerHTML).not.toContain('rounded-lg');
-    expect(element.innerHTML).not.toContain('rounded-md');
-  });
-
-  it('keeps primary actions touch-sized and responsive', async () => {
-    const element = await renderLoadedState();
-    const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>('button'));
-    const submit = element.querySelector<HTMLButtonElement>('button[type="submit"]');
-    const milestoneCard = element.querySelector<HTMLElement>('article > div');
-
-    expect(buttons.length).toBeGreaterThanOrEqual(3);
-    expect(buttons.every((button) => button.classList.contains('min-h-11'))).toBe(true);
-    expect(submit?.classList.contains('w-full')).toBe(true);
-    expect(submit?.classList.contains('sm:w-fit')).toBe(true);
-    expect(milestoneCard?.classList.contains('flex-col')).toBe(true);
-    expect(milestoneCard?.classList.contains('sm:flex-row')).toBe(true);
   });
 
   it('does not submit when the title is blank', async () => {

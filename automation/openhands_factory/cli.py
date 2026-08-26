@@ -222,9 +222,9 @@ def main(arguments: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "daemon":
-            from openhands_factory.gated_daemon import MainCiGatedFactoryDaemon
+            from openhands_factory.daemon import FactoryDaemon
 
-            return MainCiGatedFactoryDaemon(config).run()
+            return FactoryDaemon(config).run()
         if args.command in {"pause", "resume"}:
             from openhands_factory.daemon import set_paused
 

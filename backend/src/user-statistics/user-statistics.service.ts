@@ -41,6 +41,7 @@ export class UserStatisticsService {
     if (query?.toDate) {
       momentQuery = momentQuery.lte('created_at', query.toDate);
     }
+    const { count: totalMoments } = await momentQuery;
 
     // Comments authored
     let commentQuery = this.supabase
@@ -53,6 +54,7 @@ export class UserStatisticsService {
     if (query?.toDate) {
       commentQuery = commentQuery.lte('created_at', query.toDate);
     }
+    const { count: totalComments } = await commentQuery;
 
     // Likes received on user's moments
     let momentIdsQuery = this.supabase
@@ -65,31 +67,7 @@ export class UserStatisticsService {
     if (query?.toDate) {
       momentIdsQuery = momentIdsQuery.lte('created_at', query.toDate);
     }
-
-    // Profile visits
-    let visitQuery = this.supabase
-      .from('profile_visits')
-      .select('id', { count: 'exact', head: true })
-      .eq('viewed_id', userId);
-    if (query?.fromDate) {
-      visitQuery = visitQuery.gte('created_at', query.fromDate);
-    }
-    if (query?.toDate) {
-      visitQuery = visitQuery.lte('created_at', query.toDate);
-    }
-
-    const [
-      { count: totalMoments },
-      { count: totalComments },
-      { data: momentIds, error: momentIdsError },
-      { count: totalProfileVisits },
-    ] = await Promise.all([
-      momentQuery,
-      commentQuery,
-      momentIdsQuery,
-      visitQuery,
-    ]);
-
+    const { data: momentIds, error: momentIdsError } = await momentIdsQuery;
     if (momentIdsError) {
       throw new NotFoundException('Could not load moments');
     }
@@ -103,6 +81,19 @@ export class UserStatisticsService {
         .in('moment_id', ids);
       likesReceived = totalLikes ?? 0;
     }
+
+    // Profile visits
+    let visitQuery = this.supabase
+      .from('profile_visits')
+      .select('id', { count: 'exact', head: true })
+      .eq('viewed_id', userId);
+    if (query?.fromDate) {
+      visitQuery = visitQuery.gte('created_at', query.fromDate);
+    }
+    if (query?.toDate) {
+      visitQuery = visitQuery.lte('created_at', query.toDate);
+    }
+    const { count: totalProfileVisits } = await visitQuery;
 
     return {
       studyStreakDays,

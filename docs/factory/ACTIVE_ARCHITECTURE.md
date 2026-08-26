@@ -85,7 +85,6 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 | `provider_capacity.py`       | Generation-aware cross-process provider leases                                            |
 | `conversation_runner.py`     | OpenHands SDK compatibility transport and inner-provider attribution                      |
 | `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority                     |
-| `task_source.py`            | Logical task claims, worker CAS leases and canonical branch/PR provenance                |
 | `git_workflow.py`            | Worktree, branch, commit, push, and recovery archive safety                               |
 | `review_report.py`           | Authoritative `.factory-review.json` schema and acceptance validation                     |
 | `architect_report.py`        | Authoritative `.factory-architect.json` schema                                            |
@@ -99,8 +98,6 @@ last-known-good backup:
 
 - `jobs.json`: state, branch, PR, reviewed SHA, attempts, retry evidence, findings, and the latest 500 provider
   provenance entries per job;
-- `leases.json`: persistent logical claims plus expiring worker ownership, canonical branch/PR identity, base and
-  verified SHAs, predecessor/successor links, path and failure fingerprints;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
 - `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
@@ -122,9 +119,6 @@ stopped. Stale generation leases are ignored. Malformed, timezone-naive, future-
 task leases are bounded or discarded rather than suppressing work indefinitely. Task-lease and `jobs.json`
 read-modify-write operations use cross-process locks. The watchdog recovers old execution states through the
 normal timeout class and deterministic retry policy while leaving live futures and polling-only states untouched.
-Released task leases retain canonical claim history. Before branch creation, Factory reconciles open and recently
-closed PRs using issue links, logical titles, branch metadata, changed paths and explicit supersession links. See
-[TASK-OWNERSHIP.md](TASK-OWNERSHIP.md).
 
 A repeated identical task-side failure opens a durable, recoverable quarantine after
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds

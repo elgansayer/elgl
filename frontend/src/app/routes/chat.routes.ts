@@ -13,8 +13,9 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'chat-settings',
-    redirectTo: 'settings/chat',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../pages/chat-settings/chat-settings.component').then((m) => m.ChatSettingsComponent),
+    title: 'Chat Settings - HelloTalk',
   },
   {
     path: 'groups',
@@ -26,13 +27,17 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'groups/create',
-    redirectTo: 'community/groups/create',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
   },
   {
     path: 'communities',
-    redirectTo: 'community',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../components/communities/communities.component').then((m) => m.CommunitiesComponent),
+    title: 'Communities - HelloTalk',
   },
   {
     path: 'join',
@@ -48,12 +53,18 @@ export const chatRoutes: Routes = [
   },
   {
     path: 'message-filters',
-    redirectTo: 'settings/message-filters',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../pages/settings/message-filter-settings/message-filter-settings.component').then(
+        (m) => m.MessageFilterSettingsComponent,
+      ),
+    title: 'Message Filter Settings - HelloTalk',
   },
   {
     path: 'blocks',
-    redirectTo: 'settings/blocks',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Block Management - HelloTalk',
   },
 ];

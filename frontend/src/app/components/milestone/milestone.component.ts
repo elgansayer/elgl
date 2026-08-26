@@ -10,16 +10,16 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
   selector: 'app-milestone',
   imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
-    <section class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
-      <h2 class="text-xl font-bold text-text-primary sm:text-2xl">{{ 'milestones.title' | t }}</h2>
+    <div class="p-4">
+      <h2 class="text-xl font-bold text-text-primary">{{ 'milestones.title' | t }}</h2>
 
-      <div class="mt-4 rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card sm:p-5">
-        <div class="mb-1 flex items-center justify-between gap-3 text-sm">
+      <div class="mt-4">
+        <div class="flex items-center justify-between text-sm mb-1">
           <span class="text-text-secondary">{{ 'milestones.progress' | t }}</span>
           <span class="font-semibold text-text-primary">{{ progress().percentage }}%</span>
         </div>
         <div
-          class="h-2 w-full overflow-hidden rounded-pill bg-surface-100"
+          class="h-2 w-full rounded-full bg-surface-200 overflow-hidden"
           role="progressbar"
           [attr.aria-valuenow]="progress().percentage"
           aria-valuemin="0"
@@ -27,111 +27,100 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           [attr.aria-label]="'milestones.progress' | t"
         >
           <div
-            class="h-full bg-primary transition-[width] motion-reduce:transition-none"
+            class="h-full bg-primary transition-all"
             [style.width.%]="progress().percentage"
           ></div>
         </div>
       </div>
 
-      <form
-        class="mt-6 grid gap-3 rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card sm:p-5"
-        (submit)="addMilestone($event)"
-      >
-        <label class="min-w-0">
-          <span class="block text-sm font-medium text-text-secondary">
+      <form class="mt-6 space-y-2" (submit)="addMilestone($event)">
+        <div>
+          <label for="milestone-title" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.titleLabel' | t }}
-          </span>
+          </label>
           <input
             hlmInput
+            id="milestone-title"
             type="text"
             required
             [value]="newTitle()"
             (input)="newTitle.set($any($event.target).value)"
             [attr.placeholder]="'milestones.titlePlaceholder' | t"
-            class="mt-1 w-full min-w-0 rounded-app border border-surface-100 bg-surface-300 p-2 text-text-primary"
+            class="mt-1 w-full ps-3 pe-3 py-2 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           />
-        </label>
-        <label class="min-w-0">
-          <span class="block text-sm font-medium text-text-secondary">
+        </div>
+        <div>
+          <label for="milestone-description" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.descriptionLabel' | t }}
-          </span>
+          </label>
           <input
             hlmInput
+            id="milestone-description"
             type="text"
             [value]="newDescription()"
             (input)="newDescription.set($any($event.target).value)"
             [attr.placeholder]="'common.optional' | t"
-            class="mt-1 w-full min-w-0 rounded-app border border-surface-100 bg-surface-300 p-2 text-text-primary"
+            class="mt-1 w-full ps-3 pe-3 py-2 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           />
-        </label>
+        </div>
         <button
           hlmBtn
-          size="touch"
           type="submit"
           [disabled]="!newTitle().trim() || creating()"
-          class="min-h-11 w-full rounded-app bg-primary text-on-fill transition-colors hover:bg-primary/90 sm:w-fit"
+          class="px-4 py-2 bg-primary text-on-fill rounded-lg text-sm font-semibold disabled:opacity-50"
         >
           {{ 'milestones.addBtn' | t }}
         </button>
       </form>
 
       @if (milestonesData.isLoading()) {
-        <p class="mt-4 text-text-secondary" role="status">{{ 'common.loading' | t }}</p>
+        <p class="mt-4 text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (milestonesData.error()) {
-        <p class="mt-4 text-danger" role="alert">{{ 'common.loadError' | t }}</p>
+        <p class="mt-4 text-danger">{{ 'common.loadError' | t }}</p>
       } @else {
-        <div class="mt-4 grid gap-3">
+        <div class="mt-4">
           @for (ms of milestones(); track ms.id) {
-            <article
-              class="min-w-0 rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card sm:p-5"
-            >
-              <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div class="min-w-0">
-                  <p class="break-words font-medium text-text-primary" [class.line-through]="ms.completed">
-                    {{ ms.title }}
-                  </p>
-                  @if (ms.description) {
-                    <p class="mt-1 break-words text-sm text-text-secondary">{{ ms.description }}</p>
-                  }
-                </div>
-                <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-                  @if (!ms.completed) {
-                    <button
-                      hlmBtn
-                      size="touch"
-                      type="button"
-                      (click)="complete(ms.id)"
-                      [attr.aria-label]="'milestones.completeBtn' | t"
-                      class="min-h-11 w-full rounded-app bg-primary text-on-fill sm:w-auto"
-                    >
-                      {{ 'milestones.completeBtn' | t }}
-                    </button>
-                  } @else {
-                    <span class="self-center text-success" aria-hidden="true">&check;</span>
-                    <span class="sr-only">{{ 'milestones.completedStatus' | t }}</span>
-                  }
+            <div class="my-2 p-3 bg-surface-200 rounded-lg flex items-center justify-between gap-3">
+              <div>
+                <p class="font-medium text-text-primary" [class.line-through]="ms.completed">
+                  {{ ms.title }}
+                </p>
+                @if (ms.description) {
+                  <p class="text-sm text-text-secondary">{{ ms.description }}</p>
+                }
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                @if (!ms.completed) {
                   <button
                     hlmBtn
-                    size="touch"
-                    variant="outline"
                     type="button"
-                    (click)="remove(ms.id)"
-                    [attr.aria-label]="'milestones.removeBtn' | t"
-                    class="min-h-11 w-full text-danger sm:w-auto"
+                    (click)="complete(ms.id)"
+                    [attr.aria-label]="'milestones.completeBtn' | t"
+                    class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md"
                   >
-                    {{ 'milestones.removeBtn' | t }}
+                    {{ 'milestones.completeBtn' | t }}
                   </button>
-                </div>
+                } @else {
+                  <span class="text-success" aria-hidden="true">&check;</span>
+                  <span class="sr-only">{{ 'milestones.completedStatus' | t }}</span>
+                }
+                <button
+                  hlmBtn
+                  type="button"
+                  (click)="remove(ms.id)"
+                  [attr.aria-label]="'milestones.removeBtn' | t"
+                  class="px-3 py-1 text-sm text-danger hover:text-danger/80"
+                >
+                  {{ 'milestones.removeBtn' | t }}
+                </button>
               </div>
-            </article>
-          } @empty {
-            <div class="rounded-card border border-surface-100 bg-surface-200 p-4 text-text-secondary shadow-card sm:p-5">
-              {{ 'milestones.empty' | t }}
             </div>
+          } @empty {
+            <p class="text-text-secondary">{{ 'milestones.empty' | t }}</p>
           }
         </div>
       }
-    </section>
+    </div>
   `,
 })
 export class MilestoneComponent {

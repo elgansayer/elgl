@@ -1,15 +1,8 @@
-import {
-  Controller,
-  Get,
-  GoneException,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import type { User } from '@supabase/supabase-js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { LinkedAccountsService } from './linked-accounts.service';
+import type { Request } from 'express';
 
 @Controller('users/me/linked-accounts')
 @UseGuards(SupabaseAuthGuard)
@@ -17,25 +10,31 @@ export class LinkedAccountsController {
   constructor(private readonly linkedAccountsService: LinkedAccountsService) {}
 
   @Get()
-  async getLinkedAccounts(@CurrentUser() user: User) {
-    return this.linkedAccountsService.getLinkedAccounts(user.id);
+  async getLinkedAccounts(@Req() req: Request) {
+    const userId = (req as any).user?.id;
+    return this.linkedAccountsService.getLinkedAccounts(userId);
   }
 
-  /**
-   * Kept temporarily for mixed-version clients. OAuth identity linking requires
-   * the authenticated browser session so the user can complete the provider
-   * redirect. Never write a shadow "linked" record on the server.
-   */
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('link')
-  linkAccount(): never {
-    throw new GoneException('Use the authenticated identity-linking flow');
+  async linkAccount(
+    @Req() req: Request,
+    @Body() body: { provider: string; name?: string },
+  ) {
+    const userId = (req as any).user?.id;
+    await this.linkedAccountsService.linkAccount(
+      userId,
+      body.provider,
+      body.name,
+    );
+    return { success: true };
   }
 
-  /** See linkAccount. Identity unlinking is also session-bound in Supabase Auth. */
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('unlink')
-  unlinkAccount(): never {
-    throw new GoneException('Use the authenticated identity-linking flow');
+  async unlinkAccount(@Req() req: Request, @Body() body: { provider: string }) {
+    const userId = (req as any).user?.id;
+    await this.linkedAccountsService.unlinkAccount(userId, body.provider);
+    return { success: true };
   }
 }

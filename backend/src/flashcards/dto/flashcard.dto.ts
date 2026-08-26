@@ -3,24 +3,18 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-
-function trimString({ value }: { value: unknown }): unknown {
-  return typeof value === 'string' ? value.trim() : value;
-}
+import { Type } from 'class-transformer';
 
 export class CreateFlashcardDto {
   @ApiProperty({
     description: 'The word token to learn (lowercase, trimmed)',
     example: 'bonjour',
   })
-  @Transform(trimString)
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
@@ -31,7 +25,6 @@ export class CreateFlashcardDto {
     example: 'Je dis bonjour a mon voisin chaque matin.',
   })
   @IsOptional()
-  @Transform(trimString)
   @IsString()
   @MaxLength(1000)
   original_context?: string;
@@ -41,7 +34,6 @@ export class CreateFlashcardDto {
       "Translation of the word token into the user's native language",
     example: 'hello',
   })
-  @Transform(trimString)
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
@@ -52,23 +44,16 @@ export class CreateFlashcardDto {
     example: 'Used as a greeting when meeting someone.',
   })
   @IsOptional()
-  @Transform(trimString)
   @IsString()
   @MaxLength(1000)
   definition?: string;
 
   @ApiPropertyOptional({
-    description: 'HTTP(S) URL to an audio pronunciation clip',
+    description: 'URL to an audio pronunciation clip (Cloudflare R2)',
     example: 'https://r2.example.com/pronunciation/bonjour.mp3',
   })
   @IsOptional()
-  @Transform(trimString)
   @IsString()
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-    require_valid_protocol: true,
-  })
   @MaxLength(2000)
   pronunciation_url?: string;
 }

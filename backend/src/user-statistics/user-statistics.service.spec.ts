@@ -58,6 +58,7 @@ describe('UserStatisticsService', () => {
       });
       const likeCountBuilder = createQueryBuilder({ count: 9 });
       const visitCountBuilder = createQueryBuilder({ count: 4 });
+
       let momentsCalls = 0;
       mockClient.from.mockImplementation((table: string) => {
         if (table === 'users') return userBuilder;
@@ -182,7 +183,6 @@ describe('UserStatisticsService', () => {
         data: null,
         error: { message: 'moment ids failed' },
       });
-      const visitCountBuilder = createQueryBuilder({ count: 0 });
 
       let momentsCalls = 0;
       mockClient.from.mockImplementation((table: string) => {
@@ -194,7 +194,6 @@ describe('UserStatisticsService', () => {
             : failingMomentIdsBuilder;
         }
         if (table === 'moment_comments') return commentCountBuilder;
-        if (table === 'profile_visits') return visitCountBuilder;
         throw new Error(`Unexpected table: ${table}`);
       });
 

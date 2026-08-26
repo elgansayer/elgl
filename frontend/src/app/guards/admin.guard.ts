@@ -12,14 +12,9 @@ export const adminGuard: CanActivateFn = async () => {
   const adminService = inject(AdminService);
   const router = inject(Router);
 
-  try {
-    const isAdmin = await adminService.checkAdminAccess();
-    if (isAdmin) {
-      return true;
-    }
-  } catch {
-    // The service currently resolves false for authorization/provider failures,
-    // but the route boundary must remain fail-closed if that contract changes.
+  const isAdmin = await adminService.checkAdminAccess();
+  if (isAdmin) {
+    return true;
   }
 
   return router.parseUrl('/discovery');
