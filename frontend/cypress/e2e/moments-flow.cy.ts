@@ -1,5 +1,8 @@
-const avatarDataUrl =
-  'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+const avatarDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+const normaliseText = (value: string): string => value.replace(/\s+/g, '');
+const renderedTokenText = (tokens: JQuery<HTMLElement>): string =>
+  normaliseText([...tokens].map((token) => token.textContent ?? '').join(''));
 
 const baseMoment = {
   id: 'moment-1',
@@ -43,6 +46,15 @@ describe('Moments Flow (Mocked)', () => {
       statusCode: 200,
       body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
     }).as('dailyCheckIn');
+
+    // These product-flow tests do not run a Centrifugo server. Model a
+    // temporary rate limit so the app exercises its supported degraded path
+    // without treating absent test infrastructure as an application crash.
+    cy.intercept('POST', '**/api/chat/token', {
+      statusCode: 429,
+      headers: { 'retry-after': '30' },
+      body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
+    }).as('centrifugoUnavailable');
 
     cy.intercept('GET', '**/api/moments/feed*', (req) => {
       const filter = new URL(req.url).searchParams.get('filter');
@@ -97,19 +109,25 @@ describe('Moments Flow (Mocked)', () => {
   it('loads the feed and switches to the Following filter', () => {
     cy.visit('/moments');
 
-    cy.wait('@getMomentsFeed')
-      .its('request.url')
-      .should('include', 'filter=All');
+    cy.wait('@getMomentsFeed').its('request.url').should('include', 'filter=All');
     cy.get('article').should('have.length', 1);
     cy.contains('Aiko Test').should('be.visible');
-    cy.contains('今日は日本語を勉強しています。').should('be.visible');
+    cy.contains('article h3', 'Aiko Test')
+      .closest('article')
+      .find('app-tokenised-text > div[dir="auto"] > span')
+      .then(($tokens) => {
+        expect(renderedTokenText($tokens)).to.equal(normaliseText(baseMoment.text_content));
+      });
 
     cy.get('button[role="radio"][aria-label="Following"]').click();
-    cy.wait('@getMomentsFeed')
-      .its('request.url')
-      .should('include', 'filter=Following');
+    cy.wait('@getMomentsFeed').its('request.url').should('include', 'filter=Following');
     cy.contains('Following Partner').should('be.visible');
-    cy.contains('Following feed moment').should('be.visible');
+    cy.contains('article h3', 'Following Partner')
+      .closest('article')
+      .find('app-tokenised-text > div[dir="auto"] > span')
+      .then(($tokens) => {
+        expect(renderedTokenText($tokens)).to.equal(normaliseText(followingMoment.text_content));
+      });
     cy.contains('Aiko Test').should('not.exist');
   });
 
@@ -119,9 +137,9 @@ describe('Moments Flow (Mocked)', () => {
     cy.visit('/moments');
     cy.wait('@getMomentsFeed');
 
-    cy.get('header button').last().click();
+    cy.get('header button:not([role="radio"])').click();
     cy.get('textarea').should('be.visible').type(text);
-    cy.contains('button', /^Post$/i).should('be.enabled').click();
+    cy.get('textarea').closest('section').find('button').last().should('be.enabled').click();
 
     cy.wait('@grammarCheck').then(({ request: grammarRequest }) => {
       expect(grammarRequest.body.text).to.equal(text);
@@ -137,7 +155,9 @@ describe('Moments Flow (Mocked)', () => {
       });
     });
 
-    cy.contains(text).should('be.visible');
+    cy.get('article app-tokenised-text > div[dir="auto"] > span').then(($tokens) => {
+      expect(renderedTokenText($tokens)).to.contain(normaliseText(text));
+    });
     cy.get('textarea').should('not.exist');
   });
 
