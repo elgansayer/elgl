@@ -22,7 +22,10 @@ describe('ChatTypingService', () => {
     error: null,
   });
   const profileBuilder = createBuilder({
-    data: { display_name: ' Alice ', avatar_url: 'https://example.com/alice.png' },
+    data: {
+      display_name: ' Alice ',
+      avatar_url: 'https://example.com/alice.png',
+    },
     error: null,
   });
   const supabaseClient = {
@@ -47,7 +50,10 @@ describe('ChatTypingService', () => {
       error: null,
     });
     profileBuilder.maybeSingle.mockResolvedValue({
-      data: { display_name: ' Alice ', avatar_url: 'https://example.com/alice.png' },
+      data: {
+        display_name: ' Alice ',
+        avatar_url: 'https://example.com/alice.png',
+      },
       error: null,
     });
     centrifugoService.publish.mockResolvedValue(undefined);
@@ -64,18 +70,28 @@ describe('ChatTypingService', () => {
 
     expect(supabaseClient.from).toHaveBeenCalledWith('chat_room_members');
     expect(membershipBuilder.eq).toHaveBeenNthCalledWith(1, 'room_id', roomId);
-    expect(membershipBuilder.eq).toHaveBeenNthCalledWith(2, 'user_id', 'user-1');
-    expect(centrifugoService.publish).toHaveBeenCalledWith(`chat:${roomId}:typing`, {
-      userId: 'user-1',
-      displayName: 'Alice',
-      avatarUrl: 'https://example.com/alice.png',
-      typing: true,
-      timestamp: 1_777_000_000_000,
-    });
+    expect(membershipBuilder.eq).toHaveBeenNthCalledWith(
+      2,
+      'user_id',
+      'user-1',
+    );
+    expect(centrifugoService.publish).toHaveBeenCalledWith(
+      `chat:${roomId}:typing`,
+      {
+        userId: 'user-1',
+        displayName: 'Alice',
+        avatarUrl: 'https://example.com/alice.png',
+        typing: true,
+        timestamp: 1_777_000_000_000,
+      },
+    );
   });
 
   it('rejects users who are not members of the requested room', async () => {
-    membershipBuilder.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    membershipBuilder.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: null,
+    });
 
     await expect(
       service.publish('user-1', { room_id: roomId, is_typing: true }),
@@ -131,10 +147,14 @@ describe('ChatTypingService', () => {
   });
 
   it('returns a stable service-unavailable failure when realtime publish fails', async () => {
-    centrifugoService.publish.mockRejectedValueOnce(new Error('secret provider detail'));
+    centrifugoService.publish.mockRejectedValueOnce(
+      new Error('secret provider detail'),
+    );
 
     await expect(
       service.publish('user-1', { room_id: roomId, is_typing: true }),
-    ).rejects.toEqual(new ServiceUnavailableException('Typing presence is unavailable.'));
+    ).rejects.toEqual(
+      new ServiceUnavailableException('Typing presence is unavailable.'),
+    );
   });
 });
