@@ -24,12 +24,20 @@ export class ChatTypingService {
 
   async publish(userId: string, dto: PublishTypingDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const membership = await supabase
-      .from('chat_room_members')
-      .select('user_id')
-      .eq('room_id', dto.room_id)
-      .eq('user_id', userId)
-      .maybeSingle();
+    const membership = await (async () => {
+      try {
+        return await supabase
+          .from('chat_room_members')
+          .select('user_id')
+          .eq('room_id', dto.room_id)
+          .eq('user_id', userId)
+          .maybeSingle();
+      } catch {
+        throw new ServiceUnavailableException(
+          'Typing presence is unavailable.',
+        );
+      }
+    })();
 
     if (membership.error) {
       throw new ServiceUnavailableException('Typing presence is unavailable.');
@@ -38,15 +46,22 @@ export class ChatTypingService {
       throw new ForbiddenException('You are not a member of this chat room.');
     }
 
-    const profileResult = await supabase
-      .from('users')
-      .select('display_name, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
+    const profileResult = await (async () => {
+      try {
+        return await supabase
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('id', userId)
+          .maybeSingle();
+      } catch {
+        return null;
+      }
+    })();
 
-    const profile = profileResult.error
-      ? null
-      : (profileResult.data as TypingProfile | null);
+    const profile =
+      !profileResult || profileResult.error
+        ? null
+        : (profileResult.data as TypingProfile | null);
     const displayName = this.sanitizeDisplayName(profile?.display_name);
     const avatarUrl = this.sanitizeAvatarUrl(profile?.avatar_url);
 
