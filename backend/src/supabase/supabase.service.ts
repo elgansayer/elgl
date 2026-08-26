@@ -2184,6 +2184,17 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      claim_daily_checkin_reward: {
+        Args: {
+          p_user_id: string;
+          p_reward: number;
+        };
+        Returns: {
+          claimed: boolean;
+          coins_rewarded: number;
+          new_balance: number;
+        }[];
+      };
       increment_xp: {
         Args: { user_id: string; amount: number };
         Returns: void;
