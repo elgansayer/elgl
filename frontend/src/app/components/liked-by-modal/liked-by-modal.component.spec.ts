@@ -15,8 +15,8 @@ function flushRequest(httpTesting: HttpTestingController, users: LikedUser[] = [
   httpTesting.expectOne('/api/moments/moment-123/likes').flush(users);
 }
 
-function getDialog(component: LikedByModalComponent): HTMLElement {
-  const title = document.getElementById(component.dialogTitleId);
+function getDialog(): HTMLElement {
+  const title = document.body.querySelector<HTMLElement>('[data-testid="liked-by-title"]');
   const dialog = title?.closest<HTMLElement>('[role="dialog"]');
   if (!dialog) {
     throw new Error('Expected the Liked By dialog to be rendered in the document overlay');
@@ -53,13 +53,10 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component).toBeTruthy();
-    expect(component.dialogTitleId).toMatch(
-      /^liked-by-title-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
-
-    const dialog = getDialog(component);
-    expect(dialog.getAttribute('aria-labelledby')).toBe(component.dialogTitleId);
-    expect(dialog.querySelector(`#${component.dialogTitleId}`)).toBeTruthy();
+    const dialog = getDialog();
+    const titleId = dialog.getAttribute('aria-labelledby');
+    expect(titleId).toMatch(/^brn-dialog-title-\d+$/);
+    expect(dialog.querySelector(`#${titleId}`)?.getAttribute('data-testid')).toBe('liked-by-title');
     flushRequest(httpTesting);
   });
 
@@ -67,7 +64,7 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.isLoading()).toBe(true);
-    expect(getDialog(component).querySelector('[role="progressbar"]')).toBeTruthy();
+    expect(getDialog().querySelector('[role="progressbar"]')).toBeTruthy();
     flushRequest(httpTesting);
   });
 
@@ -94,7 +91,7 @@ describe('LikedByModalComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const dialog = getDialog(component);
+    const dialog = getDialog();
     const rows = dialog.querySelectorAll('li');
     expect(rows.length).toBe(2);
     expect(dialog.textContent).toContain('Alice');
@@ -117,7 +114,7 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.value()).toEqual([]);
-    const dialog = getDialog(component);
+    const dialog = getDialog();
     expect(dialog.querySelectorAll('li').length).toBe(1);
     expect(dialog.textContent).toContain('No likes yet');
   });
@@ -131,7 +128,7 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.error()).toBeTruthy();
-    const dialog = getDialog(component);
+    const dialog = getDialog();
     expect(dialog.querySelector('[role="alert"]')).toBeTruthy();
 
     const retry = dialog.querySelector<HTMLButtonElement>('[data-testid="liked-by-retry"]');
@@ -157,7 +154,7 @@ describe('LikedByModalComponent', () => {
 
     const closeSpy = vi.fn();
     const subscription = component.closeModal.subscribe(closeSpy);
-    const closeButton = getDialog(component).querySelector<HTMLButtonElement>(
+    const closeButton = getDialog().querySelector<HTMLButtonElement>(
       '[data-testid="liked-by-close"]',
     );
 
