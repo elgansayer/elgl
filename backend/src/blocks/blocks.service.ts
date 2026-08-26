@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -27,7 +31,10 @@ export class BlocksService {
     offset = 0,
   ): Promise<BlockedUserSummary[]> {
     const client = this.supabaseService.getClient();
-    const safeLimit = Math.min(Math.max(Math.trunc(limit) || MAX_BLOCKS_PAGE_SIZE, 1), MAX_BLOCKS_PAGE_SIZE);
+    const safeLimit = Math.min(
+      Math.max(Math.trunc(limit) || MAX_BLOCKS_PAGE_SIZE, 1),
+      MAX_BLOCKS_PAGE_SIZE,
+    );
     const safeOffset = Math.max(Math.trunc(offset) || 0, 0);
 
     const { data: blockedRows, error: blockError } = await client
@@ -44,7 +51,9 @@ export class BlocksService {
 
     const blockedIds: string[] = (blockedRows ?? [])
       .map((row: { blocked_id?: unknown }) => row.blocked_id)
-      .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+      .filter(
+        (id: unknown): id is string => typeof id === 'string' && id.length > 0,
+      );
 
     if (blockedIds.length === 0) {
       return [];
@@ -80,10 +89,12 @@ export class BlocksService {
     }
 
     const client = this.supabaseService.getClient();
-    const { error } = await client.from('blocks').upsert(
-      { blocker_id: blockerId, blocked_id: blockedId },
-      { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
-    );
+    const { error } = await client
+      .from('blocks')
+      .upsert(
+        { blocker_id: blockerId, blocked_id: blockedId },
+        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true },
+      );
 
     if (error) {
       this.logger.warn('Block creation failed');

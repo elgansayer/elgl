@@ -63,7 +63,9 @@ describe('BlocksService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocked_id');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
+        ascending: false,
+      });
       expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 99);
       expect(result).toEqual([]);
     });
@@ -114,7 +116,10 @@ describe('BlocksService', () => {
       const result = await service.getBlockedUsers('user-1', 25, 50);
 
       expect(blocksBuilder.range).toHaveBeenCalledWith(50, 74);
-      expect(usersBuilder.in).toHaveBeenCalledWith('id', ['blocked-2', 'blocked-1']);
+      expect(usersBuilder.in).toHaveBeenCalledWith('id', [
+        'blocked-2',
+        'blocked-1',
+      ]);
       expect(result.map((user) => user.id)).toEqual(['blocked-2', 'blocked-1']);
     });
 
@@ -127,12 +132,17 @@ describe('BlocksService', () => {
     });
 
     it('fails with a sanitised error when either database query fails', async () => {
-      mockQueryBuilder._response = { data: null, error: { message: 'private database detail' } };
+      mockQueryBuilder._response = {
+        data: null,
+        error: { message: 'private database detail' },
+      };
 
       await expect(service.getBlockedUsers('user-1')).rejects.toBeInstanceOf(
         InternalServerErrorException,
       );
-      await expect(service.getBlockedUsers('user-1')).rejects.toThrow('Unable to load blocked users');
+      await expect(service.getBlockedUsers('user-1')).rejects.toThrow(
+        'Unable to load blocked users',
+      );
     });
   });
 
@@ -150,7 +160,9 @@ describe('BlocksService', () => {
     });
 
     it('rejects self-blocking without touching persistence', async () => {
-      expect(await service.blockUser('user-1', 'user-1')).toEqual({ success: false });
+      expect(await service.blockUser('user-1', 'user-1')).toEqual({
+        success: false,
+      });
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
   });
@@ -171,11 +183,13 @@ describe('BlocksService', () => {
     });
 
     it('does not expose database error details when delete fails', async () => {
-      mockQueryBuilder._response = { error: { message: 'delete failed: private detail' } };
+      mockQueryBuilder._response = {
+        error: { message: 'delete failed: private detail' },
+      };
 
-      await expect(service.unblockUser('user-1', 'blocked-user')).rejects.toThrow(
-        'Unable to update block state',
-      );
+      await expect(
+        service.unblockUser('user-1', 'blocked-user'),
+      ).rejects.toThrow('Unable to update block state');
       expect(mockMetricsService.recordTsBlockRemoved).not.toHaveBeenCalled();
     });
   });

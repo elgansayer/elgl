@@ -63,7 +63,9 @@ describe('BlocksController', () => {
     vi.mocked(service.blockUser).mockResolvedValue({ success: true });
 
     await expect(
-      controller.blockUser({ id: 'user-1' } as any, { blocked_id: ' blocked-2 ' }),
+      controller.blockUser({ id: 'user-1' } as any, {
+        blocked_id: ' blocked-2 ',
+      }),
     ).resolves.toEqual({ success: true });
     expect(service.blockUser).toHaveBeenCalledWith('user-1', 'blocked-2');
   });
@@ -81,19 +83,24 @@ describe('BlocksController', () => {
   it('unblocks a validated target', async () => {
     vi.mocked(service.unblockUser).mockResolvedValue({ success: true });
 
-    const result = await controller.unblockUser({ id: 'user-1' } as any, ' blocked-2 ');
+    const result = await controller.unblockUser(
+      { id: 'user-1' } as any,
+      ' blocked-2 ',
+    );
 
     expect(result).toEqual({ success: true });
     expect(service.unblockUser).toHaveBeenCalledWith('user-1', 'blocked-2');
   });
 
   it('requires authentication for all block-management operations', async () => {
-    await expect(controller.getBlockedUsers(null)).rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(controller.blockUser(null, { blocked_id: 'blocked-2' })).rejects.toBeInstanceOf(
+    await expect(controller.getBlockedUsers(null)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-    await expect(controller.unblockUser(null, 'blocked-2')).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.blockUser(null, { blocked_id: 'blocked-2' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      controller.unblockUser(null, 'blocked-2'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

@@ -62,7 +62,13 @@ export class BlocksController {
     @Query('offset') offsetRaw?: string,
   ) {
     if (!user) throw new UnauthorizedException();
-    const limit = parseBoundedInteger(limitRaw, DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE, 'limit');
+    const limit = parseBoundedInteger(
+      limitRaw,
+      DEFAULT_PAGE_SIZE,
+      1,
+      MAX_PAGE_SIZE,
+      'limit',
+    );
     const offset = parseBoundedInteger(offsetRaw, 0, 0, MAX_OFFSET, 'offset');
     return this.blocksService.getBlockedUsers(user.id, limit, offset);
   }
