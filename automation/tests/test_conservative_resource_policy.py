@@ -170,6 +170,50 @@ def test_conservative_router_enforces_global_hourly_agent_route_budget(
     assert provider.calls == 2
 
 
+def test_conservative_router_caps_one_task_without_spending_review_admission(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_INTERVAL", "6")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL", "2")
+    monkeypatch.setenv("FACTORY_AGENT_ROUTE_INTERVAL_SECONDS", "3600")
+    provider = Provider("first")
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 2},
+        enabled=True,
+    )
+    task = Task("42", "Issue", "Body", "github-issue", 0)
+    job = Job(task, pull_request=42, head_sha="abc")
+
+    assert router.run(
+        AgentRequest(AgentPhase.IMPLEMENTATION, task, "implement", tmp_path),
+        job,
+    ).success
+    assert router.run(
+        AgentRequest(AgentPhase.SECURITY_REVIEW, task, "security", tmp_path),
+        job,
+    ).success
+
+    with pytest.raises(ProviderCapacityUnavailable, match="Per-task conservative"):
+        router.run(
+            AgentRequest(AgentPhase.CODE_REVIEW, task, "review", tmp_path),
+            job,
+        )
+
+    assert provider.calls == 2
+    assert router._review_admission is not None
+    assert router._review_admission.available_slots() == 2
+
+    other_task = Task("43", "Issue", "Body", "github-issue", 0)
+    assert router.run(
+        AgentRequest(AgentPhase.IMPLEMENTATION, other_task, "implement", tmp_path),
+        Job(other_task),
+    ).success
+    assert provider.calls == 3
+
+
 def test_conservative_router_preserves_independent_review_before_candidate_cap(
     tmp_path: Path,
 ) -> None:
