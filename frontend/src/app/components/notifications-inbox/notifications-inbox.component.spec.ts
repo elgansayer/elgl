@@ -136,6 +136,7 @@ describe('NotificationsInboxComponent', () => {
   });
 
   it('does not decrement unread state until mark-read succeeds', async () => {
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     mockNotificationService.markAsRead.mockRejectedValueOnce(new Error('offline'));
     component.onNotificationClick(component.notifications()[0]);
     await fixture.whenStable();

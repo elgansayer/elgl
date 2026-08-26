@@ -10,6 +10,7 @@ const LOGGER_CONTEXTS = [
   'AudioRoomsController',
   'AppleNotificationController',
   'AppleNotificationService',
+  'AnkiExportService',
   'AppleReceiptValidatorService',
   'CentrifugoService',
   'CallsController',

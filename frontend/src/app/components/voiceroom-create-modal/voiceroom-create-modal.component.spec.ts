@@ -126,7 +126,7 @@ describe('VoiceroomCreateModalComponent', () => {
   });
 
   it('renders translated labels and disables Launch until the form is valid', () => {
-    const root = fixture.nativeElement as HTMLElement;
+    const root = document.body;
     expect(root.textContent).toContain('audioRoom.modalTitle');
     expect(root.textContent).toContain('audioRoom.roomTitleLabel');
     expect(root.textContent).toContain('audioRoom.languagePairLabel');
@@ -144,7 +144,7 @@ describe('VoiceroomCreateModalComponent', () => {
   });
 
   it('does not close or reset the draft when Launch is clicked', async () => {
-    const root = fixture.nativeElement as HTMLElement;
+    const root = document.body;
     const createdSpy = vi.fn();
     const closedSpy = vi.fn();
     const createdSub = component.created.subscribe(createdSpy);
@@ -176,7 +176,7 @@ describe('VoiceroomCreateModalComponent', () => {
   });
 
   it('blocks duplicate Launch requests while creation is in progress', () => {
-    const root = fixture.nativeElement as HTMLElement;
+    const root = document.body;
     const createdSpy = vi.fn();
     const sub = component.created.subscribe(createdSpy);
 

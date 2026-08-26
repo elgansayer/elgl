@@ -1,5 +1,5 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import { ChatEditController } from './chat-edit.controller';
 import type { ChatService } from './chat.service';
@@ -22,7 +22,7 @@ describe('ChatEditController', () => {
       edited_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     } as ChatMessage;
-    const editMessage = jest.fn<ChatService['editMessage']>();
+    const editMessage = vi.fn<ChatService['editMessage']>();
     editMessage.mockResolvedValue(edited);
     const controller = new ChatEditController({
       editMessage,
@@ -41,7 +41,7 @@ describe('ChatEditController', () => {
   });
 
   it('fails closed when the authenticated principal is missing', async () => {
-    const editMessage = jest.fn<ChatService['editMessage']>();
+    const editMessage = vi.fn<ChatService['editMessage']>();
     const controller = new ChatEditController({
       editMessage,
     } as unknown as ChatService);
@@ -55,7 +55,7 @@ describe('ChatEditController', () => {
   });
 
   it('does not hide service ownership or edit-window failures', async () => {
-    const editMessage = jest.fn<ChatService['editMessage']>();
+    const editMessage = vi.fn<ChatService['editMessage']>();
     editMessage.mockRejectedValue(
       new ForbiddenException('You can only edit your own messages'),
     );
