@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from datetime import UTC, datetime
 from threading import BoundedSemaphore
 from typing import Any
@@ -202,6 +203,8 @@ class ConservativeAgentRouter(AgentRouter):
         )
 
     def _admit_agent_route(self, request: AgentRequest, job: Job, now: datetime) -> None:
+        """Persist one allowance admission immediately before a provider process starts."""
+
         gate = self._agent_route_admission
         if gate is None:
             return
@@ -260,8 +263,29 @@ class ConservativeAgentRouter(AgentRouter):
                         f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
                         retry_after_seconds=_gate_retry_seconds(self._review_admission, now),
                     )
-            self._admit_agent_route(request, job, now)
-            return super().run(request, job, exclude=exclude)
+
+            # A logical route can examine provider health/capacity and still start no
+            # paid agent process at all. Do not consume durable allowance for those
+            # control-plane-only attempts. AgentRouter invokes prepare_attempt only
+            # after a provider slot is successfully reserved and immediately before
+            # provider.run(); wrapping it makes the admission count real provider
+            # starts, including distinct fallback starts, rather than scheduler calls.
+            original_prepare_attempt = request.prepare_attempt
+
+            def prepare_and_admit_provider_start() -> None:
+                if original_prepare_attempt is not None:
+                    original_prepare_attempt()
+                attempt_now = datetime.now(UTC)
+                # Re-check task fairness at the actual start boundary so concurrent
+                # work cannot race past the per-task allowance after the early check.
+                self._ensure_task_route_available(job, attempt_now)
+                self._admit_agent_route(request, job, attempt_now)
+
+            routed_request = replace(
+                request,
+                prepare_attempt=prepare_and_admit_provider_start,
+            )
+            return super().run(routed_request, job, exclude=exclude)
         finally:
             if review_slot_acquired:
                 self._review_slots.release()
