@@ -45,12 +45,18 @@ describe('ProfileVisibilityService', () => {
     await expect(resultPromise).resolves.toBe('vips_only');
   });
 
-  it('defaults missing visibility to everyone', async () => {
+  it.each([
+    {},
+    null,
+    [],
+    { profile_visibility: 'contacts' },
+    { profile_visibility: 1 },
+  ])('fails closed on malformed visibility responses: %j', async (response) => {
     const resultPromise = service.getProfileVisibility();
     const request = httpMock.expectOne(`${baseUrl}/me/privacy-settings`);
-    request.flush({});
+    request.flush(response);
 
-    await expect(resultPromise).resolves.toBe('everyone');
+    await expect(resultPromise).rejects.toThrow('Invalid profile visibility response');
   });
 
   it('persists visibility through the validated privacy endpoint', async () => {
@@ -63,6 +69,13 @@ describe('ProfileVisibilityService', () => {
     request.flush({});
 
     await expect(resultPromise).resolves.toBeUndefined();
+  });
+
+  it('rejects invalid visibility mutations before issuing a request', async () => {
+    await expect(
+      service.updateProfileVisibility('contacts' as never),
+    ).rejects.toThrow('Invalid profile visibility');
+    httpMock.expectNone(`${baseUrl}/me/privacy`);
   });
 
   it('propagates persistence failures instead of reporting fake success', async () => {
