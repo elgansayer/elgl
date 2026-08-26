@@ -86,6 +86,20 @@ describe('FavouritesService starred messages', () => {
     expect(membershipIn).toHaveBeenCalledWith('room_id', ['room-1']);
   });
 
+  it('applies current visibility checks to compatibility reads', async () => {
+    const service = new FavouritesService({} as SupabaseService);
+    const secureRead = vi.spyOn(service, 'getStarredMessages').mockResolvedValue({
+      items: [{ id: 'fav-visible' }],
+      has_more: false,
+      next_offset: null,
+    });
+
+    await expect(service.getUserFavourites('user-1')).resolves.toEqual([
+      { id: 'fav-visible' },
+    ]);
+    expect(secureRead).toHaveBeenCalledWith('user-1', 100, 0);
+  });
+
   it('fails closed when current message visibility cannot be verified', async () => {
     const favouritesRange = vi.fn().mockResolvedValue({
       data: [
