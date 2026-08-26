@@ -22,6 +22,7 @@ import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
 import { retryInterceptor } from './interceptors/retry.interceptor';
+import { chatE2eeInterceptor } from './interceptors/chat-e2ee.interceptor';
 
 export function initConfig(
   configService: ConfigurationService,
@@ -57,7 +58,9 @@ function initialiseDeepLinks(): () => void {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
+    // E2EE runs before retry so a transient retry reuses the same ciphertext
+    // instead of producing a second logical encryption operation.
+    provideHttpClient(withFetch(), withInterceptors([chatE2eeInterceptor, retryInterceptor])),
     provideClientHydration(),
     provideAnimations(),
     provideServiceWorker('ngsw-worker.js', {
