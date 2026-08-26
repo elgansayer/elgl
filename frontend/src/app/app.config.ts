@@ -16,6 +16,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { JoyrideModule } from 'ngx-joyride';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 import { ConfigurationService } from './core/config/configuration.service';
 import { routes } from './app.routes';
@@ -66,6 +67,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideTranslateService({ lang: 'en-GB' }),
     provideTranslateHttpLoader({ prefix: './assets/i18n/', suffix: '.json' }),
+    provideCharts(withDefaultRegisterables()),
     importProvidersFrom(JoyrideModule.forRoot()),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
 

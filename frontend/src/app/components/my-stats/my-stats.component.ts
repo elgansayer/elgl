@@ -1,5 +1,5 @@
 import { Component, computed, inject, resource } from '@angular/core';
-import { NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -20,7 +20,7 @@ interface MyStatsResponse {
 
 @Component({
   selector: 'app-my-stats',
-  imports: [NgChartsModule, TranslatePipe],
+  imports: [BaseChartDirective, TranslatePipe],
   template: `
     <div class="p-4 max-w-4xl mx-auto space-y-6">
       <h1 class="text-2xl font-bold text-text-primary">
