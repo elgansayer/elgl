@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SafetyModule } from '../safety/safety.module';
 import { LinkPreviewModule } from '../link-preview/link-preview.module';
 import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
@@ -11,9 +12,12 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatE2eeController } from './chat-e2ee.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
+import { ChatE2eeService } from './chat-e2ee.service';
+import { ChatE2eePolicyInterceptor } from './chat-e2ee-policy.interceptor';
 import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -40,6 +44,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    ChatE2eeController,
     ChatMediaSendController,
     ChatSearchController,
     ChatSettingsController,
@@ -53,6 +58,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatE2eeService,
     ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
@@ -60,6 +66,10 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ChatE2eePolicyInterceptor,
+    },
   ],
   exports: [
     CentrifugoService,
@@ -67,6 +77,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatE2eeService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
