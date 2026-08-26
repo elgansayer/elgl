@@ -13,7 +13,9 @@ import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
+import { ChatTypingController } from './chat-typing.controller';
 import { ChatService } from './chat.service';
+import { ChatTypingService } from './chat-typing.service';
 import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
@@ -42,6 +44,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatController,
     ChatMediaSendController,
     ChatSearchController,
+    ChatTypingController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -53,6 +56,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatTypingService,
     ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
