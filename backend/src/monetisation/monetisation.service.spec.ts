@@ -513,7 +513,9 @@ describe('MonetisationService', () => {
       await expect(
         service.createCheckoutSession('user-1', 'unknown_plan', 'month'),
       ).rejects.toThrow(
-        new BadRequestException('Unsupported subscription plan: "unknown_plan"'),
+        new BadRequestException(
+          'Unsupported subscription plan: "unknown_plan"',
+        ),
       );
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
     });
