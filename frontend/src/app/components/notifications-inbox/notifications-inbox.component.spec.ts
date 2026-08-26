@@ -84,6 +84,7 @@ describe('NotificationsInboxComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
 
   it('loads a bounded first page and the unread count', () => {
@@ -145,10 +146,9 @@ describe('NotificationsInboxComponent', () => {
 
   it('navigates chat notifications to the bounded entity route', () => {
     const router = TestBed.inject(Router);
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const notification = makeNotif({ type: 'mention_chat', entity_id: 'room-123', is_read: true });
     component.onNotificationClick(notification);
-    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(router.navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
   });
 
   it('returns localized activity keys and distinct icons', () => {
