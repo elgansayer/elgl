@@ -1,6 +1,9 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
+  GoneException,
+  InternalServerErrorException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PremiumAiService } from './premium-ai.service';
@@ -12,6 +15,8 @@ function createClient(options?: {
   startError?: { message: string; code?: string } | null;
   complete?: boolean;
   completeError?: { message: string; code?: string } | null;
+  fail?: boolean;
+  failError?: { message: string; code?: string } | null;
 }) {
   const membership =
     options?.member === false
@@ -55,7 +60,10 @@ function createClient(options?: {
       };
     }
     if (name === 'fail_premium_ai_service') {
-      return { data: true, error: null };
+      return {
+        data: options?.fail ?? true,
+        error: options?.failError ?? null,
+      };
     }
     throw new Error(`Unexpected RPC ${name}`);
   });
@@ -219,6 +227,65 @@ describe('PremiumAiService', () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps an in-flight idempotent request retryable with the same key', async () => {
+    const { client } = createClient({
+      start: {
+        run_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        run_status: 'pending',
+        run_cost_coins: 30,
+        coins_remaining: 70,
+        run_result: null,
+        created: false,
+      },
+    });
+    const service = new PremiumAiService(
+      { getClient: () => client } as never,
+      { chatCompletion: vi.fn() } as never,
+    );
+
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('marks a refunded run as non-reusable so clients can create a fresh key', async () => {
+    const { client } = createClient({
+      start: {
+        run_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        run_status: 'failed',
+        run_cost_coins: 30,
+        coins_remaining: 100,
+        run_result: null,
+        created: false,
+      },
+    });
+    const service = new PremiumAiService(
+      { getClient: () => client } as never,
+      { chatCompletion: vi.fn() } as never,
+    );
+
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(GoneException);
+  });
+
+  it('rejects reuse of an idempotency key for another conversation', async () => {
+    const { client } = createClient({
+      startError: {
+        message: 'premium ai idempotency subject mismatch',
+        code: 'P0001',
+      },
+    });
+    const service = new PremiumAiService(
+      { getClient: () => client } as never,
+      { chatCompletion: vi.fn() } as never,
+    );
+
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(GoneException);
+  });
+
   it('maps insufficient funds without calling the AI provider', async () => {
     const { client } = createClient({
       startError: { message: 'insufficient coins', code: 'P0001' },
@@ -252,5 +319,17 @@ describe('PremiumAiService', () => {
         p_error_code: 'provider_failure',
       }),
     );
+  });
+
+  it('never claims a refund when the refund RPC reports no mutation', async () => {
+    const { client } = createClient({ fail: false });
+    const service = new PremiumAiService(
+      { getClient: () => client } as never,
+      { chatCompletion: vi.fn(async () => '') } as never,
+    );
+
+    await expect(
+      service.runConversationAnalysis(userId, dto),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 });
