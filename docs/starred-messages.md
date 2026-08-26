@@ -23,7 +23,7 @@ The response is:
 
 `next_offset` advances by the requested page size and is `null` on the final page. The endpoint intentionally fetches one extra favourite row rather than requesting an exact database count, avoiding an unnecessary count scan over private chat metadata.
 
-The existing `GET /favourites`, `/favourites/user/:userId`, and `/chat/favourites` routes remain available for mixed-version clients. Star creation and removal use the canonical authenticated `/favourites` routes in the Angular `FavouriteService`.
+The existing `GET /favourites`, `/favourites/user/:userId`, and `/chat/favourites` routes remain available for mixed-version clients and apply the same current-visibility filtering. Star creation and removal use the canonical authenticated `/favourites` routes in the Angular `FavouriteService`.
 
 ## Authorization and privacy
 
@@ -42,7 +42,7 @@ View-once media remains protected by the existing favourite-normalisation trigge
 
 ## Frontend behaviour
 
-`FavouritesComponent` now uses the dedicated `FavouriteService` rather than the broader `ChatService` compatibility routes. It follows the server pagination contract in 100-item pages, rejects non-advancing pagination, and stops after 500 retrieved items in one screen load so a corrupted or unexpectedly large account cannot cause an unbounded request loop.
+`FavouritesComponent` now uses the dedicated `FavouriteService` rather than the broader `ChatService` compatibility routes. It follows the server pagination contract in 100-item pages, rejects inconsistent or non-advancing pagination, and stops after inspecting 500 favourites in one screen load so sparse filtered pages cannot cause an unbounded request loop.
 
 The existing user-visible states remain intact:
 
