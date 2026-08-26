@@ -45,13 +45,6 @@ describe('FavouritesService starred messages', () => {
         {
           id: 'msg-visible',
           room_id: 'room-1',
-          is_deleted: false,
-          deleted_for_user_ids: null,
-        },
-        {
-          id: 'msg-deleted',
-          room_id: 'room-1',
-          is_deleted: true,
           deleted_for_user_ids: null,
         },
       ],
@@ -86,8 +79,11 @@ describe('FavouritesService starred messages', () => {
     });
 
     expect(favouritesRange).toHaveBeenCalledWith(0, 2);
-    expect(messagesIn).toHaveBeenCalledWith(['msg-visible', 'msg-deleted']);
-    expect(membershipIn).toHaveBeenCalledWith(['room-1']);
+    expect(messagesIn).toHaveBeenCalledWith('id', [
+      'msg-visible',
+      'msg-deleted',
+    ]);
+    expect(membershipIn).toHaveBeenCalledWith('room_id', ['room-1']);
   });
 
   it('fails closed when current message visibility cannot be verified', async () => {
