@@ -5,5 +5,5 @@ export class SendTypingDto {
   room_id!: string;
 
   @IsString()
-  is_typing!: string; // Legacy internal DTO; authenticated API uses PublishTypingDto.
+  is_typing!: string; // 'true' or 'false'
 }
