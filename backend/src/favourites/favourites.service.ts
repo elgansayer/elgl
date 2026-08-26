@@ -66,16 +66,8 @@ export class FavouritesService {
   }
 
   async getUserFavourites(userId: string): Promise<Record<string, unknown>[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) throw new Error('Failed to load favourites');
-    return data ?? [];
+    const page = await this.getStarredMessages(userId, 100, 0);
+    return page.items;
   }
 
   /**
