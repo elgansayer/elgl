@@ -1,0 +1,42 @@
+import type { Route } from '@angular/router';
+import { describe, expect, it } from 'vitest';
+import { authRoutes } from './auth.routes';
+
+function getRoute(path: string): Route {
+  const route = authRoutes.find((candidate) => candidate.path === path);
+
+  expect(route, `Expected public /${path} route`).toBeDefined();
+  return route as Route;
+}
+
+async function loadRouteComponent(route: Route): Promise<unknown> {
+  expect(route.loadComponent).toBeTypeOf('function');
+  return await Promise.resolve(route.loadComponent!() as Promise<unknown>);
+}
+
+describe('public legal routes', () => {
+  it.each([
+    ['terms', 'Terms of Service - HelloTalk', 'TermsComponent'],
+    ['privacy', 'Privacy Policy - HelloTalk', 'PrivacyComponent'],
+  ])('keeps /%s lazy-loaded and available before authentication', async (path, title, componentName) => {
+    const route = getRoute(path);
+
+    expect(route.title).toBe(title);
+    expect(route.redirectTo).toBeUndefined();
+    expect(route.component).toBeUndefined();
+    expect(route.canActivate).toBeUndefined();
+    expect(route.canMatch).toBeUndefined();
+
+    const component = (await loadRouteComponent(route)) as { name?: string };
+    expect(component.name).toBe(componentName);
+  });
+
+  it('keeps Terms and Privacy as separate canonical destinations', () => {
+    const terms = getRoute('terms');
+    const privacy = getRoute('privacy');
+
+    expect(terms).not.toBe(privacy);
+    expect(terms.path).toBe('terms');
+    expect(privacy.path).toBe('privacy');
+  });
+});
