@@ -1,11 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { GlobalSearchComponent } from './global-search.component';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nService } from '../../../services/i18n.service';
 import { RecommendationsService } from '../../../services/recommendations.service';
+import { AppButtonPrimaryComponent } from '../../primitives/button-primary/button-primary.component';
 import { ALL_LANGUAGE_CODES } from '../../primitives/language-picker/language-picker.component';
+import { AppSelectComponent } from '../../primitives/select/select.component';
+import { GlobalSearchComponent } from './global-search.component';
 
 describe('GlobalSearchComponent', () => {
   let component: GlobalSearchComponent;
@@ -68,35 +71,59 @@ describe('GlobalSearchComponent', () => {
     expect(component).toBeDefined();
   });
 
-  it('should render the title', () => {
+  it('should render the translated named search landmark', () => {
+    const search = fixture.nativeElement.querySelector('[role="search"]');
     const title = fixture.nativeElement.querySelector('h2');
+
+    expect(search.getAttribute('aria-label')).toBe('Global Search');
     expect(title.textContent.trim()).toBe('Global Search');
   });
 
-  it('should render three dropdowns', () => {
-    const selects = fixture.nativeElement.querySelectorAll('select');
-    expect(selects.length).toBe(3);
+  it('should delegate all dropdown interactions to Relay AppSelect', () => {
+    const relaySelects = fixture.debugElement.queryAll(By.directive(AppSelectComponent));
+    const nativeSelects = fixture.nativeElement.querySelectorAll('select');
+
+    expect(relaySelects).toHaveLength(3);
+    expect(nativeSelects).toHaveLength(3);
   });
 
-  it('should render the search button', () => {
-    const button = fixture.nativeElement.querySelector('button[hlmBtn]');
-    expect(button.textContent.trim()).toBe('Search Partners');
+  it('should keep every native select associated with its translated Relay label', () => {
+    const selectHosts: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('app-select'));
+    expect(selectHosts).toHaveLength(3);
+
+    expect(
+      selectHosts.map((host) => {
+        const label = host.querySelector('label');
+        const select = host.querySelector('select');
+        return {
+          label: label?.textContent?.trim(),
+          associated: Boolean(label && select && label.htmlFor === select.id && select.id.length > 0),
+        };
+      }),
+    ).toEqual([
+      { label: 'Native Language', associated: true },
+      { label: 'Target Language', associated: true },
+      { label: 'Proficiency Level', associated: true },
+    ]);
   });
 
-  it('should have aria-label on search button', () => {
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[hlmBtn]');
-    expect(button.getAttribute('aria-label')).toBe('Search Partners');
+  it('should delegate the primary search interaction to Relay AppButtonPrimary', () => {
+    const relayButton = fixture.debugElement.query(By.directive(AppButtonPrimaryComponent));
+    const button: HTMLButtonElement = relayButton.nativeElement.querySelector('button');
+
+    expect(relayButton).toBeTruthy();
+    expect(button.textContent?.trim()).toBe('Search Partners');
+    expect(button.getAttribute('aria-label')).toBeNull();
   });
 
-  it('should emit search filters on applyFilters', () => {
+  it('should emit selected filters on applyFilters', () => {
     const emitted: unknown[] = [];
-    component.searchFilters.subscribe((f) => emitted.push(f));
+    component.searchFilters.subscribe((filters) => emitted.push(filters));
 
     component.nativeLanguages.set('es');
     component.targetLanguage.set('fr');
     component.level.set('b1');
     component.hasAudioIntro.set(true);
-    fixture.detectChanges();
 
     component.applyFilters();
 
@@ -110,70 +137,96 @@ describe('GlobalSearchComponent', () => {
     ]);
   });
 
-  it('should omit the audio intro requirement when it is not selected', () => {
+  it('should emit explicit clear values for Any and an unchecked audio requirement', () => {
     const emitted: unknown[] = [];
-    component.searchFilters.subscribe((f) => emitted.push(f));
+    component.searchFilters.subscribe((filters) => emitted.push(filters));
 
     component.applyFilters();
 
     expect(emitted).toEqual([
       {
-        native_languages: undefined,
-        target_language: undefined,
-        proficiency_level: undefined,
-        has_audio_intro: undefined,
+        native_languages: '',
+        target_language: '',
+        proficiency_level: '',
+        has_audio_intro: false,
       },
     ]);
   });
 
-  it('should apply the audio intro filter immediately when toggled', () => {
+  it('should clear previously selected filters instead of omitting the clear operation', () => {
     const emitted: unknown[] = [];
-    component.searchFilters.subscribe((f) => emitted.push(f));
+    component.searchFilters.subscribe((filters) => emitted.push(filters));
 
-    component.toggleHasAudioIntro();
+    component.nativeLanguages.set('es');
+    component.targetLanguage.set('fr');
+    component.level.set('b1');
+    component.hasAudioIntro.set(true);
+    component.applyFilters();
 
-    expect(component.hasAudioIntro()).toBe(true);
-    expect(emitted).toEqual([
-      {
-        native_languages: undefined,
-        target_language: undefined,
-        proficiency_level: undefined,
-        has_audio_intro: true,
-      },
-    ]);
-  });
+    component.nativeLanguages.set('');
+    component.targetLanguage.set('');
+    component.level.set('');
+    component.hasAudioIntro.set(false);
+    component.applyFilters();
 
-  it('should remove the audio intro requirement when toggled off again', () => {
-    const emitted: unknown[] = [];
-    component.searchFilters.subscribe((f) => emitted.push(f));
-
-    component.toggleHasAudioIntro();
-    component.toggleHasAudioIntro();
-
-    expect(component.hasAudioIntro()).toBe(false);
     expect(emitted.at(-1)).toEqual({
-      native_languages: undefined,
-      target_language: undefined,
-      proficiency_level: undefined,
-      has_audio_intro: undefined,
+      native_languages: '',
+      target_language: '',
+      proficiency_level: '',
+      has_audio_intro: false,
     });
   });
 
-  it('should render an associated audio intro checkbox label', () => {
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('#global-hasAudioIntro');
+  it('should apply the checkbox value supplied by Spartan without manually inverting state', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((filters) => emitted.push(filters));
+
+    component.onAudioIntroChange(true);
+    component.onAudioIntroChange(false);
+
+    expect(component.hasAudioIntro()).toBe(false);
+    expect(emitted).toEqual([
+      {
+        native_languages: '',
+        target_language: '',
+        proficiency_level: '',
+        has_audio_intro: true,
+      },
+      {
+        native_languages: '',
+        target_language: '',
+        proficiency_level: '',
+        has_audio_intro: false,
+      },
+    ]);
+  });
+
+  it('should render an instance-safe associated audio intro checkbox label', () => {
+    const input = fixture.nativeElement.querySelector(`[id="${component.audioIntroId}"]`);
     const label: HTMLLabelElement = fixture.nativeElement.querySelector(
-      'label[for="global-hasAudioIntro"]',
+      `label[for="${component.audioIntroId}"]`,
     );
 
+    expect(component.audioIntroId).toMatch(/^global-hasAudioIntro-/);
     expect(input).toBeTruthy();
     expect(label.textContent?.trim()).toBe('Audio Introduction');
+  });
+
+  it('should emit search filters exactly once from the Relay primary action', () => {
+    const emitted: unknown[] = [];
+    component.searchFilters.subscribe((filters) => emitted.push(filters));
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('app-button-primary button');
+
+    button.click();
+
+    expect(emitted).toHaveLength(1);
   });
 
   it('should populate availableLanguages with translated names', () => {
     const langs = component.availableLanguages();
     expect(langs.length).toBe(ALL_LANGUAGE_CODES.length);
 
-    const enEntry = langs.find((l) => l.code === 'en');
+    const enEntry = langs.find((language) => language.code === 'en');
     expect(enEntry).toBeDefined();
     expect(enEntry!.flag).toBe('🇬🇧');
     expect(enEntry!.nativeName).toBeTruthy();
@@ -182,36 +235,31 @@ describe('GlobalSearchComponent', () => {
 
   it('should have six proficiency levels', () => {
     expect(component.levels.length).toBe(6);
-    expect(component.levels.map((l) => l.value)).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
+    expect(component.levels.map((level) => level.value)).toEqual([
+      'a1',
+      'a2',
+      'b1',
+      'b2',
+      'c1',
+      'c2',
+    ]);
   });
 
-  it('should react to select changes', () => {
-    const nativeSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#global-nativeLanguages');
+  it('should react to native select changes through the Relay wrappers', () => {
+    const nativeSelects: HTMLSelectElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('select'),
+    );
 
-    nativeSelect.value = 'de';
-    nativeSelect.dispatchEvent(new Event('change'));
+    nativeSelects[0].value = 'de';
+    nativeSelects[0].dispatchEvent(new Event('change'));
+    nativeSelects[1].value = 'fr';
+    nativeSelects[1].dispatchEvent(new Event('change'));
+    nativeSelects[2].value = 'c1';
+    nativeSelects[2].dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     expect(component.nativeLanguages()).toBe('de');
-
-    const targetSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#global-targetLanguage');
-
-    targetSelect.value = 'fr';
-    targetSelect.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
     expect(component.targetLanguage()).toBe('fr');
-
-    const levelSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
-      '#global-proficiencyLevel',
-    );
-
-    levelSelect.value = 'c1';
-    levelSelect.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
     expect(component.level()).toBe('c1');
   });
 

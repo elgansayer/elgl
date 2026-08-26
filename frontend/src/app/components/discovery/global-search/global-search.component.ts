@@ -1,14 +1,14 @@
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
-import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
-import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, output, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import { SearchFilterParams } from '../../../services/discovery.service';
+import { AppButtonPrimaryComponent } from '../../primitives/button-primary/button-primary.component';
 import {
   ALL_LANGUAGE_CODES,
   getLanguageFlag,
 } from '../../primitives/language-picker/language-picker.component';
+import { AppSelectComponent } from '../../primitives/select/select.component';
 import { RecommendedForYouCarouselComponent } from '../recommended-for-you/recommended-for-you-carousel.component';
 
 export interface TranslatedLanguage {
@@ -22,9 +22,9 @@ export interface TranslatedLanguage {
   selector: 'app-global-search',
   imports: [
     HlmCheckbox,
-    HlmNativeSelect,
-    HlmButton,
     TranslatePipe,
+    AppButtonPrimaryComponent,
+    AppSelectComponent,
     RecommendedForYouCarouselComponent,
   ],
   templateUrl: './global-search.component.html',
@@ -39,6 +39,7 @@ export class GlobalSearchComponent {
   readonly targetLanguage = signal<string>('');
   readonly level = signal<string>('');
   readonly hasAudioIntro = signal<boolean>(false);
+  readonly audioIntroId = `global-hasAudioIntro-${crypto.randomUUID()}`;
 
   readonly levels = [
     { value: 'a1', key: 'levels.a1' },
@@ -79,36 +80,15 @@ export class GlobalSearchComponent {
 
   applyFilters(): void {
     this.searchFilters.emit({
-      native_languages: this.nativeLanguages() || undefined,
-      target_language: this.targetLanguage() || undefined,
-      proficiency_level: this.level() || undefined,
-      has_audio_intro: this.hasAudioIntro() ? true : undefined,
+      native_languages: this.nativeLanguages(),
+      target_language: this.targetLanguage(),
+      proficiency_level: this.level(),
+      has_audio_intro: this.hasAudioIntro(),
     });
   }
 
-  toggleHasAudioIntro(): void {
-    this.hasAudioIntro.update((value) => !value);
+  onAudioIntroChange(checked: boolean): void {
+    this.hasAudioIntro.set(checked);
     this.applyFilters();
-  }
-
-  onNativeLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.nativeLanguages.set(target.value);
-    }
-  }
-
-  onTargetLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.targetLanguage.set(target.value);
-    }
-  }
-
-  onLevelChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.level.set(target.value);
-    }
   }
 }
