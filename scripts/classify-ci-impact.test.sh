@@ -12,7 +12,6 @@ assert_case() {
 
   local output
   output="$(mktemp)"
-  trap 'rm -f "$output"' RETURN
 
   if [ "$#" -eq 0 ]; then
     printf '' | bash "$CLASSIFIER" "$output" >/dev/null
@@ -23,6 +22,7 @@ assert_case() {
   local actual_application actual_factory
   actual_application="$(sed -n 's/^run_application=//p' "$output" | tail -1)"
   actual_factory="$(sed -n 's/^run_factory=//p' "$output" | tail -1)"
+  rm -f "$output"
 
   if [ "$actual_application" != "$expected_application" ] || [ "$actual_factory" != "$expected_factory" ]; then
     echo "FAIL: $name expected application=$expected_application factory=$expected_factory; got application=$actual_application factory=$actual_factory" >&2
