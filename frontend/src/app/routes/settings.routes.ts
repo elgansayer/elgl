@@ -42,6 +42,19 @@ export const settingsRoutes: Routes = [
     title: 'Appearance - HelloTalk',
   },
   {
+    path: 'language',
+    redirectTo: 'settings/language',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/language',
+    loadComponent: () =>
+      import('../pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
+  },
+  {
     path: 'settings/privacy',
     loadComponent: () =>
       import('../pages/settings/privacy-settings/privacy-settings.component').then(
