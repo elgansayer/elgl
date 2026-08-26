@@ -52,9 +52,13 @@ export class LessonsService {
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException(`Lesson ${id} not found`);
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Lesson ${id} not found`);
+      }
+      throw error;
     }
+    if (!data) throw new NotFoundException(`Lesson ${id} not found`);
     return data;
   }
 
@@ -92,6 +96,7 @@ export class LessonsService {
     }
 
     const client = this.progressClient();
+    const now = new Date().toISOString();
     const { data, error } = await client
       .from('lesson_progress')
       .upsert(
@@ -100,15 +105,16 @@ export class LessonsService {
           lesson_id: lessonId,
           segment_index: segmentIndex,
           completed,
-          completed_at: completed ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
+          completed_at: completed ? now : null,
+          updated_at: now,
         },
         { onConflict: 'user_id,lesson_id' },
       )
       .select('lesson_id, segment_index, completed, completed_at, updated_at')
       .single();
 
-    if (error || !data) throw error ?? new Error('Lesson progress write returned no row');
+    if (error) throw error;
+    if (!data) throw new Error('Lesson progress write returned no row');
     return this.normaliseProgress(data, lessonId);
   }
 
@@ -199,8 +205,8 @@ export class LessonsService {
     const updatedAt = record['updated_at'];
 
     if (
-      !Number.isInteger(segmentIndex) ||
       typeof segmentIndex !== 'number' ||
+      !Number.isInteger(segmentIndex) ||
       segmentIndex < 0 ||
       typeof completed !== 'boolean' ||
       (completedAt !== null && typeof completedAt !== 'string') ||
