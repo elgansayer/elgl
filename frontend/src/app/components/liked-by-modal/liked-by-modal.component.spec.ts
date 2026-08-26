@@ -137,6 +137,7 @@ describe('LikedByModalComponent', () => {
     }
     expect(retry.getAttribute('type')).toBe('button');
     retry.click();
+    fixture.detectChanges();
 
     httpTesting.expectOne('/api/moments/moment-123/likes').flush([]);
     await fixture.whenStable();
