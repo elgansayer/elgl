@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
+import { MomentsRankingService } from './moments-ranking.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
@@ -25,6 +26,12 @@ describe('MomentsController', () => {
             getComments: vi.fn(),
             pinMoment: vi.fn(),
             getLifetimeCounts: vi.fn(),
+          },
+        },
+        {
+          provide: MomentsRankingService,
+          useValue: {
+            rankForYou: vi.fn(),
           },
         },
         {
