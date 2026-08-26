@@ -196,6 +196,7 @@ describe('TypingService', () => {
     realtimeCallback?.({ userId: 'user-2', typing: 'true', timestamp: Date.now() });
     realtimeCallback?.({ userId: 'user-2', typing: true, timestamp: Number.NaN });
     realtimeCallback?.({ userId: 'user-1', typing: true, timestamp: Date.now() });
+    realtimeCallback?.({ userId: ' user-1 ', typing: true, timestamp: Date.now() });
     realtimeCallback?.({ userId: 'user-2', typing: true, timestamp: Date.now() - 10_001 });
     realtimeCallback?.({ userId: 'user-3', typing: true, timestamp: Date.now() + 5001 });
 
