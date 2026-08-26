@@ -53,7 +53,7 @@ test('the accessibility audit records the exact current high-priority debt', () 
     },
     {
       id: 'MOM-A11Y-003',
-      present: template.includes("[attr.aria-label]=\"'text input'\""),
+      present: (template.match(/\\[attr\\.aria-label\\]=\"'text input'\"/g) ?? []).length === 2,
     },
     {
       id: 'MOM-A11Y-004',
@@ -63,12 +63,29 @@ test('the accessibility audit records the exact current high-priority debt', () 
       id: 'MOM-A11Y-005',
       present: removeMedia.includes('h-5 w-5') && submitComment.includes('h-8 w-8'),
     },
+    {
+      id: 'MOM-A11Y-006',
+      present: submitComment.includes('aria-label=\"Submit comment\"'),
+    },
+    {
+      id: 'MOM-A11Y-007',
+      present: template.includes('(keyup.enter)=\"submitComment(moment)\"'),
+    },
   ];
 
   for (const finding of findings) {
     assert.equal(finding.present, true, `${finding.id} no longer matches the source; update the audit`);
     assert.match(audit, new RegExp(`\\b${finding.id}\\b`), `${finding.id} must be documented`);
   }
+
+  const documentedFindingIds = [
+    ...new Set([...audit.matchAll(/\\bMOM-A11Y-\\d{3}\\b/g)].map(([id]) => id)),
+  ].sort();
+  assert.deepEqual(
+    documentedFindingIds,
+    findings.map(({ id }) => id).sort(),
+    'The documented and executable accessibility debt baselines must match',
+  );
 });
 
 test('the audit covers screen-reader, keyboard, zoom, RTL, privacy, and rollback review', () => {
