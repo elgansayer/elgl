@@ -19,8 +19,12 @@ describe('lesson progress migration (#617)', () => {
 
   it('stores one resumable progress row per user and lesson', () => {
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.lesson_progress/);
-    expect(sql).toMatch(/user_id uuid NOT NULL REFERENCES public\.users\(id\) ON DELETE CASCADE/);
-    expect(sql).toMatch(/lesson_id uuid NOT NULL REFERENCES public\.lessons\(id\) ON DELETE CASCADE/);
+    expect(sql).toMatch(
+      /user_id uuid NOT NULL REFERENCES public\.users\(id\) ON DELETE CASCADE/,
+    );
+    expect(sql).toMatch(
+      /lesson_id uuid NOT NULL REFERENCES public\.lessons\(id\) ON DELETE CASCADE/,
+    );
     expect(sql).toMatch(/PRIMARY KEY \(user_id, lesson_id\)/);
   });
 
@@ -31,20 +35,32 @@ describe('lesson progress migration (#617)', () => {
   });
 
   it('enables owner-only authenticated row-level security', () => {
-    expect(sql).toMatch(/ALTER TABLE public\.lesson_progress ENABLE ROW LEVEL SECURITY/);
-    expect(sql).toMatch(/CREATE POLICY lesson_progress_select_own[\s\S]*TO authenticated[\s\S]*auth\.uid\(\) = user_id/);
-    expect(sql).toMatch(/CREATE POLICY lesson_progress_insert_own[\s\S]*WITH CHECK \(auth\.uid\(\) = user_id\)/);
-    expect(sql).toMatch(/CREATE POLICY lesson_progress_update_own[\s\S]*USING \(auth\.uid\(\) = user_id\)[\s\S]*WITH CHECK \(auth\.uid\(\) = user_id\)/);
+    expect(sql).toMatch(
+      /ALTER TABLE public\.lesson_progress ENABLE ROW LEVEL SECURITY/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY lesson_progress_select_own[\s\S]*TO authenticated[\s\S]*auth\.uid\(\) = user_id/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY lesson_progress_insert_own[\s\S]*WITH CHECK \(auth\.uid\(\) = user_id\)/,
+    );
+    expect(sql).toMatch(
+      /CREATE POLICY lesson_progress_update_own[\s\S]*USING \(auth\.uid\(\) = user_id\)[\s\S]*WITH CHECK \(auth\.uid\(\) = user_id\)/,
+    );
   });
 
   it('makes lesson completion monotonic across retries and stale writes', () => {
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.preserve_lesson_completion\(\)/);
+    expect(sql).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.preserve_lesson_completion\(\)/,
+    );
     expect(sql).toMatch(/NEW\.completed := OLD\.completed OR NEW\.completed/);
     expect(sql).toMatch(/NEW\.completed_at := OLD\.completed_at/);
     expect(sql).toMatch(/BEFORE UPDATE ON public\.lesson_progress/);
   });
 
   it('does not grant the trigger function to arbitrary callers', () => {
-    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.preserve_lesson_completion\(\) FROM PUBLIC/);
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.preserve_lesson_completion\(\) FROM PUBLIC/,
+    );
   });
 });
