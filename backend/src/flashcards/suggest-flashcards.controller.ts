@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -13,15 +14,17 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SuggestFlashcardsService } from './suggest-flashcards.service';
-import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
+import type { User } from '@supabase/supabase-js';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import {
   CacheControlInterceptor,
   CACHE_EDGE_SHORT,
   CACHE_TAG_SUGGESTIONS,
 } from '../common/cache.interceptor';
+import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
+import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
+import { SuggestFlashcardsService } from './suggest-flashcards.service';
 
 @ApiTags('Spaced Repetition (SRS) / Suggest')
 @Controller('flashcards/suggest')
@@ -30,10 +33,6 @@ import {
 export class SuggestFlashcardsController {
   constructor(private readonly suggestService: SuggestFlashcardsService) {}
 
-  /**
-   * Suggestion is deterministic for the same input and knowledge base.
-   * Short-lived private cache reduces DB and NLP read pressure.
-   */
   @Get()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 20, windowSeconds: 60 })
@@ -43,7 +42,7 @@ export class SuggestFlashcardsController {
   @ApiOperation({
     summary: 'Suggest new vocabulary from a user message',
     description:
-      'Tokenises the input message using Intl.Segmenter, extracts unique word tokens, optionally excludes already-known words (SRS level 4), and returns a list of suggestions to add as flashcards.',
+      'Tokenises the input message using Intl.Segmenter, extracts unique word tokens, and by default excludes words the authenticated user has already mastered at SRS level 4.',
   })
   @ApiQuery({
     name: 'message',
@@ -55,15 +54,14 @@ export class SuggestFlashcardsController {
   @ApiQuery({
     name: 'user_id',
     required: false,
+    deprecated: true,
     description:
-      'UUID of the user. When provided and exclude_known=true, words already at SRS level 4 are filtered out.',
-    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+      'Deprecated compatibility parameter. It is ignored; known-word filtering is always scoped to the authenticated user.',
   })
   @ApiQuery({
     name: 'target_language',
     required: false,
-    description:
-      'ISO 639-1 language code for Intl.Segmenter locale-aware tokenisation.',
+    description: 'BCP 47 language tag used for locale-aware word segmentation.',
     example: 'fr',
   })
   @ApiQuery({
@@ -81,6 +79,10 @@ export class SuggestFlashcardsController {
     },
   })
   @ApiResponse({
+    status: 400,
+    description: 'Invalid message or target language.',
+  })
+  @ApiResponse({
     status: 401,
     description: 'Unauthorized -- missing or invalid JWT.',
   })
@@ -88,7 +90,18 @@ export class SuggestFlashcardsController {
     status: 429,
     description: 'Too many requests -- rate limit exceeded (20 req/min).',
   })
-  async suggest(@Query() dto: SuggestFlashcardsDto) {
-    return this.suggestService.suggestFromMessage(dto);
+  @ApiResponse({
+    status: 503,
+    description:
+      'Known-word filtering is temporarily unavailable; the endpoint fails closed rather than returning mastered words as new suggestions.',
+  })
+  async suggest(
+    @CurrentUser() user: User | null,
+    @Query() dto: SuggestFlashcardsDto,
+  ) {
+    if (!user) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    return this.suggestService.suggestFromMessage(user.id, dto);
   }
 }
