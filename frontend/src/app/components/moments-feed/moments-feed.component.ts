@@ -1,6 +1,7 @@
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmAutocompleteImports } from '@spartan-ng/helm/autocomplete';
 import { showToast } from '../../services/toast.service';
 import {
   Component,
@@ -51,6 +52,7 @@ interface MentionSuggestion {
     HlmTextarea,
     HlmInput,
     HlmButton,
+    ...HlmAutocompleteImports,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -164,9 +166,13 @@ export class MomentsFeedComponent {
   // @mention autocomplete state per momentId
   readonly mentionQueryMap = signal<Record<string, string | null>>({});
   readonly mentionSuggestionsMap = signal<Record<string, MentionSuggestion[]>>({});
-  readonly mentionActiveIndexMap = signal<Record<string, number>>({});
   private mentionRangeStartMap: Record<string, number> = {};
   private mentionRangeEndMap: Record<string, number> = {};
+  private mentionRequestVersionMap: Record<string, number> = {};
+  private readonly mentionItemToStringMap = new Map<
+    string,
+    (value: unknown) => string
+  >();
 
   // New Comment / Correction form states per momentId
   commentInputMap: Record<string, string> = {};
@@ -490,74 +496,85 @@ export class MomentsFeedComponent {
       this.mentionRangeStartMap[momentId] = match.index;
       this.mentionRangeEndMap[momentId] = cursor;
       this.mentionQueryMap.update((m) => ({ ...m, [momentId]: match[1] }));
-      this.mentionActiveIndexMap.update((m) => ({ ...m, [momentId]: 0 }));
       void this.loadMentionSuggestions(momentId);
     } else {
-      this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+      this.closeMentionSuggestions(momentId);
     }
   }
 
   onCommentKeydown(event: KeyboardEvent, moment: MomentRecord): void {
-    const momentId = moment.id;
-    const suggestions = this.mentionSuggestionsMap()[momentId] ?? [];
-    if (suggestions.length > 0) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        this.mentionActiveIndexMap.update((m) => ({
-          ...m,
-          [momentId]: Math.min((m[momentId] ?? 0) + 1, suggestions.length - 1),
-        }));
-        return;
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        this.mentionActiveIndexMap.update((m) => ({
-          ...m,
-          [momentId]: Math.max((m[momentId] ?? 0) - 1, 0),
-        }));
-        return;
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const idx = this.mentionActiveIndexMap()[momentId] ?? 0;
-        this.selectMention(momentId, suggestions[idx]);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
-        return;
-      }
-    }
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && (this.mentionSuggestionsMap()[moment.id]?.length ?? 0) === 0) {
       event.preventDefault();
       void this.submitComment(moment);
     }
   }
 
+  mentionItemToStringFor(momentId: string): (value: unknown) => string {
+    const existing = this.mentionItemToStringMap.get(momentId);
+    if (existing) return existing;
+
+    const itemToString = (value: unknown): string => {
+      const currentValue = this.commentInputMap[momentId] ?? '';
+      if (!value || typeof value !== 'object' || !('display_name' in value)) {
+        return currentValue;
+      }
+
+      const displayName = (value as MentionSuggestion).display_name;
+      if (!displayName) return currentValue;
+
+      const rangeStart = this.mentionRangeStartMap[momentId] ?? currentValue.length;
+      const rangeEnd = this.mentionRangeEndMap[momentId] ?? currentValue.length;
+      return (
+        currentValue.slice(0, rangeStart) +
+        `@${displayName} ` +
+        currentValue.slice(rangeEnd)
+      );
+    };
+
+    this.mentionItemToStringMap.set(momentId, itemToString);
+    return itemToString;
+  }
+
+  onMentionSelected(momentId: string, member: unknown): void {
+    if (!member) return;
+    this.closeMentionSuggestions(momentId);
+  }
+
   private async loadMentionSuggestions(momentId: string): Promise<void> {
     const query = this.mentionQueryMap()[momentId];
+    const requestVersion = (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
+    this.mentionRequestVersionMap[momentId] = requestVersion;
+
     if (!query) {
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
       return;
     }
+
     try {
       const results = await this.userService.searchUsers(query, 5);
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: results }));
     } catch {
+      if (
+        this.mentionRequestVersionMap[momentId] !== requestVersion ||
+        this.mentionQueryMap()[momentId] !== query
+      ) {
+        return;
+      }
       this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
     }
   }
 
-  selectMention(momentId: string, member: MentionSuggestion | undefined): void {
-    const displayName = member?.display_name;
-    if (!displayName) return;
-    const mentionText = '@' + displayName + ' ';
-    this.commentInputMap[momentId] =
-      (this.commentInputMap[momentId] ?? '').slice(0, this.mentionRangeStartMap[momentId]) +
-      mentionText +
-      (this.commentInputMap[momentId] ?? '').slice(this.mentionRangeEndMap[momentId]);
+  closeMentionSuggestions(momentId: string): void {
+    this.mentionRequestVersionMap[momentId] =
+      (this.mentionRequestVersionMap[momentId] ?? 0) + 1;
     this.mentionQueryMap.update((m) => ({ ...m, [momentId]: null }));
+    this.mentionSuggestionsMap.update((m) => ({ ...m, [momentId]: [] }));
   }
 
   openGhostCorrection(moment: MomentRecord, textToCorrect?: string): void {
