@@ -180,11 +180,10 @@ describe('LikedByModalComponent', () => {
     subscription.unsubscribe();
   });
 
-  it('does not emit a duplicate close after the parent closes the modal', async () => {
+  it('does not emit a duplicate close after the parent closes the modal', () => {
     fixture.componentRef.setInput('open', false);
     fixture.detectChanges();
-    flushRequest(httpTesting);
-    await fixture.whenStable();
+    httpTesting.expectNone('/api/moments/moment-123/likes');
     const closeSpy = vi.fn();
     const subscription = component.closeModal.subscribe(closeSpy);
 
