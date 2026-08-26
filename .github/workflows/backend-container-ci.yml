@@ -1,0 +1,31 @@
+name: Backend container CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - backend/Dockerfile
+      - backend/package.json
+      - backend/package-lock.json
+      - .github/workflows/backend-container-ci.yml
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-container-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-build:
+    name: backend-container / production-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build production backend image
+        run: docker build --target production --tag "elgl-api-ci:${GITHUB_SHA}" backend

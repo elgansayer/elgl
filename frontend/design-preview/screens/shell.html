@@ -255,6 +255,49 @@
         padding: 2px 6px;
       }
 
+      /* Chat-only premium AI action, mounted by the shell above mobile navigation. */
+      .premium-ai {
+        position: absolute;
+        right: 12px;
+        bottom: 76px;
+        width: min(240px, calc(100% - 24px));
+        padding: 12px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+        box-shadow: 0 12px 28px rgb(var(--shadow) / 0.2);
+      }
+      .premium-ai strong,
+      .premium-ai p {
+        display: block;
+        margin: 0;
+      }
+      .premium-ai strong {
+        font-size: 13px;
+      }
+      .premium-ai p {
+        margin-top: 4px;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .premium-ai button {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 10px;
+        border: 0;
+        border-radius: 12px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .premium-ai button:focus-visible {
+        outline: 3px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+
       /* Bottom nav */
       .bottom-nav {
         display: flex;
@@ -342,10 +385,10 @@
       <!-- Main content placeholder (router-outlet) -->
       <div class="content">
         <div class="content-card">
-          <div class="glyph">🧭</div>
+          <div class="glyph">💬</div>
           <p>
-            Routed page content renders here inside <code>&lt;router-outlet /&gt;</code> - see the
-            profile, discovery and chat screen previews for what actually fills this area.
+            Routed chat content renders here inside <code>&lt;router-outlet /&gt;</code>. The premium
+            AI action is shell-mounted but appears only for a concrete chat room route.
           </p>
           <p>
             Discovery also owns a dedicated spoken-introduction sub-route at
@@ -353,6 +396,12 @@
           </p>
         </div>
       </div>
+
+      <aside class="premium-ai" aria-label="Conversation Analysis Report">
+        <strong>Conversation Analysis Report</strong>
+        <p>One-off learner feedback from recent messages. Price is loaded from the server.</p>
+        <button type="button">Conversation Analysis Report · 🪙 30</button>
+      </aside>
 
       <!-- Mobile bottom nav -->
       <nav class="bottom-nav">
@@ -381,10 +430,10 @@
 
     <p class="caption">
       Desktop adds a persistent sidebar (<code>app-desktop-sidebar</code>) alongside this content
-      area instead of the bottom nav; omitted here since this preview targets the 390px mobile
-      layout per <code>DESIGN.md</code>. Also omitted: the app-lock overlay, forced-update modal,
-      incoming-call modal, and toast/gift-animation overlays - all conditional chrome that only
-      makes sense layered over a specific runtime state, out of scope for a static chrome preview.
+      area instead of the bottom nav. The premium AI launcher remains anchored to the logical end
+      edge and is hidden outside <code>/chat/:roomId</code>. Also omitted: the app-lock overlay,
+      forced-update modal, incoming-call modal, and toast/gift-animation overlays - conditional
+      chrome that only makes sense layered over a specific runtime state.
     </p>
 
     <script>
