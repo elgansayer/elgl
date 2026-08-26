@@ -1,4 +1,10 @@
-import { Body, Controller, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
