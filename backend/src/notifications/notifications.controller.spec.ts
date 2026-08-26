@@ -57,20 +57,26 @@ describe('NotificationsController', () => {
 
   it('gets the authenticated user unread count', async () => {
     const user = { id: 'user-1' } as any;
-    await expect(controller.getUnreadCount(user)).resolves.toEqual({ unreadCount: 3 });
+    await expect(controller.getUnreadCount(user)).resolves.toEqual({
+      unreadCount: 3,
+    });
     expect(inboxService.getUnreadCount).toHaveBeenCalledWith('user-1');
   });
 
   it('marks a single notification as read for the authenticated user', async () => {
     const user = { id: 'user-1' } as any;
     const id = 'd0aa8e62-d334-4d0f-8450-ecb998ed3bf5';
-    await expect(controller.markAsRead(id, user)).resolves.toEqual({ success: true });
+    await expect(controller.markAsRead(id, user)).resolves.toEqual({
+      success: true,
+    });
     expect(inboxService.markAsRead).toHaveBeenCalledWith('user-1', id);
   });
 
   it('marks all notifications as read for the authenticated user', async () => {
     const user = { id: 'user-1' } as any;
-    await expect(controller.markAllAsRead(user)).resolves.toEqual({ success: true });
+    await expect(controller.markAllAsRead(user)).resolves.toEqual({
+      success: true,
+    });
     expect(inboxService.markAllAsRead).toHaveBeenCalledWith('user-1');
   });
 });
