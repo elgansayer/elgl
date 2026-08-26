@@ -164,9 +164,7 @@ describe('PronunciationScoringService', () => {
     const [, providerRequest] = (global.fetch as Mock).mock.calls;
     const providerUrl = providerRequest[0] as URL;
     const init = providerRequest[1] as RequestInit;
-    expect(providerUrl.hostname).toBe(
-      'westeurope.stt.speech.microsoft.com',
-    );
+    expect(providerUrl.hostname).toBe('westeurope.stt.speech.microsoft.com');
     expect(providerUrl.searchParams.get('language')).toBe('en-US');
     expect(providerUrl.searchParams.get('format')).toBe('detailed');
     expect(init.headers).toMatchObject({
@@ -178,15 +176,16 @@ describe('PronunciationScoringService', () => {
     const encodedAssessment = (init.headers as Record<string, string>)[
       'Pronunciation-Assessment'
     ];
-    expect(JSON.parse(Buffer.from(encodedAssessment, 'base64').toString('utf8')))
-      .toEqual({
-        ReferenceText: 'Hello world.',
-        GradingSystem: 'HundredMark',
-        Granularity: 'Phoneme',
-        Dimension: 'Comprehensive',
-        EnableMiscue: true,
-        NBestPhonemeCount: 3,
-      });
+    expect(
+      JSON.parse(Buffer.from(encodedAssessment, 'base64').toString('utf8')),
+    ).toEqual({
+      ReferenceText: 'Hello world.',
+      GradingSystem: 'HundredMark',
+      Granularity: 'Phoneme',
+      Dimension: 'Comprehensive',
+      EnableMiscue: true,
+      NBestPhonemeCount: 3,
+    });
     expect(JSON.stringify(init.headers)).not.toContain(
       'translator-key-must-not-be-used',
     );
