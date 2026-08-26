@@ -122,7 +122,9 @@ describe('CreateGroupComponent', () => {
     expect(component.selectedMembers()[0].id).toBe('user-b');
   });
 
-  it('should respect MAX_MEMBERS limit', () => {
+  it('should respect the 50-member selection limit', () => {
+    expect(component.MAX_MEMBERS).toBe(50);
+
     for (let i = 0; i < component.MAX_MEMBERS + 5; i++) {
       component.addMember({
         ...mockUserA,
@@ -130,7 +132,28 @@ describe('CreateGroupComponent', () => {
         display_name: `User ${i}`,
       });
     }
-    expect(component.selectedMembers().length).toBe(component.MAX_MEMBERS);
+    expect(component.selectedMembers().length).toBe(50);
+  });
+
+  it('should submit all 50 selected member ids', async () => {
+    component.groupName = 'Fifty Member Group';
+    const expectedIds: string[] = [];
+
+    for (let i = 0; i < component.MAX_MEMBERS; i++) {
+      const id = `member-${i}`;
+      expectedIds.push(id);
+      component.addMember({
+        ...mockUserA,
+        id,
+        display_name: `Member ${i}`,
+      });
+    }
+
+    await component.createGroup();
+
+    expect(component.selectedCount()).toBe(50);
+    expect(component.canAddMore()).toBe(false);
+    expect(mockChatService.createGroup).toHaveBeenCalledWith('Fifty Member Group', expectedIds);
   });
 
   it('should compute selectedMemberIds', () => {
@@ -234,9 +257,10 @@ describe('CreateGroupComponent', () => {
   });
 
   it('should canAddMore return correct value', () => {
+    expect(component.MAX_MEMBERS).toBe(50);
     expect(component.canAddMore()).toBe(true);
 
-    for (let i = 0; i < 49; i++) {
+    for (let i = 0; i < component.MAX_MEMBERS; i++) {
       component.addMember({
         ...mockUserA,
         id: `user-${i}`,
