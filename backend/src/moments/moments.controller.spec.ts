@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MomentsController } from './moments.controller';
+import { MomentsFeedService } from './moments-feed.service';
 import { MomentsService } from './moments.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -9,6 +10,7 @@ import { R2Service } from '../cloudflare-r2/r2.service';
 describe('MomentsController', () => {
   let controller: MomentsController;
   let momentsService: MomentsService;
+  let momentsFeedService: MomentsFeedService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -25,6 +27,12 @@ describe('MomentsController', () => {
             getComments: vi.fn(),
             pinMoment: vi.fn(),
             getLifetimeCounts: vi.fn(),
+          },
+        },
+        {
+          provide: MomentsFeedService,
+          useValue: {
+            getFeed: vi.fn(),
           },
         },
         {
@@ -45,6 +53,7 @@ describe('MomentsController', () => {
 
     controller = module.get<MomentsController>(MomentsController);
     momentsService = module.get<MomentsService>(MomentsService);
+    momentsFeedService = module.get<MomentsFeedService>(MomentsFeedService);
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -81,19 +90,19 @@ describe('MomentsController', () => {
     it('should return empty array if user is not provided', async () => {
       const result = await controller.getFeed(null);
       expect(result).toEqual([]);
-      expect(momentsService.getFeed).not.toHaveBeenCalled();
+      expect(momentsFeedService.getFeed).not.toHaveBeenCalled();
     });
 
-    it('should call service getFeed with active filter and lang when user is provided', async () => {
+    it('should call feed service with active filter and lang when user is provided', async () => {
       const feed: any[] = [{ id: 'm-1' }];
-      (momentsService.getFeed as Mock).mockResolvedValue(feed);
+      (momentsFeedService.getFeed as Mock).mockResolvedValue(feed);
 
       const result = await controller.getFeed(
         { id: 'user-1' } as any,
         'Classmates',
         'fr',
       );
-      expect(momentsService.getFeed).toHaveBeenCalledWith(
+      expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
         'user-1',
         'Classmates',
         'fr',
@@ -103,10 +112,10 @@ describe('MomentsController', () => {
 
     it('should use All as default filter when filter is undefined', async () => {
       const feed: any[] = [{ id: 'm-1' }];
-      (momentsService.getFeed as Mock).mockResolvedValue(feed);
+      (momentsFeedService.getFeed as Mock).mockResolvedValue(feed);
 
       const result = await controller.getFeed({ id: 'user-1' } as any);
-      expect(momentsService.getFeed).toHaveBeenCalledWith(
+      expect(momentsFeedService.getFeed).toHaveBeenCalledWith(
         'user-1',
         'All',
         undefined,

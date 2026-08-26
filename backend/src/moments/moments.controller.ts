@@ -22,21 +22,22 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
+import { MomentsFeedService, MomentFeedFilter } from './moments-feed.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
 
-const MOMENT_FEED_FILTERS = [
+const MOMENT_FEED_FILTERS: readonly MomentFeedFilter[] = [
   'All',
   'Classmates',
   'Following',
   'For You',
-] as const;
-type MomentFeedFilter = (typeof MOMENT_FEED_FILTERS)[number];
+];
 
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
 export class MomentsController {
   constructor(
     private readonly momentsService: MomentsService,
+    private readonly momentsFeedService: MomentsFeedService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
   ) {}
@@ -68,16 +69,10 @@ export class MomentsController {
       return [];
     }
 
-    const feed = await this.momentsService.getFeed(
+    return await this.momentsFeedService.getFeed(
       user.id,
       activeFilter,
       targetLanguage ?? undefined,
-    );
-
-    return feed.filter(
-      (moment) =>
-        !moment.id.startsWith('mock-moment-') &&
-        (activeFilter !== 'Following' || moment.user_id !== user.id),
     );
   }
 
