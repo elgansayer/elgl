@@ -19,9 +19,11 @@ describe('NotificationsInboxService', () => {
       lt: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockImplementation(() => Promise.resolve(result)),
-      then: vi.fn().mockImplementation((resolve: (value: unknown) => unknown) =>
-        Promise.resolve(resolve(result)),
-      ),
+      then: vi
+        .fn()
+        .mockImplementation((resolve: (value: unknown) => unknown) =>
+          Promise.resolve(resolve(result)),
+        ),
     };
     client = { from: vi.fn().mockReturnValue(builder) };
 
@@ -68,7 +70,11 @@ describe('NotificationsInboxService', () => {
   });
 
   it('does not fabricate unread counts on provider failure', async () => {
-    result = { data: null, error: { message: 'database unavailable' }, count: 2 };
+    result = {
+      data: null,
+      error: { message: 'database unavailable' },
+      count: 2,
+    };
     await expect(service.getUnreadCount('user-1')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
