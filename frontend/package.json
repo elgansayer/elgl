@@ -98,7 +98,7 @@
     "eslint-formatter-compact": "^9.0.1",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^28.1.0",
-    "listr2": "10.2.1",
+    "listr2": "11.0.0",
     "postcss": "^8.5.26",
     "prettier": "3.9.6",
     "start-server-and-test": "^3.0.12",
