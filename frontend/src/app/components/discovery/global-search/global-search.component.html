@@ -7,7 +7,6 @@
     {{ 'discovery.global_search_title' | t }}
   </h2>
 
-  <!-- Native Language Dropdown -->
   <div class="flex flex-col gap-1.5">
     <label for="global-nativeLanguages" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.native_languages' | t }}
@@ -26,7 +25,6 @@
     </hlm-native-select>
   </div>
 
-  <!-- Target Language Dropdown -->
   <div class="flex flex-col gap-1.5">
     <label for="global-targetLanguage" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.target_language' | t }}
@@ -45,7 +43,6 @@
     </hlm-native-select>
   </div>
 
-  <!-- Level Dropdown -->
   <div class="flex flex-col gap-1.5">
     <label for="global-proficiencyLevel" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'discovery.proficiency_level' | t }}
@@ -66,20 +63,20 @@
 
   <div class="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-200 p-3">
     <hlm-checkbox
-      inputId="global-hasAudioIntro"
+      [inputId]="audioIntroId"
       [checked]="hasAudioIntro()"
-      (change)="toggleHasAudioIntro()"
+      (checkedChange)="onAudioIntroChange($event)"
     />
-    <label for="global-hasAudioIntro" class="text-xs sm:text-sm font-medium text-text-primary">
+    <label [for]="audioIntroId" class="text-xs sm:text-sm font-medium text-text-primary">
       {{ 'audioIntro.title' | t }}
     </label>
   </div>
 
   <button
     hlmBtn
+    type="button"
     (click)="applyFilters()"
     class="mt-2 w-full py-2.5 sm:py-3 px-4 bg-accent-500 hover:bg-accent-400 text-white font-bold rounded-xl transition-colors text-sm sm:text-base active:scale-[0.98] touch-manipulation"
-    [attr.aria-label]="'discovery.search_button' | t"
   >
     {{ 'discovery.search_button' | t }}
   </button>
