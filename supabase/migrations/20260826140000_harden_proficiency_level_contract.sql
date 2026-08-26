@@ -4,9 +4,24 @@
 -- Mixed-version safety:
 -- - existing supported lower/mixed-case values are normalized to the canonical
 --   uppercase CEFR representation used by the API and profile UI;
--- - unexpected values fail the migration instead of being silently discarded;
+-- - unexpected values fail before the existing constraint is touched instead
+--   of being silently discarded;
 -- - NULL remains valid so profiles that have not selected/completed a level are
 --   not assigned an invented proficiency.
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.users
+    WHERE proficiency_level IS NOT NULL
+      AND upper(btrim(proficiency_level)) NOT IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
+  ) THEN
+    RAISE EXCEPTION 'users.proficiency_level contains unsupported values; repair data before retrying migration'
+      USING ERRCODE = '23514';
+  END IF;
+END
+$$;
 
 ALTER TABLE public.users
   DROP CONSTRAINT IF EXISTS users_proficiency_level_check;
@@ -16,20 +31,6 @@ SET proficiency_level = upper(btrim(proficiency_level))
 WHERE proficiency_level IS NOT NULL
   AND upper(btrim(proficiency_level)) IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
   AND proficiency_level IS DISTINCT FROM upper(btrim(proficiency_level));
-
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM public.users
-    WHERE proficiency_level IS NOT NULL
-      AND proficiency_level NOT IN ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
-  ) THEN
-    RAISE EXCEPTION 'users.proficiency_level contains unsupported values; repair data before retrying migration'
-      USING ERRCODE = '23514';
-  END IF;
-END
-$$;
 
 ALTER TABLE public.users
   ALTER COLUMN proficiency_level TYPE varchar(2)
