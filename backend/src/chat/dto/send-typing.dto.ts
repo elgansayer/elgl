@@ -1,9 +1,9 @@
-import { IsString } from 'class-validator';
+import { IsBoolean, IsUUID } from 'class-validator';
 
 export class SendTypingDto {
-  @IsString()
+  @IsUUID()
   room_id!: string;
 
-  @IsString()
-  is_typing!: string; // 'true' or 'false'
+  @IsBoolean()
+  is_typing!: boolean;
 }
