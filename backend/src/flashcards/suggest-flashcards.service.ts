@@ -36,7 +36,9 @@ export class SuggestFlashcardsService {
     const segments = Array.from(segmenter.segment(message));
     const words = segments
       .filter((segment) => segment.isWordLike)
-      .map((segment) => segment.segment.toLocaleLowerCase(target_language || 'en').trim())
+      .map((segment) =>
+        segment.segment.toLocaleLowerCase(target_language || 'en').trim(),
+      )
       .filter(Boolean);
     const uniqueWords = [...new Set(words)];
 
@@ -68,7 +70,9 @@ export class SuggestFlashcardsService {
           data
             .map((row) =>
               typeof row.word_token === 'string'
-                ? row.word_token.toLocaleLowerCase(target_language || 'en').trim()
+                ? row.word_token
+                    .toLocaleLowerCase(target_language || 'en')
+                    .trim()
                 : '',
             )
             .filter(Boolean),

@@ -58,8 +58,7 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
 
         excluded = excluded_task_ids or set()
         merge_in_flight = any(
-            task_id in jobs and jobs[task_id].state is JobState.MERGE_QUEUED
-            for task_id in excluded
+            task_id in jobs and jobs[task_id].state is JobState.MERGE_QUEUED for task_id in excluded
         )
         if merge_in_flight:
             return gate_merge_batch(batch, main_ci_green=False)
@@ -115,10 +114,10 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 expected_head_sha,
             )
 
-        setattr(daemon_module, "select_batch", gated_select_batch)
-        setattr(self.pipeline.github, "merge_pull_request", gated_merge_pull_request)
+        daemon_module.select_batch = gated_select_batch
+        self.pipeline.github.merge_pull_request = gated_merge_pull_request  # type: ignore[method-assign]
         try:
             return super()._loop()
         finally:
-            setattr(daemon_module, "select_batch", original_select)
-            setattr(self.pipeline.github, "merge_pull_request", original_merge)
+            daemon_module.select_batch = original_select
+            self.pipeline.github.merge_pull_request = original_merge  # type: ignore[method-assign]

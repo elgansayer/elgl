@@ -2,10 +2,10 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MomentsController } from './moments.controller';
 import { MomentsService } from './moments.service';
-import { MomentsRankingService } from './moments-ranking.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { MomentsRankingService } from './moments-ranking.service';
 
 describe('MomentsController', () => {
   let controller: MomentsController;
@@ -29,12 +29,6 @@ describe('MomentsController', () => {
           },
         },
         {
-          provide: MomentsRankingService,
-          useValue: {
-            rankForYou: vi.fn(),
-          },
-        },
-        {
           provide: UsersService,
           useValue: {
             getProfile: vi.fn(),
@@ -43,6 +37,14 @@ describe('MomentsController', () => {
         {
           provide: R2Service,
           useValue: {},
+        },
+        {
+          provide: MomentsRankingService,
+          useValue: {
+            rankForYou: vi
+              .fn()
+              .mockImplementation(async (_userId, moments) => moments),
+          },
         },
       ],
     })

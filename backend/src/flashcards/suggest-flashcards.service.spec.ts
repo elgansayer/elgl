@@ -99,7 +99,9 @@ describe('SuggestFlashcardsService', () => {
     expect(mockQueryBuilder.limit).toHaveBeenCalledWith(2000);
     expect(result.suggestions).not.toContain('hello');
     expect(result.suggestions).not.toContain('world');
-    expect(result.suggestions).toEqual(expect.arrayContaining(['this', 'is', 'new']));
+    expect(result.suggestions).toEqual(
+      expect.arrayContaining(['this', 'is', 'new']),
+    );
   });
 
   it('ignores a legacy caller-controlled user_id', async () => {

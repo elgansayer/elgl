@@ -61,8 +61,7 @@ export class SuggestFlashcardsController {
   @ApiQuery({
     name: 'target_language',
     required: false,
-    description:
-      'BCP 47 language tag used for locale-aware word segmentation.',
+    description: 'BCP 47 language tag used for locale-aware word segmentation.',
     example: 'fr',
   })
   @ApiQuery({

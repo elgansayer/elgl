@@ -22,7 +22,9 @@ export class CommentMentionNotificationListener {
         : [];
 
     const recipientIds = Array.from(new Set(candidateRecipientIds))
-      .filter((recipientId) => recipientId && recipientId !== payload.commenterId)
+      .filter(
+        (recipientId) => recipientId && recipientId !== payload.commenterId,
+      )
       .slice(0, MAX_MENTION_RECIPIENTS);
 
     for (const recipientId of recipientIds) {
