@@ -158,6 +158,18 @@ describe('CreateEventModalComponent', () => {
     });
   });
 
+  it('dismisses from the Spartan dialog boundary but stays open while submitting', () => {
+    const dismissSpy = vi.fn();
+    component.dismiss.subscribe(dismissSpy);
+
+    component.onDialogStateChanged('closed');
+    expect(dismissSpy).toHaveBeenCalledTimes(1);
+
+    component.isSubmitting.set(true);
+    component.onDialogStateChanged('closed');
+    expect(dismissSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('should suppress duplicate submissions while creation is pending', async () => {
     const request = new Subject<Event>();
     eventsServiceSpy.createEvent.mockReturnValue(request);
