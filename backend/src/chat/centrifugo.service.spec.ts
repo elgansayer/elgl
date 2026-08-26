@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
 import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
+import Redis from 'ioredis';
 
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn(),
@@ -111,7 +112,13 @@ describe('CentrifugoService', () => {
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_SECRET');
     });
 
-    it('should connect to Redis and load Lua script', () => {
+    it('should connect to Redis with the v5-compatible RESP2 protocol and load Lua script', () => {
+      expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
+        maxRetriesPerRequest: 1,
+        lazyConnect: true,
+        enableOfflineQueue: false,
+        protocol: 2,
+      });
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
     });

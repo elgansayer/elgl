@@ -1,14 +1,18 @@
-import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { I18nService } from '../../services/i18n.service';
-import { NotificationService, InAppNotification } from '../../services/notification.service';
+import {
+  InAppNotification,
+  NotificationFilter,
+  NotificationService,
+} from '../../services/notification.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
-export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system';
+export type NotificationTab = NotificationFilter;
 
 @Component({
   selector: 'app-notifications-inbox',
@@ -17,23 +21,40 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
   styleUrls: ['./notifications-inbox.component.scss'],
 })
 export class NotificationsInboxComponent {
-  private notificationService = inject(NotificationService);
-  private unreadCounter = inject(UnreadCounterService);
-  private location = inject(Location);
-  private router = inject(Router);
+  private readonly notificationService = inject(NotificationService);
+  private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly location = inject(Location);
+  private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
+  private readonly pageSize = 20;
 
   readonly selectedTab = signal<NotificationTab>('all');
-  readonly unreadCount = signal<number>(0);
+  readonly unreadCount = signal(0);
+  readonly additionalNotifications = signal<InAppNotification[]>([]);
+  readonly hasMore = signal(false);
+  readonly isLoadingMore = signal(false);
+  readonly markingAllRead = signal(false);
+  readonly actionError = signal(false);
+  readonly loadMoreError = signal(false);
 
   readonly notificationsResource = resource({
     params: () => this.selectedTab(),
     loader: ({ params: tab }) => this.loadNotifications(tab),
   });
 
-  readonly notifications = computed(() => this.notificationsResource.value() ?? []);
+  readonly notifications = computed(() => {
+    const byId = new Map<string, InAppNotification>();
+    for (const notification of this.notificationsResource.value() ?? []) {
+      byId.set(notification.id, notification);
+    }
+    for (const notification of this.additionalNotifications()) {
+      byId.set(notification.id, notification);
+    }
+    return [...byId.values()];
+  });
 
   readonly isLoading = this.notificationsResource.isLoading;
+  readonly loadError = this.notificationsResource.error;
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -47,12 +68,16 @@ export class NotificationsInboxComponent {
   });
 
   private async loadNotifications(tab: NotificationTab): Promise<InAppNotification[]> {
+    this.additionalNotifications.set([]);
+    this.actionError.set(false);
+    this.loadMoreError.set(false);
     const [list, unread] = await Promise.all([
-      this.notificationService.getNotifications(tab),
+      this.notificationService.getNotifications(tab, { limit: this.pageSize }),
       this.notificationService.getUnreadCount(),
     ]);
     this.unreadCount.set(unread);
     this.unreadCounter.setNotificationUnread(unread);
+    this.hasMore.set(list.length === this.pageSize);
     return list;
   }
 
@@ -61,36 +86,89 @@ export class NotificationsInboxComponent {
   }
 
   setTab(tab: NotificationTab): void {
+    if (tab === this.selectedTab()) return;
+    this.additionalNotifications.set([]);
+    this.hasMore.set(false);
+    this.actionError.set(false);
+    this.loadMoreError.set(false);
     this.selectedTab.set(tab);
   }
 
-  async markAllAsRead(): Promise<void> {
-    await this.notificationService.markAllAsRead();
-    this.unreadCount.set(0);
-    this.unreadCounter.setNotificationUnread(0);
+  retry(): void {
+    this.actionError.set(false);
+    this.loadMoreError.set(false);
+    this.notificationsResource.reload();
   }
 
-  async onNotificationClick(notif: InAppNotification): Promise<void> {
-    if (!notif.is_read) {
-      notif.is_read = true;
-      this.unreadCount.update((c) => Math.max(0, c - 1));
-      this.unreadCounter.decrementNotificationUnread();
-      void this.notificationService.markAsRead(notif.id);
+  async loadMore(): Promise<void> {
+    if (!this.hasMore() || this.isLoadingMore()) return;
+    const current = this.notifications();
+    const before = current.at(-1)?.created_at;
+    if (!before) {
+      this.hasMore.set(false);
+      return;
     }
 
+    this.isLoadingMore.set(true);
+    this.loadMoreError.set(false);
+    try {
+      const next = await this.notificationService.getNotifications(this.selectedTab(), {
+        limit: this.pageSize,
+        before,
+      });
+      this.additionalNotifications.update((items) => [...items, ...next]);
+      this.hasMore.set(next.length === this.pageSize);
+    } catch {
+      this.loadMoreError.set(true);
+    } finally {
+      this.isLoadingMore.set(false);
+    }
+  }
+
+  async markAllAsRead(): Promise<void> {
+    if (this.markingAllRead() || this.unreadCount() === 0) return;
+    this.markingAllRead.set(true);
+    this.actionError.set(false);
+    try {
+      await this.notificationService.markAllAsRead();
+      for (const notification of this.notifications()) notification.is_read = true;
+      this.unreadCount.set(0);
+      this.unreadCounter.setNotificationUnread(0);
+    } catch {
+      this.actionError.set(true);
+    } finally {
+      this.markingAllRead.set(false);
+    }
+  }
+
+  onNotificationClick(notification: InAppNotification): void {
+    if (!notification.is_read) void this.markNotificationRead(notification);
+
     if (
-      notif.type === 'like_moment' ||
-      notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment' ||
-      notif.type === 'mention_comment'
+      notification.type === 'like_moment' ||
+      notification.type === 'comment_moment' ||
+      notification.type === 'reply_comment' ||
+      notification.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
-    } else if (notif.type === 'mention_chat') {
-      void this.router.navigate(['/chat', notif.entity_id]);
-    } else if (notif.type === 'system') {
+    } else if (notification.type === 'mention_chat' && notification.entity_id) {
+      void this.router.navigate(['/chat', notification.entity_id]);
+    } else if (notification.type === 'system') {
       void this.router.navigate(['/help']);
     } else {
-      void this.router.navigate(['/profile/user', notif.actor_id]);
+      void this.router.navigate(['/profile', notification.actor_id]);
+    }
+  }
+
+  private async markNotificationRead(notification: InAppNotification): Promise<void> {
+    try {
+      await this.notificationService.markAsRead(notification.id);
+      if (notification.is_read) return;
+      notification.is_read = true;
+      this.unreadCount.update((count) => Math.max(0, count - 1));
+      this.unreadCounter.decrementNotificationUnread();
+    } catch {
+      this.actionError.set(true);
     }
   }
 

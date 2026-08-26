@@ -104,6 +104,7 @@ export class CentrifugoService implements OnModuleInit {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
         enableOfflineQueue: false,
+        protocol: 2,
       });
       await this.redis.connect();
       // Pre-load the Lua script so we can call it by SHA digest (EVALSHA)

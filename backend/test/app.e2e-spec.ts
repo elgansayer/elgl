@@ -129,6 +129,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
 
     mockSupabaseClient = {
       from: vi.fn().mockReturnValue(mockQueryBuilder),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: { user: { id: 'e2e-user-1', email: 'e2e@hellotalk.com' } },
