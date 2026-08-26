@@ -71,6 +71,7 @@ export class AudioRoomComponent implements OnInit {
   private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly isCreatingRoom = signal<boolean>(false);
   readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showTipModal = signal<boolean>(false);
@@ -165,6 +166,9 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
+    if (this.isCreatingRoom()) return;
+
+    this.isCreatingRoom.set(true);
     try {
       const room = await this.store.createRoom(
         payload.title,
@@ -177,6 +181,8 @@ export class AudioRoomComponent implements OnInit {
     } catch (e) {
       console.error('Error creating live room:', e);
       showToast(this.i18n.translate('audioRoom.launchError'));
+    } finally {
+      this.isCreatingRoom.set(false);
     }
   }
 

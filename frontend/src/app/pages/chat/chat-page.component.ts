@@ -8,7 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { AiConversationService, Scenario } from './ai-conversation.service';
+import { AiConversationService, Scenario } from '../../services/ai-conversation.service';
 import { A11yClickableDirective } from '../../components/primitives/a11y-clickable';
 import { VisualDiffComponent } from '../../components/visual-diff/visual-diff.component';
 
@@ -857,7 +857,7 @@ export class ChatPageComponent implements OnInit {
 
     try {
       const scenarioId = this.aiSelectedScenario()?.id;
-      const response = await this.aiConversationService.sendMessage(
+      const { reply: response } = await this.aiConversationService.sendMessage(
         text,
         scenarioId,
         conversationHistory,
