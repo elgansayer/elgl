@@ -31,9 +31,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: empty-state-illustrations-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
