@@ -1546,7 +1546,8 @@ def test_repeated_identical_task_failure_opens_recoverable_quarantine(
     assert restored.state is JobState.QUARANTINED
     assert restored.quarantine_reason is not None
     assert restored.quarantine_notification_pending is False
-    assert (42, ("factory-quarantined", "needs-human")) in github.labels
+    assert (42, ("factory-quarantined",)) in github.labels
+    assert (42, ("factory-quarantined", "needs-human")) not in github.labels
     assert len(github.comments) == 1
 
 
@@ -1581,7 +1582,8 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
         "task_failure",
     ]
     assert github.closed == []
-    assert (42, ("factory-quarantined", "needs-human")) in github.labels
+    assert (42, ("factory-quarantined",)) in github.labels
+    assert (42, ("factory-quarantined", "needs-human")) not in github.labels
     assert not any("already satisfied" in body for _, body in github.comments)
 
 
