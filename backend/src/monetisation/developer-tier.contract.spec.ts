@@ -15,11 +15,17 @@ function readRepositoryFile(path: string): string {
 
 describe('Developer Tier product contract', () => {
   it('keeps the lazy Developer dashboard and typed client endpoints wired', () => {
-    const routes = readRepositoryFile('frontend/src/app/routes/admin.routes.ts');
-    const client = readRepositoryFile('frontend/src/app/services/monetisation.service.ts');
+    const routes = readRepositoryFile(
+      'frontend/src/app/routes/admin.routes.ts',
+    );
+    const client = readRepositoryFile(
+      'frontend/src/app/services/monetisation.service.ts',
+    );
 
     expect(routes).toMatch(/path:\s*'developer'/);
-    expect(routes).toContain('developer-dashboard/developer-dashboard.component');
+    expect(routes).toContain(
+      'developer-dashboard/developer-dashboard.component',
+    );
     expect(routes).toContain('DeveloperDashboardComponent');
 
     expect(client).toContain("private readonly baseUrl = '/api/monetisation'");
@@ -42,12 +48,16 @@ describe('Developer Tier product contract', () => {
   });
 
   it('keeps the paid Developer tier, cryptographic key generation, and 600 RPM contract', () => {
-    const service = readRepositoryFile('backend/src/monetisation/monetisation.service.ts');
+    const service = readRepositoryFile(
+      'backend/src/monetisation/monetisation.service.ts',
+    );
 
     expect(service).toContain("developer_20_ukp_26_usd: 'developer'");
     expect(service).toContain('crypto.randomBytes(16)');
     expect(service).toContain('`ht_dev_${');
-    expect(service).toContain("user.vip_tier?.startsWith('developer') ? 600 : 60");
+    expect(service).toContain(
+      "user.vip_tier?.startsWith('developer') ? 600 : 60",
+    );
     expect(service).toContain('Developer Tier: 20 UKP / $26 USD per month');
   });
 
@@ -76,11 +86,15 @@ describe('Developer Tier product contract', () => {
     );
 
     expect(dashboard).toContain('if (this.isGeneratingApiKey()) return;');
-    expect(dashboard).toContain('const issuedKey = await this.store.generateApiKey();');
+    expect(dashboard).toContain(
+      'const issuedKey = await this.store.generateApiKey();',
+    );
     expect(dashboard).toContain(
       "'Generated new production API key (600 RPM).'",
     );
-    expect(dashboard).not.toContain('Generated new production API key: ${issuedKey}');
+    expect(dashboard).not.toContain(
+      'Generated new production API key: ${issuedKey}',
+    );
 
     expect(template).toContain("'developer.generateBtn' | t");
     expect(template).toContain('store.developerStats()?.total_api_calls_today');
