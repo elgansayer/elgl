@@ -1,9 +1,9 @@
-import { IsBoolean, IsUUID } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class SendTypingDto {
-  @IsUUID()
+  @IsString()
   room_id!: string;
 
-  @IsBoolean()
-  is_typing!: boolean;
+  @IsString()
+  is_typing!: string; // Legacy internal DTO; authenticated API uses PublishTypingDto.
 }
