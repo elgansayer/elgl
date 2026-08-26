@@ -1,3 +1,5 @@
+import { RequestMethod } from '@nestjs/common';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VersionController } from './version.controller';
 import { VersionService } from './version.service';
@@ -30,6 +32,18 @@ describe('VersionController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('exposes the minimum supported version as GET /version/minimum', () => {
+    const handler = VersionController.prototype.getMinimumSupportedVersion;
+
+    expect(Reflect.getMetadata(PATH_METADATA, VersionController)).toBe(
+      'version',
+    );
+    expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe('minimum');
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.GET,
+    );
   });
 
   describe('getVersion', () => {

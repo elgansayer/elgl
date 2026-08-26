@@ -6,6 +6,10 @@
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
 #   - A failure trap restores the primary service and any active repository service.
 #   - Logs every decision so journalctl -u hellotalk-factory-update traces the run.
+#
+# The unit runs as root for systemd/package operations. Repository Git
+# operations run as the repository owner and use GH_TOKEN (GITHUB_TOKEN) from
+# factory.env, loaded by the service unit EnvironmentFile.
 set -euo pipefail
 
 FACTORY_USER=dev
@@ -20,7 +24,7 @@ SERVICES_STOPPED=false
 WORKOUT_WAS_ACTIVE=false
 RESTART_GRACE_SECONDS=${FACTORY_UPDATE_RESTART_GRACE_SECONDS:-60}
 ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-300}
-GIT_TIMEOUT=120
+GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
 
@@ -36,7 +40,6 @@ try:
     jobs = d.get("active_jobs", [])
     raise SystemExit(0 if not jobs else 1)
 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-    # If we cannot read the heartbeat treat it as idle - daemon may be stopped.
     raise SystemExit(0)
 PY
 }
@@ -48,7 +51,7 @@ while ! service_idle "$HEARTBEAT" || {
     ! service_idle "$WORKOUT_HEARTBEAT"
 }; do
   if [ "$waited" -ge "$ACTIVE_JOB_WAIT_SECONDS" ]; then
-    log "Active jobs still running after ${ACTIVE_JOB_WAIT_SECONDS}s - aborting update, will retry tomorrow"
+    log "Active jobs still running after ${ACTIVE_JOB_WAIT_SECONDS}s - skipping update, will retry tomorrow"
     exit 0
   fi
   sleep 15
@@ -77,11 +80,13 @@ trap recover_services EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Fetching origin/main"
 timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
-    git -C "$REPOSITORY" fetch --quiet origin main
+  runuser -u "$FACTORY_USER" -- env \
+    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
+    git -c credential.helper='!gh auth git-credential' \
+    -C "$REPOSITORY" fetch --quiet origin main
 
-local_sha=$(git -C "$REPOSITORY" rev-parse HEAD)
-remote_sha=$(git -C "$REPOSITORY" rev-parse origin/main)
+local_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse HEAD)
+remote_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse origin/main)
 
 if [ "$local_sha" = "$remote_sha" ]; then
   log "Already up to date at ${local_sha:0:12} - no restart needed"
@@ -93,7 +98,7 @@ log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # 3. Verify the pull will be a clean fast-forward.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-merge_base=$(git -C "$REPOSITORY" merge-base HEAD origin/main)
+merge_base=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" merge-base HEAD origin/main)
 if [ "$merge_base" != "$local_sha" ]; then
   log "ERROR: local main has diverged from origin/main (merge-base=${merge_base:0:12}) - manual intervention required"
   exit 1
@@ -115,10 +120,12 @@ systemctl stop "$SERVICE" || true
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Pulling main"
 timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
-    git -C "$REPOSITORY" pull --ff-only origin main
+  runuser -u "$FACTORY_USER" -- env \
+    HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
+    git -c credential.helper='!gh auth git-credential' \
+    -C "$REPOSITORY" pull --ff-only origin main
 
-pulled_sha=$(git -C "$REPOSITORY" rev-parse HEAD)
+pulled_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse HEAD)
 log "Pulled to ${pulled_sha:0:12}"
 
 log "Reinstalling factory Python package"
@@ -126,6 +133,8 @@ VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
     --project "$REPOSITORY/automation"
+# uv sync ran as root - restore ownership so the factory service (runs as dev) can execute.
+chown -R dev:dev "$FACTORY_VENV"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # 6. Restart and verify.

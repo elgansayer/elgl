@@ -389,6 +389,7 @@ class FactoryDaemon:
         active: dict[Future[Job | None], str] = {}
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
+        next_prune_at = 0.0
         architect_future: Future[None] | None = None
         # Publish liveness before the first provider probe and GitHub refresh.
         # A large queue can make that first scheduling cycle slower than the
@@ -418,6 +419,24 @@ class FactoryDaemon:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
                 capacity = self.config.max_parallel_jobs - len(active)
+                # Must run unconditionally, before the storage gate below and
+                # regardless of pause/capacity state: this is what's supposed
+                # to correct a low-disk state, so gating it behind
+                # storage_ready (as an earlier version of this fix did)
+                # deadlocks - once blocked, nothing ever runs to unblock it.
+                prune_now = time.monotonic()
+                if prune_now >= next_prune_at:
+                    next_prune_at = prune_now + self.config.cooldown_seconds
+                    pruned = prune_recovery_archives(
+                        self.config.recovery_dir,
+                        timedelta(hours=self.config.recovery_retention_hours),
+                    )
+                    if pruned:
+                        LOGGER.info(
+                            "Pruned %d recovery archive(s) older than %sh",
+                            len(pruned),
+                            self.config.recovery_retention_hours,
+                        )
                 storage_ready = self._storage_ready()
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
@@ -467,16 +486,6 @@ class FactoryDaemon:
                                 "Recovered abandoned Factory attempt for task %s; "
                                 "retry is backed off",
                                 task_id,
-                            )
-                        pruned = prune_recovery_archives(
-                            self.config.recovery_dir,
-                            timedelta(hours=self.config.recovery_retention_hours),
-                        )
-                        if pruned:
-                            LOGGER.info(
-                                "Pruned %d recovery archive(s) older than %sh",
-                                len(pruned),
-                                self.config.recovery_retention_hours,
                             )
                         if recovered:
                             jobs = self.pipeline.jobs.load()
