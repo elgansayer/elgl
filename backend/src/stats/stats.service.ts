@@ -43,7 +43,7 @@ export class StatsService {
 
     let queryResults: QueryResult[];
     try {
-      queryResults = (await Promise.all([
+      queryResults = await Promise.all([
         client
           .from('call_logs')
           .select('duration_seconds, started_at')
@@ -64,7 +64,7 @@ export class StatsService {
           .from('moments')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId),
-      ])) as QueryResult[];
+      ]);
     } catch (error: unknown) {
       this.failUnavailable('query_execution', error);
     }
