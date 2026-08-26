@@ -1,18 +1,10 @@
 import { isMockBackendEnabled } from './config/mock-backend-mode';
-
-const FIXTURE_SEED = 7932;
-const FIXTURE_EPOCH_MS = Date.UTC(2024, 0, 1, 0, 0, 0);
-
-function seededRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state += 0x6d2b79f5;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import {
+  MOCK_FIXTURE_EPOCH_MS,
+  createDeterministicFixtureGenerator,
+  getMockFixtureDiagnostics,
+  resolveMockFixtureSeed,
+} from './mock/deterministic-fixtures';
 
 const LINKED_ACCOUNT_FIXTURES = [
   {
@@ -87,8 +79,9 @@ const LINKED_ACCOUNT_FIXTURES = [
   },
 ] as const;
 
-function buildMockUsers() {
-  const random = seededRandom(FIXTURE_SEED);
+export function buildMockUsers(seed = resolveMockFixtureSeed()) {
+  const generator = createDeterministicFixtureGenerator(seed);
+  const random = () => generator.random();
   const nativeLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
   const targetLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
   const names = [
@@ -138,19 +131,26 @@ function buildMockUsers() {
       study_streak_days: Math.floor(random() * 50),
       correction_ratio: Number((0.5 + random() * 0.5).toFixed(2)),
       is_serious_learner: random() > 0.6,
-      created_at: new Date(FIXTURE_EPOCH_MS + i * 60_000).toISOString(),
+      created_at: new Date(MOCK_FIXTURE_EPOCH_MS + i * 60_000).toISOString(),
     };
   });
 }
 
+export function buildMockFixtureSnapshot(seed = resolveMockFixtureSeed()) {
+  return {
+    diagnostics: getMockFixtureDiagnostics(seed),
+    linkedAccounts: LINKED_ACCOUNT_FIXTURES.map((fixture) => ({ ...fixture })),
+    users: buildMockUsers(seed),
+  };
+}
+
 const fixturesEnabled = isMockBackendEnabled();
+const fixtureSnapshot = fixturesEnabled ? buildMockFixtureSnapshot() : null;
 
 /**
  * Legacy fixture exports remain for existing local test consumers, but contain
  * no data unless the explicit mock backend activation boundary is enabled.
  */
-export const MOCK_LINKED_ACCOUNTS = fixturesEnabled
-  ? LINKED_ACCOUNT_FIXTURES.map((fixture) => ({ ...fixture }))
-  : [];
-
-export const MOCK_USERS = fixturesEnabled ? buildMockUsers() : [];
+export const MOCK_LINKED_ACCOUNTS = fixtureSnapshot?.linkedAccounts ?? [];
+export const MOCK_USERS = fixtureSnapshot?.users ?? [];
+export const MOCK_FIXTURE_DIAGNOSTICS = fixtureSnapshot?.diagnostics ?? null;
