@@ -38,8 +38,7 @@ function IsDoodlePngDataUrl(validationOptions?: ValidationOptions) {
           if (messageType !== 'doodle') return true;
 
           return (
-            typeof value === 'string' &&
-            DOODLE_PNG_DATA_URL_PATTERN.test(value)
+            typeof value === 'string' && DOODLE_PNG_DATA_URL_PATTERN.test(value)
           );
         },
       },
