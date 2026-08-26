@@ -15,7 +15,7 @@ import { showToast } from '../../services/toast.service';
   template: `
     @if (loading()) {
       <div
-        class="flex flex-col items-center justify-center p-12"
+        class="flex flex-col items-center justify-center p-6 sm:p-12"
         role="status"
         aria-label="{{ 'diagnosticQuiz.loading' | t }}"
       >
@@ -28,7 +28,7 @@ import { showToast } from '../../services/toast.service';
     }
 
     @if (error()) {
-      <div class="p-12 text-center" role="alert">
+      <div class="p-6 text-center sm:p-12" role="alert">
         <span aria-hidden="true" class="mb-4 block text-5xl">&#x26A0;&#xFE0F;</span>
         <h3 class="mb-2 text-xl font-semibold text-text-primary">
           {{ 'diagnosticQuiz.errorTitle' | t }}
@@ -42,15 +42,19 @@ import { showToast } from '../../services/toast.service';
 
     @if (!loading() && !error() && questions().length > 0) {
       <section
-        class="mx-auto w-full max-w-3xl overflow-hidden rounded-sheet border border-primary/20 bg-surface-200"
+        class="mx-auto w-full max-w-3xl overflow-hidden rounded-card border border-surface-100 bg-surface-200 shadow-card"
         [attr.aria-labelledby]="quizTitleId"
       >
-        <div class="ps-6 pe-6 pt-6 pb-4">
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
+          <div
+            class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <h2 [id]="quizTitleId" class="text-start text-xl font-bold text-text-primary">
               {{ 'diagnosticQuiz.title' | t }}
             </h2>
-            <span class="rounded-full bg-primary/10 px-3 py-1 text-sm text-text-muted">
+            <span
+              class="self-start rounded-pill bg-primary/10 px-3 py-1 text-sm text-text-muted sm:self-auto"
+            >
               {{
                 'diagnosticQuiz.questionCounter'
                   | t: { current: currentQuestionNumber(), total: totalQuestions() }
@@ -58,7 +62,7 @@ import { showToast } from '../../services/toast.service';
             </span>
           </div>
           <div
-            class="h-2 w-full overflow-hidden rounded-full bg-surface-400"
+            class="h-2 w-full overflow-hidden rounded-pill bg-surface-300"
             role="progressbar"
             [attr.aria-label]="'diagnosticQuiz.title' | t"
             [attr.aria-valuenow]="progressPercentage()"
@@ -67,13 +71,13 @@ import { showToast } from '../../services/toast.service';
           >
             <div
               aria-hidden="true"
-              class="h-2 rounded-full bg-primary transition-all duration-500 ease-out"
+              class="h-2 rounded-pill bg-primary transition-all duration-500 ease-out"
               [style.width.%]="progressPercentage()"
             ></div>
           </div>
         </div>
 
-        <div class="min-h-[220px] ps-6 pe-6 pb-6">
+        <div class="min-h-[220px] px-4 pb-5 sm:px-6 sm:pb-6">
           @if (currentQuestion(); as question) {
             <h3
               [id]="'diagnostic-question-' + currentIndex()"
@@ -95,14 +99,16 @@ import { showToast } from '../../services/toast.service';
                   [aria-label]="
                     'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
                   "
-                  class="group min-h-11 w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10"
+                  class="group min-h-11 w-full cursor-pointer rounded-card border-2 border-surface-100 bg-surface-300 px-4 py-4 text-start transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10 sm:px-5"
                 >
-                  <span class="block text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary">
+                  <span
+                    class="flex min-w-0 items-start gap-3 text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary"
+                  >
                     <span
                       aria-hidden="true"
-                      class="me-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-text-muted group-data-[checked=true]:bg-primary group-data-[checked=true]:text-on-fill"
+                      class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-text-muted group-data-[checked=true]:bg-primary group-data-[checked=true]:text-on-fill"
                     >{{ idx + 1 }}</span>
-                    {{ option.text }}
+                    <span class="min-w-0 flex-1">{{ option.text }}</span>
                   </span>
                 </hlm-radio>
               }
@@ -110,18 +116,19 @@ import { showToast } from '../../services/toast.service';
           }
         </div>
 
-        <div class="border-t border-primary/10 bg-surface-400/60 ps-6 pe-6 pt-4 pb-6">
+        <div class="border-t border-surface-100 bg-surface-300 px-4 py-4 sm:px-6 sm:pb-6">
           @if (submitError()) {
             <p class="mb-4 text-sm text-danger" role="alert">
               {{ 'diagnosticQuiz.submitError' | t }}
             </p>
           }
 
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               hlmBtn
               type="button"
               variant="secondary"
+              class="w-full sm:w-auto"
               (click)="previous()"
               [disabled]="isFirstQuestion() || isSubmitting()"
             >
@@ -132,6 +139,7 @@ import { showToast } from '../../services/toast.service';
               <button
                 hlmBtn
                 type="button"
+                class="w-full sm:w-auto"
                 (click)="next()"
                 [disabled]="!canProceed() || isSubmitting()"
                 [attr.aria-busy]="isSubmitting()"
@@ -145,7 +153,13 @@ import { showToast } from '../../services/toast.service';
                 {{ 'diagnosticQuiz.submit' | t }}
               </button>
             } @else {
-              <button hlmBtn type="button" (click)="next()" [disabled]="!canProceed()">
+              <button
+                hlmBtn
+                type="button"
+                class="w-full sm:w-auto"
+                (click)="next()"
+                [disabled]="!canProceed()"
+              >
                 {{ 'diagnosticQuiz.next' | t }}
               </button>
             }
@@ -155,7 +169,7 @@ import { showToast } from '../../services/toast.service';
     }
 
     @if (!loading() && !error() && questions().length === 0) {
-      <div class="p-12 text-center" role="status">
+      <div class="p-6 text-center sm:p-12" role="status">
         <span aria-hidden="true" class="mb-4 block text-5xl">&#x1F4CB;</span>
         <p class="text-sm text-text-muted">{{ 'diagnosticQuiz.empty' | t }}</p>
       </div>

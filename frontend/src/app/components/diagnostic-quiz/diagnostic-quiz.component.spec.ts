@@ -81,6 +81,72 @@ describe('DiagnosticQuizComponent', () => {
     expect(group.querySelectorAll('hlm-radio')).toHaveLength(2);
   });
 
+  it('uses Relay semantic surface, radius, border, and elevation roles', async () => {
+    await load();
+
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
+    const counter: HTMLElement = surface.querySelector('span.rounded-pill');
+    const progress: HTMLElement = surface.querySelector('[role="progressbar"]');
+    const progressFill: HTMLElement = progress.firstElementChild as HTMLElement;
+    const option: HTMLElement = surface.querySelector('hlm-radio');
+
+    expect(surface.classList.toString()).toContain('rounded-card');
+    expect(surface.classList.toString()).toContain('border-surface-100');
+    expect(surface.classList.toString()).toContain('bg-surface-200');
+    expect(surface.classList.toString()).toContain('shadow-card');
+    expect(surface.classList.toString()).not.toContain('rounded-sheet');
+    expect(surface.classList.toString()).not.toContain('border-primary/20');
+
+    expect(counter.classList.toString()).toContain('rounded-pill');
+    expect(counter.classList.toString()).not.toContain('rounded-full');
+    expect(progress.classList.toString()).toContain('rounded-pill');
+    expect(progress.classList.toString()).toContain('bg-surface-300');
+    expect(progressFill.classList.toString()).toContain('rounded-pill');
+
+    expect(option.classList.toString()).toContain('rounded-card');
+    expect(option.classList.toString()).toContain('border-surface-100');
+    expect(option.classList.toString()).toContain('bg-surface-300');
+    expect(option.classList.toString()).toContain('data-[checked=true]:border-primary');
+    expect(option.classList.toString()).not.toContain('rounded-2xl');
+    expect(option.classList.toString()).not.toContain('bg-surface-400');
+  });
+
+  it('uses a mobile-first layout that expands at the small breakpoint', async () => {
+    await load();
+
+    const surface: HTMLElement = fixture.nativeElement.querySelector('section');
+    const headerRow: HTMLElement = surface.querySelector('div.mb-4');
+    const footer: HTMLElement = surface.querySelector('div.border-t');
+    const actionRow: HTMLElement = footer.querySelector('div.flex');
+    const buttons: NodeListOf<HTMLButtonElement> = actionRow.querySelectorAll('button');
+
+    expect(headerRow.classList.toString()).toContain('flex-col');
+    expect(headerRow.classList.toString()).toContain('sm:flex-row');
+    expect(actionRow.classList.toString()).toContain('flex-col');
+    expect(actionRow.classList.toString()).toContain('sm:flex-row');
+
+    for (const button of buttons) {
+      expect(button.classList.toString()).toContain('w-full');
+      expect(button.classList.toString()).toContain('sm:w-auto');
+    }
+  });
+
+  it('keeps option content wrap-safe while preserving a circular index marker', async () => {
+    await load();
+
+    const option: HTMLElement = fixture.nativeElement.querySelector('hlm-radio');
+    const content: HTMLElement = option.querySelector('span.flex');
+    const marker: HTMLElement = content.firstElementChild as HTMLElement;
+    const label: HTMLElement = content.lastElementChild as HTMLElement;
+
+    expect(content.classList.toString()).toContain('min-w-0');
+    expect(content.classList.toString()).toContain('items-start');
+    expect(marker.classList.toString()).toContain('shrink-0');
+    expect(marker.classList.toString()).toContain('rounded-full');
+    expect(label.classList.toString()).toContain('min-w-0');
+    expect(label.classList.toString()).toContain('flex-1');
+  });
+
   it('stores opaque option identifiers rather than client-visible point values', async () => {
     await load();
 
