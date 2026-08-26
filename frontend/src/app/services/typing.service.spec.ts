@@ -87,6 +87,28 @@ describe('TypingService', () => {
     });
   });
 
+  it('bounds outbound identity metadata and rejects unsafe avatar schemes', async () => {
+    currentUser.set({
+      id: 'user-1',
+      user_metadata: {
+        display_name: `  ${'A'.repeat(100)}  `,
+        avatar_url: 'javascript:alert(1)',
+      },
+    });
+    service.connect('room-1');
+    await Promise.resolve();
+
+    service.sendTyping(true);
+
+    expect(centrifugeMock.publish).toHaveBeenCalledWith(
+      'chat:room-1:typing',
+      expect.objectContaining({
+        displayName: 'A'.repeat(80),
+        avatarUrl: '',
+      }),
+    );
+  });
+
   it('does not publish anonymous typing presence', async () => {
     currentUser.set(null);
     service.connect('room-1');
@@ -136,7 +158,7 @@ describe('TypingService', () => {
     expect(service.typingUsers()).toEqual([]);
   });
 
-  it('ignores malformed, anonymous, and self typing events', async () => {
+  it('ignores malformed, anonymous, self, stale, and implausibly future events', async () => {
     service.connect('room-1');
     await Promise.resolve();
 
@@ -144,8 +166,45 @@ describe('TypingService', () => {
     realtimeCallback?.({ userId: 'user-2', typing: 'true', timestamp: Date.now() });
     realtimeCallback?.({ userId: 'user-2', typing: true, timestamp: Number.NaN });
     realtimeCallback?.({ userId: 'user-1', typing: true, timestamp: Date.now() });
+    realtimeCallback?.({ userId: 'user-2', typing: true, timestamp: Date.now() - 10_001 });
+    realtimeCallback?.({ userId: 'user-3', typing: true, timestamp: Date.now() + 5001 });
 
     expect(service.typingUsers()).toEqual([]);
+  });
+
+  it('bounds remote metadata and drops unsafe avatar URLs', async () => {
+    service.connect('room-1');
+    await Promise.resolve();
+
+    realtimeCallback?.({
+      userId: 'user-2',
+      displayName: `  ${'B'.repeat(100)}  `,
+      avatarUrl: 'data:image/svg+xml,<svg></svg>',
+      typing: true,
+      timestamp: Date.now(),
+    });
+
+    expect(service.typingUsers()).toEqual([
+      { userId: 'user-2', displayName: 'B'.repeat(80), avatarUrl: undefined },
+    ]);
+  });
+
+  it('caps group typing state to the supported room membership bound', async () => {
+    service.connect('room-1');
+    await Promise.resolve();
+
+    for (let index = 0; index < 25; index += 1) {
+      realtimeCallback?.({
+        userId: `user-${index + 2}`,
+        displayName: `User ${index + 2}`,
+        typing: true,
+        timestamp: Date.now(),
+      });
+    }
+
+    expect(service.typingUsers()).toHaveLength(19);
+    expect(service.typingUsers()[0]?.userId).toBe('user-8');
+    expect(service.typingUsers()[18]?.userId).toBe('user-26');
   });
 
   it('removes a remote user immediately when a stop event arrives', async () => {
