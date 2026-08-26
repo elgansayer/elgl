@@ -23,6 +23,7 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { A11yClickableDirective } from '../primitives/a11y-clickable';
+import { FlashcardAnswerCheckComponent } from './flashcard-answer-check.component';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
@@ -38,6 +39,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
     AppCardComponent,
     AppButtonPrimaryComponent,
     A11yClickableDirective,
+    FlashcardAnswerCheckComponent,
   ],
   template: `
     <app-srs-error-boundary
@@ -46,7 +48,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
       (retry)="handleRetry()"
     >
       <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
-        <!-- Graceful degradation banner -->
         @if (isDegraded()) {
           <div
             class="rounded-sheet border border-warning/30 bg-warning/10 p-3 text-center"
@@ -60,7 +61,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
           </div>
         }
         @if (isLoading()) {
-          <!-- Skeleton loading state -->
           <app-card customClass="app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
             <div class="flex items-center justify-between">
               <app-skeleton-loader [height]="'20px'" [width]="'140px'" [borderRadius]="'8px'" />
@@ -95,14 +95,12 @@ type ReviewGrade = 'again' | 'good' | 'known';
             </div>
           </app-card>
         } @else if (reviewCards().length === 0) {
-          <!-- Empty state - no cards to review -->
           <app-empty-state
             [icon]="'🎯'"
             [title]="'review.emptyTitle' | t"
             [description]="'review.emptyDesc' | t"
           />
         } @else {
-          <!-- Header with progress -->
           <app-card customClass="app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
             <div class="flex items-center justify-between">
               <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
@@ -113,7 +111,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 }}
               </span>
             </div>
-            <!-- Progress bar -->
             <div
               class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200"
               role="progressbar"
@@ -127,7 +124,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 [style.width]="progressPercent() + '%'"
               ></div>
             </div>
-            <!-- Session stats -->
             <div class="flex gap-3 text-xs" aria-live="polite" aria-atomic="true">
               <span class="rounded-app bg-success/20 px-2 py-0.5 font-bold text-success">
                 {{ 'review.knownCount' | t: { count: sessionStats().known } }}
@@ -142,7 +138,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
           </app-card>
 
           @if (isComplete()) {
-            <!-- Completion state -->
             <section
               class="rounded-sheet border border-surface-100 bg-surface-200 p-8 text-center space-y-4"
               role="status"
@@ -167,10 +162,8 @@ type ReviewGrade = 'again' | 'good' | 'known';
               </app-button-primary>
             </section>
           } @else {
-            <!-- Flashcard -->
             @if (currentCard(); as card) {
               <div class="space-y-4" aria-live="assertive" aria-atomic="true">
-                <!-- Card -->
                 <div
                   #flashcardEl
                   class="flip-card cursor-pointer select-none"
@@ -186,7 +179,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   [attr.aria-describedby]="'card-front-' + card.id + ' card-back-' + card.id"
                 >
                   <div class="flip-card-inner">
-                    <!-- Front -->
                     <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
                         <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary">
@@ -208,7 +200,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
                         {{ 'review.tapToFlip' | t }}
                       </p>
                     </div>
-                    <!-- Back -->
                     <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
                         <span class="rounded-app bg-success/20 px-2 py-0.5 text-success">
@@ -237,7 +228,13 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   </div>
                 </div>
 
-                <!-- Grading buttons (only visible after flip) -->
+                <app-flashcard-answer-check
+                  [card]="card"
+                  [revealed]="isFlipped()"
+                  (reveal)="showAnswer()"
+                  (applyGrade)="gradeReview($event)"
+                />
+
                 @if (isFlipped()) {
                   <div
                     class="grid grid-cols-4 gap-2 animate-fadeIn"
@@ -292,7 +289,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
         display: block;
       }
 
-      /* 3D Flip Card */
       .flip-card {
         perspective: 1200px;
       }
@@ -338,7 +334,6 @@ type ReviewGrade = 'again' | 'good' | 'known';
         border-color: rgb(var(--color-primary-rgb) / 0.2);
       }
 
-      /* Grading buttons */
       .btn-grade {
         display: flex;
         flex-direction: column;
@@ -410,8 +405,6 @@ export class FlashcardReviewComponent {
   private haptic = inject(HapticFeedbackService);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
-
-  /** Optional input: a specific set of flashcards to review. If omitted, uses pending review cards from store. */
   readonly cards = input<Flashcard[]>([]);
 
   readonly reviewCards = computed<Flashcard[]>(() => {
@@ -426,7 +419,6 @@ export class FlashcardReviewComponent {
   readonly isSaving = signal(false);
   readonly isLoading = signal(false);
   readonly loadError = signal(false);
-  /** True when the SRS backend is degraded (circuit breaker open, offline queue in use) */
   readonly isDegraded = signal(false);
   readonly degradedReason = signal('');
 
@@ -443,12 +435,7 @@ export class FlashcardReviewComponent {
     const card = this.currentCard();
     if (!card) return '';
     const nextLevel = card.srs_level < 4 ? card.srs_level + 1 : 4;
-    const intervals: Record<number, string> = {
-      1: '3d',
-      2: '7d',
-      3: '14d',
-      4: '30d',
-    };
+    const intervals: Record<number, string> = { 1: '3d', 2: '7d', 3: '14d', 4: '30d' };
     const days = intervals[nextLevel] ?? '1d';
     return this.i18n.translate('review.goodHint', { interval: days });
   });
@@ -468,13 +455,10 @@ export class FlashcardReviewComponent {
 
   constructor() {
     this.loadReviewData();
-
-    // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
         const elRef = this.flashcardEl();
         if (elRef) {
-          // Schedule focus on next animation frame after DOM update
           requestAnimationFrame(() => elRef.nativeElement.focus());
         }
       }
@@ -492,15 +476,18 @@ export class FlashcardReviewComponent {
     } finally {
       this.isLoading.set(false);
     }
-    // Mirror the store's degraded state
     this.isDegraded.set(this.vocabStore.isDegraded());
     this.degradedReason.set(this.vocabStore.degradedReason());
   }
 
   flipCard(): void {
     if (this.currentCard()) {
-      this.isFlipped.update((f) => !f);
+      this.isFlipped.update((flipped) => !flipped);
     }
+  }
+
+  showAnswer(): void {
+    if (this.currentCard()) this.isFlipped.set(true);
   }
 
   async gradeReview(grade: ReviewGrade): Promise<void> {
@@ -509,28 +496,20 @@ export class FlashcardReviewComponent {
     if (!card) return;
 
     const newLevel = this.computeNewLevel(card.srs_level, grade);
-
     this.triggerHaptic(grade);
+    this.sessionStats.update((stats) => ({ ...stats, [grade]: stats[grade] + 1 }));
 
-    this.sessionStats.update((s) => ({ ...s, [grade]: s[grade] + 1 }));
-
-    // Persist review to backend
     this.isSaving.set(true);
     try {
       await this.vocabStore.updateSrsLevel(card.id, newLevel);
     } catch {
-      // Silently fail - the UI has already optimistically updated
+      // Existing degraded/offline store behavior owns retry and recovery.
     } finally {
       this.isSaving.set(false);
     }
 
     this.isFlipped.set(false);
-
-    if (this.currentIndex() < this.reviewCards().length - 1) {
-      this.currentIndex.update((i) => i + 1);
-    } else {
-      this.currentIndex.update((i) => i + 1);
-    }
+    this.currentIndex.update((index) => index + 1);
   }
 
   restart(): void {
@@ -543,10 +522,8 @@ export class FlashcardReviewComponent {
     event.stopPropagation();
     const audio = new Audio(url);
     audio.play().catch(() => {
-      // Audio playback failed silently
+      // Audio playback remains best effort.
     });
-    // Release the Audio object after playback ends to avoid memory leaks
-    // during rapid review sessions where many cards are reviewed in sequence.
     audio.addEventListener(
       'ended',
       () => {
