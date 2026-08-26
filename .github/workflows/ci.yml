@@ -12,12 +12,65 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: CI / impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_application: ${{ steps.impact.outputs.run_application }}
+      run_factory: ${{ steps.impact.outputs.run_factory }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify pull-request impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          run_application=true
+          run_factory=true
+
+          # Pushes and merge-queue candidates remain full health checks. Only PRs
+          # receive path-sensitive savings, and unknown/shared paths fail open to
+          # the full application matrix.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+
+            run_application=false
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              case "$path" in
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                  ;;
+                *)
+                  run_application=true
+                  ;;
+              esac
+            done <<< "$changed"
+
+            run_factory=false
+            if grep -Eq '^(automation/|config/factory/|config/systemd/|\.github/workflows/ci\.yml$)' <<< "$changed"; then
+              run_factory=true
+            fi
+          fi
+
+          echo "run_application=$run_application" >> "$GITHUB_OUTPUT"
+          echo "run_factory=$run_factory" >> "$GITHUB_OUTPUT"
+          echo "Application verification required: $run_application"
+          echo "Factory verification required: $run_factory"
+
   application-checks:
     name: ${{ matrix.directory }} / ${{ matrix.check }}
+    needs: changes
+    if: needs.changes.outputs.run_application == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -350,6 +403,8 @@ jobs:
         run: npx --yes supabase@2.114.0 stop --no-backup
 
   factory:
+    needs: changes
+    if: needs.changes.outputs.run_factory == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -378,58 +433,86 @@ jobs:
   required-gate:
     name: CI / required
     if: always()
-    needs: [application-checks, constitution, database, factory]
+    needs: [changes, application-checks, constitution, database, factory]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Summarize canonical CI groups
         env:
+          IMPACT_RESULT: ${{ needs.changes.result }}
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
+          RUN_APPLICATION: ${{ needs.changes.outputs.run_application }}
+          RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
-          failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
-            if [ "$result" != "success" ]; then
-              failed=$((failed + 1))
+          group_ok() {
+            result="$1"
+            required="$2"
+            if [ "$required" = "true" ]; then
+              [ "$result" = "success" ]
+            else
+              [ "$result" = "success" ] || [ "$result" = "skipped" ]
             fi
-          done
+          }
+
+          failed=0
+          [ "$IMPACT_RESULT" = "success" ] || failed=$((failed + 1))
+          group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=$((failed + 1))
+          group_ok "$CONSTITUTION_RESULT" true || failed=$((failed + 1))
+          group_ok "$DATABASE_RESULT" true || failed=$((failed + 1))
+          group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=$((failed + 1))
 
           {
             echo "### Canonical CI summary"
             echo
-            echo "| Group | Result |"
-            echo "| --- | --- |"
-            echo "| application-checks | $APPLICATION_CHECKS_RESULT |"
-            echo "| constitution | $CONSTITUTION_RESULT |"
-            echo "| database | $DATABASE_RESULT |"
-            echo "| factory | $FACTORY_RESULT |"
+            echo "| Group | Required for this PR | Result |"
+            echo "| --- | --- | --- |"
+            echo "| impact-classification | true | $IMPACT_RESULT |"
+            echo "| application-checks | $RUN_APPLICATION | $APPLICATION_CHECKS_RESULT |"
+            echo "| constitution | true | $CONSTITUTION_RESULT |"
+            echo "| database | true | $DATABASE_RESULT |"
+            echo "| factory | $RUN_FACTORY | $FACTORY_RESULT |"
             echo
             echo "Failing canonical groups: **$failed**"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Require every canonical CI group to pass
+      - name: Require every relevant canonical CI group to pass
         env:
+          IMPACT_RESULT: ${{ needs.changes.result }}
           APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
           CONSTITUTION_RESULT: ${{ needs.constitution.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
+          RUN_APPLICATION: ${{ needs.changes.outputs.run_application }}
+          RUN_FACTORY: ${{ needs.changes.outputs.run_factory }}
         run: |
-          failed=0
-          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$DATABASE_RESULT" "$FACTORY_RESULT"; do
-            if [ "$result" != "success" ]; then
-              failed=1
+          group_ok() {
+            result="$1"
+            required="$2"
+            if [ "$required" = "true" ]; then
+              [ "$result" = "success" ]
+            else
+              [ "$result" = "success" ] || [ "$result" = "skipped" ]
             fi
-          done
+          }
+
+          failed=0
+          [ "$IMPACT_RESULT" = "success" ] || failed=1
+          group_ok "$APPLICATION_CHECKS_RESULT" "$RUN_APPLICATION" || failed=1
+          group_ok "$CONSTITUTION_RESULT" true || failed=1
+          group_ok "$DATABASE_RESULT" true || failed=1
+          group_ok "$FACTORY_RESULT" "$RUN_FACTORY" || failed=1
 
           if [ "$failed" -ne 0 ]; then
-            echo "Canonical CI did not fully pass."
-            echo "application-checks=$APPLICATION_CHECKS_RESULT"
-            echo "constitution=$CONSTITUTION_RESULT"
-            echo "database=$DATABASE_RESULT"
-            echo "factory=$FACTORY_RESULT"
+            echo "Canonical CI did not fully pass for the relevant change groups."
+            echo "impact-classification=$IMPACT_RESULT required=true"
+            echo "application-checks=$APPLICATION_CHECKS_RESULT required=$RUN_APPLICATION"
+            echo "constitution=$CONSTITUTION_RESULT required=true"
+            echo "database=$DATABASE_RESULT required=true"
+            echo "factory=$FACTORY_RESULT required=$RUN_FACTORY"
             exit 1
           fi
 
-          echo "All canonical CI groups passed."
+          echo "All relevant canonical CI groups passed."

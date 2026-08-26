@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserStatisticsModule } from './user-statistics/user-statistics.module';
+import { LinkPreviewModule } from './link-preview/link-preview.module';
 
 type ProviderToken = unknown;
 
@@ -113,6 +114,13 @@ describe('AppModule', () => {
       (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
 
     expect(importsMetadata).toContain(UserStatisticsModule);
+  });
+
+  it('should register LinkPreviewModule in its imports metadata', () => {
+    const importsMetadata =
+      (Reflect.getMetadata('imports', AppModule) as unknown[]) ?? [];
+
+    expect(importsMetadata).toContain(LinkPreviewModule);
   });
 
   it('should import all required feature modules', () => {

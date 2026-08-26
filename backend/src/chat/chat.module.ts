@@ -6,11 +6,16 @@ import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
 import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatEditController } from './chat-edit.controller';
+import { ChatMediaSendController } from './chat-media-send.controller';
+import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
+import { ChatMediaMessageService } from './chat-media-message.service';
 import { ChatLlmService } from './chat-llm.service';
 import { ChatLlmProxyService } from './chat-llm-proxy.service';
 import { ConversationStarterService } from './conversation-starter.service';
@@ -31,10 +36,14 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     XpModule,
     LlmProxyModule,
     SupabaseModule,
+    CloudflareR2Module,
     forwardRef(() => UsersModule),
   ],
   controllers: [
     ChatController,
+    ChatEditController,
+    ChatMediaSendController,
+    ChatSearchController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
@@ -46,6 +55,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,
+    ChatMediaMessageService,
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
