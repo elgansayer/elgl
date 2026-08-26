@@ -7,6 +7,7 @@ import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { EconomyController } from './economy.controller';
 import { PremiumAiController } from './premium-ai.controller';
 import { EconomyService } from './economy.service';
+import { AtomicEconomyService } from './atomic-economy.service';
 import { PremiumAiService } from './premium-ai.service';
 import { PremiumAiReconciliationService } from './premium-ai-reconciliation.service';
 import { CoinEconomyHealthService } from './coin-economy-health.service';
@@ -17,7 +18,10 @@ import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
   imports: [UsersModule, ChatModule, HttpModule, MetricsModule, LlmProxyModule],
   controllers: [EconomyController, PremiumAiController],
   providers: [
-    EconomyService,
+    {
+      provide: EconomyService,
+      useClass: AtomicEconomyService,
+    },
     PremiumAiService,
     PremiumAiReconciliationService,
     CoinEconomyHealthService,
