@@ -37,6 +37,24 @@ describe('profile proficiency level migration (#1458)', () => {
     expect(sql).toMatch(/ERRCODE = '23514'/);
   });
 
+  it('validates a database guard before narrowing the column', () => {
+    const preflightValidation = sql.indexOf(
+      'VALIDATE CONSTRAINT users_proficiency_level_preflight_check',
+    );
+    const narrowing = sql.indexOf(
+      'ALTER COLUMN proficiency_level TYPE varchar(2)',
+    );
+
+    expect(sql).toMatch(
+      /ADD CONSTRAINT users_proficiency_level_preflight_check[\s\S]*upper\(btrim\(proficiency_level\)\)/,
+    );
+    expect(preflightValidation).toBeGreaterThan(-1);
+    expect(narrowing).toBeGreaterThan(preflightValidation);
+    expect(sql).toMatch(
+      /DROP CONSTRAINT users_proficiency_level_preflight_check;/,
+    );
+  });
+
   it('restricts the column to the six canonical CEFR levels', () => {
     expect(sql).toMatch(/ALTER COLUMN proficiency_level TYPE varchar\(2\)/i);
     expect(sql).toMatch(/ADD CONSTRAINT users_proficiency_level_check/);
