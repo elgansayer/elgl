@@ -174,6 +174,7 @@ describe('VoiceroomCreateModalComponent', () => {
     createdSub.unsubscribe();
     closedSub.unsubscribe();
   });
+
   it('blocks duplicate Launch requests while creation is in progress', () => {
     const root = fixture.nativeElement as HTMLElement;
     const createdSpy = vi.fn();
