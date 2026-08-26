@@ -3,8 +3,8 @@ import { CacheService } from './cache.service';
 
 function installIndexedDbDeleteStub(): ReturnType<typeof vi.fn> {
   const deleteDatabase = vi.fn(() => {
-    const request: Partial<IDBOpenDBRequest> = {};
-    queueMicrotask(() => request.onsuccess?.(new Event('success')));
+    const request = { error: null } as Partial<IDBOpenDBRequest>;
+    queueMicrotask(() => (request as any).onsuccess?.(new Event('success')));
     return request as IDBOpenDBRequest;
   });
   vi.stubGlobal('indexedDB', { deleteDatabase } as unknown as IDBFactory);
