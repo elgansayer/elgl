@@ -92,9 +92,15 @@ class AgentTimeoutsConfig(BaseModel):
     architecture: int = 1800
     implementation: int = 3600
     security_review: int = 1800
-    quality_repair: int = 3600
-    code_review: int = 1800
-    ci_repair: int = 3600
+    # Repair/review phases now route to each provider's fast/low-effort tier
+    # (see phase_models and claude.py's per-phase --effort), so a runaway
+    # attempt on a narrow CI failure or review pass shouldn't need the same
+    # hour-long ceiling implementation gets. Left generous enough that a
+    # genuinely slow attempt still finishes rather than getting killed into
+    # an extra retry cycle.
+    quality_repair: int = 1800
+    code_review: int = 900
+    ci_repair: int = 1800
     general_action: int = 1800
 
     @model_validator(mode="after")
@@ -429,6 +435,12 @@ class FactoryConfig(BaseModel):
     provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    # archive_worktree() writes a full worktree copy into recovery_dir on every
+    # crash-recovery path with nothing that ever deletes them; left unpruned,
+    # these silently consume the disk-space reserve minimum_free_disk_gib
+    # protects, permanently pausing scheduling with no further log output
+    # once the check has already failed once (it only logs on state changes).
+    recovery_retention_hours: float = 72
     max_no_pr_hours: float = 6
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
@@ -513,6 +525,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
+        if self.recovery_retention_hours <= 0:
+            raise ValueError("recovery retention must be positive")
         if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
@@ -636,6 +650,7 @@ class FactoryConfig(BaseModel):
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
