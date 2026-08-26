@@ -6,12 +6,17 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
-import { FavouritesService } from './favourites.service';
+import { ListStarredMessagesQueryDto } from './dto/list-starred-messages-query.dto';
+import {
+  FavouritesService,
+  StarredMessagesPage,
+} from './favourites.service';
 
 interface AuthenticatedRequest {
   user: { id: string };
@@ -41,6 +46,18 @@ export class FavouritesController {
   @Get()
   async getMyFavourites(@Req() req: AuthenticatedRequest) {
     return this.favouritesService.getUserFavourites(req.user.id);
+  }
+
+  @Get('messages')
+  async getStarredMessages(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: ListStarredMessagesQueryDto,
+  ): Promise<StarredMessagesPage> {
+    return this.favouritesService.getStarredMessages(
+      req.user.id,
+      query.limit,
+      query.offset,
+    );
   }
 
   /**
