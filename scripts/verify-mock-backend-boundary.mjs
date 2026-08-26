@@ -48,7 +48,10 @@ export function verifyMockBackendBoundary(root) {
   const failures = [];
   const required = [
     ['backend/src/config/environment.validation.ts', 'assertMockBackendActivationBoundary'],
-    ['backend/src/config/mock-backend-mode.ts', "'disabled', 'local', 'test', 'demo'"],
+    [
+      'backend/src/config/mock-backend-mode.ts',
+      /['"]disabled['"]\s*,\s*['"]local['"]\s*,\s*['"]test['"]\s*,\s*['"]demo['"]/,
+    ],
     ['backend/src/mock-data.ts', 'const fixturesEnabled = isMockBackendEnabled()'],
     ['backend/test/setup.ts', "process.env.MOCK_BACKEND_MODE = 'test'"],
     ['frontend/src/app/core/config/configuration.service.ts', 'MOCK_CLIENT_ENVIRONMENTS'],
@@ -67,7 +70,11 @@ export function verifyMockBackendBoundary(root) {
       failures.push(`missing required mock-boundary file: ${path}`);
       continue;
     }
-    if (!source.includes(marker)) failures.push(`${path} is missing boundary marker: ${marker}`);
+    const hasMarker =
+      marker instanceof RegExp ? marker.test(source) : source.includes(marker);
+    if (!hasMarker) {
+      failures.push(`${path} is missing boundary marker: ${marker}`);
+    }
   }
 
   for (const path of walk(root)) {

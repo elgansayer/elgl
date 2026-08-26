@@ -36,6 +36,20 @@ test('accepts a repository with an explicit fail-closed boundary', () => {
   assert.deepEqual(verifyMockBackendBoundary(fixtureRoot()), []);
 });
 
+test('accepts the formatted multiline mode declaration', () => {
+  const root = fixtureRoot();
+  writeFileSync(
+    join(root, 'backend/src/config/mock-backend-mode.ts'),
+    `const modes = [
+  'disabled',
+  'local',
+  'test',
+  'demo',
+];`,
+  );
+  assert.deepEqual(verifyMockBackendBoundary(root), []);
+});
+
 test('rejects an enabled mock backend in production workflow/configuration', () => {
   const root = fixtureRoot();
   writeFileSync(
