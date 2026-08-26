@@ -12,6 +12,12 @@ import {
   NotificationChannel,
 } from '../../services/notification-preferences.service';
 
+interface DndSchedule {
+  do_not_disturb: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+}
+
 @Component({
   selector: 'app-notification-preferences',
   imports: [HlmCheckbox, HlmInput, HlmButton, TranslatePipe],
@@ -32,6 +38,7 @@ import {
                 <label class="flex items-center gap-1 cursor-pointer">
                   <hlm-checkbox
                     [checked]="channelEnabled(cat, ch)"
+                    [disabled]="mutationPending()"
                     (change)="toggle(cat, ch)"
                     class="accent-primary h-4 w-4 rounded"
                   />
@@ -46,6 +53,7 @@ import {
           <label class="flex items-center gap-2 mb-4">
             <hlm-checkbox
               [checked]="doNotDisturb()"
+              [disabled]="mutationPending()"
               (change)="toggleDnd()"
               class="accent-primary h-4 w-4 rounded"
             />
@@ -62,6 +70,7 @@ import {
                 id="quiet-hours-start"
                 type="time"
                 [value]="quietStart()"
+                [disabled]="mutationPending()"
                 (input)="updateQuietStart($event)"
                 class="w-full rounded-app border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -75,6 +84,7 @@ import {
                 id="quiet-hours-end"
                 type="time"
                 [value]="quietEnd()"
+                [disabled]="mutationPending()"
                 (input)="updateQuietEnd($event)"
                 class="w-full rounded-app border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -86,6 +96,7 @@ import {
           <button
             hlmBtn
             type="button"
+            [disabled]="mutationPending()"
             (click)="reset()"
             class="rounded-app border border-surface-100 text-text-secondary hover:bg-surface-300 transition-colors px-4 py-2 text-sm font-semibold"
           >
@@ -94,6 +105,7 @@ import {
           <button
             hlmBtn
             type="button"
+            [disabled]="mutationPending()"
             (click)="save()"
             class="rounded-app bg-primary text-on-fill hover:bg-primary/90 transition-colors px-4 py-2 text-sm font-semibold"
           >
@@ -113,6 +125,7 @@ export class NotificationPreferencesComponent {
   private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly mutationPending = signal(false);
 
   readonly categories = signal<NotificationCategory[]>([
     'new_message',
@@ -138,10 +151,7 @@ export class NotificationPreferencesComponent {
       this.error.set(null);
       try {
         const prefs = await this.service.getPreferences();
-        this.prefs.set(prefs);
-        this.doNotDisturb.set(prefs.do_not_disturb);
-        this.quietStart.set(prefs.quiet_hours_start ?? '');
-        this.quietEnd.set(prefs.quiet_hours_end ?? '');
+        this.applyPreferences(prefs);
       } catch {
         this.error.set(this.i18n.translate('common.error_generic'));
       } finally {
@@ -160,6 +170,38 @@ export class NotificationPreferencesComponent {
     return p?.[cat];
   }
 
+  private currentDndSchedule(): DndSchedule {
+    return {
+      do_not_disturb: this.doNotDisturb(),
+      quiet_hours_start: this.quietStart(),
+      quiet_hours_end: this.quietEnd(),
+    };
+  }
+
+  private applyPreferences(updated: NotificationPreferences): void {
+    this.prefs.set(updated);
+    this.doNotDisturb.set(updated.do_not_disturb);
+    this.quietStart.set(updated.quiet_hours_start ?? '');
+    this.quietEnd.set(updated.quiet_hours_end ?? '');
+  }
+
+  private runMutation(
+    request: () => Promise<NotificationPreferences>,
+    onSuccess: (updated: NotificationPreferences) => void,
+  ): void {
+    if (this.mutationPending()) return;
+    this.mutationPending.set(true);
+    this.error.set(null);
+    request()
+      .then(onSuccess)
+      .catch(() => {
+        this.error.set(this.i18n.translate('common.error_generic'));
+      })
+      .finally(() => {
+        this.mutationPending.set(false);
+      });
+  }
+
   channelEnabled(cat: NotificationCategory, ch: 'push' | 'badge'): boolean {
     const cp = this.categoryPref(cat);
     if (!cp) return false;
@@ -176,38 +218,30 @@ export class NotificationPreferencesComponent {
 
   toggle(cat: NotificationCategory, ch: 'push' | 'badge'): void {
     const p = this.prefs();
-    if (!p) return;
+    if (!p || this.mutationPending()) return;
     const cp = this.categoryPref(cat);
     if (!cp) return;
     const newVal = !cp[ch];
-    this.service
-      .toggleCategoryChannel(cat, ch, newVal, p)
-      .then((updated) => {
+    const dndSchedule = this.currentDndSchedule();
+    this.runMutation(
+      () => this.service.toggleCategoryChannel(cat, ch, newVal, p),
+      (updated) => {
         this.prefs.set(updated);
-        this.doNotDisturb.set(updated.do_not_disturb);
-        this.quietStart.set(updated.quiet_hours_start ?? '');
-        this.quietEnd.set(updated.quiet_hours_end ?? '');
-      })
-      .catch(() => {
-        this.error.set(this.i18n.translate('common.error_generic'));
-      });
+        this.doNotDisturb.set(dndSchedule.do_not_disturb);
+        this.quietStart.set(dndSchedule.quiet_hours_start);
+        this.quietEnd.set(dndSchedule.quiet_hours_end);
+      },
+    );
   }
 
   toggleDnd(): void {
     const p = this.prefs();
-    if (!p) return;
+    if (!p || this.mutationPending()) return;
     const newVal = !p.do_not_disturb;
-    this.service
-      .toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd())
-      .then((updated) => {
-        this.prefs.set(updated);
-        this.doNotDisturb.set(updated.do_not_disturb);
-        this.quietStart.set(updated.quiet_hours_start ?? '');
-        this.quietEnd.set(updated.quiet_hours_end ?? '');
-      })
-      .catch(() => {
-        this.error.set(this.i18n.translate('common.error_generic'));
-      });
+    this.runMutation(
+      () => this.service.toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd()),
+      (updated) => this.applyPreferences(updated),
+    );
   }
 
   updateQuietStart(event: Event): void {
@@ -225,36 +259,19 @@ export class NotificationPreferencesComponent {
   }
 
   reset(): void {
-    this.service
-      .resetToDefaults()
-      .then((updated) => {
-        this.prefs.set(updated);
-        this.doNotDisturb.set(updated.do_not_disturb);
-        this.quietStart.set(updated.quiet_hours_start ?? '');
-        this.quietEnd.set(updated.quiet_hours_end ?? '');
-      })
-      .catch(() => {
-        this.error.set(this.i18n.translate('common.error_generic'));
-      });
+    this.runMutation(
+      () => this.service.resetToDefaults(),
+      (updated) => this.applyPreferences(updated),
+    );
   }
 
   save(): void {
     const p = this.prefs();
-    if (!p) return;
-    this.service
-      .updatePreferences({
-        do_not_disturb: this.doNotDisturb(),
-        quiet_hours_start: this.quietStart(),
-        quiet_hours_end: this.quietEnd(),
-      })
-      .then((updated) => {
-        this.prefs.set(updated);
-        this.doNotDisturb.set(updated.do_not_disturb);
-        this.quietStart.set(updated.quiet_hours_start ?? '');
-        this.quietEnd.set(updated.quiet_hours_end ?? '');
-      })
-      .catch(() => {
-        this.error.set(this.i18n.translate('common.error_generic'));
-      });
+    if (!p || this.mutationPending()) return;
+    const dndSchedule = this.currentDndSchedule();
+    this.runMutation(
+      () => this.service.updatePreferences(dndSchedule),
+      (updated) => this.applyPreferences(updated),
+    );
   }
 }
