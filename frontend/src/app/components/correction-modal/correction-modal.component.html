@@ -6,15 +6,15 @@
   <hlm-dialog-content
     *hlmDialogPortal="let ctx"
     [showCloseButton]="false"
-    class="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-sheet border border-surface-100 bg-surface-200 p-0 shadow-lift"
+    class="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg min-w-0 flex-col gap-0 overflow-hidden rounded-sheet border border-surface-100 bg-surface-200 p-0 shadow-lift"
   >
     <!-- Modal Header -->
     <header
-      class="flex items-center justify-between border-b border-surface-100 bg-surface-100/60 p-4 sm:p-5"
+      class="flex min-w-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-100/60 p-4 sm:p-5"
     >
       <div class="flex min-w-0 items-center gap-2">
-        <span class="text-xl" aria-hidden="true">✏️</span>
-        <h2 hlmDialogTitle class="min-w-0 text-base font-bold text-text-primary">
+        <span class="shrink-0 text-xl" aria-hidden="true">✏️</span>
+        <h2 hlmDialogTitle class="min-w-0 break-words text-base font-bold text-text-primary">
           {{ 'moments.correctSentenceTitle' | t }}
         </h2>
       </div>
@@ -23,22 +23,21 @@
         hlmDialogClose
         type="button"
         variant="ghost"
-        size="touch"
+        size="icon-touch"
         [attr.aria-label]="'common.cancel' | t"
-        class="shrink-0 text-text-secondary"
+        class="shrink-0 rounded-full text-text-secondary transition-colors hover:bg-surface-300 hover:text-text-primary motion-reduce:transition-none"
       >
         <span aria-hidden="true">✕</span>
       </button>
     </header>
 
     <!-- Modal Body -->
-    <div class="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+    <div class="min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-5">
       <!-- Original Ghost Text Box -->
-      <div>
-        <div class="mb-1.5 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="mb-1.5 flex min-w-0 items-center justify-between gap-3">
           <p
-            id="correction-original-label"
-            class="min-w-0 text-xs font-bold uppercase tracking-wider text-text-secondary"
+            class="min-w-0 break-words text-xs font-bold uppercase tracking-wider text-text-secondary"
           >
             {{ 'moments.ghostOriginal' | t }}
           </p>
@@ -46,19 +45,22 @@
             hlmBtn
             type="button"
             variant="ghost"
-            size="sm"
+            size="touch"
             (click)="onOriginalClick()"
-            class="shrink-0 text-primary"
+            class="shrink-0 text-[11px] text-primary transition-colors hover:underline motion-reduce:transition-none"
             [attr.aria-label]="'moments.resetGhost' | t"
           >
             {{ 'moments.resetGhost' | t }}
           </button>
         </div>
         <div
-          class="relative rounded-card border border-surface-100 bg-surface-100/60 p-3 text-sm italic text-text-muted"
-          aria-labelledby="correction-original-label"
+          role="group"
+          [attr.aria-label]="'moments.ghostOriginal' | t"
+          class="relative min-w-0 rounded-card border border-surface-100 bg-surface-100/60 p-3 text-sm italic text-text-muted"
         >
-          <span class="break-words opacity-70">"{{ originalText() }}"</span>
+          <span dir="auto" class="block break-words opacity-70 [overflow-wrap:anywhere]"
+            >"{{ originalText() }}"</span
+          >
           <span
             class="absolute end-2 top-2 rounded-pill bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning"
             >{{ 'correction.ghostTextLabel' | t }}</span
@@ -67,29 +69,26 @@
       </div>
 
       <!-- Edit Correction Box -->
-      <div>
-        <label
-          for="correction-corrected-text"
-          class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-text-secondary"
-        >
-          {{ 'moments.correctedSentence' | t }}
-        </label>
+      <label
+        class="grid min-w-0 gap-1.5 text-xs font-bold uppercase tracking-wider text-text-secondary"
+      >
+        <span>{{ 'moments.correctedSentence' | t }}</span>
         <textarea
-          id="correction-corrected-text"
           hlmTextarea
           cdkFocusInitial
+          dir="auto"
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
           [placeholder]="'correction.editPlaceholder' | t"
-          class="w-full resize-none rounded-app border border-surface-100 bg-surface-100/50 p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:ring-2 focus:ring-primary"
+          class="w-full min-w-0 resize-y rounded-app border border-surface-100 bg-surface-100/50 p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary [overflow-wrap:anywhere]"
         >
         </textarea>
-      </div>
+      </label>
 
       <!-- Live Diff Preview -->
       @if (correctedText().trim() && correctedText().trim() !== originalText().trim()) {
-        <div>
+        <div class="min-w-0">
           <p class="mb-1 block text-xs font-bold uppercase tracking-wider text-warning">
             {{ 'moments.liveDiffPreview' | t }}
           </p>
@@ -103,31 +102,30 @@
       }
 
       <!-- Tutor Explanation Notes -->
-      <div>
+      <div class="min-w-0">
         <label
-          for="correction-explanation"
-          class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-text-secondary"
+          class="grid min-w-0 gap-1.5 text-xs font-bold uppercase tracking-wider text-text-secondary"
         >
-          {{ 'moments.explanation' | t }} ({{ 'common.optional' | t }})
+          <span> {{ 'moments.explanation' | t }} ({{ 'common.optional' | t }}) </span>
+          <input
+            hlmInput
+            type="text"
+            dir="auto"
+            [ngModel]="explanation()"
+            (ngModelChange)="explanation.set($event)"
+            [placeholder]="'correction.explainPlaceholder' | t"
+            class="w-full min-w-0 rounded-app border border-surface-100 bg-surface-100/50 px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </label>
-        <input
-          id="correction-explanation"
-          hlmInput
-          type="text"
-          [ngModel]="explanation()"
-          (ngModelChange)="explanation.set($event)"
-          [placeholder]="'correction.explainPlaceholder' | t"
-          class="w-full rounded-app border border-surface-100 bg-surface-100/50 px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:ring-2 focus:ring-primary"
-        />
         <div class="mt-2 flex flex-wrap gap-2">
           @for (tag of quickTags; track tag) {
             <button
               hlmBtn
               type="button"
-              size="sm"
+              size="touch"
               variant="outline"
               (click)="addQuickTag(tag)"
-              class="h-auto rounded-pill px-2 py-0.5 text-[10px] text-text-secondary"
+              class="rounded-pill px-2 text-[10px] text-text-secondary transition-colors hover:bg-surface-200 hover:text-text-primary motion-reduce:transition-none"
             >
               + {{ tag }}
             </button>
@@ -138,7 +136,7 @@
 
     <!-- Modal Footer Actions -->
     <footer
-      class="flex flex-col-reverse gap-3 border-t border-surface-100 bg-surface-100/60 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5"
+      class="flex flex-col-reverse flex-wrap gap-3 border-t border-surface-100 bg-surface-100/60 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5"
     >
       <button
         hlmBtn
