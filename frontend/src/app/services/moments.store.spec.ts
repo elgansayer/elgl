@@ -1,8 +1,15 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { MomentsStore, MomentRecord } from './moments.store';
+import {
+  MomentsStore,
+  MomentLikeUser,
+  MomentRecord,
+} from './moments.store';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 import { environment } from '../../environments/environment';
@@ -10,7 +17,10 @@ import { environment } from '../../environments/environment';
 describe('MomentsStore', () => {
   let store: MomentsStore;
   let httpMock: HttpTestingController;
-  let hapticFeedback: { success: ReturnType<typeof vi.fn>; tap: ReturnType<typeof vi.fn> };
+  let hapticFeedback: {
+    success: ReturnType<typeof vi.fn>;
+    tap: ReturnType<typeof vi.fn>;
+  };
 
   const mockMoment: MomentRecord = {
     id: 'moment1',
@@ -83,5 +93,32 @@ describe('MomentsStore', () => {
     await promise;
 
     expect(hapticFeedback.success).not.toHaveBeenCalled();
+  });
+
+  it('loads a bounded liker page through the configured authenticated API', async () => {
+    const response: MomentLikeUser[] = [
+      {
+        id: 'user-2',
+        display_name: 'Alice',
+        avatar_url: null,
+        native_languages: ['en'],
+        target_languages: ['ja'],
+      },
+    ];
+
+    const promise = store.loadMomentLikes('moment1', 50, 25);
+
+    const req = httpMock.expectOne((request) => {
+      return (
+        request.url === `${environment.apiUrl}/moments/moment1/likes` &&
+        request.params.get('offset') === '50' &&
+        request.params.get('limit') === '25'
+      );
+    });
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
+    req.flush(response);
+
+    await expect(promise).resolves.toEqual(response);
   });
 });

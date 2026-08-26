@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  DefaultValuePipe,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -22,6 +24,7 @@ import { AnswerLanguageQuestionDto } from './dto/answer-language-question.dto';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
+import { MomentLikesService } from './moment-likes.service';
 import { MomentsService, MomentLikeUser } from './moments.service';
 
 const MOMENT_FEED_FILTERS = [
@@ -39,6 +42,7 @@ export class MomentsController {
     private readonly momentsService: MomentsService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
+    private readonly momentLikesService: MomentLikesService,
   ) {}
 
   @Post()
@@ -211,8 +215,19 @@ export class MomentsController {
   async getMomentLikes(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query(
+      'limit',
+      new DefaultValuePipe(MomentLikesService.DEFAULT_LIMIT),
+      ParseIntPipe,
+    )
+    limit: number,
   ): Promise<MomentLikeUser[]> {
-    return await this.momentsService.getMomentLikes(id, user?.id);
+    if (!user) return [];
+    return await this.momentLikesService.listMomentLikes(id, user.id, {
+      offset,
+      limit,
+    });
   }
 
   @Post(':id/comments')
