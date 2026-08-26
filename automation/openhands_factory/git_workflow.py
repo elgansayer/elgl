@@ -115,6 +115,28 @@ class GitWorkflow:
         self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
         return branch
 
+    def prepare_claimed_worktree(
+        self,
+        worktree: Path,
+        branch: str,
+        initial_base_sha: str | None,
+    ) -> None:
+        """Rebuild a crash-recovered branch from its durable canonical identity."""
+
+        ensure_push_target(branch, self.base_branch)
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        self._add_worktree(
+            worktree,
+            branch,
+            initial_base_sha or f"origin/{self.base_branch}",
+        )
+
     def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
         """Check out an existing pull request branch for independent review.
 
