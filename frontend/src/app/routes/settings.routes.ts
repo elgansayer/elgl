@@ -50,6 +50,19 @@ export const settingsRoutes: Routes = [
     title: 'Privacy Settings - HelloTalk',
   },
   {
+    path: 'settings/blocks',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Blocked Users - HelloTalk',
+  },
+  {
+    path: 'settings/blocked-users',
+    redirectTo: 'settings/blocks',
+    pathMatch: 'full',
+  },
+  {
     path: 'settings/backup-restore',
     loadComponent: () =>
       import('../pages/settings/backup-restore.component').then((m) => m.BackupRestoreComponent),

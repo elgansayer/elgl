@@ -1,7 +1,8 @@
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { SupabaseService } from '../supabase/supabase.service';
 import { BlocksController } from './blocks.controller';
 import { BlocksService } from './blocks.service';
-import { SupabaseService } from '../supabase/supabase.service';
 
 describe('BlocksController', () => {
   let controller: BlocksController;
@@ -12,16 +13,18 @@ describe('BlocksController', () => {
       controllers: [BlocksController],
       providers: [
         {
+          provide: SupabaseService,
+          useValue: {
+            getClient: vi.fn(),
+          },
+        },
+        {
           provide: BlocksService,
           useValue: {
             getBlockedUsers: vi.fn(),
             blockUser: vi.fn(),
             unblockUser: vi.fn(),
           },
-        },
-        {
-          provide: SupabaseService,
-          useValue: { getClient: vi.fn() },
         },
       ],
     }).compile();
@@ -30,58 +33,81 @@ describe('BlocksController', () => {
     service = module.get<BlocksService>(BlocksService);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  afterEach(() => vi.clearAllMocks());
+
+  it('uses bounded pagination defaults for blocked users', async () => {
+    const expected = [{ id: 'blocked-1' }] as any;
+    vi.mocked(service.getBlockedUsers).mockResolvedValue(expected);
+
+    const result = await controller.getBlockedUsers({ id: 'user-1' } as any);
+
+    expect(service.getBlockedUsers).toHaveBeenCalledWith('user-1', 100, 0);
+    expect(result).toEqual(expected);
   });
 
-  it('should block a user successfully', async () => {
-    const mockUser = { id: 'user123' } as any;
-    const body = { blocked_id: 'block456' };
-    const expectedResult = { success: true };
+  it('passes validated pagination to the service', async () => {
+    vi.mocked(service.getBlockedUsers).mockResolvedValue([]);
 
-    vi.mocked(service.blockUser).mockResolvedValue(expectedResult);
+    await controller.getBlockedUsers({ id: 'user-1' } as any, '25', '50');
 
-    const result = await controller.blockUser(mockUser, body);
-
-    expect(result).toEqual(expectedResult);
-    expect(service.blockUser).toHaveBeenCalledWith('user123', 'block456');
+    expect(service.getBlockedUsers).toHaveBeenCalledWith('user-1', 25, 50);
   });
 
-  it('should unblock a user successfully', async () => {
-    const mockUser = { id: 'user123' } as any;
-    const blockedId = 'block456';
-    const expectedResult = { success: true };
-
-    vi.mocked(service.unblockUser).mockResolvedValue(expectedResult);
-
-    const result = await controller.unblockUser(mockUser, blockedId);
-
-    expect(result).toEqual(expectedResult);
-    expect(service.unblockUser).toHaveBeenCalledWith('user123', 'block456');
+  it.each([
+    ['0', undefined],
+    ['101', undefined],
+    ['abc', undefined],
+    [undefined, '-1'],
+    [undefined, '10001'],
+  ])('rejects invalid pagination limit=%s offset=%s', async (limit, offset) => {
+    await expect(
+      controller.getBlockedUsers({ id: 'user-1' } as any, limit, offset),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(service.getBlockedUsers).not.toHaveBeenCalled();
   });
 
-  it('should get blocked users successfully', async () => {
-    const mockUser = { id: 'user123' } as any;
-    const expectedResult = [{ id: 'block456' }] as any;
+  it('blocks a different user using a validated identifier', async () => {
+    vi.mocked(service.blockUser).mockResolvedValue({ success: true });
 
-    vi.mocked(service.getBlockedUsers).mockResolvedValue(expectedResult);
-
-    const result = await controller.getBlockedUsers(mockUser);
-
-    expect(result).toEqual(expectedResult);
-    expect(service.getBlockedUsers).toHaveBeenCalledWith('user123');
+    await expect(
+      controller.blockUser({ id: 'user-1' } as any, {
+        blocked_id: ' blocked-2 ',
+      }),
+    ).resolves.toEqual({ success: true });
+    expect(service.blockUser).toHaveBeenCalledWith('user-1', 'blocked-2');
   });
 
-  it('should throw error when blockUser called with null user', async () => {
-    const body = { blocked_id: 'block456' };
-    await expect(controller.blockUser(null, body)).rejects.toThrow();
+  it('rejects missing or self-targeting block mutations', async () => {
+    await expect(
+      controller.blockUser({ id: 'user-1' } as any, {}),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      controller.blockUser({ id: 'user-1' } as any, { blocked_id: 'user-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(service.blockUser).not.toHaveBeenCalled();
   });
 
-  it('should throw error when unblockUser called with null user', async () => {
-    await expect(controller.unblockUser(null, 'block456')).rejects.toThrow();
+  it('unblocks a validated target', async () => {
+    vi.mocked(service.unblockUser).mockResolvedValue({ success: true });
+
+    const result = await controller.unblockUser(
+      { id: 'user-1' } as any,
+      ' blocked-2 ',
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(service.unblockUser).toHaveBeenCalledWith('user-1', 'blocked-2');
   });
 
-  it('should throw error when getBlockedUsers called with null user', async () => {
-    await expect(controller.getBlockedUsers(null)).rejects.toThrow();
+  it('requires authentication for all block-management operations', async () => {
+    await expect(controller.getBlockedUsers(null)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await expect(
+      controller.blockUser(null, { blocked_id: 'blocked-2' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      controller.unblockUser(null, 'blocked-2'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

@@ -1,82 +1,143 @@
-<div class="ps-4 pe-4 pt-4 pb-4">
-  <h1 class="text-2xl font-bold mb-4 text-text-primary">
-    {{ 'safety.blockManagement.title' | t }}
-  </h1>
+<div class="app-screen bg-surface-50 min-h-dvh">
+  <header class="app-header">
+    <button hlmBtn type="button" class="app-button-icon" (click)="goBack()" [attr.aria-label]="'common.back' | t">
+      <span class="text-xl" aria-hidden="true">&larr;</span>
+    </button>
+    <h1 class="app-header-title">{{ 'safety.blockManagement.title' | t }}</h1>
+    <div class="w-10" aria-hidden="true"></div>
+  </header>
 
-  @if (isLoading()) {
-    <div class="space-y-3" aria-busy="true" [attr.aria-label]="'common.loading' | t">
-      @for (i of [1, 2, 3, 4, 5]; track i) {
-        <app-card customClass="flex items-center gap-3 p-3" aria-hidden="true">
-          <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
-          <div class="flex-1 space-y-2">
-            <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
-            <app-skeleton-loader [height]="'10px'" [width]="'40%'" [variant]="'text'" />
-          </div>
-          <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
-        </app-card>
-      }
-    </div>
-  } @else if (loadError()) {
-    <app-empty-state
-      icon="⚠️"
-      [title]="'safety.blockManagement.loadError' | t"
-      [description]="'safety.blockManagement.loadErrorDesc' | t"
-      [actionLabel]="'common.retry' | t"
-      (actionClicked)="retryLoad()"
-      role="alert"
-    />
-  } @else if (blockedUsers().length === 0) {
-    <app-empty-state
-      icon="🛡️"
-      [title]="'safety.blockManagement.emptyTitle' | t"
-      [description]="'safety.blockManagement.emptyDesc' | t"
-    />
-  } @else {
-    <ul class="space-y-2" role="list" [attr.aria-label]="'safety.blockManagement.title' | t">
-      @for (user of blockedUsers(); track user.id) {
-        <li role="listitem" class="flex items-center justify-between bg-surface rounded-lg p-3">
-          <div class="flex items-center gap-3">
-            @if (user.avatar_url) {
-              <img
-                [src]="user.avatar_url"
-                [alt]="user.display_name ?? ''"
-                class="w-10 h-10 rounded-full object-cover"
-              />
-            } @else {
-              <div
-                class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold"
-                aria-hidden="true"
-              >
-                {{ (user.display_name ?? '?').charAt(0) }}
-              </div>
-            }
-            <div>
-              <p class="font-medium text-text-primary">{{ user.display_name ?? '' }}</p>
-              <p class="text-sm text-text-secondary">
-                @if (user.native_language) {
-                  <span>{{ user.native_language }}</span>
-                }
-                @if (hasTargetLanguages(user)) {
-                  @if (user.native_language) {
-                    <span class="ms-1">→</span>
-                  }
-                  <span>{{ getTargetLanguagesText(user) }}</span>
-                }
-              </p>
+  <main class="mx-auto w-full max-w-2xl space-y-4 ps-4 pe-4 pt-4 pb-6">
+    @if (unblockError()) {
+      <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger" role="alert" aria-live="assertive">
+        {{ 'common.error' | t }}
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="space-y-3" aria-busy="true" [attr.aria-label]="'common.loading' | t">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <app-card customClass="flex items-center gap-3 p-3" aria-hidden="true">
+            <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
+            <div class="flex-1 space-y-2">
+              <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+              <app-skeleton-loader [height]="'10px'" [width]="'40%'" [variant]="'text'" />
             </div>
-          </div>
-          <button
-            hlmBtn
-            class="px-3 py-1.5 bg-danger text-on-fill rounded-lg text-sm hover:bg-danger/90 transition-colors"
-            (click)="onUnblock(user.id)"
-            [attr.aria-label]="
-              'safety.blockManagement.unblockAria' | t: { name: user.display_name }
-            "
-          >
-            {{ 'safety.blockManagement.unblock' | t }}
+            <app-skeleton-loader [height]="'44px'" [width]="'88px'" [borderRadius]="'8px'" />
+          </app-card>
+        }
+      </div>
+    } @else if (loadError() && blockedUsers().length === 0) {
+      <app-empty-state
+        icon="⚠️"
+        [title]="'safety.blockManagement.loadError' | t"
+        [description]="'safety.blockManagement.loadErrorDesc' | t"
+        [actionLabel]="'common.retry' | t"
+        (actionClicked)="retryLoad()"
+        role="alert"
+      />
+    } @else {
+      @if (loadError()) {
+        <div class="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm text-text-primary" role="status">
+          {{ 'safety.blockManagement.loadErrorDesc' | t }}
+          <button hlmBtn type="button" variant="link" class="min-h-11 ms-2" (click)="retryLoad()">
+            {{ 'common.retry' | t }}
           </button>
-        </li>
+        </div>
       }
-    </ul>
-  }
+
+      @if (blockedUsers().length === 0) {
+        <app-empty-state
+          icon="🛡️"
+          [title]="'safety.blockManagement.emptyTitle' | t"
+          [description]="'safety.blockManagement.emptyDesc' | t"
+        />
+      } @else {
+        <ul class="space-y-2" role="list" [attr.aria-label]="'safety.blockManagement.title' | t">
+          @for (user of blockedUsers(); track user.id) {
+            <li role="listitem" class="rounded-card border border-surface-200 bg-surface-100 p-3">
+              <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex min-w-0 items-center gap-3">
+                  @if (user.avatar_url) {
+                    <img
+                      [src]="user.avatar_url"
+                      [alt]="user.display_name ?? ''"
+                      referrerpolicy="no-referrer"
+                      class="h-10 w-10 shrink-0 rounded-full object-cover"
+                    />
+                  } @else {
+                    <div
+                      class="h-10 w-10 shrink-0 rounded-full bg-surface-200 flex items-center justify-center text-text-secondary font-bold"
+                      aria-hidden="true"
+                    >
+                      {{ (user.display_name ?? '?').charAt(0) }}
+                    </div>
+                  }
+                  <div class="min-w-0" dir="auto">
+                    <p class="truncate font-medium text-text-primary">{{ user.display_name ?? '' }}</p>
+                    <p class="break-words text-sm text-text-secondary">
+                      @if (user.native_language) {
+                        <span>{{ user.native_language }}</span>
+                      }
+                      @if (hasTargetLanguages(user)) {
+                        @if (user.native_language) {
+                          <span class="ms-1" aria-hidden="true">→</span>
+                        }
+                        <span>{{ getTargetLanguagesText(user) }}</span>
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                @if (confirmUnblockId() === user.id) {
+                  <div class="flex w-full flex-col gap-2 sm:w-auto" role="group" [attr.aria-label]="'safety.blockManagement.unblockAria' | t: { name: user.display_name }">
+                    <span class="text-sm text-text-secondary" role="status">
+                      {{ 'safety.blockManagement.unblockAria' | t: { name: user.display_name } }}
+                    </span>
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                      <button
+                        hlmBtn
+                        type="button"
+                        variant="secondary"
+                        size="touch"
+                        class="w-full sm:w-auto"
+                        [disabled]="isUnblocking(user.id)"
+                        (click)="cancelUnblock()"
+                      >
+                        {{ 'common.cancel' | t }}
+                      </button>
+                      <button
+                        hlmBtn
+                        type="button"
+                        size="touch"
+                        class="w-full bg-danger text-on-fill hover:bg-danger/90 sm:w-auto"
+                        [disabled]="isUnblocking(user.id)"
+                        [attr.aria-busy]="isUnblocking(user.id)"
+                        (click)="confirmUnblock(user.id)"
+                      >
+                        {{ 'safety.blockManagement.unblock' | t }}
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="secondary"
+                    size="touch"
+                    class="w-full sm:w-auto"
+                    [disabled]="isUnblocking(user.id)"
+                    (click)="requestUnblock(user.id)"
+                    [attr.aria-label]="'safety.blockManagement.unblockAria' | t: { name: user.display_name }"
+                  >
+                    {{ 'safety.blockManagement.unblock' | t }}
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </main>
 </div>
