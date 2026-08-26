@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { Centrifuge, Subscription } from 'centrifuge';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { ChatE2eeService } from './chat-e2ee.service';
 
 /** Maximum number of terminal/initial reconnection attempts before giving up. */
 const MAX_RECONNECT_ATTEMPTS = 8;
@@ -31,6 +32,7 @@ interface TokenRequest {
 export class CentrifugeService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly chatE2eeService = inject(ChatE2eeService);
   private centrifuge: Centrifuge | null = null;
   private readonly subscriptions = new Map<string, Subscription>();
   private readonly subscriptionHandlers = new Map<string, (data: unknown) => void>();
@@ -102,6 +104,10 @@ export class CentrifugeService {
     this.subscriptions.clear();
   }
 
+  private deliverPublication(onMessage: (data: unknown) => void, data: unknown): void {
+    void this.chatE2eeService.decryptPublication(data).then((decrypted) => onMessage(decrypted));
+  }
+
   private createSubscription(
     channel: string,
     onMessage: (data: unknown) => void,
@@ -112,7 +118,7 @@ export class CentrifugeService {
 
     const subscription = this.centrifuge.newSubscription(channel);
     subscription.on('publication', (ctx) => {
-      onMessage(ctx.data);
+      this.deliverPublication(onMessage, ctx.data);
     });
     subscription.subscribe();
     this.subscriptions.set(channel, subscription);
@@ -292,7 +298,7 @@ export class CentrifugeService {
     if (existing) {
       existing.removeAllListeners('publication');
       existing.on('publication', (ctx) => {
-        onMessage(ctx.data);
+        this.deliverPublication(onMessage, ctx.data);
       });
       return existing;
     }
