@@ -220,6 +220,34 @@ def test_retry_diagnostics_round_trip(tmp_path: Path) -> None:
     assert restored.repeated_failure_count == 3
 
 
+def test_canonical_ownership_provenance_round_trips(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    task = Task("7033", "Canonical ownership", "", "github-issue", 0)
+    job = store.reconcile([task])["7033"]
+    job.canonical_task_id = "7033"
+    job.producer_identity = "generation:7033"
+    job.branch = "factory/7033-canonical-ownership"
+    job.pull_request = 8001
+    job.initial_base_sha = "base-sha"
+    job.latest_verified_sha = "verified-sha"
+    job.predecessor_pull_request = 7999
+    job.successor_pull_request = 8001
+    job.changed_path_fingerprint = "paths:abc123"
+
+    store.save_job(job)
+    restored = store.load()["7033"]
+
+    assert restored.canonical_task_id == "7033"
+    assert restored.producer_identity == "generation:7033"
+    assert restored.branch == "factory/7033-canonical-ownership"
+    assert restored.pull_request == 8001
+    assert restored.initial_base_sha == "base-sha"
+    assert restored.latest_verified_sha == "verified-sha"
+    assert restored.predecessor_pull_request == 7999
+    assert restored.successor_pull_request == 8001
+    assert restored.changed_path_fingerprint == "paths:abc123"
+
+
 def test_task_triage_tags_round_trip_as_a_frozenset(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs.json")
     task = Task(
