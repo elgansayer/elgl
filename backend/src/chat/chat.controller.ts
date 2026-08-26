@@ -147,7 +147,11 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<FavouriteRecord[]> {
     if (!user) return [];
-    const page = await this.favouritesService.getStarredMessages(user.id, 100, 0);
+    const page = await this.favouritesService.getStarredMessages(
+      user.id,
+      100,
+      0,
+    );
     return page.items as unknown as FavouriteRecord[];
   }
 
