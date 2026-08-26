@@ -12,6 +12,8 @@ import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton
 
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { CrashReportService } from '../../services/crash-report.service';
+import { I18nService } from '../../services/i18n.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -33,6 +35,7 @@ export class AdminUsersComponent {
   private offlineStorage = inject(OfflineAdminStorageService);
   private crashReportService = inject(CrashReportService);
   private errorHandler = inject(ErrorHandler);
+  private i18n = inject(I18nService);
   readonly isOnline = this.offlineStorage.isOnline;
 
   readonly searchTerm = signal('');
@@ -161,13 +164,22 @@ export class AdminUsersComponent {
   }
 
   async banUser(user: AdminUserSummary): Promise<void> {
-    if (this.isBanning()) {
+    if (!this.canStartModerationAction()) {
       return;
     }
+
+    const name = this.userLabel(user);
+    if (!this.confirmAction('admin.banConfirm', name)) {
+      return;
+    }
+
     this.isBanning.set(user.id);
     try {
       await this.adminService.banUser(user.id);
+      showToast(this.i18n.translate('admin.userBanned'), 'success');
+      this.refreshToken.update((value) => value + 1);
     } catch (err: unknown) {
+      showErrorToast(this.i18n.translate('admin.banFailed'));
       this.reportCrash(err, 'banUser');
     } finally {
       this.isBanning.set(null);
@@ -175,17 +187,42 @@ export class AdminUsersComponent {
   }
 
   async warnUser(user: AdminUserSummary): Promise<void> {
-    if (this.isWarning()) {
+    if (!this.canStartModerationAction()) {
       return;
     }
+
+    const name = this.userLabel(user);
+    if (!this.confirmAction('admin.warnConfirm', name)) {
+      return;
+    }
+
     this.isWarning.set(user.id);
     try {
       await this.adminService.warnUser(user.id);
+      showToast(this.i18n.translate('admin.warningIssued'), 'success');
+      this.refreshToken.update((value) => value + 1);
     } catch (err: unknown) {
+      showErrorToast(this.i18n.translate('admin.warningFailed'));
       this.reportCrash(err, 'warnUser');
     } finally {
       this.isWarning.set(null);
     }
+  }
+
+  private canStartModerationAction(): boolean {
+    return this.isOnline() && this.isBanning() === null && this.isWarning() === null;
+  }
+
+  private userLabel(user: AdminUserSummary): string {
+    const displayName = user.display_name?.trim();
+    return displayName || user.id;
+  }
+
+  private confirmAction(key: 'admin.banConfirm' | 'admin.warnConfirm', name: string): boolean {
+    if (typeof window === 'undefined' || typeof window.confirm !== 'function') {
+      return false;
+    }
+    return window.confirm(this.i18n.translate(key, { name }));
   }
 
   private reportCrash(err: unknown, action: string): void {
