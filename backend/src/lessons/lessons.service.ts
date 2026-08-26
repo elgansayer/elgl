@@ -89,10 +89,14 @@ export class LessonsService {
     const lesson = await this.getLesson(lessonId);
     const maxSegmentIndex = this.maxSegmentIndex(lesson);
     if (segmentIndex > maxSegmentIndex) {
-      throw new BadRequestException('Lesson progress is outside the lesson content');
+      throw new BadRequestException(
+        'Lesson progress is outside the lesson content',
+      );
     }
     if (completed && segmentIndex !== maxSegmentIndex) {
-      throw new BadRequestException('A lesson can only complete on its final segment');
+      throw new BadRequestException(
+        'A lesson can only complete on its final segment',
+      );
     }
 
     const client = this.progressClient();
@@ -180,7 +184,7 @@ export class LessonsService {
   }
 
   private progressClient(): SupabaseClient {
-    return this.supabaseService.getClient() as unknown as SupabaseClient;
+    return this.supabaseService.getClient();
   }
 
   private emptyProgress(lessonId: string): LessonProgressRecord {
@@ -193,7 +197,10 @@ export class LessonsService {
     };
   }
 
-  private normaliseProgress(value: unknown, lessonId: string): LessonProgressRecord {
+  private normaliseProgress(
+    value: unknown,
+    lessonId: string,
+  ): LessonProgressRecord {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error('Lesson progress response was malformed');
     }
@@ -228,7 +235,8 @@ export class LessonsService {
     const segments = lesson.content_json?.['segments'];
     if (!Array.isArray(segments)) return 0;
     const usableCount = segments.filter((value) => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
       const text = (value as Record<string, unknown>)['text'];
       return typeof text === 'string' && text.trim().length > 0;
     }).length;
