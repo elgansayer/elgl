@@ -4,7 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ChatTypingService } from './chat-typing.service';
-import { SendTypingDto } from './dto/send-typing.dto';
+import { PublishTypingDto } from './dto/publish-typing.dto';
 
 @Controller('chat')
 @UseGuards(SupabaseAuthGuard)
@@ -15,7 +15,7 @@ export class ChatTypingController {
   @Throttle({ default: { limit: 40, ttl: 60000 } })
   async publishTyping(
     @CurrentUser() user: User | null,
-    @Body() dto: SendTypingDto,
+    @Body() dto: PublishTypingDto,
   ): Promise<{ success: true }> {
     if (!user) {
       throw new UnauthorizedException();
