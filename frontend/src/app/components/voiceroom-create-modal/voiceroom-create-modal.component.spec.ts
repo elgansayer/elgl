@@ -174,4 +174,27 @@ describe('VoiceroomCreateModalComponent', () => {
     createdSub.unsubscribe();
     closedSub.unsubscribe();
   });
+  it('blocks duplicate Launch requests while creation is in progress', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const createdSpy = vi.fn();
+    const sub = component.created.subscribe(createdSpy);
+
+    component.title.set('Only One Room');
+    fixture.componentRef.setInput('isSubmitting', true);
+    fixture.detectChanges();
+
+    const launchButton = Array.from(root.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('audioRoom.launchStageBtn'),
+    );
+    expect(launchButton).toBeTruthy();
+    expect(launchButton?.disabled).toBe(true);
+    expect(launchButton?.getAttribute('aria-busy')).toBe('true');
+
+    component.submit();
+    launchButton?.click();
+
+    expect(createdSpy).not.toHaveBeenCalled();
+    sub.unsubscribe();
+  });
+
 });
