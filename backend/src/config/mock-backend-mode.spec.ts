@@ -6,7 +6,9 @@ import {
 
 describe('mock backend activation boundary', () => {
   it('defaults to disabled when the profile is not explicitly configured', () => {
-    expect(resolveMockBackendMode({ NODE_ENV: 'development' })).toBe('disabled');
+    expect(resolveMockBackendMode({ NODE_ENV: 'development' })).toBe(
+      'disabled',
+    );
     expect(isMockBackendEnabled({ NODE_ENV: 'development' })).toBe(false);
   });
 

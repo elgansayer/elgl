@@ -1,4 +1,9 @@
-export const MOCK_BACKEND_MODES = ['disabled', 'local', 'test', 'demo'] as const;
+export const MOCK_BACKEND_MODES = [
+  'disabled',
+  'local',
+  'test',
+  'demo',
+] as const;
 
 export type MockBackendMode = (typeof MOCK_BACKEND_MODES)[number];
 

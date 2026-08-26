@@ -70,11 +70,14 @@ export class AtomicEconomyService extends EconomyService {
     );
   }
 
-  override async claimDailyCheckIn(userId: string): Promise<DailyCheckInResult> {
+  override async claimDailyCheckIn(
+    userId: string,
+  ): Promise<DailyCheckInResult> {
     const startedAt = Date.now();
 
     try {
-      const rpcClient = this.atomicSupabaseService.getClient() as unknown as DailyCheckInRpcClient;
+      const rpcClient =
+        this.atomicSupabaseService.getClient() as unknown as DailyCheckInRpcClient;
       const response = await withExponentialBackoff(
         () => rpcClient.rpc('claim_daily_checkin', { p_user_id: userId }),
         'claimDailyCheckInAtomic',

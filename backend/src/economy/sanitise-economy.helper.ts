@@ -128,11 +128,7 @@ export function scrubCoinPurchasesForArchive(
     return records;
   }
   return records.map((entry) => {
-    if (
-      entry !== null &&
-      typeof entry === 'object' &&
-      !Array.isArray(entry)
-    ) {
+    if (entry !== null && typeof entry === 'object' && !Array.isArray(entry)) {
       const record = entry as Record<string, unknown>;
       return scrubCoinPurchaseForArchive(record) ?? record;
     }

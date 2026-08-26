@@ -115,7 +115,11 @@ describe('MomentsRankingService', () => {
       comments_count: 5,
     });
 
-    const ranked = service.rankCandidates([first, second, other], context(), NOW);
+    const ranked = service.rankCandidates(
+      [first, second, other],
+      context(),
+      NOW,
+    );
 
     expect(ranked[0]?.id).toBe('a-1');
     expect(ranked[1]?.id).toBe('b-1');
@@ -184,7 +188,9 @@ describe('MomentsRankingService', () => {
 
     expect(ranked).toHaveLength(50);
     expect(ranked.some((item) => item.user_id === 'viewer-1')).toBe(false);
-    expect(ranked.some((item) => item.id.startsWith('mock-moment-'))).toBe(false);
+    expect(ranked.some((item) => item.id.startsWith('mock-moment-'))).toBe(
+      false,
+    );
     expect(ranked.filter((item) => item.id === 'duplicate')).toHaveLength(1);
   });
 });

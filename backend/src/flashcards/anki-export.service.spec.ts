@@ -44,7 +44,9 @@ describe('Anki export serialization', () => {
     );
     expect(safePronunciationUrl('javascript:alert(1)')).toBe('');
     expect(safePronunciationUrl('data:audio/mp3;base64,AAAA')).toBe('');
-    expect(safePronunciationUrl('https://user:secret@example.com/a.mp3')).toBe('');
+    expect(safePronunciationUrl('https://user:secret@example.com/a.mp3')).toBe(
+      '',
+    );
     expect(safePronunciationUrl('not a url')).toBe('');
   });
 });

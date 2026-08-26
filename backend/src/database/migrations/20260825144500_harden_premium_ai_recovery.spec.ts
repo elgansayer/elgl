@@ -21,9 +21,7 @@ describe('premium AI coin recovery migration (#1700)', () => {
     expect(sql).toMatch(
       /CREATE INDEX IF NOT EXISTS premium_ai_runs_pending_updated_idx[\s\S]*?WHERE status = 'pending'/,
     );
-    expect(sql).toMatch(
-      /v_run\.updated_at <= now\(\) - INTERVAL '5 minutes'/,
-    );
+    expect(sql).toMatch(/v_run\.updated_at <= now\(\) - INTERVAL '5 minutes'/);
   });
 
   it('binds every idempotency key to the original conversation subject', () => {
@@ -53,7 +51,9 @@ describe('premium AI coin recovery migration (#1700)', () => {
 
     for (const fn of [startFunction, failFunction]) {
       expect(fn.indexOf('FROM public.users')).toBeGreaterThanOrEqual(0);
-      expect(fn.indexOf('FROM public.premium_ai_runs')).toBeGreaterThanOrEqual(0);
+      expect(fn.indexOf('FROM public.premium_ai_runs')).toBeGreaterThanOrEqual(
+        0,
+      );
       expect(fn.indexOf('FROM public.users')).toBeLessThan(
         fn.indexOf('FROM public.premium_ai_runs'),
       );
