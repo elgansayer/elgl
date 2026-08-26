@@ -1,4 +1,4 @@
-import { Type } from '@nestjs/class-transformer';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
