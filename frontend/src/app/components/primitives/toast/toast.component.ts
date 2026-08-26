@@ -16,6 +16,9 @@ import { toastsSignal } from '../../../services/toast.service';
           [class.bg-danger]="toast.type === 'error'"
           [class.text-on-fill]="toast.type === 'error' || toast.type === 'success'"
           [class.bg-success]="toast.type === 'success'"
+          [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
+          [attr.aria-live]="toast.type === 'error' ? 'assertive' : 'polite'"
+          aria-atomic="true"
         >
           {{ toast.message }}
         </div>
