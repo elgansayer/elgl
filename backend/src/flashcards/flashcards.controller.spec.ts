@@ -112,9 +112,9 @@ describe('FlashcardsController', () => {
         translation: 'hello',
       };
 
-      await expect(controller.createFlashcard(null, dto)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.createFlashcard(null, dto),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(flashcardsService.createOrUpdateFlashcard).not.toHaveBeenCalled();
     });
 
@@ -166,11 +166,7 @@ describe('FlashcardsController', () => {
       const dto: UpdateSrsDto = { quality: 0 };
 
       await expect(
-        controller.updateSrs(
-          null,
-          '8db1df5a-8ef1-4ff6-a430-9ed8adf1515d',
-          dto,
-        ),
+        controller.updateSrs(null, '8db1df5a-8ef1-4ff6-a430-9ed8adf1515d', dto),
       ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(flashcardsService.updateSrsLevel).not.toHaveBeenCalled();
     });

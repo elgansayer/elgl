@@ -82,6 +82,9 @@ describe('Discovery Nearby GPS product contract', () => {
 
     const fixture = TestBed.createComponent(DiscoveryComponent);
     const component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    findPartners.mockClear();
     return { fixture, component, findPartners, getCurrentPosition };
   }
 
