@@ -22,11 +22,13 @@ export class CommentMentionNotificationListener {
         : [];
 
     const recipientIds = Array.from(new Set(candidateRecipientIds))
-      .filter((recipientId) => recipientId && recipientId !== payload.commenterId)
+      .filter(
+        (recipientId) => recipientId && recipientId !== payload.commenterId,
+      )
       .slice(0, MAX_MENTION_RECIPIENTS);
 
     for (const recipientId of recipientIds) {
-      let shouldSend = false;
+      let shouldSend: boolean;
       try {
         shouldSend =
           await this.notificationPreferencesService.shouldSendNotification(
@@ -37,7 +39,9 @@ export class CommentMentionNotificationListener {
       } catch {
         // Mention notifications are best-effort, but preference lookup failures
         // must fail closed rather than bypassing a user's notification choices.
-        console.warn('Moment mention preference lookup failed; notification suppressed.');
+        console.warn(
+          'Moment mention preference lookup failed; notification suppressed.',
+        );
         continue;
       }
 

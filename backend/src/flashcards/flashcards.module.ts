@@ -9,7 +9,11 @@ import { XpModule } from '../xp/xp.module';
 
 @Module({
   imports: [XpModule],
-  controllers: [FlashcardsController, SuggestFlashcardsController, AnkiExportController],
+  controllers: [
+    FlashcardsController,
+    SuggestFlashcardsController,
+    AnkiExportController,
+  ],
   providers: [FlashcardsService, SuggestFlashcardsService, AnkiExportService],
   exports: [FlashcardsService, SuggestFlashcardsService, AnkiExportService],
 })

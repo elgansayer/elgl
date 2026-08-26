@@ -16,9 +16,7 @@ describe('atomic daily check-in migration contract', () => {
     expect(migration).toMatch(
       /CREATE TABLE IF NOT EXISTS public\.daily_checkins/i,
     );
-    expect(migration).toMatch(
-      /PRIMARY KEY\s*\(user_id,\s*checkin_date\)/i,
-    );
+    expect(migration).toMatch(/PRIMARY KEY\s*\(user_id,\s*checkin_date\)/i);
     expect(migration).toMatch(
       /reward\s+SMALLINT\s+NOT NULL\s+CHECK\s*\(reward BETWEEN 5 AND 10\)/i,
     );

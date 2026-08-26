@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { describe, expect, it, jest } from '@jest/globals';
 import type { User } from '@supabase/supabase-js';
 import { ChatEditController } from './chat-edit.controller';
@@ -27,7 +24,9 @@ describe('ChatEditController', () => {
     } as ChatMessage;
     const editMessage = jest.fn<ChatService['editMessage']>();
     editMessage.mockResolvedValue(edited);
-    const controller = new ChatEditController({ editMessage } as unknown as ChatService);
+    const controller = new ChatEditController({
+      editMessage,
+    } as unknown as ChatService);
 
     await expect(
       controller.editMessage(authenticatedUser(), 'message-1', {
@@ -43,10 +42,14 @@ describe('ChatEditController', () => {
 
   it('fails closed when the authenticated principal is missing', async () => {
     const editMessage = jest.fn<ChatService['editMessage']>();
-    const controller = new ChatEditController({ editMessage } as unknown as ChatService);
+    const controller = new ChatEditController({
+      editMessage,
+    } as unknown as ChatService);
 
     await expect(
-      controller.editMessage(null, 'message-1', { text_content: 'edited text' }),
+      controller.editMessage(null, 'message-1', {
+        text_content: 'edited text',
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(editMessage).not.toHaveBeenCalled();
   });
@@ -56,7 +59,9 @@ describe('ChatEditController', () => {
     editMessage.mockRejectedValue(
       new ForbiddenException('You can only edit your own messages'),
     );
-    const controller = new ChatEditController({ editMessage } as unknown as ChatService);
+    const controller = new ChatEditController({
+      editMessage,
+    } as unknown as ChatService);
 
     await expect(
       controller.editMessage(authenticatedUser('other-user'), 'message-1', {

@@ -62,7 +62,9 @@ export function serializeAnkiTsv(cards: readonly ExportFlashcard[]): string {
   for (const card of cards) {
     const translation = normaliseHtmlField(card.translation);
     const definition = normaliseHtmlField(card.definition);
-    const back = definition ? `${translation}<br><small>${definition}</small>` : translation;
+    const back = definition
+      ? `${translation}<br><small>${definition}</small>`
+      : translation;
     const fields = [
       normaliseHtmlField(card.word_token),
       back,
@@ -94,7 +96,9 @@ export class AnkiExportService {
       const pageSize = Math.min(EXPORT_PAGE_SIZE, remaining);
       const { data, error } = await client
         .from('flashcards')
-        .select('id, word_token, translation, definition, original_context, pronunciation_url')
+        .select(
+          'id, word_token, translation, definition, original_context, pronunciation_url',
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
         .range(offset, offset + pageSize - 1);
@@ -104,7 +108,9 @@ export class AnkiExportService {
           { errorCode: error.code ?? 'unknown' },
           'Anki export flashcard read failed',
         );
-        throw new ServiceUnavailableException('Unable to export flashcards right now');
+        throw new ServiceUnavailableException(
+          'Unable to export flashcards right now',
+        );
       }
 
       const page = (data ?? []) as ExportFlashcard[];

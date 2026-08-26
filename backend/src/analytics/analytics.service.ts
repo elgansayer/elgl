@@ -10,7 +10,8 @@ import {
 } from './dto/client-error.dto';
 
 const BEARER_TOKEN_RE = /\bBearer\s+[^\s,;]+/gi;
-const JWT_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
+const JWT_RE =
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
 const SECRET_PARAM_RE =
   /\b(authorization|access[_-]?token|refresh[_-]?token|api[_-]?key|password)=([^\s&#]+)/gi;
 
@@ -27,7 +28,8 @@ function sanitiseUrl(value?: string): string | null {
 
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
+      return null;
     return `${parsed.origin}${parsed.pathname}`.slice(0, 2048);
   } catch {
     return null;
@@ -61,9 +63,7 @@ function sanitiseStackFrames(
   if (!frames?.length) return null;
 
   return frames.slice(0, 20).map((frame) => ({
-    fileName: frame.fileName
-      ? sanitiseText(frame.fileName, 512)
-      : undefined,
+    fileName: frame.fileName ? sanitiseText(frame.fileName, 512) : undefined,
     functionName: frame.functionName
       ? sanitiseText(frame.functionName, 512)
       : undefined,

@@ -112,7 +112,9 @@ describe('AnalyticsService', () => {
 
   it('fails closed with a stable 503 when Supabase rejects the insert', async () => {
     mockSupabaseClient.from.mockReturnValue({
-      insert: vi.fn().mockResolvedValue({ error: { message: 'private db detail' } }),
+      insert: vi
+        .fn()
+        .mockResolvedValue({ error: { message: 'private db detail' } }),
     });
     const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 
@@ -127,7 +129,9 @@ describe('AnalyticsService', () => {
 
   it('fails closed without leaking provider exception text', async () => {
     mockSupabaseClient.from.mockReturnValue({
-      insert: vi.fn().mockRejectedValue(new Error('connection string leaked here')),
+      insert: vi
+        .fn()
+        .mockRejectedValue(new Error('connection string leaked here')),
     });
     const warnSpy = vi.spyOn(Logger.prototype, 'warn');
 

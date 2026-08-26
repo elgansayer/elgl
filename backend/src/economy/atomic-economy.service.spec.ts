@@ -94,8 +94,12 @@ describe('AtomicEconomyService daily check-in', () => {
   });
 
   it('fails closed when the database claim fails', async () => {
-    const { service, rpc, loggerError, recordCoinPurchaseError } = createHarness();
-    rpc.mockResolvedValue({ data: null, error: { message: 'provider detail' } });
+    const { service, rpc, loggerError, recordCoinPurchaseError } =
+      createHarness();
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'provider detail' },
+    });
 
     await expect(service.claimDailyCheckIn('user-1')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
