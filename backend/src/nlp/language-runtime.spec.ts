@@ -5,8 +5,8 @@ describe('language detector runtime dependency', () => {
     const detector = new Language();
 
     expect(detector.guess).toBeTypeOf('function');
-    expect(detector.guess('This is a short English sentence.', undefined, 1)).toEqual(
-      expect.any(Array),
-    );
+    expect(
+      detector.guess('This is a short English sentence.', undefined, 1),
+    ).toEqual(expect.any(Array));
   });
 });
