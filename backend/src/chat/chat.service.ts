@@ -376,11 +376,6 @@ export class ChatService {
       await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
-    // Check message filters for initial (first) message in a room
-    if (receiverId) {
-      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
-    }
-
     // Spam detection for text messages
     if (dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
@@ -389,11 +384,6 @@ export class ChatService {
           'Your message appears to be a duplicate or spam content.',
         );
       }
-    }
-
-    // Enforce receiver's message filters for initial messages
-    if (receiverId) {
-      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     const insertResponse = await supabase

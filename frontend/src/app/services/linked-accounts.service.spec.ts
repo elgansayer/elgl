@@ -126,8 +126,7 @@ describe('LinkedAccountsService', () => {
 
     const first = service.linkAccount('apple');
     const second = service.linkAccount('apple');
-    await Promise.resolve();
-    expect(auth.linkIdentity).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(auth.linkIdentity).toHaveBeenCalledTimes(1));
 
     resolveLink();
     await Promise.all([first, second]);
