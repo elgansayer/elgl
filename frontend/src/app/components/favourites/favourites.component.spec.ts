@@ -157,6 +157,29 @@ describe('FavouritesComponent', () => {
     ]);
   });
 
+  it('bounds sparse page scans by inspected offsets', async () => {
+    await fixture.whenStable();
+    mockFavouriteService.getStarredMessages.mockClear();
+    mockFavouriteService.getStarredMessages.mockImplementation(
+      (_limit: number, offset: number) =>
+        Promise.resolve({
+          items: [],
+          has_more: true,
+          next_offset: offset + 100,
+        }),
+    );
+
+    await component.loadFavourites();
+
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenCalledTimes(5);
+    expect(mockFavouriteService.getStarredMessages).toHaveBeenLastCalledWith(
+      100,
+      400,
+    );
+    expect(component.loadError()).toBe(false);
+    expect(component.favourites()).toEqual([]);
+  });
+
   it('fails safely if pagination does not advance', async () => {
     mockFavouriteService.getStarredMessages.mockResolvedValue({
       items: [mockFavourites[0]],
