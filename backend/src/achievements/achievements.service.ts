@@ -123,15 +123,19 @@ export class AchievementsService implements OnModuleInit {
       this.failUnavailable('definition_lookup');
     }
     if (!achievementLookup.data) {
-      this.logger.warn(`achievements.definition_missing code=${achievementCode}`);
+      this.logger.warn(
+        `achievements.definition_missing code=${achievementCode}`,
+      );
       return;
     }
 
     try {
-      const { error } = await supabase.from('user_achievements').upsert(
-        { user_id: userId, achievement_id: achievementLookup.data.id },
-        { onConflict: 'user_id,achievement_id' },
-      );
+      const { error } = await supabase
+        .from('user_achievements')
+        .upsert(
+          { user_id: userId, achievement_id: achievementLookup.data.id },
+          { onConflict: 'user_id,achievement_id' },
+        );
       if (error) {
         this.failUnavailable('award_write');
       }
