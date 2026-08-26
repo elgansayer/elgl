@@ -1,9 +1,19 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { GetNotificationsQueryDto, NotificationFilter } from './dto/get-notifications-query.dto';
+import {
+  GetNotificationsQueryDto,
+  NotificationFilter,
+} from './dto/get-notifications-query.dto';
 import { NotificationDto } from './dto/notification.dto';
 
-const FILTER_TYPES: Record<Exclude<NotificationFilter, 'all'>, NotificationDto['type'][]> = {
+const FILTER_TYPES: Record<
+  Exclude<NotificationFilter, 'all'>,
+  NotificationDto['type'][]
+> = {
   likes: ['like_profile', 'like_moment'],
   comments: ['comment_moment', 'reply_comment', 'mention_comment'],
   follows: ['follow'],
@@ -60,7 +70,9 @@ export class NotificationsInboxService {
 
     if (error) {
       this.logger.warn('notifications_inbox.list_failed');
-      throw new ServiceUnavailableException('Notifications are temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Notifications are temporarily unavailable',
+      );
     }
 
     return (data ?? []) as NotificationDto[];
@@ -76,10 +88,13 @@ export class NotificationsInboxService {
 
     if (error) {
       this.logger.warn('notifications_inbox.unread_count_failed');
-      throw new ServiceUnavailableException('Notification count is temporarily unavailable');
+      throw new ServiceUnavailableException(
+        'Notification count is temporarily unavailable',
+      );
     }
 
-    const unreadCount = Number.isSafeInteger(count) && (count ?? 0) > 0 ? (count as number) : 0;
+    const unreadCount =
+      Number.isSafeInteger(count) && (count ?? 0) > 0 ? (count as number) : 0;
     return { unreadCount };
   }
 
@@ -93,7 +108,9 @@ export class NotificationsInboxService {
 
     if (error) {
       this.logger.warn('notifications_inbox.mark_read_failed');
-      throw new ServiceUnavailableException('Notification could not be updated');
+      throw new ServiceUnavailableException(
+        'Notification could not be updated',
+      );
     }
   }
 
@@ -107,7 +124,9 @@ export class NotificationsInboxService {
 
     if (error) {
       this.logger.warn('notifications_inbox.mark_all_read_failed');
-      throw new ServiceUnavailableException('Notifications could not be updated');
+      throw new ServiceUnavailableException(
+        'Notifications could not be updated',
+      );
     }
   }
 }
