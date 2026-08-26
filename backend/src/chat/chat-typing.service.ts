@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
-import { SendTypingDto } from './dto/send-typing.dto';
+import { PublishTypingDto } from './dto/publish-typing.dto';
 
 interface TypingProfile {
   display_name?: string | null;
@@ -22,7 +22,7 @@ export class ChatTypingService {
     private readonly centrifugoService: CentrifugoService,
   ) {}
 
-  async publish(userId: string, dto: SendTypingDto): Promise<void> {
+  async publish(userId: string, dto: PublishTypingDto): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const membership = await supabase
       .from('chat_room_members')
