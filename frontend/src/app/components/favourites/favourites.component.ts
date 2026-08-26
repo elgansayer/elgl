@@ -2,7 +2,8 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { ChatService, FavouriteRecord, ChatMessage } from '../../services/chat.service';
+import { ChatMessage, FavouriteRecord } from '../../services/chat.service';
+import { FavouriteService } from '../../services/favourite.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
@@ -14,6 +15,9 @@ interface TabDefinition {
   labelKey: string;
   icon: string;
 }
+
+const STARRED_PAGE_SIZE = 100;
+const MAX_STARRED_MESSAGES = 500;
 
 @Component({
   selector: 'app-favourites',
@@ -29,7 +33,7 @@ interface TabDefinition {
   styleUrls: ['./favourites.component.scss'],
 })
 export class FavouritesComponent implements OnDestroy {
-  private chatService = inject(ChatService);
+  private favouriteService = inject(FavouriteService);
 
   readonly favourites = signal<FavouriteRecord[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -103,9 +107,30 @@ export class FavouritesComponent implements OnDestroy {
     this.loadError.set(false);
 
     try {
-      const data = await this.chatService.getFavourites();
+      const starred: FavouriteRecord[] = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore && starred.length < MAX_STARRED_MESSAGES) {
+        const limit = Math.min(
+          STARRED_PAGE_SIZE,
+          MAX_STARRED_MESSAGES - starred.length,
+        );
+        const page = await this.favouriteService.getStarredMessages(limit, offset);
+        if (generation !== this.loadGeneration) return;
+
+        starred.push(...page.items);
+        hasMore = page.has_more;
+
+        if (!hasMore || page.next_offset === null) break;
+        if (page.next_offset <= offset) {
+          throw new Error('Invalid starred messages pagination');
+        }
+        offset = page.next_offset;
+      }
+
       if (generation !== this.loadGeneration) return;
-      this.favourites.set(data);
+      this.favourites.set(starred.slice(0, MAX_STARRED_MESSAGES));
     } catch {
       if (generation !== this.loadGeneration) return;
       this.loadError.set(true);
@@ -135,7 +160,7 @@ export class FavouritesComponent implements OnDestroy {
     });
 
     try {
-      await this.chatService.removeFavourite(fav.id);
+      await this.favouriteService.removeFavourite(fav.id);
       if (this.audioPlayingId() === fav.id) {
         this.stopAudio();
       }
