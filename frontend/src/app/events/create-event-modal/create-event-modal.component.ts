@@ -2,6 +2,7 @@ import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { Component, inject, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -10,16 +11,24 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-event-modal',
-  imports: [HlmNativeSelect, HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
+  imports: [
+    HlmNativeSelect,
+    HlmTextarea,
+    HlmInput,
+    HlmButton,
+    ReactiveFormsModule,
+    TranslatePipe,
+    ...HlmDialogImports,
+  ],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        class="max-w-md w-full rounded-2xl bg-surface-200 p-6 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-label]="'events.createEvent' | t"
+    <hlm-dialog [state]="dialogState" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-200 p-6 shadow-xl"
+        aria-labelledby="create-event-title"
       >
-        <h2 class="mb-4 text-start text-lg font-semibold">
+        <h2 id="create-event-title" class="mb-4 text-start text-lg font-semibold">
           {{ 'events.createEvent' | t }}
         </h2>
 
@@ -185,8 +194,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class CreateEventModalComponent {
@@ -203,6 +212,7 @@ export class CreateEventModalComponent {
     description: ['', [Validators.required, Validators.pattern(/\S/)]],
   });
 
+  readonly dialogState: HlmDialogState = 'open';
   readonly isSubmitting = signal(false);
   readonly submitError = signal(false);
 
@@ -211,6 +221,12 @@ export class CreateEventModalComponent {
 
   /** Emitted when the user cancels the modal. */
   readonly dismiss = output<void>();
+
+  onDialogStateChanged(state: HlmDialogState): void {
+    if (state === 'closed' && !this.isSubmitting()) {
+      this.dismiss.emit();
+    }
+  }
 
   async onSubmit(): Promise<void> {
     if (this.eventForm.invalid || this.isSubmitting()) {
