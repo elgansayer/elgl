@@ -15,7 +15,8 @@ class Gate:
 
 
 def _job(identifier: str, state: JobState) -> Job:
-    return Job(Task(identifier, f"Task {identifier}", "Body", "github-pull-request", 5), state=state)
+    task = Task(identifier, f"Task {identifier}", "Body", "github-pull-request", 5)
+    return Job(task, state=state)
 
 
 def test_daemon_only_queries_main_ci_when_batch_contains_a_merge() -> None:
