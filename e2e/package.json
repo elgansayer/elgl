@@ -9,7 +9,9 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
+    "pretest": "npm run test:readiness",
     "test": "npx playwright test",
+    "test:readiness": "node --test backend-readiness.test.mjs",
     "test:rtl": "npx playwright test --project=rtl-arabic --project=rtl-hebrew",
     "test:ui": "npx playwright test --ui"
   },

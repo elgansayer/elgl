@@ -72,7 +72,7 @@ export class MonetisationService {
     }
 
     this.stripe = new Stripe(secret, {
-      apiVersion: '2023-10-16',
+      apiVersion: '2026-07-29.dahlia',
     });
   }
 
@@ -801,20 +801,21 @@ export class MonetisationService {
 
     const subscription = await this.findActiveStripeSubscription(userId);
     const item = subscription?.items.data[0];
-    const billing = subscription
-      ? {
-          cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(
-            subscription.current_period_end * 1000,
-          ).toISOString(),
-          nextBillingAmount:
-            item?.price?.unit_amount != null
-              ? item.price.unit_amount / 100
-              : null,
-          currency: item?.price?.currency ?? null,
-          interval: item?.price?.recurring?.interval ?? null,
-        }
-      : null;
+    const billing =
+      subscription && item
+        ? {
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            currentPeriodEnd: new Date(
+              item.current_period_end * 1000,
+            ).toISOString(),
+            nextBillingAmount:
+              item.price?.unit_amount != null
+                ? item.price.unit_amount / 100
+                : null,
+            currency: item.price?.currency ?? null,
+            interval: item.price?.recurring?.interval ?? null,
+          }
+        : null;
 
     return {
       isVip: data.is_vip ?? false,
