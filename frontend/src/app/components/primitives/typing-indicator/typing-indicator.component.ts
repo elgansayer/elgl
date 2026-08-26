@@ -16,14 +16,14 @@ export interface TypingUser {
         class="flex items-center gap-2 px-4 py-1.5 bg-surface-900/80 rounded-t-lg animate-slide-up"
         role="status"
         aria-live="polite"
-        [attr.aria-label]="ariaLabel()"
+        aria-atomic="true"
       >
         @if (displayAvatars().length > 0) {
-          <div class="flex -space-x-2">
+          <div class="flex -space-x-2" aria-hidden="true">
             @for (user of displayAvatars(); track user.userId) {
               <img
                 [src]="user.avatarUrl ?? '/assets/default-avatar.svg'"
-                [alt]="user.displayName"
+                alt=""
                 class="w-5 h-5 rounded-full ring-2 ring-black/30 object-cover"
               />
             }
@@ -37,7 +37,7 @@ export interface TypingUser {
           </div>
         }
         <div class="flex items-center gap-1">
-          <span class="flex items-center gap-1">
+          <span class="flex items-center gap-1" aria-hidden="true">
             <span
               class="typing-dot w-1.5 h-1.5 rounded-full bg-neon-violet opacity-40 animate-typing-bounce"
             ></span>
@@ -89,6 +89,14 @@ export interface TypingUser {
       .animate-slide-up {
         animation: slideUp 150ms ease-out;
       }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-typing-bounce,
+        .animate-typing-bounce-delayed-1,
+        .animate-typing-bounce-delayed-2,
+        .animate-slide-up {
+          animation: none;
+        }
+      }
       :host {
         display: block;
       }
@@ -128,19 +136,5 @@ export class TypingIndicatorComponent {
     const names = shown.map((u) => u.displayName).join(', ');
     const remaining = count - this.maxVisible();
     return { names, count: remaining };
-  });
-
-  readonly ariaLabel = computed(() => {
-    const count = this.typingUsers().length;
-    if (count === 0) return '';
-    if (count === 1) {
-      return this.typingUsers()[0].displayName + ' is typing';
-    }
-    if (count > 4) return 'Several people are typing';
-    return (
-      this.typingUsers()
-        .map((u) => u.displayName)
-        .join(', ') + ' are typing'
-    );
   });
 }
