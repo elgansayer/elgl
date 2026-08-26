@@ -15,7 +15,6 @@ interface FavouriteRow extends Record<string, unknown> {
 interface MessageVisibilityRow {
   id: string;
   room_id: string;
-  is_deleted: boolean | null;
   deleted_for_user_ids: string[] | null;
 }
 
@@ -123,7 +122,7 @@ export class FavouritesService {
 
     const { data: messageData, error: messageError } = await supabase
       .from('chat_messages')
-      .select('id, room_id, is_deleted, deleted_for_user_ids')
+      .select('id, room_id, deleted_for_user_ids')
       .in('id', messageIds);
 
     if (messageError) {
@@ -152,13 +151,14 @@ export class FavouritesService {
     }
 
     const memberRoomIds = new Set(
-      (membershipData ?? []).map((membership: { room_id: string }) => membership.room_id),
+      (membershipData ?? []).map(
+        (membership: { room_id: string }) => membership.room_id,
+      ),
     );
     const visibleMessageIds = new Set(
       messages
         .filter(
           (message) =>
-            !message.is_deleted &&
             !message.deleted_for_user_ids?.includes(userId) &&
             memberRoomIds.has(message.room_id),
         )
@@ -167,7 +167,8 @@ export class FavouritesService {
 
     return {
       items: pageRows.filter(
-        (row) => row.message_id !== null && visibleMessageIds.has(row.message_id),
+        (row) =>
+          row.message_id !== null && visibleMessageIds.has(row.message_id),
       ),
       has_more: hasMore,
       next_offset: hasMore ? offset + limit : null,
