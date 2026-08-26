@@ -14,6 +14,14 @@ class Gate:
         return self.green
 
 
+class MergeRecorder:
+    def __init__(self) -> None:
+        self.merges: list[tuple[int, str]] = []
+
+    def __call__(self, pull_request: int, expected_head_sha: str) -> None:
+        self.merges.append((pull_request, expected_head_sha))
+
+
 def _job(identifier: str, state: JobState) -> Job:
     task = Task(identifier, f"Task {identifier}", "Body", "github-pull-request", 5)
     return Job(task, state=state)
@@ -101,3 +109,27 @@ def test_daemon_does_not_schedule_second_merge_while_first_is_in_flight() -> Non
 
     assert selected == [repair]
     assert gate.calls == 0
+
+
+def test_daemon_fences_merge_execution_when_current_main_is_not_green() -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    gate = Gate(False)
+    daemon.main_merge_gate = gate
+    merge = MergeRecorder()
+
+    daemon._gated_merge_pull_request(merge, 77, "reviewed-head")
+
+    assert merge.merges == []
+    assert gate.calls == 1
+
+
+def test_daemon_executes_merge_after_current_main_is_reverified() -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    gate = Gate(True)
+    daemon.main_merge_gate = gate
+    merge = MergeRecorder()
+
+    daemon._gated_merge_pull_request(merge, 77, "reviewed-head")
+
+    assert merge.merges == [(77, "reviewed-head")]
+    assert gate.calls == 1
