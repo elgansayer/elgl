@@ -87,7 +87,7 @@ describe('LikedByModalComponent', () => {
     expect(component.users()).toEqual([]);
     expect(component.loadError()).toBe(true);
     expect(component.isLoading()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('common.loadError');
+    expect(document.body.textContent).toContain('common.loadError');
   });
 
   it('retries the first page after an initial failure', async () => {
@@ -200,7 +200,7 @@ describe('LikedByModalComponent', () => {
     await start();
 
     const links = Array.from(
-      fixture.nativeElement.querySelectorAll('a[role="listitem"]'),
+      document.body.querySelectorAll('a[role="listitem"]'),
     ) as HTMLAnchorElement[];
     expect(links).toHaveLength(2);
     expect(links[0].getAttribute('href')).toContain('/profile/user/user-1');
@@ -214,6 +214,40 @@ describe('LikedByModalComponent', () => {
         target_languages: [],
       }),
     ).toBe(false);
+  });
+
+  it('clears pending pagination when the modal closes and reopens', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => ({
+      id: `user-${index}`,
+      display_name: `User ${index}`,
+      avatar_url: null,
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    }));
+    let resolvePage: ((value: MomentLikeUser[]) => void) | undefined;
+    const pendingPage = new Promise<MomentLikeUser[]>((resolve) => {
+      resolvePage = resolve;
+    });
+    loadMomentLikes
+      .mockResolvedValueOnce(firstPage)
+      .mockReturnValueOnce(pendingPage)
+      .mockResolvedValueOnce([]);
+
+    await start();
+    const loadMore = component.loadMore();
+    expect(component.isLoadingMore()).toBe(true);
+
+    fixture.componentRef.setInput('open', false);
+    fixture.detectChanges();
+    expect(component.isLoadingMore()).toBe(false);
+
+    fixture.componentRef.setInput('open', true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.isLoadingMore()).toBe(false);
+
+    resolvePage?.([]);
+    await loadMore;
   });
 
   it('emits close when the Spartan dialog closes', async () => {

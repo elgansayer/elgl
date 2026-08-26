@@ -40,9 +40,9 @@ type MomentFeedFilter = (typeof MOMENT_FEED_FILTERS)[number];
 export class MomentsController {
   constructor(
     private readonly momentsService: MomentsService,
-    private readonly momentLikesService: MomentLikesService,
     private readonly usersService: UsersService,
     private readonly r2Service: R2Service,
+    private readonly momentLikesService: MomentLikesService,
   ) {}
 
   @Post()

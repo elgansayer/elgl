@@ -13,7 +13,8 @@ describe('MomentLikesService', () => {
   const likesReturns = vi.fn();
   const likesRange = vi.fn(() => ({ returns: likesReturns }));
   const likesOrder = vi.fn(() => ({ range: likesRange }));
-  const likesEq = vi.fn(() => ({ order: likesOrder }));
+  const likesNot = vi.fn(() => ({ order: likesOrder }));
+  const likesEq = vi.fn(() => ({ not: likesNot, order: likesOrder }));
   const likesSelect = vi.fn(() => ({ eq: likesEq }));
 
   const from = vi.fn((table: string) => {
@@ -107,6 +108,7 @@ describe('MomentLikesService', () => {
     await expect(
       service.listMomentLikes('moment-1', 'viewer-1'),
     ).resolves.toEqual([expect.objectContaining({ id: 'visible-user' })]);
+    expect(likesNot).toHaveBeenCalledWith('user_id', 'in', '(blocked-user)');
   });
 
   it('fails closed when the viewer and Moment author are blocked', async () => {

@@ -73,12 +73,13 @@ export class MomentLikesService {
       throw new NotFoundException('Moment not found.');
     }
 
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(viewerId);
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(viewerId);
     if (blockedIds.includes(momentData.user_id)) {
       throw new ForbiddenException('This Moment is not available.');
     }
 
-    const { data, error } = await supabase
+    const likesQuery = supabase
       .from('moment_likes')
       .select(
         `
@@ -93,7 +94,13 @@ export class MomentLikesService {
         )
       `,
       )
-      .eq('moment_id', momentId)
+      .eq('moment_id', momentId);
+    const visibleLikesQuery =
+      blockedIds.length > 0
+        ? likesQuery.not('user_id', 'in', `(${blockedIds.join(',')})`)
+        : likesQuery;
+
+    const { data, error } = await visibleLikesQuery
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
       .returns<MomentLikeQueryResult[]>();

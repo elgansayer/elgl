@@ -171,6 +171,8 @@ export class LikedByModalComponent {
     const open = this.open();
     if (!open) {
       this.requestVersion += 1;
+      this.isLoading.set(false);
+      this.isLoadingMore.set(false);
       return;
     }
     void this.loadFirstPage(momentId);
@@ -199,6 +201,7 @@ export class LikedByModalComponent {
     this.users.set([]);
     this.hasMore.set(false);
     this.loadError.set(false);
+    this.isLoadingMore.set(false);
     this.isLoading.set(true);
 
     try {
