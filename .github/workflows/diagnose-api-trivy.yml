@@ -1,0 +1,49 @@
+name: Diagnose API Trivy
+
+on:
+  push:
+    branches: [fix/ci-api-trivy-20260826]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  scan-api-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan failing main API image
+        id: trivy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository }}/api:36aebbd4604532a9040232467f1cbe631fa78ff9
+          format: json
+          output: trivy-api.json
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-trivy-report-${{ github.sha }}
+          path: trivy-api.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Preserve scanner gate
+        if: steps.trivy.outcome != 'success'
+        run: exit 1
