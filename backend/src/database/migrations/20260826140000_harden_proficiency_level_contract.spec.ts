@@ -23,7 +23,9 @@ describe('profile proficiency level migration (#1458)', () => {
   });
 
   it('normalizes supported mixed-case CEFR values before enforcing the constraint', () => {
-    expect(sql).toMatch(/SET proficiency_level = upper\(btrim\(proficiency_level\)\)/);
+    expect(sql).toMatch(
+      /SET proficiency_level = upper\(btrim\(proficiency_level\)\)/,
+    );
     expect(sql).toMatch(
       /upper\(btrim\(proficiency_level\)\) IN \('A1', 'A2', 'B1', 'B2', 'C1', 'C2'\)/,
     );
