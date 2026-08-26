@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from threading import Event
 
 import pytest
 from pydantic import SecretStr
@@ -10,7 +12,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
 from openhands_factory.exceptions import FactoryError, VerificationFailed
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import PullRequestStatus
+from openhands_factory.github import PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.repository_guard import ensure_push_target
@@ -38,6 +40,8 @@ class GitHub:
         self.released_active_issues: list[list[int]] = []
         self.active_list_calls = 0
         self._next_issue_number = 200
+        self.equivalent_pull_requests: list[PullRequestMatch] = []
+        self.created_pull_requests: list[tuple[str, str, str]] = []
 
     def ensure_factory_labels(self) -> None:
         return None
@@ -95,7 +99,19 @@ class GitHub:
         self.comments.append((number, body))
 
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
+        self.created_pull_requests.append((branch, title, body))
         return 99
+
+    def find_equivalent_pull_requests(
+        self,
+        task: Task,
+        *,
+        known_branch: str | None = None,
+        known_path_fingerprint: str | None = None,
+        **kwargs: object,
+    ) -> list[PullRequestMatch]:
+        del task, known_branch, known_path_fingerprint, kwargs
+        return list(self.equivalent_pull_requests)
 
     def mark_ready(self, pull_request: int) -> None:
         return None
@@ -1103,6 +1119,7 @@ def test_successful_transition_resets_previous_failures(
         "prepare_worktree",
         lambda workflow, worktree, task_id, title: "factory/42-fix-build",
     )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "base-sha")
 
     advanced = pipeline.run_once()
 
@@ -1179,13 +1196,68 @@ def test_discovery_retry_releases_lease_and_retires_stale_worktree(
         "prepare_worktree",
         lambda workflow, path, task_id, title: "factory/42-fix-build",
     )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "base-sha")
 
     advanced = pipeline.run_job(job.task.identifier)
 
     assert advanced is not None
     assert advanced.state is JobState.IMPLEMENTING
     assert removed == [worktree]
-    assert pipeline.tasks.leases()["42"].owner == "factory"
+    claim = pipeline.tasks.claims()["42"]
+    assert claim.task_id == "42"
+    assert claim.owner is None
+    assert claim.canonical_branch == "factory/42-fix-build"
+
+
+def test_discovery_recovery_reuses_durable_branch_and_initial_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    pipeline.tasks.acquire(job.task, "crashed-worker")
+    pipeline.tasks.bind_branch(
+        job.task.identifier,
+        "crashed-worker",
+        "factory/42-original",
+        "initial-base-sha",
+    )
+    pipeline.tasks.release(job.task.identifier, owner="crashed-worker")
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    prepared: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "remove_worktree",
+        lambda workflow, path, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, path, task_id, title: pytest.fail(
+            "recovery created a fresh branch instead of reusing the durable claim"
+        ),
+    )
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_claimed_worktree",
+        lambda workflow, path, branch, initial_base_sha: prepared.append(
+            (branch, initial_base_sha)
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "initial-base-sha")
+
+    advanced = pipeline.run_job(job.task.identifier)
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert prepared == [("factory/42-original", "initial-base-sha")]
+    claim = pipeline.tasks.claims()[job.task.logical_key]
+    assert claim.canonical_branch == "factory/42-original"
+    assert claim.initial_base_sha == "initial-base-sha"
 
 
 def test_run_job_advances_only_the_selected_durable_job(
@@ -1200,6 +1272,7 @@ def test_run_job_advances_only_the_selected_durable_job(
         "prepare_worktree",
         lambda workflow, worktree, task_id, title: f"factory/{task_id}",
     )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "base-sha")
 
     advanced = pipeline.run_job("43")
     restored = pipeline.jobs.load()
@@ -1207,6 +1280,239 @@ def test_run_job_advances_only_the_selected_durable_job(
     assert advanced is not None
     assert restored["43"].state is JobState.IMPLEMENTING
     assert restored["42"].state is JobState.DISCOVERED
+
+
+def test_concurrent_equivalent_dispatches_create_one_branch_and_one_canonical_pr(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    github.tasks = [
+        Task(
+            "42",
+            "Initial wording",
+            "Logical-Task-Key: shared-implementation",
+            "github-issue",
+            0,
+        ),
+        Task(
+            "43",
+            "Replacement wording",
+            "Logical-Task-Key: shared-implementation",
+            "github-issue",
+            0,
+        ),
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+    prepared: list[str] = []
+
+    def prepare(
+        workflow: GitWorkflow,
+        worktree: Path,
+        task_id: str,
+        title: str,
+    ) -> str:
+        del workflow, worktree, title
+        prepared.append(task_id)
+        return f"factory/{task_id}-canonical"
+
+    monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "base-sha")
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        first_results = list(workers.map(pipeline.run_job, ["42", "43"]))
+
+    assert all(result is not None for result in first_results)
+    jobs = pipeline.jobs.load()
+    implementing = [job for job in jobs.values() if job.state is JobState.IMPLEMENTING]
+    attached = [job for job in jobs.values() if job.state is JobState.DONE]
+    assert len(implementing) == 1
+    assert len(attached) == 1
+    assert len(prepared) == 1
+    canonical = implementing[0]
+    assert attached[0].canonical_task_id == canonical.task.identifier
+
+    canonical.state = JobState.PR_DRAFT
+    canonical.head_sha = "verified-sha"
+    pipeline.jobs.save_job(canonical)
+    create_started = Event()
+    allow_create = Event()
+
+    def create_pull_request(branch: str, title: str, body: str) -> int:
+        github.created_pull_requests.append((branch, title, body))
+        create_started.set()
+        assert allow_create.wait(timeout=5)
+        return 99
+
+    monkeypatch.setattr(github, "create_pull_request", create_pull_request)
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        winner = workers.submit(pipeline.run_job, canonical.task.identifier)
+        assert create_started.wait(timeout=5)
+        loser = workers.submit(pipeline.run_job, canonical.task.identifier)
+        assert loser.result(timeout=5) is None
+        allow_create.set()
+        created = winner.result(timeout=5)
+
+    assert created is not None and created.pull_request == 99
+    assert len(github.created_pull_requests) == 1
+    claim = pipeline.tasks.claims()[canonical.task.logical_key]
+    assert claim.canonical_pull_request == 99
+    assert claim.canonical_branch == canonical.branch
+
+
+def test_existing_equivalent_pr_is_attached_before_new_branch_creation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    github.equivalent_pull_requests = [
+        PullRequestMatch(
+            number=88,
+            title="Fix build",
+            body="Fixes #42",
+            branch="factory/older-fix-build",
+            head_sha="existing-head",
+            state="OPEN",
+            closed_at=None,
+            labels=frozenset(),
+            changed_paths=frozenset({"automation/openhands_factory/pipeline.py"}),
+            reasons=frozenset({"issue-link"}),
+        )
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+    checked_out: list[str] = []
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, worktree, task_id, title: pytest.fail("new branch was created"),
+    )
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_pull_request_worktree",
+        lambda workflow, worktree, branch: checked_out.append(branch),
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "existing-head")
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify_or_schedule_quality_repair",
+        lambda pipeline, job, workflow: {Path("automation/openhands_factory/pipeline.py")},
+    )
+
+    attached = pipeline.run_job("42")
+
+    assert attached is not None
+    assert attached.state is JobState.REVIEWING
+    assert attached.branch == "factory/older-fix-build"
+    assert attached.pull_request == 88
+    assert checked_out == ["factory/older-fix-build"]
+    assert github.created_pull_requests == []
+    claim = pipeline.tasks.claims()[attached.task.logical_key]
+    assert claim.canonical_pull_request == 88
+    assert claim.latest_verified_sha == "existing-head"
+
+
+def test_path_fingerprint_alone_cannot_complete_or_supersede_a_task(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    github.equivalent_pull_requests = [
+        PullRequestMatch(
+            number=80,
+            title="Unrelated merged work",
+            body="",
+            branch="factory/unrelated-merged",
+            head_sha="merged-head",
+            state="MERGED",
+            closed_at=datetime(2026, 8, 23, tzinfo=UTC),
+            labels=frozenset(),
+            changed_paths=frozenset({"automation/openhands_factory/pipeline.py"}),
+            reasons=frozenset({"changed-path-fingerprint"}),
+        ),
+        PullRequestMatch(
+            number=81,
+            title="Unrelated closed work",
+            body="",
+            branch="factory/unrelated-closed",
+            head_sha="closed-head",
+            state="CLOSED",
+            closed_at=datetime(2026, 8, 23, tzinfo=UTC),
+            labels=frozenset(),
+            changed_paths=frozenset({"automation/openhands_factory/pipeline.py"}),
+            reasons=frozenset({"changed-path-fingerprint"}),
+        ),
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    prepared: list[str] = []
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, worktree, task_id, title: (
+            prepared.append(task_id) or "factory/42-fix-build"
+        ),
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "base-sha")
+
+    advanced = pipeline.run_job(job.task.identifier)
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert advanced.predecessor_pull_request is None
+    assert prepared == ["42"]
+
+
+def test_pr_creation_race_attaches_new_canonical_pr_instead_of_opening_sibling(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    github = GitHub()
+    github.equivalent_pull_requests = [
+        PullRequestMatch(
+            number=89,
+            title="Fix build",
+            body="Fixes #42",
+            branch="factory/concurrent-fix-build",
+            head_sha="concurrent-head",
+            state="OPEN",
+            closed_at=None,
+            labels=frozenset(),
+            changed_paths=frozenset({"automation/openhands_factory/pipeline.py"}),
+            reasons=frozenset({"issue-link"}),
+        )
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.PR_DRAFT
+    job.branch = "factory/42-local-fix"
+    job.head_sha = "local-head"
+    pipeline.jobs.save_job(job)
+    checked_out: list[str] = []
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_pull_request_worktree",
+        lambda workflow, worktree, branch: checked_out.append(branch),
+    )
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "concurrent-head")
+    monkeypatch.setattr(
+        FactoryPipeline,
+        "_verify_or_schedule_quality_repair",
+        lambda pipeline, current, workflow: {Path("automation/openhands_factory/pipeline.py")},
+    )
+
+    attached = pipeline.run_job("42")
+
+    assert attached is not None
+    assert attached.state is JobState.REVIEWING
+    assert attached.branch == "factory/concurrent-fix-build"
+    assert attached.pull_request == 89
+    assert checked_out == ["factory/concurrent-fix-build"]
+    assert github.created_pull_requests == []
+    claim = pipeline.tasks.claims()[attached.task.logical_key]
+    assert claim.canonical_pull_request == 89
+    assert claim.canonical_branch == "factory/concurrent-fix-build"
 
 
 def test_repeated_identical_task_failure_opens_recoverable_quarantine(
