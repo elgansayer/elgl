@@ -50,7 +50,7 @@ WHERE proficiency_level IS NOT NULL
 
 ALTER TABLE public.users
   ALTER COLUMN proficiency_level TYPE varchar(2)
-  USING proficiency_level::varchar(2);
+  USING upper(btrim(proficiency_level))::varchar(2);
 
 ALTER TABLE public.users
   ADD CONSTRAINT users_proficiency_level_check
