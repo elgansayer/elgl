@@ -216,21 +216,25 @@
                     hlmBtn
                     type="button"
                     (click)="warnUser(user)"
-                    [disabled]="isWarning() !== null || !isOnline()"
-                    class="btn btn-sm rounded border border-warning text-warning px-3 py-1 hover:bg-warning/10 disabled:opacity-50 whitespace-nowrap"
+                    [disabled]="isWarning() !== null || isBanning() !== null || !isOnline()"
+                    class="btn btn-sm min-h-11 rounded border border-warning text-warning px-3 py-1 hover:bg-warning/10 disabled:opacity-50 whitespace-nowrap"
+                    [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
+                    [attr.aria-busy]="isWarning() === user.id ? 'true' : null"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
-                    {{ 'admin.users.warn' | t }}
+                    {{ isWarning() === user.id ? ('admin.warning' | t) : ('admin.users.warn' | t) }}
                   </button>
                   <button
                     hlmBtn
                     type="button"
                     (click)="banUser(user)"
-                    [disabled]="isBanning() !== null || !isOnline()"
-                    class="btn btn-sm rounded border border-danger text-danger px-3 py-1 hover:bg-danger/10 disabled:opacity-50 whitespace-nowrap"
+                    [disabled]="isBanning() !== null || isWarning() !== null || !isOnline()"
+                    class="btn btn-sm min-h-11 rounded border border-danger text-danger px-3 py-1 hover:bg-danger/10 disabled:opacity-50 whitespace-nowrap"
+                    [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
+                    [attr.aria-busy]="isBanning() === user.id ? 'true' : null"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
-                    {{ 'admin.users.ban' | t }}
+                    {{ isBanning() === user.id ? ('admin.banning' | t) : ('admin.users.ban' | t) }}
                   </button>
                 </div>
               </td>
