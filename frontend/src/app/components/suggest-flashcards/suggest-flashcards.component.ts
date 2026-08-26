@@ -197,10 +197,14 @@ export class SuggestFlashcardsComponent {
 
   private handleError(error: unknown, operation: string): void {
     const normalized = error instanceof Error ? error : new Error(String(error));
-    this.errorHandler.handleError(normalized);
-    this.errorBoundary()?.captureError(normalized, undefined, {
-      operation,
-      messageLength: this.messageInput().length,
-    });
+    const boundary = this.errorBoundary();
+    if (boundary) {
+      boundary.captureError(normalized, undefined, {
+        operation,
+        messageLength: this.messageInput().length,
+      });
+    } else {
+      this.errorHandler.handleError(normalized);
+    }
   }
 }
