@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Req,
   UnauthorizedException,
@@ -24,13 +25,20 @@ import {
   AdminNetworkImpactPreview,
   AdminNetworkReputation,
 } from './admin-network-abuse.service';
+import {
+  AdminNetworkRateLimitControl,
+  AdminNetworkRateLimitInspection,
+  AdminRateLimitControlService,
+} from './admin-rate-limit-control.service';
 import { AdminAuditService } from './admin-audit.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import {
   AdminNetworkImpactDto,
   AdminNetworkLookupDto,
+  AdminNetworkRateLimitInspectDto,
   CreateAdminNetworkAllowlistDto,
   CreateAdminNetworkBlockDto,
+  CreateAdminNetworkRateLimitDto,
 } from './dto/admin-network-abuse.dto';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -46,6 +54,7 @@ interface AdminAuthRequest extends Request {
 export class AdminNetworkAbuseV1Controller {
   constructor(
     private readonly networkAbuse: AdminNetworkAbuseService,
+    private readonly rateLimits: AdminRateLimitControlService,
     private readonly audit: AdminAuditService,
   ) {}
 
@@ -164,6 +173,66 @@ export class AdminNetworkAbuseV1Controller {
     }
   }
 
+  @Get('rate-limits')
+  @RequireAdminCapabilities('security.network.read')
+  @ApiOperation({ summary: 'List active emergency network throttles' })
+  async listRateLimits(
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl[]> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.list();
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limits.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'success',
+        operation: 'list-rate-limits',
+        resultCount: result.length,
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limits.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'failed',
+        operation: 'list-rate-limits',
+      });
+      throw error;
+    }
+  }
+
+  @Post('rate-limits/inspect')
+  @RequireAdminCapabilities('security.network.read')
+  @ApiOperation({
+    summary: 'Inspect the active emergency throttle for a network request',
+    description:
+      'Accepts the IP only in the request body and returns a coarse network plus bounded counter state. Raw IPs are not written to audit records.',
+  })
+  async inspectRateLimit(
+    @Body() input: AdminNetworkRateLimitInspectDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitInspection> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.inspect(input.ip, input.scope);
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'success',
+        operation: 'inspect-rate-limit',
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.read',
+        capabilityKey: 'security.network.read',
+        outcome: 'failed',
+        operation: 'inspect-rate-limit',
+      });
+      throw error;
+    }
+  }
+
   @Post('blocks')
   @RequireAdminCapabilities('security.network.manage')
   @ApiOperation({ summary: 'Create a temporary scoped network block' })
@@ -221,6 +290,76 @@ export class AdminNetworkAbuseV1Controller {
         capabilityKey: 'security.network.manage',
         outcome: 'failed',
         operation: 'revoke-network-block',
+        targetId: id,
+      });
+      throw error;
+    }
+  }
+
+  @Post('rate-limits')
+  @RequireAdminCapabilities('security.network.manage')
+  @ApiOperation({
+    summary: 'Create a temporary stricter network rate limit',
+    description:
+      'Emergency throttles can only add stricter limits. They never bypass or raise existing application security limits.',
+  })
+  async createRateLimit(
+    @Body() input: CreateAdminNetworkRateLimitDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.create(actorUserId, input);
+      await this.audit.record({
+        actorUserId,
+        action: 'security.network.rate_limit.create',
+        capabilityKey: 'security.network.manage',
+        targetType: 'network-rate-limit',
+        targetId: result.id,
+        reasonCode: input.reasonCode,
+        operatorNote: input.operatorNote,
+        outcome: 'success',
+        correlationId: this.correlationId(req),
+        metadata: {
+          source: 'admin-v1',
+          operation: 'create-network-rate-limit',
+        },
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.create',
+        capabilityKey: 'security.network.manage',
+        outcome: 'failed',
+        operation: 'create-network-rate-limit',
+      });
+      throw error;
+    }
+  }
+
+  @Delete('rate-limits/:id')
+  @RequireAdminCapabilities('security.network.manage')
+  async revokeRateLimit(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminNetworkRateLimitControl> {
+    const actorUserId = this.actor(req);
+    try {
+      const result = await this.rateLimits.revoke(actorUserId, id);
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.revoke',
+        capabilityKey: 'security.network.manage',
+        outcome: 'success',
+        operation: 'revoke-network-rate-limit',
+        targetId: id,
+      });
+      return result;
+    } catch (error) {
+      await this.record(req, actorUserId, {
+        action: 'security.network.rate_limit.revoke',
+        capabilityKey: 'security.network.manage',
+        outcome: 'failed',
+        operation: 'revoke-network-rate-limit',
         targetId: id,
       });
       throw error;
