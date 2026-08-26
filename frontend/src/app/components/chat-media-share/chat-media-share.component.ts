@@ -4,6 +4,7 @@ import { ChatMediaMessageService } from '../../services/chat-media-message.servi
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker.component';
+import { InstantVideoRecorderComponent } from '../instant-video-recorder/instant-video-recorder.component';
 
 @Component({
   selector: 'app-chat-media-share',
@@ -11,6 +12,7 @@ import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     ChatMediaPickerComponent,
+    InstantVideoRecorderComponent,
   ],
   template: `
     <app-button-secondary
@@ -20,6 +22,15 @@ import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker
       ariaLabel="Share a photo or video"
     >
       📷 Media
+    </app-button-secondary>
+
+    <app-button-secondary
+      type="button"
+      (clicked)="videoNoteOpen.set(true)"
+      customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+      ariaLabel="Record an instant video note"
+    >
+      🎥 Video note
     </app-button-secondary>
 
     @if (open()) {
@@ -33,6 +44,20 @@ import { ChatMediaPickerComponent } from '../chat-media-picker/chat-media-picker
           (uploaded)="onUploaded($event)"
           (cancelled)="open.set(false)"
         ></app-chat-media-picker>
+      </div>
+    }
+
+    @if (videoNoteOpen()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Record an instant video note"
+      >
+        <app-instant-video-recorder
+          (uploaded)="onUploaded($event)"
+          (cancelled)="videoNoteOpen.set(false)"
+        ></app-instant-video-recorder>
       </div>
     }
 
@@ -72,12 +97,14 @@ export class ChatMediaShareComponent {
 
   readonly roomId = input.required<string>();
   readonly open = signal(false);
+  readonly videoNoteOpen = signal(false);
   readonly sendError = signal<string | null>(null);
   readonly pendingMedia = signal<UploadedChatMedia | null>(null);
   readonly isSending = signal(false);
 
   async onUploaded(media: UploadedChatMedia): Promise<void> {
     this.open.set(false);
+    this.videoNoteOpen.set(false);
     this.pendingMedia.set(media);
     await this.sendPending();
   }
