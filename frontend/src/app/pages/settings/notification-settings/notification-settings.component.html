@@ -1,4 +1,4 @@
-<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
+<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10" [attr.aria-busy]="isLoading() || saving()">
   <h1 class="text-2xl font-semibold text-text-primary mb-2">
     {{ 'notification_settings.title' | t }}
   </h1>
@@ -7,14 +7,30 @@
   </p>
 
   @if (loadError()) {
-    <div class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6">
-      {{ loadError() ?? '' | t }}
+    <div
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
+      role="alert"
+    >
+      <p>{{ (loadError() ?? '') | t }}</p>
+      <button
+        hlmBtn
+        type="button"
+        size="touch"
+        class="mt-3"
+        [disabled]="isLoading()"
+        (click)="retryLoad()"
+      >
+        {{ 'common.retry' | t }}
+      </button>
     </div>
   }
 
   @if (error()) {
-    <div class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6">
-      {{ error() ?? '' | t }}
+    <div
+      class="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger mb-6"
+      role="alert"
+    >
+      {{ (error() ?? '') | t }}
     </div>
   }
 
@@ -52,18 +68,24 @@
               hlmBtn
               type="button"
               role="switch"
+              size="icon-touch"
+              [disabled]="saving() || !prefs()"
               [attr.aria-checked]="toggleValue(cat.key, ch)"
+              [attr.aria-busy]="isTogglePending(cat.key, ch) ? 'true' : null"
               [attr.aria-label]="(cat.labelKey | t) + ' ' + (channelLabel(ch) | t)"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
-              [class.bg-primary]="toggleValue(cat.key, ch)"
-              [class.bg-surface-300]="!toggleValue(cat.key, ch)"
+              class="p-0 bg-transparent hover:bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
               (click)="toggle(cat.key, ch)"
             >
               <span
-                class="inline-block h-4 w-4 transform rounded-full bg-on-fill transition-transform"
-                [class.translate-x-6]="toggleValue(cat.key, ch)"
-                [class.translate-x-1]="!toggleValue(cat.key, ch)"
-              ></span>
+                aria-hidden="true"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors px-1"
+                [class.justify-end]="toggleValue(cat.key, ch)"
+                [class.justify-start]="!toggleValue(cat.key, ch)"
+                [class.bg-primary]="toggleValue(cat.key, ch)"
+                [class.bg-surface-300]="!toggleValue(cat.key, ch)"
+              >
+                <span class="h-4 w-4 rounded-full bg-on-fill"></span>
+              </span>
             </button>
           </div>
         }
@@ -72,7 +94,7 @@
   </div>
 
   @if (saved()) {
-    <p class="text-sm text-success animate-pulse">
+    <p class="text-sm text-success" role="status" aria-live="polite">
       {{ 'notification_settings.saved_message' | t }}
     </p>
   }
