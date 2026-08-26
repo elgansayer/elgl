@@ -1,23 +1,27 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+
+export type NotificationType =
+  | 'follow'
+  | 'like_profile'
+  | 'like_moment'
+  | 'comment_moment'
+  | 'reply_comment'
+  | 'profile_visit'
+  | 'mention_comment'
+  | 'mention_chat'
+  | 'system';
+
+export type NotificationFilter = 'all' | 'likes' | 'comments' | 'follows' | 'system';
 
 export interface InAppNotification {
   id: string;
   recipient_id: string;
   actor_id: string;
-  type:
-    | 'follow'
-    | 'like_profile'
-    | 'like_moment'
-    | 'comment_moment'
-    | 'reply_comment'
-    | 'profile_visit'
-    | 'mention_comment'
-    | 'mention_chat'
-    | 'system';
+  type: NotificationType;
   entity_id?: string;
   message?: string;
   is_read: boolean;
@@ -31,161 +35,157 @@ export interface InAppNotification {
   };
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+export interface NotificationPageOptions {
+  limit?: number;
+  before?: string;
+}
+
+const NOTIFICATION_TYPES = new Set<NotificationType>([
+  'follow',
+  'like_profile',
+  'like_moment',
+  'comment_moment',
+  'reply_comment',
+  'profile_visit',
+  'mention_comment',
+  'mention_chat',
+  'system',
+]);
+
+@Injectable({ providedIn: 'root' })
 export class NotificationService {
-  private http = inject(HttpClient);
-  private authService = inject(AuthService);
-  private baseUrl = `${environment.apiUrl}/notifications`;
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly baseUrl = `${environment.apiUrl}/notifications`;
 
-  private getHeaders() {
-    const token = this.authService.getAccessToken();
-    return {
-      Authorization: `Bearer ${token ?? ''}`,
-    };
-  }
+  async getNotifications(
+    type: NotificationFilter = 'all',
+    options: NotificationPageOptions = {},
+  ): Promise<InAppNotification[]> {
+    const limit = Math.min(50, Math.max(1, Math.trunc(options.limit ?? 20)));
+    let params = new HttpParams().set('type', type).set('limit', limit);
+    if (options.before) params = params.set('before', options.before);
 
-  async getNotifications(type?: string): Promise<InAppNotification[]> {
-    const url = type ? `${this.baseUrl}?type=${type}` : this.baseUrl;
-    return firstValueFrom(
-      this.http
-        .get<InAppNotification[]>(url, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(this.getFallbackNotifications(type)))),
+    const response = await firstValueFrom(
+      this.http.get<unknown>(this.baseUrl, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
+
+    if (!Array.isArray(response)) throw new Error('Invalid notifications response');
+    return response
+      .map((value) => this.parseNotification(value))
+      .filter((value): value is InAppNotification => value !== null);
   }
 
   async getUnreadCount(): Promise<number> {
-    return firstValueFrom(
-      this.http
-        .get<{ unreadCount: number }>(`${this.baseUrl}/unread-count`, {
-          headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of({ unreadCount: 2 }))),
-    ).then((res) => res.unreadCount);
+    const response = await firstValueFrom(
+      this.http.get<unknown>(`${this.baseUrl}/unread-count`, {
+        headers: this.getHeaders(),
+      }),
+    );
+    if (!this.isRecord(response)) throw new Error('Invalid unread count response');
+    const unreadCount = response['unreadCount'];
+    if (!Number.isSafeInteger(unreadCount) || (unreadCount as number) < 0) {
+      throw new Error('Invalid unread count response');
+    }
+    return unreadCount as number;
   }
 
   async markAsRead(notificationId: string): Promise<void> {
-    return firstValueFrom(
-      this.http
-        .patch<void>(`${this.baseUrl}/${notificationId}/read`, {}, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(undefined))),
+    await firstValueFrom(
+      this.http.patch<void>(`${this.baseUrl}/${encodeURIComponent(notificationId)}/read`, {}, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async markAllAsRead(): Promise<void> {
-    return firstValueFrom(
-      this.http
-        .patch<void>(`${this.baseUrl}/read-all`, {}, { headers: this.getHeaders() })
-        .pipe(catchError(() => of(undefined))),
+    await firstValueFrom(
+      this.http.patch<void>(`${this.baseUrl}/read-all`, {}, { headers: this.getHeaders() }),
     );
   }
 
-  private getFallbackNotifications(type?: string): InAppNotification[] {
-    const mocks: InAppNotification[] = [
-      {
-        id: 'notif-1',
-        recipient_id: 'me',
-        actor_id: 'user-201',
-        type: 'follow',
-        is_read: false,
-        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'user-201',
-          display_name: 'Sofia Tanaka',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-201',
-          native_languages: ['ja'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-2',
-        recipient_id: 'me',
-        actor_id: 'user-202',
-        type: 'like_profile',
-        is_read: false,
-        created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'user-202',
-          display_name: 'Mateo Garcia',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-202',
-          native_languages: ['es'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-3',
-        recipient_id: 'me',
-        actor_id: 'user-203',
-        type: 'comment_moment',
-        message: 'Great pronunciation in your voice clip!',
-        is_read: true,
-        created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-203',
-          display_name: 'Emma Watson',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-203',
-          native_languages: ['en'],
-          target_languages: ['fr'],
-        },
-      },
-      {
-        id: 'notif-4',
-        recipient_id: 'me',
-        actor_id: 'user-204',
-        type: 'like_moment',
-        is_read: true,
-        created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-204',
-          display_name: 'Kenji Sato',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-204',
-          native_languages: ['ja'],
-          target_languages: ['es'],
-        },
-      },
-      {
-        id: 'notif-5',
-        recipient_id: 'me',
-        actor_id: 'user-205',
-        type: 'profile_visit',
-        is_read: true,
-        created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-        actor: {
-          id: 'user-205',
-          display_name: 'Lucas Bernard',
-          avatar_url: 'https://i.pravatar.cc/150?u=user-205',
-          native_languages: ['fr'],
-          target_languages: ['en'],
-        },
-      },
-      {
-        id: 'notif-6',
-        recipient_id: 'me',
-        actor_id: 'admin-001',
-        type: 'system',
-        message: 'Welcome to HelloTalk! Your unified notifications area is ready.',
-        is_read: false,
-        created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        actor: {
-          id: 'admin-001',
-          display_name: 'HelloTalk Team',
-          avatar_url: 'https://i.pravatar.cc/150?u=admin-001',
-          native_languages: ['en'],
-          target_languages: [],
-        },
-      },
-    ];
+  private getHeaders(): Record<string, string> {
+    return { Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}` };
+  }
 
-    if (!type || type === 'all') return mocks;
-    if (type === 'likes')
-      return mocks.filter((n) => n.type === 'like_profile' || n.type === 'like_moment');
-    if (type === 'comments')
-      return mocks.filter(
-        (n) =>
-          n.type === 'comment_moment' || n.type === 'reply_comment' || n.type === 'mention_comment',
-      );
-    if (type === 'follows') return mocks.filter((n) => n.type === 'follow');
-    return mocks;
+  private parseNotification(value: unknown): InAppNotification | null {
+    if (!this.isRecord(value)) return null;
+    const id = this.boundedString(value['id'], 255);
+    const recipientId = this.boundedString(value['recipient_id'], 255);
+    const actorId = this.boundedString(value['actor_id'], 255);
+    const type = value['type'];
+    const createdAt = this.boundedString(value['created_at'], 64);
+    if (
+      !id ||
+      !recipientId ||
+      !actorId ||
+      typeof type !== 'string' ||
+      !NOTIFICATION_TYPES.has(type as NotificationType) ||
+      !createdAt ||
+      Number.isNaN(Date.parse(createdAt)) ||
+      typeof value['is_read'] !== 'boolean'
+    ) {
+      return null;
+    }
+
+    const notification: InAppNotification = {
+      id,
+      recipient_id: recipientId,
+      actor_id: actorId,
+      type: type as NotificationType,
+      is_read: value['is_read'],
+      created_at: createdAt,
+    };
+    const entityId = this.boundedString(value['entity_id'], 255);
+    if (entityId) notification.entity_id = entityId;
+    const message = this.boundedString(value['message'], 2000);
+    if (message) notification.message = message;
+
+    const actor = value['actor'];
+    if (this.isRecord(actor)) {
+      const actorRecord: NonNullable<InAppNotification['actor']> = { id: actorId };
+      const displayName = this.boundedString(actor['display_name'], 200);
+      if (displayName) actorRecord.display_name = displayName;
+      const avatarUrl = this.safeHttpUrl(actor['avatar_url']);
+      if (avatarUrl) actorRecord.avatar_url = avatarUrl;
+      const nativeLanguages = this.boundedStringArray(actor['native_languages']);
+      if (nativeLanguages) actorRecord.native_languages = nativeLanguages;
+      const targetLanguages = this.boundedStringArray(actor['target_languages']);
+      if (targetLanguages) actorRecord.target_languages = targetLanguages;
+      notification.actor = actorRecord;
+    }
+    return notification;
+  }
+
+  private boundedString(value: unknown, maxLength: number): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim();
+    return normalized.length > 0 && normalized.length <= maxLength ? normalized : undefined;
+  }
+
+  private boundedStringArray(value: unknown): string[] | undefined {
+    if (!Array.isArray(value) || value.length > 10) return undefined;
+    const items = value
+      .map((item) => this.boundedString(item, 32))
+      .filter((item): item is string => Boolean(item));
+    return items.length > 0 ? items : undefined;
+  }
+
+  private safeHttpUrl(value: unknown): string | undefined {
+    const candidate = this.boundedString(value, 2048);
+    if (!candidate) return undefined;
+    try {
+      const parsed = new URL(candidate);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }
