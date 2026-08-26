@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryService } from './discovery.service';
+import type { SearchQueryDto } from './dto/search-query.dto';
 
 vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: <T>(value: T): T => value,
@@ -202,12 +203,17 @@ describe('DiscoveryService regression boundaries', () => {
   });
 
   describe('proximity-search boundary', () => {
-    it.each([
-      [{ latitude: 51.5074 }, 'latitude-only'],
-      [{ longitude: -0.1278 }, 'longitude-only'],
-    ])(
-      'uses the standard bounded query for %s coordinates',
-      async (coordinates) => {
+    const partialCoordinateCases: Array<{
+      label: string;
+      query: SearchQueryDto;
+    }> = [
+      { label: 'latitude-only', query: { latitude: 51.5074 } },
+      { label: 'longitude-only', query: { longitude: -0.1278 } },
+    ];
+
+    it.each(partialCoordinateCases)(
+      'uses the standard bounded query for $label coordinates',
+      async ({ query }) => {
         const { service, queryBuilder, supabaseClient } = createHarness();
         queryBuilder.limit.mockResolvedValue({
           data: [{ id: 'standard-user', display_name: 'Standard User' }],
@@ -217,7 +223,7 @@ describe('DiscoveryService regression boundaries', () => {
         const result = await service.searchPartners(
           'viewer-user',
           null,
-          coordinates,
+          query,
         );
 
         expect(supabaseClient.rpc).not.toHaveBeenCalled();
