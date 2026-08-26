@@ -57,18 +57,17 @@ function buildService() {
 describe('AtomicEconomyService daily check-in', () => {
   it('returns the authoritative atomic claim and chooses a reward between 5 and 10', async () => {
     const { service, rpc, metrics, redisDel } = buildService();
-    rpc.mockImplementation(
-      (_name: string, params: { p_reward: number }) =>
-        Promise.resolve({
-          data: [
-            {
-              claimed: true,
-              coins_rewarded: params.p_reward,
-              new_balance: 57,
-            },
-          ],
-          error: null,
-        }),
+    rpc.mockImplementation((_name: string, params: { p_reward: number }) =>
+      Promise.resolve({
+        data: [
+          {
+            claimed: true,
+            coins_rewarded: params.p_reward,
+            new_balance: 57,
+          },
+        ],
+        error: null,
+      }),
     );
 
     const result = await service.claimDailyCheckIn('user-1');

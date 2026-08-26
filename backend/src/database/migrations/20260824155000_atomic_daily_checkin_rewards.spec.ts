@@ -18,7 +18,9 @@ describe('atomic daily check-in rewards migration (#1385)', () => {
   });
 
   it('stores at most one claim marker per user and UTC date', () => {
-    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS public\.daily_checkin_claims/);
+    expect(sql).toMatch(
+      /CREATE TABLE IF NOT EXISTS public\.daily_checkin_claims/,
+    );
     expect(sql).toMatch(/PRIMARY KEY \(user_id, claim_date\)/);
     expect(sql).toMatch(/\(now\(\) AT TIME ZONE 'UTC'\)::date/);
     expect(sql).toMatch(/ON CONFLICT \(user_id, claim_date\) DO NOTHING/);
@@ -31,7 +33,9 @@ describe('atomic daily check-in rewards migration (#1385)', () => {
 
   it('serializes the user balance and increments it inside the RPC transaction', () => {
     expect(sql).toMatch(/FROM public\.users AS u[\s\S]*FOR UPDATE/);
-    expect(sql).toMatch(/SET coins_balance = COALESCE\(coins_balance, 0\) \+ p_reward/);
+    expect(sql).toMatch(
+      /SET coins_balance = COALESCE\(coins_balance, 0\) \+ p_reward/,
+    );
     expect(sql).toMatch(/RETURNING coins_balance INTO v_new_balance/);
   });
 
@@ -42,7 +46,9 @@ describe('atomic daily check-in rewards migration (#1385)', () => {
   });
 
   it('keeps claim markers and the privileged RPC inaccessible to browser roles', () => {
-    expect(sql).toMatch(/ALTER TABLE public\.daily_checkin_claims ENABLE ROW LEVEL SECURITY/);
+    expect(sql).toMatch(
+      /ALTER TABLE public\.daily_checkin_claims ENABLE ROW LEVEL SECURITY/,
+    );
     expect(sql).toMatch(
       /REVOKE ALL ON TABLE public\.daily_checkin_claims FROM PUBLIC, anon, authenticated/,
     );

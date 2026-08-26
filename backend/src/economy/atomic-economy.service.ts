@@ -100,7 +100,9 @@ export class AtomicEconomyService extends EconomyService {
     );
   }
 
-  override async claimDailyCheckIn(userId: string): Promise<DailyCheckInResult> {
+  override async claimDailyCheckIn(
+    userId: string,
+  ): Promise<DailyCheckInResult> {
     const startedAt = Date.now();
 
     // The value is not security-sensitive, but using the platform CSPRNG keeps
