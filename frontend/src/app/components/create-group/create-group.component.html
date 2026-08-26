@@ -1,18 +1,20 @@
 <div class="create-group-container">
   <header class="create-group-header">
-    <h2 class="create-group-title">{{ 'group.createTitle' | t }}</h2>
+    <h2 id="createGroupTitle" class="create-group-title">{{ 'group.createTitle' | t }}</h2>
     <p class="create-group-subtitle">{{ 'group.createSubtitle' | t }}</p>
   </header>
 
-  <form (ngSubmit)="createGroup()" novalidate>
+  <form (ngSubmit)="createGroup()" novalidate aria-labelledby="createGroupTitle">
     <section class="create-group-form">
       <div class="form-group">
         <label for="groupNameInput" class="form-label">{{ 'group.nameLabel' | t }}</label>
         <input
+          #groupNameInput
           hlmInput
           id="groupNameInput"
           name="groupName"
           type="text"
+          dir="auto"
           [(ngModel)]="groupName"
           class="form-input"
           [placeholder]="'group.namePlaceholder' | t"
@@ -21,7 +23,7 @@
       </div>
 
       <div class="form-group">
-        <label for="memberSearchInput" class="form-label">
+        <label id="memberSearchLabel" for="memberSearchInput" class="form-label">
           {{ 'group.addMembers' | t }} ({{ selectedCount() }}/{{ MAX_MEMBERS }})
         </label>
 
@@ -39,10 +41,12 @@
               <path d="m21 21-4.35-4.35" />
             </svg>
             <input
+              #memberSearchInput
               hlmInput
               id="memberSearchInput"
               name="memberSearch"
               type="text"
+              dir="auto"
               [(ngModel)]="searchQuery"
               (ngModelChange)="searchUsers()"
               (keydown.enter)="$event.preventDefault()"
@@ -51,6 +55,7 @@
               [disabled]="!canAddMore()"
               [attr.disabled]="!canAddMore() ? '' : null"
               [attr.aria-busy]="isSearching()"
+              [attr.aria-controls]="searchResults().length > 0 ? 'memberSearchResults' : null"
               [attr.aria-describedby]="!canAddMore() ? 'memberSearchLimit' : null"
             />
             @if (isSearching()) {
@@ -66,39 +71,50 @@
         }
 
         @if (searchResults().length > 0) {
-          <div class="search-results">
+          <ul
+            id="memberSearchResults"
+            class="search-results"
+            aria-labelledby="memberSearchLabel"
+          >
             @for (user of searchResults(); track user.id) {
-              <button
-                hlmBtn
-                type="button"
-                class="search-result-item"
-                (click)="addMember(user)"
-                [disabled]="!canAddMore() || selectedMemberIds().includes(user.id)"
-                [attr.aria-label]="user.display_name || user.id"
-              >
-                <div class="user-avatar">
-                  @if (user.avatar_url) {
-                    <img [src]="user.avatar_url" alt="" class="avatar-img" />
-                  } @else {
-                    <span class="avatar-placeholder">{{
-                      (user.display_name || user.id).charAt(0).toUpperCase()
-                    }}</span>
-                  }
-                </div>
-                <div class="user-info">
-                  <span class="user-name">{{ user.display_name || user.id }}</span>
-                  @if (user.native_languages?.length) {
-                    <span class="user-lang">{{ user.native_languages[0] }}</span>
-                  }
-                </div>
-                <span class="add-indicator" aria-hidden="true">+</span>
-              </button>
+              <li class="search-result-row">
+                <button
+                  hlmBtn
+                  type="button"
+                  class="search-result-item"
+                  (click)="addMember(user)"
+                  [disabled]="!canAddMore() || selectedMemberIds().includes(user.id)"
+                >
+                  <span class="sr-only">{{ 'group.addBtn' | t }} </span>
+                  <div class="user-avatar">
+                    @if (user.avatar_url) {
+                      <img [src]="user.avatar_url" alt="" class="avatar-img" />
+                    } @else {
+                      <span class="avatar-placeholder" aria-hidden="true">{{
+                        (user.display_name || user.id).charAt(0).toUpperCase()
+                      }}</span>
+                    }
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name" dir="auto">{{ user.display_name || user.id }}</span>
+                    @if (user.native_languages?.length) {
+                      <span class="user-lang" dir="auto">{{ user.native_languages[0] }}</span>
+                    }
+                  </div>
+                  <span class="add-indicator" aria-hidden="true">+</span>
+                </button>
+              </li>
             }
-          </div>
+          </ul>
         }
 
         <div class="selected-section">
-          <h3 class="selected-heading">
+          <h3
+            id="selectedMembersHeading"
+            class="selected-heading"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
           </h3>
           @if (selectedMembers().length === 0) {
@@ -106,26 +122,26 @@
               <p class="empty-hint">{{ 'group.noMembersSelected' | t }}</p>
             </div>
           } @else {
-            <ul class="selected-list">
+            <ul class="selected-list" aria-labelledby="selectedMembersHeading">
               @for (member of selectedMembers(); track member.id) {
                 <li class="selected-item">
                   <div class="user-avatar small">
                     @if (member.avatar_url) {
                       <img [src]="member.avatar_url" alt="" class="avatar-img" />
                     } @else {
-                      <span class="avatar-placeholder">{{
+                      <span class="avatar-placeholder" aria-hidden="true">{{
                         (member.display_name || member.id).charAt(0).toUpperCase()
                       }}</span>
                     }
                   </div>
                   <div class="user-info">
-                    <span class="user-name">{{ member.display_name || member.id }}</span>
+                    <span class="user-name" dir="auto">{{ member.display_name || member.id }}</span>
                   </div>
                   <button
                     hlmBtn
                     type="button"
                     class="remove-btn"
-                    (click)="removeMember(member)"
+                    (click)="removeMember(member, $event)"
                     [attr.aria-label]="
                       'group.removeMemberAria' | t: { name: member.display_name || member.id }
                     "
@@ -152,10 +168,12 @@
 
     <footer class="create-group-footer">
       @if (error()) {
-        <p class="error-message" role="alert">{{ error() }}</p>
+        <p id="createGroupError" class="error-message" role="alert">{{ error() }}</p>
       }
       @if (success()) {
-        <p class="success-message" role="status">{{ 'group.successMsg' | t }}</p>
+        <p id="createGroupSuccess" class="success-message" role="status">
+          {{ 'group.successMsg' | t }}
+        </p>
       }
 
       <button
@@ -164,6 +182,9 @@
         class="create-btn"
         [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
         [attr.aria-busy]="isCreating()"
+        [attr.aria-describedby]="
+          error() ? 'createGroupError' : success() ? 'createGroupSuccess' : null
+        "
         [attr.aria-label]="(isCreating() ? 'group.creatingBtn' : 'group.createBtn') | t"
       >
         @if (isCreating()) {
