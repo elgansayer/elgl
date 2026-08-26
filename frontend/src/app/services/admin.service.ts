@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, catchError, of, throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -56,68 +56,6 @@ export interface AdminBlocksListResult {
   pageSize: number;
 }
 
-const MOCK_ADMIN_USERS: AdminUserSummary[] = [
-  {
-    id: 'partner-1',
-    display_name: 'Kenji',
-    avatar_url: 'https://i.pravatar.cc/150?u=partner-1',
-    native_languages: ['ja'],
-    target_languages: ['en'],
-    is_vip: false,
-    vip_tier: 'free',
-    is_admin: false,
-    coins_balance: 100,
-    study_streak_days: 4,
-    last_active_at: new Date().toISOString(),
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-  {
-    id: 'partner-2',
-    display_name: 'Maria',
-    avatar_url: 'https://i.pravatar.cc/150?u=partner-2',
-    native_languages: ['es'],
-    target_languages: ['en'],
-    is_vip: true,
-    vip_tier: 'consumer_8_ukp_10_usd',
-    is_admin: false,
-    coins_balance: 320,
-    study_streak_days: 20,
-    last_active_at: new Date(Date.now() - 3600000).toISOString(),
-    created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
-  },
-  {
-    id: 'mock-user-123',
-    display_name: 'Mock User',
-    avatar_url: 'https://i.pravatar.cc/150?u=mock-user-123',
-    native_languages: ['en'],
-    target_languages: ['es', 'ja'],
-    is_vip: true,
-    vip_tier: 'premium',
-    is_admin: true,
-    coins_balance: 500,
-    study_streak_days: 12,
-    last_active_at: new Date().toISOString(),
-    created_at: new Date(Date.now() - 180 * 86400000).toISOString(),
-  },
-];
-
-const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
-  {
-    id: 'login-1',
-    user_id: 'partner-1',
-    ip_address: '203.0.113.5',
-    user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'login-2',
-    user_id: 'partner-1',
-    ip_address: '203.0.113.5',
-    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-];
-
 @Injectable({
   providedIn: 'root',
 })
@@ -134,8 +72,9 @@ export class AdminService {
   }
 
   /**
-   * Real backend check with no mock fallback, unlike listUsers()/getLoginHistory()
-   * below. A non-admin must be told they lack access, not shown a fake page.
+   * Real backend check with no mock fallback. A non-admin or an unavailable
+   * authorization boundary must never be represented as a successful admin
+   * session.
    */
   async checkAdminAccess(): Promise<boolean> {
     try {
@@ -158,28 +97,10 @@ export class AdminService {
     }
 
     return firstValueFrom(
-      this.http
-        .get<AdminUserListResult>(`${this.baseUrl}/users`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(
-          catchError((err: HttpErrorResponse) => {
-            if (err.status === 0) {
-              return of({
-                users: search
-                  ? MOCK_ADMIN_USERS.filter((u) =>
-                      (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-                    )
-                  : MOCK_ADMIN_USERS,
-                total: MOCK_ADMIN_USERS.length,
-                page,
-                pageSize,
-              });
-            }
-            return throwError(() => err);
-          }),
-        ),
+      this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
   }
 
@@ -197,18 +118,9 @@ export class AdminService {
 
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
     return firstValueFrom(
-      this.http
-        .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
-          headers: this.getHeaders(),
-        })
-        .pipe(
-          catchError((err: HttpErrorResponse) => {
-            if (err.status === 0) {
-              return of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId));
-            }
-            return throwError(() => err);
-          }),
-        ),
+      this.http.get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
@@ -238,19 +150,10 @@ export class AdminService {
       .set('pageSize', pageSize.toString());
 
     return firstValueFrom(
-      this.http
-        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(
-          catchError((err: HttpErrorResponse) => {
-            if (err.status === 0) {
-              return of({ blocks: [], total: 0, page, pageSize });
-            }
-            return throwError(() => err);
-          }),
-        ),
+      this.http.get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
   }
 

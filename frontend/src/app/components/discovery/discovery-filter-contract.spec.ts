@@ -77,6 +77,10 @@ describe('DiscoveryComponent matchmaking filter contract', () => {
     }).compileComponents();
 
     component = TestBed.createComponent(DiscoveryComponent).componentInstance;
+    // ngOnInit() fires fire-and-forget and ends with its own searchPartners()
+    // call once profile/blocked-user loading resolves. Flush it here so it
+    // can't land findPartners calls mid-test after a mockClear().
+    await flushPromises();
   });
 
   afterEach(() => {

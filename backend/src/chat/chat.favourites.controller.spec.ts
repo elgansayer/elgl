@@ -16,7 +16,9 @@ describe('ChatController favourites contract', () => {
   };
 
   const user = { id: 'user-1' } as unknown as User;
-  const dto = { message_id: '00000000-0000-4000-8000-000000000001' } as AddFavouriteDto;
+  const dto = {
+    message_id: '00000000-0000-4000-8000-000000000001',
+  } as AddFavouriteDto;
 
   beforeEach(() => {
     chatService = {
@@ -34,7 +36,9 @@ describe('ChatController favourites contract', () => {
   });
 
   it('adds a favourite for the authenticated user', async () => {
-    await expect(controller.addFavourite(user, dto)).resolves.toEqual({ success: true });
+    await expect(controller.addFavourite(user, dto)).resolves.toEqual({
+      success: true,
+    });
     expect(chatService.addFavourite).toHaveBeenCalledWith('user-1', dto);
   });
 
@@ -57,7 +61,9 @@ describe('ChatController favourites contract', () => {
   });
 
   it('deletes a favourite in the authenticated user scope', async () => {
-    await expect(controller.deleteFavourite(user, 'fav-1')).resolves.toEqual({ success: true });
+    await expect(controller.deleteFavourite(user, 'fav-1')).resolves.toEqual({
+      success: true,
+    });
     expect(chatService.deleteFavourite).toHaveBeenCalledWith('user-1', 'fav-1');
   });
 
