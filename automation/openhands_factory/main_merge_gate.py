@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient, GitHubRunner
