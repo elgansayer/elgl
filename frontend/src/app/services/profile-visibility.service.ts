@@ -7,11 +7,24 @@ import { AuthService } from './auth.service';
 export type ProfileVisibility = 'everyone' | 'vips_only' | 'hidden';
 
 interface PrivacySettingsResponse {
-  profile_visibility?: ProfileVisibility;
+  profile_visibility?: unknown;
 }
 
-export function isProfileVisibility(value: string): value is ProfileVisibility {
+export function isProfileVisibility(value: unknown): value is ProfileVisibility {
   return value === 'everyone' || value === 'vips_only' || value === 'hidden';
+}
+
+function parseProfileVisibilityResponse(response: unknown): ProfileVisibility {
+  if (!response || typeof response !== 'object') {
+    throw new Error('Invalid profile visibility response');
+  }
+
+  const { profile_visibility: profileVisibility } = response as PrivacySettingsResponse;
+  if (!isProfileVisibility(profileVisibility)) {
+    throw new Error('Invalid profile visibility response');
+  }
+
+  return profileVisibility;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,17 +35,19 @@ export class ProfileVisibilityService {
 
   async getProfileVisibility(): Promise<ProfileVisibility> {
     const response = await firstValueFrom(
-      this.http.get<PrivacySettingsResponse>(`${this.baseUrl}/me/privacy-settings`, {
+      this.http.get<unknown>(`${this.baseUrl}/me/privacy-settings`, {
         headers: this.getHeaders(),
       }),
     );
 
-    return response.profile_visibility && isProfileVisibility(response.profile_visibility)
-      ? response.profile_visibility
-      : 'everyone';
+    return parseProfileVisibilityResponse(response);
   }
 
   async updateProfileVisibility(profileVisibility: ProfileVisibility): Promise<void> {
+    if (!isProfileVisibility(profileVisibility)) {
+      throw new Error('Invalid profile visibility');
+    }
+
     await firstValueFrom(
       this.http.patch(
         `${this.baseUrl}/me/privacy`,
