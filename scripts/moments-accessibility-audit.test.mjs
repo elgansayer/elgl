@@ -12,12 +12,10 @@ const template = readFileSync(templateUrl, 'utf8');
 const audit = readFileSync(auditUrl, 'utf8');
 
 function buttonFor(clickExpression) {
-  const escaped = clickExpression.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = template.match(
-    new RegExp(`<button[\\s\\S]*?\\(click\\)="${escaped}"[\\s\\S]*?<\\/button>`),
-  );
-  assert.ok(match, `Expected button for ${clickExpression}`);
-  return match[0];
+  const buttons = [...template.matchAll(/<button\b[\s\S]*?<\/button>/g)].map((match) => match[0]);
+  const button = buttons.find((candidate) => candidate.includes(`(click)="${clickExpression}"`));
+  assert.ok(button, `Expected button for ${clickExpression}`);
+  return button;
 }
 
 test('Moments exposes a single primary landmark and translated top-level navigation names', () => {
@@ -82,6 +80,6 @@ test('the audit covers screen-reader, keyboard, zoom, RTL, privacy, and rollback
     'Privacy and security review',
     'Rollout and rollback',
   ]) {
-    assert.match(audit, new RegExp(`## ${heading.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}`));
+    assert.ok(audit.includes(`## ${heading}`), `Missing audit section: ${heading}`);
   }
 });
