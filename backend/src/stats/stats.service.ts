@@ -18,6 +18,12 @@ interface QueryError {
   code?: unknown;
 }
 
+interface QueryResult {
+  data?: unknown;
+  count?: number | null;
+  error?: QueryError | null;
+}
+
 export interface MyStatsResponse {
   study_hours: { day: string; hours: number }[];
   messages_sent: number;
@@ -35,12 +41,9 @@ export class StatsService {
     const client = this.supabaseService.getClient();
     const startOfWeek = this.getStartOfWeekUtc(new Date());
 
-    let queryResults: Awaited<
-      ReturnType<typeof Promise.all<[PromiseLike<unknown>, PromiseLike<unknown>]>>
-    >;
-
+    let queryResults: QueryResult[];
     try {
-      queryResults = await Promise.all([
+      queryResults = (await Promise.all([
         client
           .from('call_logs')
           .select('duration_seconds, started_at')
@@ -61,17 +64,13 @@ export class StatsService {
           .from('moments')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId),
-      ]);
+      ])) as QueryResult[];
     } catch (error: unknown) {
       this.failUnavailable('query_execution', error);
     }
 
     const [callResult, messageResult, correctionResult, momentResult] =
-      queryResults as Array<{
-        data?: unknown;
-        count?: number | null;
-        error?: QueryError | null;
-      }>;
+      queryResults;
 
     this.assertQuerySucceeded('call_logs', callResult.error);
     this.assertQuerySucceeded('chat_messages', messageResult.error);
