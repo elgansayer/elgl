@@ -4,7 +4,7 @@
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
-#   - Aborts on any error; systemd Restart=on-failure handles recovery.
+#   - A failure trap restores the primary service and any active repository service.
 #   - Logs every decision so journalctl -u hellotalk-factory-update traces the run.
 set -euo pipefail
 
@@ -103,11 +103,11 @@ fi
 # 4. Stop the factory before touching the package.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Stopping factory services that share the installed runtime"
+SERVICES_STOPPED=true
 if systemctl is-active --quiet "$WORKOUT_SERVICE"; then
   WORKOUT_WAS_ACTIVE=true
   systemctl stop "$WORKOUT_SERVICE"
 fi
-SERVICES_STOPPED=true
 systemctl stop "$SERVICE" || true
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

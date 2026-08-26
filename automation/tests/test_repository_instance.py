@@ -103,7 +103,6 @@ def test_inline_autonomous_trigger_fails_closed(tmp_path: Path) -> None:
         assert_workout_agent_single_owner(tmp_path)
 
 
-
 def test_all_workout_agent_executor_tombstones_are_guarded() -> None:
     assert {
         ".github/workflows/agent-daily.yml",
