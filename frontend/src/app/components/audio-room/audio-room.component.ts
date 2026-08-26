@@ -31,6 +31,11 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import {
+  buildAudienceSeatIndexes,
+  buildStageViewModel,
+  normaliseAudienceCount,
+} from './audio-room-view-model';
 
 @Component({
   selector: 'app-audio-room',
@@ -66,6 +71,7 @@ export class AudioRoomComponent implements OnInit {
   private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly isCreatingRoom = signal<boolean>(false);
   readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showTipModal = signal<boolean>(false);
@@ -77,10 +83,27 @@ export class AudioRoomComponent implements OnInit {
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
-  readonly audiencePlaceholderAvatars = computed(() => {
-    const count = this.store.audienceCount();
-    return Array.from({ length: Math.min(count, 8) }, (_, i) => i + 1);
+  readonly stageViewModel = computed(() =>
+    buildStageViewModel(
+      this.store.currentRoom(),
+      this.store.stageInfo(),
+      this.store.stageParticipants(),
+    ),
+  );
+  readonly stageParticipants = computed(() => this.stageViewModel().participants);
+  readonly stageOverflowCount = computed(() => this.stageViewModel().overflowCount);
+  readonly audienceCount = computed(() => {
+    const count = this.store.stageInfo()
+      ? this.store.audienceCount()
+      : (this.store.currentRoom()?.listeners_count ?? this.store.audienceCount());
+    return normaliseAudienceCount(count);
   });
+  readonly audiencePlaceholderAvatars = computed(() =>
+    buildAudienceSeatIndexes(this.audienceCount()),
+  );
+  readonly audienceOverflowCount = computed(() =>
+    Math.max(0, this.audienceCount() - this.audiencePlaceholderAvatars().length),
+  );
   readonly pollResults = signal<{
     question: string;
     options: string[];
@@ -143,6 +166,9 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
+    if (this.isCreatingRoom()) return;
+
+    this.isCreatingRoom.set(true);
     try {
       const room = await this.store.createRoom(
         payload.title,
@@ -155,6 +181,8 @@ export class AudioRoomComponent implements OnInit {
     } catch (e) {
       console.error('Error creating live room:', e);
       showToast(this.i18n.translate('audioRoom.launchError'));
+    } finally {
+      this.isCreatingRoom.set(false);
     }
   }
 
