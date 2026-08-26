@@ -111,10 +111,10 @@ export class FavouritesComponent implements OnDestroy {
       let offset = 0;
       let hasMore = true;
 
-      while (hasMore && starred.length < MAX_STARRED_MESSAGES) {
+      while (hasMore && offset < MAX_STARRED_MESSAGES) {
         const limit = Math.min(
           STARRED_PAGE_SIZE,
-          MAX_STARRED_MESSAGES - starred.length,
+          MAX_STARRED_MESSAGES - offset,
         );
         const page = await this.favouriteService.getStarredMessages(limit, offset);
         if (generation !== this.loadGeneration) return;
