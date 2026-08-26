@@ -1,4 +1,15 @@
-import { MOCK_LINKED_ACCOUNTS, MOCK_USERS } from './mock-data';
+import {
+  MOCK_FIXTURE_DIAGNOSTICS,
+  MOCK_LINKED_ACCOUNTS,
+  MOCK_USERS,
+  buildMockFixtureSnapshot,
+  buildMockUsers,
+} from './mock-data';
+import {
+  DEFAULT_MOCK_FIXTURE_SEED,
+  MOCK_FIXTURE_GENERATOR_VERSION,
+  MOCK_FIXTURE_SEED_NAME,
+} from './mock/deterministic-fixtures';
 
 describe('offline mock fixtures', () => {
   it('are available only through the explicit test profile', () => {
@@ -40,6 +51,41 @@ describe('offline mock fixtures', () => {
         created_at: '2024-01-01T00:02:00.000Z',
       },
     ]);
+  });
+
+  it('rebuilds byte-stable fixture snapshots for the same seed', () => {
+    expect(JSON.stringify(buildMockFixtureSnapshot(7932))).toBe(
+      JSON.stringify(buildMockFixtureSnapshot(7932)),
+    );
+  });
+
+  it('produces distinct valid user records for a different seed', () => {
+    const defaultUsers = buildMockUsers(7932);
+    const alternateUsers = buildMockUsers(7933);
+
+    expect(alternateUsers).toHaveLength(defaultUsers.length);
+    expect(JSON.stringify(alternateUsers)).not.toBe(JSON.stringify(defaultUsers));
+    expect(alternateUsers.every((user) => user.id.startsWith('fake-'))).toBe(true);
+  });
+
+  it('recreates the exact initial state after a consumer mutates its snapshot', () => {
+    const pristine = JSON.stringify(buildMockFixtureSnapshot(7932));
+    const mutable = buildMockFixtureSnapshot(7932);
+    const firstUser = mutable.users[0];
+    if (!firstUser) throw new Error('Expected seeded users');
+
+    firstUser.display_name = 'mutated locally';
+
+    expect(JSON.stringify(buildMockFixtureSnapshot(7932))).toBe(pristine);
+  });
+
+  it('exposes the active seed in test diagnostics', () => {
+    expect(MOCK_FIXTURE_DIAGNOSTICS).toMatchObject({
+      seedName: MOCK_FIXTURE_SEED_NAME,
+      seed: DEFAULT_MOCK_FIXTURE_SEED,
+      generatorVersion: MOCK_FIXTURE_GENERATOR_VERSION,
+      epoch: '2024-01-01T00:00:00.000Z',
+    });
   });
 
   it('contains no third-party media URLs', () => {
