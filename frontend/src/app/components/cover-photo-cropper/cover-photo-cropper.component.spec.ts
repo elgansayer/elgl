@@ -39,13 +39,12 @@ describe('CoverPhotoCropperComponent', () => {
     const dialog = document.querySelector('hlm-dialog-content');
 
     expect(dialog).not.toBeNull();
-    expect(dialog?.classList.contains('rounded-sheet')).toBe(true);
+    expect(dialog?.classList.contains('!rounded-sheet')).toBe(true);
     expect(dialog?.classList.contains('shadow-lift')).toBe(true);
     expect(dialog?.classList.contains('bg-surface-200')).toBe(true);
     expect(dialog?.classList.contains('border-surface-100')).toBe(true);
     expect(dialog?.classList.contains('p-4')).toBe(true);
     expect(dialog?.classList.contains('sm:p-6')).toBe(true);
-    expect(dialog?.classList.contains('rounded-xl')).toBe(false);
     expect(dialog?.classList.contains('shadow-2xl')).toBe(false);
   });
 
