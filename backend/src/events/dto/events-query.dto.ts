@@ -5,6 +5,7 @@ import {
   IsISO8601,
   IsInt,
   Min,
+  Max,
   IsIn,
   Matches,
 } from 'class-validator';
@@ -47,6 +48,7 @@ export class EventsQueryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(100)
   @Type(() => Number)
   limit?: number = 20;
 
