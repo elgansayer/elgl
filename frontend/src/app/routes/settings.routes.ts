@@ -42,12 +42,33 @@ export const settingsRoutes: Routes = [
     title: 'Appearance - HelloTalk',
   },
   {
+    path: 'language',
+    redirectTo: 'settings/language',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/language',
+    loadComponent: () =>
+      import('../pages/language-settings/language-settings.component').then(
+        (m) => m.LanguageSettingsComponent,
+      ),
+    title: 'Language Settings - HelloTalk',
+  },
+  {
     path: 'settings/privacy',
     loadComponent: () =>
       import('../pages/settings/privacy-settings/privacy-settings.component').then(
         (m) => m.PrivacySettingsComponent,
       ),
     title: 'Privacy Settings - HelloTalk',
+  },
+  {
+    path: 'blocks',
+    loadComponent: () =>
+      import('../pages/block-management/block-management.component').then(
+        (m) => m.BlockManagementComponent,
+      ),
+    title: 'Blocked Users - HelloTalk',
   },
   {
     path: 'settings/backup-restore',
