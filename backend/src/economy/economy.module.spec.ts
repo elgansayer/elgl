@@ -2,7 +2,8 @@ import { HttpModule } from '@nestjs/axios';
 import { EconomyModule } from './economy.module';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
-import { EconomyController } from './economy.controller';
+import { AtomicEconomyController } from './atomic-economy.controller';
+import { AtomicEconomyService } from './atomic-economy.service';
 import { EconomyService } from './economy.service';
 
 describe('EconomyModule', () => {
@@ -19,18 +20,21 @@ describe('EconomyModule', () => {
     expect(importsMetadata).toContain(HttpModule);
   });
 
-  it('should register EconomyController in its controllers metadata', () => {
+  it('should register the atomic economy controller', () => {
     const controllersMetadata =
       (Reflect.getMetadata('controllers', EconomyModule) as unknown[]) ?? [];
 
-    expect(controllersMetadata).toContain(EconomyController);
+    expect(controllersMetadata).toContain(AtomicEconomyController);
   });
 
-  it('should register EconomyService in its providers metadata', () => {
+  it('should bind EconomyService to AtomicEconomyService', () => {
     const providersMetadata =
-      (Reflect.getMetadata('providers', EconomyModule) as unknown[]) ?? [];
+      (Reflect.getMetadata('providers', EconomyModule) as Array<unknown>) ?? [];
 
-    expect(providersMetadata).toContain(EconomyService);
+    expect(providersMetadata).toContainEqual({
+      provide: EconomyService,
+      useClass: AtomicEconomyService,
+    });
   });
 
   it('should export EconomyService', () => {
