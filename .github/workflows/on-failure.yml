@@ -39,7 +39,8 @@ jobs:
             gh issue list \
               --repo "$REPOSITORY" \
               --state open \
-              --limit 1000 \
+              --search "\"${INCIDENT_TITLE}\" in:title" \
+              --limit 10 \
               --json number,title |
               jq -r --arg title "$INCIDENT_TITLE" \
                 '.[] | select(.title == $title) | .number' |
@@ -81,8 +82,8 @@ jobs:
 
   resolve-recovery:
     # PR failures never create incidents above, so successful PR workflow runs
-    # cannot possibly have an incident to close. Avoid starting a runner and
-    # listing up to 1,000 issues on every successful pull-request CI completion.
+    # cannot possibly have an incident to close. Non-PR recovery checks use a
+    # title-scoped search instead of downloading the first 1,000 open issues.
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -103,7 +104,8 @@ jobs:
             gh issue list \
               --repo "$REPOSITORY" \
               --state open \
-              --limit 1000 \
+              --search "\"${INCIDENT_TITLE}\" in:title" \
+              --limit 10 \
               --json number,title |
               jq -r --arg title "$INCIDENT_TITLE" \
                 '.[] | select(.title == $title) | .number' |
