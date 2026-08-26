@@ -51,8 +51,9 @@ interface SelectOption {
           <button
             hlmBtn
             hlmDialogClose
+            type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon-touch"
             class="shrink-0 rounded-full text-text-muted hover:bg-surface-100 hover:text-text-primary"
             [attr.aria-label]="'audioRoom.cancelBtn' | t"
           >
@@ -124,15 +125,23 @@ interface SelectOption {
         <hlm-dialog-footer
           class="flex-row justify-end gap-3 border-t border-surface-100 bg-surface-100/50 px-6 py-4"
         >
-          <button hlmBtn hlmDialogClose variant="ghost" class="rounded-xl px-5 py-2.5 font-bold">
+          <button
+            hlmBtn
+            hlmDialogClose
+            type="button"
+            variant="ghost"
+            size="touch"
+            class="rounded-xl px-5 font-bold"
+          >
             {{ 'audioRoom.cancelBtn' | t }}
           </button>
           <button
             hlmBtn
-            hlmDialogClose
+            type="button"
+            size="touch"
             (click)="submit()"
             [disabled]="!isValid()"
-            class="rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-bold text-on-fill shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            class="rounded-xl bg-gradient-to-r from-primary to-secondary px-5 font-bold text-on-fill shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {{ 'audioRoom.launchStageBtn' | t }}
           </button>

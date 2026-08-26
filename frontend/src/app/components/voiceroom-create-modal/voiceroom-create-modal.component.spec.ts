@@ -1,12 +1,12 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { I18nService } from '../../services/i18n.service';
 import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from './voiceroom-create-modal.component';
-import { I18nService } from '../../services/i18n.service';
 
-describe.skip('VoiceroomCreateModalComponent', () => {
+describe('VoiceroomCreateModalComponent', () => {
   let component: VoiceroomCreateModalComponent;
   let fixture: ComponentFixture<VoiceroomCreateModalComponent>;
   let i18nServiceMock: Partial<I18nService>;
@@ -29,14 +29,11 @@ describe.skip('VoiceroomCreateModalComponent', () => {
 
     fixture = TestBed.createComponent(VoiceroomCreateModalComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
-  it('should create the component', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should initialise with default values', () => {
+  it('initialises with safe defaults', () => {
     expect(component.title()).toBe('');
     expect(component.languagePair()).toBe('en-es');
     expect(component.topicTag()).toBe('Free Talk');
@@ -44,20 +41,61 @@ describe.skip('VoiceroomCreateModalComponent', () => {
     expect(component.isValid()).toBe(false);
   });
 
-  it('should make isValid true when title is filled and selections set', () => {
+  it('requires a non-empty trimmed title', () => {
+    component.title.set('   ');
     expect(component.isValid()).toBe(false);
-    component.title.set('My Room');
-    fixture.detectChanges();
+
+    component.title.set('Conversation Club');
     expect(component.isValid()).toBe(true);
   });
 
-  it('should make isValid false when title is only whitespace', () => {
-    component.title.set('   ');
-    fixture.detectChanges();
+  it('requires both language pair and topic selections', () => {
+    component.title.set('Conversation Club');
+    component.languagePair.set('');
+    expect(component.isValid()).toBe(false);
+
+    component.languagePair.set('ja-en');
+    component.topicTag.set('');
     expect(component.isValid()).toBe(false);
   });
 
-  it('should emit closed and reset form on closeModal', () => {
+  it('emits a trimmed, typed creation payload without closing prematurely', () => {
+    let emitted: VoiceroomCreatePayload | undefined;
+    const closedSpy = vi.fn();
+    const createdSub = component.created.subscribe((payload) => (emitted = payload));
+    const closedSub = component.closed.subscribe(closedSpy);
+
+    component.title.set('  Conversation Club  ');
+    component.languagePair.set('ja-en');
+    component.topicTag.set('Grammar Help');
+    component.isVideoStream.set(true);
+
+    component.submit();
+
+    expect(emitted).toEqual({
+      title: 'Conversation Club',
+      languagePair: 'ja-en',
+      topicTag: 'Grammar Help',
+      isVideoStream: true,
+    });
+    expect(closedSpy).not.toHaveBeenCalled();
+    expect(component.title()).toBe('  Conversation Club  ');
+
+    createdSub.unsubscribe();
+    closedSub.unsubscribe();
+  });
+
+  it('does not emit an invalid creation request', () => {
+    const createdSpy = vi.fn();
+    const sub = component.created.subscribe(createdSpy);
+
+    component.submit();
+
+    expect(createdSpy).not.toHaveBeenCalled();
+    sub.unsubscribe();
+  });
+
+  it('resets the draft only when the modal is explicitly closed', () => {
     const closedSpy = vi.fn();
     const sub = component.closed.subscribe(closedSpy);
 
@@ -76,88 +114,64 @@ describe.skip('VoiceroomCreateModalComponent', () => {
     sub.unsubscribe();
   });
 
-  it('should emit created with correct payload and close on submit', () => {
-    let emitted: VoiceroomCreatePayload | undefined;
-    const createdSub = component.created.subscribe((p) => (emitted = p));
-    const closedSpy = vi.fn();
-    const closedSub = component.closed.subscribe(closedSpy);
-
-    component.title.set('  Conversation Club  ');
-    component.languagePair.set('ja-en');
-    component.topicTag.set('Grammar Help');
-    component.isVideoStream.set(true);
-
-    component.submit();
-    fixture.detectChanges();
-
-    expect(emitted).toEqual({
-      title: 'Conversation Club',
-      languagePair: 'ja-en',
-      topicTag: 'Grammar Help',
-      isVideoStream: true,
-    });
-    expect(closedSpy).toHaveBeenCalledTimes(1);
-
-    createdSub.unsubscribe();
-    closedSub.unsubscribe();
-  });
-
-  it('should not emit when submit is called with invalid form', () => {
-    const createdSpy = vi.fn();
-    const sub = component.created.subscribe(createdSpy);
-
-    component.title.set('');
-    component.submit();
-
-    expect(createdSpy).not.toHaveBeenCalled();
-    sub.unsubscribe();
-  });
-
-  it('should expose 23 language pair options', () => {
+  it('exposes the supported language pairs and topics', () => {
     expect(component.LANGUAGE_PAIR_OPTIONS).toHaveLength(23);
-    const first = component.LANGUAGE_PAIR_OPTIONS[0];
-    expect(first.value).toBe('en-es');
-    expect(first.labelKey).toBe('audioRoom.languagePair.en-es');
-  });
-
-  it('should expose 6 topic options', () => {
+    expect(component.LANGUAGE_PAIR_OPTIONS[0]).toEqual({
+      value: 'en-es',
+      labelKey: 'audioRoom.languagePair.en-es',
+    });
     expect(component.TOPIC_OPTIONS).toHaveLength(6);
     expect(component.TOPIC_OPTIONS[0].value).toBe('Pronunciation');
     expect(component.TOPIC_OPTIONS[5].value).toBe('Business English');
   });
 
-  it('should render modal title from translation', () => {
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('h2')?.textContent).toContain('audioRoom.modalTitle');
-  });
+  it('renders translated labels and disables Launch until the form is valid', () => {
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('audioRoom.modalTitle');
+    expect(root.textContent).toContain('audioRoom.roomTitleLabel');
+    expect(root.textContent).toContain('audioRoom.languagePairLabel');
+    expect(root.textContent).toContain('audioRoom.topicLabel');
 
-  it('should disable the launch button when form is invalid', () => {
-    const el: HTMLElement = fixture.nativeElement;
-    const submitBtn = el.querySelectorAll('button')[2] as HTMLButtonElement;
-    expect(submitBtn.disabled).toBe(true);
+    const launchButton = Array.from(root.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('audioRoom.launchStageBtn'),
+    );
+    expect(launchButton).toBeTruthy();
+    expect(launchButton?.disabled).toBe(true);
 
     component.title.set('My Room');
     fixture.detectChanges();
-    expect(submitBtn.disabled).toBe(false);
+    expect(launchButton?.disabled).toBe(false);
   });
 
-  it('should call closeModal when close button is clicked', () => {
-    const closeSpy = vi.spyOn(component, 'closeModal');
-    const el: HTMLElement = fixture.nativeElement;
-    const buttons = el.querySelectorAll('button');
-    const closeBtn = buttons[0]; // first button = close X
-    closeBtn.click();
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
+  it('does not close or reset the draft when Launch is clicked', async () => {
+    const root = fixture.nativeElement as HTMLElement;
+    const createdSpy = vi.fn();
+    const closedSpy = vi.fn();
+    const createdSub = component.created.subscribe(createdSpy);
+    const closedSub = component.closed.subscribe(closedSpy);
 
-  it('should call submit when launch button is clicked', () => {
-    const submitSpy = vi.spyOn(component, 'submit');
-    component.title.set('Test');
+    component.title.set('Retryable Room');
     fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    const buttons = el.querySelectorAll('button');
-    const launchBtn = buttons[2]; // third button = launch
-    launchBtn.click();
-    expect(submitSpy).toHaveBeenCalledTimes(1);
+
+    const launchButton = Array.from(root.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('audioRoom.launchStageBtn'),
+    );
+    expect(launchButton).toBeTruthy();
+
+    launchButton?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(createdSpy).toHaveBeenCalledWith({
+      title: 'Retryable Room',
+      languagePair: 'en-es',
+      topicTag: 'Free Talk',
+      isVideoStream: false,
+    });
+    expect(closedSpy).not.toHaveBeenCalled();
+    expect(component.title()).toBe('Retryable Room');
+
+    createdSub.unsubscribe();
+    closedSub.unsubscribe();
   });
 });
