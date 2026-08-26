@@ -110,7 +110,7 @@ export class LikedByModalComponent {
   private readonly http = inject(HttpClient);
   readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
   readonly likedUsers = resource({
-    params: () => this.momentId(),
+    params: () => (this.open() ? this.momentId() : undefined),
     loader: ({ params: momentId }) =>
       firstValueFrom(this.http.get<LikedUser[]>(`/api/moments/${momentId}/likes`)),
   });
