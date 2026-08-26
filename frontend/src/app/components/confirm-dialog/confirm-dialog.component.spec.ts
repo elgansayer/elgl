@@ -134,15 +134,17 @@ describe('ConfirmDialogComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
+    const dialog = fixture.debugElement.query(By.css('[role="dialog"]'));
     const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
     const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
     const renderedHtml = dialogContent.nativeElement.outerHTML;
 
+    expect(dialog).not.toBeNull();
     expect(dialogContent).not.toBeNull();
     expect(title).not.toBeNull();
     expect(title.nativeElement.textContent).toContain('Delete this draft?');
     expect(title.nativeElement.id).toBeTruthy();
-    expect(dialogContent.nativeElement.getAttribute('aria-labelledby')).toBe(title.nativeElement.id);
+    expect(dialog.nativeElement.getAttribute('aria-labelledby')).toBe(title.nativeElement.id);
     expect(renderedHtml).not.toContain('confirm-message');
   });
 
