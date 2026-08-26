@@ -12,6 +12,7 @@ Type=oneshot
 EnvironmentFile=/etc/hellotalk-factory/factory.env
 EnvironmentFile=/etc/hellotalk-factory/runtime.env
 Environment=HOME=/home/dev
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-update.sh
 UMask=0077
 PrivateTmp=true
