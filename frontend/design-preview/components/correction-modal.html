@@ -255,6 +255,41 @@
             </footer>
           </div>
         </section>
+        <section
+          class="stage light wide"
+          dir="rtl"
+          aria-label="Light theme right-to-left correction modal"
+        >
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rtl-title">
+            <header>
+              <strong id="rtl-title">✏️ تصحيح الجملة</strong
+              ><button type="button" aria-label="إلغاء التصحيح">×</button>
+            </header>
+            <div class="body">
+              <div>
+                <div class="actions">
+                  <span class="label">النص الأصلي</span
+                  ><button class="reset" type="button">إعادة ضبط</button>
+                </div>
+                <div class="original">“أنا يذهب إلى السوق أمس.”</div>
+              </div>
+              <label
+                ><span class="label">الجملة المصححة</span><textarea>ذهبتُ إلى السوق أمس.</textarea>
+              </label>
+              <label
+                ><span class="label">الشرح (اختياري)</span><input value="استخدم صيغة الماضي."
+              /></label>
+              <div class="tags" aria-label="وسوم شرح سريعة">
+                <button class="tag" type="button">+ قواعد</button
+                ><button class="tag" type="button">+ صياغة طبيعية</button>
+              </div>
+            </div>
+            <footer>
+              <button type="button">إلغاء</button
+              ><button class="primary" type="button">إرسال التصحيح</button>
+            </footer>
+          </div>
+        </section>
       </div>
     </main>
   </body>
