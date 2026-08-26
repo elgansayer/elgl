@@ -1,49 +1,80 @@
-name: Diagnose API Trivy
+name: Validate API Trivy repair
 
 on:
   push:
     branches: [fix/ci-api-trivy-20260826]
 
 permissions:
-  contents: read
-  packages: read
+  contents: write
 
 jobs:
-  scan-api-image:
+  regenerate-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repair branch
+        uses: actions/checkout@v7
 
-      - name: Scan failing main API image
-        id: trivy
-        continue-on-error: true
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Regenerate backend lockfile
+        working-directory: backend
+        run: npm install --package-lock-only --legacy-peer-deps
+
+      - name: Verify deterministic backend install
+        working-directory: backend
+        run: npm ci --legacy-peer-deps
+
+      - name: Verify vulnerable spreadsheet runtime is gone
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npm ls node-nlp
+          if npm ls xlsx >/dev/null 2>&1; then
+            echo '::error::xlsx is still present in the backend dependency tree'
+            npm ls xlsx
+            exit 1
+          fi
+
+      - name: Backend lint
+        working-directory: backend
+        run: npm run lint:check
+
+      - name: Backend build
+        working-directory: backend
+        run: npm run build
+
+      - name: Backend unit tests
+        working-directory: backend
+        run: npm test
+
+      - name: Build production API image
+        run: docker build --target production -t elgl-api-trivy-repair:${{ github.sha }} backend
+
+      - name: Scan production API image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/${{ github.repository }}/api:36aebbd4604532a9040232467f1cbe631fa78ff9
-          format: json
-          output: trivy-api.json
+          image-ref: elgl-api-trivy-repair:${{ github.sha }}
+          format: table
           exit-code: '1'
           ignore-unfixed: true
           vuln-type: os,library
           severity: HIGH,CRITICAL
           timeout: 10m
 
-      - name: Upload Trivy report
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: api-trivy-report-${{ github.sha }}
-          path: trivy-api.json
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Preserve scanner gate
-        if: steps.trivy.outcome != 'success'
-        run: exit 1
+      - name: Commit regenerated lockfile and remove temporary workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/package-lock.json
+          git rm .github/workflows/diagnose-api-trivy.yml
+          git diff --cached --check
+          git commit -m 'fix(security): regenerate backend lock without xlsx'
+          git push origin HEAD:fix/ci-api-trivy-20260826
