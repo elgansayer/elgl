@@ -111,6 +111,19 @@ describe('ChatTypingService', () => {
     expect(centrifugoService.publish).not.toHaveBeenCalled();
   });
 
+  it('returns a stable failure when membership verification rejects', async () => {
+    membershipBuilder.maybeSingle.mockRejectedValueOnce(
+      new Error('secret database detail'),
+    );
+
+    await expect(
+      service.publish('user-1', { room_id: roomId, is_typing: true }),
+    ).rejects.toEqual(
+      new ServiceUnavailableException('Typing presence is unavailable.'),
+    );
+    expect(centrifugoService.publish).not.toHaveBeenCalled();
+  });
+
   it('bounds display names and strips unsafe profile avatar URLs', async () => {
     profileBuilder.maybeSingle.mockResolvedValueOnce({
       data: {
@@ -137,6 +150,19 @@ describe('ChatTypingService', () => {
       data: null,
       error: { message: 'profile lookup failed' },
     });
+
+    await service.publish('user-1', { room_id: roomId, is_typing: true });
+
+    expect(centrifugoService.publish).toHaveBeenCalledWith(
+      `chat:${roomId}:typing`,
+      expect.objectContaining({ displayName: 'Someone', avatarUrl: '' }),
+    );
+  });
+
+  it('degrades rejected profile lookups without blocking publication', async () => {
+    profileBuilder.maybeSingle.mockRejectedValueOnce(
+      new Error('secret database detail'),
+    );
 
     await service.publish('user-1', { room_id: roomId, is_typing: true });
 
