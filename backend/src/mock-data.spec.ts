@@ -64,8 +64,12 @@ describe('offline mock fixtures', () => {
     const alternateUsers = buildMockUsers(7933);
 
     expect(alternateUsers).toHaveLength(defaultUsers.length);
-    expect(JSON.stringify(alternateUsers)).not.toBe(JSON.stringify(defaultUsers));
-    expect(alternateUsers.every((user) => user.id.startsWith('fake-'))).toBe(true);
+    expect(JSON.stringify(alternateUsers)).not.toBe(
+      JSON.stringify(defaultUsers),
+    );
+    expect(alternateUsers.every((user) => user.id.startsWith('fake-'))).toBe(
+      true,
+    );
   });
 
   it('recreates the exact initial state after a consumer mutates its snapshot', () => {
