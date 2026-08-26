@@ -56,11 +56,7 @@ const lesson: LessonRecord = {
   description: 'Practise introductions.',
   language_code: 'ja',
   content_json: {
-    segments: [
-      { text: 'First' },
-      { text: 'Second' },
-      { text: 'Third' },
-    ],
+    segments: [{ text: 'First' }, { text: 'Second' }, { text: 'Third' }],
   },
 };
 
