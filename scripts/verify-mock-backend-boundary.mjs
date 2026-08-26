@@ -35,12 +35,24 @@ function isProductionArtifact(path) {
   );
 }
 
+function isTextArtifact(path) {
+  const lower = path.toLowerCase();
+  return (
+    TEXT_EXTENSIONS.has(extension(path)) ||
+    lower.includes('dockerfile') ||
+    lower.includes('.env')
+  );
+}
+
 export function verifyMockBackendBoundary(root) {
   const failures = [];
   const required = [
     ['backend/src/config/environment.validation.ts', 'assertMockBackendActivationBoundary'],
     ['backend/src/config/mock-backend-mode.ts', "'disabled', 'local', 'test', 'demo'"],
+    ['backend/src/mock-data.ts', 'const fixturesEnabled = isMockBackendEnabled()'],
+    ['backend/test/setup.ts', "process.env.MOCK_BACKEND_MODE = 'test'"],
     ['frontend/src/app/core/config/configuration.service.ts', 'MOCK_CLIENT_ENVIRONMENTS'],
+    ['frontend/public/assets/config.json', '"mockBackendMode": "disabled"'],
     [
       'frontend/src/app/components/primitives/no-network-banner/no-network-banner.component.ts',
       'data-testid="mock-backend-indicator"',
@@ -59,8 +71,7 @@ export function verifyMockBackendBoundary(root) {
   }
 
   for (const path of walk(root)) {
-    if (!isProductionArtifact(path)) continue;
-    if (!TEXT_EXTENSIONS.has(extension(path)) && !path.toLowerCase().includes('dockerfile')) continue;
+    if (!isProductionArtifact(path) || !isTextArtifact(path)) continue;
     const source = readFileSync(join(root, path), 'utf8');
     if (ENABLED_MODE_PATTERN.test(source)) {
       failures.push(`${path} enables MOCK_BACKEND_MODE in a production artifact`);
