@@ -200,6 +200,7 @@
             </div>
             @if (preview.isOnline) {
               <span
+                aria-hidden="true"
                 class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
               ></span>
             }
@@ -207,7 +208,7 @@
 
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline mb-0.5">
-              <div class="flex items-center gap-2 truncate">
+              <div class="flex flex-wrap items-center gap-2 min-w-0">
                 <h3 class="text-[15px] font-bold text-text-primary truncate">
                   {{ preview.title }}
                 </h3>
@@ -215,6 +216,11 @@
                   class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
                   >{{ 'discovery.vipBadge' | t }}</span
                 >
+                @if (preview.isOnline) {
+                  <span class="text-[10px] font-semibold leading-none text-success">
+                    {{ 'chatList.filterOnline' | t }}
+                  </span>
+                }
               </div>
               <span class="text-xs text-text-secondary shrink-0 ms-2">
                 @if (preview.lastMessageAt) {
@@ -277,6 +283,7 @@
                 </div>
                 @if (preview.isOnline) {
                   <span
+                    aria-hidden="true"
                     class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-success border-2 border-surface-500 rounded-full"
                   ></span>
                 }
@@ -284,7 +291,7 @@
 
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-baseline mb-0.5">
-                  <div class="flex items-center gap-2 truncate">
+                  <div class="flex flex-wrap items-center gap-2 min-w-0">
                     <h3 class="text-[15px] font-bold text-text-primary truncate">
                       {{ preview.title }}
                     </h3>
@@ -292,6 +299,11 @@
                       class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-on-fill italic leading-none"
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
+                    @if (preview.isOnline) {
+                      <span class="text-[10px] font-semibold leading-none text-success">
+                        {{ 'chatList.filterOnline' | t }}
+                      </span>
+                    }
                   </div>
                   <span class="text-xs text-text-secondary shrink-0 ms-2">
                     @if (preview.lastMessageAt) {
