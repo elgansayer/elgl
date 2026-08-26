@@ -53,7 +53,7 @@ test('the accessibility audit records the exact current high-priority debt', () 
     },
     {
       id: 'MOM-A11Y-003',
-      present: (template.match(/\\[attr\\.aria-label\\]=\"'text input'\"/g) ?? []).length === 2,
+      present: (template.match(/\[attr\.aria-label\]="'text input'"/g) ?? []).length === 2,
     },
     {
       id: 'MOM-A11Y-004',
@@ -79,7 +79,7 @@ test('the accessibility audit records the exact current high-priority debt', () 
   }
 
   const documentedFindingIds = [
-    ...new Set([...audit.matchAll(/\\bMOM-A11Y-\\d{3}\\b/g)].map(([id]) => id)),
+    ...new Set([...audit.matchAll(/\bMOM-A11Y-\d{3}\b/g)].map(([id]) => id)),
   ].sort();
   assert.deepEqual(
     documentedFindingIds,
