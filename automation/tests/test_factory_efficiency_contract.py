@@ -31,6 +31,6 @@ def test_self_healing_monitor_avoids_pull_request_and_issue_list_churn() -> None
     assert workflow.count(exclusion) == 2
     assert "conclusion == 'failure'" in workflow
     assert "conclusion == 'success'" in workflow
-    assert workflow.count('--search "\\\"${INCIDENT_TITLE}\\\" in:title"') == 2
+    assert workflow.count('--search "\\"${INCIDENT_TITLE}\\" in:title"') == 2
     assert workflow.count("--limit 10") == 2
     assert "--limit 1000" not in workflow
