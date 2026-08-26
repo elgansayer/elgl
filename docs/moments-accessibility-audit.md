@@ -31,6 +31,8 @@ The following findings are the current audit baseline. They are deliberately rec
 | MOM-A11Y-003 | P1 | Composer image-URL and comment inputs expose the generic hard-coded accessible name `text input`. | The field purpose is not identifiable from the accessibility tree; repeated generic controls are ambiguous. | Bind each input to its visible/translated purpose with a label, `aria-labelledby`, or a purpose-specific translated `aria-label`. |
 | MOM-A11Y-004 | P1 | The likes-count button that opens the Liked By modal has no explicit accessible name beyond the numeric count. | A screen reader may announce only a number, with no indication that it opens the list of people who liked the Moment. | Add a translated contextual label that includes the count where useful. |
 | MOM-A11Y-005 | P1 | Media removal is `h-5 w-5` and comment submit is `h-8 w-8`, both below the repository 44 CSS-pixel touch-target baseline. | Touch, switch, tremor, low-vision, and high-zoom users have unnecessarily small targets. | Use Spartan `icon-touch` / equivalent 44px hit areas without enlarging the visual glyph. |
+| MOM-A11Y-006 | P1 | The comment-submit icon uses the hard-coded English accessible name `Submit comment`. | Screen-reader users whose app language is not English hear mixed-language UI on a primary feed action. | Replace it with the established translated comment-submit key while preserving an explicit accessible name. |
+| MOM-A11Y-007 | P1 | The comment field submits through raw `(keyup.enter)` handling without checking IME composition state. | Users entering Japanese, Chinese, Korean, or other composed text can accidentally submit an unfinished comment when confirming a candidate. | Route submission through the repository IME-safe keyboard contract and add focused composition coverage. |
 
 ### Additional follow-up observations
 
@@ -89,7 +91,7 @@ The repository's 200%/400% visual contracts remain the authoritative rendered ve
 
 The Moments layout already uses logical utilities such as `ms-*` and `end-*` in important composer/comment positions. New spacing and positioning must continue to use logical properties rather than `left`/`right` or `ml`/`mr`/`pl`/`pr` ownership.
 
-ARIA names are user-visible strings and therefore part of localisation. MOM-A11Y-001 through MOM-A11Y-003 are production localisation gaps even though they are technically ARIA attributes. Remediation must use established translation keys/workflow rather than duplicating English strings in component code.
+ARIA names are user-visible strings and therefore part of localisation. MOM-A11Y-001 through MOM-A11Y-003 and MOM-A11Y-006 are production localisation gaps even though they are technically ARIA attributes. Remediation must use established translation keys/workflow rather than duplicating English strings in component code.
 
 User-authored multilingual text should keep browser-native bidirectional behavior and shared `dir="auto"`/language ownership where the shared rendering component provides it. Do not infer a user's UI direction from the language of one Moment.
 
