@@ -22,6 +22,7 @@ import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { CentrifugoService } from './centrifugo.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { FavouritesService } from '../favourites/favourites.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 import type { User } from '@supabase/supabase-js';
@@ -37,6 +38,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let favouritesService: FavouritesService;
   let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
@@ -76,6 +78,12 @@ describe('ChatController', () => {
           },
         },
         {
+          provide: FavouritesService,
+          useValue: {
+            getStarredMessages: vi.fn(),
+          },
+        },
+        {
           provide: CentrifugoService,
           useValue: {
             checkConnectionRateLimit: vi.fn().mockResolvedValue(true),
@@ -106,6 +114,7 @@ describe('ChatController', () => {
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    favouritesService = module.get<FavouritesService>(FavouritesService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService);
     conversationStarterService = module.get<ConversationStarterService>(
       ConversationStarterService,
@@ -275,15 +284,23 @@ describe('ChatController', () => {
     it('should return empty array if user is not provided', async () => {
       const result = await controller.getFavourites(null);
       expect(result).toEqual([]);
-      expect(chatService.getFavourites).not.toHaveBeenCalled();
+      expect(favouritesService.getStarredMessages).not.toHaveBeenCalled();
     });
 
-    it('should call chatService.getFavourites when user is provided', async () => {
+    it('should filter compatibility reads through current visibility', async () => {
       const favourites = [{ id: 'fav-1' }];
-      (chatService.getFavourites as Mock).mockResolvedValue(favourites);
+      (favouritesService.getStarredMessages as Mock).mockResolvedValue({
+        items: favourites,
+        has_more: false,
+        next_offset: null,
+      });
 
       const result = await controller.getFavourites(mockUser());
-      expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
+      expect(favouritesService.getStarredMessages).toHaveBeenCalledWith(
+        'user-1',
+        100,
+        0,
+      );
       expect(result).toEqual(favourites);
     });
   });

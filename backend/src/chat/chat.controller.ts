@@ -17,6 +17,7 @@ import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { FavouritesService } from '../favourites/favourites.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { ConversationStarterDto } from './dto/conversation-starter.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
@@ -45,6 +46,7 @@ import type { Request, Response } from 'express';
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly favouritesService: FavouritesService,
     private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
@@ -145,7 +147,12 @@ export class ChatController {
     @CurrentUser() user: User | null,
   ): Promise<FavouriteRecord[]> {
     if (!user) return [];
-    return await this.chatService.getFavourites(user.id);
+    const page = await this.favouritesService.getStarredMessages(
+      user.id,
+      100,
+      0,
+    );
+    return page.items as unknown as FavouriteRecord[];
   }
 
   @Delete('favourites/:id')

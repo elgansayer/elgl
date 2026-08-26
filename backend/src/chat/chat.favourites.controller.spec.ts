@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { FavouritesService } from '../favourites/favourites.service';
 import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
@@ -11,8 +12,10 @@ describe('ChatController favourites contract', () => {
   let controller: ChatController;
   let chatService: {
     addFavourite: ReturnType<typeof vi.fn>;
-    getFavourites: ReturnType<typeof vi.fn>;
     deleteFavourite: ReturnType<typeof vi.fn>;
+  };
+  let favouritesService: {
+    getStarredMessages: ReturnType<typeof vi.fn>;
   };
 
   const user = { id: 'user-1' } as unknown as User;
@@ -23,12 +26,19 @@ describe('ChatController favourites contract', () => {
   beforeEach(() => {
     chatService = {
       addFavourite: vi.fn().mockResolvedValue(undefined),
-      getFavourites: vi.fn().mockResolvedValue([]),
       deleteFavourite: vi.fn().mockResolvedValue(undefined),
+    };
+    favouritesService = {
+      getStarredMessages: vi.fn().mockResolvedValue({
+        items: [],
+        has_more: false,
+        next_offset: null,
+      }),
     };
 
     controller = new ChatController(
       chatService as unknown as ChatService,
+      favouritesService as unknown as FavouritesService,
       {} as CentrifugoService,
       {} as ConversationStarterService,
       {} as TranslationService,
@@ -49,15 +59,23 @@ describe('ChatController favourites contract', () => {
 
   it('returns only the authenticated user favourites', async () => {
     const favourites = [{ id: 'fav-1' }] as FavouriteRecord[];
-    chatService.getFavourites.mockResolvedValue(favourites);
+    favouritesService.getStarredMessages.mockResolvedValue({
+      items: favourites,
+      has_more: false,
+      next_offset: null,
+    });
 
     await expect(controller.getFavourites(user)).resolves.toEqual(favourites);
-    expect(chatService.getFavourites).toHaveBeenCalledWith('user-1');
+    expect(favouritesService.getStarredMessages).toHaveBeenCalledWith(
+      'user-1',
+      100,
+      0,
+    );
   });
 
   it('returns an empty list without an authenticated user', async () => {
     await expect(controller.getFavourites(null)).resolves.toEqual([]);
-    expect(chatService.getFavourites).not.toHaveBeenCalled();
+    expect(favouritesService.getStarredMessages).not.toHaveBeenCalled();
   });
 
   it('deletes a favourite in the authenticated user scope', async () => {
