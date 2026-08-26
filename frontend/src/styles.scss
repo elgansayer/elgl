@@ -115,8 +115,8 @@ legacy comma-separated value (silently drops the whole declaration). */
     user-select: none;
     -webkit-touch-callout: none;
     padding-top: env(safe-area-inset-top);
-    padding-right: env(safe-area-inset-right);
-    padding-left: env(safe-area-inset-left);
+    padding-inline-start: env(safe-area-inset-left);
+    padding-inline-end: env(safe-area-inset-right);
   }
 
   input, textarea, [contenteditable="true"] {
@@ -125,9 +125,12 @@ legacy comma-separated value (silently drops the whole declaration). */
     user-select: text;
   }
 
-  /* Support RTL mirroring natively */
-  html[dir='rtl'] {
+  /* Support RTL mirroring natively, including physical viewport safe areas. */
+  html[dir='rtl'],
+  html[dir='rtl'] body {
     text-align: start;
+    padding-inline-start: env(safe-area-inset-right);
+    padding-inline-end: env(safe-area-inset-left);
   }
 
   /* Global keyboard focus-visible ring for all interactive elements */
