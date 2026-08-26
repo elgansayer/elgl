@@ -1,5 +1,6 @@
 import { validate } from 'class-validator';
 import { UpdateProfileDto } from './update-profile.dto';
+import { PROFICIENCY_LEVELS } from '../proficiency-level';
 
 describe('UpdateProfileDto', () => {
   it('should be defined', () => {
@@ -7,7 +8,7 @@ describe('UpdateProfileDto', () => {
     expect(dto).toBeDefined();
   });
 
-  it.each(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'])(
+  it.each(PROFICIENCY_LEVELS)(
     'accepts the supported CEFR proficiency level %s',
     async (proficiencyLevel) => {
       const dto = Object.assign(new UpdateProfileDto(), {
@@ -16,9 +17,7 @@ describe('UpdateProfileDto', () => {
 
       const errors = await validate(dto);
 
-      expect(
-        errors.filter((error) => error.property === 'proficiency_level'),
-      ).toHaveLength(0);
+      expect(errors.filter((error) => error.property === 'proficiency_level')).toHaveLength(0);
     },
   );
 
@@ -31,9 +30,7 @@ describe('UpdateProfileDto', () => {
 
       const errors = await validate(dto);
 
-      expect(
-        errors.some((error) => error.property === 'proficiency_level'),
-      ).toBe(true);
+      expect(errors.some((error) => error.property === 'proficiency_level')).toBe(true);
     },
   );
 
@@ -44,8 +41,6 @@ describe('UpdateProfileDto', () => {
 
     const errors = await validate(dto);
 
-    expect(errors.some((error) => error.property === 'proficiency_level')).toBe(
-      false,
-    );
+    expect(errors.some((error) => error.property === 'proficiency_level')).toBe(false);
   });
 });
