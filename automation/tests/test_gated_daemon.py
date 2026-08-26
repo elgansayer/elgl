@@ -77,3 +77,26 @@ def test_daemon_schedules_at_most_one_merge_from_green_main() -> None:
 
     assert selected == [merge_one, review]
     assert gate.calls == 1
+
+
+def test_daemon_does_not_schedule_second_merge_while_first_is_in_flight() -> None:
+    daemon = object.__new__(MainCiGatedFactoryDaemon)
+    gate = Gate(True)
+    daemon.main_merge_gate = gate
+    active_merge = _job("1", JobState.MERGE_QUEUED)
+    waiting_merge = _job("2", JobState.MERGE_QUEUED)
+    repair = _job("3", JobState.REPAIRING)
+
+    def original(*args: object, **kwargs: object) -> list[Job]:
+        del args, kwargs
+        return [waiting_merge, repair]
+
+    selected = daemon._gated_select_batch(
+        original,
+        {"1": active_merge, "2": waiting_merge, "3": repair},
+        2,
+        excluded_task_ids={"1"},
+    )
+
+    assert selected == [repair]
+    assert gate.calls == 0
