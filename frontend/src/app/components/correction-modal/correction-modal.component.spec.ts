@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { CorrectionModalComponent } from './correction-modal.component';
 
 describe('CorrectionModalComponent', () => {
@@ -67,6 +69,19 @@ describe('CorrectionModalComponent', () => {
       corrected: 'I went to the market yesterday.',
       explanation: 'Use past tense "went" instead of "goes".',
     });
+  });
+
+  it('should pass the tutor explanation to the live diff flashcard action', () => {
+    component.correctedText.set('I went to the market yesterday.');
+    component.explanation.set('Use past tense "went" instead of "goes".');
+    fixture.detectChanges();
+
+    const visualDiff = fixture.debugElement.query(By.directive(VisualDiffComponent));
+
+    expect(visualDiff).not.toBeNull();
+    expect(visualDiff.componentInstance.explanation()).toBe(
+      'Use past tense "went" instead of "goes".',
+    );
   });
 
   it('should omit an empty explanation', () => {
