@@ -1,5 +1,6 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { SupabaseService } from '../supabase/supabase.service';
 import { BlocksController } from './blocks.controller';
 import { BlocksService } from './blocks.service';
 
@@ -11,6 +12,12 @@ describe('BlocksController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BlocksController],
       providers: [
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: vi.fn(),
+          },
+        },
         {
           provide: BlocksService,
           useValue: {
