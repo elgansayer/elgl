@@ -125,10 +125,10 @@ def test_push_trigger_fails_closed(tmp_path: Path) -> None:
 
 
 def test_daily_update_coordinates_the_shared_factory_runtime() -> None:
-    updater = (
-        REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh"
-    ).read_text(encoding="utf-8")
+    updater = (REPOSITORY_ROOT / "config/systemd/hellotalk-factory-update.sh").read_text(
+        encoding="utf-8"
+    )
 
     assert "workout-agent-factory.service" in updater
     assert "/var/lib/workout-agent-factory/daemon.json" in updater
-    assert 'trap recover_services EXIT' in updater
+    assert "trap recover_services EXIT" in updater

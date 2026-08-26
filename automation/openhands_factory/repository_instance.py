@@ -25,9 +25,13 @@ PROFILE_ENVIRONMENT = "FACTORY_REPOSITORY_PROFILE"
 CONTROL_REPOSITORY_ENVIRONMENT = "FACTORY_CONTROL_REPOSITORY"
 
 _ORIGINAL_COMMANDS_FOR = cast(
-    Callable[[Path, set[Path]], list[VerificationCommand]], pipeline.commands_for
+    Callable[[Path, set[Path]], list[VerificationCommand]],
+    pipeline.commands_for,  # type: ignore[attr-defined]
 )
-_ORIGINAL_BUILD_SYSTEM_PROMPT = cast(Callable[[Path], str], pipeline.build_system_prompt)
+_ORIGINAL_BUILD_SYSTEM_PROMPT = cast(
+    Callable[[Path], str],
+    pipeline.build_system_prompt,  # type: ignore[attr-defined]
+)
 _ORIGINAL_PIPELINE_INIT = cast(Callable[..., None], FactoryPipeline.__init__)
 _ORIGINAL_ADD_WORKTREE = cast(
     Callable[[GitWorkflow, Path, str, str], None], GitWorkflow._add_worktree
@@ -54,11 +58,7 @@ def _workflow_triggers(text: str) -> set[str]:
         inline = match.group(1).strip()
         if inline:
             if inline.startswith("[") and inline.endswith("]"):
-                return {
-                    item.strip()
-                    for item in inline[1:-1].split(",")
-                    if item.strip()
-                }
+                return {item.strip() for item in inline[1:-1].split(",") if item.strip()}
             return {inline}
 
         triggers: set[str] = set()
@@ -266,8 +266,8 @@ def install_repository_profile() -> None:
         raise RuntimeError(f"Unsupported repository Factory profile: {profile or '<empty>'}")
 
     _control_repository()
-    pipeline.commands_for = _profiled_commands_for
-    pipeline.build_system_prompt = _profiled_build_system_prompt
+    pipeline.commands_for = _profiled_commands_for  # type: ignore[attr-defined]
+    pipeline.build_system_prompt = _profiled_build_system_prompt  # type: ignore[attr-defined]
     pipeline.FactoryPipeline.__init__ = _profiled_pipeline_init  # type: ignore[method-assign]
     git_workflow.GitWorkflow._add_worktree = _profiled_add_worktree  # type: ignore[method-assign]
     architecture_guard.assert_single_owner = assert_workout_agent_single_owner
