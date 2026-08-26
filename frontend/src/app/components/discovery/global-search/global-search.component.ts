@@ -1,14 +1,14 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import { SearchFilterParams } from '../../../services/discovery.service';
-import { AppButtonPrimaryComponent } from '../../primitives/button-primary/button-primary.component';
 import {
   ALL_LANGUAGE_CODES,
   getLanguageFlag,
 } from '../../primitives/language-picker/language-picker.component';
-import { AppSelectComponent } from '../../primitives/select/select.component';
 import { RecommendedForYouCarouselComponent } from '../recommended-for-you/recommended-for-you-carousel.component';
 
 export interface TranslatedLanguage {
@@ -22,9 +22,9 @@ export interface TranslatedLanguage {
   selector: 'app-global-search',
   imports: [
     HlmCheckbox,
+    HlmNativeSelect,
+    HlmButton,
     TranslatePipe,
-    AppButtonPrimaryComponent,
-    AppSelectComponent,
     RecommendedForYouCarouselComponent,
   ],
   templateUrl: './global-search.component.html',
@@ -79,6 +79,8 @@ export class GlobalSearchComponent {
   });
 
   applyFilters(): void {
+    // Emit an explicit snapshot so the parent can clear a previously selected filter.
+    // DiscoveryComponent converts inactive values back to omitted API query parameters.
     this.searchFilters.emit({
       native_languages: this.nativeLanguages(),
       target_language: this.targetLanguage(),

@@ -2,12 +2,11 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nService } from '../../../services/i18n.service';
 import { RecommendationsService } from '../../../services/recommendations.service';
-import { AppButtonPrimaryComponent } from '../../primitives/button-primary/button-primary.component';
 import { ALL_LANGUAGE_CODES } from '../../primitives/language-picker/language-picker.component';
-import { AppSelectComponent } from '../../primitives/select/select.component';
 import { GlobalSearchComponent } from './global-search.component';
 
 describe('GlobalSearchComponent', () => {
@@ -79,39 +78,35 @@ describe('GlobalSearchComponent', () => {
     expect(title.textContent.trim()).toBe('Global Search');
   });
 
-  it('should delegate all dropdown interactions to Relay AppSelect', () => {
-    const relaySelects = fixture.debugElement.queryAll(By.directive(AppSelectComponent));
+  it('should keep all dropdown interactions on Spartan native-select', () => {
+    const spartanSelects = fixture.debugElement.queryAll(By.directive(HlmNativeSelect));
     const nativeSelects = fixture.nativeElement.querySelectorAll('select');
 
-    expect(relaySelects).toHaveLength(3);
+    expect(spartanSelects).toHaveLength(3);
     expect(nativeSelects).toHaveLength(3);
   });
 
-  it('should keep every native select associated with its translated Relay label', () => {
-    const selectHosts: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('app-select'));
-    expect(selectHosts).toHaveLength(3);
+  it('should keep every native select associated with its translated label', () => {
+    const expected = [
+      ['global-nativeLanguages', 'Native Language'],
+      ['global-targetLanguage', 'Target Language'],
+      ['global-proficiencyLevel', 'Proficiency Level'],
+    ];
 
-    expect(
-      selectHosts.map((host) => {
-        const label = host.querySelector('label');
-        const select = host.querySelector('select');
-        return {
-          label: label?.textContent?.trim(),
-          associated: Boolean(label && select && label.htmlFor === select.id && select.id.length > 0),
-        };
-      }),
-    ).toEqual([
-      { label: 'Native Language', associated: true },
-      { label: 'Target Language', associated: true },
-      { label: 'Proficiency Level', associated: true },
-    ]);
+    for (const [id, labelText] of expected) {
+      const select: HTMLSelectElement = fixture.nativeElement.querySelector(`#${id}`);
+      const label: HTMLLabelElement = fixture.nativeElement.querySelector(`label[for="${id}"]`);
+
+      expect(select).toBeTruthy();
+      expect(label.textContent?.trim()).toBe(labelText);
+    }
   });
 
-  it('should delegate the primary search interaction to Relay AppButtonPrimary', () => {
-    const relayButton = fixture.debugElement.query(By.directive(AppButtonPrimaryComponent));
-    const button: HTMLButtonElement = relayButton.nativeElement.querySelector('button');
+  it('should keep the search action on Spartan button semantics', () => {
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[hlmBtn]');
 
-    expect(relayButton).toBeTruthy();
+    expect(button).toBeTruthy();
+    expect(button.type).toBe('button');
     expect(button.textContent?.trim()).toBe('Search Partners');
     expect(button.getAttribute('aria-label')).toBeNull();
   });
@@ -202,20 +197,20 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('should render an instance-safe associated audio intro checkbox label', () => {
-    const input = fixture.nativeElement.querySelector(`[id="${component.audioIntroId}"]`);
+    const checkbox = fixture.nativeElement.querySelector(`[id="${component.audioIntroId}"]`);
     const label: HTMLLabelElement = fixture.nativeElement.querySelector(
       `label[for="${component.audioIntroId}"]`,
     );
 
     expect(component.audioIntroId).toMatch(/^global-hasAudioIntro-/);
-    expect(input).toBeTruthy();
+    expect(checkbox).toBeTruthy();
     expect(label.textContent?.trim()).toBe('Audio Introduction');
   });
 
-  it('should emit search filters exactly once from the Relay primary action', () => {
+  it('should emit search filters exactly once from the Spartan search action', () => {
     const emitted: unknown[] = [];
     component.searchFilters.subscribe((filters) => emitted.push(filters));
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector('app-button-primary button');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[hlmBtn]');
 
     button.click();
 
@@ -245,7 +240,7 @@ describe('GlobalSearchComponent', () => {
     ]);
   });
 
-  it('should react to native select changes through the Relay wrappers', () => {
+  it('should react to native select changes through Spartan', () => {
     const nativeSelects: HTMLSelectElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('select'),
     );

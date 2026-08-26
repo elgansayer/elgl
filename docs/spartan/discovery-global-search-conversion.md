@@ -4,53 +4,57 @@ Issue: #6139 (`Spartan UI 0357`)
 
 Target: `frontend/src/app/components/discovery/global-search`
 
-This stage implements the interaction-ownership decisions recorded by the completed #6138 audit. It intentionally leaves the later Relay token, accessibility/zoom, and design-preview stages to #6140-#6142.
+This stage implements the interaction-ownership decisions from the completed #6138 audit against the repository's current Spartan governance. The audit predates the newer convergence gate that retires several legacy `app-*` primitives, so current CI policy is authoritative where the two differ. The later Relay token, accessibility/zoom, and design-preview stages remain #6140-#6142.
 
 ## Ownership after conversion
 
-- Native Language, Target Language, and Proficiency Level use the shared `AppSelectComponent`. The Relay wrapper owns label association and the Spartan Helm native-select boundary while the browser continues to own native select keyboard, type-ahead, screen-reader, and mobile picker behavior.
-- Search Partners uses `AppButtonPrimaryComponent`. The Relay wrapper owns the Spartan button interaction and primary-action treatment; feature code only handles the emitted search intent.
-- Has Audio Intro continues to use `HlmCheckbox` because the repository has no approved Relay checkbox wrapper. The component consumes Spartan's typed `checkedChange` output instead of listening for a synthetic DOM `change` and manually inverting local state.
+- Native Language, Target Language, and Proficiency Level remain on installed `HlmNativeSelect`. Spartan/Helm and the browser own native select keyboard, type-ahead, screen-reader, focus, and mobile picker behaviour. Feature code only owns the selected filter values.
+- Search Partners remains on `HlmButton`. Spartan/native button semantics own activation and focus behaviour; feature code only handles the search intent.
+- Has Audio Intro uses `HlmCheckbox` and consumes its typed `checkedChange` output directly. The component no longer listens for a synthetic DOM change and manually inverts state.
 - Global Search remains a pure filter-intent component. It does not call the discovery API, navigate, write storage, or own loading/error state.
 
-No new Brain primitive or feature-local keyboard state machine is introduced.
+No Brain import, feature-local keyboard state machine, or new retired `app-*` primitive call site is introduced. If a future non-retired Relay abstraction becomes the approved owner for these controls, this surface can migrate to that API without changing the feature contract.
 
 ## Clear-filter contract
 
-The #6138 audit identified a stale-filter defect: converting `Any` selections to `undefined` made the parent `DiscoveryComponent` preserve the previous filter because omitted fields are ignored. The same problem applied when Has Audio Intro was switched off.
+The #6138 audit identified a stale-filter defect: converting `Any` selections to `undefined` made the parent `DiscoveryComponent` preserve the previous filter because omitted fields are ignored. The same issue occurred when Has Audio Intro was switched off.
 
-The conversion now treats all four controls as an explicit snapshot of this surface:
+The conversion treats all four controls as an explicit snapshot of this surface:
 
 - `native_languages`, `target_language`, and `proficiency_level` emit `''` for `Any`;
 - `has_audio_intro` emits `false` when unchecked.
 
-`DiscoveryComponent.onGlobalSearch()` therefore clears its corresponding signals. The downstream `searchPartners()` method still converts empty strings and `false` to omitted HTTP query parameters, so unchecked/default filters do not become server requirements.
+`DiscoveryComponent.onGlobalSearch()` therefore clears its corresponding signals. The downstream `searchPartners()` method still converts empty strings and `false` to omitted HTTP query parameters, so inactive filters do not become server requirements.
 
 This is backward-compatible at the discovery API boundary while making the component-to-parent state transition deterministic.
 
-## Accessibility and input behavior
+## Accessibility and input behaviour
 
 - The named `role="search"` landmark and visible translated heading are preserved.
-- Relay select wrappers generate instance-safe IDs and keep every translated label associated with its native select.
+- Native select label relationships are preserved for all three filters.
 - The audio-intro checkbox now uses an instance-safe ID rather than a document-global fixed ID.
-- The Search Partners action relies on its visible translated text for its accessible name instead of duplicating the same text in `aria-label`.
-- Native select and native button semantics remain authoritative. Feature code does not implement Arrow key, Enter, Space, focus, disabled, or selected-state behavior already owned by the platform/Spartan primitives.
+- Search Partners is explicitly `type="button"`, preventing accidental form submission if the surface is composed inside a form later.
+- The visible translated Search Partners text supplies the accessible name, so the redundant duplicate `aria-label` is removed.
+- Native/Spartan semantics remain authoritative. Feature code does not implement Arrow key, Enter, Space, focus, disabled, or selected-state behaviour already owned by the platform/Spartan primitives.
+
+The select IDs remain unchanged in this interaction stage because #6141 owns the dedicated accessibility, RTL, zoom, and multi-instance pass.
 
 ## Verification
 
 The colocated Angular/Vitest suite covers:
 
-- Relay ownership for all three selects and the primary action;
+- Spartan `HlmNativeSelect` ownership for all three dropdowns;
 - translated label-to-control associations;
+- Spartan button ownership and safe button type;
 - explicit clear-filter emission;
 - typed checkbox state propagation without manual inversion;
 - instance-safe checkbox labelling;
 - exactly-once search activation;
-- native select value propagation through Relay wrappers;
-- existing language and CEFR option behavior.
+- native select value propagation;
+- existing language and CEFR option behaviour.
 
-Repository CI remains the authoritative integration gate for frontend unit tests, static analysis, build, Spartan/design governance, dependency review, and E2E contracts.
+Repository CI is the authoritative integration gate for frontend unit tests, static analysis, build, Spartan/design governance, dependency review, and E2E contracts. In particular, `check:legacy-primitive-delta` ensures this conversion cannot regress by introducing retired product primitives.
 
 ## Rollout and rollback
 
-There is no backend, route, schema, persistence, analytics, or migration change. Deploy with the normal frontend release. Rollback is a normal revert of the conversion commit; doing so would also restore the stale clear-filter behavior documented above.
+There is no backend, route, schema, persistence, analytics, or migration change. Deploy with the normal frontend release. Rollback is a normal revert of this PR; doing so would also restore the stale clear-filter behaviour documented above.
