@@ -49,6 +49,56 @@ export interface NetworkAllowlistEntry {
   revokedAt: string | null;
 }
 
+export interface NetworkProviderReputation {
+  asn: number;
+  provider: string;
+  isHostingProvider: boolean;
+  riskLevel: 'low' | 'medium' | 'high';
+  signals: string[];
+  requestsToday: number;
+  requests7d: number;
+  activeDays7d: number;
+  latestSeenAt: string | null;
+  allowlisted: boolean;
+  activeBlocks: Array<{
+    id: string;
+    scope: NetworkBlockScope;
+    expiresAt: string;
+  }>;
+}
+
+export interface NetworkProviderImpactPreview {
+  asn: number;
+  provider: string;
+  isHostingProvider: boolean;
+  scope: NetworkBlockScope;
+  observedRequests30d: number;
+  observedDays30d: number;
+  latestSeenAt: string | null;
+  allowlisted: boolean;
+}
+
+export interface NetworkProviderBlock {
+  id: string;
+  asn: number;
+  providerSnapshot: string | null;
+  scope: NetworkBlockScope;
+  reasonCode: string;
+  expiresAt: string;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+export interface NetworkProviderAllowlistEntry {
+  id: string;
+  asn: number;
+  providerSnapshot: string | null;
+  reason: string;
+  expiresAt: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminNetworkSecurityService {
   private readonly http = inject(HttpClient);
@@ -101,6 +151,70 @@ export class AdminNetworkSecurityService {
     return this.request<NetworkAllowlistEntry>(
       'DELETE',
       `allowlist/${encodeURIComponent(id)}`,
+    );
+  }
+
+  lookupProvider(asn: number): Observable<NetworkProviderReputation> {
+    return this.post<NetworkProviderReputation>('provider/reputation', { asn });
+  }
+
+  previewProvider(
+    asn: number,
+    scope: NetworkBlockScope,
+  ): Observable<NetworkProviderImpactPreview> {
+    return this.post<NetworkProviderImpactPreview>('provider/impact', {
+      asn,
+      scope,
+    });
+  }
+
+  listProviderBlocks(): Observable<NetworkProviderBlock[]> {
+    return this.request<NetworkProviderBlock[]>('GET', 'provider/blocks');
+  }
+
+  listProviderAllowlist(): Observable<NetworkProviderAllowlistEntry[]> {
+    return this.request<NetworkProviderAllowlistEntry[]>(
+      'GET',
+      'provider/allowlist',
+    );
+  }
+
+  createProviderBlock(input: {
+    asn: number;
+    scope: NetworkBlockScope;
+    reasonCode: string;
+    operatorNote?: string;
+    expiresAt: string;
+    idempotencyKey: string;
+  }): Observable<NetworkProviderBlock> {
+    return this.post<NetworkProviderBlock>('provider/blocks', input);
+  }
+
+  revokeProviderBlock(id: string): Observable<NetworkProviderBlock> {
+    return this.request<NetworkProviderBlock>(
+      'DELETE',
+      `provider/blocks/${encodeURIComponent(id)}`,
+    );
+  }
+
+  createProviderAllowlist(input: {
+    asn: number;
+    reason: string;
+    expiresAt?: string;
+    idempotencyKey: string;
+  }): Observable<NetworkProviderAllowlistEntry> {
+    return this.post<NetworkProviderAllowlistEntry>(
+      'provider/allowlist',
+      input,
+    );
+  }
+
+  revokeProviderAllowlist(
+    id: string,
+  ): Observable<NetworkProviderAllowlistEntry> {
+    return this.request<NetworkProviderAllowlistEntry>(
+      'DELETE',
+      `provider/allowlist/${encodeURIComponent(id)}`,
     );
   }
 
