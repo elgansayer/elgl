@@ -23,10 +23,13 @@ interface LikedUser {
         *hlmDialogPortal
         [showCloseButton]="false"
         class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-200 p-6 shadow-2xl"
-        [attr.aria-labelledby]="dialogTitleId"
       >
         <div class="mb-4 flex items-center justify-between gap-3">
-          <h2 [id]="dialogTitleId" class="min-w-0 text-xl font-bold text-text-primary">
+          <h2
+            hlmDialogTitle
+            data-testid="liked-by-title"
+            class="min-w-0 text-xl font-bold text-text-primary"
+          >
             {{ 'moments.likedBy' | t }}
           </h2>
           <button
@@ -69,7 +72,9 @@ interface LikedUser {
             @if (likedUsers.value(); as users) {
               <ul class="m-0 list-none p-0" aria-live="polite">
                 @for (user of users; track user.id) {
-                  <li class="mb-1 flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-surface-100/50">
+                  <li
+                    class="mb-1 flex items-center gap-3 rounded-xl p-3 transition-colors hover:bg-surface-100/50"
+                  >
                     <img
                       [src]="user.avatar_url || 'assets/default-avatar.png'"
                       class="h-12 w-12 shrink-0 rounded-full border border-surface-100 object-cover"
@@ -102,11 +107,10 @@ export class LikedByModalComponent {
   readonly momentId = input.required<string>();
   readonly open = input(true);
   readonly closeModal = output<void>();
-  readonly dialogTitleId = 'liked-by-title-' + crypto.randomUUID();
   private readonly http = inject(HttpClient);
   readonly dialogState = computed<HlmDialogState>(() => (this.open() ? 'open' : 'closed'));
   readonly likedUsers = resource({
-    params: () => this.momentId(),
+    params: () => (this.open() ? this.momentId() : undefined),
     loader: ({ params: momentId }) =>
       firstValueFrom(this.http.get<LikedUser[]>(`/api/moments/${momentId}/likes`)),
   });

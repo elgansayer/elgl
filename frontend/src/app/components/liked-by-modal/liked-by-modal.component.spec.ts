@@ -15,6 +15,15 @@ function flushRequest(httpTesting: HttpTestingController, users: LikedUser[] = [
   httpTesting.expectOne('/api/moments/moment-123/likes').flush(users);
 }
 
+function getDialog(): HTMLElement {
+  const title = document.body.querySelector<HTMLElement>('[data-testid="liked-by-title"]');
+  const dialog = title?.closest<HTMLElement>('[role="dialog"]');
+  if (!dialog) {
+    throw new Error('Expected the Liked By dialog to be rendered in the document overlay');
+  }
+  return dialog;
+}
+
 describe('LikedByModalComponent', () => {
   let component: LikedByModalComponent;
   let fixture: ComponentFixture<LikedByModalComponent>;
@@ -33,20 +42,21 @@ describe('LikedByModalComponent', () => {
   });
 
   afterEach(() => {
-    httpTesting.verify();
+    try {
+      httpTesting?.verify();
+    } finally {
+      fixture?.destroy();
+    }
   });
 
   it('creates with an instance-safe dialog title relationship', () => {
     fixture.detectChanges();
 
     expect(component).toBeTruthy();
-    expect(component.dialogTitleId).toMatch(
-      /^liked-by-title-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
-
-    const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
-    expect(dialog?.getAttribute('aria-labelledby')).toBe(component.dialogTitleId);
-    expect(fixture.nativeElement.querySelector(`#${component.dialogTitleId}`)).toBeTruthy();
+    const dialog = getDialog();
+    const titleId = dialog.getAttribute('aria-labelledby');
+    expect(titleId).toMatch(/^brn-dialog-title-\d+$/);
+    expect(dialog.querySelector(`#${titleId}`)?.getAttribute('data-testid')).toBe('liked-by-title');
     flushRequest(httpTesting);
   });
 
@@ -54,7 +64,7 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.isLoading()).toBe(true);
-    expect(fixture.nativeElement.querySelector('[role="progressbar"]')).toBeTruthy();
+    expect(getDialog().querySelector('[role="progressbar"]')).toBeTruthy();
     flushRequest(httpTesting);
   });
 
@@ -81,14 +91,15 @@ describe('LikedByModalComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const rows = fixture.nativeElement.querySelectorAll('li');
+    const dialog = getDialog();
+    const rows = dialog.querySelectorAll('li');
     expect(rows.length).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('Alice');
-    expect(fixture.nativeElement.textContent).toContain('Bob');
-    expect(fixture.nativeElement.textContent).toContain('EN');
-    expect(fixture.nativeElement.textContent).toContain('ES');
+    expect(dialog.textContent).toContain('Alice');
+    expect(dialog.textContent).toContain('Bob');
+    expect(dialog.textContent).toContain('EN');
+    expect(dialog.textContent).toContain('ES');
 
-    const images = fixture.nativeElement.querySelectorAll('img');
+    const images = dialog.querySelectorAll('img');
     expect(images[0].getAttribute('src')).toContain('default-avatar.png');
     expect(images[0].getAttribute('alt')).toBe('');
     expect(images[1].getAttribute('src')).toBe('https://example.com/avatar.jpg');
@@ -103,8 +114,9 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.value()).toEqual([]);
-    expect(fixture.nativeElement.querySelectorAll('li').length).toBe(1);
-    expect(fixture.nativeElement.textContent).toContain('No likes yet');
+    const dialog = getDialog();
+    expect(dialog.querySelectorAll('li').length).toBe(1);
+    expect(dialog.textContent).toContain('No likes yet');
   });
 
   it('shows an alert and lets the user retry a failed request', async () => {
@@ -116,12 +128,16 @@ describe('LikedByModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.likedUsers.error()).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
+    const dialog = getDialog();
+    expect(dialog.querySelector('[role="alert"]')).toBeTruthy();
 
-    const retry = fixture.nativeElement.querySelector('[data-testid="liked-by-retry"]');
-    expect(retry).toBeTruthy();
+    const retry = dialog.querySelector<HTMLButtonElement>('[data-testid="liked-by-retry"]');
+    if (!retry) {
+      throw new Error('Expected the Liked By retry action to be rendered');
+    }
     expect(retry.getAttribute('type')).toBe('button');
     retry.click();
+    fixture.detectChanges();
 
     httpTesting.expectOne('/api/moments/moment-123/likes').flush([]);
     await fixture.whenStable();
@@ -139,9 +155,13 @@ describe('LikedByModalComponent', () => {
 
     const closeSpy = vi.fn();
     const subscription = component.closeModal.subscribe(closeSpy);
-    const closeButton = fixture.nativeElement.querySelector('[data-testid="liked-by-close"]');
+    const closeButton = getDialog().querySelector<HTMLButtonElement>(
+      '[data-testid="liked-by-close"]',
+    );
 
-    expect(closeButton).toBeTruthy();
+    if (!closeButton) {
+      throw new Error('Expected the Liked By close action to be rendered');
+    }
     expect(closeButton.getAttribute('type')).toBe('button');
     expect(closeButton.getAttribute('aria-label')).toBeTruthy();
     closeButton.click();
@@ -163,6 +183,7 @@ describe('LikedByModalComponent', () => {
   it('does not emit a duplicate close after the parent closes the modal', () => {
     fixture.componentRef.setInput('open', false);
     fixture.detectChanges();
+    httpTesting.expectNone('/api/moments/moment-123/likes');
     const closeSpy = vi.fn();
     const subscription = component.closeModal.subscribe(closeSpy);
 
