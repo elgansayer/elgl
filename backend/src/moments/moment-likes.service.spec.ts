@@ -12,7 +12,7 @@ describe('MomentLikesService', () => {
 
   const likesReturns = vi.fn();
   const likesRange = vi.fn(() => ({ returns: likesReturns }));
-  const likesOrder = vi.fn(() => ({ range: likesRange }));
+  const likesOrder = vi.fn(() => ({ order: likesOrder, range: likesRange }));
   const likesNot = vi.fn(() => ({ order: likesOrder }));
   const likesEq = vi.fn(() => ({ not: likesNot, order: likesOrder }));
   const likesSelect = vi.fn(() => ({ eq: likesEq }));
@@ -71,8 +71,11 @@ describe('MomentLikesService', () => {
     ]);
     expect(momentEq).toHaveBeenCalledWith('id', 'moment-1');
     expect(likesEq).toHaveBeenCalledWith('moment_id', 'moment-1');
-    expect(likesOrder).toHaveBeenCalledWith('created_at', {
+    expect(likesOrder).toHaveBeenNthCalledWith(1, 'created_at', {
       ascending: false,
+    });
+    expect(likesOrder).toHaveBeenNthCalledWith(2, 'user_id', {
+      ascending: true,
     });
     expect(likesRange).toHaveBeenCalledWith(50, 74);
   });

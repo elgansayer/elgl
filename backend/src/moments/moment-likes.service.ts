@@ -102,6 +102,7 @@ export class MomentLikesService {
 
     const { data, error } = await visibleLikesQuery
       .order('created_at', { ascending: false })
+      .order('user_id', { ascending: true })
       .range(offset, offset + limit - 1)
       .returns<MomentLikeQueryResult[]>();
 
