@@ -10,13 +10,15 @@ The value is nullable. A missing value means that no proficiency level has been 
 
 The original `20260807000000_add_proficiency_level_to_users.sql` migration introduced the nullable two-character column and a six-value check constraint. The forward migration `20260826140000_harden_proficiency_level_contract.sql` converges older/mixed deployments without rewriting applied migration history:
 
-1. remove the old constraint inside the migration transaction;
-2. normalize supported lower/mixed-case values to canonical uppercase;
-3. fail the migration if any unsupported persisted value remains, rather than deleting or guessing learner data;
-4. restore and validate the exact six-value constraint; and
-5. retain `NULL` as a valid state.
+1. report unsupported persisted values without exposing user IDs or values;
+2. install and validate a temporary database constraint that blocks unsupported concurrent writes before the narrowing cast;
+3. remove the old constraint and normalize supported lower/mixed-case values to canonical uppercase;
+4. retain the two-character storage bound without truncating unsupported data;
+5. restore and validate the exact six-value constraint;
+6. remove the temporary guard only after the final constraint is authoritative; and
+7. retain `NULL` as a valid state.
 
-The migration is safe to retry after a successful application because normalization is idempotent and the constraint is recreated deterministically.
+The migration is safe to retry after a successful application because normalization is idempotent and both the temporary guard and final constraint are recreated deterministically.
 
 ## API and UI behavior
 
