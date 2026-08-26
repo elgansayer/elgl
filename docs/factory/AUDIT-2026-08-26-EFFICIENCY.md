@@ -20,9 +20,9 @@ The Factory already has strong allowance controls and this pass does not reduce 
 - mechanical CI repair before agent-backed CI repair;
 - independent review, deterministic verification, required CI, and exact reviewed-head merge checks.
 
-The best remaining high-confidence saving was therefore outside model routing itself: GitHub Actions fan-out caused by Factory-only workflow edits.
+The best remaining high-confidence savings were therefore outside model routing itself: unrelated GitHub Actions fan-out and oversized recovery-incident lookups.
 
-## Finding: Factory-only workflow changes were classified as application changes
+## Finding 1: Factory-only workflow changes were classified as application changes
 
 Both `.github/workflows/ci.yml` and `.github/workflows/clean-project-lint.yml` independently implemented the same path classifier. They treated `automation/`, `docs/`, Factory configuration, systemd configuration, and Dependabot metadata as application-neutral, but every other `.github/workflows/*` path failed open to application verification.
 
@@ -37,7 +37,7 @@ launched the full backend/frontend/admin application matrix even though those fi
 
 The same classification was duplicated in Clean project lint, so a qualifying Factory-only change also launched the lint-contract job plus backend and frontend clean-lint jobs.
 
-## Change made
+## Changes made
 
 ### 1. One tested impact classifier
 
@@ -65,7 +65,7 @@ Canonical CI runs this regression suite in its impact job before trusting the cl
 
 Clean project lint now calls the same classifier instead of carrying its own shell `case` statement. Future path-policy changes therefore have one implementation and one regression suite rather than two subtly diverging copies.
 
-## Deterministic efficiency gain
+## Deterministic CI efficiency gain
 
 For a PR whose changed paths are limited to the explicitly recognised Factory/control-plane surface, the new classifier avoids:
 
@@ -80,6 +80,16 @@ This is a deterministic job-count reduction. No runner-minute, monetary, energy,
 
 Factory Python verification, workflow-specific checks, constitution/governance checks, the canonical required gate, and fail-open behaviour remain in place. Pushes and merge-queue candidates still run full health checks.
 
+## Finding 2: recovery incident lookup downloaded up to 1,000 open issues
+
+The self-healing workflow no longer starts recovery jobs for successful pull-request CI, but every qualifying non-PR failure or recovery still used `gh issue list --limit 1000` and then filtered the complete response locally by exact incident title.
+
+That created unnecessary GitHub API response volume on healthy main/deploy recoveries and had a correctness weakness: if the matching incident was not present in the first 1,000 open issues, it could be missed.
+
+The workflow now uses GitHub's title search to narrow candidates first, requests at most 10 matching issues, and still applies the existing exact-title comparison locally before updating or closing anything. Factory regression coverage asserts both incident paths use the bounded search and that `--limit 1000` cannot return.
+
+This does not eliminate the non-PR recovery runner, because that runner is what checks whether an earlier incident exists. It does eliminate the large unscoped issue-list payload while preserving recovery semantics.
+
 ## Other findings
 
 ### Provider/resource policy remains appropriately conservative
@@ -92,7 +102,7 @@ The repository still contains USD-oriented budget fields/helper logic, but subsc
 
 ### PR-convergence work should stay separate
 
-The previously open PR #7897 for broader PR churn/convergence was closed without merge. Its large scope is not silently recreated here. PR backlog/convergence should be reassessed against current `main` as a separate change rather than mixing it into this CI classifier optimisation.
+The previously open PR #7897 for broader PR churn/convergence was closed without merge. Its large scope is not silently recreated here. PR backlog/convergence should be reassessed against current `main` as a separate change rather than mixing it into this CI/action optimisation.
 
 ## Validation
 
@@ -101,7 +111,8 @@ The change is intentionally self-validating:
 - the classifier regression suite runs before canonical CI trusts classifier output;
 - this PR changes `.github/workflows/ci.yml`, so the classifier deliberately requires the full application and Factory verification groups for this PR itself;
 - unknown paths and unknown workflows remain fail-open;
-- pushes and merge-queue candidates remain full health checks.
+- pushes and merge-queue candidates remain full health checks;
+- Factory tests enforce the self-healing workflow's bounded title-search contract.
 
 GitHub Actions on the pull-request head is authoritative for workflow syntax, Factory Ruff/mypy/pytest, application verification, and repository governance checks.
 
