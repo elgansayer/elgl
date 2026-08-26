@@ -26,12 +26,31 @@ function syncReq(result?: unknown) {
   return request;
 }
 
+function deferredReq(result?: unknown) {
+  let callback: (() => void) | null = null;
+  const request: Record<string, unknown> = { result: result ?? null };
+  Object.defineProperty(request, 'onsuccess', {
+    get() {
+      return callback;
+    },
+    set(value: (() => void) | null) {
+      callback = value;
+    },
+  });
+  return {
+    request,
+    resolve: () => callback?.(),
+  };
+}
+
 describe('ChatCacheService', () => {
   let service: ChatCacheService;
   let stores: Map<string, Map<string, StoredRecord>>;
   let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let isOnline: ReturnType<typeof signal<boolean>>;
   let failTransactions: boolean;
+  let deferNextGet: boolean;
+  let releasePendingGet: (() => void) | null;
   let now: number;
 
   const message = (id: string, roomId = 'room-1'): ChatMessage => ({
@@ -74,7 +93,15 @@ describe('ChatCacheService', () => {
         store.set(value.key, value);
         return syncReq();
       },
-      get: (key: string) => syncReq(store.get(key) ?? null),
+      get: (key: string) => {
+        const result = store.get(key) ?? null;
+        if (!deferNextGet) return syncReq(result);
+
+        deferNextGet = false;
+        const deferred = deferredReq(result);
+        releasePendingGet = deferred.resolve;
+        return deferred.request;
+      },
       delete: (key: string) => {
         store.delete(key);
         return syncReq();
@@ -114,6 +141,8 @@ describe('ChatCacheService', () => {
   beforeEach(() => {
     stores = new Map();
     failTransactions = false;
+    deferNextGet = false;
+    releasePendingGet = null;
     now = 1_780_000_000_000;
     vi.spyOn(Date, 'now').mockImplementation(() => now);
 
@@ -174,6 +203,23 @@ describe('ChatCacheService', () => {
     await expect(service.getCachedMessages('room-1')).resolves.toEqual([message('a')]);
   });
 
+  it('does not reveal or copy a pending read after the authenticated account changes', async () => {
+    await service.cacheMessages('room-1', [message('a')]);
+
+    deferNextGet = true;
+    const append = service.appendCachedMessage('room-1', message('new'));
+
+    while (!releasePendingGet) await Promise.resolve();
+    currentUser.set({ id: 'user-b' });
+    releasePendingGet();
+    await append;
+
+    await expect(service.getCachedMessages('room-1')).resolves.toBeNull();
+
+    currentUser.set({ id: 'user-a' });
+    await expect(service.getCachedMessages('room-1')).resolves.toEqual([message('a')]);
+  });
+
   it('does not persist or reveal cache data without an authenticated account', async () => {
     currentUser.set(null);
 
@@ -194,6 +240,17 @@ describe('ChatCacheService', () => {
     await expect(service.getCachedMessages('room-1')).resolves.toEqual([message('a')]);
 
     now += 8 * 24 * 60 * 60 * 1000;
+    await expect(service.getCachedMessages('room-1')).resolves.toBeNull();
+  });
+
+  it('rejects future-dated records that could outlive the retention boundary', async () => {
+    isOnline.set(false);
+    getStore('chatMessages').set('v2:user-a:messages:room-1', {
+      key: 'v2:user-a:messages:room-1',
+      data: [message('future')],
+      cachedAt: now + 8 * 24 * 60 * 60 * 1000,
+    });
+
     await expect(service.getCachedMessages('room-1')).resolves.toBeNull();
   });
 

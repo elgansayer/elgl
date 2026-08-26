@@ -86,10 +86,21 @@ export class ChatCacheService {
     return typeof window !== 'undefined' && !!window.indexedDB;
   }
 
-  private scopedKey(kind: string, id = 'all'): string | null {
+  private accountKeyPrefix(): string | null {
     const userId = this.authService.currentUser()?.id?.trim();
     if (!userId) return null;
-    return `${CACHE_KEY_VERSION}:${encodeURIComponent(userId)}:${kind}:${encodeURIComponent(id)}`;
+    return `${CACHE_KEY_VERSION}:${encodeURIComponent(userId)}:`;
+  }
+
+  private scopedKey(kind: string, id = 'all'): string | null {
+    const prefix = this.accountKeyPrefix();
+    if (!prefix) return null;
+    return `${prefix}${kind}:${encodeURIComponent(id)}`;
+  }
+
+  private isCurrentAccountKey(key: string): boolean {
+    const prefix = this.accountKeyPrefix();
+    return !!prefix && key.startsWith(prefix);
   }
 
   private isUsableEntry<T>(value: unknown): value is CacheEntry<T[]> {
@@ -109,10 +120,12 @@ export class ChatCacheService {
     key: string | null,
     options: ReadOptions,
   ): Promise<T[] | null> {
-    if (!key || !this.isAvailable()) return null;
+    if (!key || !this.isCurrentAccountKey(key) || !this.isAvailable()) return null;
 
     try {
       const db = await this.ensureDB();
+      if (!this.isCurrentAccountKey(key)) return null;
+
       const entry = await new Promise<unknown>((resolve, reject) => {
         const tx = db.transaction(storeName, 'readonly');
         const req = tx.objectStore(storeName).get(key);
@@ -121,9 +134,18 @@ export class ChatCacheService {
         tx.onabort = () => reject(tx.error);
       });
 
-      if (!this.isUsableEntry<T>(entry)) return null;
+      if (
+        !this.isCurrentAccountKey(key) ||
+        !this.isUsableEntry<T>(entry) ||
+        entry.key !== key
+      ) {
+        return null;
+      }
 
-      const ageMs = Math.max(0, Date.now() - entry.cachedAt);
+      const now = Date.now();
+      if (entry.cachedAt > now) return null;
+
+      const ageMs = now - entry.cachedAt;
       const maxAgeMs = this.networkStatus.isOnline() ? options.ttlMs : OFFLINE_RETENTION_MS;
       if (ageMs >= maxAgeMs) return null;
 
@@ -143,7 +165,7 @@ export class ChatCacheService {
     maxItems: number,
     keepNewest = false,
   ): Promise<void> {
-    if (!key || !this.isAvailable()) return;
+    if (!key || !this.isCurrentAccountKey(key) || !this.isAvailable()) return;
 
     const boundedData = keepNewest ? data.slice(-maxItems) : data.slice(0, maxItems);
     const entry: CacheEntry<T[]> = {
@@ -154,6 +176,8 @@ export class ChatCacheService {
 
     try {
       const db = await this.ensureDB();
+      if (!this.isCurrentAccountKey(key)) return;
+
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(storeName, 'readwrite');
         tx.objectStore(storeName).put(entry);
@@ -168,10 +192,12 @@ export class ChatCacheService {
   }
 
   private async deleteKey(storeName: string, key: string | null): Promise<void> {
-    if (!key || !this.isAvailable()) return;
+    if (!key || !this.isCurrentAccountKey(key) || !this.isAvailable()) return;
 
     try {
       const db = await this.ensureDB();
+      if (!this.isCurrentAccountKey(key)) return;
+
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(storeName, 'readwrite');
         tx.objectStore(storeName).delete(key);
@@ -213,8 +239,13 @@ export class ChatCacheService {
    * Duplicate realtime/API echoes therefore keep one canonical message ID.
    */
   async appendCachedMessage(roomId: string, message: ChatMessage): Promise<void> {
-    const existing = await this.getCachedMessages(roomId);
-    if (!existing) return;
+    const key = this.scopedKey('messages', roomId);
+    const existing = await this.readArray<ChatMessage>(STORE_MESSAGES, key, {
+      ttlMs: MESSAGES_TTL_MS,
+      maxItems: MAX_MESSAGES_PER_ROOM,
+      keepNewest: true,
+    });
+    if (!key || !existing || !this.isCurrentAccountKey(key)) return;
 
     const index = existing.findIndex((cachedMessage) => cachedMessage.id === message.id);
     if (index >= 0) {
@@ -222,7 +253,13 @@ export class ChatCacheService {
     } else {
       existing.push(message);
     }
-    await this.cacheMessages(roomId, existing);
+    await this.writeArray(
+      STORE_MESSAGES,
+      key,
+      existing,
+      MAX_MESSAGES_PER_ROOM,
+      true,
+    );
   }
 
   // --- Rooms cache ---
@@ -293,7 +330,8 @@ export class ChatCacheService {
             const isExpired =
               typeof cachedAt !== 'number' ||
               !Number.isFinite(cachedAt) ||
-              Math.max(0, now - cachedAt) >= OFFLINE_RETENTION_MS;
+              cachedAt > now ||
+              now - cachedAt >= OFFLINE_RETENTION_MS;
             if (!isCurrentScopedEntry || isExpired) {
               void cursor.delete();
             }

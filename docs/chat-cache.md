@@ -36,7 +36,7 @@ Search results are not cached because a search query is a derived, potentially i
 
 IndexedDB may be disabled by browser policy, unavailable in private browsing, blocked during an upgrade, or reject writes because of quota pressure. Public cache reads therefore degrade to `null`; writes and invalidations become no-ops. The caller continues through the normal authenticated network path.
 
-Persisted IndexedDB content is treated as untrusted local input. Entries must use the current scoped-key version, contain a finite cache timestamp, and contain an array payload before they can be returned to chat code.
+Persisted IndexedDB content is treated as untrusted local input. Entries must use the exact requested scoped key, contain a finite non-future cache timestamp, and contain an array payload before they can be returned to chat code.
 
 No message text, user identifier, token, room identifier, or provider/database error is logged by the cache layer.
 
@@ -44,14 +44,14 @@ No message text, user identifier, token, room identifier, or provider/database e
 
 The cache contains private conversation content on the user's device. It must not be copied into analytics, logs, error labels, URLs, or shared browser storage. The seven-day offline retention window is the maximum age accepted by current clients; housekeeping can safely delete older records at any time because the server is authoritative.
 
-Logging out already prevents access because `ChatService` requires an authenticated token and the cache additionally requires an authenticated user scope. Account switching produces a different cache namespace.
+Logging out already prevents access because `ChatService` requires an authenticated token and the cache additionally requires an authenticated user scope. Account switching produces a different cache namespace, and in-flight cache operations revalidate that namespace after asynchronous IndexedDB work.
 
 ## Verification
 
 Focused regression coverage is in `frontend/src/app/services/chat-cache.service.spec.ts`. It covers:
 
-- account isolation and unauthenticated behavior
-- online freshness versus bounded offline stale reads
+- account isolation, in-flight account switching, and unauthenticated behavior
+- online freshness versus bounded offline stale reads, including future-dated records
 - bounded message/room/favourite storage
 - message-ID deduplication
 - account-scoped invalidation
