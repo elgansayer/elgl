@@ -16,15 +16,18 @@
           ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: item.exact }"
           class="flex items-center gap-3 px-4 py-3 rounded-app text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
-          [attr.aria-label]="item.key | t"
         >
           <span class="text-xl leading-none" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.key | t }}</span>
           @if (unreadCounter.tabCount(item.tab) > 0) {
             <span
+              aria-hidden="true"
               class="ms-auto bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-pill min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.tabCount(item.tab) > 99 ? '99+' : unreadCounter.tabCount(item.tab) }}
+              {{ unreadCounter.badgeText(item.tab) }}
+            </span>
+            <span class="sr-only">
+              {{ unreadCounter.tabCount(item.tab) }} {{ 'chatList.filterUnread' | t }}
             </span>
           }
         </a>
