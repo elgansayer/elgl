@@ -25,6 +25,7 @@ REVIEW_INTERVAL_SECONDS = 60 * 60
 REVIEWS_PER_INTERVAL = 2
 AGENT_ROUTE_INTERVAL_SECONDS = 60 * 60
 AGENT_ROUTES_PER_INTERVAL = 6
+AGENT_ROUTES_PER_TASK_PER_INTERVAL = 4
 _RESOURCE_RETRY_SECONDS = 60
 _CODE_MUTATING_PHASES = {
     AgentPhase.ARCHITECTURE.value,
@@ -62,6 +63,38 @@ def _gate_retry_seconds(gate: DurableAdmissionGate, now: datetime) -> int:
     return max(1, int((available_at - now).total_seconds()) + 1)
 
 
+def _task_route_admissions(
+    gate: DurableAdmissionGate,
+    task_id: str,
+    now: datetime,
+) -> list[datetime]:
+    """Return active route admissions belonging to one durable task."""
+
+    snapshot = gate.snapshot(now)
+    active = snapshot.get("active_admissions")
+    if not isinstance(active, list):
+        return []
+    prefix = f"{task_id}:"
+    admitted_at: list[datetime] = []
+    for item in active:
+        if not isinstance(item, dict):
+            continue
+        route_key = item.get("task_id")
+        timestamp = item.get("admitted_at")
+        if not isinstance(route_key, str) or not route_key.startswith(prefix):
+            continue
+        if not isinstance(timestamp, str):
+            continue
+        try:
+            parsed = datetime.fromisoformat(timestamp)
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        admitted_at.append(parsed)
+    return admitted_at
+
+
 def conservative_policy_enabled() -> bool:
     """Enable the agent budget alongside the existing issue-admission policy.
 
@@ -89,7 +122,12 @@ class ConservativeAgentRouter(AgentRouter):
         self._review_slots = BoundedSemaphore(MAX_REVIEW_CONCURRENCY)
         self._review_admission: ReviewAdmissionGate | None = None
         self._agent_route_admission: DurableAdmissionGate | None = None
+        self._agent_routes_per_task_interval = AGENT_ROUTES_PER_TASK_PER_INTERVAL
         if self.conservative_enabled:
+            self._agent_routes_per_task_interval = _positive_int_environment(
+                "FACTORY_AGENT_ROUTES_PER_TASK_PER_INTERVAL",
+                AGENT_ROUTES_PER_TASK_PER_INTERVAL,
+            )
             # Retrying the same subscription immediately doubles the cost of one
             # provider-side failure. The conservative policy instead permits one
             # distinct fallback provider; a durable scheduler retry can revisit the
@@ -146,6 +184,23 @@ class ConservativeAgentRouter(AgentRouter):
         pull_request = job.pull_request if job.pull_request is not None else job.task.identifier
         return f"pr-{pull_request}@{job.head_sha or 'unknown'}"
 
+    def _ensure_task_route_available(self, job: Job, now: datetime) -> None:
+        """Prevent one troubled task from monopolising the hourly agent allowance."""
+
+        gate = self._agent_route_admission
+        if gate is None:
+            return
+        task_admissions = _task_route_admissions(gate, job.task.identifier, now)
+        if len(task_admissions) < self._agent_routes_per_task_interval:
+            return
+        oldest = min(task_admissions)
+        retry_seconds = max(1, int((oldest + gate.interval - now).total_seconds()) + 1)
+        raise ProviderCapacityUnavailable(
+            "Per-task conservative agent-route budget is exhausted "
+            f"({self._agent_routes_per_task_interval} routes per configured interval)",
+            retry_after_seconds=retry_seconds,
+        )
+
     def _admit_agent_route(self, request: AgentRequest, job: Job, now: datetime) -> None:
         gate = self._agent_route_admission
         if gate is None:
@@ -185,6 +240,11 @@ class ConservativeAgentRouter(AgentRouter):
                     "Global conservative agent-route budget is exhausted",
                     retry_after_seconds=_gate_retry_seconds(route_gate, now),
                 )
+            # Check task fairness before consuming a SHA-scoped review admission.
+            # Otherwise a task that already exhausted its route share could burn a
+            # review slot without ever starting a provider and delay that review for
+            # another full review window.
+            self._ensure_task_route_available(job, now)
             if request.phase is AgentPhase.CODE_REVIEW:
                 if not self._review_slots.acquire(blocking=False):
                     raise ProviderCapacityUnavailable(
