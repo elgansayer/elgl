@@ -196,5 +196,4 @@ describe('VoiceroomCreateModalComponent', () => {
     expect(createdSpy).not.toHaveBeenCalled();
     sub.unsubscribe();
   });
-
 });
