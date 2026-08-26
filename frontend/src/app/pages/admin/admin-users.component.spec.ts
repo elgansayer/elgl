@@ -197,17 +197,17 @@ describe('AdminUsersComponent', () => {
     expect(adminService.banUser).not.toHaveBeenCalled();
   });
 
-  it('renders target-specific names, pending semantics, and 44px moderation controls', async () => {
+  it('renders target-specific names and 44px moderation controls', async () => {
     adminService.listUsers.mockResolvedValueOnce({ users: [user], total: 1, page: 1, pageSize: 10 });
     component.retryUsers();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const warnButton = fixture.nativeElement.querySelector(
-      'button[aria-label="admin.warnUserAria"]',
+      'button[aria-label="admin.warnUserAria:Ada"]',
     ) as HTMLButtonElement | null;
     const banButton = fixture.nativeElement.querySelector(
-      'button[aria-label="admin.banUserAria"]',
+      'button[aria-label="admin.banUserAria:Ada"]',
     ) as HTMLButtonElement | null;
 
     expect(warnButton).toBeTruthy();
