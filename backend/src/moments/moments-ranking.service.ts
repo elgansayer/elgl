@@ -77,42 +77,45 @@ export class MomentsRankingService {
     context: ForYouRankingContext,
     nowMs = Date.now(),
   ): MomentRecord[] {
-    const scored: ScoredMoment[] = candidates.slice(0, MAX_CANDIDATES).map((moment) => {
-      const createdAtMs = this.parseCreatedAt(moment.created_at, nowMs);
-      const ageHours = Math.max(0, (nowMs - createdAtMs) / 3_600_000);
-      const recencyScore = Math.exp(
-        (-Math.LN2 * ageHours) / RECENCY_HALF_LIFE_HOURS,
-      );
+    const scored: ScoredMoment[] = candidates
+      .slice(0, MAX_CANDIDATES)
+      .map((moment) => {
+        const createdAtMs = this.parseCreatedAt(moment.created_at, nowMs);
+        const ageHours = Math.max(0, (nowMs - createdAtMs) / 3_600_000);
+        const recencyScore = Math.exp(
+          (-Math.LN2 * ageHours) / RECENCY_HALF_LIFE_HOURS,
+        );
 
-      const likes = this.safeCount(moment.likes_count);
-      const comments = this.safeCount(moment.comments_count);
-      const engagementScore = Math.min(
-        1,
-        (Math.log1p(likes) + 1.5 * Math.log1p(comments)) / 12,
-      );
+        const likes = this.safeCount(moment.likes_count);
+        const comments = this.safeCount(moment.comments_count);
+        const engagementScore = Math.min(
+          1,
+          (Math.log1p(likes) + 1.5 * Math.log1p(comments)) / 12,
+        );
 
-      const hashtags = moment.hashtags ?? this.extractHashtags(moment.text_content);
-      const matchedHashtags = hashtags.filter((tag) =>
-        context.interestedHashtags.has(tag),
-      ).length;
-      const hashtagAffinity = Math.min(1, matchedHashtags / 2);
-      const inNetwork = context.followedAuthorIds.has(moment.user_id) ? 1 : 0;
-      const pinned = moment.is_pinned ? 1 : 0;
+        const hashtags =
+          moment.hashtags ?? this.extractHashtags(moment.text_content);
+        const matchedHashtags = hashtags.filter((tag) =>
+          context.interestedHashtags.has(tag),
+        ).length;
+        const hashtagAffinity = Math.min(1, matchedHashtags / 2);
+        const inNetwork = context.followedAuthorIds.has(moment.user_id) ? 1 : 0;
+        const pinned = moment.is_pinned ? 1 : 0;
 
-      return {
-        moment: {
-          ...moment,
-          hashtags,
-        },
-        score:
-          recencyScore * 0.45 +
-          engagementScore * 0.2 +
-          inNetwork * 0.2 +
-          hashtagAffinity * 0.13 +
-          pinned * 0.02,
-        createdAtMs,
-      };
-    });
+        return {
+          moment: {
+            ...moment,
+            hashtags,
+          },
+          score:
+            recencyScore * 0.45 +
+            engagementScore * 0.2 +
+            inNetwork * 0.2 +
+            hashtagAffinity * 0.13 +
+            pinned * 0.02,
+          createdAtMs,
+        };
+      });
 
     return this.applyAuthorDiversity(scored).map(({ moment }) => moment);
   }
@@ -214,7 +217,8 @@ export class MomentsRankingService {
         throw new Error('viewer ranking history unavailable');
       }
 
-      for (const moment of (likedMomentsResult.data ?? []) as LikedMomentRow[]) {
+      for (const moment of (likedMomentsResult.data ??
+        []) as LikedMomentRow[]) {
         for (const hashtag of this.extractHashtags(moment.text_content)) {
           interestedHashtags.add(hashtag);
         }

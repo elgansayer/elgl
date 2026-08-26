@@ -21,7 +21,9 @@ describe('MomentsController feed filters', () => {
       getProfile: vi.fn(),
     };
     rankingService = {
-      rankForYou: vi.fn().mockImplementation(async (_userId, moments) => moments),
+      rankForYou: vi
+        .fn()
+        .mockImplementation(async (_userId, moments) => moments),
     };
 
     controller = new MomentsController(

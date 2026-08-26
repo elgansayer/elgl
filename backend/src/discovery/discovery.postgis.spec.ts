@@ -40,7 +40,9 @@ describe('DiscoveryService PostGIS search contract', () => {
     ]) {
       queryBuilder[method] = vi.fn().mockReturnValue(queryBuilder);
     }
-    queryBuilder['limit'] = vi.fn().mockResolvedValue({ data: [], error: null });
+    queryBuilder['limit'] = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null });
 
     supabaseClient = {
       from: vi.fn().mockReturnValue(queryBuilder),
@@ -87,23 +89,19 @@ describe('DiscoveryService PostGIS search contract', () => {
       error: null,
     });
 
-    await service.searchPartners(
-      'viewer-1',
-      { is_vip: true } as never,
-      {
-        latitude: 51.5074,
-        longitude: -0.1278,
-        radius_metres: 12_500,
-        native_languages: 'ja',
-        target_language: 'en',
-        serious_learner_only: true,
-        level: 'B2',
-        gender: 'female',
-        age_min: 21,
-        age_max: 40,
-        has_audio_intro: true,
-      },
-    );
+    await service.searchPartners('viewer-1', { is_vip: true } as never, {
+      latitude: 51.5074,
+      longitude: -0.1278,
+      radius_metres: 12_500,
+      native_languages: 'ja',
+      target_language: 'en',
+      serious_learner_only: true,
+      level: 'B2',
+      gender: 'female',
+      age_min: 21,
+      age_max: 40,
+      has_audio_intro: true,
+    });
 
     expect(supabaseClient.rpc).toHaveBeenCalledTimes(1);
     expect(supabaseClient.rpc).toHaveBeenCalledWith('search_nearby_users', {

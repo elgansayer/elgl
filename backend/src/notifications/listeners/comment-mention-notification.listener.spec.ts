@@ -72,7 +72,10 @@ describe('CommentMentionNotificationListener', () => {
       'commenter-1',
       'mentioned-user-1',
       'mentioned-user-1',
-      ...Array.from({ length: 25 }, (_, index) => `mentioned-user-${index + 2}`),
+      ...Array.from(
+        { length: 25 },
+        (_, index) => `mentioned-user-${index + 2}`,
+      ),
     ];
 
     await listener.handleCommentMention(
@@ -142,7 +145,9 @@ describe('CommentMentionNotificationListener', () => {
       notificationPreferencesService,
       'shouldSendNotification',
     ).mockRejectedValue(new Error('DB error'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
 
     const payload = new MomentCommentEvent(
       'moment-1',
@@ -167,7 +172,9 @@ describe('CommentMentionNotificationListener', () => {
     vi.spyOn(notificationsService, 'createNotification')
       .mockRejectedValueOnce(new Error('transient failure'))
       .mockResolvedValueOnce(undefined);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
 
     await listener.handleCommentMention(
       new MomentCommentEvent(

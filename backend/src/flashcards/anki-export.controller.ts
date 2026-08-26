@@ -6,7 +6,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -43,7 +48,10 @@ export class AnkiExportController {
     const result = await this.ankiExportService.exportUserFlashcards(user.id);
     const date = new Date().toISOString().slice(0, 10);
 
-    response.setHeader('Content-Type', 'text/tab-separated-values; charset=utf-8');
+    response.setHeader(
+      'Content-Type',
+      'text/tab-separated-values; charset=utf-8',
+    );
     response.setHeader(
       'Content-Disposition',
       `attachment; filename="elgl-anki-${date}.tsv"`,

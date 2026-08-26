@@ -66,12 +66,13 @@ function createSummaryHarness(options: SummaryHarnessOptions = {}) {
     .mockResolvedValue('https://media.example.test/rooms/room-1.webm');
   const generateTranscriptFromAudioUrl = vi
     .fn()
-    .mockResolvedValue('We practised greetings, travel plans, and ordering food.');
-  const fallbackSummary =
-    options.fallbackSummary ?? {
-      summary: '- Greetings\n- Travel plans',
-      vocabulary: ['hola', 'viaje', 'comida'],
-    };
+    .mockResolvedValue(
+      'We practised greetings, travel plans, and ordering food.',
+    );
+  const fallbackSummary = options.fallbackSummary ?? {
+    summary: '- Greetings\n- Travel plans',
+    vocabulary: ['hola', 'viaje', 'comida'],
+  };
   const generateSessionSummary = vi.fn().mockResolvedValue(fallbackSummary);
   const chatCompletion = options.llmError
     ? vi.fn().mockRejectedValue(options.llmError)
@@ -86,7 +87,9 @@ function createSummaryHarness(options: SummaryHarnessOptions = {}) {
 
   const service = new AudioRoomsService(
     createConfigService(),
-    { getClient: vi.fn().mockReturnValue({ from }) } as unknown as SupabaseService,
+    {
+      getClient: vi.fn().mockReturnValue({ from }),
+    } as unknown as SupabaseService,
     {} as UsersService,
     { publish } as unknown as CentrifugoService,
     {

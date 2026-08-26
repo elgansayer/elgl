@@ -29,9 +29,9 @@ describe('AnkiExportController', () => {
     } as unknown as AnkiExportService;
     const controller = new AnkiExportController(service);
 
-    await expect(controller.exportForAnki(null, mockResponse())).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.exportForAnki(null, mockResponse()),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(service.exportUserFlashcards).not.toHaveBeenCalled();
   });
 
@@ -48,9 +48,15 @@ describe('AnkiExportController', () => {
     await controller.exportForAnki(mockUser(), response);
 
     expect(exportUserFlashcards).toHaveBeenCalledWith('user-1');
-    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'private, no-store',
+    );
     expect(response.setHeader).toHaveBeenCalledWith('X-Anki-Export-Count', '1');
-    expect(response.setHeader).toHaveBeenCalledWith('X-Anki-Export-Truncated', 'false');
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'X-Anki-Export-Truncated',
+      'false',
+    );
     expect(response.setHeader).toHaveBeenCalledWith(
       'Content-Type',
       'text/tab-separated-values; charset=utf-8',
