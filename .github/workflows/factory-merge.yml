@@ -2,7 +2,10 @@ name: Factory Merge Gate
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    # The daemon owns normal exact-head merges. This workflow is only a recovery
+    # fallback for daemon downtime, so a ten-minute poll created runner churn
+    # without improving healthy-path merge latency.
+    - cron: '16 * * * *'
   workflow_dispatch:
 
 permissions:
