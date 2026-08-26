@@ -1,0 +1,30 @@
+name: Mock Backend Production Boundary
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mock-backend-boundary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Production fixture boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test boundary verifier
+        run: node --test scripts/verify-mock-backend-boundary.test.mjs
+      - name: Verify production cannot activate fixtures
+        run: node scripts/verify-mock-backend-boundary.mjs

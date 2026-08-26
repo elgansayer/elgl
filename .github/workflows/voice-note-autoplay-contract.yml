@@ -1,0 +1,37 @@
+name: Voice Note Autoplay Contract
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260808000259_add_auto_play_voice_notes_column.sql'
+      - 'backend/src/users/interfaces/user-profile.interface.ts'
+      - 'frontend/src/app/components/settings/**'
+      - 'frontend/src/app/components/chat-room/**'
+      - 'scripts/voice-note-autoplay-contract.test.mjs'
+      - 'docs/voice-note-autoplay.md'
+      - '.github/workflows/voice-note-autoplay-contract.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'supabase/migrations/20260808000259_add_auto_play_voice_notes_column.sql'
+      - 'backend/src/users/interfaces/user-profile.interface.ts'
+      - 'frontend/src/app/components/settings/**'
+      - 'frontend/src/app/components/chat-room/**'
+      - 'scripts/voice-note-autoplay-contract.test.mjs'
+      - 'docs/voice-note-autoplay.md'
+      - '.github/workflows/voice-note-autoplay-contract.yml'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate sequential voice-note autoplay contract
+        run: node --test scripts/voice-note-autoplay-contract.test.mjs

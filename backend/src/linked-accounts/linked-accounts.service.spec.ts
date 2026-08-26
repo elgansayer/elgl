@@ -1,160 +1,106 @@
-import type { Mock } from 'vitest';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  LinkedAccountsService,
-  LinkedAccount,
-} from './linked-accounts.service';
+import { LinkedAccountsService } from './linked-accounts.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('LinkedAccountsService', () => {
   let service: LinkedAccountsService;
-  let supabaseService: Partial<SupabaseService>;
-
-  const mockSupabaseChain = (methods: Record<string, Mock>) => {
-    const chain: Record<string, Mock> = {};
-    Object.entries(methods).forEach(([name, fn]) => {
-      chain[name] = fn.mockReturnThis ? fn : fn;
-    });
-    return chain;
-  };
+  let getUserById: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    supabaseService = {
-      getClient: vi.fn(),
-    };
+    getUserById = vi.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LinkedAccountsService,
-        { provide: SupabaseService, useValue: supabaseService },
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: () => ({ auth: { admin: { getUserById } } }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<LinkedAccountsService>(LinkedAccountsService);
   });
 
-  describe('getLinkedAccounts', () => {
-    it('should return mock fallback for seeded users when no DB data', async () => {
-      const select = vi.fn().mockReturnThis();
-      const eq = vi.fn().mockReturnThis();
-      const order = vi.fn().mockResolvedValue({ data: [], error: null });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ select, eq, order }),
-      });
-
-      const result = await service.getLinkedAccounts('fake-5');
-      expect(result).toHaveLength(3);
-      expect(result[0].provider).toBe('google');
-      expect(result.every((a) => a.active)).toBe(true);
-    });
-
-    it('should return empty array when no accounts exist', async () => {
-      const select = vi.fn().mockReturnThis();
-      const eq = vi.fn().mockReturnThis();
-      const order = vi.fn().mockResolvedValue({ data: [], error: null });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ select, eq, order }),
-      });
-
-      const result = await service.getLinkedAccounts('user-1');
-      expect(result).toEqual([]);
-    });
-
-    it('should return mapped accounts', async () => {
-      const select = vi.fn().mockReturnThis();
-      const eq = vi.fn().mockReturnThis();
-      const order = vi.fn().mockResolvedValue({
-        data: [
-          {
-            provider: 'google',
-            name: 'test@gmail.com',
-            active: true,
-            created_at: '2024-01-01T00:00:00Z',
-          },
-        ],
-        error: null,
-      });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ select, eq, order }),
-      });
-
-      const result = await service.getLinkedAccounts('user-1');
-      expect(result).toEqual([
-        {
-          provider: 'google',
-          name: 'test@gmail.com',
-          active: true,
-          created_at: '2024-01-01T00:00:00Z',
+  it('returns supported identities from the authoritative Supabase Auth user', async () => {
+    getUserById.mockResolvedValue({
+      data: {
+        user: {
+          identities: [
+            {
+              identity_id: 'email-1',
+              provider: 'email',
+              identity_data: { email: 'learner@example.test' },
+              created_at: '2026-08-20T10:00:00Z',
+            },
+            {
+              identity_id: 'google-1',
+              provider: 'google',
+              identity_data: { email: 'google@example.test' },
+              created_at: '2026-08-21T10:00:00Z',
+            },
+            {
+              identity_id: 'github-1',
+              provider: 'github',
+              identity_data: {},
+              created_at: '2026-08-22T10:00:00Z',
+            },
+          ],
         },
-      ]);
+      },
+      error: null,
     });
 
-    it('should return empty array on supabase error', async () => {
-      const select = vi.fn().mockReturnThis();
-      const eq = vi.fn().mockReturnThis();
-      const order = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: 'DB error' } });
-      (supabaseService.getClient as vi.Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ select, eq, order }),
-      });
-
-      const result = await service.getLinkedAccounts('user-1');
-      expect(result).toEqual([]);
-    });
+    await expect(service.getLinkedAccounts('user-1')).resolves.toEqual([
+      {
+        provider: 'email',
+        active: true,
+        identity_id: 'email-1',
+        created_at: '2026-08-20T10:00:00Z',
+        name: 'learner@example.test',
+      },
+      {
+        provider: 'google',
+        active: true,
+        identity_id: 'google-1',
+        created_at: '2026-08-21T10:00:00Z',
+        name: 'google@example.test',
+      },
+    ]);
+    expect(getUserById).toHaveBeenCalledWith('user-1');
   });
 
-  describe('linkAccount', () => {
-    it('should upsert an account', async () => {
-      const upsert = vi.fn().mockResolvedValue({ error: null });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ upsert }),
-      });
-
-      await expect(
-        service.linkAccount('user-1', 'google', 'test@gmail.com'),
-      ).resolves.not.toThrow();
+  it('bounds display metadata returned from identity data', async () => {
+    getUserById.mockResolvedValue({
+      data: {
+        user: {
+          identities: [
+            {
+              identity_id: 'apple-1',
+              provider: 'apple',
+              identity_data: { full_name: `  ${'a'.repeat(400)}  ` },
+            },
+          ],
+        },
+      },
+      error: null,
     });
 
-    it('should throw on error', async () => {
-      const upsert = vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as vi.Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ upsert }),
-      });
-
-      await expect(service.linkAccount('user-1', 'google')).rejects.toThrow(
-        'Could not link account',
-      );
-    });
+    const [account] = await service.getLinkedAccounts('user-1');
+    expect(account.name).toHaveLength(200);
   });
 
-  describe('unlinkAccount', () => {
-    it('should delete an account', async () => {
-      const deleteFn = vi.fn().mockReturnThis();
-      const match = vi.fn().mockResolvedValue({ error: null });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
-      });
-
-      await expect(
-        service.unlinkAccount('user-1', 'google'),
-      ).resolves.not.toThrow();
+  it('fails closed instead of returning mock or empty identity state on provider failure', async () => {
+    getUserById.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'provider unavailable', status: 503 },
     });
 
-    it('should throw on error', async () => {
-      const deleteFn = vi.fn().mockReturnThis();
-      const match = vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as vi.Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
-      });
-
-      await expect(service.unlinkAccount('user-1', 'google')).rejects.toThrow(
-        'Could not unlink account',
-      );
-    });
+    await expect(service.getLinkedAccounts('user-1')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 });

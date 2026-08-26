@@ -10,6 +10,13 @@ def test_factory_merge_workflow_is_an_hourly_recovery_fallback() -> None:
 
     assert "- cron: '16 * * * *'" in workflow
     assert "*/10 * * * *" not in workflow
+    assert "actions: read" in workflow
+    assert "gh run list" in workflow
+    assert "--workflow ci.yml" in workflow
+    assert "--event push" in workflow
+    assert "Current main" in workflow
+    assert "has no successful canonical CI push run" in workflow
+    assert "] | .[0] // empty" in workflow
     assert "--match-head-commit" in workflow
     assert "factory/independent-review" in workflow
     assert "CI / required" in workflow
