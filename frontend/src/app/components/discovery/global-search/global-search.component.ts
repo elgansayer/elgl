@@ -9,6 +9,7 @@ import {
   ALL_LANGUAGE_CODES,
   getLanguageFlag,
 } from '../../primitives/language-picker/language-picker.component';
+import { RecommendedForYouCarouselComponent } from '../recommended-for-you/recommended-for-you-carousel.component';
 
 export interface TranslatedLanguage {
   code: string;
@@ -19,7 +20,13 @@ export interface TranslatedLanguage {
 
 @Component({
   selector: 'app-global-search',
-  imports: [HlmCheckbox, HlmNativeSelect, HlmButton, TranslatePipe],
+  imports: [
+    HlmCheckbox,
+    HlmNativeSelect,
+    HlmButton,
+    TranslatePipe,
+    RecommendedForYouCarouselComponent,
+  ],
   templateUrl: './global-search.component.html',
   styleUrls: ['./global-search.component.scss'],
 })
@@ -75,7 +82,7 @@ export class GlobalSearchComponent {
       native_languages: this.nativeLanguages() || undefined,
       target_language: this.targetLanguage() || undefined,
       proficiency_level: this.level() || undefined,
-      has_audio_intro: this.hasAudioIntro(),
+      has_audio_intro: this.hasAudioIntro() ? true : undefined,
     });
   }
 
