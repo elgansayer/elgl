@@ -29,6 +29,9 @@ describe('profile proficiency level migration (#1458)', () => {
     expect(sql).toMatch(
       /upper\(btrim\(proficiency_level\)\) IN \('A1', 'A2', 'B1', 'B2', 'C1', 'C2'\)/,
     );
+    expect(sql).toMatch(
+      /USING upper\(btrim\(proficiency_level\)\)::varchar\(2\)/,
+    );
   });
 
   it('fails closed when unexpected persisted values exist', () => {
