@@ -104,6 +104,7 @@ export class CentrifugoService implements OnModuleInit {
         maxRetriesPerRequest: 1,
         lazyConnect: true,
         enableOfflineQueue: false,
+        // Preserve ioredis 5 response shapes while adopting v6 fixes.
         protocol: 2,
       });
       await this.redis.connect();

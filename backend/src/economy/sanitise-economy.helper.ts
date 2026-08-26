@@ -122,17 +122,21 @@ export function scrubCoinPurchaseForArchive(
  * through unchanged. Does not mutate originals.
  */
 export function scrubCoinPurchasesForArchive(
-  records: Record<string, unknown>[] | null | undefined,
-): Record<string, unknown>[] | null | undefined {
+  records: unknown[] | null | undefined,
+): unknown[] | null | undefined {
   if (records === null || records === undefined) {
     return records;
   }
-  return records.map((r) => {
-    if (r !== null && typeof r === 'object') {
-      const scrubbed = scrubCoinPurchaseForArchive(r);
-      return scrubbed ?? r;
+  return records.map((entry) => {
+    if (
+      entry !== null &&
+      typeof entry === 'object' &&
+      !Array.isArray(entry)
+    ) {
+      const record = entry as Record<string, unknown>;
+      return scrubCoinPurchaseForArchive(record) ?? record;
     }
-    return r;
+    return entry;
   });
 }
 // ---------------------------------------------------------------------------

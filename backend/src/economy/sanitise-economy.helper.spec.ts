@@ -260,11 +260,13 @@ describe('scrubCoinPurchasesForArchive', () => {
     expect(records[0].transaction_id).toBe('txn_original_b');
   });
 
-  it('should handle non-object elements in arrays', () => {
-    const records = [null, 'string', 42] as unknown[];
+  it('should pass non-record elements through unchanged', () => {
+    const nested = ['nested'];
+    const records = [null, 'string', 42, nested] as unknown[];
     const result = scrubCoinPurchasesForArchive(records);
     expect(result![0]).toBeNull();
     expect(result![1]).toBe('string');
     expect(result![2]).toBe(42);
+    expect(result![3]).toBe(nested);
   });
 });
