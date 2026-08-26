@@ -24,6 +24,14 @@ import { MomentComment, MomentRecord } from './interfaces/moment.interface';
 import { StoryResponse } from './interfaces/story.interface';
 import { MomentsService, MomentLikeUser } from './moments.service';
 
+const MOMENT_FEED_FILTERS = [
+  'All',
+  'Classmates',
+  'Following',
+  'For You',
+] as const;
+type MomentFeedFilter = (typeof MOMENT_FEED_FILTERS)[number];
+
 @Controller('moments')
 @UseGuards(SupabaseAuthGuard)
 export class MomentsController {
@@ -45,12 +53,56 @@ export class MomentsController {
   @Get('feed')
   async getFeed(
     @CurrentUser() user: User | null,
-    @Query('filter') filter?: 'All' | 'Classmates' | 'Following' | 'For You',
+    @Query('filter') filter?: string,
     @Query('lang') lang?: string,
   ): Promise<MomentRecord[]> {
     if (!user) return [];
-    const activeFilter = filter ?? 'All';
-    return await this.momentsService.getFeed(user.id, activeFilter, lang);
+
+    const activeFilter = this.parseFeedFilter(filter);
+    const targetLanguage =
+      activeFilter === 'Classmates'
+        ? await this.resolveClassmatesLanguage(user.id, lang)
+        : this.normaliseLanguage(lang);
+
+    if (activeFilter === 'Classmates' && !targetLanguage) {
+      return [];
+    }
+
+    const feed = await this.momentsService.getFeed(
+      user.id,
+      activeFilter,
+      targetLanguage ?? undefined,
+    );
+
+    return feed.filter(
+      (moment) =>
+        !moment.id.startsWith('mock-moment-') &&
+        (activeFilter !== 'Following' || moment.user_id !== user.id),
+    );
+  }
+
+  private parseFeedFilter(filter?: string): MomentFeedFilter {
+    if (!filter) return 'All';
+    if (!MOMENT_FEED_FILTERS.includes(filter as MomentFeedFilter)) {
+      throw new BadRequestException('Unsupported Moments feed filter');
+    }
+    return filter as MomentFeedFilter;
+  }
+
+  private normaliseLanguage(language?: string): string | null {
+    const normalised = language?.trim().toLowerCase();
+    return normalised || null;
+  }
+
+  private async resolveClassmatesLanguage(
+    userId: string,
+    requestedLanguage?: string,
+  ): Promise<string | null> {
+    const explicitLanguage = this.normaliseLanguage(requestedLanguage);
+    if (explicitLanguage) return explicitLanguage;
+
+    const profile = await this.usersService.getProfile(userId);
+    return this.normaliseLanguage(profile?.target_languages?.[0]);
   }
 
   @Get('lifetime-counts')
