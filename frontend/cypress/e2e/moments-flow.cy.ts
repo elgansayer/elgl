@@ -1,5 +1,9 @@
 const avatarDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
+const normaliseText = (value: string): string => value.replace(/\s+/g, '');
+const renderedTokenText = (tokens: JQuery<HTMLElement>): string =>
+  normaliseText([...tokens].map((token) => token.textContent ?? '').join(''));
+
 const baseMoment = {
   id: 'moment-1',
   user_id: 'partner-1',
@@ -110,16 +114,20 @@ describe('Moments Flow (Mocked)', () => {
     cy.contains('Aiko Test').should('be.visible');
     cy.contains('article h3', 'Aiko Test')
       .closest('article')
-      .find('app-tokenised-text')
-      .should('contain.text', '今日は日本語を勉強しています。');
+      .find('app-tokenised-text > div[dir="auto"] > span')
+      .then(($tokens) => {
+        expect(renderedTokenText($tokens)).to.equal(normaliseText(baseMoment.text_content));
+      });
 
     cy.get('button[role="radio"][aria-label="Following"]').click();
     cy.wait('@getMomentsFeed').its('request.url').should('include', 'filter=Following');
     cy.contains('Following Partner').should('be.visible');
     cy.contains('article h3', 'Following Partner')
       .closest('article')
-      .find('app-tokenised-text')
-      .should('contain.text', 'Following feed moment');
+      .find('app-tokenised-text > div[dir="auto"] > span')
+      .then(($tokens) => {
+        expect(renderedTokenText($tokens)).to.equal(normaliseText(followingMoment.text_content));
+      });
     cy.contains('Aiko Test').should('not.exist');
   });
 
@@ -131,7 +139,7 @@ describe('Moments Flow (Mocked)', () => {
 
     cy.get('header button:not([role="radio"])').click();
     cy.get('textarea').should('be.visible').type(text);
-    cy.contains('button', /^Post$/i)
+    cy.contains('button', /^Post moment$/i)
       .should('be.enabled')
       .click();
 
@@ -149,7 +157,9 @@ describe('Moments Flow (Mocked)', () => {
       });
     });
 
-    cy.get('article app-tokenised-text').should('contain.text', text);
+    cy.get('article app-tokenised-text > div[dir="auto"] > span').then(($tokens) => {
+      expect(renderedTokenText($tokens)).to.contain(normaliseText(text));
+    });
     cy.get('textarea').should('not.exist');
   });
 
