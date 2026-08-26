@@ -118,9 +118,10 @@ describe('MediaController', () => {
         dto,
       );
 
-      expect(
-        mediaService.generateAudioIntroPresignedUrl,
-      ).toHaveBeenCalledWith('user-1', dto);
+      expect(mediaService.generateAudioIntroPresignedUrl).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
       expect(result).toEqual(expectedResponse);
     });
   });
