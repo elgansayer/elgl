@@ -88,11 +88,13 @@ describe('FavouritesService starred messages', () => {
 
   it('applies current visibility checks to compatibility reads', async () => {
     const service = new FavouritesService({} as SupabaseService);
-    const secureRead = vi.spyOn(service, 'getStarredMessages').mockResolvedValue({
-      items: [{ id: 'fav-visible' }],
-      has_more: false,
-      next_offset: null,
-    });
+    const secureRead = vi
+      .spyOn(service, 'getStarredMessages')
+      .mockResolvedValue({
+        items: [{ id: 'fav-visible' }],
+        has_more: false,
+        next_offset: null,
+      });
 
     await expect(service.getUserFavourites('user-1')).resolves.toEqual([
       { id: 'fav-visible' },
