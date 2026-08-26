@@ -1,4 +1,4 @@
-import { Component, computed, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
@@ -140,7 +140,8 @@ interface SelectOption {
             type="button"
             size="touch"
             (click)="submit()"
-            [disabled]="!isValid()"
+            [attr.aria-busy]="isSubmitting()"
+            [disabled]="!isValid() || isSubmitting()"
             class="rounded-xl bg-gradient-to-r from-primary to-secondary px-5 font-bold text-on-fill shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-secondary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {{ 'audioRoom.launchStageBtn' | t }}
@@ -153,6 +154,7 @@ interface SelectOption {
 export class VoiceroomCreateModalComponent {
   readonly closed = output<void>();
   readonly created = output<VoiceroomCreatePayload>();
+  readonly isSubmitting = input(false);
 
   readonly LANGUAGE_PAIR_OPTIONS: readonly SelectOption[] = [
     { value: 'en-es', labelKey: 'audioRoom.languagePair.en-es' },
@@ -210,7 +212,7 @@ export class VoiceroomCreateModalComponent {
   }
 
   submit(): void {
-    if (!this.isValid()) return;
+    if (!this.isValid() || this.isSubmitting()) return;
 
     this.created.emit({
       title: this.title().trim(),
