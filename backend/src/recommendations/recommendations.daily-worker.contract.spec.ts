@@ -9,7 +9,9 @@ describe('daily recommendation worker contract', () => {
 
   it('runs the real recommendation job every day at midnight', () => {
     expect(source).toContain('@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)');
-    expect(source).toContain('async calculateDailyRecommendations(): Promise<void>');
+    expect(source).toContain(
+      'async calculateDailyRecommendations(): Promise<void>',
+    );
   });
 
   it('bounds the user scan and recommendation fan-out', () => {
@@ -34,7 +36,9 @@ describe('daily recommendation worker contract', () => {
   });
 
   it('avoids caching the learner in their own recommendation list', () => {
-    expect(source).toContain('const matchIndex = matchIndices.get(entry.userId);');
+    expect(source).toContain(
+      'const matchIndex = matchIndices.get(entry.userId);',
+    );
     expect(source).toContain('const strToRemove = jsonParts[matchIndex];');
   });
 });
