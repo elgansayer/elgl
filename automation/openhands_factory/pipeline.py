@@ -568,19 +568,26 @@ class FactoryPipeline:
         LOGGER.exception("Factory job %s failed", job.task.identifier)
 
     def _publish_quarantine(self, job: Job) -> None:
-        """Publish one recoverable human-action circuit without retry spam."""
+        """Publish one recoverable, fully autonomous circuit without retry spam.
+
+        This is never a request for a human decision - see AGENTS.md's autonomy
+        mandate. It is a bounded cooldown: recover_due_quarantines() automatically
+        returns the task to DISCOVERED after quarantine_recovery_minutes, preserving
+        failure evidence so an unrelated transient error doesn't get treated as the
+        same repeated failure. No "needs-human" label is applied.
+        """
 
         issue = int(job.task.identifier)
         try:
             self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
-            self.github.add_issue_labels(issue, ("factory-quarantined", "needs-human"))
+            self.github.add_issue_labels(issue, ("factory-quarantined",))
             self.github.add_comment(
                 issue,
                 "OpenHands Factory paused this task after the same task-side failure "
                 "repeated to its configured safety limit. Provider outages and busy "
-                "subscriptions do not trigger this circuit. After resolving the cause, "
-                "run `hellotalk-factory backlog requeue-quarantined` to reset the "
-                "durable state and labels.",
+                "subscriptions do not trigger this circuit. This is a bounded, "
+                "automatic cooldown - the Factory will requeue and retry this task "
+                "on its own; no manual action is needed.",
             )
         except FactoryError:
             LOGGER.exception(
