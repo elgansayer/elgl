@@ -13,10 +13,7 @@ import {
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AddFavouriteDto } from '../chat/dto/add-favourite.dto';
 import { ListStarredMessagesQueryDto } from './dto/list-starred-messages-query.dto';
-import {
-  FavouritesService,
-  StarredMessagesPage,
-} from './favourites.service';
+import { FavouritesService, StarredMessagesPage } from './favourites.service';
 
 interface AuthenticatedRequest {
   user: { id: string };
