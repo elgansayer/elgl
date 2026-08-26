@@ -135,28 +135,28 @@ function isMyStatsResponse(value: unknown): value is MyStatsResponse {
             </h2>
             <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div class="rounded-xl bg-surface-300 p-4 text-center">
-                <dd class="text-3xl font-bold text-secondary">
-                  {{ currentStats.messages_sent }}
-                </dd>
-                <dt class="mt-1 text-sm text-text-secondary">
+                <dt class="text-sm text-text-secondary">
                   {{ 'stats.myStats.messagesSent' | t }}
                 </dt>
+                <dd class="mt-1 text-3xl font-bold text-secondary">
+                  {{ currentStats.messages_sent }}
+                </dd>
               </div>
               <div class="rounded-xl bg-surface-300 p-4 text-center">
-                <dd class="text-3xl font-bold text-success">
-                  {{ currentStats.corrections_count }}
-                </dd>
-                <dt class="mt-1 text-sm text-text-secondary">
+                <dt class="text-sm text-text-secondary">
                   {{ 'stats.myStats.correctionsMade' | t }}
                 </dt>
+                <dd class="mt-1 text-3xl font-bold text-success">
+                  {{ currentStats.corrections_count }}
+                </dd>
               </div>
               <div class="rounded-xl bg-surface-300 p-4 text-center">
-                <dd class="text-3xl font-bold text-warning">
-                  {{ currentStats.moments_count }}
-                </dd>
-                <dt class="mt-1 text-sm text-text-secondary">
+                <dt class="text-sm text-text-secondary">
                   {{ 'stats.myStats.momentsPosted' | t }}
                 </dt>
+                <dd class="mt-1 text-3xl font-bold text-warning">
+                  {{ currentStats.moments_count }}
+                </dd>
               </div>
             </dl>
           </section>
@@ -194,7 +194,7 @@ export class MyStatsComponent {
     const labels =
       data?.study_hours.map((stat) =>
         this.i18nService.translate(`stats.dayAbbr.${stat.day.toLowerCase()}`),
-      ) ?? DAY_NAMES;
+      ) ?? [...DAY_NAMES];
     const hours = data?.study_hours.map((stat) => stat.hours) ?? DAY_NAMES.map(() => 0);
 
     return {
