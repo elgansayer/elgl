@@ -139,9 +139,7 @@ describe('Moments Flow (Mocked)', () => {
 
     cy.get('header button:not([role="radio"])').click();
     cy.get('textarea').should('be.visible').type(text);
-    cy.contains('button', /^Post moment$/i)
-      .should('be.enabled')
-      .click();
+    cy.get('textarea').closest('section').find('button').last().should('be.enabled').click();
 
     cy.wait('@grammarCheck').then(({ request: grammarRequest }) => {
       expect(grammarRequest.body.text).to.equal(text);
