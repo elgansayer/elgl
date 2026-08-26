@@ -440,6 +440,63 @@ class TestAgentProviders(unittest.TestCase):
         )
         self.assertEqual(runner.stdin, ["untrusted issue text"])
 
+    def test_claude_uses_max_effort_for_build_critical_phases(self):
+        runner = FakeProcessRunner("success output")
+        provider = ClaudeCodeProvider(process_runner=runner)
+        request = AgentRequest(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=Task("1", "test", "body", "issue", 1),
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+
+        provider.run(request)
+
+        command = runner.commands[0]
+        self.assertEqual(command[command.index("--effort") + 1], "max")
+
+    def test_claude_uses_low_effort_for_repair_class_phases(self):
+        # quality_repair/code_review/ci_repair are the fast/haiku-tier phases -
+        # attempt_mechanical_repair() already resolves the purely mechanical CI
+        # failures before an agent is invoked, so what reaches here rarely
+        # needs "max" reasoning.
+        for phase in (AgentPhase.QUALITY_REPAIR, AgentPhase.CODE_REVIEW, AgentPhase.CI_REPAIR):
+            runner = FakeProcessRunner("success output")
+            provider = ClaudeCodeProvider(process_runner=runner)
+            request = AgentRequest(
+                phase=phase,
+                task=Task("1", "test", "body", "issue", 1),
+                prompt="do it",
+                cwd=Path("/tmp"),
+            )
+
+            provider.run(request)
+
+            command = runner.commands[0]
+            self.assertEqual(
+                command[command.index("--effort") + 1],
+                "low",
+                msg=f"expected low effort for {phase}",
+            )
+
+    def test_claude_uses_medium_effort_for_security_review(self):
+        # Security-review is the same bounded-checklist shape as code-review
+        # (already "low"), but higher-stakes, so it sits a tier above the
+        # repair-class floor instead of matching "max" build-critical work.
+        runner = FakeProcessRunner("success output")
+        provider = ClaudeCodeProvider(process_runner=runner)
+        request = AgentRequest(
+            phase=AgentPhase.SECURITY_REVIEW,
+            task=Task("1", "test", "body", "issue", 1),
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+
+        provider.run(request)
+
+        command = runner.commands[0]
+        self.assertEqual(command[command.index("--effort") + 1], "medium")
+
     def test_codex_provider(self):
         runner = FakeProcessRunner("codex success")
         provider = CodexProvider(process_runner=runner)
@@ -497,9 +554,13 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(result.summary, "google success")
         self.assertIn("--dangerously-skip-permissions", runner.commands[0])
         self.assertIn("--disable-slash-commands", runner.commands[0])
-        self.assertIn("high", runner.commands[0])
         self.assertIn("gemini-3.1-pro-high", runner.commands[0])
         self.assertNotIn("auto", runner.commands[0])
+        # gemini-3.1-pro-high already bakes its effort tier into the model
+        # name; a separately-passed --effort is what breaks flash-tier
+        # models below, so it must not be added when the model supplies its
+        # own tier suffix.
+        self.assertNotIn("--effort", runner.commands[0])
         # --sandbox silently breaks stdin as a prompt channel for agy (verified
         # directly on a real host), so the prompt must travel in argv instead.
         self.assertIsNone(runner.stdin[0])
@@ -511,6 +572,52 @@ class TestAgentProviders(unittest.TestCase):
         self.assertEqual(
             runner.commands[0][runner.commands[0].index("--add-dir") + 1],
             "/tmp",
+        )
+
+    def test_antigravity_does_not_pass_a_conflicting_effort_for_a_tiered_model(self):
+        # agy hard-errors ("--model X conflicts with --effort=Y") when a
+        # model whose name already encodes an effort tier is combined with
+        # a disagreeing --effort flag - this broke every phase routed to
+        # gemini-3.7-flash-low until --effort stopped being forced to
+        # "high" unconditionally.
+        runner = FakeProcessRunner("google success")
+        provider = GoogleAgentProvider(
+            model="gemini-3.7-flash-low",
+            process_runner=runner,
+        )
+        task = Task("1", "test", "body", "issue", 1)
+        request = AgentRequest(
+            phase=AgentPhase.QUALITY_REPAIR,
+            task=task,
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+
+        result = provider.run(request)
+        self.assertTrue(result.success)
+        self.assertIn("gemini-3.7-flash-low", runner.commands[0])
+        self.assertNotIn("--effort", runner.commands[0])
+
+    def test_antigravity_passes_effort_high_for_an_untiered_model(self):
+        runner = FakeProcessRunner("google success")
+        provider = GoogleAgentProvider(
+            model="gemini-experimental",
+            process_runner=runner,
+        )
+        task = Task("1", "test", "body", "issue", 1)
+        request = AgentRequest(
+            phase=AgentPhase.IMPLEMENTATION,
+            task=task,
+            prompt="do it",
+            cwd=Path("/tmp"),
+        )
+
+        result = provider.run(request)
+        self.assertTrue(result.success)
+        self.assertIn("gemini-experimental", runner.commands[0])
+        self.assertEqual(
+            runner.commands[0][runner.commands[0].index("--effort") + 1],
+            "high",
         )
 
     def test_gemini_provider_remains_configurable(self):

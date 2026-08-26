@@ -22,11 +22,8 @@ export const settingsRoutes: Routes = [
   },
   {
     path: 'settings/notification-customization',
-    loadComponent: () =>
-      import('../components/notification-customization/notification-customization.component').then(
-        (m) => m.NotificationCustomizationComponent,
-      ),
-    title: 'Notification Customisation - HelloTalk',
+    redirectTo: 'settings/notification',
+    pathMatch: 'full',
   },
   {
     path: 'settings/message-filters',
@@ -68,6 +65,11 @@ export const settingsRoutes: Routes = [
   },
   {
     path: 'data-storage',
+    redirectTo: 'settings/data-storage',
+    pathMatch: 'full',
+  },
+  {
+    path: 'settings/data-storage',
     loadComponent: () =>
       import('../pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
     title: 'Data & Storage - HelloTalk',

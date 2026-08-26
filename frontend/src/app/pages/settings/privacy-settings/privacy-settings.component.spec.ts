@@ -5,6 +5,10 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { BlockedUsersService } from '../../../services/blocked-users.service';
 import { I18nService } from '../../../services/i18n.service';
+import {
+  ProfileVisibility,
+  ProfileVisibilityService,
+} from '../../../services/profile-visibility.service';
 import { SafetyService } from '../../../services/safety.service';
 import { PrivacySettingsComponent } from './privacy-settings.component';
 
@@ -16,6 +20,8 @@ describe('PrivacySettingsComponent', () => {
   const addMutedWord = vi.fn<(word: string) => void>();
   const removeMutedWord = vi.fn<(word: string) => void>();
   const goBack = vi.fn();
+  const getProfileVisibility = vi.fn<() => Promise<ProfileVisibility>>();
+  const updateProfileVisibility = vi.fn<(value: ProfileVisibility) => Promise<void>>();
 
   beforeEach(async () => {
     mutedWords.set([]);
@@ -23,6 +29,10 @@ describe('PrivacySettingsComponent', () => {
     addMutedWord.mockReset();
     removeMutedWord.mockReset();
     goBack.mockReset();
+    getProfileVisibility.mockReset();
+    updateProfileVisibility.mockReset();
+    getProfileVisibility.mockResolvedValue('everyone');
+    updateProfileVisibility.mockResolvedValue(undefined);
 
     addMutedWord.mockImplementation((word) => {
       mutedWords.update((previous) => (previous.includes(word) ? previous : [...previous, word]));
@@ -45,6 +55,10 @@ describe('PrivacySettingsComponent', () => {
             blockedUsers,
             loadBlockedUsers: vi.fn().mockResolvedValue(undefined),
           },
+        },
+        {
+          provide: ProfileVisibilityService,
+          useValue: { getProfileVisibility, updateProfileVisibility },
         },
         {
           provide: I18nService,
@@ -71,6 +85,52 @@ describe('PrivacySettingsComponent', () => {
     const heading = fixture.nativeElement.querySelector('h1') as HTMLHeadingElement | null;
     expect(heading?.textContent?.trim()).toBe('privacy.hub.title');
     expect(component.hubNavItems.length).toBeGreaterThan(0);
+  });
+
+  it('loads and exposes the persisted profile visibility', () => {
+    expect(getProfileVisibility).toHaveBeenCalledOnce();
+    expect(component.profileVisibility()).toBe('everyone');
+    expect(component.profileVisibilityOptions.map((option) => option.value)).toEqual([
+      'everyone',
+      'vips_only',
+      'hidden',
+    ]);
+
+    const group = fixture.nativeElement.querySelector(
+      'hlm-radio-group[name="profile-visibility"]',
+    ) as HTMLElement | null;
+    expect(group).not.toBeNull();
+    expect(group?.getAttribute('aria-labelledby')).toBe('profile-visibility-heading');
+  });
+
+  it('persists a visibility change and reports success', async () => {
+    await component.updateProfileVisibility('vips_only');
+    fixture.detectChanges();
+
+    expect(updateProfileVisibility).toHaveBeenCalledWith('vips_only');
+    expect(component.profileVisibility()).toBe('vips_only');
+    expect(component.visibilitySaveSuccess()).toBe(true);
+    expect(component.visibilitySaveError()).toBe(false);
+  });
+
+  it('rolls back a failed visibility change', async () => {
+    updateProfileVisibility.mockRejectedValueOnce(new Error('offline'));
+
+    await component.updateProfileVisibility('hidden');
+    fixture.detectChanges();
+
+    expect(component.profileVisibility()).toBe('everyone');
+    expect(component.visibilitySaveError()).toBe(true);
+    expect(component.visibilitySaveSuccess()).toBe(false);
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+    expect(alert?.textContent).toContain('privacy.profileVisibility.saveError');
+  });
+
+  it('ignores invalid and unchanged visibility values', async () => {
+    await component.updateProfileVisibility('friends');
+    await component.updateProfileVisibility('everyone');
+
+    expect(updateProfileVisibility).not.toHaveBeenCalled();
   });
 
   it('exposes a screen-reader name for the muted-word input and add action', () => {
