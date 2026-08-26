@@ -25,10 +25,7 @@ export class LearningLessonsController {
   }
 
   @Get(':id/progress')
-  async getProgress(
-    @CurrentUser() user: User | null,
-    @Param('id') id: string,
-  ) {
+  async getProgress(@CurrentUser() user: User | null, @Param('id') id: string) {
     if (!user) throw new UnauthorizedException();
     return this.lessonsService.getLessonProgress(user.id, id);
   }
