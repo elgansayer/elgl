@@ -7,7 +7,7 @@ export type NotificationFilter = (typeof NOTIFICATION_FILTERS)[number];
 
 export class GetNotificationsQueryDto {
   @IsOptional()
-  @IsIn(NOTIFICATION_FILTERS)
+  @IsIn([...NOTIFICATION_FILTERS])
   type?: NotificationFilter = 'all';
 
   @IsOptional()
