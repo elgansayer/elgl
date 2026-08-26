@@ -2,12 +2,20 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { RestorePurchasesService } from './restore-purchases.service';
+import { I18nService } from './i18n.service';
 import { environment } from '../../environments/environment';
 
-describe.skip('RestorePurchasesService', () => {
+
+describe('RestorePurchasesService', () => {
   let service: RestorePurchasesService;
   let httpMock: HttpTestingController;
   const baseUrl = `${environment.apiUrl}/monetisation/restore-purchases`;
+
+  const translations: Record<string, string> = {
+    'restorePurchases.success': 'Successfully restored your purchase(s).',
+    'restorePurchases.noSubscriptionFound': 'No previous purchases found to restore.',
+    'restorePurchases.failed': 'Failed to restore purchases. Please try again later.',
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -15,6 +23,12 @@ describe.skip('RestorePurchasesService', () => {
         RestorePurchasesService,
         provideHttpClient(),
         provideHttpClientTesting(),
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => translations[key] ?? key,
+          },
+        },
       ],
     });
     service = TestBed.inject(RestorePurchasesService);
@@ -25,61 +39,81 @@ describe.skip('RestorePurchasesService', () => {
     httpMock.verify();
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
-  it('should have initial state with isRestoring as false', () => {
+  it('starts idle without a previous result', () => {
     expect(service.isRestoring()).toBe(false);
     expect(service.lastRestoreResult()).toBeNull();
   });
 
-  it('should call backend API and return success when status is restored', async () => {
+  it('restores Stripe purchases and preserves the returned tier', async () => {
     const promise = service.restorePurchases('stripe');
 
     const req = httpMock.expectOne(baseUrl);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ platform: 'stripe', receipt_data: undefined });
-    req.flush({ received: true, status: 'restored' });
+    expect(req.request.body).toEqual({ platform: 'stripe' });
+    req.flush({ received: true, status: 'restored', tier: 'consumer' });
 
-    const result = await promise;
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Successfully restored your purchase(s).');
+    await expect(promise).resolves.toEqual({
+      success: true,
+      restoredPlans: ['consumer'],
+      message: 'Successfully restored your purchase(s).',
+      status: 'restored',
+      platform: 'stripe',
+      tier: 'consumer',
+    });
+    expect(service.lastRestoreResult()?.status).toBe('restored');
     expect(service.isRestoring()).toBe(false);
   });
 
-  it('should handle no_valid_subscription status', async () => {
-    const promise = service.restorePurchases('ios', 'test-receipt');
+  it('trims receipt data before sending it', async () => {
+    const promise = service.restorePurchases('ios', '  signed-receipt  ');
 
     const req = httpMock.expectOne(baseUrl);
-    expect(req.request.body).toEqual({ platform: 'ios', receipt_data: 'test-receipt' });
+    expect(req.request.body).toEqual({ platform: 'ios', receipt_data: 'signed-receipt' });
     req.flush({ received: true, status: 'no_valid_subscription' });
 
     const result = await promise;
-    expect(result.success).toBe(false);
+    expect(result.status).toBe('no_valid_subscription');
+    expect(result.platform).toBe('ios');
     expect(result.message).toBe('No previous purchases found to restore.');
-    expect(service.isRestoring()).toBe(false);
   });
 
-  it('should handle API errors gracefully', async () => {
-    const promise = service.restorePurchases();
+  it('treats malformed or unknown backend outcomes as a retryable failure', async () => {
+    const malformed = service.restorePurchases('stripe');
+    httpMock.expectOne(baseUrl).flush({ received: false, status: 'restored' });
+    expect((await malformed).status).toBe('failed');
 
+    const unknown = service.restorePurchases('stripe');
+    httpMock.expectOne(baseUrl).flush({ received: true, status: 'mystery' });
+    expect((await unknown).status).toBe('failed');
+  });
+
+  it('handles network errors without leaving the restoring state stuck', async () => {
+    const promise = service.restorePurchases('android', '{"purchaseToken":"x","productId":"y"}');
+
+    expect(service.isRestoring()).toBe(true);
     httpMock.expectOne(baseUrl).error(new ProgressEvent('Network error'));
 
     const result = await promise;
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Failed to restore purchases. Please try again later.');
+    expect(result).toMatchObject({
+      success: false,
+      status: 'failed',
+      platform: 'android',
+      message: 'Failed to restore purchases. Please try again later.',
+    });
     expect(service.isRestoring()).toBe(false);
   });
 
-  it('should set isRestoring to true while request is pending', async () => {
-    const promise = service.restorePurchases();
+  it('deduplicates concurrent restore attempts so a double click cannot double-submit', async () => {
+    const first = service.restorePurchases('stripe');
+    const second = service.restorePurchases('stripe');
 
-    expect(service.isRestoring()).toBe(true);
+    const requests = httpMock.match(baseUrl);
+    expect(requests).toHaveLength(1);
+    requests[0].flush({ received: true, status: 'restored' });
 
-    httpMock.expectOne(baseUrl).flush({ received: true, status: 'restored' });
-
-    await promise;
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    expect(firstResult.status).toBe('restored');
+    expect(secondResult.status).toBe('restored');
     expect(service.isRestoring()).toBe(false);
   });
 });
