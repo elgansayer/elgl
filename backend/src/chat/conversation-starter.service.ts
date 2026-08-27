@@ -60,7 +60,7 @@ export class ConversationStarterService {
     const activeRequest = this.inFlight.get(cacheKey);
     if (activeRequest) return [...(await activeRequest)];
 
-    const request = this.generateSuggestions(profile);
+    const request = this.generateSuggestions(partnerId, profile);
     this.inFlight.set(cacheKey, request);
     try {
       const suggestions = await request;
@@ -220,10 +220,16 @@ export class ConversationStarterService {
     return partner;
   }
 
-  private async generateSuggestions(profile: PartnerProfile): Promise<string[]> {
+  private async generateSuggestions(
+    partnerId: string,
+    profile: PartnerProfile,
+  ): Promise<string[]> {
     const supabase = this.supabaseService.getClient();
-    const displayName = this.cleanProfileText(profile.display_name, 80) || 'your language partner';
-    const nativeLanguage = this.cleanProfileText(profile.native_language, 40) || 'their native language';
+    const displayName =
+      this.cleanProfileText(profile.display_name, 80) || 'your language partner';
+    const nativeLanguage =
+      this.cleanProfileText(profile.native_language, 40) ||
+      'their native language';
     const targetLanguages = (profile.target_languages ?? [])
       .slice(0, 5)
       .map((language) => this.cleanProfileText(language, 40))
@@ -235,7 +241,7 @@ export class ConversationStarterService {
       const { data } = await supabase
         .from('user_interests')
         .select('interests(name)')
-        .eq('user_id', profile === undefined ? '' : '')
+        .eq('user_id', partnerId)
         .limit(MAX_INTERESTS);
       interests = (data ?? [])
         .map((row) => this.cleanProfileText(row.interests?.name, 60))
@@ -301,17 +307,25 @@ export class ConversationStarterService {
       suggestions.push(`What got you interested in ${interests[0]}?`);
     }
     if (targetLanguages[0]) {
-      suggestions.push(`What do you enjoy most about learning ${targetLanguages[0]}?`);
+      suggestions.push(
+        `What do you enjoy most about learning ${targetLanguages[0]}?`,
+      );
     }
     if (displayName !== 'your language partner') {
-      suggestions.push(`What has been the highlight of your week, ${displayName}?`);
+      suggestions.push(
+        `What has been the highlight of your week, ${displayName}?`,
+      );
     }
     return this.fillToThree(suggestions);
   }
 
   private cleanProfileText(value: unknown, maxLength: number): string {
     return typeof value === 'string'
-      ? value.replace(/[\u0000-\u001f\u007f]/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, maxLength)
+      ? value
+          .replace(/[\u0000-\u001f\u007f]/gu, ' ')
+          .replace(/\s+/gu, ' ')
+          .trim()
+          .slice(0, maxLength)
       : '';
   }
 
