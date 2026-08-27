@@ -156,6 +156,16 @@ export class MatchmakingAlgorithmService {
     if (filters.availability_afternoon && !partner.availability_afternoon) return false;
     if (filters.availability_evening && !partner.availability_evening) return false;
 
+    if (filters.interests) {
+      const requestedInterest = filters.interests.trim().toLocaleLowerCase('en-US');
+      if (requestedInterest) {
+        const partnerInterests = (partner.interests ?? partner.hobbies ?? [])
+          .filter((interest): interest is string => typeof interest === 'string')
+          .map((interest) => interest.trim().toLocaleLowerCase('en-US'));
+        if (!partnerInterests.includes(requestedInterest)) return false;
+      }
+    }
+
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const age = partner.age;
       if (age === undefined || age === null) return true;
@@ -170,16 +180,17 @@ export class MatchmakingAlgorithmService {
   private recordMatchmakingError(context: string, error: Error): void {
     this.lastErrorMap.set(context, error);
     // Report asynchronously - do not block the caller path
-    this.crashReportService.reportCrash(
-      error,
-      {
+    this.crashReportService
+      .reportCrash(error, {
         route: context,
         component: 'MatchmakingAlgorithmService',
         adminRole: 'system',
         action: context,
         offline: !navigator.onLine,
-      },
-    ).catch(() => { /* fire-and-forget */ });
+      })
+      .catch(() => {
+        /* fire-and-forget */
+      });
   }
 
   // ---- Private scoring helpers ----
@@ -191,10 +202,7 @@ export class MatchmakingAlgorithmService {
     const seriousLearnerBonus = this.scoreSeriousLearner(partner, currentUser);
 
     const totalScore =
-      languageComplementarity +
-      sharedInterests +
-      activityStreak +
-      seriousLearnerBonus;
+      languageComplementarity + sharedInterests + activityStreak + seriousLearnerBonus;
 
     return {
       partner,
@@ -224,11 +232,11 @@ export class MatchmakingAlgorithmService {
 
     const partnerTeaches = partnerNative.filter((lang) => myTarget.includes(lang)).length;
     const partnerTeachesCount = myTarget.length > 0 ? partnerTeaches / myTarget.length : 0;
-    score += (maxScore * 0.5) * Math.min(1, partnerTeachesCount);
+    score += maxScore * 0.5 * Math.min(1, partnerTeachesCount);
 
     const canTeachPartner = myNative.filter((lang) => partnerTarget.includes(lang)).length;
     const canTeachRatio = partnerTarget.length > 0 ? canTeachPartner / partnerTarget.length : 0;
-    score += (maxScore * 0.5) * Math.min(1, canTeachRatio);
+    score += maxScore * 0.5 * Math.min(1, canTeachRatio);
 
     return Math.round(score * 10) / 10;
   }
@@ -239,8 +247,16 @@ export class MatchmakingAlgorithmService {
       return 0;
     }
 
-    const myGoals = new Set(currentUser.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean));
-    const partnerGoals = partner.learning_goals.split(',').map((g) => g.trim().toLowerCase()).filter(Boolean);
+    const myGoals = new Set(
+      currentUser.learning_goals
+        .split(',')
+        .map((g) => g.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const partnerGoals = partner.learning_goals
+      .split(',')
+      .map((g) => g.trim().toLowerCase())
+      .filter(Boolean);
 
     if (myGoals.size === 0 || partnerGoals.length === 0) return 0;
 
