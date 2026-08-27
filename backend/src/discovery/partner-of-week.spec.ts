@@ -215,10 +215,7 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
       return { averageScore: 1, totalRatings: 0 };
     });
     queryBuilder['limit'].mockResolvedValue({
-      data: [
-        makeCandidate('z-one-star'),
-        makeCandidate('a-score-unavailable'),
-      ],
+      data: [makeCandidate('z-one-star'), makeCandidate('a-score-unavailable')],
       error: null,
     });
 
