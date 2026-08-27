@@ -29,7 +29,15 @@ import {
 } from './openapi-fixture-factory';
 
 const UINT32_MAX = 0xffff_ffff;
-const MOCK_RESPONSE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'] as const;
+const MOCK_RESPONSE_METHODS = [
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'options',
+  'head',
+] as const;
 
 class CreateMockResponseFixtureDto {
   @IsString()

@@ -119,7 +119,9 @@ describe('OpenApiFixtureFactoryRegistry', () => {
     expect(first.payload).toEqual(
       expect.objectContaining({
         id: expect.stringMatching(/^[0-9a-f-]{36}$/),
-        avatarUrl: expect.stringMatching(/^http:\/\/127\.0\.0\.1\/mock-fixtures\//),
+        avatarUrl: expect.stringMatching(
+          /^http:\/\/127\.0\.0\.1\/mock-fixtures\//,
+        ),
         metadata: expect.objectContaining({ active: expect.any(Boolean) }),
       }),
     );

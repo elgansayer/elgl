@@ -55,13 +55,9 @@ describe('MockSchemaFixtureClient', () => {
       seed: 7937,
       overrides: { minimumSupportedVersion: '2.0.0' },
     });
-    const request = httpMock.expectOne(
-      'http://127.0.0.1:3000/api/mock/schema-fixtures/responses',
-    );
+    const request = httpMock.expectOne('http://127.0.0.1:3000/api/mock/schema-fixtures/responses');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual(
-      expect.objectContaining({ seed: 7937, path: '/version' }),
-    );
+    expect(request.request.body).toEqual(expect.objectContaining({ seed: 7937, path: '/version' }));
     request.flush({
       descriptor: {
         id: 'GET /version 200',

@@ -23,10 +23,7 @@ function assertThrottledMethod({ file, method, route, limit, ttl }) {
   const source = read(file);
   const preamble = methodPreamble(source, method);
 
-  assert.ok(
-    preamble.includes(route),
-    `${file}:${method} must retain ${route}`,
-  );
+  assert.ok(preamble.includes(route), `${file}:${method} must retain ${route}`);
   assert.ok(
     preamble.includes(`@Throttle({ default: { limit: ${limit}, ttl: ${ttl} } })`),
     `${file}:${method} must retain ${limit} requests per ${ttl}ms throttle`,
@@ -181,12 +178,9 @@ test('registers the Nest throttler globally with the repository default', () => 
 
   assert.match(
     source,
-    /ThrottlerModule\.forRoot\(\[\s*\{\s*ttl:\s*60000,\s*limit:\s*10,?\s*\}\s*\]\)/s,
+    /ThrottlerModule\.forRoot\(\[\s*\{\s*ttl:\s*60000,\s*limit:\s*10,?\s*\},?\s*\]\)/s,
   );
-  assert.match(
-    source,
-    /provide:\s*APP_GUARD,[\s\S]{0,120}useClass:\s*ThrottlerGuard/,
-  );
+  assert.match(source, /provide:\s*APP_GUARD,[\s\S]{0,120}useClass:\s*ThrottlerGuard/);
 });
 
 test('keeps endpoint-specific throttles on sensitive authentication and account lifecycle routes', () => {
@@ -197,9 +191,6 @@ test('keeps endpoint-specific throttles on sensitive authentication and account 
 
 test('documents the executable throttling verification command', () => {
   const docs = read('docs/api-auth-throttling.md');
-  assert.match(
-    docs,
-    /node --test scripts\/auth-throttling-contract\.test\.mjs/,
-  );
+  assert.match(docs, /node --test scripts\/auth-throttling-contract\.test\.mjs/);
   assert.match(docs, /global `APP_GUARD`/);
 });

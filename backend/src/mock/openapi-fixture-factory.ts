@@ -6,7 +6,15 @@ import {
   type DeterministicFixtureGenerator,
 } from './deterministic-fixtures';
 
-const RESPONSE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'] as const;
+const RESPONSE_METHODS = [
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'options',
+  'head',
+] as const;
 const MAX_SCHEMA_DEPTH = 12;
 const MAX_GENERATED_ARRAY_ITEMS = 3;
 const LOCAL_FIXTURE_ORIGIN = 'http://127.0.0.1/mock-fixtures';
@@ -85,7 +93,9 @@ export interface TypedFixtureFactory<T extends object> {
  * required DTO field mandatory in `defaults`, so TypeScript fails compilation
  * when a required field is added without updating the fixture.
  */
-export function defineTypedFixtureFactory<T extends object>(defaults: T): TypedFixtureFactory<T> {
+export function defineTypedFixtureFactory<T extends object>(
+  defaults: T,
+): TypedFixtureFactory<T> {
   const stableDefaults = structuredClone(defaults);
   return {
     defaults: stableDefaults,
@@ -119,7 +129,10 @@ function slugify(value: string): string {
   return slug || 'value';
 }
 
-function resolveJsonPointer(document: OpenApiDocumentLike, ref: string): unknown {
+function resolveJsonPointer(
+  document: OpenApiDocumentLike,
+  ref: string,
+): unknown {
   if (!ref.startsWith('#/')) {
     throw new Error(`External OpenAPI references are not allowed: ${ref}`);
   }
@@ -141,7 +154,10 @@ function resolveSchema(
   context: string,
 ): OpenApiSchemaLike {
   if (!schema.$ref) return schema;
-  return asSchema(resolveJsonPointer(document, schema.$ref), `${context} -> ${schema.$ref}`);
+  return asSchema(
+    resolveJsonPointer(document, schema.$ref),
+    `${context} -> ${schema.$ref}`,
+  );
 }
 
 function responseSchema(
@@ -168,11 +184,15 @@ function responseSchema(
 
   const content = response['content'];
   if (!isRecord(content)) {
-    throw new Error(`OpenAPI response content disappeared for ${descriptor.id}`);
+    throw new Error(
+      `OpenAPI response content disappeared for ${descriptor.id}`,
+    );
   }
   const media = content[descriptor.mediaType];
   if (!isRecord(media)) {
-    throw new Error(`OpenAPI response media type disappeared for ${descriptor.id}`);
+    throw new Error(
+      `OpenAPI response media type disappeared for ${descriptor.id}`,
+    );
   }
   return asSchema(media['schema'], `${descriptor.id} response`);
 }
@@ -190,7 +210,10 @@ function normalizeString(
   context: string,
 ): string {
   const minLength = Math.max(0, schema.minLength ?? 0);
-  const maxLength = Math.max(minLength, schema.maxLength ?? Math.max(64, minLength));
+  const maxLength = Math.max(
+    minLength,
+    schema.maxLength ?? Math.max(64, minLength),
+  );
   let value = raw;
 
   if (value.length < minLength) {
@@ -211,7 +234,9 @@ function normalizeString(
       if (typeof schema.default === 'string' && pattern.test(schema.default)) {
         value = schema.default;
       } else {
-        throw new Error(`Cannot deterministically satisfy OpenAPI pattern at ${context}`);
+        throw new Error(
+          `Cannot deterministically satisfy OpenAPI pattern at ${context}`,
+        );
       }
     }
   }
@@ -260,12 +285,19 @@ function generateString(
   return normalizeString(value, schema, context);
 }
 
-function numericBounds(schema: OpenApiSchemaLike): { min: number; max: number } {
+function numericBounds(schema: OpenApiSchemaLike): {
+  min: number;
+  max: number;
+} {
   let min = Number.isFinite(schema.minimum) ? Number(schema.minimum) : 0;
-  let max = Number.isFinite(schema.maximum) ? Number(schema.maximum) : Math.max(min + 1000, 1000);
+  let max = Number.isFinite(schema.maximum)
+    ? Number(schema.maximum)
+    : Math.max(min + 1000, 1000);
 
-  if (typeof schema.exclusiveMinimum === 'number') min = Math.max(min, schema.exclusiveMinimum + 1);
-  if (typeof schema.exclusiveMaximum === 'number') max = Math.min(max, schema.exclusiveMaximum - 1);
+  if (typeof schema.exclusiveMinimum === 'number')
+    min = Math.max(min, schema.exclusiveMinimum + 1);
+  if (typeof schema.exclusiveMaximum === 'number')
+    max = Math.min(max, schema.exclusiveMaximum - 1);
   if (schema.exclusiveMinimum === true) min += 1;
   if (schema.exclusiveMaximum === true) max -= 1;
   if (max < min) {
@@ -294,7 +326,9 @@ function generateSchemaValue(
   refStack: string[] = [],
 ): unknown {
   if (depth > MAX_SCHEMA_DEPTH) {
-    throw new Error(`OpenAPI fixture schema exceeded ${MAX_SCHEMA_DEPTH} levels at ${context}`);
+    throw new Error(
+      `OpenAPI fixture schema exceeded ${MAX_SCHEMA_DEPTH} levels at ${context}`,
+    );
   }
 
   if (schemaInput.$ref) {
@@ -319,16 +353,37 @@ function generateSchemaValue(
   if (schema.allOf && schema.allOf.length > 0) {
     return mergeGeneratedObjects(
       schema.allOf.map((part, index) =>
-        generateSchemaValue(document, part, generator, `${context}.allOf[${index}]`, depth + 1, refStack),
+        generateSchemaValue(
+          document,
+          part,
+          generator,
+          `${context}.allOf[${index}]`,
+          depth + 1,
+          refStack,
+        ),
       ),
       context,
     );
   }
   if (schema.oneOf && schema.oneOf.length > 0) {
-    return generateSchemaValue(document, schema.oneOf[0], generator, `${context}.oneOf[0]`, depth + 1, refStack);
+    return generateSchemaValue(
+      document,
+      schema.oneOf[0],
+      generator,
+      `${context}.oneOf[0]`,
+      depth + 1,
+      refStack,
+    );
   }
   if (schema.anyOf && schema.anyOf.length > 0) {
-    return generateSchemaValue(document, schema.anyOf[0], generator, `${context}.anyOf[0]`, depth + 1, refStack);
+    return generateSchemaValue(
+      document,
+      schema.anyOf[0],
+      generator,
+      `${context}.anyOf[0]`,
+      depth + 1,
+      refStack,
+    );
   }
 
   switch (inferSchemaType(schema)) {
@@ -351,12 +406,17 @@ function generateSchemaValue(
       const required = schema.required ?? [];
       for (const requiredProperty of required) {
         if (!(requiredProperty in result)) {
-          throw new Error(`Required OpenAPI response property has no schema: ${context}.${requiredProperty}`);
+          throw new Error(
+            `Required OpenAPI response property has no schema: ${context}.${requiredProperty}`,
+          );
         }
       }
 
       const minProperties = Math.max(0, schema.minProperties ?? 0);
-      if (Object.keys(result).length < minProperties && isRecord(schema.additionalProperties)) {
+      if (
+        Object.keys(result).length < minProperties &&
+        isRecord(schema.additionalProperties)
+      ) {
         while (Object.keys(result).length < minProperties) {
           const propertyName = `fixture_${Object.keys(result).length + 1}`;
           result[propertyName] = generateSchemaValue(
@@ -372,12 +432,27 @@ function generateSchemaValue(
       return result;
     }
     case 'array': {
-      if (!schema.items) throw new Error(`OpenAPI array is missing items at ${context}`);
+      if (!schema.items)
+        throw new Error(`OpenAPI array is missing items at ${context}`);
       const minItems = Math.max(0, schema.minItems ?? 1);
-      const maxItems = Math.max(minItems, schema.maxItems ?? MAX_GENERATED_ARRAY_ITEMS);
-      const count = Math.min(MAX_GENERATED_ARRAY_ITEMS, maxItems, Math.max(1, minItems));
+      const maxItems = Math.max(
+        minItems,
+        schema.maxItems ?? MAX_GENERATED_ARRAY_ITEMS,
+      );
+      const count = Math.min(
+        MAX_GENERATED_ARRAY_ITEMS,
+        maxItems,
+        Math.max(1, minItems),
+      );
       return Array.from({ length: count }, (_, index) =>
-        generateSchemaValue(document, schema.items!, generator, `${context}[${index}]`, depth + 1, refStack),
+        generateSchemaValue(
+          document,
+          schema.items!,
+          generator,
+          `${context}[${index}]`,
+          depth + 1,
+          refStack,
+        ),
       );
     }
     case 'string':
@@ -396,7 +471,9 @@ function generateSchemaValue(
       if (schema.default !== undefined) return structuredClone(schema.default);
       return {};
     default:
-      throw new Error(`Unsupported OpenAPI schema type '${schema.type}' at ${context}`);
+      throw new Error(
+        `Unsupported OpenAPI schema type '${schema.type}' at ${context}`,
+      );
   }
 }
 
@@ -407,7 +484,8 @@ function validateSchemaValue(
   context: string,
   depth = 0,
 ): void {
-  if (depth > MAX_SCHEMA_DEPTH) throw new Error(`OpenAPI validation exceeded depth at ${context}`);
+  if (depth > MAX_SCHEMA_DEPTH)
+    throw new Error(`OpenAPI validation exceeded depth at ${context}`);
   const schema = resolveSchema(document, schemaInput, context);
 
   if (value === null && schema.nullable) return;
@@ -416,65 +494,107 @@ function validateSchemaValue(
   }
   if (schema.allOf) {
     schema.allOf.forEach((part, index) =>
-      validateSchemaValue(document, part, value, `${context}.allOf[${index}]`, depth + 1),
+      validateSchemaValue(
+        document,
+        part,
+        value,
+        `${context}.allOf[${index}]`,
+        depth + 1,
+      ),
     );
     return;
   }
   if (schema.oneOf) {
     const successes = schema.oneOf.filter((part, index) => {
       try {
-        validateSchemaValue(document, part, value, `${context}.oneOf[${index}]`, depth + 1);
+        validateSchemaValue(
+          document,
+          part,
+          value,
+          `${context}.oneOf[${index}]`,
+          depth + 1,
+        );
         return true;
       } catch {
         return false;
       }
     });
-    if (successes.length === 0) throw new Error(`Fixture does not satisfy OpenAPI oneOf at ${context}`);
+    if (successes.length === 0)
+      throw new Error(`Fixture does not satisfy OpenAPI oneOf at ${context}`);
     return;
   }
   if (schema.anyOf) {
     const valid = schema.anyOf.some((part, index) => {
       try {
-        validateSchemaValue(document, part, value, `${context}.anyOf[${index}]`, depth + 1);
+        validateSchemaValue(
+          document,
+          part,
+          value,
+          `${context}.anyOf[${index}]`,
+          depth + 1,
+        );
         return true;
       } catch {
         return false;
       }
     });
-    if (!valid) throw new Error(`Fixture does not satisfy OpenAPI anyOf at ${context}`);
+    if (!valid)
+      throw new Error(`Fixture does not satisfy OpenAPI anyOf at ${context}`);
     return;
   }
 
   switch (inferSchemaType(schema)) {
     case 'object': {
-      if (!isRecord(value)) throw new Error(`Expected object fixture at ${context}`);
+      if (!isRecord(value))
+        throw new Error(`Expected object fixture at ${context}`);
       for (const requiredProperty of schema.required ?? []) {
         if (!(requiredProperty in value)) {
-          throw new Error(`Missing required fixture property ${context}.${requiredProperty}`);
+          throw new Error(
+            `Missing required fixture property ${context}.${requiredProperty}`,
+          );
         }
       }
       const properties = schema.properties ?? {};
       for (const [key, childValue] of Object.entries(value)) {
         const childSchema = properties[key];
         if (childSchema) {
-          validateSchemaValue(document, childSchema, childValue, `${context}.${key}`, depth + 1);
+          validateSchemaValue(
+            document,
+            childSchema,
+            childValue,
+            `${context}.${key}`,
+            depth + 1,
+          );
         } else if (schema.additionalProperties === false) {
           throw new Error(`Unexpected fixture property ${context}.${key}`);
         } else if (isRecord(schema.additionalProperties)) {
-          validateSchemaValue(document, schema.additionalProperties, childValue, `${context}.${key}`, depth + 1);
+          validateSchemaValue(
+            document,
+            schema.additionalProperties,
+            childValue,
+            `${context}.${key}`,
+            depth + 1,
+          );
         }
       }
       const propertyCount = Object.keys(value).length;
-      if (schema.minProperties !== undefined && propertyCount < schema.minProperties) {
+      if (
+        schema.minProperties !== undefined &&
+        propertyCount < schema.minProperties
+      ) {
         throw new Error(`Too few fixture properties at ${context}`);
       }
-      if (schema.maxProperties !== undefined && propertyCount > schema.maxProperties) {
+      if (
+        schema.maxProperties !== undefined &&
+        propertyCount > schema.maxProperties
+      ) {
         throw new Error(`Too many fixture properties at ${context}`);
       }
       return;
     }
     case 'array': {
-      if (!Array.isArray(value)) throw new Error(`Expected array fixture at ${context}`);
+      if (!Array.isArray(value))
+        throw new Error(`Expected array fixture at ${context}`);
       if (schema.minItems !== undefined && value.length < schema.minItems) {
         throw new Error(`Too few fixture items at ${context}`);
       }
@@ -483,13 +603,20 @@ function validateSchemaValue(
       }
       if (schema.items) {
         value.forEach((entry, index) =>
-          validateSchemaValue(document, schema.items!, entry, `${context}[${index}]`, depth + 1),
+          validateSchemaValue(
+            document,
+            schema.items!,
+            entry,
+            `${context}[${index}]`,
+            depth + 1,
+          ),
         );
       }
       return;
     }
     case 'string': {
-      if (typeof value !== 'string') throw new Error(`Expected string fixture at ${context}`);
+      if (typeof value !== 'string')
+        throw new Error(`Expected string fixture at ${context}`);
       if (schema.minLength !== undefined && value.length < schema.minLength) {
         throw new Error(`Fixture string is shorter than schema at ${context}`);
       }
@@ -497,12 +624,15 @@ function validateSchemaValue(
         throw new Error(`Fixture string is longer than schema at ${context}`);
       }
       if (schema.pattern && !new RegExp(schema.pattern, 'u').test(value)) {
-        throw new Error(`Fixture string does not match schema pattern at ${context}`);
+        throw new Error(
+          `Fixture string does not match schema pattern at ${context}`,
+        );
       }
       return;
     }
     case 'integer':
-      if (!Number.isInteger(value)) throw new Error(`Expected integer fixture at ${context}`);
+      if (!Number.isInteger(value))
+        throw new Error(`Expected integer fixture at ${context}`);
       break;
     case 'number':
       if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -510,7 +640,8 @@ function validateSchemaValue(
       }
       break;
     case 'boolean':
-      if (typeof value !== 'boolean') throw new Error(`Expected boolean fixture at ${context}`);
+      if (typeof value !== 'boolean')
+        throw new Error(`Expected boolean fixture at ${context}`);
       return;
     default:
       return;
@@ -529,20 +660,25 @@ function validateSchemaValue(
 function deepMerge(base: unknown, overrides: JsonRecord | undefined): unknown {
   if (!overrides) return base;
   if (!isRecord(base)) {
-    throw new Error('Overrides are only supported for object response fixtures');
+    throw new Error(
+      'Overrides are only supported for object response fixtures',
+    );
   }
 
   const result: JsonRecord = structuredClone(base);
   for (const [key, overrideValue] of Object.entries(overrides)) {
     const baseValue = result[key];
-    result[key] = isRecord(baseValue) && isRecord(overrideValue)
-      ? deepMerge(baseValue, overrideValue)
-      : structuredClone(overrideValue);
+    result[key] =
+      isRecord(baseValue) && isRecord(overrideValue)
+        ? deepMerge(baseValue, overrideValue)
+        : structuredClone(overrideValue);
   }
   return result;
 }
 
-function discoverResponseFactories(document: OpenApiDocumentLike): PublicResponseFactoryDescriptor[] {
+function discoverResponseFactories(
+  document: OpenApiDocumentLike,
+): PublicResponseFactoryDescriptor[] {
   const descriptors: PublicResponseFactoryDescriptor[] = [];
 
   for (const path of Object.keys(document.paths).sort()) {
@@ -565,13 +701,21 @@ function discoverResponseFactories(document: OpenApiDocumentLike): PublicRespons
 
         const content = response['content'];
         const mediaType = Object.keys(content).find(
-          (candidate) => candidate === 'application/json' || candidate.endsWith('+json'),
+          (candidate) =>
+            candidate === 'application/json' || candidate.endsWith('+json'),
         );
-        if (!mediaType || !isRecord(content[mediaType]) || !isRecord(content[mediaType]['schema'])) {
+        if (
+          !mediaType ||
+          !isRecord(content[mediaType]) ||
+          !isRecord(content[mediaType]['schema'])
+        ) {
           continue;
         }
 
-        const operationId = typeof operation['operationId'] === 'string' ? operation['operationId'] : undefined;
+        const operationId =
+          typeof operation['operationId'] === 'string'
+            ? operation['operationId']
+            : undefined;
         descriptors.push({
           id: `${method.toUpperCase()} ${path} ${status}`,
           method,
@@ -594,7 +738,9 @@ export class OpenApiFixtureFactoryRegistry {
 
   registerDocument(document: unknown): void {
     if (!isRecord(document) || !isRecord(document['paths'])) {
-      throw new Error('Cannot register invalid OpenAPI document for mock fixtures');
+      throw new Error(
+        'Cannot register invalid OpenAPI document for mock fixtures',
+      );
     }
     this.document = document as OpenApiDocumentLike;
     this.descriptors = discoverResponseFactories(this.document);
@@ -605,21 +751,32 @@ export class OpenApiFixtureFactoryRegistry {
     return structuredClone(this.descriptors);
   }
 
-  createResponseFixture(input: CreatePublicResponseFixtureInput): CreatedPublicResponseFixture {
+  createResponseFixture(
+    input: CreatePublicResponseFixtureInput,
+  ): CreatedPublicResponseFixture {
     const document = this.assertReady();
     const method = input.method.trim().toLowerCase();
     const descriptor = this.descriptors.find(
       (candidate) =>
-        candidate.method === method && candidate.path === input.path && candidate.status === input.status,
+        candidate.method === method &&
+        candidate.path === input.path &&
+        candidate.status === input.status,
     );
     if (!descriptor) {
-      throw new Error('Requested response fixture is not present in the authoritative OpenAPI document');
+      throw new Error(
+        'Requested response fixture is not present in the authoritative OpenAPI document',
+      );
     }
 
     const seed = input.seed ?? resolveMockFixtureSeed();
     const generator = createDeterministicFixtureGenerator(seed);
     const schema = responseSchema(document, descriptor);
-    const generated = generateSchemaValue(document, schema, generator, descriptor.id);
+    const generated = generateSchemaValue(
+      document,
+      schema,
+      generator,
+      descriptor.id,
+    );
     const payload = deepMerge(generated, input.overrides);
     validateSchemaValue(document, schema, payload, descriptor.id);
     const diagnostics = getMockFixtureDiagnostics(seed);

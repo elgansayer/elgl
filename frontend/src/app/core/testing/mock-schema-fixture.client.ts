@@ -51,7 +51,9 @@ export class MockSchemaFixtureClient {
   async listResponseFactories(): Promise<MockResponseFactoryDescriptor[]> {
     this.assertMockMode();
     const response = await firstValueFrom(
-      this.http.get<unknown>(`${this.configuration.config.apiEndpoint}/mock/schema-fixtures/responses`),
+      this.http.get<unknown>(
+        `${this.configuration.config.apiEndpoint}/mock/schema-fixtures/responses`,
+      ),
     );
     if (!isRecord(response) || !Array.isArray(response['factories'])) {
       throw new Error('Invalid mock response factory index');
@@ -63,7 +65,9 @@ export class MockSchemaFixtureClient {
     return factories;
   }
 
-  async createResponseFixture(request: MockResponseFixtureRequest): Promise<MockResponseFixtureResult> {
+  async createResponseFixture(
+    request: MockResponseFixtureRequest,
+  ): Promise<MockResponseFixtureResult> {
     this.assertMockMode();
     if (!/^\/[A-Za-z0-9_{}./:-]{0,255}$/.test(request.path) || !/^2\d\d$/.test(request.status)) {
       throw new Error('Invalid mock response fixture request');

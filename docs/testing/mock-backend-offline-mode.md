@@ -10,12 +10,12 @@ Mock fixtures are an explicit local/test/demo facility. They are never a depende
 
 The backend accepts these `MOCK_BACKEND_MODE` values:
 
-| Value | Meaning |
-| --- | --- |
+| Value      | Meaning                                |
+| ---------- | -------------------------------------- |
 | `disabled` | Default. Mock backend behavior is off. |
-| `local` | Explicit local development profile. |
-| `test` | Explicit automated-test profile. |
-| `demo` | Explicit offline/demo profile. |
+| `local`    | Explicit local development profile.    |
+| `test`     | Explicit automated-test profile.       |
+| `demo`     | Explicit offline/demo profile.         |
 
 Fixture-enabled values are accepted only with `NODE_ENV=development` or `NODE_ENV=test`. `NODE_ENV=production` and `NODE_ENV=provision` refuse to start when an enabled mock mode is supplied. Unknown values also fail startup validation.
 
