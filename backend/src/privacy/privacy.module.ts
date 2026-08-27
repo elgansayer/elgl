@@ -5,11 +5,17 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { SafetyModule } from '../safety/safety.module';
 import { DataScrubbingService } from './data-scrubbing.service';
 import { PrivacyArchiveCron } from './privacy-archive.cron';
+import { PrivacyLifecycleService } from './privacy-lifecycle.service';
 
 @Module({
   imports: [SupabaseModule, SafetyModule],
   controllers: [PrivacyController],
-  providers: [PrivacyService, DataScrubbingService, PrivacyArchiveCron],
-  exports: [PrivacyService, DataScrubbingService],
+  providers: [
+    PrivacyService,
+    PrivacyLifecycleService,
+    DataScrubbingService,
+    PrivacyArchiveCron,
+  ],
+  exports: [PrivacyService, PrivacyLifecycleService, DataScrubbingService],
 })
 export class PrivacyModule {}
