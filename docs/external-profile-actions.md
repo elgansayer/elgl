@@ -11,7 +11,7 @@ Issue #1238 is implemented by the existing `UserDetailComponent` external-profil
 
 ## Security and privacy
 
-The backend remains authoritative for relationship and room authorization. The direct-conversation client now fails closed before network access when the target identifier is malformed or there is no authenticated access token. Returned room identifiers are treated as untrusted and must be UUID v4 values before they are used for navigation.
+The backend remains authoritative for relationship and room authorization. The direct-conversation client now fails closed before network access when the target identifier is malformed or there is no authenticated access token. Returned room identifiers are treated as untrusted and must be valid UUID values before they are used for navigation.
 
 No message text, profile content, access token, target identifier, or provider error is added to application logs by these actions. The action state is presentation state only; relationship and room membership remain server-owned.
 
