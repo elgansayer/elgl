@@ -1,172 +1,122 @@
-import {
-  Component,
-  ElementRef,
-  DestroyRef,
-  Injector,
-  afterNextRender,
-  inject,
-  input,
-  signal,
-  viewChild,
-  OnInit,
-} from '@angular/core';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { Component, computed, inject, input } from '@angular/core';
+import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 
-interface LiveMessage {
+const MAX_OVERLAY_MESSAGES = 30;
+const MAX_MESSAGE_ID_LENGTH = 128;
+const MAX_SENDER_NAME_LENGTH = 80;
+const MAX_MESSAGE_TEXT_LENGTH = 500;
+
+export interface LiveOverlayMessage {
   id: string;
   senderName: string;
   text: string;
-  timestamp: number;
 }
 
-interface CentrifugoMessageData {
-  type?: string;
-  id?: string;
-  senderName?: string;
-  content: string;
+function boundedText(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return Array.from(trimmed).slice(0, maxLength).join('');
+}
+
+/**
+ * Treat room-chat state as an untrusted realtime boundary before rendering it
+ * over video. The canonical AudioRoomsStore owns the Centrifugo subscription;
+ * this component only derives a small, bounded visual projection from it.
+ */
+export function buildLiveOverlayMessages(
+  values: readonly unknown[],
+  fallbackSenderName: string,
+): LiveOverlayMessage[] {
+  const fallbackSender =
+    boundedText(fallbackSenderName, MAX_SENDER_NAME_LENGTH) ?? 'User';
+  const result: LiveOverlayMessage[] = [];
+  const seenIds = new Set<string>();
+
+  for (let index = values.length - 1; index >= 0 && result.length < MAX_OVERLAY_MESSAGES; index--) {
+    const value = values[index];
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) continue;
+
+    const record = value as Record<string, unknown>;
+    const id = boundedText(record['id'], MAX_MESSAGE_ID_LENGTH);
+    const text = boundedText(record['text_content'], MAX_MESSAGE_TEXT_LENGTH);
+    if (!id || !text || seenIds.has(id)) continue;
+
+    const senderName = boundedText(record['sender_name'], MAX_SENDER_NAME_LENGTH) ?? fallbackSender;
+    seenIds.add(id);
+    result.push({ id, senderName, text });
+  }
+
+  return result.reverse();
 }
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [TranslatePipe],
   template: `
-    <!-- Overlay container positioned at the bottom of the video stream -->
-    <div
-      class="absolute bottom-0 start-0 w-full h-48 sm:h-60 md:h-72 p-3 sm:p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
-      role="complementary"
-      [attr.aria-label]="'liveChat.overlayAria' | t"
-    >
-      <!-- Scrollable message list with top-fade mask -->
+    @if (messages().length > 0) {
       <div
-        #scrollContainer
-        class="overflow-y-auto flex flex-col gap-2 sm:gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
-        role="log"
-        aria-live="polite"
-        [attr.aria-label]="'liveChat.overlayAria' | t"
+        class="absolute inset-x-0 bottom-0 z-50 flex h-48 flex-col justify-end bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 pointer-events-none sm:h-60 sm:p-4 md:h-72"
+        aria-hidden="true"
+        data-testid="live-chat-overlay"
       >
-        @for (msg of messages(); track msg.id) {
-          <div
-            class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
-          >
-            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
-              msg.senderName
-            }}</span>
-            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
-              msg.text
-            }}</span>
-          </div>
-        }
+        <div class="flex max-h-full flex-col justify-end gap-2 overflow-hidden pb-2 sm:gap-3">
+          @for (msg of messages(); track msg.id) {
+            <div
+              class="live-comment max-w-[90%] rounded-card border border-white/10 bg-black/50 p-2 shadow-sm backdrop-blur-md sm:max-w-[85%] sm:p-2.5"
+              dir="auto"
+            >
+              <span class="mb-0.5 block text-[10px] font-semibold text-white/70 sm:text-xs">{{
+                msg.senderName
+              }}</span>
+              <span class="block break-words text-xs leading-snug text-white sm:text-sm">{{
+                msg.text
+              }}</span>
+            </div>
+          }
+        </div>
       </div>
-    </div>
+    }
   `,
   styles: [
     `
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
+      .live-comment {
+        animation: liveCommentEnter 180ms ease-out both;
       }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      .mask-image-fade-top {
-        mask-image: linear-gradient(to bottom, transparent, black 25%);
-        -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%);
-      }
-      @keyframes fadeInSlideUp {
+
+      @keyframes liveCommentEnter {
         from {
           opacity: 0;
-          transform: translateY(12px) scale(0.98);
+          transform: translateY(0.5rem);
         }
         to {
           opacity: 1;
-          transform: translateY(0) scale(1);
+          transform: translateY(0);
         }
       }
-      .animate-fade-in {
-        animation: fadeInSlideUp 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+
+      @media (prefers-reduced-motion: reduce) {
+        .live-comment {
+          animation: none;
+        }
       }
     `,
   ],
 })
-export class LiveChatOverlayComponent implements OnInit {
-  roomId = input<string>('');
+export class LiveChatOverlayComponent {
+  readonly roomId = input<string>('');
 
-  private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
+  private readonly store = inject(AudioRoomsStore);
+  private readonly i18n = inject(I18nService);
 
-  centrifugo = inject(CentrifugoService);
-  i18n = inject(I18nService);
-  destroyRef = inject(DestroyRef);
-  private injector = inject(Injector);
+  readonly messages = computed(() => {
+    const requestedRoomId = this.roomId().trim();
+    const activeRoomId = this.store.currentRoom()?.id;
+    if (!requestedRoomId || requestedRoomId !== activeRoomId) return [];
 
-  messages = signal<LiveMessage[]>([]);
-  channelName = '';
-  subscription: unknown = null;
-
-  // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
-  ngOnInit() {
-    const id = this.roomId();
-    if (!id) return;
-
-    this.channelName = `room_${id}`;
-
-    this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
-        if (typeof value !== 'object' || value === null) return false;
-        if (!('type' in value) || !('content' in value)) return false;
-        const type = value.type;
-        const content = value.content;
-        return typeof type === 'string' && typeof content === 'string';
-      };
-
-      if (!isCentrifugoMessageData(data)) return;
-
-      const event = data;
-
-      if (event.type === 'text') {
-        this.addMessage({
-          id: event.id || crypto.randomUUID(),
-          senderName: event.senderName || this.i18n.translate('common.user'),
-          text: event.content,
-          timestamp: Date.now(),
-        });
-      }
-    });
-  }
-
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      if (this.channelName) {
-        this.centrifugo.unsubscribe(this.channelName);
-      }
-    });
-  }
-
-  addMessage(msg: LiveMessage) {
-    this.messages.update((msgs) => {
-      const newMsgs = [...msgs, msg];
-      // Cap at 50 messages to maintain 60 FPS rendering performance
-      if (newMsgs.length > 50) {
-        newMsgs.shift();
-      }
-      return newMsgs;
-    });
-    this.scrollToBottom();
-  }
-
-  scrollToBottom() {
-    afterNextRender(
-      () => {
-        const el = this.scrollContainer()?.nativeElement;
-        if (el) {
-          el.scrollTo({
-            top: el.scrollHeight,
-            behavior: 'smooth',
-          });
-        }
-      },
-      { injector: this.injector },
+    return buildLiveOverlayMessages(
+      this.store.roomMessages(),
+      this.i18n.translate('common.user'),
     );
-  }
+  });
 }
