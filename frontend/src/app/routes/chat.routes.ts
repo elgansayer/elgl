@@ -9,7 +9,9 @@ export const chatRoutes: Routes = [
   {
     path: 'chat/:id',
     loadComponent: () =>
-      import('../components/chat-room/chat-room.component').then((m) => m.ChatRoomComponent),
+      import('../pages/chat-room-page/chat-room-page.component').then(
+        (m) => m.ChatRoomPageComponent,
+      ),
   },
   {
     path: 'chat-settings',
