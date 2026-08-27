@@ -105,13 +105,13 @@ export function collectSsrCompatibilityFailures(files) {
 
   requireMatch(
     serverConfig,
-    /mergeApplicationConfig\s*\(\s*appConfig\s*,\s*serverConfig\s*\)/,
+    /mergeApplicationConfig\s*\(\s*appConfig\s*,\s*serverConfig\s*,?\s*\)/,
     'app.config.server.ts: server configuration must merge the shared appConfig',
     failures,
   );
   requireMatch(
     serverConfig,
-    /provideServerRendering\s*\(\s*withRoutes\s*\(\s*serverRoutes\s*\)\s*\)/,
+    /provideServerRendering\s*\(\s*withRoutes\s*\(\s*serverRoutes\s*\)\s*,?\s*\)/,
     'app.config.server.ts: provideServerRendering(withRoutes(serverRoutes)) is required',
     failures,
   );
