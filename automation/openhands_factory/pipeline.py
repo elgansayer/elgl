@@ -1578,7 +1578,7 @@ class FactoryPipeline:
         # every task needs; the issue body already carries whatever
         # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md")):
+        for relative in (Path("AGENTS.md"),):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))
