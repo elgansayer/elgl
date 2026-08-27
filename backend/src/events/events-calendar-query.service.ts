@@ -58,75 +58,83 @@ export class EventsCalendarQueryService {
     );
     const client = this.supabaseService.getClient();
 
-    const hostedRequest = client
-      .from('events')
-      .select('*, host:host_id(display_name, avatar_url)')
-      .eq('host_id', userId)
-      .eq('is_cancelled', false)
-      .gte('date_time', fromDate)
-      .lte('date_time', toDate)
-      .order('date_time', { ascending: true })
-      .limit(limit);
-
-    const rsvpRequest = client
-      .from('event_rsvps')
-      .select('event:events!inner(*, host:host_id(display_name, avatar_url))')
-      .eq('user_id', userId)
-      .eq('event.is_cancelled', false)
-      .gte('event.date_time', fromDate)
-      .lte('event.date_time', toDate)
-      .limit(limit);
-
-    let hostedResult: CalendarQueryResult;
-    let rsvpResult: CalendarQueryResult;
     try {
-      [hostedResult, rsvpResult] = (await Promise.all([
-        hostedRequest,
-        rsvpRequest,
+      const [hostedResult, rsvpResult] = (await Promise.all([
+        client
+          .from('events')
+          .select('*, host:host_id(display_name, avatar_url)')
+          .eq('host_id', userId)
+          .eq('is_cancelled', false)
+          .gte('date_time', fromDate)
+          .lte('date_time', toDate)
+          .order('date_time', { ascending: true })
+          .limit(limit),
+        client
+          .from('event_rsvps')
+          .select('event_id')
+          .eq('user_id', userId)
+          .limit(limit),
       ])) as [CalendarQueryResult, CalendarQueryResult];
-    } catch {
+
+      if (hostedResult.error || rsvpResult.error) {
+        throw new Error('calendar source unavailable');
+      }
+
+      const rsvpIds = this.extractRsvpIds(rsvpResult.data);
+      let rsvpEvents: CalendarEventRecord[] = [];
+      if (rsvpIds.length > 0) {
+        const rsvpEventsResult = (await client
+          .from('events')
+          .select('*, host:host_id(display_name, avatar_url)')
+          .in('id', rsvpIds)
+          .eq('is_cancelled', false)
+          .gte('date_time', fromDate)
+          .lte('date_time', toDate)
+          .order('date_time', { ascending: true })
+          .limit(limit)) as CalendarQueryResult;
+
+        if (rsvpEventsResult.error) {
+          throw new Error('calendar event lookup unavailable');
+        }
+        rsvpEvents = this.extractEvents(rsvpEventsResult.data);
+      }
+
+      const byId = new Map<string, CalendarEventRecord>();
+      for (const candidate of this.extractEvents(hostedResult.data)) {
+        byId.set(candidate.id, candidate);
+      }
+      for (const candidate of rsvpEvents) {
+        byId.set(candidate.id, candidate);
+      }
+
+      return [...byId.values()]
+        .filter((event) => event.is_cancelled !== true)
+        .sort((a, b) => Date.parse(a.date_time) - Date.parse(b.date_time))
+        .slice(0, limit)
+        .map((event) => this.toPublicEvent(event));
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       this.logger.warn('User events calendar query failed');
       throw new ServiceUnavailableException('Calendar unavailable');
     }
-
-    if (hostedResult.error || rsvpResult.error) {
-      this.logger.warn('User events calendar query failed');
-      throw new ServiceUnavailableException('Calendar unavailable');
-    }
-
-    const byId = new Map<string, CalendarEventRecord>();
-    for (const candidate of this.extractHostedEvents(hostedResult.data)) {
-      byId.set(candidate.id, candidate);
-    }
-    for (const candidate of this.extractRsvpEvents(rsvpResult.data)) {
-      byId.set(candidate.id, candidate);
-    }
-
-    return [...byId.values()]
-      .filter((event) => event.is_cancelled !== true)
-      .sort((a, b) => Date.parse(a.date_time) - Date.parse(b.date_time))
-      .slice(0, limit)
-      .map((event) => this.toPublicEvent(event));
   }
 
-  private extractHostedEvents(data: unknown): CalendarEventRecord[] {
+  private extractRsvpIds(data: unknown): string[] {
+    if (!Array.isArray(data)) return [];
+    const ids = new Set<string>();
+    for (const row of data) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+      const id = (row as Record<string, unknown>)['event_id'];
+      if (typeof id === 'string' && id.length > 0) ids.add(id);
+    }
+    return [...ids].slice(0, MAX_CALENDAR_LIMIT);
+  }
+
+  private extractEvents(data: unknown): CalendarEventRecord[] {
     if (!Array.isArray(data)) return [];
     return data
       .map((value) => this.asEvent(value))
       .filter((value): value is CalendarEventRecord => value !== null);
-  }
-
-  private extractRsvpEvents(data: unknown): CalendarEventRecord[] {
-    if (!Array.isArray(data)) return [];
-    const events: CalendarEventRecord[] = [];
-    for (const row of data) {
-      if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
-      const rawEvent = (row as Record<string, unknown>)['event'];
-      const candidate = Array.isArray(rawEvent) ? rawEvent[0] : rawEvent;
-      const event = this.asEvent(candidate);
-      if (event) events.push(event);
-    }
-    return events;
   }
 
   private asEvent(value: unknown): CalendarEventRecord | null {
@@ -154,8 +162,12 @@ export class EventsCalendarQueryService {
     const { host: _host, ...rest } = event;
     return {
       ...rest,
-      host_name: typeof host?.['display_name'] === 'string' ? host['display_name'] : null,
-      host_avatar_url: typeof host?.['avatar_url'] === 'string' ? host['avatar_url'] : null,
+      host_name:
+        typeof host?.['display_name'] === 'string'
+          ? host['display_name']
+          : null,
+      host_avatar_url:
+        typeof host?.['avatar_url'] === 'string' ? host['avatar_url'] : null,
     };
   }
 }
