@@ -24,6 +24,16 @@ function mobileNavigationTemplate(): string {
   return template.slice(start, end);
 }
 
+function topBarTemplate(): string {
+  const start = template.indexOf('<!-- Top Bar with Theme Selector -->');
+  const end = template.indexOf('<app-toast />');
+
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+
+  return template.slice(start, end);
+}
+
 describe('primary navigation unread contract', () => {
   it('renders the five primary mobile destinations in order', () => {
     const navigation = mobileNavigationTemplate();
@@ -41,6 +51,27 @@ describe('primary navigation unread contract', () => {
       expect(navigation).toContain(`unreadCounter.tabCount('${tab}')`);
       expect(navigation).toContain(`unreadCounter.badgeText('${tab}')`);
     }
+  });
+
+  it('renders a top-level notification badge from totalUnread()', () => {
+    const topBar = topBarTemplate();
+
+    expect(topBar).toContain('routerLink="/notifications"');
+    expect(topBar).toContain('@if (unreadCounter.totalUnread() > 0)');
+    expect(topBar).toContain(
+      "unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread()",
+    );
+  });
+
+  it('keeps the total unread badge visually hidden when there is no unread activity', () => {
+    const topBar = topBarTemplate();
+    const totalUnreadCondition = '@if (unreadCounter.totalUnread() > 0)';
+    const totalUnreadBadge = topBar.slice(topBar.indexOf(totalUnreadCondition));
+
+    expect(topBar.indexOf(totalUnreadCondition)).toBeGreaterThanOrEqual(0);
+    expect(totalUnreadBadge).toContain('bg-danger');
+    expect(totalUnreadBadge).toContain('text-on-fill');
+    expect(totalUnreadBadge).toContain('min-w-[18px]');
   });
 
   it('binds desktop navigation badges to the same shared service', () => {
