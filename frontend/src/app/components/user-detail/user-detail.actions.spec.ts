@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { AuthService } from '../../services/auth.service';
@@ -38,6 +38,7 @@ function makeProfile(partial: Partial<UserProfile> = {}): UserProfile {
 describe('UserDetailComponent external profile actions', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
+  let router: Router;
   let getUserProfile: ReturnType<typeof vi.fn>;
   let follow: ReturnType<typeof vi.fn>;
   let unfollow: ReturnType<typeof vi.fn>;
@@ -104,6 +105,7 @@ describe('UserDetailComponent external profile actions', () => {
 
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
+    router = TestBed.inject(Router);
   });
 
   it('renders direct Send Message and Follow actions for an external profile', async () => {
@@ -122,6 +124,43 @@ describe('UserDetailComponent external profile actions', () => {
     expect(chatButton).toBeDefined();
     expect(followButton).not.toBeNull();
     expect(followButton?.textContent?.trim()).toBe('userProfile.follow');
+  });
+
+  it('does not render follow or message actions on the current users own profile', async () => {
+    await render(makeProfile({ id: 'current-user' }));
+
+    expect(fixture.nativeElement.querySelector('button[aria-label="userProfile.follow"]')).toBeNull();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    );
+    expect(buttons.some((button) => button.textContent?.trim() === 'chatList.tapToChat')).toBe(false);
+  });
+
+  it('opens the canonical direct conversation and navigates to the returned room', async () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await render(makeProfile());
+
+    await component.openConversation();
+
+    expect(openOrCreate).toHaveBeenCalledTimes(1);
+    expect(openOrCreate).toHaveBeenCalledWith('partner-1');
+    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(component.chatErrorKey()).toBe('');
+    expect(component.isOpeningChat()).toBe(false);
+  });
+
+  it('keeps the profile usable and exposes retryable status when opening chat fails', async () => {
+    openOrCreate.mockRejectedValue(new Error('provider unavailable'));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    await render(makeProfile());
+
+    await component.openConversation();
+    fixture.detectChanges();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(component.chatErrorKey()).toBe('common.error_generic');
+    expect(component.isOpeningChat()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="status"]')).not.toBeNull();
   });
 
   it('follows the displayed partner and updates the action state', async () => {
