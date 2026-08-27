@@ -127,6 +127,24 @@ def test_adaptive_recovery_delay_caps_at_persisted_retry_maximum() -> None:
     assert delay == MAX_PERSISTED_RETRY_DELAY
 
 
+def test_explicit_long_base_recovery_window_is_never_shortened() -> None:
+    long_base = timedelta(hours=48)
+
+    first = quarantine_recovery_delay(
+        long_base,
+        repeated_failure_count=3,
+        repeated_failure_limit=3,
+    )
+    repeated = quarantine_recovery_delay(
+        long_base,
+        repeated_failure_count=1000,
+        repeated_failure_limit=3,
+    )
+
+    assert first == long_base
+    assert repeated == long_base
+
+
 def test_store_without_repeated_failure_limit_keeps_fixed_delay() -> None:
     delay = quarantine_recovery_delay(
         _BASE_RECOVERY_DELAY,
