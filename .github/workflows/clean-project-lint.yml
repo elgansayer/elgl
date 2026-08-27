@@ -16,8 +16,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  impact:
+    name: clean lint / impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_application: ${{ steps.impact.outputs.run_application }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect application impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" \
+              | bash scripts/classify-ci-impact.sh "$GITHUB_OUTPUT"
+          else
+            echo "run_application=true" >> "$GITHUB_OUTPUT"
+            echo "Clean project lint required: true"
+          fi
+
   lint-contract:
     name: lint contract guard
+    needs: impact
+    if: needs.impact.outputs.run_application == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -34,7 +61,8 @@ jobs:
 
   clean-lint:
     name: ${{ matrix.project }} / npm run lint clean tree
-    needs: lint-contract
+    needs: [impact, lint-contract]
+    if: always() && needs.impact.outputs.run_application == 'true' && needs.lint-contract.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
