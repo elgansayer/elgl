@@ -53,7 +53,10 @@ export class ConversationStarterService {
     partnerId: string,
   ): Promise<string[]> {
     await this.assertEligibleDirectPartner(currentUserId, partnerId);
-    const profile = await this.loadVisiblePartnerProfile(currentUserId, partnerId);
+    const profile = await this.loadVisiblePartnerProfile(
+      currentUserId,
+      partnerId,
+    );
     const cacheKey = `${currentUserId}:${partnerId}`;
     const cached = this.cache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -229,7 +232,8 @@ export class ConversationStarterService {
     profile: PartnerProfile,
   ): Promise<string[]> {
     const displayName =
-      this.cleanProfileText(profile.display_name, 80) || 'your language partner';
+      this.cleanProfileText(profile.display_name, 80) ||
+      'your language partner';
     const nativeLanguage =
       this.cleanProfileText(profile.native_language, 40) ||
       'their native language';
@@ -252,7 +256,7 @@ export class ConversationStarterService {
     ].join('\n');
 
     try {
-      const response = await this.llmProxyService.proxyMessage(prompt);
+      const { response } = await this.llmProxyService.proxyMessage(prompt);
       const parsed = this.parseSuggestions(response);
       if (parsed.length > 0) return this.fillToThree(parsed);
     } catch {
@@ -336,13 +340,21 @@ export class ConversationStarterService {
   }
 
   private cleanProfileText(value: unknown, maxLength: number): string {
-    return typeof value === 'string'
-      ? value
-          .replace(/[\u0000-\u001f\u007f]/gu, ' ')
-          .replace(/\s+/gu, ' ')
-          .trim()
-          .slice(0, maxLength)
-      : '';
+    if (typeof value !== 'string') return '';
+
+    const withoutControls = [...value]
+      .map((character) => {
+        const codePoint = character.codePointAt(0);
+        return codePoint !== undefined && (codePoint <= 31 || codePoint === 127)
+          ? ' '
+          : character;
+      })
+      .join('');
+
+    return withoutControls
+      .replace(/\s+/gu, ' ')
+      .trim()
+      .slice(0, maxLength);
   }
 
   private putCache(cacheKey: string, suggestions: string[]): void {
