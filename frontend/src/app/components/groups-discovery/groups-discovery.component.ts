@@ -87,9 +87,11 @@ function parseDiscoverableGroups(value: unknown): DiscoverableGroup[] {
       !isBoundedString(idValue, MAX_IDENTIFIER_LENGTH) ||
       !isBoundedString(nameValue, MAX_GROUP_NAME_LENGTH) ||
       !isBoundedString(ownerIdValue, MAX_IDENTIFIER_LENGTH) ||
+      typeof maxMembersValue !== 'number' ||
       !Number.isInteger(maxMembersValue) ||
       maxMembersValue < 2 ||
       maxMembersValue > 19 ||
+      typeof memberCountValue !== 'number' ||
       !Number.isInteger(memberCountValue) ||
       memberCountValue < 0 ||
       memberCountValue > maxMembersValue ||
@@ -113,8 +115,8 @@ function parseDiscoverableGroups(value: unknown): DiscoverableGroup[] {
       id,
       name: String(nameValue).trim(),
       owner_id: String(ownerIdValue),
-      max_members: Number(maxMembersValue),
-      member_count: Number(memberCountValue),
+      max_members: maxMembersValue,
+      member_count: memberCountValue,
       is_member: isMemberValue,
       interest_id:
         interestIdValue === null || interestIdValue === undefined ? null : String(interestIdValue),
