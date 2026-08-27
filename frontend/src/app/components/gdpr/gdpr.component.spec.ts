@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 describe('GdprComponent', () => {
   let fixture: ComponentFixture<GdprComponent>;
   let mockGdprService: {
+    getStatus: ReturnType<typeof vi.fn>;
     requestArchive: ReturnType<typeof vi.fn>;
     deleteAccount: ReturnType<typeof vi.fn>;
     cancelDeletion: ReturnType<typeof vi.fn>;
@@ -17,6 +18,13 @@ describe('GdprComponent', () => {
 
   beforeEach(async () => {
     mockGdprService = {
+      getStatus: vi.fn().mockResolvedValue({
+        deletion: {
+          pending: false,
+          scheduled_for: null,
+          requested_at: null,
+        },
+      }),
       requestArchive: vi.fn().mockResolvedValue({
         request_id: '11111111-1111-4111-8111-111111111111',
         status: 'ready',
@@ -53,6 +61,47 @@ describe('GdprComponent', () => {
     expect(el.querySelector('.app-header-title')?.textContent).toContain('gdpr.title');
     expect(el.textContent).toContain('gdpr.archiveSection');
     expect(el.textContent).toContain('gdpr.deleteSection');
+  });
+
+  it('rehydrates a pending deletion from the authenticated server state', async () => {
+    mockGdprService.getStatus.mockResolvedValueOnce({
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-26T04:00:00.000Z',
+        requested_at: '2026-08-27T04:00:00.000Z',
+      },
+    });
+
+    await fixture.componentInstance.loadStatus();
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
+    expect(el.textContent).toContain('gdpr.cancelDeletionSection');
+    expect(el.textContent).not.toContain('gdpr.deleteAccountBtn');
+  });
+
+  it('keeps lifecycle lookup failures retryable without inventing local state', async () => {
+    mockGdprService.getStatus.mockRejectedValueOnce(new Error('provider detail'));
+
+    await fixture.componentInstance.loadStatus();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(false);
+    expect(fixture.componentInstance.statusError()).toBe('common.loadError');
+    expect(fixture.nativeElement.textContent).toContain('common.retry');
+
+    mockGdprService.getStatus.mockResolvedValueOnce({
+      deletion: {
+        pending: true,
+        scheduled_for: '2026-09-26T04:00:00.000Z',
+        requested_at: '2026-08-27T04:00:00.000Z',
+      },
+    });
+    await fixture.componentInstance.loadStatus();
+
+    expect(fixture.componentInstance.statusError()).toBe('');
+    expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
   });
 
   it('requests a private archive, downloads the signed URL, and shows success', async () => {
