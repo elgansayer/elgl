@@ -1,12 +1,15 @@
 import { Transform } from 'class-transformer';
 import {
   IsIn,
+  IsInt,
   IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { ADMIN_ACTION_REASON_CODES } from '../admin-action-reasons';
 
@@ -34,6 +37,11 @@ export class AdminNetworkImpactDto {
   scope!: AdminNetworkBlockScope;
 }
 
+export class AdminNetworkRateLimitInspectDto extends AdminNetworkLookupDto {
+  @IsIn(ADMIN_NETWORK_BLOCK_SCOPES)
+  scope!: AdminNetworkBlockScope;
+}
+
 export class CreateAdminNetworkBlockDto {
   @Transform(trim)
   @IsString()
@@ -42,6 +50,41 @@ export class CreateAdminNetworkBlockDto {
 
   @IsIn(ADMIN_NETWORK_BLOCK_SCOPES)
   scope!: AdminNetworkBlockScope;
+
+  @IsIn(ADMIN_ACTION_REASON_CODES)
+  reasonCode!: (typeof ADMIN_ACTION_REASON_CODES)[number];
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  operatorNote?: string;
+
+  @IsISO8601({ strict: true })
+  expiresAt!: string;
+
+  @IsUUID()
+  idempotencyKey!: string;
+}
+
+export class CreateAdminNetworkRateLimitDto {
+  @Transform(trim)
+  @IsString()
+  @Length(2, 80)
+  cidr!: string;
+
+  @IsIn(ADMIN_NETWORK_BLOCK_SCOPES)
+  scope!: AdminNetworkBlockScope;
+
+  @IsInt()
+  @Min(1)
+  @Max(300)
+  maxRequests!: number;
+
+  @IsInt()
+  @Min(10)
+  @Max(3600)
+  windowSeconds!: number;
 
   @IsIn(ADMIN_ACTION_REASON_CODES)
   reasonCode!: (typeof ADMIN_ACTION_REASON_CODES)[number];

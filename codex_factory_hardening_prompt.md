@@ -743,7 +743,7 @@ Search for:
 - existing labels,
 - existing reviewer phases,
 - existing quality checks,
-- old abandoned swarm infrastructure,
+- retired swarm infrastructure,
 - duplicate prompt files,
 - duplicate pipeline implementations.
 
@@ -1048,7 +1048,7 @@ The hardening work is complete only if all of the following are true.
 Do not do any of the following.
 
 - Do not create a second autonomous issue resolver.
-- Do not restore an obsolete GitHub Actions AI swarm.
+- Do not restore a retired GitHub Actions AI swarm.
 - Do not create a second PR reviewer system.
 - Do not add hidden backdoors around `factory-ready`.
 - Do not make the gate pass by deleting tests.
