@@ -37,10 +37,15 @@ import { I18nService } from '../../services/i18n.service';
         @if (statusError()) {
           <div
             class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/30 bg-danger/10 p-3"
-            role="alert"
           >
-            <span class="text-xs text-danger">{{ statusError() }}</span>
-            <button hlmBtn type="button" variant="secondary" size="sm" (click)="loadStatus()">
+            <span class="text-xs text-danger" role="alert">{{ statusError() }}</span>
+            <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="touch"
+              (click)="loadStatus()"
+            >
               {{ 'common.retry' | t }}
             </button>
           </div>
@@ -75,6 +80,13 @@ import { I18nService } from '../../services/i18n.service';
           </div>
         </section>
 
+        @if (deleteSuccess()) {
+          <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
+        }
+        @if (cancelSuccess()) {
+          <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+        }
+
         @if (!isPendingDeletion()) {
           <section class="space-y-4">
             <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
@@ -105,9 +117,6 @@ import { I18nService } from '../../services/i18n.service';
               >
                 {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
               </button>
-              @if (deleteSuccess()) {
-                <p class="text-xs text-success" role="status">{{ 'gdpr.deleteSuccess' | t }}</p>
-              }
               @if (deleteError()) {
                 <p class="text-xs text-danger" role="alert">{{ deleteError() }}</p>
               }
@@ -135,9 +144,6 @@ import { I18nService } from '../../services/i18n.service';
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
-              @if (cancelSuccess()) {
-                <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
-              }
               @if (cancelError()) {
                 <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
               }
@@ -226,6 +232,7 @@ export class GdprComponent implements OnInit {
       this.statusRequestId += 1;
       this.statusLoading.set(false);
       this.statusError.set('');
+      this.cancelSuccess.set(false);
       this.deleteSuccess.set(true);
       this.isPendingDeletion.set(true);
     } catch {
@@ -245,6 +252,7 @@ export class GdprComponent implements OnInit {
       this.statusRequestId += 1;
       this.statusLoading.set(false);
       this.statusError.set('');
+      this.deleteSuccess.set(false);
       this.cancelSuccess.set(true);
       this.isPendingDeletion.set(false);
     } catch {
