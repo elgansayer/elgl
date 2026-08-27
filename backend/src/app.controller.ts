@@ -8,10 +8,8 @@ import {
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { isMockBackendEnabled } from './config/mock-backend-mode';
-import {
-  GpsDiscoveryScenario,
-  GpsDiscoveryScenarioStore,
-} from './mock/gps-discovery-scenario';
+import { GpsDiscoveryScenarioStore } from './mock/gps-discovery-scenario';
+import type { GpsDiscoveryScenario } from './mock/gps-discovery-scenario';
 
 interface MockGpsNamespaceRequest {
   namespace?: string;
