@@ -1,6 +1,7 @@
 import { Component, input, output, inject, resource, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
+import { environment } from '../../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
@@ -112,7 +113,7 @@ export class LikedByModalComponent {
   readonly likedUsers = resource({
     params: () => (this.open() ? this.momentId() : undefined),
     loader: ({ params: momentId }) =>
-      firstValueFrom(this.http.get<LikedUser[]>(`/api/moments/${momentId}/likes`)),
+      firstValueFrom(this.http.get<LikedUser[]>(`${environment.apiUrl}/moments/${momentId}/likes`)),
   });
 
   onDialogStateChanged(state: HlmDialogState): void {

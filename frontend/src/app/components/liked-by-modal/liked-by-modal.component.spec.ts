@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { environment } from '../../../environments/environment';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { LikedByModalComponent } from './liked-by-modal.component';
@@ -12,7 +13,7 @@ interface LikedUser {
 }
 
 function flushRequest(httpTesting: HttpTestingController, users: LikedUser[] = []): void {
-  httpTesting.expectOne('/api/moments/moment-123/likes').flush(users);
+  httpTesting.expectOne(`${environment.apiUrl}/moments/moment-123/likes`).flush(users);
 }
 
 function getDialog(): HTMLElement {
@@ -122,7 +123,7 @@ describe('LikedByModalComponent', () => {
   it('shows an alert and lets the user retry a failed request', async () => {
     fixture.detectChanges();
     httpTesting
-      .expectOne('/api/moments/moment-123/likes')
+      .expectOne(`${environment.apiUrl}/moments/moment-123/likes`)
       .flush('unavailable', { status: 503, statusText: 'Service Unavailable' });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -139,7 +140,7 @@ describe('LikedByModalComponent', () => {
     retry.click();
     fixture.detectChanges();
 
-    httpTesting.expectOne('/api/moments/moment-123/likes').flush([]);
+    httpTesting.expectOne(`${environment.apiUrl}/moments/moment-123/likes`).flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -183,7 +184,7 @@ describe('LikedByModalComponent', () => {
   it('does not emit a duplicate close after the parent closes the modal', () => {
     fixture.componentRef.setInput('open', false);
     fixture.detectChanges();
-    httpTesting.expectNone('/api/moments/moment-123/likes');
+    httpTesting.expectNone(`${environment.apiUrl}/moments/moment-123/likes`);
     const closeSpy = vi.fn();
     const subscription = component.closeModal.subscribe(closeSpy);
 
@@ -201,7 +202,7 @@ describe('LikedByModalComponent', () => {
     fixture.componentRef.setInput('momentId', 'moment-456');
     fixture.detectChanges();
 
-    const req = httpTesting.expectOne('/api/moments/moment-456/likes');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/moments/moment-456/likes`);
     req.flush([
       {
         id: 'user-2',
