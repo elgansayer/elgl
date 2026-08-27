@@ -106,7 +106,9 @@ const LOCALE_TEMPLATES: readonly LocaleTemplate[] = [
     timezone: 'Europe/Istanbul',
     nativeLanguage: 'tr',
     names: ['İpek Yılmaz', 'Çağrı Demir', 'Ece Şahin'],
-    bios: ['Günlük konuşma pratiği yapmak ve yeni kültürler öğrenmek istiyorum.'],
+    bios: [
+      'Günlük konuşma pratiği yapmak ve yeni kültürler öğrenmek istiyorum.',
+    ],
   },
   {
     country: 'Vietnam',
@@ -115,7 +117,9 @@ const LOCALE_TEMPLATES: readonly LocaleTemplate[] = [
     timezone: 'Asia/Ho_Chi_Minh',
     nativeLanguage: 'vi',
     names: ['Nguyễn Thảo Vy', 'Trần Minh Quân', 'Lê Bảo An'],
-    bios: ['Mình muốn luyện nói tự nhiên và kết bạn qua trao đổi ngôn ngữ.'],
+    bios: [
+      'Mình muốn luyện nói tự nhiên và kết bạn qua trao đổi ngôn ngữ.',
+    ],
   },
   {
     country: 'France',
@@ -142,6 +146,11 @@ const GENDERS = ['female', 'male', 'nonbinary', 'prefer_not_to_say'] as const;
 const LONG_DISPLAY_NAME =
   'Alexandria-Catherine Fernández-Watanabe de la Cruz-Sørensen, Language Exchange Enthusiast';
 
+export interface MockUserProfile extends UserProfile {
+  /** IANA timezone used only by explicit mock/test scenarios. */
+  timezone: string;
+}
+
 export interface MockUserPopulationDataset {
   schemaVersion: typeof MOCK_USER_POPULATION_SCHEMA_VERSION;
   namespace: string;
@@ -149,7 +158,7 @@ export interface MockUserPopulationDataset {
   count: number;
   seed: number;
   seedId: string;
-  profiles: UserProfile[];
+  profiles: MockUserProfile[];
 }
 
 export function deriveMockPopulationSeed(
@@ -167,10 +176,12 @@ export function deriveMockPopulationSeed(
 function createProfile(
   generator: DeterministicFixtureGenerator,
   index: number,
-): UserProfile {
+): MockUserProfile {
   const locale = LOCALE_TEMPLATES[index % LOCALE_TEMPLATES.length];
   const targetLocale =
-    LOCALE_TEMPLATES[(index + 1 + generator.integer(0, 3)) % LOCALE_TEMPLATES.length];
+    LOCALE_TEMPLATES[
+      (index + 1 + generator.integer(0, 3)) % LOCALE_TEMPLATES.length
+    ];
   const isVip = index % 11 === 0;
   const displayName =
     index === 3
@@ -208,6 +219,7 @@ function createProfile(
       ['drawing', 'music'],
     ]),
     location: `${locale.city}, ${locale.country}`,
+    timezone: locale.timezone,
     is_vip: isVip,
     vip_tier: isVip ? 'vip' : 'free',
     coins_balance: generator.integer(0, 5000),
