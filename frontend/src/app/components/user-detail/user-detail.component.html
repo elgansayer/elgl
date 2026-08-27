@@ -45,38 +45,51 @@
           }
         </div>
 
-        <div class="flex gap-2">
-          @if (profile()) {
-            <app-report-button [userId]="profile()!.id" />
-          }
+        @if (!isOwnProfile()) {
+          <div class="flex gap-2">
+            @if (profile()) {
+              <app-report-button [userId]="profile()!.id" />
+            }
 
-          <button
-            hlmBtn
-            (click)="toggleLike()"
-            class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
-            [class.text-neon-pink]="isLiked()"
-            [class.border-neon-pink]="isLiked()"
-            aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
-          >
-            {{ isLiked() ? '❤️' : '🤍' }}
-          </button>
+            <button
+              hlmBtn
+              type="button"
+              (click)="toggleLike()"
+              class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
+              [class.text-neon-pink]="isLiked()"
+              [class.border-neon-pink]="isLiked()"
+              aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
+            >
+              {{ isLiked() ? '❤️' : '🤍' }}
+            </button>
 
-          <button
-            hlmBtn
-            (click)="toggleFollow()"
-            class="h-10 px-6 rounded-full font-bold transition-colors"
-            [class.bg-neon-blue]="!isFollowing()"
-            [class.text-white]="!isFollowing()"
-            [class.bg-surface-300]="isFollowing()"
-            [class.text-text-primary]="isFollowing()"
-            [class.border]="isFollowing()"
-            [class.border-surface-100]="isFollowing()"
-            [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t"
-          >
-            {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
-          </button>
-        </div>
+            <button
+              hlmBtn
+              type="button"
+              (click)="toggleFollow()"
+              class="h-10 px-6 rounded-full font-bold transition-colors"
+              [class.bg-neon-blue]="!isFollowing()"
+              [class.text-white]="!isFollowing()"
+              [class.bg-surface-300]="isFollowing()"
+              [class.text-text-primary]="isFollowing()"
+              [class.border]="isFollowing()"
+              [class.border-surface-100]="isFollowing()"
+              [disabled]="isFollowingPending()"
+              [attr.aria-busy]="isFollowingPending() ? 'true' : null"
+              [attr.aria-describedby]="followErrorKey() ? followStatusId() : null"
+              [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t"
+            >
+              {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
+            </button>
+          </div>
+        }
       </div>
+
+      @if (followErrorKey()) {
+        <p [id]="followStatusId()" class="mb-4 text-sm text-danger" role="status" aria-live="polite">
+          {{ followErrorKey() | t }}
+        </p>
+      }
 
       <div class="mb-6">
         <h2 class="text-2xl font-black">{{ profile()?.display_name }}</h2>
@@ -152,6 +165,7 @@
           <div class="mt-4 pt-4 border-t border-surface-100">
             <button
               hlmBtn
+              type="button"
               (click)="playAudioIntro(profile()?.audio_intro_url)"
               class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
               [attr.aria-label]="'profile.playAudioIntro' | t"
@@ -169,14 +183,26 @@
         </div>
       }
 
-      <div class="flex flex-col gap-3">
-        <a
-          [routerLink]="['/chat', profile()?.id]"
-          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
-        >
-          {{ 'chatList.tapToChat' | t }}
-        </a>
-      </div>
+      @if (!isOwnProfile()) {
+        <div class="flex flex-col gap-3">
+          <button
+            hlmBtn
+            type="button"
+            (click)="openConversation()"
+            class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+            [disabled]="isOpeningChat()"
+            [attr.aria-busy]="isOpeningChat() ? 'true' : null"
+            [attr.aria-describedby]="chatErrorKey() ? chatStatusId() : null"
+          >
+            {{ 'chatList.tapToChat' | t }}
+          </button>
+          @if (chatErrorKey()) {
+            <p [id]="chatStatusId()" class="text-sm text-danger" role="status" aria-live="polite">
+              {{ chatErrorKey() | t }}
+            </p>
+          }
+        </div>
+      }
     </div>
   }
 </div>

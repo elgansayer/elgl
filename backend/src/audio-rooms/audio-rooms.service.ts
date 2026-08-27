@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
   OnModuleInit,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
@@ -130,8 +131,23 @@ export class AudioRoomsService implements OnModuleInit {
 
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!apiKey || !secretKey) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    if (env === 'production') {
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secretKey === 'test-livekit-secret' ||
+        secretKey === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     this.apiKey = apiKey;
@@ -219,6 +235,71 @@ export class AudioRoomsService implements OnModuleInit {
       const message = e instanceof Error ? e.message : String(e);
       this.logger.warn(
         `Could not init LiveKit RoomServiceClient (${message}). Will fall back to local/mock.`,
+      );
+    }
+  }
+
+  /**
+   * Revoke media publishing for the outgoing co-host before changing the
+   * application-level role. LiveKit immediately unpublishes active tracks when
+   * canPublish is revoked, so a slow or malicious client cannot keep broadcasting
+   * with its old co-host token while a replacement is being assigned.
+   */
+  private async revokeCoHostPublishPermission(
+    room: AudioRoomRow,
+    userId: string,
+  ): Promise<void> {
+    const client = this.roomServiceClient;
+    if (!client || this.livekitUrl.includes('mock')) return;
+
+    // Real RoomServiceClient instances expose both methods. Keep this runtime
+    // guard for legacy/local SDK test doubles so a missing optional integration
+    // degrades to the awaited client demotion event rather than crashing.
+    if (
+      typeof client.listParticipants !== 'function' ||
+      typeof client.updateParticipant !== 'function'
+    ) {
+      this.logger.warn(
+        'LiveKit participant controls unavailable during co-host replacement',
+      );
+      return;
+    }
+
+    try {
+      const participants = await client.listParticipants(room.room_name);
+      const identitySuffix = `_${userId.slice(0, 6)}`;
+      const matches = participants.filter(
+        (participant) =>
+          participant.identity === userId ||
+          participant.identity.endsWith(identitySuffix),
+      );
+
+      // A disconnected co-host has no active tracks to revoke.
+      if (matches.length === 0) return;
+
+      // Never risk revoking media from the wrong participant if legacy identities
+      // collide on the six-character user-id suffix.
+      if (matches.length > 1) {
+        throw new Error('Ambiguous LiveKit participant identity');
+      }
+
+      const participant = matches[0];
+      if (!participant) return;
+
+      await client.updateParticipant(room.room_name, participant.identity, {
+        permission: {
+          canSubscribe: true,
+          canPublish: false,
+          canPublishData: true,
+        },
+      });
+    } catch (error: unknown) {
+      const errorName = error instanceof Error ? error.name : 'UnknownError';
+      this.logger.warn(
+        `Failed to revoke outgoing co-host publish permission (${errorName})`,
+      );
+      throw new ServiceUnavailableException(
+        'Could not safely replace the current co-host. Please retry.',
       );
     }
   }
@@ -1023,7 +1104,48 @@ export class AudioRoomsService implements OnModuleInit {
       (id) => id !== dto.target_user_id,
     );
 
-    await supabase
+    if (previousCoHostId) {
+      // Security boundary: revoke LiveKit publish rights before changing the
+      // application role. LiveKit automatically unpublishes active tracks when
+      // canPublish becomes false.
+      await this.revokeCoHostPublishPermission(room, previousCoHostId);
+
+      // Demote the outgoing co-host in the source of truth before notifying
+      // clients or assigning a replacement. If the later assignment fails the
+      // room is left safely without a co-host rather than with two publishers.
+      const demotionResponse = await supabase
+        .from('audio_rooms')
+        .update({
+          co_host_id: null,
+          speakers: speakersWithoutPreviousCoHost,
+        })
+        .eq('id', room.id)
+        .eq('co_host_id', previousCoHostId);
+
+      if (demotionResponse.error) {
+        this.logger.warn('Failed to persist outgoing co-host demotion');
+        throw new ServiceUnavailableException(
+          'Could not safely replace the current co-host. Please retry.',
+        );
+      }
+
+      try {
+        // Await the removal notification so the outgoing client observes its
+        // demotion before any replacement event can be emitted.
+        await this.centrifugoService.publish(`room_${room.id}`, {
+          type: 'co_host_removed',
+          target_user_id: previousCoHostId,
+          room_id: room.id,
+        });
+      } catch {
+        this.logger.warn('Failed to notify outgoing co-host of demotion');
+        throw new ServiceUnavailableException(
+          'Could not safely replace the current co-host. Please retry.',
+        );
+      }
+    }
+
+    const assignmentResponse = await supabase
       .from('audio_rooms')
       .update({
         co_host_id: dto.target_user_id,
@@ -1032,24 +1154,28 @@ export class AudioRoomsService implements OnModuleInit {
       })
       .eq('id', room.id);
 
-    if (previousCoHostId) {
-      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
-      // incoming co-host's invite, preventing the invite from being clobbered by a
-      // late-arriving removal for a different user.
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: previousCoHostId,
-        room_id: room.id,
-      });
+    if (assignmentResponse.error) {
+      this.logger.warn('Failed to persist incoming co-host assignment');
+      throw new ServiceUnavailableException(
+        'Could not assign the new co-host. Please retry.',
+      );
     }
 
-    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
-    await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_changed',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-      previous_co_host_id: previousCoHostId,
-    });
+    try {
+      // Notify the invited user only after the outgoing co-host has been fully
+      // demoted and the replacement is persisted.
+      await this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_changed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+        previous_co_host_id: previousCoHostId,
+      });
+    } catch {
+      this.logger.warn('Failed to notify incoming co-host of assignment');
+      throw new ServiceUnavailableException(
+        'The co-host was assigned but could not be notified. Please retry.',
+      );
+    }
 
     return this.getRoom(room.id);
   }
