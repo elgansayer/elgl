@@ -1,23 +1,26 @@
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
   input,
   output,
-  effect,
+  PLATFORM_ID,
+  signal,
   viewChild,
-  ElementRef,
-  inject,
-  DestroyRef,
 } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import {
+  IncomingCallData,
+  normaliseIncomingCallData,
+} from './incoming-call-data';
 
-export interface IncomingCallData {
-  callerId: string;
-  callerName: string;
-  callerAvatarUrl?: string;
-  roomName: string;
-  isVideoCall: boolean;
-}
+export type { IncomingCallData } from './incoming-call-data';
 
 interface WindowWithWebkitAudioContext extends Window {
   webkitAudioContext: typeof AudioContext;
@@ -27,32 +30,32 @@ function hasWebkitAudioContext(win: Window): win is WindowWithWebkitAudioContext
   return 'webkitAudioContext' in win;
 }
 
-function getAudioContextClass(): typeof AudioContext | undefined {
-  if (window.AudioContext) return window.AudioContext;
-  if (hasWebkitAudioContext(window)) return window.webkitAudioContext;
-  return undefined;
-}
-
 @Component({
   selector: 'app-incoming-call-modal',
   imports: [HlmButton, TranslatePipe],
   template: `
-    @if (callData(); as data) {
+    @if (safeCallData(); as data) {
       <div
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 sm:px-4"
+        role="presentation"
       >
         <div
-          class="bg-surface-200 border border-surface-100 rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200"
+          class="incoming-call-dialog bg-surface-200 border border-surface-100 rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="incoming-call-title"
+          aria-describedby="incoming-call-status"
+          [attr.aria-busy]="actionPending()"
         >
-          <!-- Caller Info -->
           <div class="flex flex-col items-center space-y-3 sm:space-y-4 mb-6 sm:mb-8">
-            <div class="relative">
+            <div class="relative" aria-hidden="true">
               @if (data.callerAvatarUrl) {
                 <img
                   [src]="data.callerAvatarUrl"
-                  [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
+                  alt=""
                   class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-secondary/50"
                   loading="lazy"
+                  referrerpolicy="no-referrer"
                 />
               } @else {
                 <div
@@ -67,29 +70,38 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                 class="absolute -bottom-1 -end-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-success border-4 border-surface-200"
               ></div>
             </div>
-            <div class="text-center">
-              <h2 class="text-xl sm:text-2xl font-bold text-text-primary">{{ data.callerName }}</h2>
-              <p class="text-sm text-text-muted mt-1">
+            <div class="text-center min-w-0 w-full">
+              <h2
+                id="incoming-call-title"
+                class="text-xl sm:text-2xl font-bold text-text-primary break-words"
+                dir="auto"
+              >
+                {{ data.callerName }}
+              </h2>
+              <p id="incoming-call-status" class="text-sm text-text-muted mt-1" role="status">
                 @if (data.isVideoCall) {
                   {{ 'voip.incomingVideoCall' | t }}
                 } @else {
                   {{ 'voip.incomingVoiceCall' | t }}
                 }
+                <span class="sr-only">. {{ 'voip.ringing' | t }}</span>
               </p>
             </div>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="flex justify-center gap-4 sm:gap-6">
-            <!-- Decline Button -->
+          <div class="flex flex-wrap justify-center gap-4 sm:gap-6">
             <button
+              #declineButton
               hlmBtn
+              type="button"
               (click)="onDecline()"
-              class="flex flex-col items-center gap-1.5 sm:gap-2 group"
+              class="min-w-20 min-h-20 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group disabled:opacity-60"
+              [disabled]="actionPending()"
               [attr.aria-label]="'voip.decline' | t"
             >
-              <div
+              <span
                 class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-danger/20 flex items-center justify-center group-hover:bg-danger/40 transition-colors duration-150"
+                aria-hidden="true"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -104,21 +116,24 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-              </div>
-              <span class="text-xs sm:text-sm text-text-muted group-hover:text-text-secondary">{{
-                'voip.decline' | t
-              }}</span>
+              </span>
+              <span class="text-xs sm:text-sm text-text-muted group-hover:text-text-secondary">
+                {{ 'voip.decline' | t }}
+              </span>
             </button>
 
-            <!-- Accept Button -->
             <button
+              #acceptButton
               hlmBtn
+              type="button"
               (click)="onAccept()"
-              class="flex flex-col items-center gap-1.5 sm:gap-2 group"
+              class="min-w-20 min-h-20 flex flex-col items-center justify-center gap-1.5 sm:gap-2 group disabled:opacity-60"
+              [disabled]="actionPending()"
               [attr.aria-label]="'voip.accept' | t"
             >
-              <div
-                class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-success/20 flex items-center justify-center group-hover:bg-success/40 transition-colors duration-150 animate-pulse"
+              <span
+                class="incoming-call-pulse w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-success/20 flex items-center justify-center group-hover:bg-success/40 transition-colors duration-150 animate-pulse"
+                aria-hidden="true"
               >
                 @if (data.isVideoCall) {
                   <svg
@@ -150,24 +165,34 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                     ></path>
                   </svg>
                 }
-              </div>
-              <span class="text-xs sm:text-sm text-success group-hover:text-success/80">{{
-                'voip.accept' | t
-              }}</span>
+              </span>
+              <span class="text-xs sm:text-sm text-success group-hover:text-success/80">
+                {{ 'voip.accept' | t }}
+              </span>
             </button>
           </div>
         </div>
       </div>
     }
 
-    <!-- Hidden audio element for ringtone -->
-    @if (callData()) {
-      <audio #ringtoneAudio [src]="ringtoneUrl()" loop autoplay class="hidden"></audio>
+    @if (safeCallData() && safeRingtoneUrl()) {
+      <audio
+        #ringtoneAudio
+        [src]="safeRingtoneUrl()"
+        loop
+        autoplay
+        class="hidden"
+        (error)="onRingtoneError()"
+      ></audio>
     }
   `,
   styles: [
     `
-      @keyframes zoom-in-95 {
+      .incoming-call-dialog {
+        animation: incoming-call-enter 0.2s ease-out;
+      }
+
+      @keyframes incoming-call-enter {
         from {
           opacity: 0;
           transform: scale(0.95);
@@ -177,109 +202,254 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           transform: scale(1);
         }
       }
-      .animate-in.zoom-in-95 {
-        animation: zoom-in-95 0.2s ease-out;
+
+      @media (prefers-reduced-motion: reduce) {
+        .incoming-call-dialog,
+        .incoming-call-pulse {
+          animation: none !important;
+          transition: none !important;
+        }
       }
     `,
   ],
 })
 export class IncomingCallModalComponent {
-  /** Input: The incoming call invitation data */
-  callData = input<IncomingCallData | null>(null);
+  readonly callData = input<IncomingCallData | null>(null);
 
-  /** Input: URL to a ringtone audio file (optional, defaults to a built-in beep) */
-  ringtoneUrl = input<string>('/assets/audio/ringtone.wav');
+  /**
+   * Optional trusted ringtone URL. When omitted or unavailable, the component
+   * uses a short browser-generated ringtone pattern instead of depending on a
+   * network asset.
+   */
+  readonly ringtoneUrl = input<string>('');
 
-  /** Emits when user accepts the call */
-  acceptCall = output<IncomingCallData>();
+  readonly acceptCall = output<IncomingCallData>();
+  readonly declineCall = output<IncomingCallData>();
 
-  /** Emits when user declines the call */
-  declineCall = output<IncomingCallData>();
+  readonly safeCallData = computed(() => normaliseIncomingCallData(this.callData()));
+  readonly safeRingtoneUrl = computed(() => this.normaliseRingtoneUrl(this.ringtoneUrl()));
+  readonly actionPending = signal(false);
 
-  /** Reference to the audio element in the template */
-  private ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
+  private readonly ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
+  private readonly declineButtonRef = viewChild<ElementRef<HTMLButtonElement>>('declineButton');
+  private readonly acceptButtonRef = viewChild<ElementRef<HTMLButtonElement>>('acceptButton');
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  private destroyRef = inject(DestroyRef);
   private audioContext: AudioContext | null = null;
   private oscillator: OscillatorNode | null = null;
   private gainNode: GainNode | null = null;
+  private fallbackTimer: ReturnType<typeof setInterval> | null = null;
+  private activeCallKey: string | null = null;
+  private previouslyFocused: HTMLElement | null = null;
+  private previousBodyOverflow: string | null = null;
 
   constructor() {
-    // Auto-play ringtone when callData appears
     effect(() => {
-      const data = this.callData();
-      if (data) {
-        this.playRingtone();
-      } else {
-        this.stopRingtone();
+      const data = this.safeCallData();
+      const ringtoneUrl = this.safeRingtoneUrl();
+
+      if (!data) {
+        this.closeModalEnvironment();
+        return;
       }
+
+      const callKey = `${data.callerId}:${data.roomName}`;
+      if (this.activeCallKey !== callKey) {
+        this.activeCallKey = callKey;
+        this.actionPending.set(false);
+        this.openModalEnvironment();
+      }
+
+      this.playRingtone(ringtoneUrl);
     });
 
-    // Ensure ringtone is stopped when component is destroyed
     this.destroyRef.onDestroy(() => {
-      this.stopRingtone();
+      this.closeModalEnvironment();
     });
   }
 
-  private playRingtone(): void {
-    const url = this.ringtoneUrl();
-    if (!url) {
-      this.playFallbackBeep();
+  @HostListener('document:keydown', ['$event'])
+  handleDocumentKeydown(event: KeyboardEvent): void {
+    if (!this.safeCallData() || this.actionPending()) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.onDecline();
       return;
     }
 
-    // Try to play the audio file via the template audio element
-    const audioEl = this.ringtoneAudioRef()?.nativeElement;
-    if (audioEl) {
-      audioEl.loop = true;
-      audioEl.volume = 0.5;
-      audioEl.play().catch(() => {
-        // Autoplay may be blocked; fallback to beep
-        this.playFallbackBeep();
-      });
-    } else {
-      // Fallback if template element not available
-      this.playFallbackBeep();
+    if (event.key !== 'Tab') return;
+
+    const first = this.declineButtonRef()?.nativeElement;
+    const last = this.acceptButtonRef()?.nativeElement;
+    if (!first || !last) return;
+
+    const active = this.document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
     }
   }
 
-  private playFallbackBeep(): void {
+  onAccept(): void {
+    this.emitOnce(this.acceptCall);
+  }
+
+  onDecline(): void {
+    this.emitOnce(this.declineCall);
+  }
+
+  onRingtoneError(): void {
+    if (!this.safeCallData() || !this.isBrowser) return;
+    this.stopHtmlRingtone();
+    this.playFallbackRingtone();
+  }
+
+  private emitOnce(emitter: { emit(value: IncomingCallData): void }): void {
+    const data = this.safeCallData();
+    if (!data || this.actionPending()) return;
+
+    this.actionPending.set(true);
+    this.stopRingtone();
+    emitter.emit(data);
+  }
+
+  private openModalEnvironment(): void {
+    if (!this.isBrowser) return;
+
+    const activeElement = this.document.activeElement;
+    this.previouslyFocused = activeElement instanceof HTMLElement ? activeElement : null;
+
+    if (this.previousBodyOverflow === null) {
+      this.previousBodyOverflow = this.document.body.style.overflow;
+      this.document.body.style.overflow = 'hidden';
+    }
+
+    queueMicrotask(() => {
+      if (this.safeCallData() && !this.actionPending()) {
+        this.declineButtonRef()?.nativeElement.focus();
+      }
+    });
+  }
+
+  private closeModalEnvironment(): void {
+    this.stopRingtone();
+    this.activeCallKey = null;
+    this.actionPending.set(false);
+
+    if (!this.isBrowser) return;
+
+    if (this.previousBodyOverflow !== null) {
+      this.document.body.style.overflow = this.previousBodyOverflow;
+      this.previousBodyOverflow = null;
+    }
+
+    const previous = this.previouslyFocused;
+    this.previouslyFocused = null;
+    if (previous?.isConnected) {
+      queueMicrotask(() => previous.focus());
+    }
+  }
+
+  private playRingtone(url: string | null): void {
+    if (!this.isBrowser) return;
+
+    this.stopRingtone();
+
+    if (!url) {
+      this.playFallbackRingtone();
+      return;
+    }
+
+    const audioEl = this.ringtoneAudioRef()?.nativeElement;
+    if (!audioEl) {
+      this.playFallbackRingtone();
+      return;
+    }
+
+    audioEl.loop = true;
+    audioEl.volume = 0.5;
+    void audioEl.play().catch(() => {
+      this.playFallbackRingtone();
+    });
+  }
+
+  private playFallbackRingtone(): void {
+    if (!this.isBrowser || this.audioContext) return;
+
     try {
-      const AudioContextClass = getAudioContextClass();
+      const browserWindow = this.document.defaultView;
+      if (!browserWindow) return;
+
+      const AudioContextClass = browserWindow.AudioContext
+        ? browserWindow.AudioContext
+        : hasWebkitAudioContext(browserWindow)
+          ? browserWindow.webkitAudioContext
+          : undefined;
       if (!AudioContextClass) return;
 
-      this.audioContext = new AudioContextClass();
-      this.oscillator = this.audioContext.createOscillator();
-      this.gainNode = this.audioContext.createGain();
+      const audioContext = new AudioContextClass();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-      this.oscillator.connect(this.gainNode);
-      this.gainNode.connect(this.audioContext.destination);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.value = 440;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0;
+      oscillator.start();
 
-      this.oscillator.frequency.value = 440; // A4 note
-      this.oscillator.type = 'sine';
-      this.gainNode.gain.value = 0.3;
+      const pulse = (): void => {
+        if (audioContext.state === 'closed') return;
+        const now = audioContext.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(0.18, now);
+        gainNode.gain.setValueAtTime(0, now + 0.25);
+        gainNode.gain.setValueAtTime(0.18, now + 0.45);
+        gainNode.gain.setValueAtTime(0, now + 0.7);
+      };
 
-      this.oscillator.start();
+      pulse();
+      this.fallbackTimer = setInterval(pulse, 1800);
+      this.audioContext = audioContext;
+      this.oscillator = oscillator;
+      this.gainNode = gainNode;
+      void audioContext.resume().catch(() => undefined);
     } catch {
-      // Silently fail if audio context not available
+      this.stopFallbackRingtone();
     }
   }
 
-  private stopRingtone(): void {
-    // Stop HTML audio element
+  private stopHtmlRingtone(): void {
     const audioEl = this.ringtoneAudioRef()?.nativeElement;
-    if (audioEl) {
-      audioEl.pause();
+    if (!audioEl) return;
+
+    audioEl.pause();
+    try {
       audioEl.currentTime = 0;
+    } catch {
+      // Some media implementations reject seeking before metadata is loaded.
+    }
+  }
+
+  private stopFallbackRingtone(): void {
+    if (this.fallbackTimer !== null) {
+      clearInterval(this.fallbackTimer);
+      this.fallbackTimer = null;
     }
 
-    // Stop fallback beep
     if (this.oscillator) {
       try {
         this.oscillator.stop();
       } catch {
-        // Already stopped
+        // Already stopped.
       }
+      this.oscillator.disconnect();
       this.oscillator = null;
     }
 
@@ -288,25 +458,32 @@ export class IncomingCallModalComponent {
       this.gainNode = null;
     }
 
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-      this.audioContext = null;
+    const audioContext = this.audioContext;
+    this.audioContext = null;
+    if (audioContext && audioContext.state !== 'closed') {
+      void audioContext.close().catch(() => undefined);
     }
   }
 
-  onAccept(): void {
-    const data = this.callData();
-    if (data) {
-      this.stopRingtone();
-      this.acceptCall.emit(data);
-    }
+  private stopRingtone(): void {
+    this.stopHtmlRingtone();
+    this.stopFallbackRingtone();
   }
 
-  onDecline(): void {
-    const data = this.callData();
-    if (data) {
-      this.stopRingtone();
-      this.declineCall.emit(data);
+  private normaliseRingtoneUrl(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 2048) return null;
+
+    if (trimmed.startsWith('/')) return trimmed;
+
+    try {
+      const url = new URL(trimmed);
+      if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.username || url.password) {
+        return null;
+      }
+      return url.toString();
+    } catch {
+      return null;
     }
   }
 }
