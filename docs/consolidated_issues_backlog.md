@@ -67,3 +67,4 @@ _Organized by complete user outcomes rather than individual technical chores._
 - Fail closed on missing Supabase sessions and fix IDOR / secrets validation for LiveKit and Stripe.
 - Harden authenticated OpenGraph scraping and Prometheus/Grafana compose contracts.
 - Reduce automation churn and Codex reasoning burn without lowering quality.
+- Implement virtual scrolling (cdk-virtual-scroll-viewport) for data-heavy chat and reading views to prevent DOM bloat and UI lag.
