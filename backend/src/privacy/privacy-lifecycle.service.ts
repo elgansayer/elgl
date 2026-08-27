@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface AccountDeletionStatus {
@@ -13,7 +17,9 @@ export class PrivacyLifecycleService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getAccountDeletionStatus(userId: string): Promise<AccountDeletionStatus> {
+  async getAccountDeletionStatus(
+    userId: string,
+  ): Promise<AccountDeletionStatus> {
     const { data, error } = await this.supabase
       .getClient()
       .from('users')
@@ -46,6 +52,8 @@ export class PrivacyLifecycleService {
   private normaliseTimestamp(value: unknown): string | null {
     if (typeof value !== 'string' || !value.trim()) return null;
     const timestamp = Date.parse(value);
-    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+    return Number.isFinite(timestamp)
+      ? new Date(timestamp).toISOString()
+      : null;
   }
 }
