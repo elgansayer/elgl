@@ -129,11 +129,15 @@ describe('UserDetailComponent external profile actions', () => {
   it('does not render follow or message actions on the current users own profile', async () => {
     await render(makeProfile({ id: 'current-user' }));
 
-    expect(fixture.nativeElement.querySelector('button[aria-label="userProfile.follow"]')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('button[aria-label="userProfile.follow"]'),
+    ).toBeNull();
     const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     );
-    expect(buttons.some((button) => button.textContent?.trim() === 'chatList.tapToChat')).toBe(false);
+    expect(
+      buttons.some((button) => button.textContent?.trim() === 'chatList.tapToChat'),
+    ).toBe(false);
   });
 
   it('opens the canonical direct conversation and navigates to the returned room', async () => {
