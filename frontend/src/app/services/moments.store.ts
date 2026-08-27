@@ -6,6 +6,8 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 
+export type MomentFeedFilter = 'All' | 'Classmates' | 'Following' | 'For You' | 'Topics';
+
 export interface MomentComment {
   id: string;
   moment_id: string;
@@ -70,7 +72,7 @@ export class MomentsStore {
   private baseUrl = `${environment.apiUrl}/moments`;
 
   readonly feed = signal<MomentRecord[]>([]);
-  readonly activeFilter = signal<'All' | 'Classmates' | 'Following' | 'For You'>('All');
+  readonly activeFilter = signal<MomentFeedFilter>('All');
   readonly isLoading = signal<boolean>(false);
 
   private getHeaders() {
@@ -80,23 +82,26 @@ export class MomentsStore {
     };
   }
 
-  async loadFeed(
-    filter?: 'All' | 'Classmates' | 'Following' | 'For You',
-    lang?: string,
-  ): Promise<void> {
+  async loadFeed(filter?: MomentFeedFilter, lang?: string): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
     this.isLoading.set(true);
 
-    let params = new HttpParams().set('filter', targetFilter);
-    if (lang) {
-      params = params.set('lang', lang);
+    let params = new HttpParams();
+    let url = `${this.baseUrl}/feed`;
+    if (targetFilter === 'Topics') {
+      url = `${this.baseUrl}/topics/feed`;
+    } else {
+      params = params.set('filter', targetFilter);
+      if (lang) {
+        params = params.set('lang', lang);
+      }
     }
 
     try {
       const list = await firstValueFrom(
         this.http
-          .get<MomentRecord[]>(`${this.baseUrl}/feed`, {
+          .get<MomentRecord[]>(url, {
             headers: this.getHeaders(),
             params,
           })
