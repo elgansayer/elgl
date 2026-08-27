@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -27,7 +27,6 @@ import {
           <a
             class="mb-5 inline-flex min-h-11 items-center rounded-app px-3 text-sm font-semibold text-primary hover:bg-surface-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             routerLink="/lessons"
-            (click)="resetProgress()"
           >
             Back to lessons
           </a>
@@ -107,13 +106,22 @@ import {
                   </audio>
                 }
 
-                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
+                @if (progressLoadFailed() || progressSaveError()) {
+                  <p class="mt-4 text-sm text-danger" role="alert">
+                    {{ 'common.error_generic' | t }}
+                  </p>
+                }
+
+                <div
+                  class="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between"
+                  [attr.aria-busy]="isSavingProgress()"
+                >
                   <button
                     hlmBtn
                     size="touch"
                     variant="outline"
                     type="button"
-                    [disabled]="segmentIndex() === 0 || segments().length === 0"
+                    [disabled]="segmentIndex() === 0 || segments().length === 0 || isSavingProgress()"
                     (click)="previousSegment()"
                   >
                     Previous
@@ -122,7 +130,7 @@ import {
                     hlmBtn
                     size="touch"
                     type="button"
-                    [disabled]="segmentIndex() >= segments().length - 1 || segments().length === 0"
+                    [disabled]="segmentIndex() >= segments().length - 1 || segments().length === 0 || isSavingProgress()"
                     (click)="nextSegment()"
                   >
                     Next
@@ -181,7 +189,6 @@ import {
         routerLink="/lessons"
         [queryParams]="{ lesson: lesson.id }"
         [attr.aria-label]="'Open lesson: ' + lesson.title"
-        (click)="resetProgress()"
       >
         <div class="h-full overflow-hidden rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card transition-shadow hover:shadow-lift">
           @if (safeUrl(lesson.cover_image_url); as coverUrl) {
@@ -219,7 +226,8 @@ export class LessonsComponent {
   });
 
   readonly selectedLessonId = computed(() => this.queryParamMap().get('lesson'));
-  readonly segmentIndex = signal(0);
+  readonly progressSaveError = signal(false);
+  readonly isSavingProgress = signal(false);
 
   readonly lessonsResource = resource({
     loader: () => firstValueFrom(this.lessonsService.getLessons()),
@@ -230,12 +238,49 @@ export class LessonsComponent {
     loader: ({ params }) => firstValueFrom(this.lessonsService.getLesson(params)),
   });
 
+  readonly selectedProgressResource = resource({
+    params: () => this.selectedLessonId() ?? undefined,
+    loader: ({ params }) => firstValueFrom(this.lessonsService.getLessonProgress(params)),
+  });
+
   readonly lessons = computed(() => this.lessonsResource.value() ?? []);
   readonly selectedLesson = computed(() => this.selectedLessonResource.value() ?? null);
   readonly segments = computed(() => {
     const lesson = this.selectedLesson();
     return lesson ? normaliseLessonSegments(lesson) : [];
   });
+
+  readonly segmentIndex = linkedSignal({
+    source: () => ({
+      lessonId: this.selectedLessonId(),
+      segmentCount: this.segments().length,
+      savedIndex: this.selectedProgressResource.value()?.segment_index,
+    }),
+    computation: ({ segmentCount, savedIndex }) => {
+      if (segmentCount === 0 || typeof savedIndex !== 'number' || !Number.isInteger(savedIndex)) {
+        return 0;
+      }
+      return Math.max(0, Math.min(savedIndex, segmentCount - 1));
+    },
+  });
+
+  readonly singleSegmentCompletionResource = resource({
+    params: () => {
+      const lessonId = this.selectedLessonId();
+      const progress = this.selectedProgressResource.value();
+      return lessonId && this.segments().length === 1 && progress && !progress.completed
+        ? lessonId
+        : undefined;
+    },
+    loader: ({ params }) =>
+      firstValueFrom(
+        this.lessonsService.saveLessonProgress(params, {
+          segment_index: 0,
+          completed: true,
+        }),
+      ),
+  });
+
   readonly currentSegment = computed(() => {
     const segments = this.segments();
     if (segments.length === 0) return null;
@@ -250,6 +295,9 @@ export class LessonsComponent {
     if (count === 0) return 'No lesson segments';
     return `Segment ${Math.min(this.segmentIndex(), count - 1) + 1} of ${count}`;
   });
+  readonly progressLoadFailed = computed(
+    () => Boolean(this.selectedProgressResource.error()) || Boolean(this.singleSegmentCompletionResource.error()),
+  );
 
   readonly featuredLessons = computed(() => {
     const lessons = this.lessons();
@@ -280,15 +328,13 @@ export class LessonsComponent {
   }
 
   previousSegment(): void {
-    this.segmentIndex.update((index) => Math.max(0, index - 1));
+    void this.persistSegment(Math.max(0, this.segmentIndex() - 1));
   }
 
   nextSegment(): void {
-    this.segmentIndex.update((index) => Math.min(Math.max(0, this.segments().length - 1), index + 1));
-  }
-
-  resetProgress(): void {
-    this.segmentIndex.set(0);
+    void this.persistSegment(
+      Math.min(Math.max(0, this.segments().length - 1), this.segmentIndex() + 1),
+    );
   }
 
   retryLessons(): void {
@@ -297,6 +343,33 @@ export class LessonsComponent {
 
   retrySelectedLesson(): void {
     this.selectedLessonResource.reload();
+    this.selectedProgressResource.reload();
+  }
+
+  private async persistSegment(nextIndex: number): Promise<void> {
+    const lessonId = this.selectedLessonId();
+    const segmentCount = this.segments().length;
+    if (!lessonId || segmentCount === 0 || this.isSavingProgress()) return;
+
+    const previousIndex = this.segmentIndex();
+    const targetIndex = Math.max(0, Math.min(nextIndex, segmentCount - 1));
+    this.segmentIndex.set(targetIndex);
+    this.progressSaveError.set(false);
+    this.isSavingProgress.set(true);
+
+    try {
+      await firstValueFrom(
+        this.lessonsService.saveLessonProgress(lessonId, {
+          segment_index: targetIndex,
+          completed: targetIndex === segmentCount - 1,
+        }),
+      );
+    } catch {
+      this.segmentIndex.set(previousIndex);
+      this.progressSaveError.set(true);
+    } finally {
+      this.isSavingProgress.set(false);
+    }
   }
 
   private currentDifficulty(): number | null {

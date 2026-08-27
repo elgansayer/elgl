@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { NotificationsInboxService } from './notifications-inbox.service';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { ChatNotificationListener } from './listeners/chat-notification.listener';
 import { ChatMentionNotificationListener } from './listeners/chat-mention-notification.listener';
@@ -18,6 +19,7 @@ import { NotificationsController } from './notifications.controller';
   controllers: [NotificationsController],
   providers: [
     NotificationsService,
+    NotificationsInboxService,
     NotificationPreferencesService,
     ChatNotificationListener,
     ChatMentionNotificationListener,
