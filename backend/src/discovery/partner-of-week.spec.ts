@@ -207,6 +207,31 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     );
   });
 
+  it('treats an unavailable score as a zero rating signal', async () => {
+    const { service, queryBuilder, redis } = createHarness(async (userId) => {
+      if (userId === 'a-score-unavailable') {
+        throw new Error('ratings provider unavailable');
+      }
+      return { averageScore: 1, totalRatings: 0 };
+    });
+    queryBuilder['limit'].mockResolvedValue({
+      data: [
+        makeCandidate('z-one-star'),
+        makeCandidate('a-score-unavailable'),
+      ],
+      error: null,
+    });
+
+    await service.calculatePartnerOfWeek();
+
+    expect(redis.set).toHaveBeenCalledWith(
+      'partner_of_week_ids',
+      '["a-score-unavailable","z-one-star"]',
+      'EX',
+      604800,
+    );
+  });
+
   it('caps the published highlight list at ten users', async () => {
     const { service, queryBuilder, redis } = createHarness();
     queryBuilder['limit'].mockResolvedValue({
