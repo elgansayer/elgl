@@ -35,6 +35,24 @@ describe('DocumentViewerComponent', () => {
     expect(heading?.classList).toContain('sm:text-3xl');
   });
 
+  it('exposes the document as a named article without adding a nested main landmark', () => {
+    const article: HTMLElement | null = fixture.nativeElement.querySelector('article');
+
+    expect(article?.getAttribute('aria-label')).toBe('Privacy policy');
+    expect(article?.querySelector('h1')?.textContent?.trim()).toBe('Privacy policy');
+    expect(fixture.nativeElement.querySelector('main')).toBeNull();
+  });
+
+  it('keeps the accessible article name synchronized with the supplied title', () => {
+    fixture.componentRef.setInput('title', 'Updated legal notice');
+    fixture.detectChanges();
+
+    const article: HTMLElement | null = fixture.nativeElement.querySelector('article');
+
+    expect(article?.getAttribute('aria-label')).toBe('Updated legal notice');
+    expect(article?.querySelector('h1')?.textContent?.trim()).toBe('Updated legal notice');
+  });
+
   it('uses Relay semantic surfaces and theme-neutral content styling', () => {
     const shell: HTMLElement = fixture.nativeElement.querySelector('.min-h-screen');
     const card: HTMLElement = fixture.nativeElement.querySelector('app-card');
@@ -67,6 +85,34 @@ describe('DocumentViewerComponent', () => {
     expect(card.classList).toContain('p-4');
     expect(card.classList).toContain('sm:p-6');
     expect(card.classList).toContain('lg:p-8');
+  });
+
+  it('keeps long translated and projected content reflow-safe at high zoom', () => {
+    const wrapper: HTMLElement = fixture.nativeElement.querySelector('.max-w-4xl');
+    const card: HTMLElement = fixture.nativeElement.querySelector('app-card');
+    const heading: HTMLElement = fixture.nativeElement.querySelector('h1');
+    const content: HTMLElement = fixture.nativeElement.querySelector('app-card > div');
+
+    expect(wrapper.classList).toContain('min-w-0');
+    expect(card.classList).toContain('min-w-0');
+    expect(heading.classList).toContain('break-words');
+    expect(content.classList).toContain('min-w-0');
+    expect(content.classList).toContain('break-words');
+    expect(content.classList).toContain('[overflow-wrap:anywhere]');
+  });
+
+  it('keeps the component direction-neutral and free of feature-owned motion', () => {
+    const classNames = Array.from(
+      fixture.nativeElement.querySelectorAll<HTMLElement>('[class]'),
+      (element) => element.className,
+    ).join(' ');
+
+    expect(classNames).not.toMatch(
+      /(?:^|\s)(?:ml-|mr-|pl-|pr-|left-|right-|text-left|text-right)/,
+    );
+    expect(classNames).not.toMatch(
+      /(?:^|\s)(?:animate-|transition|duration-|delay-)/,
+    );
   });
 
   it('does not manufacture command controls or synthetic keyboard behaviour', () => {
