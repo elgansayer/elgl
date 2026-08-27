@@ -7,6 +7,10 @@ import { AuthService } from './auth.service';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 @Injectable({ providedIn: 'root' })
 export class DirectConversationService {
   private readonly http = inject(HttpClient);
@@ -24,16 +28,17 @@ export class DirectConversationService {
     }
 
     const response = await firstValueFrom(
-      this.http.post<{ roomId?: unknown }>(
+      this.http.post<unknown>(
         this.baseUrl,
         { targetUserId },
         { headers: { Authorization: `Bearer ${token}` } },
       ),
     );
 
-    if (typeof response.roomId !== 'string' || !UUID_PATTERN.test(response.roomId)) {
+    const roomId = isRecord(response) ? response['roomId'] : undefined;
+    if (typeof roomId !== 'string' || !UUID_PATTERN.test(roomId)) {
       throw new Error('Direct conversation response did not include a valid room ID');
     }
-    return response.roomId;
+    return roomId;
   }
 }

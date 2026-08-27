@@ -14,9 +14,13 @@ import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
 
+const CURRENT_USER_ID = '11111111-1111-4111-8111-111111111111';
+const PARTNER_ID = '22222222-2222-4222-8222-222222222222';
+const ROOM_ID = '33333333-3333-5333-8333-333333333333';
+
 function makeProfile(partial: Partial<UserProfile> = {}): UserProfile {
   return {
-    id: 'partner-1',
+    id: PARTNER_ID,
     display_name: 'Partner One',
     native_languages: ['ja'],
     target_languages: ['en'],
@@ -56,7 +60,7 @@ describe('UserDetailComponent external profile actions', () => {
     getUserProfile = vi.fn();
     follow = vi.fn().mockResolvedValue(undefined);
     unfollow = vi.fn().mockResolvedValue(undefined);
-    openOrCreate = vi.fn().mockResolvedValue('room-123');
+    openOrCreate = vi.fn().mockResolvedValue(ROOM_ID);
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -66,7 +70,7 @@ describe('UserDetailComponent external profile actions', () => {
         provideHttpClientTesting(),
         {
           provide: AuthService,
-          useValue: { currentUser: signal({ id: 'current-user' }) },
+          useValue: { currentUser: signal({ id: CURRENT_USER_ID }) },
         },
         {
           provide: UserService,
@@ -127,7 +131,7 @@ describe('UserDetailComponent external profile actions', () => {
   });
 
   it('does not render follow or message actions on the current users own profile', async () => {
-    await render(makeProfile({ id: 'current-user' }));
+    await render(makeProfile({ id: CURRENT_USER_ID }));
 
     expect(
       fixture.nativeElement.querySelector('button[aria-label="userProfile.follow"]'),
@@ -147,8 +151,8 @@ describe('UserDetailComponent external profile actions', () => {
     await component.openConversation();
 
     expect(openOrCreate).toHaveBeenCalledTimes(1);
-    expect(openOrCreate).toHaveBeenCalledWith('partner-1');
-    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(openOrCreate).toHaveBeenCalledWith(PARTNER_ID);
+    expect(navigate).toHaveBeenCalledWith(['/chat', ROOM_ID]);
     expect(component.chatErrorKey()).toBe('');
     expect(component.isOpeningChat()).toBe(false);
   });
@@ -174,7 +178,7 @@ describe('UserDetailComponent external profile actions', () => {
     fixture.detectChanges();
 
     expect(follow).toHaveBeenCalledTimes(1);
-    expect(follow).toHaveBeenCalledWith('partner-1');
+    expect(follow).toHaveBeenCalledWith(PARTNER_ID);
     expect(unfollow).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(true);
 
@@ -191,7 +195,7 @@ describe('UserDetailComponent external profile actions', () => {
     fixture.detectChanges();
 
     expect(unfollow).toHaveBeenCalledTimes(1);
-    expect(unfollow).toHaveBeenCalledWith('partner-1');
+    expect(unfollow).toHaveBeenCalledWith(PARTNER_ID);
     expect(follow).not.toHaveBeenCalled();
     expect(component.isFollowing()).toBe(false);
   });

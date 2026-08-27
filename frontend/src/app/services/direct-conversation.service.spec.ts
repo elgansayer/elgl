@@ -63,6 +63,9 @@ describe('DirectConversationService', () => {
   });
 
   it.each([
+    null,
+    'not-an-object',
+    [],
     {},
     { roomId: '' },
     { roomId: 'not-a-room-id' },
