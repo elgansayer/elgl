@@ -30,8 +30,17 @@ function validFiles() {
       export const config = { providers: [provideClientHydration()] };
     `,
     serverConfig: `
-      const serverConfig = { providers: [provideServerRendering(withRoutes(serverRoutes))] };
-      export const config = mergeApplicationConfig(appConfig, serverConfig);
+      const serverConfig = {
+        providers: [
+          provideServerRendering(
+            withRoutes(serverRoutes),
+          ),
+        ],
+      };
+      export const config = mergeApplicationConfig(
+        appConfig,
+        serverConfig,
+      );
     `,
     serverRoutes: `
       export const serverRoutes = [
