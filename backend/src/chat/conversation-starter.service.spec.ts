@@ -15,6 +15,7 @@ function makeQuery(response: QueryResponse) {
   for (const method of ['select', 'eq', 'in', 'is', 'limit']) {
     query[method] = vi.fn(() => query);
   }
+  query['returns'] = vi.fn(() => Promise.resolve(response));
   query['maybeSingle'] = vi.fn(() => Promise.resolve(response));
   query['then'] = (
     resolve: (value: QueryResponse) => unknown,
