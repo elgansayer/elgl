@@ -221,8 +221,9 @@ describe('DiscoveryService Partner of the Week eligibility', () => {
     expect(redis.set).toHaveBeenCalledWith(
       'partner_of_week_ids',
       JSON.stringify(
-        Array.from({ length: 10 }, (_, index) =>
-          `user-${String(index).padStart(2, '0')}`,
+        Array.from(
+          { length: 10 },
+          (_, index) => `user-${String(index).padStart(2, '0')}`,
         ),
       ),
       'EX',
