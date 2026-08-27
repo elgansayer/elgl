@@ -3,6 +3,7 @@ import { MockScenariosService } from './mock-scenarios.service';
 
 describe('MockScenariosService', () => {
   const originalMode = process.env.MOCK_BACKEND_MODE;
+  const originalNodeEnv = process.env.NODE_ENV;
   const originalScenarios = process.env.MOCK_BACKEND_SCENARIOS;
   const originalSeed = process.env.MOCK_BACKEND_SEED;
 
@@ -16,6 +17,8 @@ describe('MockScenariosService', () => {
   afterAll(() => {
     if (originalMode === undefined) delete process.env.MOCK_BACKEND_MODE;
     else process.env.MOCK_BACKEND_MODE = originalMode;
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
     if (originalScenarios === undefined)
       delete process.env.MOCK_BACKEND_SCENARIOS;
     else process.env.MOCK_BACKEND_SCENARIOS = originalScenarios;
