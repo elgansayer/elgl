@@ -27,6 +27,7 @@ function isAbortError(error: unknown): boolean {
   template: `
     <div
       (touchstart)="onTouchStart($event)"
+      (touchmove)="onTouchMove()"
       (touchend)="onTouchEnd()"
       (touchcancel)="onTouchCancel()"
       (mousedown)="onMouseDown($event)"
@@ -416,6 +417,10 @@ export class LongPressContextMenuComponent {
   onTouchStart(event: TouchEvent) {
     if (event.touches.length !== 1) return;
     this.startTimer();
+  }
+
+  onTouchMove() {
+    this.cancelTimer();
   }
 
   onTouchEnd() {
