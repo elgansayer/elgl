@@ -1,0 +1,42 @@
+{
+  "scenario": "mb-017-v1",
+  "case": {
+    "id": "same-and-boundary",
+    "query": {
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "radius_metres": 50000,
+      "sort": "nearest"
+    },
+    "users": [
+      {
+        "id": "mock-gps-same-location",
+        "display_name": "GPS Same Location",
+        "native_languages": ["ja"],
+        "target_languages": ["en"],
+        "avatar_url": null,
+        "is_vip": false,
+        "study_streak_days": 10,
+        "correction_ratio": 0.9,
+        "is_serious_learner": true,
+        "privacy_hide_from_search": false,
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "distance_metres": 0
+      },
+      {
+        "id": "mock-gps-radius-inside",
+        "display_name": "GPS Radius Inside",
+        "native_languages": ["ja"],
+        "target_languages": ["en"],
+        "avatar_url": null,
+        "is_vip": false,
+        "study_streak_days": 10,
+        "correction_ratio": 0.9,
+        "is_serious_learner": true,
+        "privacy_hide_from_search": false,
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "distance_metres": 49999
+      }
+    ]
+  }
+}
