@@ -74,8 +74,10 @@ describe('002_trust_and_safety migration contract', () => {
   });
 
   it('keeps the historical migration replay-safe and non-destructive', () => {
-    const tableCreates = trustAndSafety.match(/CREATE TABLE IF NOT EXISTS/g) ?? [];
-    const indexCreates = trustAndSafety.match(/CREATE INDEX IF NOT EXISTS/g) ?? [];
+    const tableCreates =
+      trustAndSafety.match(/CREATE TABLE IF NOT EXISTS/g) ?? [];
+    const indexCreates =
+      trustAndSafety.match(/CREATE INDEX IF NOT EXISTS/g) ?? [];
 
     expect(tableCreates).toHaveLength(3);
     expect(indexCreates).toHaveLength(6);
