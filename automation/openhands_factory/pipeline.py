@@ -1779,6 +1779,62 @@ class FactoryPipeline:
                 }
             )
 
+    def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
+        """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
+
+        Two Telegram sends, not one, because the first must never depend on a healthy agent
+        provider - the exact thing a stall may itself have taken down. The AI pass is a
+        strictly-optional addition that reasons over the already-gathered evidence; it has no
+        tool access and cannot make the situation worse by touching the repository or host.
+        Never raises - this always runs from a background thread and must not affect scheduling.
+        """
+        from openhands_factory.agents.base import AgentPhase, AgentRequest
+
+        alerts = AlertService(self.config)
+        started_at = datetime.now(UTC)
+        alerts.send(
+            f"OpenHands factory alert: scheduling stalled\n\n{reason}\n\n{diagnostics}",
+            category="factory-scheduling-stalled",
+        )
+
+        cycle_id = f"stall-investigation-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
+        task = Task(
+            identifier=cycle_id,
+            title="Factory stall investigation",
+            body=diagnostics,
+            source="factory-internal",
+            priority=0,
+        )
+        job = Job(task=task)
+        prompt = (
+            (self.prompt_dir / "stall_investigation.md").read_text(encoding="utf-8")
+            + "\n\n## Diagnostic snapshot\n\n"
+            + diagnostics
+        )
+        # A plain empty directory, not a git worktree - this call never reads or
+        # writes repository files, only reasons over the diagnostics text above.
+        scratch = self.config.worktree_dir / "stall-investigation"
+        scratch.mkdir(parents=True, exist_ok=True)
+        request = AgentRequest(
+            phase=AgentPhase.GENERAL_ACTION,
+            task=task,
+            prompt=prompt,
+            cwd=scratch,
+            system_prompt=self.system_prompt,
+        )
+        try:
+            result = self.router.run(request, job)
+            findings = (result.summary or "").strip() if result.success else None
+        except Exception as error:
+            LOGGER.warning("factory.stall_investigation.agent_failed error=%s", error)
+            findings = None
+
+        if findings:
+            alerts.send(
+                f"OpenHands factory alert: stall investigation findings\n\n{findings}",
+                category="factory-scheduling-stalled-findings",
+            )
+
     def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:
         """Create proposed issues, skipping anything that already exists.
 
