@@ -29,7 +29,7 @@ export function applyConversationStarterToComposer(
       <app-conversation-starter-panel
         [roomId]="id()"
         [chatLoading]="chatRoom()?.isLoading() ?? true"
-        [messageCount]="chatRoom()?.messages().length ?? 0"
+        [messageCount]="chatRoom()?.messages()?.length ?? 0"
         [composerText]="composerText() || (chatRoom()?.textInput ?? '')"
         (suggestionSelected)="useSuggestion($event)"
       />
@@ -40,7 +40,7 @@ export function applyConversationStarterToComposer(
 export class ChatRoomPageComponent {
   readonly id = input.required<string>();
   readonly composerText = signal('');
-  private readonly chatRoom = viewChild(ChatRoomComponent);
+  readonly chatRoom = viewChild(ChatRoomComponent);
 
   onInput(event: Event): void {
     const target = event.target;
