@@ -11,6 +11,7 @@ import { CentrifugoService } from './centrifugo.service';
 import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
+import { ChatEditController } from './chat-edit.controller';
 import { ChatMediaSendController } from './chat-media-send.controller';
 import { ChatSearchController } from './chat-search.controller';
 import { ChatService } from './chat.service';
@@ -26,6 +27,8 @@ import { ChatBackupService } from '../chat-backup/chat-backup.service';
 import { QuickRepliesController } from './quick-replies/quick-replies.controller';
 import { QuickRepliesService } from './quick-replies/quick-replies.service';
 import { ChatSystemEventListener } from './listeners/chat-system-event.listener';
+import { DirectConversationController } from './direct-conversations/direct-conversation.controller';
+import { DirectConversationService } from './direct-conversations/direct-conversation.service';
 
 @Module({
   imports: [
@@ -40,11 +43,13 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   controllers: [
     ChatController,
+    ChatEditController,
     ChatMediaSendController,
     ChatSearchController,
     ChatSettingsController,
     ChatBackupController,
     QuickRepliesController,
+    DirectConversationController,
   ],
   providers: [
     CentrifugoService,
@@ -60,6 +65,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ChatBackupService,
     QuickRepliesService,
     ChatSystemEventListener,
+    DirectConversationService,
   ],
   exports: [
     CentrifugoService,
@@ -70,6 +76,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
     ConversationStarterService,
     SystemMessageService,
     ChatSettingsService,
+    DirectConversationService,
   ],
 })
 export class ChatModule {}
