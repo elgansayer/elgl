@@ -4,6 +4,8 @@ import { SafetyModule } from '../safety/safety.module';
 import { XpModule } from '../xp/xp.module';
 import { QuestsModule } from '../quests/quests.module';
 import { CloudflareR2Module } from '../cloudflare-r2/r2.module';
+import { HashtagTopicsController } from './hashtag-topics.controller';
+import { HashtagTopicsService } from './hashtag-topics.service';
 import { MomentsController } from './moments.controller';
 import { MomentsRankingService } from './moments-ranking.service';
 import { MomentsService } from './moments.service';
@@ -17,8 +19,18 @@ import { TimelineWorker } from './timeline.worker';
     QuestsModule,
     CloudflareR2Module,
   ],
-  controllers: [MomentsController],
-  providers: [MomentsService, MomentsRankingService, TimelineWorker],
-  exports: [MomentsService, MomentsRankingService, TimelineWorker],
+  controllers: [MomentsController, HashtagTopicsController],
+  providers: [
+    MomentsService,
+    MomentsRankingService,
+    HashtagTopicsService,
+    TimelineWorker,
+  ],
+  exports: [
+    MomentsService,
+    MomentsRankingService,
+    HashtagTopicsService,
+    TimelineWorker,
+  ],
 })
 export class MomentsModule {}
