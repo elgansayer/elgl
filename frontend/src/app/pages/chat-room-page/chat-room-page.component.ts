@@ -25,7 +25,7 @@ export function applyConversationStarterToComposer(
   selector: 'app-chat-room-page',
   imports: [ChatRoomComponent, ConversationStarterPanelComponent],
   template: `
-    <main class="mx-auto flex max-w-3xl flex-col gap-3">
+    <div class="mx-auto flex max-w-3xl flex-col gap-3">
       <app-conversation-starter-panel
         [roomId]="id()"
         [chatLoading]="chatRoom()?.isLoading() ?? true"
@@ -34,7 +34,7 @@ export function applyConversationStarterToComposer(
         (suggestionSelected)="useSuggestion($event)"
       />
       <app-chat-room [id]="id()" />
-    </main>
+    </div>
   `,
 })
 export class ChatRoomPageComponent {
