@@ -76,9 +76,9 @@ describe('ConversationStarterService', () => {
   it('rejects blocked partners before reading profile data', async () => {
     safety.getBlockedAndBlockerIds.mockResolvedValue([partnerId]);
 
-    await expect(service.getSuggestions(userId, partnerId)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(from).not.toHaveBeenCalled();
     expect(llm.proxyMessage).not.toHaveBeenCalled();
   });
@@ -86,9 +86,9 @@ describe('ConversationStarterService', () => {
   it('rejects arbitrary profile probing without a two-member direct room', async () => {
     from.mockReturnValueOnce(makeQuery({ data: [], error: null }));
 
-    await expect(service.getSuggestions(userId, partnerId)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(llm.proxyMessage).not.toHaveBeenCalled();
   });
 
@@ -103,9 +103,9 @@ describe('ConversationStarterService', () => {
     });
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
 
-    await expect(service.getSuggestions(userId, partnerId)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(llm.proxyMessage).not.toHaveBeenCalled();
   });
 
@@ -115,9 +115,10 @@ describe('ConversationStarterService', () => {
       { data: [{ interests: { name: 'Hiking' } }], error: null },
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
-    llm.proxyMessage.mockResolvedValue(
-      '1. What trail would you recommend?\n- What food do you enjoy cooking?\n* What are you learning this week?',
-    );
+    llm.proxyMessage.mockResolvedValue({
+      response:
+        '1. What trail would you recommend?\n- What food do you enjoy cooking?\n* What are you learning this week?',
+    });
 
     const suggestions = await service.getSuggestions(userId, partnerId);
 
@@ -126,7 +127,9 @@ describe('ConversationStarterService', () => {
       'What food do you enjoy cooking?',
       'What are you learning this week?',
     ]);
-    expect(suggestions.every((suggestion) => suggestion.length <= 160)).toBe(true);
+    expect(
+      suggestions.every((suggestion) => suggestion.length <= 160),
+    ).toBe(true);
   });
 
   it('uses deterministic fallbacks when the LLM provider is unavailable', async () => {
@@ -151,9 +154,10 @@ describe('ConversationStarterService', () => {
       ...eligibleResponses(),
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
-    llm.proxyMessage.mockResolvedValue(
-      'What are you studying?\nWhat made you smile today?\nWhat place would you recommend?',
-    );
+    llm.proxyMessage.mockResolvedValue({
+      response:
+        'What are you studying?\nWhat made you smile today?\nWhat place would you recommend?',
+    });
 
     const first = await service.getSuggestions(userId, partnerId);
     const second = await service.getSuggestions(userId, partnerId);
