@@ -185,7 +185,10 @@ export class DiscoveryService {
 
         const correctionRatio = candidate.correction_ratio ?? 0;
         // Normalise average rating to 0-1 (1-5 scale)
-        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        const avgRatingNorm =
+          Number.isFinite(ratings.averageScore) && ratings.averageScore > 0
+            ? Math.min(1, Math.max(0, (ratings.averageScore - 1) / 4))
+            : 0;
         // Log-scale the ratings count so it doesn't dominate
         const ratingsCountLog =
           ratings.totalRatings > 0
