@@ -100,6 +100,26 @@ describe('CoverPhotoUploaderComponent', () => {
 
     expect(component.selectedFile()).toBeNull();
     expect(component.imageSource()).toBeNull();
+    expect(component.uploadError()).toBe(true);
+  });
+
+  it('rejects empty and oversized source files before reading them into memory', () => {
+    for (const size of [0, 25 * 1024 * 1024 + 1]) {
+      const file = new File(['image'], 'cover.webp', { type: 'image/webp' });
+      Object.defineProperty(file, 'size', { configurable: true, value: size });
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [file] as unknown as FileList,
+      });
+
+      component.onFileSelected({ target: input } as unknown as Event);
+
+      expect(component.selectedFile()).toBeNull();
+      expect(component.imageSource()).toBeNull();
+      expect(component.croppedBlob()).toBeNull();
+      expect(component.uploadError()).toBe(true);
+    }
   });
 
   it('delegates cropping to the shared cover photo cropper', () => {
@@ -126,6 +146,28 @@ describe('CoverPhotoUploaderComponent', () => {
     expect(component.isCropping()).toBe(false);
     expect(component.uploadError()).toBe(false);
     expect(createObjectUrl).toHaveBeenCalledWith(blob);
+  });
+
+  it('rejects empty, oversized and unsupported crop results before upload state changes', () => {
+    const invalidCrops = [
+      new Blob([], { type: 'image/webp' }),
+      new Blob(['cropped'], { type: 'image/svg+xml' }),
+      new Blob(['cropped'], { type: 'image/webp' }),
+    ];
+    Object.defineProperty(invalidCrops[2], 'size', {
+      configurable: true,
+      value: 25 * 1024 * 1024 + 1,
+    });
+
+    for (const blob of invalidCrops) {
+      component.onCropSaved(blob);
+
+      expect(component.croppedBlob()).toBeNull();
+      expect(component.croppedPreviewUrl()).toBeNull();
+      expect(component.uploadError()).toBe(true);
+    }
+
+    expect(createObjectUrl).not.toHaveBeenCalled();
   });
 
   it('keeps upload disabled until a valid crop result exists', () => {
