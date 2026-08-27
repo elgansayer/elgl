@@ -88,8 +88,8 @@ describe('CreateEventModalComponent', () => {
     const requiredControlIds = ['titleInput', 'dateTimeInput', 'locationInput', 'descriptionInput'];
 
     for (const id of requiredControlIds) {
-      const label = fixture.nativeElement.querySelector(`label[for="${id}"]`) as HTMLLabelElement | null;
-      const control = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
+      const label = document.body.querySelector(`label[for="${id}"]`) as HTMLLabelElement | null;
+      const control = document.body.querySelector(`#${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
 
       expect(label).toBeTruthy();
       expect(control).toBeTruthy();
@@ -98,7 +98,7 @@ describe('CreateEventModalComponent', () => {
   });
 
   it('keeps the Create action disabled until the required event details are valid', () => {
-    const createButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    const createButton = document.body.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(createButton.disabled).toBe(true);
 
     component.eventForm.patchValue({
