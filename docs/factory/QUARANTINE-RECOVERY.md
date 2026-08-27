@@ -18,7 +18,7 @@ With the production defaults of three repeated failures and a 30-minute base win
 | 8 | 16 hours |
 | 9+ | 24 hours |
 
-The 24-hour maximum is the same durable retry-policy cap used elsewhere in the Factory. A task can therefore recover autonomously without being allowed to consume a subscription-backed agent route every 30 minutes indefinitely.
+For the production 30-minute base, the 24-hour maximum is the same durable retry-policy cap used elsewhere in the Factory. An operator-selected base window longer than 24 hours is preserved rather than shortened. A task can therefore recover autonomously without being allowed to consume a subscription-backed agent route every 30 minutes indefinitely.
 
 For comparison, a permanently unchanged task under the old fixed 30-minute policy could become eligible 48 times in one day. The adaptive schedule makes it eligible at most five times in the first 24 hours after the initial quarantine, before settling at the 24-hour cap. Actual executions can be fewer because normal queue, capacity, and provider controls still apply.
 
