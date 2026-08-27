@@ -85,9 +85,9 @@ def test_normal_general_action_retains_provider_fallback_chain() -> None:
 
 
 def test_admin_governance_filters_non_admin_issue_events_before_runner_allocation() -> None:
-    workflow = (
-        REPOSITORY_ROOT / ".github/workflows/admin-backlog-governance.yml"
-    ).read_text(encoding="utf-8")
+    workflow = (REPOSITORY_ROOT / ".github/workflows/admin-backlog-governance.yml").read_text(
+        encoding="utf-8"
+    )
 
     assert "contains(github.event.issue.title, 'admin')" in workflow
     assert "github.event.label.name == 'factory-ready'" in workflow
