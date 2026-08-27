@@ -84,6 +84,35 @@ describe('CreateEventModalComponent', () => {
     expect(component.eventForm.invalid).toBe(true);
   });
 
+  it('renders labelled required controls for What, When, Where, and Description', () => {
+    const requiredControlIds = ['titleInput', 'dateTimeInput', 'locationInput', 'descriptionInput'];
+
+    for (const id of requiredControlIds) {
+      const label = fixture.nativeElement.querySelector(`label[for="${id}"]`) as HTMLLabelElement | null;
+      const control = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | HTMLTextAreaElement | null;
+
+      expect(label).toBeTruthy();
+      expect(control).toBeTruthy();
+      expect(control?.required).toBe(true);
+    }
+  });
+
+  it('keeps the Create action disabled until the required event details are valid', () => {
+    const createButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(createButton.disabled).toBe(true);
+
+    component.eventForm.patchValue({
+      title: 'Conversation meetup',
+      date_time: '2026-09-01T10:00',
+      category: 'audio_room',
+      location: 'Zoom',
+      description: 'Practice together',
+    });
+    fixture.detectChanges();
+
+    expect(createButton.disabled).toBe(false);
+  });
+
   it('should not call createEvent when required fields are missing', async () => {
     component.eventForm.patchValue({
       title: 'Test Event',
