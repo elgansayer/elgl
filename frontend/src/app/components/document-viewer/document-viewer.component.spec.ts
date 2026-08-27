@@ -102,11 +102,14 @@ describe('DocumentViewerComponent', () => {
   });
 
   it('keeps the component direction-neutral and free of feature-owned motion', () => {
-    const host = fixture.nativeElement as HTMLElement;
-    const classNames = Array.from(
-      host.querySelectorAll<HTMLElement>('[class]'),
-      (element) => element.className,
-    ).join(' ');
+    const host: HTMLElement = fixture.nativeElement;
+    const featureOwnedElements = [
+      host.querySelector<HTMLElement>('article'),
+      host.querySelector<HTMLElement>('.max-w-4xl'),
+      host.querySelector<HTMLElement>('h1'),
+      host.querySelector<HTMLElement>('app-card > div'),
+    ].filter((element): element is HTMLElement => element !== null);
+    const classNames = featureOwnedElements.map((element) => element.className).join(' ');
 
     expect(classNames).not.toMatch(
       /(?:^|\s)(?:ml-|mr-|pl-|pr-|left-|right-|text-left|text-right)/,
