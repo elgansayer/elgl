@@ -41,6 +41,12 @@ When mock mode is enabled, backend startup logs include the numeric seed, seed i
 
 `buildMockFixtureSnapshot(seed)` is a pure reset boundary: each call returns fresh arrays and objects. Rebuilding with the same seed restores the exact initial scenario even if a previous consumer mutated its local snapshot.
 
+## Schema-driven response factories
+
+MB-004 adds a second reusable primitive on top of the deterministic seed: every documented public `2xx` JSON response in the NestJS OpenAPI document gets a deterministic factory automatically. Mock-mode tests can list, generate and validate these response fixtures through `/api/mock/schema-fixtures/*`; production/non-mock clients receive `404`.
+
+See [OpenAPI-driven mock response factories](./mock-openapi-fixture-factories.md) for the API, override rules, whole-catalogue validation, compile-time typed-factory helper and frontend integration client.
+
 ## Client activation and indicator
 
 The normal client config explicitly carries `"mockBackendMode": "disabled"`. For offline/demo work, copy the repository-owned profile before starting the frontend:
@@ -81,6 +87,7 @@ The ordinary backend and frontend test suites additionally cover runtime validat
 4. Confirm the client indicator is visible whenever fixture mode is active.
 5. Record the startup `seedId` in test failure diagnostics so a scenario can be replayed exactly.
 6. Add future scenario payloads behind the same boundary and build them from `DeterministicFixtureGenerator` rather than adding per-feature fallback flags.
+7. Prefer the OpenAPI response-factory registry when a scenario needs ordinary API-shaped payloads, and use typed named factories only when domain-specific defaults are required.
 
 ## Rollback
 
