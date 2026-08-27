@@ -1,15 +1,24 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json, urlencoded, Request, Response } from 'express';
 import helmet from 'helmet';
-import { SanitiseHtmlPipe } from './common/pipes/sanitise-html.pipe';
+import { isMockBackendEnabled } from './config/mock-backend-mode';
+import { getMockFixtureDiagnostics } from './mock/deterministic-fixtures';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(helmet());
   app.setGlobalPrefix('api');
+
+  if (isMockBackendEnabled()) {
+    const diagnostics = getMockFixtureDiagnostics();
+    Logger.log(
+      `Mock backend fixtures enabled: seed=${diagnostics.seed} seedId=${diagnostics.seedId} epoch=${diagnostics.epoch}`,
+      'MockBackend',
+    );
+  }
 
   // Ensure raw body is preserved for Stripe webhook
   app.use(
@@ -48,7 +57,6 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(
-    new SanitiseHtmlPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,

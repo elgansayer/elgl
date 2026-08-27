@@ -3,12 +3,16 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
-import { FontScaleService } from '../../../services/font-scale.service';
+import {
+  ChatTextSizePreference,
+  FontScaleService,
+  TextSizePreference,
+} from '../../../services/font-scale.service';
 import { Theme, ThemeService } from '../../../services/theme.service';
 import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
+import { ChatSettingsService } from '../../../services/chat-settings.service';
 import { FormsModule } from '@angular/forms';
-import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 import { AppSelectComponent } from '../../../components/primitives/select/select.component';
 import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
@@ -20,7 +24,6 @@ import { AppButtonPrimaryComponent } from '../../../components/primitives/button
     HlmButton,
     TranslatePipe,
     FormsModule,
-    FontScaleSliderComponent,
     AppSelectComponent,
     AppButtonPrimaryComponent,
   ],
@@ -30,6 +33,7 @@ export class AppearanceSettingsComponent {
   readonly fontScaleService = inject(FontScaleService);
   readonly themeService = inject(ThemeService);
   private userService = inject(UserService);
+  private chatSettingsService = inject(ChatSettingsService);
   private location = inject(Location);
   readonly i18nService = inject(I18nService);
 
@@ -40,8 +44,12 @@ export class AppearanceSettingsComponent {
   readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
   readonly currentTheme = this.themeService.currentTheme;
+  readonly currentTextSize = this.fontScaleService.textSizePreference;
+  readonly currentChatTextSize = this.fontScaleService.chatTextSize;
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
+  readonly textSizeOptions: readonly TextSizePreference[] = ['small', 'normal', 'large'];
+  readonly chatTextSizeOptions: readonly ChatTextSizePreference[] = ['small', 'medium', 'large'];
 
   readonly primaryAccentColor = signal<string | null>(null);
   readonly isVip = signal(false);
@@ -58,15 +66,23 @@ export class AppearanceSettingsComponent {
 
   private profileResource = resource<UserProfile | null, void>({
     loader: async () => {
+      await this.loadChatTextPreference();
+
       try {
         const profile = await this.userService.getMyProfile();
         if (profile) {
-          this.isVip.set(Boolean(profile.is_vip));
-          const accent = profile.primary_accent_color ?? null;
+          const isVip = Boolean(profile.is_vip);
+          this.isVip.set(isVip);
+
+          // Custom accents are a VIP entitlement. A user who previously had
+          // VIP may still have a stored preference after downgrading, but the
+          // UI must not apply or resubmit that preference while the entitlement
+          // is inactive.
+          const accent = isVip ? (profile.primary_accent_color ?? null) : null;
           this.primaryAccentColor.set(accent);
-          if (accent) {
-            this.themeService.setPrimaryAccentColor(accent);
-          }
+          this.themeService.loadFromProfile({
+            primary_accent_color: accent ?? undefined,
+          });
         }
         return profile;
       } catch {
@@ -80,6 +96,14 @@ export class AppearanceSettingsComponent {
 
   setTheme(theme: Theme): void {
     this.themeService.setTheme(theme);
+  }
+
+  setTextSize(size: TextSizePreference): void {
+    this.fontScaleService.setTextSizePreference(size);
+  }
+
+  setChatTextSize(size: ChatTextSizePreference): void {
+    this.fontScaleService.setChatTextSize(size);
   }
 
   setAccentColor(color: string): void {
@@ -100,12 +124,26 @@ export class AppearanceSettingsComponent {
     this.isSaving.set(true);
 
     try {
-      const accent = this.primaryAccentColor();
-      await this.userService.updateMyProfile({
-        primary_accent_color: accent ?? undefined,
-      });
+      const accent = this.isVip() ? this.primaryAccentColor() : null;
+      const chatTextSize = this.currentChatTextSize();
+      if (this.isVip()) {
+        await this.userService.updateMyProfile({
+          primary_accent_color: accent ?? undefined,
+        });
+      } else {
+        await this.userService.updateMyProfile({});
+      }
+
+      const chatSaved = await this.chatSettingsService.updateSetting('textSize', chatTextSize);
+      if (!chatSaved) {
+        this.fontScaleService.setChatTextSize(this.chatSettingsService.textSize());
+        throw new Error('Chat text size was not persisted');
+      }
+
       if (accent) {
         this.themeService.setPrimaryAccentColor(accent);
+      } else {
+        this.themeService.resetPrimaryAccentColor();
       }
       this.successMessage.set('settings.saved');
     } catch {
@@ -125,5 +163,12 @@ export class AppearanceSettingsComponent {
 
   goBack(): void {
     this.location.back();
+  }
+
+  private async loadChatTextPreference(): Promise<void> {
+    const loaded = await this.chatSettingsService.loadSettings();
+    if (loaded) {
+      this.fontScaleService.setChatTextSize(this.chatSettingsService.textSize());
+    }
   }
 }

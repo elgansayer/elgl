@@ -19,7 +19,7 @@
       "claudeDesignPath": "foundations/tokens.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1094-appearance-settings-2026-08-23; rtl-safe-area-padding-2026-08-26",
       "requiredStates": ["light", "dark", "forced-colours", "accent-override"]
     },
     {
@@ -51,7 +51,7 @@
       "claudeDesignPath": "components/primitives/card-inputs.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; secure-component-identifiers-2026-08-18; card-consumer-role-override-2026-08-22",
       "requiredStates": ["light", "dark", "focus-visible", "error", "390px", "rtl"]
     },
     {
@@ -114,7 +114,7 @@
       "claudeDesignPath": "components/component-system.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-966-visual-diff-rendering-2026-08-21",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-594-grammar-explanation-dialog; issue-659-simplify-context-menu; merged-regression-repair-2026-08-18; secure-component-identifiers-2026-08-18; issue-6124-diagnostic-quiz-radio-group; issue-6115-device-lock-relay-tokens-2026-08-19; issue-6082-create-group-native-form-interactions-2026-08-19; issue-6179-events-calendar-spartan-controls-2026-08-19; issue-6164-emoji-picker-spartan-selection-2026-08-19; issue-6154-doodle-pad-spartan-selection-2026-08-19; issue-1713-voice-playback-speed-2026-08-20; appa11yclickable-explicit-tabindex-2026-08-20; issue-6144-distance-slider-native-control-2026-08-21; quests-retry-hlmbtn-spartan-contract-2026-08-22; issue-1078-link-preview-rendering-2026-08-23; frontend-unit-baseline-repair-2026-08-25; issue-1467-dnd-quiet-hours-save-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; canonical-ci-regression-repair-2026-08-26; issue-1702-liked-by-modal-contract-2026-08-26; liked-by-spartan-title-contract-2026-08-26; issue-757-direct-profile-chat-2026-08-26; issue-966-visual-diff-rendering-2026-08-21",
       "requiredStates": [
         "light",
         "dark",
@@ -137,7 +137,7 @@
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -161,7 +161,7 @@
       "claudeDesignPath": "screens/chat.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; merged-regression-repair-2026-08-18; appa11yclickable-explicit-tabindex-2026-08-20; issue-1094-appearance-settings-2026-08-23",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl", "400%-zoom"]
     },
     {
@@ -173,7 +173,7 @@
       "claudeDesignPath": "screens/discovery.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-6140-global-search-relay-tokens-2026-08-26",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -204,7 +204,7 @@
       "claudeDesignPath": "screens/settings.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-671-haptic-preference-safety-2026-08-19; issue-1099-profile-visibility-toggle-2026-08-22; issue-1094-appearance-settings-2026-08-23; issue-1463-presence-privacy-toggles-2026-08-26; issue-402-vip-accent-entitlement-2026-08-20",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -238,7 +238,7 @@
       "claudeDesignPath": "screens/moderation.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1058-admin-user-management-fail-closed-2026-08-22; admin-users-resource-error-state-guard-2026-08-22",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -265,7 +265,7 @@
       "claudeDesignPath": "screens/onboarding.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-1032-dynamic-diagnostic-onboarding-2026-08-22",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
@@ -324,6 +324,7 @@
       "claudeDesignPath": "foundations/focus-ring.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26",
       "requiredStates": ["focus-visible", "light", "dark"]
     },
     {
@@ -335,6 +336,7 @@
       "claudeDesignPath": "foundations/reduced-motion.html",
       "syncDirection": "code-first",
       "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
+      "implementationAudit": "rtl-safe-area-padding-2026-08-26",
       "requiredStates": ["reduced-motion", "light", "dark"]
     }
   ]
