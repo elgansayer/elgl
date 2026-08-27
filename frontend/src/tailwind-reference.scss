@@ -1,5 +1,0 @@
-/* Minimal Tailwind entry point for per-component @reference imports. Kept
-   free of SCSS-only `//` comment syntax, which Tailwind's own CSS parser
-   cannot handle when loading a file via @reference/@import. */
-@config '../tailwind.config.js';
-@import 'tailwindcss';

@@ -1,9 +1,0 @@
-:host {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.rounded-app {
-  border-radius: 0.5rem;
-}
