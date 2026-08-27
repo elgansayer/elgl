@@ -10,6 +10,7 @@ import {
   getLanguageFlag,
 } from '../../primitives/language-picker/language-picker.component';
 import { RecommendedForYouCarouselComponent } from '../recommended-for-you/recommended-for-you-carousel.component';
+import { TopicFollowingComponent } from '../../topic-following/topic-following';
 
 export interface TranslatedLanguage {
   code: string;
@@ -26,6 +27,7 @@ export interface TranslatedLanguage {
     HlmButton,
     TranslatePipe,
     RecommendedForYouCarouselComponent,
+    TopicFollowingComponent,
   ],
   templateUrl: './global-search.component.html',
   styleUrls: ['./global-search.component.scss'],
