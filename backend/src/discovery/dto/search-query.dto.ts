@@ -132,7 +132,7 @@ export class SearchQueryDto {
   )
   @IsString()
   @MaxLength(50)
-  @Matches(/^[^,\u0000-\u001f\u007f]+$/u, {
+  @Matches(/^[^,\p{Cc}]+$/u, {
     message: 'interests must be a single valid interest tag',
   })
   interests?: string;

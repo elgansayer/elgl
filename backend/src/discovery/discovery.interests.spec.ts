@@ -78,19 +78,28 @@ function createService(queryBuilder: QueryBuilderMock, rpc: Mock) {
 
 describe('DiscoveryService interest filtering', () => {
   it('applies the selected interest with PostgreSQL array overlap for ordinary search', async () => {
-    const queryBuilder = createQueryBuilder([makePartner('photo-user', ['photography'])]);
+    const queryBuilder = createQueryBuilder([
+      makePartner('photo-user', ['photography']),
+    ]);
     const service = createService(queryBuilder, vi.fn());
 
     const result = await service.searchPartners('current-user', null, {
       interests: 'photography',
     });
 
-    expect(queryBuilder.overlaps).toHaveBeenCalledWith('interests', ['photography']);
+    expect(queryBuilder.select).toHaveBeenCalledWith(
+      expect.stringContaining('interests'),
+    );
+    expect(queryBuilder.overlaps).toHaveBeenCalledWith('interests', [
+      'photography',
+    ]);
     expect(result.map((partner) => partner.id)).toEqual(['photo-user']);
   });
 
   it('does not add an interest predicate when no filter is selected', async () => {
-    const queryBuilder = createQueryBuilder([makePartner('music-user', ['music'])]);
+    const queryBuilder = createQueryBuilder([
+      makePartner('music-user', ['music']),
+    ]);
     const service = createService(queryBuilder, vi.fn());
 
     await service.searchPartners('current-user', null, {});
