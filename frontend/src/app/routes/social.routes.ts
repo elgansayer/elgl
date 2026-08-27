@@ -7,6 +7,14 @@ export const socialRoutes: Routes = [
       import('../components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
   },
   {
+    path: 'moments/hashtag/:hashtag',
+    loadComponent: () =>
+      import('../components/hashtag-topic-page/hashtag-topic-page.component').then(
+        (m) => m.HashtagTopicPageComponent,
+      ),
+    title: 'Topic - HelloTalk',
+  },
+  {
     path: 'moments',
     loadComponent: () =>
       import('../components/moments-feed/moments-feed.component').then(
