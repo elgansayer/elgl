@@ -125,7 +125,10 @@ function detectForbiddenSelfCycles(
   rule: MockFixtureReferenceRule,
   issues: MockFixtureIntegrityIssue[],
 ): void {
-  if (rule.cyclePolicy !== 'forbid' || rule.targetCollection !== definition.name) {
+  if (
+    rule.cyclePolicy !== 'forbid' ||
+    rule.targetCollection !== definition.name
+  ) {
     return;
   }
 
@@ -190,7 +193,8 @@ export function validateMockFixtureIntegrity(
 
   const indexes = new Map<string, Map<string, number>>();
   for (const definition of definitions) {
-    const idField = definition.idField === undefined ? 'id' : definition.idField;
+    const idField =
+      definition.idField === undefined ? 'id' : definition.idField;
     const index = new Map<string, number>();
 
     if (idField) {
@@ -268,7 +272,8 @@ export function validateMockFixtureIntegrity(
         );
         if (!targetDefinition) continue;
 
-        const targetField = rule.targetField ?? targetDefinition.idField ?? 'id';
+        const targetField =
+          rule.targetField ?? targetDefinition.idField ?? 'id';
         const found =
           targetField === (targetDefinition.idField ?? 'id')
             ? (indexes.get(targetCollection)?.has(reference) ?? false)
