@@ -27,7 +27,8 @@ describe('AppController', () => {
     if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
 
-    if (ORIGINAL_MOCK_BACKEND_MODE === undefined) delete process.env.MOCK_BACKEND_MODE;
+    if (ORIGINAL_MOCK_BACKEND_MODE === undefined)
+      delete process.env.MOCK_BACKEND_MODE;
     else process.env.MOCK_BACKEND_MODE = ORIGINAL_MOCK_BACKEND_MODE;
   });
 
@@ -51,7 +52,9 @@ describe('AppController', () => {
         now: '2026-08-27T12:30:00Z',
       });
 
-      expect(appController.resetMockClock({ namespace: 'worker-a' })).toMatchObject({
+      expect(
+        appController.resetMockClock({ namespace: 'worker-a' }),
+      ).toMatchObject({
         now: '2024-01-01T00:00:00.000Z',
         offsetMs: 0,
       });
@@ -104,9 +107,9 @@ describe('AppController', () => {
       expect(() => appService.getMockClock('not allowed!')).toThrow(
         BadRequestException,
       );
-      expect(() =>
-        appService.freezeMockClock('2024-01-01', 'worker'),
-      ).toThrow(BadRequestException);
+      expect(() => appService.freezeMockClock('2024-01-01', 'worker')).toThrow(
+        BadRequestException,
+      );
       expect(() =>
         appService.freezeMockClock(
           '2024-01-01T00:00:00Z',
