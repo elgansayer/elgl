@@ -25,7 +25,24 @@ GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 1. Wait for the daemon to be idle (no active jobs).
+# 1. Host storage maintenance - runs every day, before the idle wait below
+#    and regardless of whether main has moved. It touches only dangling/
+#    unreferenced resources (journal, Docker build cache, unused uv cache
+#    entries), never anything an active job holds open, so it doesn't need
+#    the daemon idle or stopped. A busy factory can legitimately never go
+#    idle within ACTIVE_JOB_WAIT_SECONDS (a healthy, always-working queue
+#    looks identical to a stuck one from this script's point of view), and
+#    the "already up to date" branch further down exits early on most days -
+#    so anything placed after either gate would rarely run at all. This was
+#    previously the only path for this maintenance, and it was manual-only:
+#    a human had to remember to run it with --apply.
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+log "Running host storage maintenance"
+"$REPOSITORY/scripts/maintain-factory-host-storage.sh" --apply --prune-docker || \
+  log "WARNING: host storage maintenance failed - continuing with the update"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# 2. Wait for the daemon to be idle (no active jobs).
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 active_jobs() {
   python3 - "$HEARTBEAT" <<'PY'
@@ -53,7 +70,7 @@ done
 log "Factory is idle"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 2. Fetch and check whether main has moved.
+# 3. Fetch and check whether main has moved.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Fetching origin/main"
 timeout "${GIT_TIMEOUT}s" \
@@ -73,7 +90,7 @@ fi
 log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 3. Verify the pull will be a clean fast-forward.
+# 4. Verify the pull will be a clean fast-forward.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 merge_base=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" merge-base HEAD origin/main)
 if [ "$merge_base" != "$local_sha" ]; then
@@ -82,13 +99,13 @@ if [ "$merge_base" != "$local_sha" ]; then
 fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 4. Stop the factory before touching the package.
+# 5. Stop the factory before touching the package.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Stopping factory service"
 systemctl stop "$SERVICE" || true
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 5. Pull and reinstall.
+# 6. Pull and reinstall.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Pulling main"
 timeout "${GIT_TIMEOUT}s" \
@@ -101,17 +118,31 @@ pulled_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse HEAD)
 log "Pulled to ${pulled_sha:0:12}"
 
 log "Reinstalling factory Python package"
-VIRTUAL_ENV="$FACTORY_VENV" \
+# Ensure dev can write the venv before uv runs as dev, regardless of what
+# owned it coming in - then the sync itself runs end to end as dev, so it
+# never creates root-owned files under $FACTORY_VENV or ~dev/.cache/uv the
+# way running it as root (even with HOME=$FACTORY_HOME set) previously did.
+# That HOME override doesn't change the process UID, so uv's cache writes
+# came out owned by root while sitting inside the dev user's home directory -
+# unreadable by the dev-run factory service and silently piling up until it
+# tripped the disk-space reserve that gates scheduling.
+chown -R dev:dev "$FACTORY_VENV"
+runuser -u "$FACTORY_USER" -- env \
+  HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
     --project "$REPOSITORY/automation"
-# All git and uv operations ran as root - restore dev ownership on everything
-# we touched so the factory service (User=dev) can read and execute them.
-chown -R dev:dev "$FACTORY_VENV"
+
+# Routine maintenance: drop cache entries no longer referenced by any
+# environment. Safe - never touches entries a future sync still needs -
+# and keeps the wheel cache from growing indefinitely across daily runs.
+runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" "$FACTORY_VENV/bin/uv" cache prune || true
+# Repository git ops above already ran as dev via runuser; this stays as a
+# defensive backstop in case anything else touched it.
 chown -R dev:dev "$REPOSITORY"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 6. Restart and verify.
+# 7. Restart and verify.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Starting factory service"
 systemctl reset-failed "$SERVICE" || true
