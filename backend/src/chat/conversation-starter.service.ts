@@ -33,6 +33,10 @@ interface PartnerProfile {
   is_deletion_pending?: boolean | null;
 }
 
+interface InterestRelationRow {
+  interests: { name?: string | null } | { name?: string | null }[] | null;
+}
+
 @Injectable()
 export class ConversationStarterService {
   private readonly cache = new Map<string, CachedSuggestions>();
@@ -224,7 +228,6 @@ export class ConversationStarterService {
     partnerId: string,
     profile: PartnerProfile,
   ): Promise<string[]> {
-    const supabase = this.supabaseService.getClient();
     const displayName =
       this.cleanProfileText(profile.display_name, 80) || 'your language partner';
     const nativeLanguage =
@@ -235,21 +238,7 @@ export class ConversationStarterService {
       .map((language) => this.cleanProfileText(language, 40))
       .filter((language) => language.length > 0);
     const bio = this.cleanProfileText(profile.bio_text, 240);
-
-    let interests: string[] = [];
-    try {
-      const { data } = await supabase
-        .from('user_interests')
-        .select('interests(name)')
-        .eq('user_id', partnerId)
-        .limit(MAX_INTERESTS);
-      interests = (data ?? [])
-        .map((row) => this.cleanProfileText(row.interests?.name, 60))
-        .filter((interest) => interest.length > 0)
-        .slice(0, MAX_INTERESTS);
-    } catch {
-      interests = [];
-    }
+    const interests = await this.loadInterests(partnerId);
 
     const prompt = [
       'Generate exactly three friendly, natural conversation starter questions for a language exchange chat.',
@@ -272,6 +261,33 @@ export class ConversationStarterService {
     }
 
     return this.personalisedFallbacks(displayName, interests, targetLanguages);
+  }
+
+  private async loadInterests(partnerId: string): Promise<string[]> {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data, error } = await supabase
+        .from('user_interests')
+        .select('interests(name)')
+        .eq('user_id', partnerId)
+        .limit(MAX_INTERESTS)
+        .returns<InterestRelationRow[]>();
+      if (error) return [];
+
+      return (data ?? [])
+        .flatMap((row) =>
+          Array.isArray(row.interests)
+            ? row.interests
+            : row.interests
+              ? [row.interests]
+              : [],
+        )
+        .map((interest) => this.cleanProfileText(interest.name, 60))
+        .filter((interest) => interest.length > 0)
+        .slice(0, MAX_INTERESTS);
+    } catch {
+      return [];
+    }
   }
 
   private parseSuggestions(response: string): string[] {
