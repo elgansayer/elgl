@@ -1,0 +1,66 @@
+name: API image security diagnostic
+
+on:
+  push:
+    branches: [fix/ci-api-trivy-20260827]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build production API image
+        run: docker build --target production -t elgl-api-security:${{ github.sha }} backend
+
+      - name: Capture API vulnerability report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: elgl-api-security:${{ github.sha }}
+          format: json
+          output: trivy-api.json
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
+
+      - name: Summarise fixed HIGH and CRITICAL vulnerabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-api.json)
+          {
+            echo '## API image Trivy findings'
+            echo
+            echo "Fixed HIGH/CRITICAL findings: ${count}"
+            echo
+            if [ "$count" -eq 0 ]; then
+              echo 'No fixed HIGH/CRITICAL vulnerabilities were reported.'
+            else
+              echo '| Severity | Vulnerability | Package | Installed | Fixed |'
+              echo '| --- | --- | --- | --- | --- |'
+              jq -r '.Results[]?.Vulnerabilities[]? | "| \(.Severity) | \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "") |"' trivy-api.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          jq -r '.Results[]?.Vulnerabilities[]? | [.Severity, .VulnerabilityID, .PkgName, .InstalledVersion, (.FixedVersion // "")] | @tsv' trivy-api.json
+
+      - name: Enforce API vulnerability gate
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: elgl-api-security:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
