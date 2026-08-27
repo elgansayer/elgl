@@ -208,6 +208,59 @@ describe('DiscoveryService PostGIS search contract', () => {
     );
   });
 
+  it('ignores malformed VIP mock locations and preserves the requested coordinates', async () => {
+    supabaseClient.rpc.mockResolvedValue({
+      data: [{ id: 'london-1', distance_metres: 250 }],
+      error: null,
+    });
+
+    await service.searchPartners(
+      'viewer-1',
+      {
+        is_vip: true,
+        mock_location: {
+          type: 'Point',
+          coordinates: ['not-a-longitude', 35.6895],
+        },
+      } as never,
+      {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      },
+    );
+
+    expect(supabaseClient.rpc).toHaveBeenCalledWith(
+      'search_nearby_users',
+      expect.objectContaining({
+        search_lat: 51.5074,
+        search_lon: -0.1278,
+      }),
+    );
+  });
+
+  it('does not forward the VIP-only gender filter for a non-VIP viewer', async () => {
+    supabaseClient.rpc.mockResolvedValue({
+      data: [{ id: 'nearby-1', distance_metres: 100 }],
+      error: null,
+    });
+
+    await service.searchPartners(
+      'viewer-1',
+      { is_vip: false } as never,
+      {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        gender: 'female',
+      },
+    );
+
+    expect(supabaseClient.rpc).toHaveBeenCalledWith(
+      'search_nearby_users',
+      expect.objectContaining({ filter_gender: null }),
+    );
+    expect(queryBuilder['eq']).not.toHaveBeenCalledWith('gender', 'female');
+  });
+
   it('falls back to the bounded non-spatial query when PostGIS is unavailable and removes stale distance metadata', async () => {
     supabaseClient.rpc.mockResolvedValue({
       data: null,
