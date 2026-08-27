@@ -53,6 +53,17 @@ done
 log "Factory is idle"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# 1b. Host storage maintenance - runs every day regardless of whether main
+#     has moved. The "already up to date" branch below exits early on most
+#     days, so anything placed after it would rarely run at all. This is the
+#     only automated path for journal vacuuming and dangling Docker/build-cache
+#     pruning - previously a human had to remember to run this with --apply.
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+log "Running host storage maintenance"
+"$REPOSITORY/scripts/maintain-factory-host-storage.sh" --apply --prune-docker || \
+  log "WARNING: host storage maintenance failed - continuing with the update"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # 2. Fetch and check whether main has moved.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Fetching origin/main"
@@ -101,13 +112,27 @@ pulled_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse HEAD)
 log "Pulled to ${pulled_sha:0:12}"
 
 log "Reinstalling factory Python package"
-VIRTUAL_ENV="$FACTORY_VENV" \
+# Ensure dev can write the venv before uv runs as dev, regardless of what
+# owned it coming in - then the sync itself runs end to end as dev, so it
+# never creates root-owned files under $FACTORY_VENV or ~dev/.cache/uv the
+# way running it as root (even with HOME=$FACTORY_HOME set) previously did.
+# That HOME override doesn't change the process UID, so uv's cache writes
+# came out owned by root while sitting inside the dev user's home directory -
+# unreadable by the dev-run factory service and silently piling up until it
+# tripped the disk-space reserve that gates scheduling.
+chown -R dev:dev "$FACTORY_VENV"
+runuser -u "$FACTORY_USER" -- env \
+  HOME="$FACTORY_HOME" VIRTUAL_ENV="$FACTORY_VENV" \
   "$FACTORY_VENV/bin/uv" sync \
     --active --frozen --inexact --no-editable --extra development \
     --project "$REPOSITORY/automation"
-# All git and uv operations ran as root - restore dev ownership on everything
-# we touched so the factory service (User=dev) can read and execute them.
-chown -R dev:dev "$FACTORY_VENV"
+
+# Routine maintenance: drop cache entries no longer referenced by any
+# environment. Safe - never touches entries a future sync still needs -
+# and keeps the wheel cache from growing indefinitely across daily runs.
+runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" "$FACTORY_VENV/bin/uv" cache prune || true
+# Repository git ops above already ran as dev via runuser; this stays as a
+# defensive backstop in case anything else touched it.
 chown -R dev:dev "$REPOSITORY"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
