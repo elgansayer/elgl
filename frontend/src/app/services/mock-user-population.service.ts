@@ -6,6 +6,10 @@ import { UserProfile } from './user.service';
 
 export type MockUserPopulationSize = 'minimal' | 'medium' | 'large';
 
+export interface MockUserProfile extends UserProfile {
+  timezone: string;
+}
+
 export interface MockUserPopulationResponse {
   schemaVersion: 'mock-user-population-v1';
   namespace: string;
@@ -13,7 +17,7 @@ export interface MockUserPopulationResponse {
   count: number;
   seed: number;
   seedId: string;
-  profiles: UserProfile[];
+  profiles: MockUserProfile[];
 }
 
 @Injectable({ providedIn: 'root' })
