@@ -119,7 +119,9 @@ function parseDiscoverableGroups(value: unknown): DiscoverableGroup[] {
       member_count: memberCountValue,
       is_member: isMemberValue,
       interest_id:
-        interestIdValue === null || interestIdValue === undefined ? null : String(interestIdValue),
+        interestIdValue === null || interestIdValue === undefined
+          ? null
+          : String(interestIdValue),
       created_at: createdAtValue,
     };
   });
@@ -185,7 +187,16 @@ function isJoinResult(value: unknown): value is { success: boolean } {
           class="bg-danger/10 text-danger px-3 py-2 mx-4 mt-3 rounded-lg text-sm shrink-0"
           role="alert"
         >
-          {{ error() }}
+          <p>{{ error() }}</p>
+          <button
+            hlmBtn
+            type="button"
+            class="mt-2 min-h-11"
+            (click)="retryDiscovery()"
+            [disabled]="loading()"
+          >
+            {{ 'common.retry' | t }}
+          </button>
         </div>
       }
 
@@ -315,7 +326,9 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         const response = await firstValueFrom(
-          this.http.get<unknown>(`${this.apiUrl}/interests?language=${encodeURIComponent(lang)}`),
+          this.http.get<unknown>(
+            `${this.apiUrl}/interests?language=${encodeURIComponent(lang)}`,
+          ),
         );
         return parseInterestTopics(response);
       } catch {
@@ -324,7 +337,9 @@ export class GroupsDiscoveryComponent {
     },
   });
 
-  protected readonly interestPills = computed(() => this.interestsResource.value() ?? []);
+  protected readonly interestPills = computed(
+    () => this.interestsResource.value() ?? [],
+  );
 
   protected readonly groupsResource = resource({
     loader: async (): Promise<DiscoverableGroup[]> => {
@@ -352,6 +367,11 @@ export class GroupsDiscoveryComponent {
     return groups.filter((group) => group.interest_id === interestId);
   });
 
+  protected retryDiscovery(): void {
+    this.error.set('');
+    this.groupsResource.reload();
+  }
+
   async joinGroup(groupId: string): Promise<void> {
     if (this.joiningId() !== null) return;
 
@@ -364,7 +384,10 @@ export class GroupsDiscoveryComponent {
     this.joiningId.set(groupId);
     try {
       const response = await firstValueFrom(
-        this.http.post<unknown>(`${this.apiUrl}/groups/${encodeURIComponent(groupId)}/join`, {}),
+        this.http.post<unknown>(
+          `${this.apiUrl}/groups/${encodeURIComponent(groupId)}/join`,
+          {},
+        ),
       );
       if (!isJoinResult(response)) {
         throw new Error('Invalid join response');
