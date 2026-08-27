@@ -22,6 +22,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: interactive-accessible-names-${{ github.ref }}
@@ -42,4 +44,30 @@ jobs:
           node-version: '22'
 
       - name: Verify accessible-name contract
-        run: npm run check:interactive-accessible-names
+        id: verify
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run check:interactive-accessible-names > accessible-name-report.txt 2>&1
+          status=$?
+          cat accessible-name-report.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish verifier diagnostics
+        if: github.event_name == 'pull_request' && steps.verify.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Accessible-name verifier diagnostics'
+            echo
+            echo '```text'
+            cat accessible-name-report.txt
+            echo '```'
+          } | gh pr comment "${{ github.event.pull_request.number }}" --body-file -
+
+      - name: Fail when the contract is violated
+        if: steps.verify.outputs.status != '0'
+        run: exit 1
