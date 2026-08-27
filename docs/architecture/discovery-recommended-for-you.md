@@ -1,6 +1,6 @@
 # Discovery Recommended for You
 
-Issue #835 adds a bounded `Recommended for You` carousel to Discovery without creating a second background recommender.
+Issue #835 originally added the bounded `Recommended for You` carousel to Discovery without creating a second background recommender. Issue #1493 completes the production contract by treating the authenticated API response as untrusted at the Angular boundary and failing closed when the session or response contract is invalid.
 
 ## Data flow
 
@@ -37,6 +37,21 @@ The endpoint enforces the same core discoverability boundary used by Discovery a
 
 The feature does not introduce a schema migration, new user-visible private fields, or mock-data fallback. Provider failures in optional seed sources degrade to the remaining sources. A failure to load the requesting profile or to perform the final privacy revalidation fails the endpoint rather than serving stale data.
 
+## Client trust boundary
+
+The Angular `RecommendationsService` does not rely on TypeScript types as runtime validation. Before a recommendation enters component state it verifies the full wire contract:
+
+- the response must be an array containing at most 10 unique profiles;
+- profile IDs and display names must be non-empty and bounded;
+- native and target language arrays must be non-empty, bounded, and duplicate-free;
+- `shared_interest_count` must be an integer from 0 through 3;
+- recommendation reasons must be unique members of the documented four-value enum;
+- avatar URLs may be absent, but persisted values must be bounded absolute HTTP(S) URLs without embedded credentials.
+
+A missing access token is rejected before any HTTP request is attempted. A malformed response fails the carousel as unavailable rather than partially rendering unvalidated profile data. Validation errors intentionally contain no response payload, token, profile name, URL, or other personal data, so ordinary client diagnostics cannot accidentally capture the recommendation set.
+
+This extra validation is defense in depth. Server-side authentication, privacy/deletion filtering, block filtering, and ranking remain authoritative.
+
 ## Frontend behavior
 
 The carousel is composed into the Discovery global-search area and loads once when the component is created. It deliberately does not auto-refresh or reorder while the user is interacting. The UI provides:
@@ -52,12 +67,14 @@ The carousel is composed into the Discovery global-search area and loads once wh
 
 ## Verification
 
-Focused backend tests cover ranking order, privacy-hidden activity, discoverability exclusions, stable ties, result bounds, and sparse profiles. Controller coverage verifies authenticated user scoping. Frontend tests cover render order, reasons, canonical profile navigation, keyboard navigation, empty state, and retryable failure state. Existing Global Search tests provide a mocked recommendation dependency so the new composition remains isolated.
+Focused backend tests cover ranking order, privacy-hidden activity, discoverability exclusions, stable ties, result bounds, and sparse profiles. Controller coverage verifies authenticated user scoping. Frontend service tests cover authenticated loading, missing-session fail-closed behavior, collection bounds, duplicate profiles, malformed ranking signals, unsafe or credential-bearing avatar URLs, and safe bounded text normalization. Component tests cover render order, reasons, canonical profile navigation, keyboard navigation, empty state, and retryable failure state. Existing Global Search tests provide a mocked recommendation dependency so the composition remains isolated.
 
 The repository CI remains authoritative for full backend/frontend test, lint, type-check, design and translation-safe API verification.
 
 ## Rollout and rollback
 
-No database migration or backfill is required. Deploy backend and frontend together so the carousel does not request an endpoint missing from an older backend. During staged rollout, an endpoint failure is contained to the carousel error state and does not prevent ordinary Discovery search.
+No database migration or backfill is required. The runtime validator is additive at the client boundary and is compatible with the documented backend response contract. During staged rollout, older backends that satisfy that contract continue to work; an invalid or unavailable response is contained to the carousel error state and does not prevent ordinary Discovery search.
 
-Rollback is a normal application revert: remove the carousel composition/client and the discovery recommendation service/controller route. The existing nightly recommendation cache remains compatible and does not need to be cleared because this feature only reads it as a seed.
+Monitor recommendation endpoint failures and client error-state frequency after rollout. A sudden increase should be treated as an API-contract regression rather than bypassing validation.
+
+Rollback is a normal application revert of the client validation change. The existing nightly recommendation cache remains compatible and does not need to be cleared because the feature only reads it as a seed. Do not weaken server-side privacy, deletion, or block revalidation as part of rollback.
