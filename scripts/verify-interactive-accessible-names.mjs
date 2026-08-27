@@ -73,6 +73,7 @@ function hasNamedImage(innerHtml) {
 
 function hasVisibleText(innerHtml) {
   if (/{{[\s\S]*?}}/.test(innerHtml)) return true;
+  if (/<ng-content\b/i.test(innerHtml)) return true;
   if (hasScreenReaderText(innerHtml) || hasNamedImage(innerHtml)) return true;
 
   const text = innerHtml
