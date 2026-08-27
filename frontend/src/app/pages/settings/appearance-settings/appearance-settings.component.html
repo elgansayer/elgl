@@ -1,0 +1,269 @@
+<div class="app-screen bg-surface-50">
+  <header class="app-header">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+      <span class="text-xl">←</span>
+    </button>
+    <h1 class="app-header-title">{{ 'settings.appearanceSection' | t }}</h1>
+    <div class="w-10"></div>
+  </header>
+
+  <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
+    @if (isLoading()) {
+      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
+    } @else {
+      @if (errorMessage()) {
+        <div
+          class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+          role="alert"
+        >
+          {{ errorMessage() }}
+        </div>
+      }
+      @if (successMessage()) {
+        <div
+          class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success"
+          role="status"
+          aria-live="polite"
+        >
+          {{ successMessage() | t }}
+        </div>
+      }
+
+      <!-- Theme Selection -->
+      <section class="space-y-4" aria-labelledby="appearance-theme-heading">
+        <h2
+          id="appearance-theme-heading"
+          class="text-sm font-bold uppercase text-text-secondary tracking-wider"
+        >
+          {{ 'settings.themeLabel' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
+        >
+          <p class="text-xs text-text-secondary mb-4">{{ 'settings.themeDescription' | t }}</p>
+          <div class="flex flex-wrap gap-2" role="group" [attr.aria-label]="'settings.themeLabel' | t">
+            @for (opt of themeOptions; track opt) {
+              <button
+                hlmBtn
+                type="button"
+                (click)="setTheme(opt)"
+                class="min-h-11 min-w-28 flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all"
+                [class.bg-primary]="currentTheme() === opt"
+                [class.text-on-fill]="currentTheme() === opt"
+                [class.shadow-lg]="currentTheme() === opt"
+                [class.bg-surface-200]="currentTheme() !== opt"
+                [class.text-text-primary]="currentTheme() !== opt"
+                [attr.aria-pressed]="currentTheme() === opt"
+                [attr.aria-label]="'theme.' + opt | t"
+              >
+                @if (opt === 'light') {
+                  <span class="me-1.5" aria-hidden="true">☀️</span>
+                } @else if (opt === 'dark') {
+                  <span class="me-1.5" aria-hidden="true">🌙</span>
+                } @else {
+                  <span class="me-1.5" aria-hidden="true">💻</span>
+                }
+                {{ 'theme.' + opt | t }}
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- App Text Size -->
+      <section class="space-y-4" aria-labelledby="appearance-text-size-heading">
+        <h2
+          id="appearance-text-size-heading"
+          class="text-sm font-bold uppercase text-text-secondary tracking-wider"
+        >
+          {{ 'settings.fontSize' | t }}
+        </h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-4">
+          <div
+            class="flex flex-wrap gap-2"
+            role="group"
+            [attr.aria-label]="'settings.fontSize' | t"
+          >
+            @for (opt of textSizeOptions; track opt) {
+              <button
+                hlmBtn
+                type="button"
+                (click)="setTextSize(opt)"
+                class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
+                [class.border-primary]="currentTextSize() === opt"
+                [class.bg-primary]="currentTextSize() === opt"
+                [class.text-on-fill]="currentTextSize() === opt"
+                [class.border-surface-300]="currentTextSize() !== opt"
+                [class.bg-surface-200]="currentTextSize() !== opt"
+                [class.text-text-primary]="currentTextSize() !== opt"
+                [attr.aria-pressed]="currentTextSize() === opt"
+              >
+                @if (opt === 'small') {
+                  {{ 'settings.textSizeSmall' | t }}
+                } @else if (opt === 'large') {
+                  {{ 'settings.textSizeLarge' | t }}
+                } @else {
+                  {{ 'settings.textSizeMedium' | t }}
+                }
+              </button>
+            }
+          </div>
+          <p class="mt-3 text-center text-xs text-text-secondary" aria-live="polite">
+            {{ fontScalePercentLabel() }}
+          </p>
+        </div>
+      </section>
+
+      <!-- Chat Text Size -->
+      <section class="space-y-4" aria-labelledby="appearance-chat-size-heading">
+        <h2
+          id="appearance-chat-size-heading"
+          class="text-sm font-bold uppercase text-text-secondary tracking-wider"
+        >
+          {{ 'chat_settings.title' | t }} · {{ 'settings.textSize' | t }}
+        </h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 shadow-sm p-4">
+          <div
+            class="flex flex-wrap gap-2"
+            role="group"
+            [attr.aria-label]="('chat_settings.title' | t) + ' · ' + ('settings.textSize' | t)"
+          >
+            @for (opt of chatTextSizeOptions; track opt) {
+              <button
+                hlmBtn
+                type="button"
+                (click)="setChatTextSize(opt)"
+                class="min-h-11 min-w-24 flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors"
+                [class.border-primary]="currentChatTextSize() === opt"
+                [class.bg-primary]="currentChatTextSize() === opt"
+                [class.text-on-fill]="currentChatTextSize() === opt"
+                [class.border-surface-300]="currentChatTextSize() !== opt"
+                [class.bg-surface-200]="currentChatTextSize() !== opt"
+                [class.text-text-primary]="currentChatTextSize() !== opt"
+                [attr.aria-pressed]="currentChatTextSize() === opt"
+              >
+                @if (opt === 'small') {
+                  {{ 'settings.textSizeSmall' | t }}
+                } @else if (opt === 'large') {
+                  {{ 'settings.textSizeLarge' | t }}
+                } @else {
+                  {{ 'settings.textSizeMedium' | t }}
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Accent Colour -->
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.accentColor' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm ps-4 pe-4 pt-4 pb-4 space-y-4"
+        >
+          <div class="flex justify-between items-center gap-3">
+            <div>
+              <span class="text-sm font-medium text-text-primary block">{{
+                'settings.accentColor' | t
+              }}</span>
+              <span class="text-xs text-text-secondary">{{ 'settings.accentColorDesc' | t }}</span>
+            </div>
+            @if (!isVip()) {
+              <span class="text-xs font-bold text-vip bg-vip/10 px-2 py-1 rounded-md">{{
+                'settings.vipRequired' | t
+              }}</span>
+            }
+          </div>
+          <div class="flex gap-3 flex-wrap">
+            @for (color of availableColors; track color) {
+              <button
+                hlmBtn
+                type="button"
+                (click)="setAccentColor(color)"
+                [disabled]="!isVip()"
+                [style.backgroundColor]="color"
+                class="w-11 h-11 rounded-full border-2 transition-transform"
+                [class.border-white]="primaryAccentColor() === color"
+                [class.border-transparent]="primaryAccentColor() !== color"
+                [class.scale-110]="primaryAccentColor() === color"
+                [class.opacity-50]="!isVip()"
+                [class.cursor-not-allowed]="!isVip()"
+                [attr.aria-pressed]="primaryAccentColor() === color"
+                [attr.aria-label]="'Select colour ' + color"
+              ></button>
+            }
+          </div>
+
+          @if (isVip()) {
+            <div class="pt-3 border-t border-surface-200">
+              <label for="customAccentColour" class="text-xs text-text-secondary block mb-2">{{
+                'settings.customColourLabel' | t
+              }}</label>
+              <div class="flex flex-wrap items-center gap-3">
+                <input
+                  id="customAccentColour"
+                  type="color"
+                  [value]="primaryAccentColor() ?? '#c65230'"
+                  (input)="onCustomColorChange($event)"
+                  class="w-11 h-11 rounded-lg border-2 border-surface-300 cursor-pointer bg-transparent"
+                  [attr.aria-label]="'settings.customColourLabel' | t"
+                />
+                <input
+                  hlmInput
+                  type="text"
+                  [value]="primaryAccentColor() ?? '#c65230'"
+                  (input)="onCustomColorChange($event)"
+                  maxlength="7"
+                  placeholder="#c65230"
+                  class="min-w-0 flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                  [attr.aria-label]="'settings.customColourPlaceholder' | t"
+                />
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Language -->
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.languageSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4"
+        >
+          <p class="text-xs text-text-secondary mb-3">
+            {{ 'settings.languageChangeDescription' | t }}
+          </p>
+          <app-select
+            [value]="i18nService.currentLang()"
+            [ariaLabel]="'settings.languageSelectAriaLabel'"
+            (valueChange)="onLanguageValueChange($event)"
+          >
+            @for (lang of i18nService.availableLanguages; track lang.code) {
+              <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
+            }
+          </app-select>
+        </div>
+      </section>
+
+      <!-- Save Button -->
+      <div class="pt-4">
+        <app-button-primary
+          (clicked)="saveSettings()"
+          [disabled]="isSaving()"
+          customClass="w-full min-h-11 py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+          [attr.aria-label]="isSaving() ? ('common.loading' | t) : ('settings.saveBtn' | t)"
+        >
+          @if (isSaving()) {
+            {{ 'common.loading' | t }}
+          } @else {
+            {{ 'settings.saveBtn' | t }}
+          }
+        </app-button-primary>
+      </div>
+    }
+  </main>
+</div>

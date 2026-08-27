@@ -1,0 +1,445 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Shell &amp; Navigation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .page-head {
+        max-width: 390px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+
+      /* Phone frame */
+      .phone {
+        width: 390px;
+        margin: 0 auto;
+        background: rgb(var(--surface-500));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        min-height: 760px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      /* Top bar */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgb(var(--surface-200));
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      .lang-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: rgb(var(--text-secondary));
+        background: rgb(var(--surface-100));
+        border-radius: 999px;
+        padding: 6px 12px;
+      }
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .coins-pill {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgb(var(--vip) / 0.15);
+        border: 1px solid rgb(var(--vip) / 0.3);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--vip));
+      }
+      .buy-pill {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgb(var(--primary) / 0.15);
+        border: 1px solid rgb(var(--primary) / 0.3);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: rgb(var(--primary));
+      }
+      .icon-btn {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: rgb(var(--text-primary));
+      }
+      .badge {
+        position: absolute;
+        top: -2px;
+        right: -4px;
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+        font-size: 9px;
+        font-weight: 700;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgb(var(--surface-200));
+        padding: 0 3px;
+      }
+
+      /* Main content placeholder */
+      .content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+        background: rgb(var(--surface-500));
+      }
+      .content-card {
+        text-align: center;
+        color: rgb(var(--text-muted));
+      }
+      .content-card .glyph {
+        font-size: 36px;
+        margin-bottom: 10px;
+      }
+      .content-card p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        max-width: 240px;
+      }
+      .content-card code {
+        font-size: 11px;
+        background: rgb(var(--surface-300));
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+
+      /* Chat-only premium AI action, mounted by the shell above mobile navigation. */
+      .premium-ai {
+        position: absolute;
+        right: 12px;
+        bottom: 76px;
+        width: min(240px, calc(100% - 24px));
+        padding: 12px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-200));
+        box-shadow: 0 12px 28px rgb(var(--shadow) / 0.2);
+      }
+      .premium-ai strong,
+      .premium-ai p {
+        display: block;
+        margin: 0;
+      }
+      .premium-ai strong {
+        font-size: 13px;
+      }
+      .premium-ai p {
+        margin-top: 4px;
+        color: rgb(var(--text-secondary));
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .premium-ai button {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 10px;
+        border: 0;
+        border-radius: 12px;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .premium-ai button:focus-visible {
+        outline: 3px solid rgb(var(--primary));
+        outline-offset: 2px;
+      }
+
+      /* Bottom nav */
+      .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        height: 60px;
+        background: rgb(var(--surface-200));
+        border-top: 1px solid rgb(var(--surface-100));
+      }
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        width: 64px;
+        color: rgb(var(--text-secondary));
+      }
+      .nav-item.active {
+        color: rgb(var(--primary));
+      }
+      .nav-item .ico {
+        position: relative;
+        font-size: 21px;
+        line-height: 1;
+      }
+      .nav-item .lbl {
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .nav-badge {
+        position: absolute;
+        top: -5px;
+        right: -9px;
+        background: rgb(var(--danger));
+        color: rgb(var(--on-fill));
+        font-size: 9px;
+        font-weight: 700;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgb(var(--surface-200));
+        padding: 0 3px;
+      }
+
+      .caption {
+        max-width: 390px;
+        margin: 18px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Shell &amp; navigation</h1>
+        <p>app.component.html - top bar chrome + mobile bottom nav</p>
+      </div>
+      <div class="toggle" id="toggle">
+        <button id="btn-light" class="active">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="phone">
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="lang-pill"><span aria-hidden="true">🇬🇧</span> EN</div>
+        <div class="top-actions">
+          <div class="coins-pill"><span aria-hidden="true">🪙</span> 1,240</div>
+          <div class="buy-pill"><span aria-hidden="true">➕</span> Buy</div>
+          <div class="icon-btn" title="Notifications">
+            🔔
+            <span class="badge">7</span>
+          </div>
+          <div class="icon-btn" title="Guided tour">🎯</div>
+          <div class="icon-btn" title="Theme">🌗</div>
+        </div>
+      </div>
+
+      <!-- Main content placeholder (router-outlet) -->
+      <div class="content">
+        <div class="content-card">
+          <div class="glyph">💬</div>
+          <p>
+            Routed chat content renders here inside <code>&lt;router-outlet /&gt;</code>. The premium
+            AI action is shell-mounted but appears only for a concrete chat room route.
+          </p>
+        </div>
+      </div>
+
+      <aside class="premium-ai" aria-label="Conversation Analysis Report">
+        <strong>Conversation Analysis Report</strong>
+        <p>One-off learner feedback from recent messages. Price is loaded from the server.</p>
+        <button type="button">Conversation Analysis Report · 🪙 30</button>
+      </aside>
+
+      <!-- Mobile bottom nav -->
+      <nav class="bottom-nav">
+        <div class="nav-item active">
+          <span class="ico">💬<span class="nav-badge">3</span></span>
+          <span class="lbl">HelloTalk</span>
+        </div>
+        <div class="nav-item">
+          <span class="ico">⭕</span>
+          <span class="lbl">Moments</span>
+        </div>
+        <div class="nav-item">
+          <span class="ico">🌍</span>
+          <span class="lbl">Connect</span>
+        </div>
+        <div class="nav-item">
+          <span class="ico">🎙️<span class="nav-badge">1</span></span>
+          <span class="lbl">Live Rooms</span>
+        </div>
+        <div class="nav-item">
+          <span class="ico">👤</span>
+          <span class="lbl">Profile</span>
+        </div>
+      </nav>
+    </div>
+
+    <p class="caption">
+      Desktop adds a persistent sidebar (<code>app-desktop-sidebar</code>) alongside this content
+      area instead of the bottom nav. The premium AI launcher remains anchored to the logical end
+      edge and is hidden outside <code>/chat/:roomId</code>. Also omitted: the app-lock overlay,
+      forced-update modal, incoming-call modal, and toast/gift-animation overlays - conditional
+      chrome that only makes sense layered over a specific runtime state.
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+name: Branch PR Hygiene
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: branch-pr-hygiene
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      BASE_BRANCH: main
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.12.5'
+          enable-cache: true
+          cache-dependency-glob: automation/uv.lock
+
+      - name: Install frozen Factory dependencies
+        run: uv sync --frozen --extra development
+        working-directory: automation
+
+      - name: Audit branches with the canonical Factory classifier
+        run: |
+          set -euo pipefail
+          uv run --frozen python -m openhands_factory.branch_hygiene \
+            --repository "$REPOSITORY" \
+            --workspace "$GITHUB_WORKSPACE" \
+            --base "$BASE_BRANCH" \
+            > "$RUNNER_TEMP/branch-hygiene.json"
+        working-directory: automation
+
+      - name: Summarize branch classifications
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ['RUNNER_TEMP']) / 'branch-hygiene.json').read_text())
+          summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
+          lines = [
+              '### Branch PR hygiene',
+              '',
+              'This audit is read-only and uses the same classifier as Factory branch-hygiene tooling.',
+              '',
+              '| Classification | Count |',
+              '| --- | ---: |',
+          ]
+          for classification, count in report['counts'].items():
+              lines.append(f'| {classification} | {count} |')
+          lines.extend([
+              '',
+              f"Safe deletion candidates (dry-run only): **{len(report['safe_deletion_candidates'])}**",
+              '',
+              'No branch is deleted and no pull request is created, modified, reopened, or merged by this workflow.',
+          ])
+          summary.write_text(summary.read_text() + '\n'.join(lines) + '\n')
+          PY
+
+      - name: Upload machine-readable branch audit
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: branch-pr-hygiene-${{ github.run_id }}
+          path: ${{ runner.temp }}/branch-hygiene.json
+          if-no-files-found: error
+          retention-days: 14
