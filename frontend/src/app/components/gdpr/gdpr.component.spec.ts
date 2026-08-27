@@ -171,9 +171,11 @@ describe('GdprComponent', () => {
     fixture.detectChanges();
 
     await fixture.componentInstance.deleteAccount();
+    fixture.detectChanges();
 
     expect(mockGdprService.deleteAccount).toHaveBeenCalledWith(true);
     expect(fixture.componentInstance.isPendingDeletion()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('gdpr.deleteSuccess');
   });
 
   it('deduplicates concurrent delete submissions', async () => {
@@ -212,9 +214,11 @@ describe('GdprComponent', () => {
     fixture.detectChanges();
 
     await fixture.componentInstance.cancelDeletion();
+    fixture.detectChanges();
 
     expect(mockGdprService.cancelDeletion).toHaveBeenCalled();
     expect(fixture.componentInstance.isPendingDeletion()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('gdpr.cancelDeletionSuccess');
   });
 
   it('should show archive error when requestArchive fails', async () => {
