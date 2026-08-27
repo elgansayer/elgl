@@ -244,15 +244,11 @@ describe('DiscoveryService PostGIS search contract', () => {
       error: null,
     });
 
-    await service.searchPartners(
-      'viewer-1',
-      { is_vip: false } as never,
-      {
-        latitude: 51.5074,
-        longitude: -0.1278,
-        gender: 'female',
-      },
-    );
+    await service.searchPartners('viewer-1', { is_vip: false } as never, {
+      latitude: 51.5074,
+      longitude: -0.1278,
+      gender: 'female',
+    });
 
     expect(supabaseClient.rpc).toHaveBeenCalledWith(
       'search_nearby_users',
