@@ -442,6 +442,13 @@ class FactoryConfig(BaseModel):
     # once the check has already failed once (it only logs on state changes).
     recovery_retention_hours: float = 72
     max_no_pr_hours: float = 6
+    # How long a stall condition (storage blocked, or no PR progress past
+    # max_no_pr_hours) must persist continuously before the daemon dispatches
+    # a Telegram alert and a best-effort AI investigation. Both signals were
+    # previously only checkable on demand (hellotalk-factory doctor); nothing
+    # evaluated them proactively, so a real multi-hour stall produced no
+    # notification at all until an operator happened to look.
+    stall_alert_minutes: float = 20
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
     # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
@@ -527,6 +534,8 @@ class FactoryConfig(BaseModel):
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
         if self.recovery_retention_hours <= 0:
             raise ValueError("recovery retention must be positive")
+        if self.stall_alert_minutes <= 0:
+            raise ValueError("stall alert threshold must be positive")
         if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
@@ -652,6 +661,7 @@ class FactoryConfig(BaseModel):
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
+                stall_alert_minutes=float(env.get("FACTORY_STALL_ALERT_MINUTES", "20")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 quarantine_recovery_minutes=int(
