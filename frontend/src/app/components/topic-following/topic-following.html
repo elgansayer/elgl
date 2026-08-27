@@ -1,27 +1,60 @@
-<div
-  class="p-4 bg-surface-200 rounded-lg shadow-sm border border-surface-100"
+<section
+  class="rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card"
   [dir]="i18n.direction()"
+  [attr.aria-busy]="isLoading()"
 >
-  <h2 class="text-xl font-bold mb-4 text-primary">{{ 'topics.title' | t }}</h2>
-  <div class="flex flex-col gap-2">
-    @for (topic of topics(); track topic.id) {
-      <div class="flex justify-between items-center bg-surface-300 p-3 rounded-md">
-        <span class="text-text-primary font-medium">{{ topic.name }}</span>
-        <button
-          hlmBtn
-          (click)="toggleFollow(topic.id)"
-          class="px-4 py-1.5 rounded-full text-sm font-bold transition-colors"
-          [class.bg-primary]="!topic.isFollowing"
-          [class.text-white]="!topic.isFollowing"
-          [class.bg-surface-100]="topic.isFollowing"
-          [class.text-text-secondary]="topic.isFollowing"
-          [attr.aria-label]="'topics.following' | t"
-        >
-          {{ topic.isFollowing ? ('topics.following' | t) : ('topics.follow' | t) }}
-        </button>
-      </div>
-    } @empty {
-      <div class="text-text-muted text-center py-4">{{ 'topics.empty' | t }}</div>
+  <div class="mb-3 flex items-center justify-between gap-3">
+    <h2 class="text-lg font-bold text-text-primary">{{ 'topics.title' | t }}</h2>
+    @if (hasError() && !isLoading()) {
+      <button hlmBtn type="button" variant="outline" size="sm" (click)="refresh()">
+        {{ 'common.retry' | t }}
+      </button>
     }
   </div>
-</div>
+
+  @if (isLoading()) {
+    <p class="py-3 text-sm text-text-secondary" role="status">{{ 'common.loading' | t }}</p>
+  } @else if (hasError() && topics().length === 0) {
+    <p class="py-3 text-sm text-danger" role="alert">{{ 'common.error_generic' | t }}</p>
+  } @else {
+    <div class="flex flex-col gap-2">
+      @for (topic of topics(); track topic.hashtag) {
+        <div class="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-app bg-surface-300 p-3">
+          <a
+            [routerLink]="['/moments/hashtag', topic.hashtag]"
+            class="min-h-11 min-w-0 flex-1 content-center font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            dir="auto"
+          >
+            #{{ topic.hashtag }}
+            <span class="ms-1 text-xs font-normal text-text-secondary">({{ topic.count }})</span>
+          </a>
+          <button
+            hlmBtn
+            type="button"
+            size="touch"
+            [disabled]="mutatingHashtag() !== null"
+            (click)="toggleFollow(topic)"
+            class="rounded-pill text-sm font-bold"
+            [class.bg-primary]="!topic.is_following"
+            [class.text-on-fill]="!topic.is_following"
+            [class.bg-surface-100]="topic.is_following"
+            [class.text-text-secondary]="topic.is_following"
+            [attr.aria-pressed]="topic.is_following"
+            [attr.aria-label]="
+              (topic.is_following ? ('topics.following' | t) : ('topics.follow' | t)) +
+              ' #' +
+              topic.hashtag
+            "
+          >
+            {{ topic.is_following ? ('topics.following' | t) : ('topics.follow' | t) }}
+          </button>
+        </div>
+      } @empty {
+        <p class="py-4 text-center text-text-muted">{{ 'topics.empty' | t }}</p>
+      }
+    </div>
+    @if (hasError()) {
+      <p class="mt-3 text-sm text-danger" role="alert">{{ 'common.error_generic' | t }}</p>
+    }
+  }
+</section>
