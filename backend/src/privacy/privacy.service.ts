@@ -217,29 +217,35 @@ export class PrivacyService {
     }
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
-    let purged = 0;
-    for (const row of rows) {
-      if (row.object_key) {
-        const { error: removeError } = await supabase.storage
-          .from(ARCHIVE_BUCKET)
-          .remove([row.object_key]);
-        if (removeError) {
-          this.logger.error('gdpr_archive_cleanup_object_failed');
-          continue;
+    // ⚡ Bolt Optimization: Replaced sequential await loop with a concurrent Promise.allSettled
+    // batch to drastically reduce network latency when purging multiple expired archives.
+    const results = await Promise.allSettled(
+      rows.map(async (row) => {
+        if (row.object_key) {
+          const { error: removeError } = await supabase.storage
+            .from(ARCHIVE_BUCKET)
+            .remove([row.object_key]);
+          if (removeError) {
+            this.logger.error('gdpr_archive_cleanup_object_failed');
+            throw removeError;
+          }
         }
-      }
 
-      const { error: updateError } = await supabase
-        .from('archive_requests')
-        .update({
-          status: 'expired',
-          object_key: null,
-          archive_url: null,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', row.id);
-      if (!updateError) purged += 1;
-    }
+        const { error: updateError } = await supabase
+          .from('archive_requests')
+          .update({
+            status: 'expired',
+            object_key: null,
+            archive_url: null,
+            updated_at: new Date().toISOString(),
+          } as never)
+          .eq('id', row.id);
+
+        if (updateError) throw updateError;
+      }),
+    );
+
+    const purged = results.filter((r) => r.status === 'fulfilled').length;
 
     if (purged > 0)
       this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
