@@ -26,7 +26,8 @@ def quarantine_recovery_delay(
     same failure has already crossed the repeated-failure limit, each subsequent
     re-quarantine doubles the quiet window. This keeps eventual autonomous recovery
     while preventing a chronically unchanged task from consuming another subscription
-    route every few minutes forever. The durable retry-policy maximum remains the cap.
+    route every few minutes forever. For normal short base windows the durable retry
+    maximum is the cap; an explicitly configured longer base window is never shortened.
 
     Stores without a repeated-failure limit retain the historical fixed-delay behavior.
     """
@@ -34,15 +35,18 @@ def quarantine_recovery_delay(
     if recovery_delay <= timedelta(0):
         raise ValueError("recovery_delay must be positive")
     if repeated_failure_limit is None:
-        return min(recovery_delay, MAX_PERSISTED_RETRY_DELAY)
+        return recovery_delay
     if repeated_failure_limit <= 0:
         raise ValueError("repeated_failure_limit must be positive")
 
     extra_failures = max(0, repeated_failure_count - repeated_failure_limit)
-    # The 24-hour cap is reached long before this bound for production's 30-minute
+    # Preserve an operator-selected base longer than the ordinary persisted retry cap.
+    # The production 30-minute base still grows only as far as 24 hours.
+    maximum_delay = max(recovery_delay, MAX_PERSISTED_RETRY_DELAY)
+    # The normal cap is reached long before this bound for production's 30-minute
     # base delay. Capping the exponent also makes corrupt legacy counters harmless.
     multiplier = 1 << min(extra_failures, 20)
-    return min(recovery_delay * multiplier, MAX_PERSISTED_RETRY_DELAY)
+    return min(recovery_delay * multiplier, maximum_delay)
 
 
 def recover_due_quarantines(
@@ -58,8 +62,8 @@ def recover_due_quarantines(
     old permanent quarantine cannot wedge the queue forever. Recovery deliberately keeps
     attempts, failure-class counters, the stable failure fingerprint, provider history,
     and ``last_error``. If the same failure happens again, the task immediately returns
-    to quarantine and its next recovery window grows exponentially up to the durable
-    24-hour retry-policy maximum.
+    to quarantine and its next recovery window grows exponentially up to the bounded
+    recovery maximum.
     """
 
     if recovery_delay <= timedelta(0):
