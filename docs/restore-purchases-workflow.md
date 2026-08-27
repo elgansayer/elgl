@@ -2,9 +2,9 @@
 
 ## Scope
 
-The product already exposes an authenticated `POST /monetisation/restore-purchases` backend boundary for Stripe, Apple App Store and Google Play purchase verification. The frontend restore control is available from subscription surfaces and uses that server-authoritative boundary; the browser never grants VIP status itself.
+The product exposes an authenticated `POST /monetisation/restore-purchases` backend boundary for Stripe, Apple App Store and Google Play purchase verification. The frontend restore control is available from subscription surfaces and uses that server-authoritative boundary; the browser never grants VIP status itself.
 
-This document defines the client workflow completed for issue #1260.
+This document defines the shared restore workflow and records the Android purchase-ownership hardening completed for issue #1475.
 
 ## User flow
 
@@ -15,6 +15,8 @@ This document defines the client workflow completed for issue #1260.
 5. A successful restore emits a `restored` event from the shared button. The My Subscription page reloads subscription details and billing history so the newly restored entitlement is visible without a manual page refresh.
 6. A no-subscription result remains a normal, non-destructive outcome. Provider/network/malformed-response failures are reported as retryable failures.
 
+For Google Play, the verified purchase token is account-bound. An unclaimed active token is associated with the authenticated account before entitlement is restored. A token already associated with that same account may be restored again idempotently. A token associated with a different account is rejected and must never grant VIP status to the caller.
+
 ## State and retry behaviour
 
 `RestorePurchasesService` owns the request lifecycle through `isRestoring` and `lastRestoreResult` signals. The latest completed result remains available while a later attempt starts, avoiding a transient false-empty state. Concurrent activations are deduplicated client-side. The backend remains authoritative and must also keep restoration idempotent because a browser can retry after an ambiguous transport failure.
@@ -24,6 +26,8 @@ The client only treats a response as success when `received === true` and `statu
 ## Security and privacy
 
 Purchase receipts and provider tokens are sent only to the authenticated monetisation API. They are not persisted in local storage, drafts, analytics or client logs by this workflow. The client never derives or writes `is_vip`/`vip_tier`; entitlement changes remain server-controlled after provider verification.
+
+Google Play purchase tokens are credentials as well as ownership identifiers. Restore diagnostics must not log the token, the current account ID, or the existing owner ID. Cross-account token reuse is rejected before any VIP mutation. Missing and expired Google Play purchases are logged only with sanitized state descriptions.
 
 Receipt bodies must not be included in error messages, telemetry or support diagnostics. Provider responses are treated as untrusted input. A successful restore result may expose the restored tier when the backend supplies it, but never a receipt or purchase token.
 
@@ -44,10 +48,17 @@ Frontend regression coverage verifies:
 - success-only `restored` event emission; and
 - live-region result announcement.
 
-The repository CI remains authoritative for the complete frontend unit/static-analysis/build suite and design-system governance.
+Backend ownership regression coverage verifies:
+
+- an unclaimed active Google Play token is stored for the authenticated account before entitlement is restored;
+- a token already owned by the authenticated account restores idempotently without a duplicate store;
+- a token owned by another account is rejected before any VIP mutation; and
+- missing, expired, and cross-account restore diagnostics do not expose provider purchase tokens or user identifiers.
+
+The repository CI remains authoritative for the complete backend/frontend unit, lint, build and design-system governance suites.
 
 ## Rollout and rollback
 
-This change is frontend-only and introduces no schema, provider credential, API route or migration change. It is safe to deploy independently of backend versions that return only `{ received, status }`; the optional `tier` field is backward compatible.
+The ownership hardening introduces no schema, provider credential or route change. It is safe to deploy with existing clients because successful and no-subscription response shapes remain unchanged.
 
-Rollback is a normal code revert. No entitlement or purchase records need data cleanup. Do not roll back the existing server-side provider verification or replace it with client-managed VIP state.
+Rollback is a normal code revert, but restoring the former cross-account entitlement behavior is not considered a safe rollback. If a provider integration must be disabled operationally, prefer returning a retryable unavailable state while retaining account-ownership enforcement.
