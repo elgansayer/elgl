@@ -61,3 +61,16 @@
 **Vulnerability:** LiveKit `LIVEKIT_API_KEY`, `LIVEKIT_SECRET`, and TURN credentials defaulted to insecure test values (e.g., `guest`, `somepassword`, `turn.example.com`) if missing in production.
 **Learning:** Default configuration schemas (like `validation.schema.ts`) can mask missing environment variables by silently providing valid but insecure fallback strings to services like `LivekitService`. This is a critical risk for WebRTC authentication.
 **Prevention:** Apply a strict fail-fast validation in the service constructor or before usage. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if any credential matches the known insecure defaults.
+## 2026-08-23 - [Strict Secrets Validation in Production for STRIPE_SECRET_KEY in EconomyService]
+
+**Vulnerability:** Monetisation service `EconomyService` relied on weak development fallback values for critical secrets (`STRIPE_SECRET_KEY`) when environment variables were missing.
+**Learning:** Default fallbacks for application secrets represent a critical vulnerability in production as they allow silent initialization into an insecure state, avoiding startup crashes but preventing secure operations.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`sk_test_123`), preventing the backend from initializing insecurely.
+## 2026-08-25 - [Fail-Fast SUPABASE_SERVICE_ROLE_KEY in Production]
+**Vulnerability:** The SupabaseService could initialize using a well-known test default for `SUPABASE_SERVICE_ROLE_KEY` (e.g., `test-service-role-key`) if the environment variable was missing in a production environment, putting backend service authentication at risk.
+**Learning:** Even though environment validation exists at the configuration module boundary, relying solely on global schemas is insufficient defense-in-depth. A missing production environment variable could still silently fall back to test defaults in the validation schema before injection.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the injected key matches known insecure defaults, preventing the service from initializing insecurely.
+## 2026-08-25 - [Fail-Fast LiveKit Credentials in Production (Audio and Calls)]
+**Vulnerability:** LiveKit API keys and secrets used in audio-rooms and calls services (`LIVEKIT_API_KEY`, `LIVEKIT_SECRET`) could default to insecure test values (e.g., `test-livekit-api-key`) if environment variables were missing in a production environment.
+**Learning:** Default fallbacks for critical external service secrets present a high risk in production by allowing silent initialization into an insecure, predictable state. Consistent validation must occur anywhere a secret is injected into a service.
+**Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials, directly within the module or service initialization.

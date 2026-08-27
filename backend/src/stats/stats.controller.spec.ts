@@ -1,8 +1,9 @@
+import { CanActivate } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { StatsController } from './stats.controller';
 import { StatsService } from './stats.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { CanActivate } from '@nestjs/common';
 
 describe('StatsController', () => {
   let controller: StatsController;
@@ -36,6 +37,15 @@ describe('StatsController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('protects the personal stats endpoint with Supabase authentication', () => {
+    const guards = Reflect.getMetadata(
+      GUARDS_METADATA,
+      StatsController.prototype.getMyStats,
+    ) as unknown[] | undefined;
+
+    expect(guards).toContain(SupabaseAuthGuard);
+  });
+
   describe('getMyStats', () => {
     it('should call statsService.getStats with the authenticated user id', async () => {
       const mockStats = {
@@ -60,6 +70,16 @@ describe('StatsController', () => {
 
       expect(statsService.getStats).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(mockStats);
+    });
+
+    it('propagates stats failures instead of returning fabricated data', async () => {
+      vi.spyOn(statsService, 'getStats').mockRejectedValue(
+        new Error('stats unavailable'),
+      );
+
+      await expect(
+        controller.getMyStats({ user: { sub: 'user-1' } }),
+      ).rejects.toThrow('stats unavailable');
     });
   });
 });

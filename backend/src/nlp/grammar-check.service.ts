@@ -48,7 +48,10 @@ export class GrammarCheckService {
     }
   }
 
-  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutHandle = setTimeout(
@@ -116,7 +119,9 @@ export class GrammarCheckService {
       corrected: cleanCorrected,
       explanation:
         cleanExplanation ||
-        (changed ? 'Grammar suggestions are available.' : 'No grammar changes suggested.'),
+        (changed
+          ? 'Grammar suggestions are available.'
+          : 'No grammar changes suggested.'),
       errors_found: changed ? Math.max(1, boundedErrors) : 0,
     };
   }

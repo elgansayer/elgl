@@ -1,14 +1,8 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
-
-export interface QuizResultPayload {
-  score: number;
-  suggestedCefr: string;
-  percentage: number;
-  skillBreakdown: Record<string, { score: number; max: number }>;
-}
+import type { DiagnosticQuizResult } from './quiz.service';
 
 /**
  * Centralises all onboarding state and navigation logic.
@@ -21,45 +15,23 @@ export class OnboardingService {
 
   private readonly http = inject(HttpClient);
 
-  /** Available wizard steps (label keys for i18n). */
   readonly steps: { label: string }[] = [
-    { label: 'onboarding.step1' },
-    { label: 'onboarding.step2' },
-    { label: 'onboarding.step4' },
+    { label: 'diagnosticQuiz.title' },
   ];
 
-  /** Current wizard step index (0-based). */
   readonly currentStep = signal(0);
+  readonly nativeLanguage = signal<string>('en');
+  readonly targetLanguages = signal<Set<string>>(new Set(['es']));
+  readonly displayName = signal<string>('User');
+  readonly quizResult = signal<DiagnosticQuizResult | null>(null);
 
-  /** User's native language code (ISO 639-1). */
-  readonly nativeLanguage = signal<string>('');
+  readonly primaryTargetLanguage = computed(
+    () => Array.from(this.targetLanguages())[0] ?? 'es',
+  );
 
-  /** Set of target language codes the user has selected. */
-  readonly targetLanguages = signal<Set<string>>(new Set());
-
-  /** The display name the user chose. */
-  readonly displayName = signal<string>('');
-
-  /** Diagnostic quiz result, populated after step 3. */
-  readonly quizResult = signal<QuizResultPayload | null>(null);
-
-  /**
-   * Derived boolean that determines whether the "Next" button should be enabled.
-   * Respects the requirements of each wizard step.
-   */
   readonly canGoNext = computed(() => {
-    const step = this.currentStep();
-    if (step === 0) {
-      return this.nativeLanguage() !== '';
-    }
-    if (step === 1) {
-      return this.targetLanguages().size > 0;
-    }
-    // final step - a non-empty display name is required
-    return this.displayName().trim().length > 0;
+    return this.quizResult() !== null;
   });
-
-  // ---- Mutation helpers -----------------------------------------
 
   setNativeLanguage(code: string): void {
     this.nativeLanguage.set(code);
@@ -75,41 +47,42 @@ export class OnboardingService {
       }
       return copy;
     });
+    // A diagnostic result belongs to the selected target-language context.
+    // Changing that context requires a fresh authoritative result.
+    this.quizResult.set(null);
   }
 
   setDisplayName(name: string): void {
     this.displayName.set(name);
   }
 
-  setQuizResult(result: QuizResultPayload): void {
+  setQuizResult(result: DiagnosticQuizResult): void {
     this.quizResult.set(result);
   }
 
-  /** Advance to the next step; if already on the last step, call `finish()`. */
   nextStep(): void {
+    if (!this.canGoNext()) return;
     if (this.currentStep() < this.steps.length - 1) {
-      this.currentStep.update((v) => v + 1);
+      this.currentStep.update((value) => value + 1);
     } else {
-      this.finish();
+      void this.finish();
     }
   }
 
-  /** Go back one step (no effect on the first step). */
   prevStep(): void {
     if (this.currentStep() > 0) {
-      this.currentStep.update((v) => v - 1);
+      this.currentStep.update((value) => value - 1);
     }
   }
 
-  /** Persist the fact that onboarding is finished and store a local flag. */
   async finish(): Promise<void> {
     this.isOnboardingComplete.set(true);
     try {
       window.localStorage.setItem('hellotalk_onboarding_done', 'true');
     } catch {
-      // storage unavailable, ignore
+      // Storage may be unavailable in privacy-restricted browser contexts.
     }
-    // Also submit selections to the backend via API (fire and forget)
+
     try {
       await firstValueFrom(
         this.http.post(`${environment.apiUrl}/users/onboarding`, {
@@ -120,12 +93,12 @@ export class OnboardingService {
         }),
       );
     } catch {
-      // API call is optional - silently ignore failures
+      // Existing onboarding persistence remains best-effort. The diagnostic
+      // itself is already persisted by the authenticated quiz endpoint.
     }
   }
 
-  // Legacy alias - preserve existing callers.
   completeOnboarding(): void {
-    this.finish();
+    void this.finish();
   }
 }
