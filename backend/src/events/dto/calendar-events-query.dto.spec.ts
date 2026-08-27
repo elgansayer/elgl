@@ -19,7 +19,10 @@ describe('CalendarEventsQueryDto', () => {
 
   it('requires both date boundaries', async () => {
     const errors = await errorsFor({});
-    expect(errors.map((error) => error.property).sort()).toEqual(['from_date', 'to_date']);
+    expect(errors.map((error) => error.property).sort()).toEqual([
+      'from_date',
+      'to_date',
+    ]);
   });
 
   it('rejects malformed dates', async () => {
@@ -27,7 +30,10 @@ describe('CalendarEventsQueryDto', () => {
       from_date: 'not-a-date',
       to_date: 'also-not-a-date',
     });
-    expect(errors.map((error) => error.property).sort()).toEqual(['from_date', 'to_date']);
+    expect(errors.map((error) => error.property).sort()).toEqual([
+      'from_date',
+      'to_date',
+    ]);
   });
 
   it('coerces query-string limits and enforces the 1 to 100 bound', async () => {
