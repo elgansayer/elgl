@@ -32,6 +32,12 @@ export interface EventsQuery {
   proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }
 
+export interface CalendarEventsQuery {
+  from_date: string;
+  to_date: string;
+  limit?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private http = inject(HttpClient);
@@ -113,6 +119,15 @@ export class EventsService {
     const params: Record<string, string> = {};
     if (status) params['status'] = status;
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
+  }
+
+  getMyCalendarEvents(query: CalendarEventsQuery) {
+    const params: Record<string, string | number> = {
+      from_date: query.from_date,
+      to_date: query.to_date,
+    };
+    if (query.limit) params['limit'] = query.limit;
+    return this.http.get<Event[]>(`${environment.apiUrl}/events/my/calendar`, { params });
   }
 
   getRsvp(eventId: string) {
