@@ -1,0 +1,80 @@
+name: E2E Core Product Flows Contract
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-core-flows-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  impact:
+    name: e2e core / impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_e2e: ${{ steps.impact.outputs.run_e2e }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect application impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          run_e2e=true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+            run_e2e=false
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              case "$path" in
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                  ;;
+                *)
+                  run_e2e=true
+                  ;;
+              esac
+            done <<< "$changed"
+          fi
+          echo "run_e2e=$run_e2e" >> "$GITHUB_OUTPUT"
+          echo "Core E2E contract required: $run_e2e"
+
+  core-flows:
+    name: e2e / core-product-flows
+    needs: impact
+    if: needs.impact.outputs.run_e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Verify core flow contract
+        run: node scripts/verify-core-e2e-flows.mjs
+
+      - name: Install E2E dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: e2e
+
+      - name: Verify Playwright discovers core product flows
+        run: npm test -- --list tests/auth.spec.ts tests/chat-messaging.spec.ts tests/moment-creation.spec.ts
+        working-directory: e2e

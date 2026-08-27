@@ -1,0 +1,114 @@
+@if (isOpen()) {
+  <div
+    appA11yClickable
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    (click)="closed.emit()"
+  >
+    <div
+      class="bg-surface-200 w-full max-w-sm rounded-2xl shadow-xl overflow-hidden"
+      (click)="$event.stopPropagation()"
+      [dir]="i18n.direction()"
+    >
+      <!-- Header -->
+      <div class="p-4 border-b border-surface-100 flex justify-between items-center">
+        <h2 class="text-lg font-bold text-text-primary">{{ 'share.title' | t }}</h2>
+        <button
+          hlmBtn
+          class="p-2 text-text-secondary hover:bg-surface-300 rounded-full"
+          (click)="closed.emit()"
+          [attr.aria-label]="'common.close' | t"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Preview Card -->
+      <div class="p-4">
+        <div
+          class="flex gap-3 bg-surface-300 p-3 rounded-lg items-center border border-surface-100"
+        >
+          @if (entity().thumbnailUrl) {
+            <img
+              [src]="entity().thumbnailUrl"
+              class="w-12 h-12 rounded object-cover"
+              alt="Preview"
+            />
+          } @else {
+            <div
+              class="w-12 h-12 bg-primary/20 rounded flex items-center justify-center text-primary text-xl"
+            >
+              🔗
+            </div>
+          }
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-bold text-text-primary truncate">{{ entity().title }}</h3>
+            @if (entity().subtitle) {
+              <p class="text-xs text-text-secondary truncate">{{ entity().subtitle }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Share Targets -->
+      <div class="px-4 pb-4">
+        <div class="grid grid-cols-4 gap-2 mb-4">
+          <button
+            hlmBtn
+            class="flex flex-col items-center gap-1 group"
+            (click)="shareToDirectMessage()"
+            [attr.aria-label]="'share.dm' | t"
+          >
+            <div
+              class="w-12 h-12 bg-secondary text-on-fill rounded-full flex items-center justify-center text-xl group-hover:scale-105 transition-transform shadow"
+            >
+              💬
+            </div>
+            <span class="text-[10px] font-bold text-text-secondary text-center">{{
+              'share.dm' | t
+            }}</span>
+          </button>
+
+          <button
+            hlmBtn
+            class="flex flex-col items-center gap-1 group"
+            (click)="shareToFeed()"
+            [attr.aria-label]="'share.moments' | t"
+          >
+            <div
+              class="w-12 h-12 bg-warning text-on-fill rounded-full flex items-center justify-center text-xl group-hover:scale-105 transition-transform shadow"
+            >
+              ⭕
+            </div>
+            <span class="text-[10px] font-bold text-text-secondary text-center">{{
+              'share.moments' | t
+            }}</span>
+          </button>
+
+          <!-- External triggers omitted for brevity, native share API would be invoked here -->
+        </div>
+
+        <!-- Copy Link Box -->
+        <div class="flex items-center gap-2 bg-surface-100 p-2 rounded-lg">
+          <input
+            hlmInput
+            type="text"
+            [value]="shareUrl()"
+            readonly
+            class="flex-1 bg-transparent text-sm text-text-primary px-2 outline-none"
+            [attr.aria-label]="'text input'"
+          />
+          <button
+            hlmBtn
+            class="px-4 py-2 rounded-md text-sm font-bold text-on-fill transition-colors"
+            [class.bg-primary]="!isCopying()"
+            [class.bg-success]="isCopying()"
+            (click)="copyLink()"
+            [attr.aria-label]="'share.copied' | t"
+          >
+            {{ isCopying() ? ('share.copied' | t) : ('share.copy' | t) }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

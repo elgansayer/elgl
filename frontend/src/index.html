@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Frontend</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗣️</text></svg>"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <script>
+      (function(){
+        var theme;
+        try {
+          theme = localStorage.getItem('app_theme');
+        } catch(e) { /* ignore */ }
+        if (!theme || theme === 'system') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+      })();
+    </script>
+  </head>
+  <body
+    class="bg-surface-500 text-text-primary antialiased m-0 p-0 h-full w-full overflow-x-hidden"
+  >
+    <app-root></app-root>
+  </body>
+</html>

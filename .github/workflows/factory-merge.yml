@@ -1,0 +1,60 @@
+name: Factory Merge Gate
+
+on:
+  schedule:
+    # The daemon owns normal exact-head merges. This workflow is only a recovery
+    # fallback for daemon downtime, so a ten-minute poll created runner churn
+    # without improving healthy-path merge latency.
+    - cron: '16 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: factory-merge-gate
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Merge one eligible factory pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          base_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          green_base_sha="$(
+            gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --branch main --event push --limit 50 \
+              --json headSha,status,conclusion \
+              --jq "[.[] | select(.headSha == \"${base_sha}\" and .status == \"completed\" and .conclusion == \"success\")][0].headSha // \"\""
+          )"
+          if [ "$green_base_sha" != "$base_sha" ]; then
+            echo "Current main ${base_sha} has no successful canonical CI push run; merge recovery is fenced."
+            exit 0
+          fi
+
+          gh pr list --repo "${GITHUB_REPOSITORY}" --state open --label factory-reviewed --json number,isDraft,headRefName,headRefOid,mergeStateStatus,reviewDecision,statusCheckRollup \
+            --jq '[.[] | select(
+              .isDraft == false
+              and .mergeStateStatus == "CLEAN"
+              and .reviewDecision != "CHANGES_REQUESTED"
+              and ([.statusCheckRollup[]? | select((.context // .name) == "factory/independent-review")] | length) >= 1
+              and ([.statusCheckRollup[]? | select((.context // .name) == "factory/independent-review" and (((.state == "SUCCESS") or (.conclusion == "SUCCESS")) | not))] | length) == 0
+              and ([.statusCheckRollup[]? | select((.context // .name) == "CI / required")] | length) >= 1
+              and ([.statusCheckRollup[]? | select((.context // .name) == "CI / required" and (((.state == "SUCCESS") or (.conclusion == "SUCCESS")) | not))] | length) == 0
+              and ([.statusCheckRollup[]? | select(((.status == "COMPLETED") and ((.conclusion // "") | IN("SUCCESS", "NEUTRAL", "SKIPPED"))) or .state == "SUCCESS")] | length) == (.statusCheckRollup | length)
+            )] | .[0] // empty | "\(.number)\t\(.headRefOid)"' \
+            | while IFS=$'\t' read -r number head_sha; do
+                if [ -z "$number" ] || [ -z "$head_sha" ]; then
+                  continue
+                fi
+                gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --delete-branch --match-head-commit "$head_sha"
+              done

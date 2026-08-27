@@ -1,0 +1,332 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Screens · Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 20px 80px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .page-head {
+        max-width: 390px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .page-head h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .page-head p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      .phone {
+        width: 390px;
+        margin: 0 auto;
+        background: rgb(var(--surface-500));
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-700) / 0.4);
+        box-shadow:
+          0 1px 2px rgb(var(--shadow) / 0.06),
+          0 24px 48px rgb(var(--shadow) / 0.28);
+        min-height: 640px;
+      }
+      header.app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      header.app-header h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .leaderboard-link {
+        font-size: 13px;
+        color: rgb(var(--primary));
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .user-email {
+        font-size: 13px;
+        color: rgb(var(--text-muted));
+      }
+      main {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .card {
+        background: rgb(var(--surface-300));
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        padding: 16px;
+      }
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .streak-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .streak-flame {
+        font-size: 32px;
+      }
+      .streak-count {
+        font-size: 24px;
+        font-weight: 800;
+        color: rgb(var(--neon-orange));
+        font-family: 'Instrument Sans', sans-serif;
+      }
+      .streak-label {
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+      }
+      .word-of-day {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px 12px;
+        min-width: 0;
+      }
+      .word-of-day .word {
+        font-size: 28px;
+        font-weight: 800;
+        color: rgb(var(--accent));
+        overflow-wrap: anywhere;
+      }
+      .word-of-day .translation {
+        font-size: 16px;
+        color: rgb(var(--text-secondary));
+        overflow-wrap: anywhere;
+      }
+      .word-of-day .language {
+        margin-inline-start: auto;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+      }
+      .word-example {
+        margin: 8px 0 0;
+        font-size: 13px;
+        color: rgb(var(--text-muted));
+        font-style: italic;
+        overflow-wrap: anywhere;
+      }
+      .tip-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .tip-icon {
+        font-size: 20px;
+      }
+      .tip-text {
+        font-size: 13px;
+        color: rgb(var(--text-secondary));
+        margin: 0;
+      }
+      .caption {
+        max-width: 390px;
+        margin: 20px auto 0;
+        font-size: 12px;
+        color: rgb(var(--text-secondary));
+        line-height: 1.5;
+      }
+      .caption code {
+        background: rgb(var(--surface-300));
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-head">
+      <div>
+        <h1 class="display">Relay - Home</h1>
+        <p>pages/home/home.component.ts</p>
+      </div>
+      <div class="toggle">
+        <button id="btn-light" class="active">☀️ Light</button>
+        <button id="btn-dark">🌙 Dark</button>
+      </div>
+    </div>
+
+    <div class="phone">
+      <header class="app-header">
+        <h2>Home</h2>
+        <div class="header-right">
+          <a href="#" class="leaderboard-link">Leaderboard</a>
+          <span class="user-email">maria@example.com</span>
+        </div>
+      </header>
+
+      <main>
+        <div class="card">
+          <h3>Study streak</h3>
+          <div class="streak-row">
+            <span class="streak-flame">🔥</span>
+            <div>
+              <div class="streak-count">14</div>
+              <div class="streak-label">days in a row - next milestone at 30</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" role="region" aria-label="Word of the Day" aria-busy="false">
+          <h3>Word of the Day</h3>
+          <div class="word-of-day">
+            <span class="word" lang="ja">学ぶ</span>
+            <span class="translation">to learn</span>
+            <span class="language">Japanese</span>
+          </div>
+          <p class="word-example" lang="ja">毎日、新しいことを学びます。</p>
+        </div>
+
+        <div class="card">
+          <h3>Daily learning tip</h3>
+          <div class="tip-row">
+            <span class="tip-icon">💡</span>
+            <p class="tip-text">
+              Try shadowing: listen to a short native-speaker clip and repeat it aloud immediately
+              after, matching rhythm and intonation, not just the words.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <p class="caption">
+      The Word of the Day card now renders the authenticated learner's target-language vocabulary,
+      wraps safely at the 390px baseline and exposes loading with <code>aria-busy</code>, loading text
+      with <code>role="status"</code>, and unavailable responses with <code>role="alert"</code>. The
+      real page also renders the streak-milestone celebration overlay when a 7/30/100-day threshold
+      is first crossed.
+    </p>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

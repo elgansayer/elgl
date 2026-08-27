@@ -1,0 +1,11 @@
+{
+  "apiEndpoint": "https://api.example.com/v1",
+  "appName": "HelloTalk",
+  "version": "1.0.0",
+  "environment": "development",
+  "mockBackendMode": "disabled",
+  "features": {
+    "enableVIP": true,
+    "enableVideoCalling": true
+  }
+}

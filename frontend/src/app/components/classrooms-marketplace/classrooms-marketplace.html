@@ -1,0 +1,208 @@
+<app-video-classroom-error-boundary>
+  <div class="p-4 sm:p-6 space-y-6">
+    <!-- Header -->
+    <header
+      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      joyrideStep="videoClassroomStepMarketplace"
+      [title]="'videoClassroomTour.stepMarketplaceTitle' | t"
+      [text]="'videoClassroomTour.stepMarketplaceText' | t"
+      stepPosition="bottom"
+    >
+      <div class="flex items-center gap-3">
+        <div>
+          <h1 class="text-2xl font-black text-text-primary">
+            {{ 'classroomsMarketplace.title' | t }}
+          </h1>
+          <p class="text-sm text-text-secondary mt-1">{{ 'classroomsMarketplace.subtitle' | t }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        @if (isHosting()) {
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-3 py-1 text-xs font-semibold text-primary"
+          >
+            &#127909;&#65039; {{ 'classroomsMarketplace.hostingBadge' | t }}
+          </span>
+        }
+        <button
+          hlmBtn
+          type="button"
+          (click)="startOnboardingTour()"
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-fill hover:bg-primary/90 transition-colors text-sm font-bold"
+          [attr.aria-label]="'videoClassroomTour.helpBtn' | t"
+          [title]="'videoClassroomTour.helpBtn' | t"
+        >
+          ?
+        </button>
+      </div>
+    </header>
+
+    <!-- Language Filter Pills -->
+    @if (languagePairOptions().length > 1) {
+      <nav
+        aria-label="Language filters"
+        class="flex flex-wrap gap-2"
+        joyrideStep="videoClassroomStepFilters"
+        [title]="'videoClassroomTour.stepFiltersTitle' | t"
+        [text]="'videoClassroomTour.stepFiltersText' | t"
+        stepPosition="bottom"
+      >
+        <button
+          hlmBtn
+          type="button"
+          (click)="selectLanguage(null)"
+          [attr.aria-pressed]="!selectedLanguage()"
+          class="rounded-full px-4 py-1.5 text-xs font-bold transition-all"
+          [class.bg-primary]="!selectedLanguage()"
+          [class.text-on-fill]="!selectedLanguage()"
+          [class.bg-surface-300]="!!selectedLanguage()"
+          [class.text-text-secondary]="!!selectedLanguage()"
+        >
+          {{ 'classroomsMarketplace.filterAll' | t }}
+        </button>
+        @for (lang of languagePairOptions(); track lang) {
+          <button
+            hlmBtn
+            type="button"
+            (click)="selectLanguage(lang)"
+            [attr.aria-pressed]="selectedLanguage() === lang"
+            class="rounded-full px-4 py-1.5 text-xs font-bold transition-all"
+            [class.bg-primary]="selectedLanguage() === lang"
+            [class.text-on-fill]="selectedLanguage() === lang"
+            [class.bg-surface-300]="selectedLanguage() !== lang"
+            [class.text-text-secondary]="selectedLanguage() !== lang"
+          >
+            {{ lang }}
+          </button>
+        }
+      </nav>
+    }
+
+    <!-- Loading state: Skeleton Loaders -->
+    @if (isLoading()) {
+      <div
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        joyrideStep="videoClassroomStepRoomCard"
+        [title]="'videoClassroomTour.stepRoomCardTitle' | t"
+        [text]="'videoClassroomTour.stepRoomCardText' | t"
+        stepPosition="top"
+      >
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="rounded-2xl bg-surface-200 border border-surface-400 overflow-hidden">
+            <app-skeleton-loader [height]="'140px'" [width]="'100%'" [borderRadius]="'0'" />
+            <div class="p-4 space-y-3">
+              <app-skeleton-loader [height]="'16px'" [width]="'75%'" [variant]="'text'" />
+              <div class="flex gap-2">
+                <app-skeleton-loader [height]="'20px'" [width]="'55px'" [borderRadius]="'999px'" />
+                <app-skeleton-loader [height]="'20px'" [width]="'45px'" [borderRadius]="'999px'" />
+              </div>
+              <div class="flex items-center gap-2">
+                <app-skeleton-loader [height]="'12px'" [width]="'60px'" [variant]="'text'" />
+                <app-skeleton-loader [height]="'12px'" [width]="'8px'" [variant]="'text'" />
+                <app-skeleton-loader [height]="'12px'" [width]="'80px'" [variant]="'text'" />
+              </div>
+              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'999px'" />
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Error state -->
+    @if (errorMessage()) {
+      <app-empty-state
+        [icon]="'&#9888;&#65039;'"
+        [title]="'classroomsMarketplace.loadErrorTitle' | t"
+        [description]="'classroomsMarketplace.loadErrorDescription' | t"
+        [actionLabel]="'classroomsMarketplace.retryLoadBtn' | t"
+        (actionClicked)="loadRooms()"
+        [customClass]="'border-danger/30 bg-danger/10 mt-4'"
+      />
+    }
+
+    <!-- Empty state -->
+    @if (!isLoading() && !errorMessage() && videoRooms().length === 0) {
+      <app-empty-state
+        icon="🏫"
+        [title]="'classroomsMarketplace.emptyTitle' | t"
+        [description]="'classroomsMarketplace.emptyDescription' | t"
+        [customClass]="'mt-4'"
+      />
+    }
+
+    <!-- Room Grid -->
+    @if (!isLoading() && !errorMessage() && videoRooms().length > 0) {
+      <div
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        joyrideStep="videoClassroomStepRoomCard"
+        [title]="'videoClassroomTour.stepRoomCardTitle' | t"
+        [text]="'videoClassroomTour.stepRoomCardText' | t"
+        stepPosition="top"
+      >
+        @for (room of videoRooms(); track room.id) {
+          <article
+            class="rounded-2xl bg-surface-200 border border-surface-400 overflow-hidden hover:border-primary/50 transition-all cursor-pointer group"
+          >
+            <!-- Video room preview placeholder -->
+            <div class="aspect-video bg-surface-900 flex items-center justify-center relative">
+              <span class="text-4xl" aria-hidden="true">&#127909;&#65039;</span>
+              @if (room.is_active) {
+                <span
+                  class="absolute top-2 start-2 inline-flex items-center gap-1 rounded-full bg-danger/90 px-2 py-0.5 text-[10px] font-bold text-on-fill"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-on-fill animate-pulse"></span>
+                  {{ 'classroomsMarketplace.liveBadge' | t }}
+                </span>
+              }
+              <span
+                class="absolute bottom-2 end-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white backdrop-blur-sm"
+              >
+                {{ room.listeners_count }} {{ 'classroomsMarketplace.watching' | t }}
+              </span>
+            </div>
+
+            <div class="p-4 space-y-3">
+              <h3 class="font-bold text-text-primary text-sm leading-snug line-clamp-2">
+                {{ room.title }}
+              </h3>
+
+              <div class="flex flex-wrap items-center gap-2">
+                @if (room.language_pair) {
+                  <span
+                    class="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary"
+                  >
+                    {{ room.language_pair }}
+                  </span>
+                }
+                @if (room.topic_tag) {
+                  <span
+                    class="rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-semibold text-secondary"
+                  >
+                    {{ room.topic_tag }}
+                  </span>
+                }
+              </div>
+
+              <div class="flex items-center gap-2 text-xs text-text-secondary">
+                <span>{{
+                  'classroomsMarketplace.speakersLabel' | t: { count: room.speakers.length }
+                }}</span>
+                <span aria-hidden="true">&middot;</span>
+                <span>{{ 'classroomsMarketplace.createdAt' | t: { date: room.created_at } }}</span>
+              </div>
+
+              <button
+                hlmBtn
+                type="button"
+                (click)="joinRoom(room)"
+                class="w-full rounded-full bg-primary hover:bg-primary/90 text-on-fill font-bold py-2 text-xs transition-colors"
+              >
+                {{ 'classroomsMarketplace.joinBtn' | t }}
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</app-video-classroom-error-boundary>

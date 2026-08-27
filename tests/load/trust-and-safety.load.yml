@@ -1,0 +1,153 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - name: "warmup"
+      duration: 30
+      arrivalRate: 1
+    - name: "ramp"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 20
+    - name: "sustained"
+      duration: 120
+      arrivalRate: 20
+    - name: "spike"
+      duration: 30
+      arrivalRate: 50
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ $processEnvironment.TEST_USER_TOKEN || 'test-token' }}"
+  processor: "./helpers/trust-safety-helpers.js"
+  variables:
+    reported_user_id:
+      - "00000000-0000-0000-0000-000000001001"
+      - "00000000-0000-0000-0000-000000001002"
+      - "00000000-0000-0000-0000-000000001003"
+    moderation_types:
+      - "moment"
+      - "profile"
+    moderation_statuses:
+      - "pending"
+      - "approved"
+      - "rejected"
+
+scenarios:
+  - name: "Report categories lookup"
+    weight: 5
+    flow:
+      - get:
+          url: "/safety/report-categories"
+          expect:
+            - statusCode: 200
+
+  - name: "Report a user"
+    weight: 15
+    flow:
+      - post:
+          url: "/safety/report"
+          json:
+            reported_id: "{{ reported_user_id }}"
+            reason_category: "{{ $randomChoice('harassment', 'spam', 'inappropriate_content', 'fake_profile', 'other') }}"
+            description: "Load test generated report at {{ $now }}"
+          expect:
+            - statusCode: 201
+
+  - name: "Block a user"
+    weight: 10
+    flow:
+      - post:
+          url: "/safety/block/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Unblock a user"
+    weight: 10
+    flow:
+      - post:
+          url: "/safety/unblock/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Check if user is blocked"
+    weight: 10
+    flow:
+      - get:
+          url: "/safety/is-blocked/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get blocked user IDs"
+    weight: 10
+    flow:
+      - get:
+          url: "/safety/blocked-ids"
+          expect:
+            - statusCode: 200
+
+  - name: "Get blocked users details"
+    weight: 8
+    flow:
+      - get:
+          url: "/safety/blocked-users-details"
+          expect:
+            - statusCode: 200
+
+  - name: "Get blocked-and-blocker combined IDs"
+    weight: 7
+    flow:
+      - get:
+          url: "/safety/blocked-and-blocker-ids/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Moderation: get items"
+    weight: 5
+    flow:
+      - get:
+          url: "/moderation/items?type={{ moderation_types }}&status={{ moderation_statuses }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Blocks: get blocked users"
+    weight: 5
+    flow:
+      - get:
+          url: "/blocks"
+          expect:
+            - statusCode: 200
+
+  - name: "Moderation: report user"
+    weight: 8
+    flow:
+      - post:
+          url: "/moderation/report"
+          json:
+            reported_id: "{{ reported_user_id }}"
+            reason_category: "{{ $randomChoice('harassment', 'spam', 'inappropriate_content', 'fake_profile', 'other') }}"
+          expect:
+            - statusCode: 201
+
+  - name: "Moderation: analyse user"
+    weight: 5
+    flow:
+      - get:
+          url: "/moderation/analyse/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get blocked IDs for specific user"
+    weight: 3
+    flow:
+      - get:
+          url: "/safety/blocked-ids/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Get blocker IDs for specific user"
+    weight: 3
+    flow:
+      - get:
+          url: "/safety/blocker-ids/{{ reported_user_id }}"
+          expect:
+            - statusCode: 200
