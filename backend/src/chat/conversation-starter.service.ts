@@ -351,10 +351,7 @@ export class ConversationStarterService {
       })
       .join('');
 
-    return withoutControls
-      .replace(/\s+/gu, ' ')
-      .trim()
-      .slice(0, maxLength);
+    return withoutControls.replace(/\s+/gu, ' ').trim().slice(0, maxLength);
   }
 
   private putCache(cacheKey: string, suggestions: string[]): void {

@@ -127,9 +127,9 @@ describe('ConversationStarterService', () => {
       'What food do you enjoy cooking?',
       'What are you learning this week?',
     ]);
-    expect(
-      suggestions.every((suggestion) => suggestion.length <= 160),
-    ).toBe(true);
+    expect(suggestions.every((suggestion) => suggestion.length <= 160)).toBe(
+      true,
+    );
   });
 
   it('uses deterministic fallbacks when the LLM provider is unavailable', async () => {
