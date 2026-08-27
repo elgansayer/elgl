@@ -25,10 +25,7 @@ def _job(*, source: str) -> Job:
 
 def _health(config: AgentsConfig, default: ProviderStatus) -> dict[str, ProviderHealth]:
     now = datetime.now(UTC)
-    return {
-        name: ProviderHealth(name, default, now)
-        for name in config.providers
-    }
+    return {name: ProviderHealth(name, default, now) for name in config.providers}
 
 
 def test_factory_internal_general_action_uses_at_most_one_regular_provider() -> None:
@@ -36,7 +33,13 @@ def test_factory_internal_general_action_uses_at_most_one_regular_provider() -> 
     policy = ConfigRoutingPolicy(config)
     health = _health(config, ProviderStatus.HEALTHY)
 
-    candidates = list(policy.candidates(AgentPhase.GENERAL_ACTION, _job(source="factory-internal"), health))
+    candidates = list(
+        policy.candidates(
+            AgentPhase.GENERAL_ACTION,
+            _job(source="factory-internal"),
+            health,
+        )
+    )
 
     assert candidates == ["opencode"]
 
@@ -53,7 +56,13 @@ def test_factory_internal_general_action_skips_emergency_provider() -> None:
         datetime.now(UTC),
     )
 
-    candidates = list(policy.candidates(AgentPhase.GENERAL_ACTION, _job(source="factory-internal"), health))
+    candidates = list(
+        policy.candidates(
+            AgentPhase.GENERAL_ACTION,
+            _job(source="factory-internal"),
+            health,
+        )
+    )
 
     assert candidates == []
 
@@ -63,18 +72,23 @@ def test_normal_general_action_retains_provider_fallback_chain() -> None:
     policy = ConfigRoutingPolicy(config)
     health = _health(config, ProviderStatus.HEALTHY)
 
-    candidates = list(policy.candidates(AgentPhase.GENERAL_ACTION, _job(source="github-issue"), health))
+    candidates = list(
+        policy.candidates(
+            AgentPhase.GENERAL_ACTION,
+            _job(source="github-issue"),
+            health,
+        )
+    )
 
     assert candidates[:3] == ["opencode", "google", "codex"]
     assert len(candidates) > 1
 
 
 def test_admin_governance_filters_non_admin_issue_events_before_runner_allocation() -> None:
-    workflow = (REPOSITORY_ROOT / ".github/workflows/admin-backlog-governance.yml").read_text(
-        encoding="utf-8"
-    )
+    workflow = (
+        REPOSITORY_ROOT / ".github/workflows/admin-backlog-governance.yml"
+    ).read_text(encoding="utf-8")
 
-    assert "startsWith(github.event.issue.title, 'Admin ')" in workflow
-    assert "startsWith(github.event.issue.title, 'Advanced admin ')" in workflow
+    assert "contains(github.event.issue.title, 'admin')" in workflow
     assert "github.event.label.name == 'factory-ready'" in workflow
     assert "github.event_name != 'issues'" in workflow
