@@ -1,5 +1,0 @@
-{
-  "supabaseUrl": "https://mock.supabase.co",
-  "supabaseAnonKey": "mock-anon-key",
-  "apiBaseUrl": "/api"
-}
