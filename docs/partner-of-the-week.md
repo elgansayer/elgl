@@ -28,7 +28,7 @@ Eligible candidates receive a deterministic composite score:
 
 The highest ten scores are cached. User ID is the final tie-breaker so identical inputs produce stable ordering. The Redis key is `partner_of_week_ids` and expires after seven days.
 
-Corrector-score lookup is best-effort per candidate. A failure for one candidate does not abort the weekly refresh; that candidate receives the existing neutral/fallback score while candidates with verified rating history can still rank normally.
+Corrector-score lookup is best-effort per candidate. A failure for one candidate does not abort the weekly refresh; that candidate receives a zero rating signal while candidates with verified rating history can still rank normally.
 
 ## Privacy and security
 
