@@ -100,9 +100,15 @@ describe('Restore purchases ownership security', () => {
     googlePlay.getUserIdByPurchaseToken.mockResolvedValue('other-user-id');
 
     await expect(
-      service.restorePurchases('current-user-id', 'android', receipt(purchaseToken)),
+      service.restorePurchases(
+        'current-user-id',
+        'android',
+        receipt(purchaseToken),
+      ),
     ).rejects.toThrow(
-      new ForbiddenException('This purchase is already linked to another account'),
+      new ForbiddenException(
+        'This purchase is already linked to another account',
+      ),
     );
 
     expect(googlePlay.storePurchaseToken).not.toHaveBeenCalled();
@@ -156,7 +162,11 @@ describe('Restore purchases ownership security', () => {
     googlePlay.getSubscriptionPurchaseDetails.mockResolvedValue(null);
 
     await expect(
-      service.restorePurchases('current-user-id', 'android', receipt(purchaseToken)),
+      service.restorePurchases(
+        'current-user-id',
+        'android',
+        receipt(purchaseToken),
+      ),
     ).resolves.toEqual({
       received: true,
       status: 'no_valid_subscription',
@@ -175,14 +185,20 @@ describe('Restore purchases ownership security', () => {
     });
 
     await expect(
-      service.restorePurchases('current-user-id', 'android', receipt(purchaseToken)),
+      service.restorePurchases(
+        'current-user-id',
+        'android',
+        receipt(purchaseToken),
+      ),
     ).resolves.toEqual({
       received: true,
       status: 'no_valid_subscription',
     });
 
     const warnings = logger.warn.mock.calls.flat().join(' ');
-    expect(warnings).toContain('Android restore: purchase not currently entitled');
+    expect(warnings).toContain(
+      'Android restore: purchase not currently entitled',
+    );
     expect(warnings).not.toContain(purchaseToken);
     expect(vipUpdateSpy).not.toHaveBeenCalled();
   });
