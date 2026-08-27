@@ -34,17 +34,22 @@ function lineNumberAt(source, index) {
   return source.slice(0, index).split('\n').length;
 }
 
+function hasBoundAttribute(attributes, names) {
+  const escapedNames = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(
+    `(?:^|\\s)(?:${escapedNames.join('|')})\\s*=\\s*(?:"[^"]+"|'[^']+')`,
+    'i',
+  );
+  return pattern.test(attributes);
+}
+
 function hasExplicitAccessibleName(attributes) {
   const ariaLabel = attributes.match(
     /(?:^|\s)(?:aria-label|attr\.aria-label)\s*=\s*(["'])(.*?)\1/is,
   );
   if (ariaLabel?.[2]?.trim()) return true;
 
-  if (
-    /(?:^|\s)(?:\[aria-label\]|\[attr\.aria-label\])\s*=\s*["'][^"']+["']/i.test(
-      attributes,
-    )
-  ) {
+  if (hasBoundAttribute(attributes, ['[aria-label]', '[attr.aria-label]'])) {
     return true;
   }
 
@@ -53,9 +58,7 @@ function hasExplicitAccessibleName(attributes) {
   );
   if (labelledBy?.[2]?.trim()) return true;
 
-  return /(?:^|\s)(?:\[aria-labelledby\]|\[attr\.aria-labelledby\])\s*=\s*["'][^"']+["']/i.test(
-    attributes,
-  );
+  return hasBoundAttribute(attributes, ['[aria-labelledby]', '[attr.aria-labelledby]']);
 }
 
 function hasScreenReaderText(innerHtml) {
