@@ -41,6 +41,29 @@ When mock mode is enabled, backend startup logs include the numeric seed, seed i
 
 `buildMockFixtureSnapshot(seed)` is a pure reset boundary: each call returns fresh arrays and objects. Rebuilding with the same seed restores the exact initial scenario even if a previous consumer mutated its local snapshot.
 
+## Globally diverse user population
+
+Issue #7946 adds a deterministic user-population fixture at `GET /api/mock/users`. The route is excluded from Swagger, returns `404` unless the explicit mock backend profile is enabled, and sends `Cache-Control: private, no-store`.
+
+Use `size=minimal`, `size=medium`, or `size=large` for 12, 96, or 512 fictional profiles. `namespace` accepts up to 64 letters, numbers, dots, underscores, or hyphens and creates an isolated deterministic seed for parallel workers. For example:
+
+```bash
+curl 'http://localhost:3000/api/mock/users?size=minimal&namespace=playwright-1'
+```
+
+The catalogue covers Japanese, English, Arabic, Hebrew, Korean, Hindi, Spanish, Portuguese, Turkish, Vietnamese, French, and Polish native-language profiles with reciprocal target-language pairs, ages, proficiency levels, time-zone-compatible locations, Unicode and RTL names, one deliberately missing display name, and one deliberately long display name. All identities and biography text are synthetic repository-owned fixtures. No avatar, audio, or other remote media URL is generated.
+
+The population builder is stateless: rebuilding the same size and namespace produces the exact same IDs, timestamps, ordering, and values. A different namespace uses an independent deterministic seed, so parallel test workers cannot perturb each other's sequence. There is no persisted state to clean up; calling the endpoint again is the reset/reseed operation for this read-only scenario.
+
+Frontend test harnesses should consume the HTTP contract through `MockUserPopulationService` rather than importing backend fixture objects. That client fails before network access when the compiled frontend environment is production.
+
+Focused verification:
+
+```bash
+npm --prefix backend test -- --runInBand src/mock/global-user-population.spec.ts src/mock/mock-users.controller.spec.ts
+npm --prefix frontend test -- --run src/app/services/mock-user-population.service.spec.ts
+```
+
 ## Client activation and indicator
 
 The normal client config explicitly carries `"mockBackendMode": "disabled"`. For offline/demo work, copy the repository-owned profile before starting the frontend:
