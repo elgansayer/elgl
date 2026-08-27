@@ -25,7 +25,24 @@ GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 1. Wait for the daemon to be idle (no active jobs).
+# 1. Host storage maintenance - runs every day, before the idle wait below
+#    and regardless of whether main has moved. It touches only dangling/
+#    unreferenced resources (journal, Docker build cache, unused uv cache
+#    entries), never anything an active job holds open, so it doesn't need
+#    the daemon idle or stopped. A busy factory can legitimately never go
+#    idle within ACTIVE_JOB_WAIT_SECONDS (a healthy, always-working queue
+#    looks identical to a stuck one from this script's point of view), and
+#    the "already up to date" branch further down exits early on most days -
+#    so anything placed after either gate would rarely run at all. This was
+#    previously the only path for this maintenance, and it was manual-only:
+#    a human had to remember to run it with --apply.
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+log "Running host storage maintenance"
+"$REPOSITORY/scripts/maintain-factory-host-storage.sh" --apply --prune-docker || \
+  log "WARNING: host storage maintenance failed - continuing with the update"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# 2. Wait for the daemon to be idle (no active jobs).
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 active_jobs() {
   python3 - "$HEARTBEAT" <<'PY'
@@ -53,18 +70,7 @@ done
 log "Factory is idle"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 1b. Host storage maintenance - runs every day regardless of whether main
-#     has moved. The "already up to date" branch below exits early on most
-#     days, so anything placed after it would rarely run at all. This is the
-#     only automated path for journal vacuuming and dangling Docker/build-cache
-#     pruning - previously a human had to remember to run this with --apply.
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-log "Running host storage maintenance"
-"$REPOSITORY/scripts/maintain-factory-host-storage.sh" --apply --prune-docker || \
-  log "WARNING: host storage maintenance failed - continuing with the update"
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 2. Fetch and check whether main has moved.
+# 3. Fetch and check whether main has moved.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Fetching origin/main"
 timeout "${GIT_TIMEOUT}s" \
@@ -84,7 +90,7 @@ fi
 log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 3. Verify the pull will be a clean fast-forward.
+# 4. Verify the pull will be a clean fast-forward.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 merge_base=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" merge-base HEAD origin/main)
 if [ "$merge_base" != "$local_sha" ]; then
@@ -93,13 +99,13 @@ if [ "$merge_base" != "$local_sha" ]; then
 fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 4. Stop the factory before touching the package.
+# 5. Stop the factory before touching the package.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Stopping factory service"
 systemctl stop "$SERVICE" || true
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 5. Pull and reinstall.
+# 6. Pull and reinstall.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Pulling main"
 timeout "${GIT_TIMEOUT}s" \
@@ -136,7 +142,7 @@ runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" "$FACTORY_VENV/bin/uv" ca
 chown -R dev:dev "$REPOSITORY"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 6. Restart and verify.
+# 7. Restart and verify.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Starting factory service"
 systemctl reset-failed "$SERVICE" || true
