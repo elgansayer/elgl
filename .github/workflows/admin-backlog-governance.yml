@@ -21,15 +21,14 @@ jobs:
   govern:
     # The Factory opens large volumes of ordinary product issues. Previously every
     # opened/reopened issue allocated a runner only for the Python body to discover
-    # it was not an admin issue. Filter those events before runner allocation while
-    # preserving manual/push full reconciliation and factory-ready promotion.
-    # startsWith() is case-insensitive in GitHub expressions, matching the Python
-    # governance check for the normal generated admin-title forms.
+    # it was not an admin issue. Use a conservative case-insensitive prefilter before
+    # runner allocation; the Python title check below remains authoritative. Using
+    # contains() rather than duplicating the exact startswith/whitespace normalization
+    # deliberately permits false positives rather than ever skipping a real admin issue.
     if: >-
       github.event_name != 'issues' ||
       (
-        (startsWith(github.event.issue.title, 'Admin ') ||
-         startsWith(github.event.issue.title, 'Advanced admin ')) &&
+        contains(github.event.issue.title, 'admin') &&
         (github.event.action != 'labeled' ||
          github.event.label.name == 'factory-ready')
       )
