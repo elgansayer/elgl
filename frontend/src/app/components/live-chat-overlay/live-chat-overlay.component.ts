@@ -20,6 +20,13 @@ function boundedText(value: unknown, maxLength: number): string | null {
   return Array.from(trimmed).slice(0, maxLength).join('');
 }
 
+function boundedMessageId(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || Array.from(trimmed).length > MAX_MESSAGE_ID_LENGTH) return null;
+  return trimmed;
+}
+
 /**
  * Treat room-chat state as an untrusted realtime boundary before rendering it
  * over video. The canonical AudioRoomsStore owns the Centrifugo subscription;
@@ -29,17 +36,20 @@ export function buildLiveOverlayMessages(
   values: readonly unknown[],
   fallbackSenderName: string,
 ): LiveOverlayMessage[] {
-  const fallbackSender =
-    boundedText(fallbackSenderName, MAX_SENDER_NAME_LENGTH) ?? 'User';
+  const fallbackSender = boundedText(fallbackSenderName, MAX_SENDER_NAME_LENGTH) ?? 'User';
   const result: LiveOverlayMessage[] = [];
   const seenIds = new Set<string>();
 
-  for (let index = values.length - 1; index >= 0 && result.length < MAX_OVERLAY_MESSAGES; index--) {
+  for (
+    let index = values.length - 1;
+    index >= 0 && result.length < MAX_OVERLAY_MESSAGES;
+    index--
+  ) {
     const value = values[index];
     if (typeof value !== 'object' || value === null || Array.isArray(value)) continue;
 
     const record = value as Record<string, unknown>;
-    const id = boundedText(record['id'], MAX_MESSAGE_ID_LENGTH);
+    const id = boundedMessageId(record['id']);
     const text = boundedText(record['text_content'], MAX_MESSAGE_TEXT_LENGTH);
     if (!id || !text || seenIds.has(id)) continue;
 
@@ -114,9 +124,6 @@ export class LiveChatOverlayComponent {
     const activeRoomId = this.store.currentRoom()?.id;
     if (!requestedRoomId || requestedRoomId !== activeRoomId) return [];
 
-    return buildLiveOverlayMessages(
-      this.store.roomMessages(),
-      this.i18n.translate('common.user'),
-    );
+    return buildLiveOverlayMessages(this.store.roomMessages(), this.i18n.translate('common.user'));
   });
 }
