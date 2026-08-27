@@ -181,7 +181,7 @@ test('registers the Nest throttler globally with the repository default', () => 
 
   assert.match(
     source,
-    /ThrottlerModule\.forRoot\(\[\s*\{\s*ttl:\s*60000,\s*limit:\s*10,?\s*\}\s*\]\)/s,
+    //ThrottlerModule\.forRoot\(\[\s*\{\s*ttl:\s*60000,\s*limit:\s*10,?\s*\},?\s*\]\)/s,
   );
   assert.match(
     source,

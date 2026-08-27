@@ -179,7 +179,10 @@ describe('ProfileUpdateIntegrityInterceptor', () => {
 
   it('rejects a fourth target language for consumer VIP', async () => {
     client.from.mockReturnValueOnce(
-      createQuery({ data: { is_vip: true, vip_tier: 'consumer' }, error: null }),
+      createQuery({
+        data: { is_vip: true, vip_tier: 'consumer' },
+        error: null,
+      }),
     );
     const next = createNext();
 
