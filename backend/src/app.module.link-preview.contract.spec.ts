@@ -6,7 +6,10 @@ describe('AppModule LinkPreviewModule wiring contract', () => {
   const moduleDecoratorStart = source.indexOf('@Module({');
   const moduleDecorator = source.slice(moduleDecoratorStart);
   const importsStart = moduleDecorator.indexOf('imports: [');
-  const controllersStart = moduleDecorator.indexOf('controllers:', importsStart);
+  const controllersStart = moduleDecorator.indexOf(
+    'controllers:',
+    importsStart,
+  );
   const importsBlock = moduleDecorator.slice(importsStart, controllersStart);
 
   it('imports LinkPreviewModule from the canonical feature module', () => {
