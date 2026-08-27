@@ -155,6 +155,13 @@ export class MatchmakingAlgorithmService {
     if (filters.availability_morning && !partner.availability_morning) return false;
     if (filters.availability_afternoon && !partner.availability_afternoon) return false;
     if (filters.availability_evening && !partner.availability_evening) return false;
+    if (
+      filters.has_audio_intro &&
+      (typeof partner.audio_intro_url !== 'string' ||
+        partner.audio_intro_url.trim().length === 0)
+    ) {
+      return false;
+    }
 
     if (filters.age_min !== undefined || filters.age_max !== undefined) {
       const age = partner.age;
