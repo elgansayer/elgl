@@ -102,8 +102,9 @@ describe('DocumentViewerComponent', () => {
   });
 
   it('keeps the component direction-neutral and free of feature-owned motion', () => {
+    const host = fixture.nativeElement as HTMLElement;
     const classNames = Array.from(
-      fixture.nativeElement.querySelectorAll<HTMLElement>('[class]'),
+      host.querySelectorAll<HTMLElement>('[class]'),
       (element) => element.className,
     ).join(' ');
 
