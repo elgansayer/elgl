@@ -103,7 +103,7 @@ export function defineTypedFixtureFactory<T extends object>(
       return {
         ...structuredClone(stableDefaults),
         ...structuredClone(overrides),
-      } as T;
+      };
     },
   };
 }
@@ -116,7 +116,7 @@ function asSchema(value: unknown, context: string): OpenApiSchemaLike {
   if (!isRecord(value)) {
     throw new Error(`OpenAPI schema is missing or invalid at ${context}`);
   }
-  return value as OpenApiSchemaLike;
+  return value;
 }
 
 function slugify(value: string): string {
