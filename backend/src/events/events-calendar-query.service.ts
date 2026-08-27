@@ -138,7 +138,8 @@ export class EventsCalendarQueryService {
   }
 
   private asEvent(value: unknown): CalendarEventRecord | null {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      return null;
     const event = value as Record<string, unknown>;
     if (
       typeof event['id'] !== 'string' ||
