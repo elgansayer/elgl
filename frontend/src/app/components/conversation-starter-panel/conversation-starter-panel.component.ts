@@ -53,18 +53,19 @@ const MAX_STARTER_LENGTH = 160;
           @if (result.suggestions.length > 0) {
             <div class="mt-3 flex flex-col gap-2" role="list">
               @for (suggestion of result.suggestions; track suggestion) {
-                <button
-                  hlmBtn
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  class="h-auto min-h-11 w-full justify-start whitespace-normal text-start"
-                  dir="auto"
-                  role="listitem"
-                  (click)="selectSuggestion(suggestion)"
-                >
-                  {{ suggestion }}
-                </button>
+                <div role="listitem">
+                  <button
+                    hlmBtn
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    class="h-auto min-h-11 w-full justify-start whitespace-normal text-start"
+                    dir="auto"
+                    (click)="selectSuggestion(suggestion)"
+                  >
+                    {{ suggestion }}
+                  </button>
+                </div>
               }
             </div>
           } @else {
