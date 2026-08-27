@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, Component, input } from '@angular/core';
+import { Pipe, PipeTransform, Component, input, signal, WritableSignal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StickerStoreComponent } from './sticker-store.component';
@@ -58,8 +58,9 @@ const mockPacks: StickerPack[] = [
 describe('StickerStoreComponent', () => {
   let component: StickerStoreComponent;
   let fixture: ComponentFixture<StickerStoreComponent>;
+  let stickerPacks: WritableSignal<StickerPack[]>;
   let economyStoreMock: {
-    stickerPacks: ReturnType<typeof vi.fn>;
+    stickerPacks: WritableSignal<StickerPack[]>;
     coinsBalance: ReturnType<typeof vi.fn>;
     isOnline: ReturnType<typeof vi.fn>;
     loadStickerPacks: ReturnType<typeof vi.fn>;
@@ -70,8 +71,9 @@ describe('StickerStoreComponent', () => {
   };
 
   beforeEach(async () => {
+    stickerPacks = signal(mockPacks);
     economyStoreMock = {
-      stickerPacks: vi.fn().mockReturnValue(mockPacks),
+      stickerPacks,
       coinsBalance: vi.fn().mockReturnValue(200),
       isOnline: vi.fn().mockReturnValue(true),
       loadStickerPacks: vi.fn().mockResolvedValue(undefined),
@@ -216,7 +218,7 @@ describe('StickerStoreComponent', () => {
     const updated = mockPacks.map((pack) =>
       pack.id === 'stk_pack_1' ? { ...pack, owned: true } : pack,
     );
-    economyStoreMock.stickerPacks.mockReturnValue(updated);
+    stickerPacks.set(updated);
     fixture.detectChanges();
 
     expect(component.packs().find((pack) => pack.id === 'stk_pack_1')?.owned).toBe(true);

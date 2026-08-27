@@ -16,28 +16,21 @@ export class OnboardingService {
   private readonly http = inject(HttpClient);
 
   readonly steps: { label: string }[] = [
-    { label: 'onboarding.step1' },
-    { label: 'onboarding.step2' },
     { label: 'diagnosticQuiz.title' },
-    { label: 'onboarding.step4' },
   ];
 
   readonly currentStep = signal(0);
-  readonly nativeLanguage = signal<string>('');
-  readonly targetLanguages = signal<Set<string>>(new Set());
-  readonly displayName = signal<string>('');
+  readonly nativeLanguage = signal<string>('en');
+  readonly targetLanguages = signal<Set<string>>(new Set(['es']));
+  readonly displayName = signal<string>('User');
   readonly quizResult = signal<DiagnosticQuizResult | null>(null);
 
   readonly primaryTargetLanguage = computed(
-    () => Array.from(this.targetLanguages())[0] ?? '',
+    () => Array.from(this.targetLanguages())[0] ?? 'es',
   );
 
   readonly canGoNext = computed(() => {
-    const step = this.currentStep();
-    if (step === 0) return this.nativeLanguage() !== '';
-    if (step === 1) return this.targetLanguages().size > 0;
-    if (step === 2) return this.quizResult() !== null;
-    return this.displayName().trim().length > 0;
+    return this.quizResult() !== null;
   });
 
   setNativeLanguage(code: string): void {
