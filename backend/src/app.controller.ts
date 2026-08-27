@@ -45,7 +45,11 @@ export class AppController {
   @Post('mock/clock/freeze')
   freezeMockClock(@Body() body: FreezeMockClockRequest): MockClockSnapshot {
     this.assertMockClockEnabled();
-    return this.appService.freezeMockClock(body.now, body.namespace, body.timeZone);
+    return this.appService.freezeMockClock(
+      body.now,
+      body.namespace,
+      body.timeZone,
+    );
   }
 
   @Post('mock/clock/advance')
