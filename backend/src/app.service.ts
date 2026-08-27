@@ -33,7 +33,10 @@ export class AppService {
 
   getMockClock(namespace?: string): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
-    return this.snapshotMockClock(normalizedNamespace, this.getMockClockState(normalizedNamespace));
+    return this.snapshotMockClock(
+      normalizedNamespace,
+      this.getMockClockState(normalizedNamespace),
+    );
   }
 
   freezeMockClock(
@@ -54,7 +57,10 @@ export class AppService {
     return this.snapshotMockClock(normalizedNamespace, next);
   }
 
-  advanceMockClock(milliseconds: number, namespace?: string): MockClockSnapshot {
+  advanceMockClock(
+    milliseconds: number,
+    namespace?: string,
+  ): MockClockSnapshot {
     return this.shiftMockClock(milliseconds, namespace);
   }
 
@@ -71,13 +77,13 @@ export class AppService {
     );
   }
 
-  private shiftMockClock(deltaMs: number, namespace?: string): MockClockSnapshot {
+  private shiftMockClock(
+    deltaMs: number,
+    namespace?: string,
+  ): MockClockSnapshot {
     const normalizedNamespace = this.normalizeMockClockNamespace(namespace);
     const absoluteDelta = Math.abs(deltaMs);
-    if (
-      !Number.isSafeInteger(deltaMs) ||
-      absoluteDelta > MAX_TIME_TRAVEL_MS
-    ) {
+    if (!Number.isSafeInteger(deltaMs) || absoluteDelta > MAX_TIME_TRAVEL_MS) {
       throw new BadRequestException(
         'Mock clock delta must be a safe integer no greater than 10 years',
       );
@@ -85,8 +91,13 @@ export class AppService {
 
     const current = this.getMockClockState(normalizedNamespace);
     const nowMs = current.nowMs + deltaMs;
-    if (!Number.isSafeInteger(nowMs) || !Number.isFinite(new Date(nowMs).getTime())) {
-      throw new BadRequestException('Mock clock result is outside the supported date range');
+    if (
+      !Number.isSafeInteger(nowMs) ||
+      !Number.isFinite(new Date(nowMs).getTime())
+    ) {
+      throw new BadRequestException(
+        'Mock clock result is outside the supported date range',
+      );
     }
 
     const next = { ...current, nowMs };
@@ -120,7 +131,9 @@ export class AppService {
   private normalizeMockClockTimeZone(timeZone: string): string {
     const normalized = timeZone.trim();
     if (normalized === '' || normalized.length > 64) {
-      throw new BadRequestException('Mock clock timeZone must be a valid IANA time zone');
+      throw new BadRequestException(
+        'Mock clock timeZone must be a valid IANA time zone',
+      );
     }
 
     try {
@@ -128,7 +141,9 @@ export class AppService {
         new Date(MOCK_FIXTURE_EPOCH_MS),
       );
     } catch {
-      throw new BadRequestException('Mock clock timeZone must be a valid IANA time zone');
+      throw new BadRequestException(
+        'Mock clock timeZone must be a valid IANA time zone',
+      );
     }
     return normalized;
   }
