@@ -58,7 +58,10 @@ export class EventsController {
     @Query() query: CalendarEventsQueryDto,
   ) {
     if (!req.user) throw new UnauthorizedException();
-    return this.eventsCalendarQueryService.getUserCalendarEvents(req.user.id, query);
+    return this.eventsCalendarQueryService.getUserCalendarEvents(
+      req.user.id,
+      query,
+    );
   }
 
   @UseGuards(SupabaseAuthGuard)
