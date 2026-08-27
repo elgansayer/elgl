@@ -58,7 +58,7 @@ export class OfflineQueueService {
         };
         resolve();
       };
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result;
         let store: IDBObjectStore;
 
@@ -69,7 +69,7 @@ export class OfflineQueueService {
 
           // Version 1 stored messages without an account owner. That data cannot be
           // safely attributed after an account switch, so fail closed and discard it.
-          if (request.oldVersion < 2) {
+          if (event.oldVersion < 2) {
             store.clear();
           }
         }
@@ -185,17 +185,33 @@ export class OfflineQueueService {
       const transaction = db.transaction(this.storeName, 'readwrite');
       const store = transaction.objectStore(this.storeName);
       const ownerIndex = store.index(this.ownerIndexName);
-      const countRequest = ownerIndex.count(ownerId);
+      const existingRequest = store.get(record.id);
       let rejectedForCapacity = false;
+      let rejectedForOwnership = false;
 
-      countRequest.onerror = () => reject(new Error('Offline queue capacity check failed'));
-      countRequest.onsuccess = () => {
-        if (countRequest.result >= this.maxQueuedMessages) {
-          rejectedForCapacity = true;
-          transaction.abort();
+      existingRequest.onerror = () => reject(new Error('Offline queue idempotency check failed'));
+      existingRequest.onsuccess = () => {
+        const existing = existingRequest.result as QueuedChatMessage | undefined;
+        if (existing) {
+          if (existing.owner_id !== ownerId) {
+            rejectedForOwnership = true;
+            transaction.abort();
+            return;
+          }
+          store.put(record);
           return;
         }
-        store.put(record);
+
+        const countRequest = ownerIndex.count(ownerId);
+        countRequest.onerror = () => reject(new Error('Offline queue capacity check failed'));
+        countRequest.onsuccess = () => {
+          if (countRequest.result >= this.maxQueuedMessages) {
+            rejectedForCapacity = true;
+            transaction.abort();
+            return;
+          }
+          store.put(record);
+        };
       };
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(new Error('Offline message could not be queued'));
@@ -204,7 +220,9 @@ export class OfflineQueueService {
           new Error(
             rejectedForCapacity
               ? `Offline queue is full (${this.maxQueuedMessages} messages)`
-              : 'Offline message could not be queued',
+              : rejectedForOwnership
+                ? 'Offline queue item belongs to a different account'
+                : 'Offline message could not be queued',
           ),
         );
     });
