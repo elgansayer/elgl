@@ -1,4 +1,12 @@
-export const MOCK_LINKED_ACCOUNTS = [
+import { isMockBackendEnabled } from './config/mock-backend-mode';
+import {
+  MOCK_FIXTURE_EPOCH_MS,
+  createDeterministicFixtureGenerator,
+  getMockFixtureDiagnostics,
+  resolveMockFixtureSeed,
+} from './mock/deterministic-fixtures';
+
+const LINKED_ACCOUNT_FIXTURES = [
   {
     user_id: 'fake-1',
     provider: 'google',
@@ -69,16 +77,13 @@ export const MOCK_LINKED_ACCOUNTS = [
     active: true,
     created_at: '2024-04-08T00:00:00Z',
   },
-];
+] as const;
 
-export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
+export function buildMockUsers(seed = resolveMockFixtureSeed()) {
+  const generator = createDeterministicFixtureGenerator(seed);
+  const random = () => generator.random();
   const nativeLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
   const targetLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
-
-  const native = nativeLangs[Math.floor(Math.random() * nativeLangs.length)];
-  const targets = [targetLangs[Math.floor(Math.random() * targetLangs.length)]];
-  if (Math.random() > 0.5 && targets[0] !== 'en') targets.push('en');
-
   const names = [
     'Sakura',
     'Min-jun',
@@ -106,19 +111,46 @@ export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
     'Carlos',
     'Maria',
   ];
-  const name = names[Math.floor(Math.random() * names.length)];
 
+  return Array.from({ length: 150 }, (_, i) => {
+    const native = nativeLangs[Math.floor(random() * nativeLangs.length)];
+    const targets = [targetLangs[Math.floor(random() * targetLangs.length)]];
+    if (random() > 0.5 && targets[0] !== 'en') targets.push('en');
+    const name = names[Math.floor(random() * names.length)];
+
+    return {
+      id: `fake-${i + 1}`,
+      display_name: `${name}${i + 1}`,
+      native_languages: [native],
+      target_languages: targets,
+      bio_text: `Hi! I want to learn ${targets.join(', ').toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
+      // Keep the offline fixture genuinely offline: consumers render their normal
+      // avatar fallback instead of contacting a third-party avatar host.
+      avatar_url: null,
+      is_vip: random() > 0.8,
+      study_streak_days: Math.floor(random() * 50),
+      correction_ratio: Number((0.5 + random() * 0.5).toFixed(2)),
+      is_serious_learner: random() > 0.6,
+      created_at: new Date(MOCK_FIXTURE_EPOCH_MS + i * 60_000).toISOString(),
+    };
+  });
+}
+
+export function buildMockFixtureSnapshot(seed = resolveMockFixtureSeed()) {
   return {
-    id: `fake-${i + 1}`,
-    display_name: `${name}${i + 1}`,
-    native_languages: [native],
-    target_languages: targets,
-    bio_text: `Hi! I want to learn ${targets.join(', ').toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
-    avatar_url: `https://i.pravatar.cc/150?u=fake-${i + 1}`,
-    is_vip: Math.random() > 0.8,
-    study_streak_days: Math.floor(Math.random() * 50),
-    correction_ratio: Number((0.5 + Math.random() * 0.5).toFixed(2)),
-    is_serious_learner: Math.random() > 0.6,
-    created_at: new Date().toISOString(),
+    diagnostics: getMockFixtureDiagnostics(seed),
+    linkedAccounts: LINKED_ACCOUNT_FIXTURES.map((fixture) => ({ ...fixture })),
+    users: buildMockUsers(seed),
   };
-});
+}
+
+const fixturesEnabled = isMockBackendEnabled();
+const fixtureSnapshot = fixturesEnabled ? buildMockFixtureSnapshot() : null;
+
+/**
+ * Legacy fixture exports remain for existing local test consumers, but contain
+ * no data unless the explicit mock backend activation boundary is enabled.
+ */
+export const MOCK_LINKED_ACCOUNTS = fixtureSnapshot?.linkedAccounts ?? [];
+export const MOCK_USERS = fixtureSnapshot?.users ?? [];
+export const MOCK_FIXTURE_DIAGNOSTICS = fixtureSnapshot?.diagnostics ?? null;
