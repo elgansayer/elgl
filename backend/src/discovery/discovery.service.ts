@@ -436,6 +436,12 @@ export class DiscoveryService {
       }
     }
 
+    // Serious Learner mode must be resolved before the standard Supabase query
+    // is constructed so every discovery path applies the same thresholds.
+    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
+      query.serious_learner_only = true;
+    }
+
     let queryBuilder = supabase
       .from('users')
       .select(
@@ -474,11 +480,6 @@ export class DiscoveryService {
 
     if (query.level) {
       queryBuilder = queryBuilder.eq('proficiency_level', query.level);
-    }
-
-    // When the user has serious_learner_mode enabled, force serious learner filter
-    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
-      query.serious_learner_only = true;
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
