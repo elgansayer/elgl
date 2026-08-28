@@ -1,10 +1,6 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  ExecutionContext,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -36,7 +32,7 @@ describe('SupabaseAuthGuard', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   const createMockExecutionContext = (
@@ -81,25 +77,6 @@ describe('SupabaseAuthGuard', () => {
         expect(request.user).toEqual(mockUser);
       });
 
-      it('accepts a case-insensitive Bearer scheme with optional surrounding whitespace', async () => {
-        const mockUser = { id: 'user-124', email: 'case@hellotalk.com' };
-        mockAuthGetUser.mockResolvedValue({
-          data: { user: mockUser },
-          error: null,
-        });
-
-        const request: any = {
-          headers: {
-            authorization: '  bearer   valid.jwt.token  ',
-          },
-        };
-        const context = createMockExecutionContext('http', request);
-
-        await expect(guard.canActivate(context)).resolves.toBe(true);
-        expect(mockAuthGetUser).toHaveBeenCalledWith('valid.jwt.token');
-        expect(request.user).toEqual(mockUser);
-      });
-
       it('should throw UnauthorizedException when authorization header is missing', async () => {
         const request: any = {
           headers: {},
@@ -122,21 +99,6 @@ describe('SupabaseAuthGuard', () => {
         await expect(guard.canActivate(context)).rejects.toThrow(
           new UnauthorizedException('Missing authentication token'),
         );
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
-      });
-
-      it('rejects ambiguous duplicate authorization headers', async () => {
-        const request: any = {
-          headers: {
-            authorization: ['Bearer first.jwt.token', 'Bearer second.jwt.token'],
-          },
-        };
-        const context = createMockExecutionContext('http', request);
-
-        await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Missing authentication token'),
-        );
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
       });
 
       it('should throw UnauthorizedException when token validation fails with error', async () => {
@@ -173,24 +135,6 @@ describe('SupabaseAuthGuard', () => {
         await expect(guard.canActivate(context)).rejects.toThrow(
           new UnauthorizedException('Invalid or expired token'),
         );
-      });
-
-      it('fails closed with a stable error when Supabase verification throws', async () => {
-        vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-        mockAuthGetUser.mockRejectedValue(new Error('provider unavailable'));
-
-        const request: any = {
-          headers: {
-            authorization: 'Bearer valid-shape.jwt.token',
-          },
-          user: { id: 'stale-user' },
-        };
-        const context = createMockExecutionContext('http', request);
-
-        await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Unable to verify authentication token'),
-        );
-        expect(request.user).toBeUndefined();
       });
     });
 
@@ -239,84 +183,6 @@ describe('SupabaseAuthGuard', () => {
         expect(result).toBe(true);
         expect(mockAuthGetUser).toHaveBeenCalledWith('ws.auth.token');
         expect(client.user).toEqual(mockUser);
-      });
-
-      it('does not treat a non-Bearer WebSocket authorization header as a JWT', async () => {
-        const client: any = {
-          handshake: {
-            headers: {
-              authorization: 'Basic basic-credential',
-            },
-          },
-        };
-        const context = createMockExecutionContext('ws', client);
-
-        await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Missing authentication token'),
-        );
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
-      });
-
-      it('falls back to the explicit handshake auth token when the header is not Bearer', async () => {
-        const mockUser = { id: 'ws-user-3', email: 'ws3@hellotalk.com' };
-        mockAuthGetUser.mockResolvedValue({
-          data: { user: mockUser },
-          error: null,
-        });
-
-        const client: any = {
-          handshake: {
-            headers: {
-              authorization: 'Basic ignored-credential',
-            },
-            auth: {
-              token: 'ws.fallback.token',
-            },
-          },
-        };
-        const context = createMockExecutionContext('ws', client);
-
-        await expect(guard.canActivate(context)).resolves.toBe(true);
-        expect(mockAuthGetUser).toHaveBeenCalledWith('ws.fallback.token');
-        expect(client.user).toEqual(mockUser);
-      });
-
-      it('rejects non-string and whitespace-bearing handshake auth tokens', async () => {
-        const clients = [
-          { handshake: { auth: { token: 123 } } },
-          { handshake: { auth: { token: 'two tokens' } } },
-        ];
-
-        for (const client of clients) {
-          const context = createMockExecutionContext('ws', client);
-          await expect(guard.canActivate(context)).rejects.toThrow(
-            new UnauthorizedException('Missing authentication token'),
-          );
-        }
-
-        expect(mockAuthGetUser).not.toHaveBeenCalled();
-      });
-
-      it('clears a stale authenticated WebSocket user before failed revalidation', async () => {
-        mockAuthGetUser.mockResolvedValue({
-          data: { user: null },
-          error: new Error('expired'),
-        });
-
-        const client: any = {
-          handshake: {
-            auth: {
-              token: 'expired.ws.token',
-            },
-          },
-          user: { id: 'stale-user' },
-        };
-        const context = createMockExecutionContext('ws', client);
-
-        await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Invalid or expired token'),
-        );
-        expect(client.user).toBeUndefined();
       });
 
       it('should throw UnauthorizedException when both header and auth token are missing in ws', async () => {

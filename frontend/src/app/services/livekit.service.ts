@@ -21,7 +21,6 @@ export interface IceServer {
 export interface VideoClassroomTokenResponse {
   token: string;
   roomName: string;
-  e2eeKey: string;
   iceServers?: IceServer[];
   degraded?: boolean;
   degradationReason?: string;
@@ -29,7 +28,6 @@ export interface VideoClassroomTokenResponse {
 
 export interface TokenFetchResult {
   token: string;
-  e2eeKey: string;
   iceServers?: IceServer[];
   degraded: boolean;
   degradationReason?: string;
@@ -63,7 +61,8 @@ export class LivekitService {
   }
 
   /**
-   * Get authenticated LiveKit join material, including the ephemeral E2EE key.
+   * Get a LiveKit access token from the backend. Returns both the token
+   * and whether the response was served from a degraded fallback.
    */
   async getToken(
     roomName: string,
@@ -79,7 +78,6 @@ export class LivekitService {
     );
     return {
       token: response.token,
-      e2eeKey: response.e2eeKey,
       iceServers: response.iceServers,
       degraded: response.degraded ?? false,
       degradationReason: response.degradationReason,
@@ -87,28 +85,20 @@ export class LivekitService {
   }
 
   /**
-   * Start a new encrypted call room for the intended second participant.
+   * Start a new video call room. Returns token and whether degraded.
    */
   async startRoom(
-    remoteUserId: string,
-  ): Promise<{
-    token: string;
-    roomName: string;
-    e2eeKey: string;
-    iceServers?: IceServer[];
-    degraded: boolean;
-    degradationReason?: string;
-  }> {
+    _userId: string,
+  ): Promise<{ token: string; roomName: string; iceServers?: IceServer[]; degraded: boolean; degradationReason?: string }> {
     const response = await firstValueFrom(
       this.http.post<VideoClassroomTokenResponse>(
         `${environment.apiUrl}/video-calls/start`,
-        { remoteUserId },
+        {},
       ),
     );
     return {
       token: response.token,
       roomName: response.roomName,
-      e2eeKey: response.e2eeKey,
       iceServers: response.iceServers,
       degraded: response.degraded ?? false,
       degradationReason: response.degradationReason,
@@ -126,60 +116,49 @@ export class LivekitService {
     roomName: string,
     userId: string,
     _isVideoCall: boolean,
-    legacyE2eeKey?: string,
+    e2eeKey?: string,
   ): Promise<Room> {
     const tokenResult = await this.getToken(roomName, userId);
 
     this.isDegraded.set(tokenResult.degraded);
     if (tokenResult.degradationReason) {
       this.degradationReason.set(tokenResult.degradationReason);
-    } else {
-      this.degradationReason.set(null);
     }
 
-    // During a mixed-version rollout, a legacy signalling key may still be
-    // present. Prefer the authenticated backend value, but never connect a
-    // call without E2EE material.
-    const e2eeKey = tokenResult.e2eeKey || legacyE2eeKey;
-    if (!e2eeKey) {
-      this.livekitConnected.set(false);
-      this.isDegraded.set(true);
-      this.degradationReason.set('Encrypted call key unavailable');
-      throw new Error('Encrypted call key unavailable');
-    }
+    let roomOptions: RoomOptions = {};
 
-    this.disposeE2eeWorker();
-    const keyProvider = new ExternalE2EEKeyProvider();
-    this.e2eeWorker = new Worker(
-      new URL('./livekit-e2ee.worker', import.meta.url),
-      {
-        type: 'module',
-      },
-    );
-    const roomOptions: RoomOptions = {
-      e2ee: {
-        keyProvider,
-        worker: this.e2eeWorker,
-      },
-    };
-    await keyProvider.setKey(e2eeKey);
+    if (e2eeKey) {
+      const keyProvider = new ExternalE2EEKeyProvider();
+      this.e2eeWorker = new Worker(
+        new URL('./livekit-e2ee.worker', import.meta.url),
+        {
+          type: 'module',
+        },
+      );
+      roomOptions = {
+        e2ee: {
+          keyProvider,
+          worker: this.e2eeWorker,
+        },
+      };
+      await keyProvider.setKey(e2eeKey);
+    }
 
     const room = this.createRoom(roomOptions);
     this.room = room;
 
-    const iceServersToUse =
-      tokenResult.iceServers && tokenResult.iceServers.length > 0
-        ? tokenResult.iceServers
-        : [
-            { urls: 'stun:stun.l.google.com:19302' },
-            {
-              urls: environment.turnServerUrl,
-              username: environment.turnUsername,
-              credential: environment.turnPassword,
-            },
-          ];
+    const iceServersToUse = tokenResult.iceServers && tokenResult.iceServers.length > 0
+      ? tokenResult.iceServers
+      : [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: environment.turnServerUrl,
+            username: environment.turnUsername,
+            credential: environment.turnPassword,
+          },
+        ];
 
-    // Connect with retry for transient network failures.
+    // Connect with retry for transient network failures
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < MAX_ROOM_CONNECT_RETRIES; attempt++) {
       try {
@@ -199,10 +178,7 @@ export class LivekitService {
       }
     }
 
-    // All connection attempts failed. Tear down the E2EE worker as well as
-    // marking the connection degraded so a failed call cannot leak resources.
-    this.disposeE2eeWorker();
-    this.room = null;
+    // All connection attempts failed - set degraded state
     this.isDegraded.set(true);
     this.degradationReason.set(
       `LiveKit connection failed after ${MAX_ROOM_CONNECT_RETRIES} attempts: ${lastError?.message ?? 'unknown error'}`,
@@ -265,10 +241,6 @@ export class LivekitService {
     this.livekitConnected.set(false);
     this.isDegraded.set(false);
     this.degradationReason.set(null);
-    this.disposeE2eeWorker();
-  }
-
-  private disposeE2eeWorker(): void {
     if (this.e2eeWorker) {
       this.e2eeWorker.terminate();
       this.e2eeWorker = null;

@@ -10,7 +10,7 @@
           <p class="app-muted">
             {{ 'audioRoom.hostLabel' | t }}:
             {{ room.host?.display_name || ('audioRoom.hostFallback' | t) }} ·
-            {{ 'audioRoom.listenersCount' | t: { count: audienceCount() } }} ·
+            {{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }} ·
             {{ room.language_pair }} · {{ room.topic_tag }}
           </p>
         </div>
@@ -136,21 +136,16 @@
               <h3 class="text-sm font-black text-text-primary">
                 {{ 'audioRoom.speakerStage' | t }}
               </h3>
-              <span class="app-muted" aria-live="polite">{{
-                'audioRoom.speakerCount'
-                  | t: { count: stageParticipants().length + stageOverflowCount() }
+              <span class="app-muted">{{
+                'audioRoom.speakerCount' | t: { count: store.stageParticipants().length }
               }}</span>
             </div>
-            <div
-              class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-              role="list"
-              [attr.aria-label]="'audioRoom.speakerStage' | t"
-            >
-              @for (participant of stageParticipants(); track participant.user_id) {
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              @for (participant of store.stageParticipants(); track participant.user_id) {
                 <div
                   class="rounded-card border border-primary/30 bg-primary/10 p-3 text-center transition-colors hover:bg-primary/20"
-                  role="listitem"
                 >
+                  <!-- Circular avatar -->
                   <div class="relative mx-auto inline-block">
                     @if (participant.avatar_url) {
                       <img
@@ -173,35 +168,36 @@
                         [class.border-surface-100]="!participant.isHost && !participant.isCoHost"
                         [class.text-on-fill]="participant.isHost || participant.isCoHost"
                         [class.text-text-primary]="!participant.isHost && !participant.isCoHost"
-                        aria-hidden="true"
                       >
                         {{ participant.display_name.slice(0, 1).toUpperCase() }}
                       </div>
                     }
+                    <!-- Speaking indicator ring -->
                     @if (participant.isSpeaking) {
                       <span
                         class="absolute bottom-0 end-0 inline-block w-4 h-4 rounded-full bg-success border-2 border-surface-200"
-                        aria-hidden="true"
                       ></span>
                     }
                     @if (participant.isMuted) {
                       <span
                         class="absolute bottom-0 end-0 inline-flex items-center justify-center w-4 h-4 rounded-full bg-surface-400 border-2 border-surface-200 text-[10px]"
-                        aria-hidden="true"
                       >
                         🔇
                       </span>
                     }
                   </div>
 
+                  <!-- Audio equalizer for active speakers -->
                   @if (participant.isSpeaking) {
                     <app-audio-equalizer [isActive]="true" customClass="mt-2"></app-audio-equalizer>
                   }
 
+                  <!-- Display name -->
                   <p class="mt-1 truncate text-xs font-bold text-text-primary">
                     {{ participant.display_name }}
                   </p>
 
+                  <!-- Badges -->
                   <div class="mt-1 flex flex-wrap items-center justify-center gap-1">
                     @if (participant.isHost) {
                       <span
@@ -217,11 +213,9 @@
                         {{ 'audioRoom.coHostBadge' | t }}
                       </span>
                     }
-                    @if (participant.isMuted) {
-                      <span class="sr-only">{{ 'audioRoom.muteBtn' | t }}</span>
-                    }
                   </div>
 
+                  <!-- Host controls -->
                   @if (
                     room.host_id === authService.currentUser()?.id &&
                     participant.user_id !== room.host_id
@@ -249,19 +243,8 @@
                   }
                 </div>
               } @empty {
-                <div class="col-span-full text-center py-6 opacity-70" role="status">
+                <div class="col-span-full text-center py-6 opacity-70">
                   <p class="text-sm text-text-secondary">{{ 'audioRoom.stageEmpty' | t }}</p>
-                </div>
-              }
-              @if (stageOverflowCount() > 0) {
-                <div
-                  class="rounded-card border border-surface-200 bg-surface-100 p-3 text-center text-xs font-bold text-text-secondary"
-                  role="listitem"
-                  [attr.aria-label]="
-                    'audioRoom.speakerCount' | t: { count: stageOverflowCount() }
-                  "
-                >
-                  +{{ stageOverflowCount() }}
                 </div>
               }
             </div>
@@ -305,43 +288,35 @@
               <h3 class="text-sm font-black text-text-primary">
                 {{ 'audioRoom.listenerAudience' | t }}
               </h3>
-              <span class="app-muted" aria-live="polite">{{
-                'audioRoom.listenerCount' | t: { count: audienceCount() }
+              <span class="app-muted">{{
+                'audioRoom.listenerCount' | t: { count: store.audienceCount() }
               }}</span>
             </div>
-            @if (audienceCount() === 0) {
-              <div class="w-full text-center py-6 opacity-70" role="status">
+            <!-- Audience avatar grid -->
+            @if (store.audienceCount() === 0) {
+              <div class="w-full text-center py-6 opacity-70">
                 <p class="text-sm text-text-secondary">{{ 'audioRoom.listenerEmpty' | t }}</p>
               </div>
             } @else {
-              <div
-                class="flex flex-wrap gap-1.5"
-                role="list"
-                [attr.aria-label]="'audioRoom.listenerAudience' | t"
-              >
+              <div class="flex flex-wrap gap-1.5">
                 @for (idx of audiencePlaceholderAvatars(); track idx) {
                   <div
                     class="h-10 w-10 rounded-full bg-surface-100 border border-surface-200 flex items-center justify-center text-xs font-semibold text-text-secondary"
-                    [attr.aria-label]="'audioRoom.listenerPrefix' | t: { num: idx }"
-                    role="listitem"
+                    [title]="'audioRoom.listenerPrefix' | t: { num: idx }"
                   >
                     {{ idx }}
                   </div>
                 }
-                @if (audienceOverflowCount() > 0) {
+                @if (store.audienceCount() > 8) {
                   <div
-                    class="h-10 min-w-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center px-2 text-xs font-bold text-primary"
-                    role="listitem"
-                    [attr.aria-label]="
-                      'audioRoom.listenerCount' | t: { count: audienceOverflowCount() }
-                    "
+                    class="h-10 w-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-xs font-bold text-primary"
                   >
-                    +{{ audienceOverflowCount() }}
+                    +{{ store.audienceCount() - 8 }}
                   </div>
                 }
               </div>
               <p class="mt-2 text-xs text-text-secondary w-full">
-                {{ 'audioRoom.listenerAudienceDesc' | t: { count: audienceCount() } }}
+                {{ 'audioRoom.listenerAudienceDesc' | t: { count: store.audienceCount() } }}
               </p>
             }
           </app-card>
@@ -356,6 +331,7 @@
       </div>
     </app-card>
 
+    <!-- Quick Poll Modals -->
     @if (showPollFormModal()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
         <div class="w-full max-w-md">
@@ -466,6 +442,7 @@
     }
 
     @if (viewMode() === 'grouped') {
+      <!-- Language pair grouping pills -->
       <div class="flex flex-wrap gap-2 overflow-x-auto pb-2">
         @for (group of store.roomsByLanguage(); track group.language_pair) {
           <button

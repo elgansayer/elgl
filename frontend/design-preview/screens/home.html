@@ -197,33 +197,23 @@
       }
       .word-of-day {
         display: flex;
-        flex-wrap: wrap;
         align-items: baseline;
-        gap: 6px 12px;
-        min-width: 0;
+        justify-content: space-between;
       }
       .word-of-day .word {
-        font-size: 28px;
-        font-weight: 800;
-        color: rgb(var(--accent));
-        overflow-wrap: anywhere;
+        font-size: 18px;
+        font-weight: 700;
+        color: rgb(var(--secondary));
       }
-      .word-of-day .translation {
-        font-size: 16px;
-        color: rgb(var(--text-secondary));
-        overflow-wrap: anywhere;
-      }
-      .word-of-day .language {
-        margin-inline-start: auto;
-        font-size: 12px;
-        color: rgb(var(--text-muted));
-      }
-      .word-example {
-        margin: 8px 0 0;
-        font-size: 13px;
+      .word-of-day .pos {
+        font-size: 11px;
         color: rgb(var(--text-muted));
         font-style: italic;
-        overflow-wrap: anywhere;
+      }
+      .word-of-day .def {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: rgb(var(--text-secondary));
       }
       .tip-row {
         display: flex;
@@ -285,14 +275,15 @@
           </div>
         </div>
 
-        <div class="card" role="region" aria-label="Word of the Day" aria-busy="false">
-          <h3>Word of the Day</h3>
+        <div class="card">
+          <h3>Word of the day</h3>
           <div class="word-of-day">
-            <span class="word" lang="ja">学ぶ</span>
-            <span class="translation">to learn</span>
-            <span class="language">Japanese</span>
+            <span class="word">effervescent</span>
+            <span class="pos">adjective</span>
           </div>
-          <p class="word-example" lang="ja">毎日、新しいことを学びます。</p>
+          <p class="def">
+            Bubbly, enthusiastic, full of energy - used to describe a lively personality.
+          </p>
         </div>
 
         <div class="card">
@@ -309,11 +300,9 @@
     </div>
 
     <p class="caption">
-      The Word of the Day card now renders the authenticated learner's target-language vocabulary,
-      wraps safely at the 390px baseline and exposes loading with <code>aria-busy</code>, loading text
-      with <code>role="status"</code>, and unavailable responses with <code>role="alert"</code>. The
-      real page also renders the streak-milestone celebration overlay when a 7/30/100-day threshold
-      is first crossed.
+      Simplified content mockup - the real page also renders a streak-milestone celebration overlay
+      (<code>app-streak-celebration-overlay</code>) when a 7/30/100-day threshold is first crossed,
+      omitted here as conditional runtime chrome rather than steady-state UI.
     </p>
 
     <script>

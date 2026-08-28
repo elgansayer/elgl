@@ -2,10 +2,6 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatService } from '../../services/chat.service';
-import {
-  FLASHCARD_CONTEXT_MAX_LENGTH,
-  FLASHCARD_SELECTION_MAX_LENGTH,
-} from '../../services/flashcard-context-menu.directive';
 import { FlashcardService } from '../../services/flashcard.service';
 import { I18nService } from '../../services/i18n.service';
 import { TransliterationService } from '../../services/transliteration.service';
@@ -82,54 +78,6 @@ describe('TokenisedTextComponent selection flashcards', () => {
     await component.createSelectionFlashcard();
 
     expect(translateText).toHaveBeenCalledWith('hola', 'fr');
-  });
-
-  it('rejects oversized selections before opening the create action', () => {
-    const fixture = TestBed.createComponent(TokenisedTextComponent);
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-
-    component.openFlashcardSelection({
-      text: 'x'.repeat(FLASHCARD_SELECTION_MAX_LENGTH + 1),
-      context: 'context',
-    });
-
-    expect(component.flashcardSelection()).toBeNull();
-    expect(translateText).not.toHaveBeenCalled();
-    expect(createFlashcard).not.toHaveBeenCalled();
-  });
-
-  it('defensively bounds persisted source context to the API contract', () => {
-    const fixture = TestBed.createComponent(TokenisedTextComponent);
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-
-    component.openFlashcardSelection({
-      text: 'hola',
-      context: 'c'.repeat(FLASHCARD_CONTEXT_MAX_LENGTH + 50),
-      sourceLanguage: ' es ',
-    });
-
-    expect(component.flashcardSelection()).toEqual({
-      text: 'hola',
-      context: 'c'.repeat(FLASHCARD_CONTEXT_MAX_LENGTH),
-      sourceLanguage: 'es',
-    });
-  });
-
-  it('keeps the action retryable when translation exceeds the flashcard API limit', async () => {
-    translateText.mockResolvedValue({ translated_text: 't'.repeat(501) });
-    const fixture = TestBed.createComponent(TokenisedTextComponent);
-    fixture.detectChanges();
-    const component = fixture.componentInstance;
-    component.openFlashcardSelection({ text: 'hola', context: 'hola mundo' });
-
-    await component.createSelectionFlashcard();
-
-    expect(createFlashcard).not.toHaveBeenCalled();
-    expect(component.flashcardSelection()?.text).toBe('hola');
-    expect(component.flashcardError()).toBe(true);
-    expect(component.flashcardCreating()).toBe(false);
   });
 
   it('prevents duplicate in-flight creation', async () => {

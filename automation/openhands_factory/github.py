@@ -657,24 +657,6 @@ class GitHubClient:
             )
         )
 
-    def merge_pull_request(self, pull_request: int, expected_head_sha: str) -> None:
-        """Squash-merge only the exact reviewed head without bypassing GitHub rules."""
-
-        self._run(
-            (
-                "gh",
-                "pr",
-                "merge",
-                str(pull_request),
-                "--repo",
-                self.repository,
-                "--squash",
-                "--delete-branch",
-                "--match-head-commit",
-                expected_head_sha,
-            )
-        )
-
     def request_review(self, pull_request: int) -> None:
         self.add_issue_labels(pull_request, ("factory-review",))
 
