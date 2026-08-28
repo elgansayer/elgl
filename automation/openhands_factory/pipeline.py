@@ -38,7 +38,7 @@ from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
-from openhands_factory.verification import commands_for, run_verification
+from openhands_factory.verification import commands_for, run_verification, verification_descriptions
 
 if TYPE_CHECKING:
     from openhands_factory.agents.router import AgentRouter
@@ -129,8 +129,10 @@ class FactoryPipeline:
             config.github_repository,
             AlertService(config),
         )
-        self.prompt_dir = config.repository / "automation/prompts"
-        self.system_prompt = build_system_prompt(self.prompt_dir)
+        self.prompt_dir = config.prompt_dir
+        self.system_prompt = build_system_prompt(
+            self.prompt_dir, system_prompt_path=config.system_prompt_path
+        )
         openhands_settings = config.agents.providers["openhands"]
         openhands_runtime_config = config.model_copy(
             update={
@@ -295,10 +297,7 @@ class FactoryPipeline:
             policy=ConfigRoutingPolicy(config.agents),
             health_store=self.health_store,
             capacity_store=ProviderCapacityStore(
-                config.state_dir,
-                factory_generation=(
-                    config.factory_generation if config.factory_generation != "unknown" else None
-                ),
+                config.provider_capacity_dir,
                 max_lease_seconds=maximum_agent_lease_seconds(config),
             ),
             provider_limits=provider_limits,
@@ -1536,7 +1535,7 @@ class FactoryPipeline:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
-        commands = commands_for(workflow.repository, changed)
+        commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Only commands that bind a fixed host port (frontend-e2e's dev server)
         # need to be serialized across workers; everything else - lint, build,
         # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
@@ -1591,27 +1590,7 @@ class FactoryPipeline:
 
     def _verification_descriptions(self, worktree: Path) -> list[str]:
         del worktree
-        return [
-            "npm run check:constitution",
-            "npm run check:agent-ui-governance",
-            "npm run check:design-sync",
-            "npm run check:spartan-boundaries",
-            "npm run check:spartan-full-tree",
-            "npm run check:component-system",
-            "npm run check:design-sync-drift",
-            "npm run check:legacy-primitive-delta",
-            "node scripts/check-conflict-markers.mjs",
-            "node scripts/check-admin-audit-integrity.mjs",
-            "node scripts/check-migration-delta.mjs",
-            "cd automation && uv run --frozen ruff format --check .",
-            "cd automation && uv run --frozen ruff check .",
-            "cd automation && uv run --frozen mypy",
-            "cd automation && uv run --frozen pytest",
-            "cd frontend && npm run lint:check && npm run build && npm run test",
-            "cd frontend && npm run e2e when frontend or e2e files changed",
-            "cd backend && npm run lint:check && npm run build && npm run test && npm run test:e2e",
-            "cd admin-portal && npm run lint:check && npm run build && npm run test",
-        ]
+        return verification_descriptions(self.config.repository_profile)
 
     def _pull_request_body(self, job: Job) -> str:
         successful = [entry for entry in job.provider_history if entry.get("success") is True]
