@@ -61,12 +61,17 @@ describe('VoiceRecorderComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
-      providers: [
-        { provide: MediaService, useClass: MockMediaService },
-      ],
+      providers: [{ provide: MediaService, useClass: MockMediaService }],
     })
       .overrideComponent(VoiceRecorderComponent, {
-        set: { imports: [MockTranslatePipe, AppCardComponent, AppChipComponent, AppButtonPrimaryComponent] },
+        set: {
+          imports: [
+            MockTranslatePipe,
+            AppCardComponent,
+            AppChipComponent,
+            AppButtonPrimaryComponent,
+          ],
+        },
       })
       .compileComponents();
 
@@ -128,5 +133,56 @@ describe('VoiceRecorderComponent', () => {
 
     expect(mediaService.uploadVoiceNote).toHaveBeenCalled();
     expect(emitted).toEqual(['https://media.url/voice.ogg']);
+  });
+
+  it('should preserve the recording for retry and never emit a fake URL when upload fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await component.startRecording();
+      component.stopRecording();
+      const previewUrl = component.audioPreviewUrl();
+      const emitted: string[] = [];
+      component.audioUploaded.subscribe((url: string) => emitted.push(url));
+      mediaService.uploadVoiceNote.mockRejectedValueOnce(new Error('signed upload request failed'));
+
+      await component.uploadAndSend();
+
+      expect(emitted).toEqual([]);
+      expect(component.audioPreviewUrl()).toBe(previewUrl);
+      expect(component.isUploading()).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith('Failed to upload voice note.');
+
+      mediaService.uploadVoiceNote.mockResolvedValueOnce({ url: 'https://media.url/retry.ogg' });
+      await component.uploadAndSend();
+
+      expect(mediaService.uploadVoiceNote).toHaveBeenCalledTimes(2);
+      expect(emitted).toEqual(['https://media.url/retry.ogg']);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('should ignore duplicate send attempts while an upload is already in flight', async () => {
+    await component.startRecording();
+    component.stopRecording();
+
+    let resolveUpload: ((value: { url: string }) => void) | undefined;
+    mediaService.uploadVoiceNote.mockImplementationOnce(
+      () =>
+        new Promise<{ url: string }>((resolve) => {
+          resolveUpload = resolve;
+        }),
+    );
+
+    const firstUpload = component.uploadAndSend();
+    const secondUpload = component.uploadAndSend();
+
+    expect(component.isUploading()).toBe(true);
+    expect(mediaService.uploadVoiceNote).toHaveBeenCalledTimes(1);
+
+    resolveUpload?.({ url: 'https://media.url/voice.ogg' });
+    await Promise.all([firstUpload, secondUpload]);
+
+    expect(component.isUploading()).toBe(false);
   });
 });

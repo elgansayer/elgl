@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { showToast } from '../../services/toast.service';
+import { showErrorToast, showToast } from '../../services/toast.service';
 import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -80,15 +80,17 @@ export class VoiceRecorderComponent implements OnDestroy {
   }
 
   async uploadAndSend(): Promise<void> {
-    if (!this.recordedBlob) return;
+    if (!this.recordedBlob || this.isUploading()) return;
     this.isUploading.set(true);
 
     try {
       const result = await this.mediaService.uploadVoiceNote(this.recordedBlob, 'ogg');
       this.audioUploaded.emit(result.url);
-    } catch (e) {
-      console.error('Failed to upload voice note:', e);
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/ogg');
+    } catch {
+      // Do not leak the local object URL or fabricate a successful remote upload.
+      // Keeping the blob and preview intact lets the user retry the real upload safely.
+      console.error('Failed to upload voice note.');
+      showErrorToast('Voice note upload failed. Your recording is still available to retry.');
     } finally {
       this.isUploading.set(false);
     }
