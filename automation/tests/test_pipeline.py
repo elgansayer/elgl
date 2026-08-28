@@ -382,6 +382,7 @@ def test_refresh_migrates_durable_quarantine_and_clears_stale_label(tmp_path: Pa
     assert github.requeued_quarantines == [([42], False)]
     assert github.quarantined_issues == []
 
+
 def test_refresh_reconciles_labels_only_on_startup_or_explicit_request(tmp_path: Path) -> None:
     github = GitHub()
     pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
@@ -1564,6 +1565,7 @@ def test_repeated_identical_task_failure_escalates_autonomous_backoff(
     assert (42, ("factory-quarantined",)) not in github.labels
     assert not any("manually requeue" in body.lower() for _, body in github.comments)
 
+
 def test_no_change_task_failure_is_bounded_without_disabling_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1599,6 +1601,7 @@ def test_no_change_task_failure_is_bounded_without_disabling_provider(
     assert (42, ("factory-quarantined",)) not in github.labels
     assert not any("manually requeue" in body.lower() for _, body in github.comments)
     assert not any("already satisfied" in body for _, body in github.comments)
+
 
 def test_local_verification_failure_routes_into_quality_repair(
     tmp_path: Path,
@@ -1719,6 +1722,7 @@ def test_refresh_preserves_backing_off_failed_job_whose_issue_is_still_open(
     assert refreshed["42"].next_attempt_at > datetime.now(UTC) + timedelta(minutes=59)
     assert refreshed["42"].quarantine_reason is None
     assert refreshed["42"].quarantined_at is None
+
 
 def test_security_review_runs_between_implementation_and_verification(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1951,6 +1955,7 @@ def test_security_review_repeated_task_failure_escalates_autonomous_backoff(
     assert third.next_attempt_at > datetime.now(UTC) + timedelta(minutes=29)
     assert third.quarantine_reason is None
     assert third.quarantined_at is None
+
 
 def test_architect_due_defaults_true_and_respects_cooldown(tmp_path: Path) -> None:
     pipeline = FactoryPipeline(config(tmp_path), github=GitHub())  # type: ignore[arg-type]
