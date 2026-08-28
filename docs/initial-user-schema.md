@@ -18,7 +18,7 @@ The `uuid-ossp`, PostGIS, and `pg_trgm` extensions are created with `IF NOT EXIS
 
 ## Authorization and privacy
 
-The NestJS API remains the primary application boundary. `009_row_level_security.sql` adds defence-in-depth RLS for `public.users`: authenticated users may read profiles, while direct authenticated updates are restricted to the row whose `id` equals `auth.uid()`.
+The NestJS API remains the primary application boundary. `009_row_level_security.sql` enables defence-in-depth RLS for `public.users`: authenticated users may read profiles, while direct authenticated updates are scoped to the row whose `id` equals `auth.uid()`. Migration `20260807000000_review_rls_virtual_coin_economy.sql` replaces that initial update policy with the effective policy, which preserves row ownership and additionally prevents direct changes to economy, VIP, admin, and API-key fields.
 
 Service-role access bypasses RLS, so backend services must still enforce their application-level authorization and privacy rules. Location, mock location, private profile fields, tokens, credentials, and other personal data should not be emitted in routine logs. Operational logging should prefer sanitized error categories and request correlation IDs.
 
@@ -28,9 +28,9 @@ The baseline user row is owned by the corresponding Supabase auth identity throu
 
 ## Verification
 
-`backend/src/database/initial-schema-migration.contract.spec.ts` protects the historical contract. It verifies required database extensions, auth ownership, PostGIS columns, language/profile fields, VIP/economy/learning defaults, discovery indexes, replay-safe DDL, absence of destructive statements, and the later users RLS boundary.
+`backend/src/database/initial-schema-migration.contract.spec.ts` protects the historical contract. It verifies required database extensions, auth ownership, PostGIS columns, language/profile fields, VIP/economy/learning defaults, discovery indexes, replay-safe DDL, absence of destructive statements, and the effective users RLS boundary. The RLS check also scans later migrations so disabling RLS or removing the hardened owner-update policy cannot silently leave this contract green.
 
-Repository CI runs the backend Vitest suite together with database clean-reset/migration gates. A deployment verification should replay the full migration chain in a clean Supabase environment and confirm that spatial indexes are created, user rows remain tied to `auth.users`, and an authenticated direct update cannot mutate another user's row.
+Repository CI runs the backend Vitest suite together with database clean-reset/migration gates. A deployment verification should replay the full migration chain in a clean Supabase environment and confirm that spatial indexes are created, user rows remain tied to `auth.users`, an authenticated direct update cannot mutate another user's row, and sensitive user fields cannot be changed through the authenticated client role.
 
 ## Rollout and rollback
 
