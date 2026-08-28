@@ -179,7 +179,10 @@ def test_default_verification_runner_isolates_credentials_state_and_network(
     assert environment["HOME"] == "/tmp/home"
     assert environment["PATH"].split(":", maxsplit=1)[0] == str(virtual_environment / "bin")
     assert environment["UV_CACHE_DIR"] == "/tmp/uv-cache"
+    assert environment["UV_NO_SYNC"] == "1"
     assert environment["UV_OFFLINE"] == "1"
+    assert environment["UV_PROJECT_ENVIRONMENT"] == str(virtual_environment)
+    assert environment["VIRTUAL_ENV"] == str(virtual_environment)
 
 
 def test_uv_cache_mount_is_writable_not_read_only() -> None:

@@ -200,7 +200,12 @@ def run_isolated_verification_process(
         ),
         "TERM": "dumb",
         "UV_CACHE_DIR": "/tmp/uv-cache",
+        # The host updater owns dependency synchronisation. Verification mounts
+        # /opt read-only and must execute against that prepared environment rather
+        # than trying to reinstall the worktree's local project into it.
+        "UV_NO_SYNC": "1",
         "UV_OFFLINE": "1",
+        "UV_PROJECT_ENVIRONMENT": virtual_environment,
         "VIRTUAL_ENV": virtual_environment,
     }
     command = (
