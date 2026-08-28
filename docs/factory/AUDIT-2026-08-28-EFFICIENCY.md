@@ -72,25 +72,25 @@ No exact token or monetary saving is claimed because subscription CLIs do not ex
 
 The central CI application matrix already has Factory-aware impact classification, but standalone product workflows still started for Factory-only pull requests.
 
-Two high-confidence cases were identified:
+Four high-confidence cases were identified:
 
-- `E2E Runner Context` already classified `automation/**`, `docs/**`, `config/factory/**`, `config/systemd/**`, and `.github/dependabot.yml` as not requiring E2E discovery, but GitHub still allocated a runner and performed a full-history checkout before making that decision.
+- `E2E Runner Context`, `E2E Core Product Flows Contract`, and `Core Compose Contract` already classified `automation/**`, `docs/**`, `config/factory/**`, `config/systemd/**`, and `.github/dependabot.yml` as not requiring their product checks, but GitHub still allocated an impact runner and performed a full-history checkout before each workflow made that decision.
 - `Cypress Setup Smoke` ran for every pull request even though it only installs and exercises the frontend Cypress setup.
 
 The validation run for this audit provided direct evidence of the Cypress cost on a Factory-only change: the job restored about **244 MB** of npm cache, installed **1,457 frontend packages** in about **55 seconds**, and used about **88 seconds of hosted-runner wall time**. The actual Cypress smoke contained two tests and completed them in about **107 ms**.
 
 ## Implemented GitHub Actions change
 
-`E2E Runner Context` now uses a pull-request `paths-ignore` list matching its existing internal no-E2E classifier. Factory-only pull requests therefore do not allocate its impact runner at all. Push and merge-group behavior is unchanged, and any pull request with an application-impacting path still runs the existing classifier and discovery path.
+The three impact-classified product workflows now use pull-request `paths-ignore` lists matching their existing internal no-product-work classifiers. Factory-only pull requests therefore do not allocate those impact runners at all. Push and merge-group behavior is unchanged, and any pull request with an application-impacting path still runs the existing classifier and downstream product contract.
 
 `Cypress Setup Smoke` now runs on pull requests only when `frontend/**` or its own workflow file changes. Pushes to its existing branches and merge-group checks still run without path restriction. Including the workflow file in its pull-request path set makes changes to the gate self-testing.
 
-`automation/tests/test_pr_workflow_efficiency.py` locks both path contracts so future refactors do not silently restore the runner churn.
+`automation/tests/test_pr_workflow_efficiency.py` locks all four path contracts so future refactors do not silently restore the runner churn.
 
 For an equivalent Factory-only pull request after this change, the deterministic avoided work includes:
 
-- one E2E impact runner and full-history checkout;
-- one Cypress runner;
+- **three impact runners** and their full-history checkouts;
+- **one Cypress runner**;
 - one frontend npm dependency installation of the scale observed above; and
 - the Cypress binary startup and setup-smoke execution.
 
@@ -107,7 +107,7 @@ The measured figures above describe this audit's real validation run, not a guar
 - Relative coordination paths are ignored by this low-level resolver rather than becoming surprising process-relative state.
 - Single-repository deployments without `FACTORY_PROVIDER_CAPACITY_DIR` continue to use their existing local path.
 - Routing order, phase model selection, independent review, verification, merge rules, and emergency-provider policy are unchanged.
-- Product-impacting pull requests still run E2E discovery.
+- Product-impacting pull requests still run the three product-impact workflows.
 - Frontend pull requests still run Cypress setup smoke.
 - Push and merge-group product gates are unchanged.
 
@@ -122,7 +122,7 @@ A deployment moving from repository-local to shared health starts with an empty 
 3. explicit custom health stores remain local; and
 4. a relative coordination path does not redirect health state.
 
-`automation/tests/test_pr_workflow_efficiency.py` proves the Factory-only E2E skip contract and the frontend-only Cypress pull-request contract.
+`automation/tests/test_pr_workflow_efficiency.py` proves the Factory-only skip contracts for all three product-impact workflows and the frontend-only Cypress pull-request contract.
 
 ## Remaining observation
 
