@@ -1,18 +1,16 @@
-import { Component, computed, effect, inject, input, output, resource, signal } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmRadio, HlmRadioGroup } from '@spartan-ng/helm/radio-group';
-import {
-  DiagnosticQuizResult,
-  QuizService,
-} from '../../services/quiz.service';
-import { I18nService } from '../../services/i18n.service';
+import { Component, computed, output, signal, inject, resource, input } from '@angular/core';
+import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
   imports: [HlmButton, HlmRadioGroup, HlmRadio, TranslatePipe],
   template: `
+    <!-- Loading State -->
     @if (loading()) {
       <div
         class="flex flex-col items-center justify-center p-12"
@@ -20,37 +18,45 @@ import { showToast } from '../../services/toast.service';
         aria-label="{{ 'diagnosticQuiz.loading' | t }}"
       >
         <div
-          aria-hidden="true"
-          class="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/30 border-t-primary"
+          class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"
         ></div>
-        <p class="text-sm text-text-secondary">{{ 'diagnosticQuiz.loading' | t }}</p>
+        <p class="text-text-secondary text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
       </div>
     }
 
+    <!-- Error State -->
     @if (error()) {
-      <div class="p-12 text-center" role="alert">
-        <span aria-hidden="true" class="mb-4 block text-5xl">&#x26A0;&#xFE0F;</span>
-        <h3 class="mb-2 text-xl font-semibold text-text-primary">
+      <div class="text-center p-12" role="alert">
+        <span class="text-5xl block mb-4">&#x26A0;&#xFE0F;</span>
+        <h3 class="text-xl font-semibold text-text-primary mb-2">
           {{ 'diagnosticQuiz.errorTitle' | t }}
         </h3>
-        <p class="mb-6 text-sm text-text-muted">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
-        <button hlmBtn type="button" (click)="reloadQuestions()">
+        <p class="text-text-muted text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
+        <button
+          hlmBtn
+          type="button"
+          (click)="reloadQuestions()"
+          class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-fill font-medium transition-colors"
+        >
           {{ 'diagnosticQuiz.retry' | t }}
         </button>
       </div>
     }
 
+    <!-- Quiz Content -->
     @if (!loading() && !error() && questions().length > 0) {
-      <section
-        class="mx-auto w-full max-w-3xl overflow-hidden rounded-sheet border border-primary/20 bg-surface-200"
-        [attr.aria-labelledby]="quizTitleId"
+      <div
+        class="w-full max-w-3xl mx-auto bg-surface-200 rounded-[2rem] border border-primary/20 overflow-hidden"
+        role="region"
+        aria-label="{{ 'diagnosticQuiz.title' | t }}"
       >
+        <!-- Header & Progress -->
         <div class="ps-6 pe-6 pt-6 pb-4">
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 [id]="quizTitleId" class="text-start text-xl font-bold text-text-primary">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-text-primary text-start">
               {{ 'diagnosticQuiz.title' | t }}
             </h2>
-            <span class="rounded-full bg-primary/10 px-3 py-1 text-sm text-text-muted">
+            <span class="text-sm text-text-muted bg-primary/10 px-3 py-1 rounded-full text-end">
               {{
                 'diagnosticQuiz.questionCounter'
                   | t: { current: currentQuestionNumber(), total: totalQuestions() }
@@ -58,50 +64,51 @@ import { showToast } from '../../services/toast.service';
             </span>
           </div>
           <div
-            class="h-2 w-full overflow-hidden rounded-full bg-surface-400"
+            class="w-full bg-surface-400 rounded-full h-2 overflow-hidden"
             role="progressbar"
-            [attr.aria-label]="'diagnosticQuiz.title' | t"
             [attr.aria-valuenow]="progressPercentage()"
             aria-valuemin="0"
             aria-valuemax="100"
           >
             <div
-              aria-hidden="true"
-              class="h-2 rounded-full bg-primary transition-all duration-500 ease-out"
+              class="h-2 rounded-full transition-all duration-500 ease-out bg-primary"
               [style.width.%]="progressPercentage()"
             ></div>
           </div>
         </div>
 
-        <div class="min-h-[220px] ps-6 pe-6 pb-6">
-          @if (currentQuestion(); as question) {
+        <!-- Question Area -->
+        <div class="ps-6 pe-6 pb-6 min-h-[220px]">
+          @if (currentQuestion(); as q) {
             <h3
               [id]="'diagnostic-question-' + currentIndex()"
-              class="mb-6 text-start text-lg font-medium leading-relaxed text-text-primary"
+              class="text-lg font-medium text-text-primary mb-6 text-start leading-relaxed"
             >
-              {{ question.text }}
+              {{ q.text }}
             </h3>
 
             <hlm-radio-group
               [name]="'diagnostic-answer-' + currentIndex()"
-              [value]="answers()[question.id]"
-              (valueChange)="selectOption(question.id, $event)"
+              [value]="answers()[q.id]"
+              (valueChange)="selectOption(q.id, $event)"
               [attr.aria-labelledby]="'diagnostic-question-' + currentIndex()"
               class="flex flex-col gap-3"
             >
-              @for (option of question.options; track option.id; let idx = $index) {
+              @for (option of q.options; track option.id; let idx = $index) {
                 <hlm-radio
-                  [value]="option.id"
+                  [value]="option.points"
                   [aria-label]="
                     'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
                   "
-                  class="group min-h-11 w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10"
+                  class="group w-full cursor-pointer rounded-2xl border-2 border-primary/20 bg-surface-400 ps-5 pe-5 pt-4 pb-4 text-start transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200 data-[checked=true]:border-primary data-[checked=true]:bg-primary/10 data-[checked=true]:shadow-lg data-[checked=true]:shadow-primary/20"
                 >
-                  <span class="block text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary">
+                  <span
+                    class="block text-base font-medium text-text-secondary group-data-[checked=true]:text-text-primary"
+                  >
                     <span
-                      aria-hidden="true"
                       class="me-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-text-muted group-data-[checked=true]:bg-primary group-data-[checked=true]:text-on-fill"
-                    >{{ idx + 1 }}</span>
+                      >{{ idx + 1 }}</span
+                    >
                     {{ option.text }}
                   </span>
                 </hlm-radio>
@@ -110,81 +117,85 @@ import { showToast } from '../../services/toast.service';
           }
         </div>
 
-        <div class="border-t border-primary/10 bg-surface-400/60 ps-6 pe-6 pt-4 pb-6">
-          @if (submitError()) {
-            <p class="mb-4 text-sm text-danger" role="alert">
-              {{ 'diagnosticQuiz.submitError' | t }}
-            </p>
-          }
+        <!-- Navigation Actions -->
+        <div
+          class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-surface-400/60 border-t border-primary/10"
+        >
+          <button
+            hlmBtn
+            type="button"
+            (click)="previous()"
+            [disabled]="isFirstQuestion()"
+            class="px-6 py-3 text-sm font-medium text-text-secondary bg-primary/10 rounded-xl hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {{ 'diagnosticQuiz.previous' | t }}
+          </button>
 
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          @if (isLastQuestion()) {
             <button
               hlmBtn
               type="button"
-              variant="secondary"
-              (click)="previous()"
-              [disabled]="isFirstQuestion() || isSubmitting()"
+              (click)="next()"
+              [disabled]="!canProceed() || isSubmitting()"
+              class="px-8 py-3 text-sm font-bold text-on-fill bg-primary rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+              [style.opacity]="!canProceed() || isSubmitting() ? '0.5' : '1'"
             >
-              {{ 'diagnosticQuiz.previous' | t }}
+              @if (isSubmitting()) {
+                <span
+                  class="inline-block w-4 h-4 border-2 border-on-fill/30 border-t-on-fill rounded-full animate-spin me-2 align-middle"
+                ></span>
+              }
+              {{ 'diagnosticQuiz.submit' | t }}
             </button>
-
-            @if (isLastQuestion()) {
-              <button
-                hlmBtn
-                type="button"
-                (click)="next()"
-                [disabled]="!canProceed() || isSubmitting()"
-                [attr.aria-busy]="isSubmitting()"
-              >
-                @if (isSubmitting()) {
-                  <span
-                    aria-hidden="true"
-                    class="me-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-on-fill/30 border-t-on-fill align-middle"
-                  ></span>
-                }
-                {{ 'diagnosticQuiz.submit' | t }}
-              </button>
-            } @else {
-              <button hlmBtn type="button" (click)="next()" [disabled]="!canProceed()">
-                {{ 'diagnosticQuiz.next' | t }}
-              </button>
-            }
-          </div>
+          } @else {
+            <button
+              hlmBtn
+              type="button"
+              (click)="next()"
+              [disabled]="!canProceed()"
+              class="px-6 py-3 text-sm font-medium text-on-fill bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {{ 'diagnosticQuiz.next' | t }}
+            </button>
+          }
         </div>
-      </section>
+      </div>
     }
 
+    <!-- Empty State (loaded but no questions) -->
     @if (!loading() && !error() && questions().length === 0) {
-      <div class="p-12 text-center" role="status">
-        <span aria-hidden="true" class="mb-4 block text-5xl">&#x1F4CB;</span>
-        <p class="text-sm text-text-muted">{{ 'diagnosticQuiz.empty' | t }}</p>
+      <div class="text-center p-12" role="status">
+        <span class="text-5xl block mb-4">&#x1F4CB;</span>
+        <p class="text-text-muted text-sm">{{ 'diagnosticQuiz.empty' | t }}</p>
       </div>
     }
   `,
 })
 export class DiagnosticQuizComponent {
-  private readonly quizService = inject(QuizService);
-  private readonly i18n = inject(I18nService);
+  private quizService = inject(QuizService);
+  private i18n = inject(I18nService);
 
-  readonly targetLanguage = input<string>('en');
-  readonly quizCompleted = output<DiagnosticQuizResult>();
+  targetLanguage = input<string>('en');
 
-  readonly currentIndex = signal(0);
-  readonly answers = signal<Record<string, string>>({});
-  readonly isSubmitting = signal(false);
-  readonly submitError = signal(false);
-  readonly quizTitleId = 'diagnostic-quiz-title';
+  quizCompleted = output<{ score: number; suggestedLevel: string; maxScore: number }>();
 
-  private readonly languageOverride = signal<string | undefined>(undefined);
+  currentIndex = signal<number>(0);
+  answers = signal<Record<string, number>>({});
+  isSubmitting = signal<boolean>(false);
 
-  readonly activeLanguage = computed(
-    () => this.languageOverride() ?? this.targetLanguage(),
-  );
+  private languageOverride = signal<string | undefined>(undefined);
 
-  readonly questionsResource = resource({
+  questionsResource = resource({
     params: () => ({ language: this.activeLanguage() }),
-    loader: ({ params }) => this.quizService.getQuestions(params.language),
+    loader: async ({ params }) => {
+      return await this.quizService.getQuestions(params.language);
+    },
     defaultValue: [],
+  });
+
+  readonly activeLanguage = computed(() => {
+    const override = this.languageOverride();
+    return override !== undefined ? override : this.targetLanguage();
   });
 
   readonly questions = computed(() => this.questionsResource.value());
@@ -192,80 +203,92 @@ export class DiagnosticQuizComponent {
   readonly error = computed(() => this.questionsResource.error());
 
   readonly currentQuestion = computed(() => {
-    const questions = this.questions();
-    const index = this.currentIndex();
-    return index >= 0 && index < questions.length ? questions[index] : null;
+    const qs = this.questions();
+    const idx = this.currentIndex();
+    return idx >= 0 && idx < qs.length ? qs[idx] : null;
   });
 
   readonly progressPercentage = computed(() => {
-    const total = this.questions().length;
-    return total === 0 ? 0 : (this.currentIndex() / total) * 100;
+    const qs = this.questions();
+    if (qs.length === 0) return 0;
+    return (this.currentIndex() / qs.length) * 100;
   });
 
   readonly isLastQuestion = computed(() => {
-    const total = this.questions().length;
-    return total > 0 && this.currentIndex() === total - 1;
+    const qs = this.questions();
+    if (qs.length === 0) return false;
+    return this.currentIndex() === qs.length - 1;
   });
+
   readonly isFirstQuestion = computed(() => this.currentIndex() === 0);
+
   readonly canProceed = computed(() => {
-    const question = this.currentQuestion();
-    return question ? this.answers()[question.id] !== undefined : false;
+    const q = this.currentQuestion();
+    if (!q) return false;
+    return this.answers()[q.id] !== undefined;
   });
+
   readonly currentQuestionNumber = computed(() => this.currentIndex() + 1);
+
   readonly totalQuestions = computed(() => this.questions().length);
 
-  private readonly resetOnLanguageChange = effect(() => {
-    this.activeLanguage();
-    this.currentIndex.set(0);
-    this.answers.set({});
-    this.submitError.set(false);
-  });
-
   reloadQuestions(language?: string): void {
-    if (language) this.languageOverride.set(language);
+    if (language) {
+      this.languageOverride.set(language);
+    }
     this.currentIndex.set(0);
     this.answers.set({});
-    this.submitError.set(false);
     this.questionsResource.reload();
   }
 
-  selectOption(questionId: string, optionId: unknown): void {
-    if (typeof optionId !== 'string') return;
-    const question = this.questions().find((item) => item.id === questionId);
-    if (!question?.options.some((option) => option.id === optionId)) return;
-    this.submitError.set(false);
-    this.answers.update((answers) => ({ ...answers, [questionId]: optionId }));
+  selectOption(questionId: string, points: unknown): void {
+    if (typeof points !== 'number' || !Number.isFinite(points)) return;
+    this.answers.update((prev) => ({ ...prev, [questionId]: points }));
   }
 
   next(): void {
-    if (!this.canProceed() || this.isSubmitting()) return;
+    if (!this.canProceed()) return;
     if (this.isLastQuestion()) {
-      void this.finishQuiz();
+      this.finishQuiz();
     } else {
-      this.currentIndex.update((index) => index + 1);
+      this.currentIndex.update((i) => i + 1);
     }
   }
 
   previous(): void {
-    if (!this.isSubmitting() && this.currentIndex() > 0) {
-      this.currentIndex.update((index) => index - 1);
+    if (this.currentIndex() > 0) {
+      this.currentIndex.update((i) => i - 1);
     }
   }
 
   private async finishQuiz(): Promise<void> {
     this.isSubmitting.set(true);
-    this.submitError.set(false);
+    const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
+    const totalQuestions = this.questions().length;
+    const maxScore = totalQuestions * 4;
+    const percentage = maxScore > 0 ? totalScore / maxScore : 0;
+
+    let suggestedLevel = 'A1';
+
+    if (percentage >= 0.9) suggestedLevel = 'C2';
+    else if (percentage >= 0.8) suggestedLevel = 'C1';
+    else if (percentage >= 0.6) suggestedLevel = 'B2';
+    else if (percentage >= 0.4) suggestedLevel = 'B1';
+    else if (percentage >= 0.2) suggestedLevel = 'A2';
+
     try {
-      const result = await this.quizService.submitResults({
-        targetLanguage: this.activeLanguage(),
+      await this.quizService.submitResults({
+        score: totalScore,
+        maxScore,
+        suggestedLevel,
         answers: this.answers(),
       });
-      this.quizCompleted.emit(result);
     } catch {
-      this.submitError.set(true);
       showToast(this.i18n.translate('diagnosticQuiz.submitError'), 'error');
     } finally {
       this.isSubmitting.set(false);
     }
+
+    this.quizCompleted.emit({ score: totalScore, suggestedLevel, maxScore });
   }
 }

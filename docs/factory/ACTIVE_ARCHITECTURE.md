@@ -46,7 +46,7 @@ issues and PRs        | one host lock and UUID |
                       | isolated task worktree |
                       +-----------+------------+
                                   |
-              verification -> structured review -> PR comment + CI
+              verification -> structured review -> GitHub checks
                                   |
                          SHA-bound merge gate
 ```
@@ -171,43 +171,34 @@ Issue work starts from fresh `origin/main` in an isolated branch and worktree. E
 remote branch in a separate worktree. Only trusted Factory code performs Git add, commit, push, status, and merge
 operations. Provider subprocesses do not receive GitHub or application secrets.
 
-Review approval publishes a machine-readable `factory/independent-review` pull-request comment for the exact
-reviewed head SHA and adds `factory-reviewed`. Before every PR-backed AI phase, refresh, or base update, the
-Factory removes review labels and publishes a `pending` review marker for the current SHA. A crash or timeout
-therefore leaves the autonomous merge gate closed. If GitHub reports a different head, the latest branch is
-rebuilt and that SHA requires its own fresh review. If GitHub reports the reviewed head as `BEHIND`, the Factory
-asks GitHub for a base update bound to that exact head SHA. The resulting head is then rebuilt, verified, and
-reviewed again.
-
-The comment's first line is the authoritative automation marker:
-
-`<!-- factory/independent-review state=<approved|rejected|pending> head=<sha> -->`
-
-The scheduled merge workflow accepts only the latest Factory marker authored by the repository-owner account for
-the current head. A later `pending` or `rejected` marker for the same SHA invalidates an earlier approval. Merge
-readiness requires all of the following:
+Review approval publishes `factory/independent-review` on the exact reviewed head and adds `factory-reviewed`.
+Before every PR-backed AI phase, refresh, or base update, the Factory removes review labels and republishes that
+status as `PENDING` on the current SHA. A crash or timeout therefore leaves the merge gate closed. If GitHub
+reports a different head, the latest branch is rebuilt and the new SHA is also marked pending before verification.
+If GitHub reports the reviewed head as `BEHIND`, the Factory asks GitHub for a base update bound to that exact head
+SHA. The resulting head is then rebuilt, verified, and reviewed again. Merge readiness requires all of the
+following:
 
 - the PR head equals the reviewed SHA;
 - `CI / required` is present and reports literal `SUCCESS`;
-- the `factory-reviewed` label is present;
-- the latest Factory review marker for that exact head is `approved`;
-- every visible terminal check, except any historical legacy `factory/independent-review` status during migration,
-  is allowed;
+- `factory/independent-review` is present and reports literal `SUCCESS`;
+- any duplicate rollup entry for either required context also reports literal `SUCCESS`;
+- every visible terminal check is allowed;
 - mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
 The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
 squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
-administrator bypass. The baseline GitHub ruleset requires pull requests and strict `CI / required` and may give
-the exact repository-owner user a pull-request-only manual CI bypass. `factory/independent-review` must not be a
-required GitHub status: review authority is the SHA-bound comment contract above. Online doctor rejects any active
-ruleset that still requires that retired review status because the Factory no longer publishes it. See
+administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
+review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
+pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
+permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes
+that path. See
 [MANUAL-MERGE.md](MANUAL-MERGE.md).
 
-The comment author check, exact reviewed SHA, review label, durable reviewed SHA, and exact-head merge binding work
-together to prevent an approval for one revision from authorising another. If review publication later moves from
-the repository-owner account to a dedicated GitHub App, the merge workflow must switch to the explicitly trusted
-App identity in the same change rather than accepting arbitrary commenters.
+A dedicated GitHub App and ruleset expected-source binding are still required to prevent another write actor from
+publishing the same legacy status-context name. Online doctor currently validates the layered rules, context
+names, and narrow manual actor, not status publisher identity.
 
 ## Deployment identity and change policy
 

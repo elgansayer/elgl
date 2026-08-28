@@ -368,12 +368,13 @@ def _is_exact_owner_pull_request_bypass(
 
 
 def github_merge_policy_check(config: FactoryConfig) -> Check:
-    """Prove GitHub requires pull requests and canonical CI for Factory merges.
+    """Prove GitHub enforces the Factory's fail-closed merge statuses.
 
-    Independent review is intentionally represented by a SHA-bound pull-request
-    comment and the ``factory-reviewed`` label. The scheduled merge workflow
-    validates that comment against the current head, so a legacy required status
-    named ``factory/independent-review`` would deadlock new reviews and is rejected.
+    A baseline ruleset must require pull requests and CI. The exact repository
+    owner may be its sole bypass actor in audited pull-request mode. Independent
+    review may live in that ruleset or in a review-only ruleset with the same
+    bounded owner policy. This validates context enforcement, not the GitHub App
+    identity that published each context.
     """
 
     environment = {
@@ -406,11 +407,7 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
     try:
         rules = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return Check(
-            "github-merge-policy",
-            False,
-            "branch rules response was not valid JSON",
-        )
+        return Check("github-merge-policy", False, "branch rules response was not valid JSON")
     if not isinstance(rules, list):
         return Check("github-merge-policy", False, "branch rules response was not a list")
 
@@ -448,8 +445,9 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
         if (details := _ruleset_details(config, environment, ruleset_id)) is not None
     }
     baseline_rulesets: list[int] = []
-    legacy_review_rulesets: list[int] = []
+    review_rulesets: list[int] = []
     manual_ci_rulesets: list[int] = []
+    manual_review_rulesets: list[int] = []
     manual_bypass_actor: str | None = None
     owner_lookup_complete = False
     owner: tuple[int, str] | None = None
@@ -459,38 +457,39 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
         if details is None or details.get("enforcement") != "active":
             continue
         contexts = _ruleset_contexts(ruleset_rules)
-        if "factory/independent-review" in contexts:
-            legacy_review_rulesets.append(ruleset_id)
         bypass_actors = details.get("bypass_actors")
-        has_pull_request = any(
-            rule.get("type") == "pull_request" for rule in ruleset_rules
-        )
+        has_pull_request = any(rule.get("type") == "pull_request" for rule in ruleset_rules)
         exact_owner_bypass = False
         if bypass_actors != []:
             if not owner_lookup_complete:
                 owner = _repository_owner_user(config, environment)
                 owner_lookup_complete = True
-            exact_owner_bypass = _is_exact_owner_pull_request_bypass(
-                bypass_actors, owner
-            )
+            exact_owner_bypass = _is_exact_owner_pull_request_bypass(bypass_actors, owner)
             if exact_owner_bypass and owner is not None:
                 manual_bypass_actor = owner[1]
         allowed_bypass = bypass_actors == [] or exact_owner_bypass
-        is_baseline = (
-            has_pull_request
-            and "CI / required" in contexts
-            and allowed_bypass
-        )
+        is_baseline = has_pull_request and "CI / required" in contexts and allowed_bypass
         if is_baseline:
             baseline_rulesets.append(ruleset_id)
             if exact_owner_bypass:
                 manual_ci_rulesets.append(ruleset_id)
+        if "factory/independent-review" not in contexts:
+            continue
+        if bypass_actors == []:
+            review_rulesets.append(ruleset_id)
+            continue
+
+        review_only = contexts == {"factory/independent-review"} and all(
+            rule.get("type") == "required_status_checks" for rule in ruleset_rules
+        )
+        if not review_only and not is_baseline:
+            continue
+        if exact_owner_bypass:
+            review_rulesets.append(ruleset_id)
+            manual_review_rulesets.append(ruleset_id)
 
     passed = (
-        pull_request_required
-        and not missing
-        and bool(baseline_rulesets)
-        and not legacy_review_rulesets
+        pull_request_required and not missing and bool(baseline_rulesets) and bool(review_rulesets)
     )
     detail_parts = [
         f"pull-request-rule={'present' if pull_request_required else 'missing'}",
@@ -504,18 +503,22 @@ def github_merge_policy_check(config: FactoryConfig) -> Check:
             if baseline_rulesets
             else "no active ruleset requiring pull requests and CI with an allowed bypass policy"
         ),
-        "independent-review=comment",
         (
-            "legacy-review-status-rulesets="
-            + ",".join(str(value) for value in legacy_review_rulesets)
-            if legacy_review_rulesets
-            else "legacy-review-status-rulesets=none"
+            "review-ruleset=" + ",".join(str(value) for value in review_rulesets)
+            if review_rulesets
+            else "no active independent-review ruleset with an allowed bypass policy"
         ),
         (
             f"manual-ci-bypass={manual_bypass_actor}; ruleset="
             + ",".join(str(value) for value in manual_ci_rulesets)
             if manual_bypass_actor is not None and manual_ci_rulesets
             else "manual-ci-bypass=disabled"
+        ),
+        (
+            f"manual-review-bypass={manual_bypass_actor}; ruleset="
+            + ",".join(str(value) for value in manual_review_rulesets)
+            if manual_bypass_actor is not None and manual_review_rulesets
+            else "manual-review-bypass=disabled"
         ),
     ]
     return Check("github-merge-policy", passed, "; ".join(detail_parts))

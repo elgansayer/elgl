@@ -1,5 +1,5 @@
 import { HlmButton } from '@spartan-ng/helm/button';
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatService, FavouriteRecord, ChatMessage } from '../../services/chat.service';
@@ -28,18 +28,14 @@ interface TabDefinition {
   templateUrl: './favourites.component.html',
   styleUrls: ['./favourites.component.scss'],
 })
-export class FavouritesComponent implements OnDestroy {
+export class FavouritesComponent {
   private chatService = inject(ChatService);
 
   readonly favourites = signal<FavouriteRecord[]>([]);
   readonly isLoading = signal<boolean>(true);
-  readonly loadError = signal<boolean>(false);
-  readonly deleteError = signal<boolean>(false);
   readonly activeTab = signal<FavouritesTab>('all');
   readonly audioPlayingId = signal<string | null>(null);
-  readonly pendingDeleteIds = signal<ReadonlySet<string>>(new Set<string>());
   private audioElement: HTMLAudioElement | null = null;
-  private loadGeneration = 0;
 
   readonly tabs: TabDefinition[] = [
     { id: 'all', labelKey: 'favourites.tabAll', icon: '\u2B50' },
@@ -89,30 +85,18 @@ export class FavouritesComponent implements OnDestroy {
   });
 
   constructor() {
-    void this.loadFavourites();
-  }
-
-  ngOnDestroy(): void {
-    this.loadGeneration++;
-    this.stopAudio();
+    this.loadFavourites();
   }
 
   async loadFavourites(): Promise<void> {
-    const generation = ++this.loadGeneration;
     this.isLoading.set(true);
-    this.loadError.set(false);
-
     try {
       const data = await this.chatService.getFavourites();
-      if (generation !== this.loadGeneration) return;
       this.favourites.set(data);
-    } catch {
-      if (generation !== this.loadGeneration) return;
-      this.loadError.set(true);
+    } catch (e) {
+      console.error('Failed to load favourites:', e);
     } finally {
-      if (generation === this.loadGeneration) {
-        this.isLoading.set(false);
-      }
+      this.isLoading.set(false);
     }
   }
 
@@ -120,34 +104,12 @@ export class FavouritesComponent implements OnDestroy {
     this.activeTab.set(tab);
   }
 
-  isDeletingFavourite(id: string): boolean {
-    return this.pendingDeleteIds().has(id);
-  }
-
   async deleteFavourite(fav: FavouriteRecord): Promise<void> {
-    if (this.isDeletingFavourite(fav.id)) return;
-
-    this.deleteError.set(false);
-    this.pendingDeleteIds.update((ids) => {
-      const next = new Set(ids);
-      next.add(fav.id);
-      return next;
-    });
-
     try {
       await this.chatService.removeFavourite(fav.id);
-      if (this.audioPlayingId() === fav.id) {
-        this.stopAudio();
-      }
       this.favourites.update((list) => list.filter((f) => f.id !== fav.id));
-    } catch {
-      this.deleteError.set(true);
-    } finally {
-      this.pendingDeleteIds.update((ids) => {
-        const next = new Set(ids);
-        next.delete(fav.id);
-        return next;
-      });
+    } catch (e) {
+      console.error('Failed to delete favourite:', e);
     }
   }
 
@@ -162,25 +124,16 @@ export class FavouritesComponent implements OnDestroy {
 
     this.stopAudio();
     const audio = new Audio(url);
-    this.audioElement = audio;
     audio.onended = () => {
-      if (this.audioElement !== audio) return;
       this.audioPlayingId.set(null);
       this.audioElement = null;
     };
-    void audio
-      .play()
-      .then(() => {
-        if (this.audioElement === audio) {
-          this.audioPlayingId.set(fav.id);
-        }
-      })
-      .catch(() => {
-        if (this.audioElement === audio) {
-          this.audioElement = null;
-          this.audioPlayingId.set(null);
-        }
-      });
+    audio.play().catch(() => {
+      this.audioPlayingId.set(null);
+      this.audioElement = null;
+    });
+    this.audioElement = audio;
+    this.audioPlayingId.set(fav.id);
   }
 
   private stopAudio(): void {

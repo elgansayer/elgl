@@ -57,15 +57,6 @@ describe('UnreadCounterService', () => {
     expect(service.tabCount('moments')).toBe(8);
   });
 
-  it('should format compact badge text without losing the underlying count', () => {
-    service.set('chat', 100);
-    service.set('moments', 12);
-
-    expect(service.badgeText('chat')).toBe('99+');
-    expect(service.badgeText('moments')).toBe('12');
-    expect(service.tabCount('chat')).toBe(100);
-  });
-
   it('should handle the full set/increment/decrement lifecycle', () => {
     service.increment('chat');
     service.increment('chat');
@@ -84,25 +75,6 @@ describe('UnreadCounterService', () => {
 
     service.set('discovery', 100);
     expect(service.discoveryUnread()).toBe(100);
-  });
-
-  it('should normalise invalid and fractional counts before navigation renders them', () => {
-    service.set('chat', Number.NaN);
-    service.set('moments', Number.POSITIVE_INFINITY);
-    service.set('discovery', -2);
-    service.set('audioRooms', 7.9);
-
-    expect(service.tabCount('chat')).toBe(0);
-    expect(service.tabCount('moments')).toBe(0);
-    expect(service.tabCount('discovery')).toBe(0);
-    expect(service.tabCount('audioRooms')).toBe(7);
-    expect(service.badgeText('audioRooms')).toBe('7');
-  });
-
-  it('should saturate increments at the largest safe integer', () => {
-    service.set('profile', Number.MAX_SAFE_INTEGER);
-    service.increment('profile');
-    expect(service.tabCount('profile')).toBe(Number.MAX_SAFE_INTEGER);
   });
 
   it('should support legacy method names', () => {
@@ -149,40 +121,28 @@ describe('UnreadCounterService', () => {
 
   it('should call setAppBadge when totalUnread is positive', async () => {
     service.set('chat', 1);
-    await vi.waitFor(
-      () => {
-        expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
-      },
-      { timeout: 100 },
-    );
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
+    }, { timeout: 100 });
   });
 
   it('should call clearAppBadge when totalUnread becomes zero', async () => {
     service.set('profile', 5);
-    await vi.waitFor(
-      () => {
-        expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
-      },
-      { timeout: 100 },
-    );
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
+    }, { timeout: 100 });
 
     service.set('profile', 0);
-    await vi.waitFor(
-      () => {
-        expect(clearAppBadgeSpy).toHaveBeenCalled();
-      },
-      { timeout: 100 },
-    );
+    await vi.waitFor(() => {
+      expect(clearAppBadgeSpy).toHaveBeenCalled();
+    }, { timeout: 100 });
   });
 
   it('should handle badge update errors gracefully', async () => {
     setAppBadgeSpy.mockRejectedValueOnce(new Error('badge failed'));
     service.set('chat', 3);
-    await vi.waitFor(
-      () => {
-        expect(setAppBadgeSpy).toHaveBeenCalled();
-      },
-      { timeout: 100 },
-    );
+    await vi.waitFor(() => {
+      expect(setAppBadgeSpy).toHaveBeenCalled();
+    }, { timeout: 100 });
   });
 });

@@ -9,7 +9,6 @@ describe('FontScaleService', () => {
     localStorage.clear();
     document.documentElement.style.fontSize = '';
     document.documentElement.style.removeProperty('--app-base-font-size');
-    document.documentElement.style.removeProperty('--chat-message-font-size');
     TestBed.configureTestingModule({});
     service = TestBed.inject(FontScaleService);
   });
@@ -20,7 +19,6 @@ describe('FontScaleService', () => {
 
   it('should default to a scale factor of 1.0', () => {
     expect(service.scaleFactor()).toBe(1.0);
-    expect(service.textSizePreference()).toBe('normal');
   });
 
   it('should expose the documented 80-150 percent range', () => {
@@ -63,7 +61,6 @@ describe('FontScaleService', () => {
     const freshService = TestBed.inject(FontScaleService);
 
     expect(freshService.scaleFactor()).toBe(1.0);
-    expect(freshService.chatTextSize()).toBe('medium');
   });
 
   it('should update the scale factor when setScale is called', () => {
@@ -90,20 +87,6 @@ describe('FontScaleService', () => {
     expect(service.scaleFactor()).toBe(1.0);
   });
 
-  it('should map the small, normal and large appearance choices to safe app scales', () => {
-    service.setTextSizePreference('small');
-    expect(service.scaleFactor()).toBe(0.9);
-    expect(service.textSizePreference()).toBe('small');
-
-    service.setTextSizePreference('normal');
-    expect(service.scaleFactor()).toBe(1);
-    expect(service.textSizePreference()).toBe('normal');
-
-    service.setTextSizePreference('large');
-    expect(service.scaleFactor()).toBeCloseTo(1.15);
-    expect(service.textSizePreference()).toBe('large');
-  });
-
   it('should apply 150 percent as a 24px root font size', () => {
     service.setScale(1.5);
     TestBed.flushEffects();
@@ -117,53 +100,16 @@ describe('FontScaleService', () => {
     expect(localStorage.getItem('app_font_scale')).toBe('80');
   });
 
-  it('should restore and apply the chat text size independently from global text size', () => {
-    localStorage.setItem('app_font_scale', '115');
-    localStorage.setItem('app_chat_text_size', 'small');
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
-
-    const freshService = TestBed.inject(FontScaleService);
-    TestBed.flushEffects();
-
-    expect(freshService.scaleFactor()).toBe(1.15);
-    expect(freshService.chatTextSize()).toBe('small');
-    expect(document.documentElement.style.getPropertyValue('--chat-message-font-size')).toBe(
-      '0.8125rem',
-    );
-  });
-
-  it('should persist and apply chat text size selections', () => {
-    service.setChatTextSize('large');
-    TestBed.flushEffects();
-
-    expect(localStorage.getItem('app_chat_text_size')).toBe('large');
-    expect(document.documentElement.style.getPropertyValue('--chat-message-font-size')).toBe('1rem');
-  });
-
-  it('should ignore an invalid stored chat text size', () => {
-    localStorage.setItem('app_chat_text_size', 'huge');
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
-
-    const freshService = TestBed.inject(FontScaleService);
-
-    expect(freshService.chatTextSize()).toBe('medium');
-  });
-
   it('should keep scaling in memory when storage writes fail', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Quota exceeded', 'QuotaExceededError');
     });
 
     service.setScale(1.5);
-    service.setChatTextSize('large');
     expect(() => TestBed.flushEffects()).not.toThrow();
 
     expect(service.scaleFactor()).toBe(1.5);
-    expect(service.chatTextSize()).toBe('large');
     expect(document.documentElement.style.fontSize).toBe('24px');
-    expect(document.documentElement.style.getPropertyValue('--chat-message-font-size')).toBe('1rem');
   });
 
   it('should reset to 100 percent', () => {

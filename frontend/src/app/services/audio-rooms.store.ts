@@ -926,7 +926,7 @@ export class AudioRoomsStore {
     if (!room || !text.trim()) return;
     const user = this.authService.currentUser();
     const msg: RoomChatMessage = {
-      id: `rc_${Date.now()}_${crypto.randomUUID()}`,
+      id: `rc_${Date.now()}_${Math.random()}`,
       sender_id: user?.id || 'anon',
       sender_name: user?.email ? user.email.split('@')[0] : 'Language Partner',
       text_content: text.trim(),
