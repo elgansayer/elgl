@@ -48,6 +48,28 @@ redis.call('EXPIRE', KEYS[1], ARGV[5])
 return {1, 0}
 `;
 
+const INSECURE_CENTRIFUGO_API_KEYS = new Set([
+  'test-centrifugo-api-key',
+  'test-api-key',
+  'secret-centrifugo-api-key-change-in-prod',
+  'your-api-key',
+]);
+
+const INSECURE_CENTRIFUGO_SECRETS = new Set([
+  'test-centrifugo-secret',
+  'test-secret',
+  'secret-centrifugo-token-key-change-in-prod',
+  'your-secret',
+]);
+
+function isInsecureCredential(
+  value: string | undefined,
+  insecureValues: ReadonlySet<string>,
+): boolean {
+  const normalized = value?.trim();
+  return !normalized || normalized !== value || insecureValues.has(normalized);
+}
+
 @Injectable()
 export class CentrifugoService implements OnModuleInit {
   private apiUrl!: string;
@@ -78,20 +100,19 @@ export class CentrifugoService implements OnModuleInit {
   async onModuleInit() {
     this.apiUrl = `${this.configService.get<string>('CENTRIFUGO_URL')}/api`;
 
-    // Security enhancement: Fail-fast securely if critical credentials are missing in production.
-    // This prevents the application from booting into a state where secrets evaluate to undefined,
-    // which could allow forged connections or bypassed API limits.
+    // Fail before Redis or Centrifugo initialization when production receives
+    // a missing, whitespace-padded, or repository-known placeholder credential.
     const apiKey = this.configService.get<string>('CENTRIFUGO_API_KEY');
     const secret = this.configService.get<string>('CENTRIFUGO_SECRET');
 
     const env = this.configService.get<string>('NODE_ENV') || 'development';
     if (env === 'production') {
-      if (!apiKey || apiKey === 'test-centrifugo-api-key') {
+      if (isInsecureCredential(apiKey, INSECURE_CENTRIFUGO_API_KEYS)) {
         throw new Error(
           'CENTRIFUGO_API_KEY must be securely configured in production',
         );
       }
-      if (!secret || secret === 'test-centrifugo-secret') {
+      if (isInsecureCredential(secret, INSECURE_CENTRIFUGO_SECRETS)) {
         throw new Error(
           'CENTRIFUGO_SECRET must be securely configured in production',
         );
