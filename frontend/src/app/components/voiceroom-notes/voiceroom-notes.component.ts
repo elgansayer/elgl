@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
+import { environment } from '../../../environments/environment';
 
 interface VoiceRoomNote {
   id: string;
@@ -25,10 +26,11 @@ interface VoiceRoomNote {
   styleUrls: ['./voiceroom-notes.component.css'],
 })
 export class VoiceroomNotesComponent {
-  private http = inject(HttpClient);
-  private i18n = inject(I18nService);
-  private centrifugo = inject(CentrifugoService);
-  private destroyRef = inject(DestroyRef);
+  private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
+  private readonly centrifugo = inject(CentrifugoService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly apiBase = environment.apiUrl;
   private subscribedRoomId?: string;
 
   roomId = input.required<string>();
@@ -45,7 +47,9 @@ export class VoiceroomNotesComponent {
       refreshKey: this.refreshCounter(),
     }),
     loader: ({ params }) =>
-      firstValueFrom(this.http.get<VoiceRoomNote[]>(`/audio-rooms/${params.roomId}/notes`)),
+      firstValueFrom(
+        this.http.get<VoiceRoomNote[]>(`${this.apiBase}/audio-rooms/${params.roomId}/notes`),
+      ),
     defaultValue: [],
   });
 
@@ -96,7 +100,7 @@ export class VoiceroomNotesComponent {
     this.isPosting.set(true);
     try {
       await firstValueFrom(
-        this.http.post(`/audio-rooms/${this.roomId()}/notes`, {
+        this.http.post(`${this.apiBase}/audio-rooms/${this.roomId()}/notes`, {
           content: c,
           vocabulary: this.vocabulary().trim() || undefined,
         }),
@@ -113,7 +117,9 @@ export class VoiceroomNotesComponent {
 
   async deleteNote(noteId: string): Promise<void> {
     try {
-      await firstValueFrom(this.http.delete(`/audio-rooms/${this.roomId()}/notes/${noteId}`));
+      await firstValueFrom(
+        this.http.delete(`${this.apiBase}/audio-rooms/${this.roomId()}/notes/${noteId}`),
+      );
       this.refreshCounter.update((value) => value + 1);
     } catch {
       // handled by UI error display
