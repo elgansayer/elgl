@@ -91,9 +91,8 @@
             'chatList.quickAiTrans' | t
           }}</span>
         </button>
-        <button
-          hlmBtn
-          (click)="notImplemented()"
+        <a
+          [routerLink]="['/ai-conversation']"
           class="flex flex-col items-center gap-1"
           [attr.aria-label]="'chatList.quickJpAi' | t"
         >
@@ -105,7 +104,7 @@
           <span class="text-[10px] text-text-secondary font-medium">{{
             'chatList.quickJpAi' | t
           }}</span>
-        </button>
+        </a>
         <button
           hlmBtn
           (click)="notImplemented()"
