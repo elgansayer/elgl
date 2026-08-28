@@ -74,3 +74,7 @@
 **Vulnerability:** LiveKit API keys and secrets used in audio-rooms and calls services (`LIVEKIT_API_KEY`, `LIVEKIT_SECRET`) could default to insecure test values (e.g., `test-livekit-api-key`) if environment variables were missing in a production environment.
 **Learning:** Default fallbacks for critical external service secrets present a high risk in production by allowing silent initialization into an insecure, predictable state. Consistent validation must occur anywhere a secret is injected into a service.
 **Prevention:** Always apply strict fail-fast validation checks where `NODE_ENV === 'production'` alongside explicit validation for known development fallback credentials, directly within the module or service initialization.
+## 2026-08-28 - [Fail-Fast Centrifugo Credentials in Production]
+**Vulnerability:** Centrifugo `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET` defaulted to insecure test values (e.g., `test-centrifugo-api-key`) if missing in production.
+**Learning:** Default configuration schemas (like `validation.schema.ts`) can mask missing environment variables by silently providing valid but insecure fallback strings to services like `CentrifugoService`. This allows an attacker to forge real-time connections or bypass rate limits.
+**Prevention:** Apply a strict fail-fast validation in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if any credential matches the known insecure defaults.
