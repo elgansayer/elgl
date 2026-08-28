@@ -331,8 +331,12 @@ class JobStore:
         with self._process_lock, self.file_lock:
             self._assert_generation_current()
             previous_jobs = self._load()
+            now = datetime.now(UTC)
             for task_id, job in jobs.items():
                 previous = previous_jobs.get(task_id)
+                if job.state is JobState.QUARANTINED:
+                    self._resume_legacy_quarantine(job, now)
+                    continue
                 if job.last_error and job.attempts > 0:
                     if self._retry_transition_changed(previous, job):
                         self._apply_retry_policy(previous, job)
@@ -391,7 +395,9 @@ class JobStore:
             self._assert_generation_current()
             jobs = self._load()
             previous = jobs.get(job.task.identifier)
-            if job.last_error and job.attempts > 0:
+            if job.state is JobState.QUARANTINED:
+                self._resume_legacy_quarantine(job, datetime.now(UTC))
+            elif job.last_error and job.attempts > 0:
                 if self._retry_transition_changed(previous, job):
                     self._apply_retry_policy(previous, job)
             elif previous is not None and self._made_meaningful_progress(previous, job):
