@@ -626,7 +626,9 @@ class FactoryDaemon:
                         try:
                             architect_future.result()
                         except ProviderCapacityUnavailable as error:
-                            retry = error.retry_after_seconds or self.config.provider_cooldown_seconds
+                            retry = (
+                                error.retry_after_seconds or self.config.provider_cooldown_seconds
+                            )
                             architect_retry_not_before = datetime.now(UTC) + timedelta(
                                 seconds=max(retry, 1)
                             )
