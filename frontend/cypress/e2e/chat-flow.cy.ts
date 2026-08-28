@@ -74,6 +74,7 @@ describe('Chat Flow (Mocked)', () => {
         failNextSend = false;
         req.reply({
           statusCode: 503,
+          headers: { 'x-cypress-expected-error': 'true' },
           body: { message: 'Chat service temporarily unavailable' },
         });
         return;
@@ -146,6 +147,10 @@ describe('Chat Flow (Mocked)', () => {
 
     cy.visit(`/chat/${roomId}`);
     cy.wait('@getMessages');
+    cy.window().then((win) => {
+      (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
+        'Error sending message:';
+    });
     cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
     cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
