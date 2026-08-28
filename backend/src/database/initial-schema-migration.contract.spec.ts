@@ -1,16 +1,31 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = resolve(process.cwd(), '..');
+const migrationsDirectory = resolve(repositoryRoot, 'supabase/migrations');
 const migration = readFileSync(
-  resolve(repositoryRoot, 'supabase/migrations/001_initial_schema.sql'),
+  resolve(migrationsDirectory, '001_initial_schema.sql'),
   'utf8',
 );
 const rowLevelSecurity = readFileSync(
-  resolve(repositoryRoot, 'supabase/migrations/009_row_level_security.sql'),
+  resolve(migrationsDirectory, '009_row_level_security.sql'),
   'utf8',
 );
+const usersRowLevelSecurityHardeningFile =
+  '20260807000000_review_rls_virtual_coin_economy.sql';
+const usersRowLevelSecurityHardening = readFileSync(
+  resolve(migrationsDirectory, usersRowLevelSecurityHardeningFile),
+  'utf8',
+);
+const laterMigrations = readdirSync(migrationsDirectory)
+  .filter(
+    (file) =>
+      file.endsWith('.sql') && file > usersRowLevelSecurityHardeningFile,
+  )
+  .sort()
+  .map((file) => readFileSync(resolve(migrationsDirectory, file), 'utf8'))
+  .join('\n');
 
 describe('001_initial_schema migration contract', () => {
   it('enables the database capabilities required by the user schema', () => {
@@ -93,15 +108,32 @@ describe('001_initial_schema migration contract', () => {
     expect(migration).not.toMatch(/\b(?:DROP|TRUNCATE|DELETE\s+FROM)\b/i);
   });
 
-  it('is protected by the later users RLS defence-in-depth boundary', () => {
+  it('is protected by the effective users RLS defence-in-depth boundary', () => {
     expect(rowLevelSecurity).toMatch(
       /ALTER TABLE public\.users ENABLE ROW LEVEL SECURITY/i,
     );
     expect(rowLevelSecurity).toMatch(
       /CREATE POLICY users_select_authenticated ON public\.users\s+FOR SELECT TO authenticated USING \(true\)/i,
     );
-    expect(rowLevelSecurity).toMatch(
-      /CREATE POLICY users_update_own ON public\.users\s+FOR UPDATE TO authenticated USING \(auth\.uid\(\) = id\) WITH CHECK \(auth\.uid\(\) = id\)/i,
+    expect(usersRowLevelSecurityHardening).toMatch(
+      /CREATE POLICY users_update_own ON public\.users\s+FOR UPDATE TO authenticated\s+USING \(auth\.uid\(\) = id\)/i,
+    );
+    for (const sensitiveColumn of [
+      'coins_balance',
+      'is_vip',
+      'vip_tier',
+      'is_admin',
+      'developer_api_key',
+    ]) {
+      expect(usersRowLevelSecurityHardening).toMatch(
+        new RegExp(`${sensitiveColumn}\\s+IS NOT DISTINCT FROM`, 'i'),
+      );
+    }
+    expect(laterMigrations).not.toMatch(
+      /ALTER TABLE public\.users DISABLE ROW LEVEL SECURITY/i,
+    );
+    expect(laterMigrations).not.toMatch(
+      /DROP POLICY(?: IF EXISTS)? users_update_own ON public\.users/i,
     );
   });
 });
