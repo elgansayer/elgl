@@ -24,55 +24,27 @@ jobs:
 
           path = Path('backend/src/supabase/supabase.service.ts')
           text = path.read_text()
-          old = """      chat_room_members: {
-                Row: {
-                  user_id: string;
-                  room_id: string;
-                  is_locked: boolean;
-                  created_at?: string;
-                };
-                Insert: Partial<{
-                  user_id: string;
-                  room_id: string;
-                  is_locked?: boolean;
-                  created_at?: string;
-                }>;
-                Update: Partial<{
-                  user_id?: string;
-                  room_id?: string;
-                  is_locked?: boolean;
-                  created_at?: string;
-                }>;
-          """
-          new = """      chat_room_members: {
-                Row: {
-                  user_id: string;
-                  room_id: string;
-                  is_locked: boolean;
-                  is_archived: boolean;
-                  archived_at: string | null;
-                  created_at?: string;
-                };
-                Insert: Partial<{
-                  user_id: string;
-                  room_id: string;
-                  is_locked?: boolean;
-                  is_archived?: boolean;
-                  archived_at?: string | null;
-                  created_at?: string;
-                }>;
-                Update: Partial<{
-                  user_id?: string;
-                  room_id?: string;
-                  is_locked?: boolean;
-                  is_archived?: boolean;
-                  archived_at?: string | null;
-                  created_at?: string;
-                }>;
-          """
-          if old not in text:
-              raise SystemExit('expected chat_room_members type block not found')
-          path.write_text(text.replace(old, new, 1))
+          if "          is_archived: boolean;\n          archived_at: string | null;" in text:
+              raise SystemExit(0)
+          replacements = [
+              (
+                  "          is_locked: boolean;\n          created_at?: string;",
+                  "          is_locked: boolean;\n          is_archived: boolean;\n          archived_at: string | null;\n          created_at?: string;",
+              ),
+              (
+                  "          is_locked?: boolean;\n          created_at?: string;\n        }>;\n        Update:",
+                  "          is_locked?: boolean;\n          is_archived?: boolean;\n          archived_at?: string | null;\n          created_at?: string;\n        }>;\n        Update:",
+              ),
+              (
+                  "          is_locked?: boolean;\n          created_at?: string;\n        }>;\n        Relationships:",
+                  "          is_locked?: boolean;\n          is_archived?: boolean;\n          archived_at?: string | null;\n          created_at?: string;\n        }>;\n        Relationships:",
+              ),
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'expected database type fragment not found: {old!r}')
+              text = text.replace(old, new, 1)
+          path.write_text(text)
           PY
       - name: Verify repair diff
         run: |
