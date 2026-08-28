@@ -3,6 +3,25 @@
 // manifest. Historical source migrations remain byte-for-byte unchanged.
 export const schemaCompatibilityShims = [
   {
+    beforeSourceFile: '20260826220000_lesson_progress.sql',
+    name: 'materialize_legacy_lessons_before_progress',
+    reason:
+      'The application and generated Supabase contract model public.lessons, but the surviving SQL migration corpus does not create it before lesson_progress adds its lesson foreign key.',
+    sql: `CREATE TABLE IF NOT EXISTS public.lessons (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  description TEXT,
+  content_json JSONB,
+  language_code VARCHAR(16) NOT NULL,
+  difficulty_level INTEGER,
+  cover_image_url TEXT,
+  audio_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+`,
+  },
+  {
     beforeSourceFile: '20260808030000_create_moment_comment_votes.sql',
     name: 'converge_moment_comment_votes_vote_column',
     reason:
