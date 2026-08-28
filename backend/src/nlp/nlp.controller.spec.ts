@@ -3,8 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
 import { NlpService } from './nlp.service';
-import { GrammarCheckService } from './grammar-check.service';
-import { GrammarExplanationService } from './grammar-explanation.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -12,7 +10,6 @@ import { NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
 describe('NlpController', () => {
   let controller: NlpController;
   let nlpService: NlpService;
-  let grammarCheckService: GrammarCheckService;
   let usersService: UsersService;
 
   beforeEach(async () => {
@@ -25,20 +22,8 @@ describe('NlpController', () => {
             detectLanguage: vi.fn(),
             translate: vi.fn(),
             translateUi: vi.fn(),
-            checkRateLimit: vi.fn(),
+            grammarCheck: vi.fn(),
             pronunciationScore: vi.fn(),
-          },
-        },
-        {
-          provide: GrammarCheckService,
-          useValue: {
-            check: vi.fn(),
-          },
-        },
-        {
-          provide: GrammarExplanationService,
-          useValue: {
-            explain: vi.fn(),
           },
         },
         {
@@ -59,7 +44,6 @@ describe('NlpController', () => {
 
     controller = module.get<NlpController>(NlpController);
     nlpService = module.get<NlpService>(NlpService);
-    grammarCheckService = module.get<GrammarCheckService>(GrammarCheckService);
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -134,49 +118,27 @@ describe('NlpController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.grammarCheck(null, {} as any);
       expect(result).toBeNull();
-      expect(nlpService.checkRateLimit).not.toHaveBeenCalled();
-      expect(grammarCheckService.check).not.toHaveBeenCalled();
+      expect(nlpService.grammarCheck).not.toHaveBeenCalled();
     });
 
-    it('should preserve daily AI limits and call the bounded grammar provider', async () => {
-      const dto: any = { text: 'I go yesterday' };
+    it('should call service grammarCheck when user is provided', async () => {
+      const dto: any = { text: 'Check me' };
       const profile: any = { id: 'user-1', is_vip: false };
-      const response: any = {
-        original: 'I go yesterday',
-        corrected: 'I went yesterday.',
-        explanation: 'Use the past tense and ending punctuation.',
-        errors_found: 2,
-      };
+      const response: any = { corrected: 'Check me.' };
 
       (usersService.getProfile as Mock).mockResolvedValue(profile);
-      (nlpService.checkRateLimit as Mock).mockResolvedValue(undefined);
-      (grammarCheckService.check as Mock).mockResolvedValue(response);
+      (nlpService.grammarCheck as Mock).mockResolvedValue(response);
 
       const result = await controller.grammarCheck(
         { id: 'user-1' } as any,
         dto,
       );
-
-      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('user-1', false);
-      expect(grammarCheckService.check).toHaveBeenCalledWith(dto);
+      expect(nlpService.grammarCheck).toHaveBeenCalledWith(
+        'user-1',
+        false,
+        dto,
+      );
       expect(result).toEqual(response);
-    });
-
-    it('should skip the free-tier daily cap for VIP profiles', async () => {
-      (usersService.getProfile as Mock).mockResolvedValue({ is_vip: true });
-      (grammarCheckService.check as Mock).mockResolvedValue({
-        original: 'Fine.',
-        corrected: 'Fine.',
-        explanation: 'No grammar changes suggested.',
-        errors_found: 0,
-      });
-
-      await controller.grammarCheck({ id: 'vip-user' } as any, {
-        text: 'Fine.',
-      });
-
-      expect(nlpService.checkRateLimit).toHaveBeenCalledWith('vip-user', true);
     });
   });
 

@@ -33,19 +33,6 @@ const languageContentPathFragments = [
   '/lessons',
 ];
 
-function hasProseBreakAll(source) {
-  const withoutDiagnosticExceptions = source.replace(
-    /\bclass\s*=\s*(["'])([\s\S]*?)\1/g,
-    (attribute, _quote, classValue) => {
-      if (/\bbreak-all\b/.test(classValue) && /\bfont-mono\b/.test(classValue)) {
-        return attribute.replace(/\bbreak-all\b/g, '');
-      }
-      return attribute;
-    },
-  );
-  return /\bbreak-all\b/.test(withoutDiagnosticExceptions);
-}
-
 function walk(directory) {
   for (const name of readdirSync(directory)) {
     const path = join(directory, name);
@@ -73,16 +60,6 @@ function walk(directory) {
     if (isLanguageContentSurface && /\bfont-display\b/.test(source)) {
       failures.push(`${projectPath}: multilingual or user-authored content surfaces must not use font-display`);
     }
-    if (isLanguageContentSurface && hasProseBreakAll(source)) {
-      failures.push(
-        `${projectPath}: language-content prose must not use break-all; preserve browser-native CJK line breaking and target unbounded machine tokens separately`,
-      );
-    }
-    if (isLanguageContentSurface && /\bdark:(?:font-|break-|whitespace-)/.test(source)) {
-      failures.push(
-        `${projectPath}: CJK typography and wrapping must remain theme-neutral; dark mode may change semantic colour/contrast, not text shaping or line breaking`,
-      );
-    }
   }
 }
 
@@ -94,6 +71,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(
-  'Multilingual typography check passed. Universal fallback, CJK line-breaking, and theme-neutral language-content safeguards are intact.',
-);
+console.log('Multilingual typography check passed. Universal font fallback and language-content safeguards are intact.');

@@ -23,9 +23,6 @@ import { AdminAuthContextService } from './admin-auth-context.service';
           @if (has('moderation.cases.read')) {
             <a routerLink="/moderation" routerLinkActive="active">Moderation</a>
           }
-          @if (has('security.network.read')) {
-            <a routerLink="/network-security" routerLinkActive="active">Network Security</a>
-          }
           @if (has('roles.read')) {
             <a routerLink="/roles" routerLinkActive="active">Roles & Permissions</a>
           }

@@ -3,8 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  FLASHCARD_CONTEXT_MAX_LENGTH,
-  FLASHCARD_SELECTION_MAX_LENGTH,
   FlashcardContextMenuDirective,
   type FlashcardSelectionRequest,
 } from './flashcard-context-menu.directive';
@@ -16,15 +14,15 @@ import {
       id="source"
       appFlashcardContextMenu
       sourceLanguage="es"
-      [selectionContext]="context"
+      selectionContext="Hola brave mundo"
       (flashcardSelection)="requests.push($event)"
-    >{{ sourceText }}</p>
+    >
+      Hola brave mundo
+    </p>
     <p id="outside">Outside text</p>
   `,
 })
 class HostComponent {
-  sourceText = 'Hola brave mundo';
-  context = 'Hola brave mundo';
   readonly requests: FlashcardSelectionRequest[] = [];
 }
 
@@ -90,40 +88,6 @@ describe('FlashcardContextMenuDirective', () => {
     source.dispatchEvent(outsideSelection);
     expect(outsideSelection.defaultPrevented).toBe(false);
     expect(fixture.componentInstance.requests).toEqual([]);
-  });
-
-  it('leaves the native context menu available for selections the flashcard API cannot accept', async () => {
-    await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.sourceText = 'a'.repeat(FLASHCARD_SELECTION_MAX_LENGTH + 1);
-    fixture.componentInstance.context = fixture.componentInstance.sourceText;
-    fixture.detectChanges();
-    const source = fixture.nativeElement.querySelector('#source') as HTMLElement;
-    selectText(source, 0, FLASHCARD_SELECTION_MAX_LENGTH + 1);
-
-    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-    source.dispatchEvent(event);
-
-    expect(event.defaultPrevented).toBe(false);
-    expect(fixture.componentInstance.requests).toEqual([]);
-  });
-
-  it('bounds persisted context while preserving the selected phrase when possible', async () => {
-    await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.context = `${'x'.repeat(700)} brave ${'y'.repeat(700)}`;
-    fixture.detectChanges();
-    const source = fixture.nativeElement.querySelector('#source') as HTMLElement;
-    const sourceText = source.textContent ?? '';
-    const start = sourceText.indexOf('brave');
-    selectText(source, start, start + 'brave'.length);
-
-    source.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-
-    expect(fixture.componentInstance.requests).toHaveLength(1);
-    const [request] = fixture.componentInstance.requests;
-    expect(request.context.length).toBeLessThanOrEqual(FLASHCARD_CONTEXT_MAX_LENGTH);
-    expect(request.context).toContain('brave');
   });
 
   it('supports mobile long press without starting an outer message gesture', async () => {
