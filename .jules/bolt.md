@@ -6,6 +6,6 @@
 **Learning:** Independent Supabase query builder `.then()` requests in NestJS services block sequentially, creating N+1 latency across network calls to the Postgres database.
 **Action:** When aggregating data across multiple independent tables (e.g., getting counts from `moments`, `moment_comments`, `profile_visits`), gather all configured query builder objects and resolve them concurrently using a single `Promise.all` array.
 
-## 2026-08-28 - [Batch Initial Chat Unread Fetch with Promise.allSettled]
-**Learning:** In the frontend `app.component.ts`, loading initial unread chat counts across multiple rooms sequentially with `for...of` creates an N+1 performance bottleneck that stalls app initialization.
-**Action:** Replace sequential await loops in frontend initialization with `Promise.allSettled()` batches to allow concurrent fetching and graceful failure for individual room fetch requests.
+## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
+**Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
+**Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.

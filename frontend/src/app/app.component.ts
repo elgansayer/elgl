@@ -268,20 +268,22 @@ export class AppComponent implements OnInit {
       const currentUserId = this.authService.currentUser()?.id;
       let totalChatUnread = 0;
 
-      // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
-      // Promise.allSettled batch to prevent N+1 request latency on initial load.
-      const messageResults = await Promise.allSettled(
-        rooms.map((room) => this.chatService.getMessages(room.id)),
-      );
+      // Fetch several rooms in parallel without creating an unbounded request burst for
+      // accounts with a large room history.
+      const unreadFetchConcurrency = 6;
+      for (let start = 0; start < rooms.length; start += unreadFetchConcurrency) {
+        const batch = rooms.slice(start, start + unreadFetchConcurrency);
+        const messageResults = await Promise.allSettled(
+          batch.map((room) => this.chatService.getMessages(room.id)),
+        );
 
-      messageResults.forEach((result) => {
-        if (result.status === 'fulfilled') {
-          const messages = result.value;
-          totalChatUnread += messages.filter(
-            (m) => !m.is_read && m.sender_id !== currentUserId,
+        for (const result of messageResults) {
+          if (result.status !== 'fulfilled') continue;
+          totalChatUnread += result.value.filter(
+            (message) => !message.is_read && message.sender_id !== currentUserId,
           ).length;
         }
-      });
+      }
 
       this.unreadCounter.setChatUnread(totalChatUnread);
     } catch {
