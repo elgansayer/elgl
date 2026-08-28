@@ -35,6 +35,46 @@ describe('CoverPhotoCropperComponent', () => {
     expect(component.dialogState()).toBe('open');
   });
 
+  it('uses Relay sheet, elevation, surface, and responsive spacing tokens', () => {
+    const dialog = document.querySelector('hlm-dialog-content');
+
+    expect(dialog).not.toBeNull();
+    expect(dialog?.classList.contains('!rounded-sheet')).toBe(true);
+    expect(dialog?.classList.contains('shadow-lift')).toBe(true);
+    expect(dialog?.classList.contains('bg-surface-200')).toBe(true);
+    expect(dialog?.classList.contains('border-surface-100')).toBe(true);
+    expect(dialog?.classList.contains('p-4')).toBe(true);
+    expect(dialog?.classList.contains('sm:p-6')).toBe(true);
+    expect(dialog?.classList.contains('shadow-2xl')).toBe(false);
+  });
+
+  it('uses a semantic crop surface without hard-coded product colours', () => {
+    const cropper = document.querySelector('image-cropper');
+    const cropSurface = cropper?.parentElement;
+
+    expect(cropSurface).not.toBeNull();
+    expect(cropSurface?.classList.contains('rounded-app')).toBe(true);
+    expect(cropSurface?.classList.contains('border-surface-100')).toBe(true);
+    expect(cropSurface?.classList.contains('bg-surface-100')).toBe(true);
+  });
+
+  it('stacks touch actions on mobile and restores an end-aligned row on wider screens', () => {
+    const dialog = document.querySelector('hlm-dialog-content');
+    const buttons = Array.from(dialog?.querySelectorAll('button') ?? []);
+    const actions = buttons[0]?.parentElement;
+
+    expect(buttons).toHaveLength(2);
+    expect(actions?.classList.contains('flex-col')).toBe(true);
+    expect(actions?.classList.contains('sm:flex-row')).toBe(true);
+    expect(actions?.classList.contains('sm:justify-end')).toBe(true);
+
+    for (const button of buttons) {
+      expect(button.classList.contains('w-full')).toBe(true);
+      expect(button.classList.contains('sm:w-auto')).toBe(true);
+      expect(button.getAttribute('type')).toBe('button');
+    }
+  });
+
   it('should store cropped blob on imageCropped event', () => {
     const testBlob = new Blob(['cropped data'], { type: 'image/jpeg' });
     component.onImageCropped({ blob: testBlob });
@@ -80,6 +120,7 @@ describe('CoverPhotoCropperComponent', () => {
     expect(component.dialogState()).toBe('closed');
     expect(emitted).toHaveBeenCalledOnce();
   });
+
   it('should close and emit cancellation from the cancel action', () => {
     const emitted = vi.fn();
     component.cancelCrop.subscribe(emitted);

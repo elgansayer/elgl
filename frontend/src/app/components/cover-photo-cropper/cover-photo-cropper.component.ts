@@ -13,14 +13,19 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <hlm-dialog-content
         *hlmDialogPortal
         [showCloseButton]="false"
-        class="w-full max-w-lg space-y-4 rounded-xl border border-surface-100 bg-surface-200 p-6 shadow-2xl"
+        class="max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-lg space-y-5 overflow-y-auto !rounded-sheet border border-surface-100 bg-surface-200 p-4 shadow-lift sm:w-full sm:p-6"
         aria-labelledby="cover-photo-crop-title"
       >
-        <h3 id="cover-photo-crop-title" class="text-lg font-semibold text-text-primary">
+        <h3
+          id="cover-photo-crop-title"
+          class="break-words text-lg font-semibold leading-tight text-text-primary"
+        >
           {{ 'coverPhoto.crop' | t }}
         </h3>
 
-        <div class="relative max-h-64 overflow-hidden rounded-lg">
+        <div
+          class="relative max-h-64 overflow-hidden rounded-app border border-surface-100 bg-surface-100"
+        >
           <image-cropper
             [imageFile]="imageFile()"
             [maintainAspectRatio]="true"
@@ -34,11 +39,25 @@ import { TranslatePipe } from '../../services/translate.pipe';
           />
         </div>
 
-        <div class="flex justify-end gap-3">
-          <button hlmBtn type="button" variant="secondary" size="touch" (click)="cancel()">
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            hlmBtn
+            type="button"
+            variant="secondary"
+            size="touch"
+            class="w-full sm:w-auto"
+            (click)="cancel()"
+          >
             {{ 'common.cancel' | t }}
           </button>
-          <button hlmBtn type="button" size="touch" (click)="save()" [disabled]="!croppedBlob()">
+          <button
+            hlmBtn
+            type="button"
+            size="touch"
+            class="w-full sm:w-auto"
+            (click)="save()"
+            [disabled]="!croppedBlob()"
+          >
             {{ 'coverPhoto.save' | t }}
           </button>
         </div>
