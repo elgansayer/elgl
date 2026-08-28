@@ -10,7 +10,7 @@ DATA_TARGET="$SECONDARY_MOUNT/repo-factory"
 STATE_ROOT=/var/lib/repo-factory
 LOG_TARGET="$SECONDARY_MOUNT/repo-factory-logs"
 LOG_ROOT=/var/log/repo-factory
-CONTROL_REPOSITORY=/var/lib/hellotalk-factory/repository
+CONTROL_REPOSITORY=/home/dev/hellotalk
 LEGACY_ENV=/etc/hellotalk-factory/factory.env
 CONFIG_ROOT=/etc/repo-factory
 
