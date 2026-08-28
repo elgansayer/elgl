@@ -1,4 +1,4 @@
-# Factory efficiency audit — 2026-08-28
+# Factory efficiency audit: 2026-08-28
 
 ## Scope
 
@@ -95,7 +95,7 @@ A deployment moving from repository-local to shared health starts with an empty 
 
 The no-PR stall detector still deserves a separate correctness change: when active implementation work exists but the durable job set has never produced a pull request, `no_pr_progress_check()` reports a warning immediately. The daemon then applies the shorter stall-alert timer rather than measuring the configured no-PR age first. PR #8436 already bounds the resulting best-effort diagnostic to one non-emergency provider, so the allowance blast radius is contained, but the signal itself should eventually be made age-aware with explicit durable-state semantics rather than guessed from historical PR jobs.
 
-That change is not bundled here because the correct definition of “progress toward the first PR” needs a durable timestamp that survives daemon restart and distinguishes a legitimate long implementation from a truly stalled one. Sharing provider health is independent, mechanically testable, and does not alter job-state semantics.
+That change is not bundled here because the correct definition of "progress toward the first PR" needs a durable timestamp that survives daemon restart and distinguishes a legitimate long implementation from a truly stalled one. Sharing provider health is independent, mechanically testable, and does not alter job-state semantics.
 
 ## Validation
 
