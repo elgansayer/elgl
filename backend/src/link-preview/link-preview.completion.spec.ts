@@ -73,7 +73,9 @@ describe('LinkPreviewService completion boundaries', () => {
       }),
     );
 
-    await expect(service.getPreview('https://example.com/empty')).resolves.toBeNull();
+    await expect(
+      service.getPreview('https://example.com/empty'),
+    ).resolves.toBeNull();
 
     expect(httpService.get).toHaveBeenCalledTimes(1);
     expect(redis.set).not.toHaveBeenCalled();
