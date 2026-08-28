@@ -19,6 +19,14 @@ function methodPreamble(source, methodName) {
   return source.slice(start < 0 ? 0 : start, match.index);
 }
 
+function assertNumericConfigValue(source, key, expected, context) {
+  assert.match(
+    source,
+    new RegExp(`(?:^|,)\\s*${key}:\\s*${expected}\\s*(?=,|$)`),
+    `${context} must retain ${key}: ${expected}`,
+  );
+}
+
 function assertThrottleConfig(source, { limit, ttl }, context) {
   const match =
     /@Throttle\(\{\s*default:\s*\{([\s\S]*?)\}\s*,?\s*\}\s*\)/.exec(
@@ -26,16 +34,8 @@ function assertThrottleConfig(source, { limit, ttl }, context) {
     );
 
   assert.ok(match, `${context} must retain an @Throttle default configuration`);
-  assert.match(
-    match[1],
-    new RegExp(`\\blimit:\\s*${limit}\\b`),
-    `${context} must retain a limit of ${limit} requests`,
-  );
-  assert.match(
-    match[1],
-    new RegExp(`\\bttl:\\s*${ttl}\\b`),
-    `${context} must retain a ${ttl}ms throttle window`,
-  );
+  assertNumericConfigValue(match[1], 'limit', limit, context);
+  assertNumericConfigValue(match[1], 'ttl', ttl, context);
 }
 
 function assertThrottledMethod({ file, method, route, limit, ttl }) {
@@ -197,11 +197,48 @@ test('registers the Nest throttler globally with the repository default', () => 
     source,
   );
   assert.ok(config, 'AppModule must retain the global ThrottlerModule config');
-  assert.match(config[1], /\bttl:\s*60000\b/);
-  assert.match(config[1], /\blimit:\s*10\b/);
+  assertNumericConfigValue(config[1], 'ttl', 60000, 'AppModule');
+  assertNumericConfigValue(config[1], 'limit', 10, 'AppModule');
   assert.match(
     source,
     /provide:\s*APP_GUARD,[\s\S]{0,120}useClass:\s*ThrottlerGuard/,
+  );
+});
+
+test('matches exact throttle values across supported formatting', () => {
+  const validConfigurations = [
+    '@Throttle({ default: { limit: 3, ttl: 60000 } })',
+    `@Throttle({
+      default: {
+        ttl: 60000,
+        limit: 3,
+      },
+    })`,
+  ];
+
+  for (const source of validConfigurations) {
+    assert.doesNotThrow(() =>
+      assertThrottleConfig(source, { limit: 3, ttl: 60000 }, 'fixture'),
+    );
+  }
+
+  assert.throws(
+    () =>
+      assertThrottleConfig(
+        '@Throttle({ default: { limit: 3 + 1, ttl: 60000 } })',
+        { limit: 3, ttl: 60000 },
+        'fixture',
+      ),
+    /fixture must retain limit: 3/,
+  );
+  assert.throws(
+    () =>
+      assertThrottleConfig(
+        '@Throttle({ default: { limit: 3, ttl: 60000 * 2 } })',
+        { limit: 3, ttl: 60000 },
+        'fixture',
+      ),
+    /fixture must retain ttl: 60000/,
   );
 });
 
