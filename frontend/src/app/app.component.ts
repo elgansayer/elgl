@@ -265,18 +265,24 @@ export class AppComponent implements OnInit {
     // Load chat unread counts from backend
     try {
       const rooms = await this.chatService.getRooms();
+      const currentUserId = this.authService.currentUser()?.id;
       let totalChatUnread = 0;
-      for (const room of rooms) {
-        try {
-          const messages = await this.chatService.getMessages(room.id);
-          const currentUserId = this.authService.currentUser()?.id;
+
+      // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+      // Promise.allSettled batch to prevent N+1 request latency on initial load.
+      const messageResults = await Promise.allSettled(
+        rooms.map((room) => this.chatService.getMessages(room.id)),
+      );
+
+      messageResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const messages = result.value;
           totalChatUnread += messages.filter(
             (m) => !m.is_read && m.sender_id !== currentUserId,
           ).length;
-        } catch {
-          // Skip rooms with errors
         }
-      }
+      });
+
       this.unreadCounter.setChatUnread(totalChatUnread);
     } catch {
       // Silently ignore - real-time events will update counts
