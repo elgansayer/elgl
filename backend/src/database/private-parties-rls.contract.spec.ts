@@ -42,9 +42,13 @@ describe('Private Party database boundary', () => {
 
     expect(updatePolicy).toBeDefined();
     expect(updatePolicy).toMatch(/FOR UPDATE TO authenticated/i);
-    expect(updatePolicy).toMatch(/auth\.uid\(\) = host_id OR auth\.uid\(\) = co_host_id/i);
+    expect(updatePolicy).toMatch(
+      /auth\.uid\(\) = host_id OR auth\.uid\(\) = co_host_id/i,
+    );
     expect(updatePolicy).toMatch(/COALESCE\(is_archived, false\) = false/i);
-    expect(updatePolicy?.match(/COALESCE\(is_private, false\) = false/gi)).toHaveLength(2);
+    expect(
+      updatePolicy?.match(/COALESCE\(is_private, false\) = false/gi),
+    ).toHaveLength(2);
     expect(updatePolicy).toMatch(/cardinality\(invited_user_ids\)[\s\S]*= 0/i);
   });
 
