@@ -16,12 +16,12 @@
 
 - Develop Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests, including real-time text correction tools for members.
 - Dedicated Groups & Scheduled Events System.
-- Complete Responsive Communities Experience (Ref: .tasks/communities-ui-issues.md):
-  - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view (Ref: Issue 1).
-  - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups (Ref: Issue 2).
-  - Add micro-interactions (hover effects) and unread notification badges (Ref: Issue 3).
-  - Extract Communities list and creation form into separate components for scalability (Ref: Issue 4).
-  - Implement error handling (`try...catch`) and user feedback for community creation and deletion (Ref: Issue 5).
+- Complete Responsive Communities Experience (Ref: PR #8448):
+  - Refactor to responsive three-pane layout (Communities sidebar, Groups sidebar, main chat area) and mobile drawer view.
+  - Implement active state styling (Angular signals, Tailwind classes) for selected communities/groups.
+  - Add micro-interactions (hover effects) and unread notification badges.
+  - Extract Communities list and creation form into separate components for scalability.
+  - Implement error handling (`try...catch`) and user feedback for community creation and deletion.
 
 ## 📰 Moments & Social Feed
 
@@ -71,7 +71,7 @@
 - Integrate diagnostic tools: Dynamic diagnostic quiz component for new sign-ups and custom Angular `ErrorHandler` logging client crashes to backend analytics.
 - Optimize app infrastructure and UX: Web Vitals audits (e.g., `loading=lazy`), offline support via IndexedDB, client-side image compression, and WebSocket connection rate limiting.
 - Develop universal connectivity features: In-App Sharing, External Deep Linking Engine, and End-to-end encrypted voice calls.
-- Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens (Ref: github-issue.md).
+- Optimize performance for data-heavy views by implementing virtual scrolling (Angular CDK) in Chat and Reading screens (Ref: PR #8448).
   - Import and integrate `ScrollingModule` from `@angular/cdk/scrolling` into the relevant Angular standalone components (e.g., `chat-page.component.ts`, `reading-engine.component.ts`).
   - Replace standard loops rendering chat messages with `<cdk-virtual-scroll-viewport>`.
   - Implement virtualised rendering or windowing in the reading components for extensive texts.
