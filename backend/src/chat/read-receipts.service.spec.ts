@@ -70,7 +70,9 @@ describe('ReadReceiptsService', () => {
 
       await service.markAsDelivered(messageId, roomId, userId);
 
-      expect(update.update).toHaveBeenCalledWith({ delivery_status: 'delivered' });
+      expect(update.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
       expect(update.eq).toHaveBeenCalledWith('id', messageId);
       expect(publishMock).toHaveBeenCalledWith(`chat:${roomId}:receipts`, {
         type: 'receipt_update',
@@ -99,16 +101,19 @@ describe('ReadReceiptsService', () => {
       expect(publishMock).not.toHaveBeenCalled();
     });
 
-    it.each(['delivered', 'read'])('does not downgrade a %s message', async (status) => {
-      fromMock.mockReturnValue(
-        selectSingle({ delivery_status: status, sender_id: 'sender-1' }),
-      );
+    it.each(['delivered', 'read'])(
+      'does not downgrade a %s message',
+      async (status) => {
+        fromMock.mockReturnValue(
+          selectSingle({ delivery_status: status, sender_id: 'sender-1' }),
+        );
 
-      await service.markAsDelivered(messageId, roomId, userId);
+        await service.markAsDelivered(messageId, roomId, userId);
 
-      expect(fromMock).toHaveBeenCalledTimes(1);
-      expect(publishMock).not.toHaveBeenCalled();
-    });
+        expect(fromMock).toHaveBeenCalledTimes(1);
+        expect(publishMock).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('markAsRead', () => {
@@ -164,12 +169,10 @@ describe('ReadReceiptsService', () => {
         eq: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
       };
-      lookup.neq
-        .mockReturnValueOnce(lookup)
-        .mockResolvedValueOnce({
-          data: [{ id: 'message-1' }, { id: 'message-2' }],
-          error: null,
-        });
+      lookup.neq.mockReturnValueOnce(lookup).mockResolvedValueOnce({
+        data: [{ id: 'message-1' }, { id: 'message-2' }],
+        error: null,
+      });
       const update = {
         update: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ error: null }),
