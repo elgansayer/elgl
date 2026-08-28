@@ -27,13 +27,15 @@ export function findHydrationRisks(diff) {
   }
 
   for (const [file, additions] of additionsByFile) {
-    const joined = additions.join('\n');
-    const reviewedSkip = /hydration-reviewed-skip/.test(joined);
-    const reviewedClientRender = /hydration-reviewed-client-render/.test(joined);
-
-    for (const line of additions) {
+    for (const [index, line] of additions.entries()) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*')) continue;
+
+      const previousLine = additions[index - 1] ?? '';
+      const reviewedSkip = /hydration-reviewed-skip/.test(`${previousLine}\n${line}`);
+      const reviewedClientRender = /hydration-reviewed-client-render/.test(
+        `${previousLine}\n${line}`,
+      );
 
       if (/\bngSkipHydration\b/.test(line) && !reviewedSkip) {
         failures.push(`${file}: new ngSkipHydration requires a hydration-reviewed-skip exception marker`);

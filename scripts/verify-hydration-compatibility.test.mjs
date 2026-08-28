@@ -18,6 +18,23 @@ test('permits explicitly reviewed narrow hydration exceptions', () => {
   assert.deepEqual(failures, []);
 });
 
+test('does not let one exception marker approve later exceptions in the same file', () => {
+  const failures = findHydrationRisks(`+++ b/frontend/src/app/app.routes.server.ts
++// hydration-reviewed-client-render: browser-only media device route
++    renderMode: RenderMode.Client,
++    { path: 'ordinary', renderMode: RenderMode.Server },
++    renderMode: RenderMode.Client,
++++ b/frontend/src/app/pages/example/example.component.html
++<!-- hydration-reviewed-skip: third-party widget owns this isolated subtree -->
++<vendor-widget ngSkipHydration />
++<section>Ordinary content</section>
++<another-widget ngSkipHydration />`);
+
+  assert.equal(failures.length, 2);
+  assert.match(failures[0], /RenderMode\.Client/);
+  assert.match(failures[1], /ngSkipHydration/);
+});
+
 test('flags high-confidence render-time DOM mutation and nondeterministic IDs', () => {
   const failures = findHydrationRisks(`+++ b/frontend/src/app/pages/example/example.component.ts\n+  readonly descriptionId = 'description-' + Math.random();\n+  readonly storedTheme = localStorage.getItem('theme');\n+  this.host.nativeElement.innerHTML = html;\n+  this.host.nativeElement.appendChild(node);`);
   assert.equal(failures.length, 4);

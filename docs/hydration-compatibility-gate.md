@@ -8,7 +8,7 @@ Issue #5528 turns the architecture contract in `docs/hydration-compatibility.md`
 
 On pull requests the checker compares only added `frontend/src` lines against the base SHA. It rejects high-confidence new hydration hazards: broad `ngSkipHydration`, unreviewed `RenderMode.Client` escape hatches, native DOM tree mutation, direct browser globals in field initialisers, and random/time-derived IDs. Existing repository debt is therefore not converted into unrelated migration failures.
 
-Narrow exceptions must be explicit. Use `hydration-reviewed-skip` beside a reviewed third-party subtree or `hydration-reviewed-client-render` beside a genuinely browser-only server-route exception. The marker is not a bypass: its rationale must be reviewable in the same change.
+Narrow exceptions must be explicit. Put `hydration-reviewed-skip` on the immediately preceding line of a reviewed third-party subtree, or `hydration-reviewed-client-render` on the immediately preceding line of a genuinely browser-only server-route exception. Each marker authorises only that adjacent exception. The marker is not a file-wide bypass: its rationale must be reviewable in the same change.
 
 The dedicated GitHub Actions workflow also runs the visual-contract matrix and a production Angular server build. Repository E2E remains responsible for rendered browser interaction; this gate protects the configuration and source boundaries that make those hydration checks meaningful.
 
