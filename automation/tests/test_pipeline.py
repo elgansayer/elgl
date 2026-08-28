@@ -1152,7 +1152,8 @@ def test_verify_only_serializes_the_exclusive_command(
         VerificationCommand("backend-test:e2e", ("true",), tmp_path),
     ]
     monkeypatch.setattr(
-        "openhands_factory.pipeline.commands_for", lambda repository, changed: fake_commands
+        "openhands_factory.pipeline.commands_for",
+        lambda repository, changed, profile: fake_commands,
     )
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
     slot_held_during: dict[str, bool] = {}

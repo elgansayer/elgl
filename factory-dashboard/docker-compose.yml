@@ -1,0 +1,36 @@
+# Repo Factory Dashboard - docker-compose
+#
+# Usage:
+#   cp .env.example .env          # then fill in secrets
+#   docker compose up -d
+#
+# The dashboard will be available on http://localhost:3100
+# Wire factory.elgansayer.com to this port via your Cloudflare tunnel.
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    environment:
+      - PORT=3100
+      - GH_TOKEN=${GH_TOKEN}
+      - HELLOTALK_STATE_DIR=/factory-state/hellotalk
+      - HELLOTALK_GH_REPO=elgansayer/elgl
+      - WORKOUT_AGENT_STATE_DIR=/factory-state/workout-agent
+      - WORKOUT_AGENT_GH_REPO=elgansayer/workout-agent
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
+    volumes:
+      # Mount the factory state dir read-only - no factory process is touched
+      - /var/lib/hellotalk-factory:/factory-state/hellotalk:ro
+      - /var/lib/repo-factory/workout-agent/state:/factory-state/workout-agent:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
