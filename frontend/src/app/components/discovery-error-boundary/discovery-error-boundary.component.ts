@@ -3,7 +3,6 @@ import { Component, input, output, signal, inject, computed } from '@angular/cor
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 export interface DiscoveryErrorContext {
   component: string;
@@ -73,7 +72,7 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
 @Component({
   selector: 'app-discovery-error-boundary',
   standalone: true,
-  imports: [HlmButton, TranslatePipe, AppButtonPrimaryComponent],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (!hasError()) {
       <ng-content />
@@ -96,15 +95,16 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
             </p>
           }
           <div class="flex flex-wrap justify-center gap-3">
-            <app-button-primary (clicked)="resetError()" customClass="text-xs">
+            <button hlmBtn type="button" size="touch" (click)="resetError()">
               {{ 'discoveryErrorBoundary.retryBtn' | t }}
-            </app-button-primary>
+            </button>
             @if (showReportButton()) {
               <button
                 hlmBtn
                 type="button"
+                variant="outline"
+                size="touch"
                 (click)="reportCrash()"
-                class="rounded-app border border-surface-100 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-secondary hover:bg-surface-200"
               >
                 {{ 'discoveryErrorBoundary.reportBtn' | t }}
               </button>
