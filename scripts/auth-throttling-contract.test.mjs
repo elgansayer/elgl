@@ -19,18 +19,32 @@ function methodPreamble(source, methodName) {
   return source.slice(start < 0 ? 0 : start, match.index);
 }
 
+function assertThrottleConfig(source, { limit, ttl }, context) {
+  const match =
+    /@Throttle\(\{\s*default:\s*\{([\s\S]*?)\}\s*,?\s*\}\s*\)/.exec(
+      source,
+    );
+
+  assert.ok(match, `${context} must retain an @Throttle default configuration`);
+  assert.match(
+    match[1],
+    new RegExp(`\\blimit:\\s*${limit}\\b`),
+    `${context} must retain a limit of ${limit} requests`,
+  );
+  assert.match(
+    match[1],
+    new RegExp(`\\bttl:\\s*${ttl}\\b`),
+    `${context} must retain a ${ttl}ms throttle window`,
+  );
+}
+
 function assertThrottledMethod({ file, method, route, limit, ttl }) {
   const source = read(file);
   const preamble = methodPreamble(source, method);
+  const context = `${file}:${method}`;
 
-  assert.ok(
-    preamble.includes(route),
-    `${file}:${method} must retain ${route}`,
-  );
-  assert.ok(
-    preamble.includes(`@Throttle({ default: { limit: ${limit}, ttl: ${ttl} } })`),
-    `${file}:${method} must retain ${limit} requests per ${ttl}ms throttle`,
-  );
+  assert.ok(preamble.includes(route), `${context} must retain ${route}`);
+  assertThrottleConfig(preamble, { limit, ttl }, context);
 }
 
 const sensitiveRoutes = [
@@ -179,10 +193,12 @@ const sensitiveRoutes = [
 test('registers the Nest throttler globally with the repository default', () => {
   const source = read('backend/src/app.module.ts');
 
-  assert.match(
+  const config = /ThrottlerModule\.forRoot\(\[\s*\{([\s\S]*?)\}\s*,?\s*\]\s*\)/.exec(
     source,
-    /ThrottlerModule\.forRoot\(\[\s*\{\s*ttl:\s*60000,\s*limit:\s*10,?\s*\}\s*\]\)/s,
   );
+  assert.ok(config, 'AppModule must retain the global ThrottlerModule config');
+  assert.match(config[1], /\bttl:\s*60000\b/);
+  assert.match(config[1], /\blimit:\s*10\b/);
   assert.match(
     source,
     /provide:\s*APP_GUARD,[\s\S]{0,120}useClass:\s*ThrottlerGuard/,
