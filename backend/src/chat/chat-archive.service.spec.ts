@@ -18,7 +18,9 @@ function listBuilder(result: { data: unknown[] | null; error: unknown }) {
   builder.eq.mockReturnValue(builder);
   builder.order.mockReturnValue(builder);
   builder.limit.mockReturnValue(builder);
-  builder.then.mockImplementation((resolve: (value: unknown) => void) => resolve(result));
+  builder.then.mockImplementation((resolve: (value: unknown) => void) =>
+    resolve(result),
+  );
   return builder;
 }
 
@@ -68,16 +70,23 @@ describe('ChatArchiveService', () => {
     });
     from.mockReturnValue(builder);
 
-    await expect(service.getArchivedRoomIds(userId)).resolves.toEqual([roomId, 'room-2']);
+    await expect(service.getArchivedRoomIds(userId)).resolves.toEqual([
+      roomId,
+      'room-2',
+    ]);
     expect(from).toHaveBeenCalledWith('chat_room_members');
     expect(builder.eq).toHaveBeenCalledWith('user_id', userId);
     expect(builder.eq).toHaveBeenCalledWith('is_archived', true);
-    expect(builder.order).toHaveBeenCalledWith('archived_at', { ascending: false });
+    expect(builder.order).toHaveBeenCalledWith('archived_at', {
+      ascending: false,
+    });
     expect(builder.limit).toHaveBeenCalledWith(500);
   });
 
   it('fails closed when archived membership lookup is unavailable', async () => {
-    from.mockReturnValue(listBuilder({ data: null, error: { code: 'db-down' } }));
+    from.mockReturnValue(
+      listBuilder({ data: null, error: { code: 'db-down' } }),
+    );
 
     await expect(service.getArchivedRoomIds(userId)).rejects.toBeInstanceOf(
       ServiceUnavailableException,
@@ -95,7 +104,10 @@ describe('ChatArchiveService', () => {
 
   it('makes repeated archive requests idempotent', async () => {
     from.mockReturnValue(
-      membershipBuilder({ data: { room_id: roomId, is_archived: true }, error: null }),
+      membershipBuilder({
+        data: { room_id: roomId, is_archived: true },
+        error: null,
+      }),
     );
 
     await expect(service.archiveRoom(userId, roomId)).resolves.toBeUndefined();
@@ -130,7 +142,10 @@ describe('ChatArchiveService', () => {
 
     await service.unarchiveRoom(userId, roomId);
 
-    expect(update.update).toHaveBeenCalledWith({ is_archived: false, archived_at: null });
+    expect(update.update).toHaveBeenCalledWith({
+      is_archived: false,
+      archived_at: null,
+    });
   });
 
   it('does not leak provider failures through archive mutations', async () => {
@@ -138,7 +153,10 @@ describe('ChatArchiveService', () => {
       data: { room_id: roomId, is_archived: false },
       error: null,
     });
-    const update = updateBuilder({ data: null, error: { message: 'secret database detail' } });
+    const update = updateBuilder({
+      data: null,
+      error: { message: 'secret database detail' },
+    });
     from.mockReturnValueOnce(membership).mockReturnValueOnce(update);
 
     await expect(service.archiveRoom(userId, roomId)).rejects.toThrow(
