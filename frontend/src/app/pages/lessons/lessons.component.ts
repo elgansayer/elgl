@@ -2,11 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { LessonsService } from '../../services/lessons.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import {
   lessonCefr,
   lessonContent,
@@ -19,7 +20,7 @@ import {
 @Component({
   selector: 'app-lessons',
   standalone: true,
-  imports: [CommonModule, RouterLink, HlmButton, TranslatePipe],
+  imports: [CommonModule, RouterLink, HlmButton, TranslatePipe, AppEmptyStateComponent],
   template: `
     <main class="min-h-screen bg-surface-300 px-4 py-6 text-primary sm:px-6 lg:px-8" aria-labelledby="lessons-title">
       <div class="mx-auto max-w-6xl">
@@ -97,7 +98,13 @@ import {
                     }
                   </section>
                 } @else {
-                  <p class="text-secondary">This lesson does not have readable content yet.</p>
+                  <app-empty-state
+                    icon="📄"
+                    [title]="'lessons.emptyContentTitle' | t"
+                    [description]="'lessons.emptyContentDesc' | t"
+                    [actionLabel]="'lessons.emptyContentAction' | t"
+                    (actionClicked)="router.navigate(['/lessons'])"
+                  />
                 }
 
                 @if (safeUrl(lesson.audio_url); as audioUrl) {
@@ -154,10 +161,13 @@ import {
               <button hlmBtn size="touch" type="button" class="mt-4" (click)="retryLessons()">Retry</button>
             </section>
           } @else if (lessons().length === 0) {
-            <section class="rounded-card border border-surface-100 bg-surface-200 p-4 shadow-card">
-              <h2 class="text-xl font-bold">No lessons available</h2>
-              <p class="mt-2 text-secondary">New lessons will appear here when they are published.</p>
-            </section>
+            <app-empty-state
+              icon="📚"
+              [title]="'lessons.emptyTitle' | t"
+              [description]="'lessons.emptyDesc' | t"
+              [actionLabel]="'lessons.emptyAction' | t"
+              (actionClicked)="router.navigate(['/discovery'])"
+            />
           } @else {
             <section aria-labelledby="featured-lessons-title">
               <h2 id="featured-lessons-title" class="mb-4 text-xl font-bold">Featured</h2>
@@ -218,6 +228,7 @@ import {
 })
 export class LessonsComponent {
   private readonly lessonsService = inject(LessonsService);
+  router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
 

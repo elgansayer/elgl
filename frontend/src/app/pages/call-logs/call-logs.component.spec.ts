@@ -64,6 +64,6 @@ describe('CallLogsComponent', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('No call logs yet.');
+    expect(text).toContain('call_logs.emptyTitle');
   });
 });

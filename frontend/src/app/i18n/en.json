@@ -126,5 +126,24 @@
     "pendingActions": "{count} pending action(s) waiting to sync.",
     "syncNow": "Sync now",
     "showingCachedData": "Showing cached data."
+  },
+  "call_logs": {
+    "title": "Call Logs",
+    "all": "All",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "missed": "Missed",
+    "emptyTitle": "No call logs",
+    "emptyDesc": "You haven't made any calls yet. Find a language partner to start practising.",
+    "emptyAction": "Find a partner",
+    "empty": "No call logs yet."
+  },
+  "lessons": {
+    "emptyTitle": "No lessons available",
+    "emptyDesc": "New lessons will appear here when they are published. In the meantime, explore language groups.",
+    "emptyAction": "Explore groups",
+    "emptyContentTitle": "No content yet",
+    "emptyContentDesc": "This lesson does not have readable content yet.",
+    "emptyContentAction": "Back to lessons"
   }
 }
