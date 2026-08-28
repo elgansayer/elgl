@@ -10,8 +10,6 @@ import { QuickPollService } from '../../services/quick-poll.service';
 import { environment } from '../../../environments/environment';
 import { AudioRoomComponent } from './audio-room.component';
 
-vi.mock('../../services/toast.service', () => ({ showToast: vi.fn() }));
-
 describe('AudioRoomComponent API URLs', () => {
   let component: AudioRoomComponent;
   let httpTesting: HttpTestingController;
@@ -51,9 +49,13 @@ describe('AudioRoomComponent API URLs', () => {
 
   it('loads exclusive emojis through environment.apiUrl', async () => {
     const initPromise = component.ngOnInit();
-    await Promise.resolve();
+    const url = `${environment.apiUrl}/audio-rooms/exclusive-emojis`;
+    let request = httpTesting.match(url)[0];
+    await vi.waitFor(() => {
+      request ??= httpTesting.match(url)[0];
+      expect(request).toBeDefined();
+    });
 
-    const request = httpTesting.expectOne(`${environment.apiUrl}/audio-rooms/exclusive-emojis`);
     expect(request.request.method).toBe('GET');
     request.flush([]);
 

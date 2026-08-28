@@ -26,9 +26,24 @@ const legacyRootRelativeCallers = new Set([
 ]);
 
 const rootRelativeHttpCall =
-  /\b(?:this\.)?(?:http|httpClient)\s*\.\s*(?:get|post|put|patch|delete)\s*(?:<[^;]*?>)?\s*\(\s*[`'"]\//g;
+  /\b(?:this\.)?(?:http|httpClient)\s*\.\s*(?:get|post|put|patch|delete)\s*(?:<[^;]*>)?\s*\(\s*[`'"]\//g;
+
+function containsRootRelativeHttpCall(source: string): boolean {
+  rootRelativeHttpCall.lastIndex = 0;
+  return rootRelativeHttpCall.test(source);
+}
 
 describe('HttpClient API base contract', () => {
+  it('detects nested generic response types without flagging API-base URLs', () => {
+    expect(containsRootRelativeHttpCall("this.http.get<Array<Record<string, unknown>>>('/api/items')"))
+      .toBe(true);
+    expect(
+      containsRootRelativeHttpCall(
+        "this.http.get<Array<Record<string, unknown>>>(`${environment.apiUrl}/items`)",
+      ),
+    ).toBe(false);
+  });
+
   it('rejects new root-relative API calls outside the tracked legacy cleanup set', () => {
     const root = frontendRoot();
     const appRoot = join(root, 'src/app');
@@ -36,11 +51,7 @@ describe('HttpClient API base contract', () => {
 
     for (const file of walkTypeScriptFiles(appRoot)) {
       const source = readFileSync(file, 'utf8');
-      if (!rootRelativeHttpCall.test(source)) {
-        rootRelativeHttpCall.lastIndex = 0;
-        continue;
-      }
-      rootRelativeHttpCall.lastIndex = 0;
+      if (!containsRootRelativeHttpCall(source)) continue;
 
       const path = relative(root, file).replaceAll('\\', '/');
       if (!legacyRootRelativeCallers.has(path)) violations.push(path);
