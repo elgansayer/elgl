@@ -14,6 +14,7 @@ import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrolla
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
 import { GroupsService, ChatGroup } from '../../services/groups.service';
+import { compareChatPriority } from './chat-list-ordering';
 
 interface ChatRoomPreview {
   id: string;
@@ -126,7 +127,7 @@ export class ChatListComponent implements OnInit {
       await this.chatService.assignLabelToRoom(roomId, label);
       showToast(this.i18n.translate('chatList.labelAssigned'), 'success');
     } catch (error) {
-      console.error('Failed to assign label to room:', error);
+      console.error('Failed to assign label:', error);
       showToast(this.i18n.translate('chatList.labelAssignFailed'), 'error');
     }
   }
@@ -201,12 +202,7 @@ export class ChatListComponent implements OnInit {
         }),
       );
 
-      previewList.sort((a, b) => {
-        if (!a.lastMessageAt && !b.lastMessageAt) return 0;
-        if (!a.lastMessageAt) return 1;
-        if (!b.lastMessageAt) return -1;
-        return b.lastMessageAt.localeCompare(a.lastMessageAt);
-      });
+      previewList.sort(compareChatPriority);
 
       this.previews.set(previewList);
       // Sync global chat unread counter
