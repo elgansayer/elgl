@@ -65,11 +65,7 @@ describe('ChatArchiveService', () => {
 
   it('returns a bounded, de-duplicated list of archived room ids', async () => {
     const builder = listBuilder({
-      data: [
-        { room_id: roomId },
-        { room_id: roomId },
-        { room_id: 'room-2' },
-      ],
+      data: [{ room_id: roomId }, { room_id: roomId }, { room_id: 'room-2' }],
       error: null,
     });
     from.mockReturnValue(builder);
