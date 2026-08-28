@@ -1,0 +1,296 @@
+<!-- @dsCard group="Components" name="Correction modal" subtitle="Relay sheet · Spartan dialog · mobile + desktop" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Correction modal - Relay + Spartan</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: Canvas;
+        color: CanvasText;
+      }
+      main {
+        max-width: 64rem;
+        margin-inline: auto;
+        display: grid;
+        gap: 1rem;
+      }
+      .states {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+      }
+      .stage {
+        min-block-size: 34rem;
+        padding: 1rem;
+        display: grid;
+        place-items: center;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 55%, transparent);
+      }
+      .stage.light {
+        color-scheme: light;
+      }
+      .stage.dark {
+        color-scheme: dark;
+      }
+      .sheet {
+        inline-size: min(100%, 32rem);
+        max-block-size: calc(100dvh - 2rem);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid ButtonBorder;
+        border-radius: 1.25rem;
+        background: color-mix(in srgb, CanvasText 7%, Canvas);
+        box-shadow: 0 12px 32px color-mix(in srgb, CanvasText 16%, transparent);
+      }
+      header,
+      footer {
+        padding: 1rem;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        border-block-end: 1px solid ButtonBorder;
+      }
+      footer {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 0.75rem;
+        border-block-start: 1px solid ButtonBorder;
+      }
+      .body {
+        min-block-size: 0;
+        overflow: auto;
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .label {
+        display: block;
+        margin-block-end: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: GrayText;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .original {
+        position: relative;
+        padding: 0.75rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 1rem;
+        background: color-mix(in srgb, CanvasText 5%, Canvas);
+        color: GrayText;
+      }
+      textarea,
+      input,
+      button {
+        min-block-size: 44px;
+        font: inherit;
+      }
+      textarea,
+      input {
+        inline-size: 100%;
+        padding: 0.75rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        background: Field;
+        color: FieldText;
+      }
+      textarea:focus-visible,
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+      }
+      .reset {
+        color: Highlight;
+        background: transparent;
+        border: 0;
+      }
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      button {
+        padding-inline: 0.875rem;
+        border: 1px solid ButtonBorder;
+        border-radius: 0.75rem;
+        background: ButtonFace;
+        color: ButtonText;
+      }
+      .primary {
+        border-color: Highlight;
+        background: Highlight;
+        color: HighlightText;
+      }
+      .tag {
+        min-block-size: 32px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .wide footer {
+        flex-direction: row;
+        justify-content: end;
+      }
+      .wide footer button {
+        inline-size: auto;
+      }
+      footer button {
+        inline-size: 100%;
+      }
+      @media (min-width: 48rem) {
+        body {
+          padding: 2rem;
+        }
+        .sheet header,
+        .sheet .body,
+        .sheet footer {
+          padding-inline: 1.25rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Correction modal</h1>
+      <p>
+        Spartan owns dialog and control mechanics. Relay owns semantic surfaces, sheet radius,
+        elevation, theme parity, and mobile-first action layout.
+      </p>
+      <div class="states">
+        <section class="stage light" aria-label="Light theme 390 pixel correction modal">
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="light-title">
+            <header>
+              <strong id="light-title">✏️ Correct sentence</strong
+              ><button type="button" aria-label="Cancel correction">×</button>
+            </header>
+            <div class="body">
+              <div>
+                <div class="actions">
+                  <span class="label">Original</span
+                  ><button class="reset" type="button">Reset</button>
+                </div>
+                <div class="original">“I goes to market yesterday.”</div>
+              </div>
+              <label
+                ><span class="label">Corrected sentence</span
+                ><textarea>I went to the market yesterday.</textarea>
+              </label>
+              <label
+                ><span class="label">Explanation (optional)</span
+                ><input value="Use the past tense."
+              /></label>
+              <div class="tags" aria-label="Quick explanation tags">
+                <button class="tag" type="button">+ Grammar</button
+                ><button class="tag" type="button">+ Natural phrasing</button>
+              </div>
+            </div>
+            <footer>
+              <button type="button">Cancel</button
+              ><button class="primary" type="button">Send correction</button>
+            </footer>
+          </div>
+        </section>
+        <section class="stage dark wide" aria-label="Dark theme desktop correction modal">
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dark-title">
+            <header>
+              <strong id="dark-title">✏️ Correct sentence</strong
+              ><button type="button" aria-label="Cancel correction">×</button>
+            </header>
+            <div class="body">
+              <div>
+                <div class="actions">
+                  <span class="label">Original</span
+                  ><button class="reset" type="button">Reset</button>
+                </div>
+                <div class="original">“明日は東京に行きます。”</div>
+              </div>
+              <label
+                ><span class="label">Corrected sentence</span
+                ><textarea>明日、東京に行きます。</textarea>
+              </label>
+              <label
+                ><span class="label">Explanation (optional)</span
+                ><input value="Natural punctuation."
+              /></label>
+              <div class="tags" aria-label="Quick explanation tags">
+                <button class="tag" type="button">+ Grammar</button
+                ><button class="tag" type="button">+ Vocabulary</button>
+              </div>
+            </div>
+            <footer>
+              <button type="button">Cancel</button
+              ><button class="primary" type="button">Send correction</button>
+            </footer>
+          </div>
+        </section>
+        <section
+          class="stage light wide"
+          dir="rtl"
+          aria-label="Light theme right-to-left correction modal"
+        >
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rtl-title">
+            <header>
+              <strong id="rtl-title">✏️ تصحيح الجملة</strong
+              ><button type="button" aria-label="إلغاء التصحيح">×</button>
+            </header>
+            <div class="body">
+              <div>
+                <div class="actions">
+                  <span class="label">النص الأصلي</span
+                  ><button class="reset" type="button">إعادة ضبط</button>
+                </div>
+                <div class="original">“أنا يذهب إلى السوق أمس.”</div>
+              </div>
+              <label
+                ><span class="label">الجملة المصححة</span><textarea>ذهبتُ إلى السوق أمس.</textarea>
+              </label>
+              <label
+                ><span class="label">الشرح (اختياري)</span><input value="استخدم صيغة الماضي."
+              /></label>
+              <div class="tags" aria-label="وسوم شرح سريعة">
+                <button class="tag" type="button">+ قواعد</button
+                ><button class="tag" type="button">+ صياغة طبيعية</button>
+              </div>
+            </div>
+            <footer>
+              <button type="button">إلغاء</button
+              ><button class="primary" type="button">إرسال التصحيح</button>
+            </footer>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
