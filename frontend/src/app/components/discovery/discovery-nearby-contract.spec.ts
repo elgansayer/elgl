@@ -131,6 +131,30 @@ describe('Discovery Nearby GPS product contract', () => {
     expect(component.partners()[0].formattedDistance).not.toContain('mi');
   });
 
+  it('privacy-rounds sub-kilometre metric distances instead of exposing raw GPS precision', async () => {
+    const { component, findPartners } = await setup(421);
+    const i18n = TestBed.inject(I18nService);
+    i18n.currentLang.set('ja');
+
+    component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(1));
+
+    expect(component.partners()[0].formattedDistance).toBe('400 m');
+    expect(component.partners()[0].formattedDistance).not.toContain('421');
+  });
+
+  it('privacy-rounds sub-mile imperial distances instead of exposing raw GPS precision', async () => {
+    const { component, findPartners } = await setup(421);
+    const i18n = TestBed.inject(I18nService);
+    i18n.currentLang.set('en-GB');
+
+    component.onFilterSelect('nearby');
+    await vi.waitFor(() => expect(findPartners).toHaveBeenCalledTimes(1));
+
+    expect(component.partners()[0].formattedDistance).toBe('1,500 ft');
+    expect(component.partners()[0].formattedDistance).not.toContain('421');
+  });
+
   it('drops precise coordinates as soon as the learner leaves Nearby', async () => {
     const { component, findPartners } = await setup();
 
