@@ -12,7 +12,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
 from openhands_factory.exceptions import FactoryError, VerificationFailed
 from openhands_factory.git_workflow import GitWorkflow
-from openhands_factory.github import PullRequestMatch, PullRequestStatus
+from openhands_factory.github import IssueComment, PullRequestMatch, PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline, _is_security_review_exempt
 from openhands_factory.repository_guard import ensure_push_target
@@ -97,6 +97,13 @@ class GitHub:
 
     def add_comment(self, number: int, body: str) -> None:
         self.comments.append((number, body))
+
+    def list_issue_comments(self, issue: int, *, after: int = 0) -> list[IssueComment]:
+        return [
+            IssueComment(index, "factory", body, "2026-08-28T00:00:00Z")
+            for index, (number, body) in enumerate(self.comments, start=1)
+            if number == issue and index > after
+        ]
 
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         self.created_pull_requests.append((branch, title, body))
@@ -1549,6 +1556,18 @@ def test_repeated_identical_task_failure_opens_recoverable_quarantine(
     assert (42, ("factory-quarantined",)) in github.labels
     assert (42, ("factory-quarantined", "needs-human")) not in github.labels
     assert len(github.comments) == 1
+
+    github.comments[0] = (
+        42,
+        "OpenHands Factory paused this task after the same task-side failure "
+        "repeated to its configured safety limit. After resolving the cause, "
+        "manually requeue it.",
+    )
+    restored.quarantine_notification_pending = True
+    pipeline._publish_quarantine(restored)
+
+    assert len(github.comments) == 1
+    assert pipeline.jobs.load()["42"].quarantine_notification_pending is False
 
 
 def test_no_change_task_failure_is_bounded_without_disabling_provider(
