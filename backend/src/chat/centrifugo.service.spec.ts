@@ -115,6 +115,75 @@ describe('CentrifugoService', () => {
       expect(mockRedis.connect).toHaveBeenCalled();
       expect(mockRedis.script).toHaveBeenCalledWith('LOAD', expect.any(String));
     });
+
+    function createProductionService(
+      apiKey: string | undefined,
+      secret: string | undefined,
+    ): CentrifugoService {
+      const values: Record<string, string | undefined> = {
+        NODE_ENV: 'production',
+        CENTRIFUGO_URL: 'http://localhost:8000',
+        CENTRIFUGO_API_KEY: apiKey,
+        CENTRIFUGO_SECRET: secret,
+        REDIS_URL: 'redis://localhost:6379',
+      };
+      return new CentrifugoService(
+        {
+          get: vi.fn((key: string) => values[key]),
+        } as unknown as ConfigService,
+        mockLogger as unknown as PinoLogger,
+      );
+    }
+
+    it.each([
+      undefined,
+      '',
+      '   ',
+      'test-centrifugo-api-key',
+      'test-api-key',
+      'secret-centrifugo-api-key-change-in-prod',
+      'your-api-key',
+    ])('should reject insecure production API key %j', async (apiKey) => {
+      const productionService = createProductionService(
+        apiKey,
+        'production-centrifugo-token-secret',
+      );
+
+      await expect(productionService.onModuleInit()).rejects.toThrow(
+        'CENTRIFUGO_API_KEY must be securely configured in production',
+      );
+      expect(mockRedis.connect).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      undefined,
+      '',
+      '   ',
+      'test-centrifugo-secret',
+      'test-secret',
+      'secret-centrifugo-token-key-change-in-prod',
+      'your-secret',
+    ])('should reject insecure production secret %j', async (secret) => {
+      const productionService = createProductionService(
+        'production-centrifugo-api-key',
+        secret,
+      );
+
+      await expect(productionService.onModuleInit()).rejects.toThrow(
+        'CENTRIFUGO_SECRET must be securely configured in production',
+      );
+      expect(mockRedis.connect).not.toHaveBeenCalled();
+    });
+
+    it('should accept non-placeholder production credentials', async () => {
+      const productionService = createProductionService(
+        'production-centrifugo-api-key',
+        'production-centrifugo-token-secret',
+      );
+
+      await expect(productionService.onModuleInit()).resolves.toBeUndefined();
+      expect(mockRedis.connect).toHaveBeenCalled();
+    });
   });
 
   describe('checkConnectionRateLimit', () => {
