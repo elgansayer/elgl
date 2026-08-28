@@ -80,6 +80,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
 import { LivekitModule } from './livekit/livekit.module';
+import { MockScenariosModule } from './mock/mock-scenarios.module';
 
 @Module({
   imports: [
@@ -176,6 +177,7 @@ import { LivekitModule } from './livekit/livekit.module';
     ReadingEngineModule,
     CloudflareModule,
     LearnerKnowledgeModule,
+    MockScenariosModule,
   ],
   controllers: [AppController],
   providers: [
