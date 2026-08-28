@@ -144,6 +144,7 @@ describe('CentrifugoService', () => {
       'secret-centrifugo-api-key-change-in-prod',
       'your-api-key',
     ])('should reject insecure production API key %j', async (apiKey) => {
+      mockRedis.connect.mockClear();
       const productionService = createProductionService(
         apiKey,
         'production-centrifugo-token-secret',
@@ -164,6 +165,7 @@ describe('CentrifugoService', () => {
       'secret-centrifugo-token-key-change-in-prod',
       'your-secret',
     ])('should reject insecure production secret %j', async (secret) => {
+      mockRedis.connect.mockClear();
       const productionService = createProductionService(
         'production-centrifugo-api-key',
         secret,
@@ -176,6 +178,7 @@ describe('CentrifugoService', () => {
     });
 
     it('should accept non-placeholder production credentials', async () => {
+      mockRedis.connect.mockClear();
       const productionService = createProductionService(
         'production-centrifugo-api-key',
         'production-centrifugo-token-secret',
