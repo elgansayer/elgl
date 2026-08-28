@@ -45,6 +45,14 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
+QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
+QUARANTINE_NOTICE = (
+    f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
+    "Provider outages and busy "
+    "subscriptions do not trigger this circuit. This is a bounded, "
+    "automatic cooldown - the Factory will requeue and retry this task "
+    "on its own; no manual action is needed."
+)
 CODE_MUTATING_AGENT_PHASES = {
     "architecture",
     "implementation",
@@ -580,14 +588,11 @@ class FactoryPipeline:
         try:
             self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
             self.github.add_issue_labels(issue, ("factory-quarantined",))
-            self.github.add_comment(
-                issue,
-                "OpenHands Factory paused this task after the same task-side failure "
-                "repeated to its configured safety limit. Provider outages and busy "
-                "subscriptions do not trigger this circuit. This is a bounded, "
-                "automatic cooldown - the Factory will requeue and retry this task "
-                "on its own; no manual action is needed.",
-            )
+            existing_comments = self.github.list_issue_comments(issue)
+            if not any(
+                comment.body.startswith(QUARANTINE_NOTICE_PREFIX) for comment in existing_comments
+            ):
+                self.github.add_comment(issue, QUARANTINE_NOTICE)
         except FactoryError:
             LOGGER.exception(
                 "factory.job.quarantine_notification_failed task=%s",
