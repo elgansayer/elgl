@@ -10,14 +10,12 @@ import { readFileSync, existsSync, statSync } from 'fs';
 import { createReadStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authorisationMatches, dashboardCredentials } from './auth.js';
 import { projectFor, projects, stateFile } from './projects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = parseInt(process.env.PORT) || 3100;
 const GH_TOKEN = process.env.GH_TOKEN || '';
-const DASHBOARD_CREDENTIALS = dashboardCredentials();
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -67,10 +65,6 @@ async function ghFetch(endpoint) {
   return data;
 }
 
-function checkAuth(req) {
-  return authorisationMatches(req.headers['authorization'], DASHBOARD_CREDENTIALS);
-}
-
 function sendJson(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -78,14 +72,6 @@ function sendJson(res, status, data) {
     'Cache-Control': 'no-cache',
   });
   res.end(body);
-}
-
-function sendUnauth(res) {
-  res.writeHead(401, {
-    'WWW-Authenticate': 'Basic realm="Factory Dashboard"',
-    'Content-Type': 'application/json',
-  });
-  res.end(JSON.stringify({ error: 'Authentication required' }));
 }
 
 function serveStatic(res, filePath) {
@@ -123,9 +109,6 @@ async function handleRoute(req, res) {
   if (pathname === '/health') {
     return sendJson(res, 200, { ok: true, ts: new Date().toISOString() });
   }
-
-  // Auth gate for everything else
-  if (!checkAuth(req)) return sendUnauth(res);
 
   if (pathname === '/api/projects') {
     return sendJson(res, 200, {
@@ -282,5 +265,4 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Repo Factory dashboard listening on http://0.0.0.0:${PORT}`);
   console.log(`Projects: ${Object.keys(projects()).join(', ')}`);
-  console.log(`Auth user: ${DASHBOARD_CREDENTIALS.user}`);
 });

@@ -22,8 +22,6 @@ services:
       - HELLOTALK_GH_REPO=elgansayer/elgl
       - WORKOUT_AGENT_STATE_DIR=/factory-state/workout-agent
       - WORKOUT_AGENT_GH_REPO=elgansayer/workout-agent
-      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
-      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
     volumes:
       # Mount the factory state dir read-only - no factory process is touched
       - /var/lib/hellotalk-factory:/factory-state/hellotalk:ro
