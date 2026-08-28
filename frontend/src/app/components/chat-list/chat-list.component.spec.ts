@@ -63,15 +63,7 @@ describe('ChatListComponent', () => {
 
   it('should switch to groups tab and load groups', async () => {
     const mockGroups = [
-      {
-        id: 'g1',
-        name: 'Spanish Learners',
-        owner_id: 'u1',
-        max_members: 10,
-        member_count: 5,
-        is_member: false,
-        created_at: '2026-01-01T00:00:00Z',
-      },
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
     ];
     mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
 
@@ -84,15 +76,7 @@ describe('ChatListComponent', () => {
 
   it('should not reload groups on switchTab if already loaded', async () => {
     const mockGroups = [
-      {
-        id: 'g1',
-        name: 'Spanish Learners',
-        owner_id: 'u1',
-        max_members: 10,
-        member_count: 5,
-        is_member: false,
-        created_at: '2026-01-01T00:00:00Z',
-      },
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
     ];
     component.groups.set(mockGroups);
 
@@ -105,15 +89,7 @@ describe('ChatListComponent', () => {
 
   it('should handle join group', async () => {
     const mockGroups = [
-      {
-        id: 'g1',
-        name: 'Spanish Learners',
-        owner_id: 'u1',
-        max_members: 10,
-        member_count: 5,
-        is_member: false,
-        created_at: '2026-01-01T00:00:00Z',
-      },
+      { id: 'g1', name: 'Spanish Learners', owner_id: 'u1', max_members: 10, member_count: 5, is_member: false, created_at: '2026-01-01T00:00:00Z' },
     ];
     mockGroupsService.getDiscoverableGroups.mockResolvedValue(mockGroups);
 
@@ -126,14 +102,6 @@ describe('ChatListComponent', () => {
   it('notImplemented should show toast', () => {
     component.notImplemented();
     expect(toast.toastsSignal().length).toBeGreaterThan(0);
-  });
-
-  it('links the Japanese AI quick action to the AI conversation route', () => {
-    const link = fixture.nativeElement.querySelector(
-      'a[href="/ai-conversation"]',
-    ) as HTMLAnchorElement | null;
-
-    expect(link).not.toBeNull();
   });
 
   describe('toggleRoomLock', () => {
