@@ -157,12 +157,11 @@ describe('ChatService message persistence and realtime pipeline', () => {
   });
 
   it('fails closed on persistence errors without publishing or emitting success events', async () => {
-    const { service, centrifugoService, eventEmitter, xpService } = createService(
-      {
+    const { service, centrifugoService, eventEmitter, xpService } =
+      createService({
         data: null,
         error: { message: 'database unavailable' },
-      },
-    );
+      });
 
     await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
       'Failed to save message: database unavailable',
