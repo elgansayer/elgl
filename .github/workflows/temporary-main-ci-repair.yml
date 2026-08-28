@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -19,61 +18,62 @@ jobs:
           ref: ci/repair-main-chat-archive-20260828
           fetch-depth: 0
       - name: Patch stale chat room member database typing
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path('backend/src/supabase/supabase.service.ts')
           text = path.read_text()
           old = """      chat_room_members: {
-        Row: {
-          user_id: string;
-          room_id: string;
-          is_locked: boolean;
-          created_at?: string;
-        };
-        Insert: Partial<{
-          user_id: string;
-          room_id: string;
-          is_locked?: boolean;
-          created_at?: string;
-        }>;
-        Update: Partial<{
-          user_id?: string;
-          room_id?: string;
-          is_locked?: boolean;
-          created_at?: string;
-        }>;
-"""
+                Row: {
+                  user_id: string;
+                  room_id: string;
+                  is_locked: boolean;
+                  created_at?: string;
+                };
+                Insert: Partial<{
+                  user_id: string;
+                  room_id: string;
+                  is_locked?: boolean;
+                  created_at?: string;
+                }>;
+                Update: Partial<{
+                  user_id?: string;
+                  room_id?: string;
+                  is_locked?: boolean;
+                  created_at?: string;
+                }>;
+          """
           new = """      chat_room_members: {
-        Row: {
-          user_id: string;
-          room_id: string;
-          is_locked: boolean;
-          is_archived: boolean;
-          archived_at: string | null;
-          created_at?: string;
-        };
-        Insert: Partial<{
-          user_id: string;
-          room_id: string;
-          is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
-          created_at?: string;
-        }>;
-        Update: Partial<{
-          user_id?: string;
-          room_id?: string;
-          is_locked?: boolean;
-          is_archived?: boolean;
-          archived_at?: string | null;
-          created_at?: string;
-        }>;
-"""
+                Row: {
+                  user_id: string;
+                  room_id: string;
+                  is_locked: boolean;
+                  is_archived: boolean;
+                  archived_at: string | null;
+                  created_at?: string;
+                };
+                Insert: Partial<{
+                  user_id: string;
+                  room_id: string;
+                  is_locked?: boolean;
+                  is_archived?: boolean;
+                  archived_at?: string | null;
+                  created_at?: string;
+                }>;
+                Update: Partial<{
+                  user_id?: string;
+                  room_id?: string;
+                  is_locked?: boolean;
+                  is_archived?: boolean;
+                  archived_at?: string | null;
+                  created_at?: string;
+                }>;
+          """
           if old not in text:
               raise SystemExit('expected chat_room_members type block not found')
           path.write_text(text.replace(old, new, 1))
+          PY
       - name: Verify repair diff
         run: |
           git diff --check
@@ -83,6 +83,8 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add backend/src/supabase/supabase.service.ts
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            exit 0
+          fi
           git commit -m "fix(ci): align chat archive database types"
           git push origin HEAD:ci/repair-main-chat-archive-20260828
