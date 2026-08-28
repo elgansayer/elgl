@@ -778,6 +778,7 @@ def test_instance_installer_preserves_legacy_rollback_path() -> None:
     assert "hellotalk-factory-update.timer" in installer
     assert "repo-factory-update.timer" in installer
     assert "localhost/repo-factory-worker:current" in installer
+    assert "--migrate-hellotalk requires --instance hellotalk and --activate" in installer
     assert "rm -rf" not in installer
 
 

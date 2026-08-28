@@ -71,7 +71,10 @@ try:
     jobs = d.get("active_jobs", [])
     raise SystemExit(0 if not jobs else 1)
 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-    raise SystemExit(0)
+    # Unknown state is not idle. Failing closed prevents a corrupt, missing or
+    # temporarily unreadable heartbeat from authorising an in-place update
+    # while a Factory may still own active work.
+    raise SystemExit(1)
 PY
 }
 

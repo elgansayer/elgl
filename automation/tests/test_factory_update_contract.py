@@ -23,3 +23,5 @@ def test_factory_updater_bounds_network_git_and_preserves_repository_ownership()
     assert 'git -C "$REPOSITORY" reset --hard' not in updater
     assert "maintain-factory-host-storage.sh" in updater
     assert "restore_services_on_failure" in updater
+    assert "Unknown state is not idle" in updater
+    assert "raise SystemExit(1)" in updater

@@ -10,14 +10,14 @@ import { readFileSync, existsSync, statSync } from 'fs';
 import { createReadStream } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authorisationMatches, dashboardCredentials } from './auth.js';
 import { projectFor, projects, stateFile } from './projects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = parseInt(process.env.PORT) || 3100;
 const GH_TOKEN = process.env.GH_TOKEN || '';
-const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
-const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'changeme';
+const DASHBOARD_CREDENTIALS = dashboardCredentials();
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -68,14 +68,7 @@ async function ghFetch(endpoint) {
 }
 
 function checkAuth(req) {
-  const auth = req.headers['authorization'];
-  if (!auth || !auth.startsWith('Basic ')) return false;
-  const decoded = Buffer.from(auth.slice(6), 'base64').toString('utf8');
-  const colon = decoded.indexOf(':');
-  if (colon < 0) return false;
-  const user = decoded.slice(0, colon);
-  const pass = decoded.slice(colon + 1);
-  return user === DASHBOARD_USER && pass === DASHBOARD_PASSWORD;
+  return authorisationMatches(req.headers['authorization'], DASHBOARD_CREDENTIALS);
 }
 
 function sendJson(res, status, data) {
@@ -289,5 +282,5 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Repo Factory dashboard listening on http://0.0.0.0:${PORT}`);
   console.log(`Projects: ${Object.keys(projects()).join(', ')}`);
-  console.log(`Auth user: ${DASHBOARD_USER}`);
+  console.log(`Auth user: ${DASHBOARD_CREDENTIALS.user}`);
 });

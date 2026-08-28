@@ -38,7 +38,7 @@ The dashboard listens on `http://127.0.0.1:3100` (localhost only).
 |---|---|---|---|
 | `GH_TOKEN` | Yes | - | GitHub PAT (needs `repo` + `actions:read` scopes) |
 | `DASHBOARD_USER` | No | `admin` | Basic auth username |
-| `DASHBOARD_PASSWORD` | Yes | - | Basic auth password - use a strong one |
+| `DASHBOARD_PASSWORD` | Yes | - | Basic auth password - must be non-placeholder and at least 16 characters |
 
 ## Cloudflare tunnel setup
 

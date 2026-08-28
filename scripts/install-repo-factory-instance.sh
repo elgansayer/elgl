@@ -53,6 +53,10 @@ if [ "$INSTANCE" != hellotalk ] && [ "$INSTANCE" != workout-agent ]; then
   echo 'Instance must be hellotalk or workout-agent.' >&2
   exit 2
 fi
+if [ "$MIGRATE_HELLOTALK" = true ] && { [ "$INSTANCE" != hellotalk ] || [ "$ACTIVATE" != true ]; }; then
+  echo '--migrate-hellotalk requires --instance hellotalk and --activate.' >&2
+  exit 2
+fi
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this installer as root.' >&2
   exit 1
