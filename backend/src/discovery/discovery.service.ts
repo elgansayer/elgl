@@ -543,7 +543,9 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
+      return sanitiseDiscoveryData(
+        this.sortUsers(enriched, query.sort, _currentUserProfile, query),
+      );
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -1037,6 +1039,7 @@ export class DiscoveryService {
 
     // For best_match, promote partner of week first, then maintain db order
     if (sort === 'best_match') {
+      // NOTE: findByLanguagePair doesn't receive currentUserProfile so it uses the baseline sort
       results.sort((a, b) => {
         const aPoW = a.is_partner_of_week ? 1 : 0;
         const bPoW = b.is_partner_of_week ? 1 : 0;
@@ -1057,6 +1060,98 @@ export class DiscoveryService {
     );
 
     return sanitiseDiscoveryData(results);
+  }
+
+  private getCompositeScore(
+    u: DiscoveryUser,
+    c: UserProfile,
+    query: SearchQueryDto,
+  ): number {
+    let score = 0;
+    const uNat = u.native_languages || [];
+    const uTar = u.target_languages || [];
+    const cNat = c.native_languages || [];
+    const cTar = c.target_languages || [];
+
+    // 1. Complementary Languages (max 20 points)
+    const isComplementary =
+      uNat.some((l) => cTar.includes(l)) && uTar.some((l) => cNat.includes(l));
+    if (isComplementary) score += 20;
+
+    // 2. Proficiency Level Gap (max 10 points)
+    const profOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    if (u.proficiency_level && c.proficiency_level) {
+      const gap = Math.abs(
+        profOrder.indexOf(u.proficiency_level) -
+          profOrder.indexOf(c.proficiency_level),
+      );
+      if (
+        gap <= 1 ||
+        (u.proficiency_level === 'C2' && c.proficiency_level === 'A1') ||
+        (u.proficiency_level === 'A1' && c.proficiency_level === 'C2')
+      ) {
+        score += 10;
+      }
+    }
+
+    // 3. Timezone / Active Hours Overlap (max 15 points)
+    const cAvailStart = c.available_time_start;
+    const cAvailEnd = c.available_time_end;
+    if (
+      u.available_time_start &&
+      u.available_time_end &&
+      cAvailStart &&
+      cAvailEnd
+    ) {
+      if (
+        u.available_time_start <= cAvailEnd &&
+        u.available_time_end >= cAvailStart
+      ) {
+        score += 15;
+      }
+    } else {
+      score += 15; // default to overlap if not specified
+    }
+
+    // 4. Interests (max 10 points)
+    if (u.interests && c.interests) {
+      const common = u.interests.filter((i) => c.interests?.includes(i));
+      score += Math.min(10, common.length * 2);
+    }
+
+    // 5. Response Behaviour (max 10 points)
+    // Assume recent activity is proxy for response rate if not explicitly recorded
+    if (u.last_active_at) {
+      const daysSinceActive =
+        (new Date().getTime() - new Date(u.last_active_at).getTime()) /
+        (1000 * 3600 * 24);
+      if (daysSinceActive <= 1) score += 10;
+      else if (daysSinceActive <= 7) score += 5;
+    }
+
+    // 6. Correction Behaviour (max 15 points)
+    if (u.correction_ratio) {
+      score += Math.min(15, u.correction_ratio * 15);
+    }
+
+    // 7. Learning Seriousness (max 10 points)
+    if (u.study_streak_days) {
+      score += Math.min(10, u.study_streak_days); // 1 point per day up to 10
+    }
+
+    // 8. Conversation Compatibility (max 10 points)
+    // Assume country/age match provides baseline compatibility if explicitly filtered
+    if (
+      query.country &&
+      (u.country ?? '').toLowerCase().includes(query.country.toLowerCase())
+    )
+      score += 5;
+    if (query.age_min && u.age! >= query.age_min) score += 5;
+
+    // Partner of week boost (override all)
+    if (u.is_partner_of_week) score += 1000;
+
+    return score;
   }
 
   private async filterByVoiceRoomActive<T extends UserProfile>(
@@ -1204,6 +1299,8 @@ export class DiscoveryService {
   private sortUsers(
     users: UserProfile[],
     sort?: string,
+    currentUserProfile?: UserProfile | null,
+    query?: SearchQueryDto,
     _searchLat?: number,
     _searchLon?: number,
   ): UserProfile[] {
@@ -1211,6 +1308,14 @@ export class DiscoveryService {
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
+        if (currentUserProfile && query) {
+          return discoveryUsers.sort((a, b) => {
+            const scoreA = this.getCompositeScore(a, currentUserProfile, query);
+            const scoreB = this.getCompositeScore(b, currentUserProfile, query);
+            if (scoreA !== scoreB) return scoreB - scoreA;
+            return (b.correction_ratio ?? 0) - (a.correction_ratio ?? 0);
+          });
+        }
         return discoveryUsers.sort((a, b) => {
           const aPow = a.is_partner_of_week ? 1 : 0;
           const bPow = b.is_partner_of_week ? 1 : 0;
