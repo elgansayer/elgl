@@ -448,7 +448,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -761,7 +761,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -838,7 +838,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
       )
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
@@ -882,7 +882,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -938,7 +938,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
@@ -1362,7 +1362,7 @@ export class DiscoveryService {
     let qb = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
