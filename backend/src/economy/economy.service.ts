@@ -1327,8 +1327,11 @@ export class EconomyService {
       );
     }
 
-    const senderProfile = await this.usersService.getProfile(senderId);
-    const receiverProfile = await this.usersService.getProfile(dto.receiver_id);
+    // ⚡ Bolt Optimization: Parallelize user profile fetching to reduce latency
+    const [senderProfile, receiverProfile] = await Promise.all([
+      this.usersService.getProfile(senderId),
+      this.usersService.getProfile(dto.receiver_id),
+    ]);
 
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.
