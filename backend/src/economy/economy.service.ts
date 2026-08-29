@@ -1327,11 +1327,32 @@ export class EconomyService {
       );
     }
 
-    // ⚡ Bolt Optimization: Parallelize user profile fetching to reduce latency
-    const [senderProfile, receiverProfile] = await Promise.all([
-      this.usersService.getProfile(senderId),
-      this.usersService.getProfile(dto.receiver_id),
-    ]);
+    // Profile display names enrich the real-time event after the gift has
+    // already been committed, so lookup failures must not fail the request.
+    const [senderProfileResult, receiverProfileResult] =
+      await Promise.allSettled([
+        this.usersService.getProfile(senderId),
+        this.usersService.getProfile(dto.receiver_id),
+      ]);
+    const senderProfile =
+      senderProfileResult.status === 'fulfilled'
+        ? senderProfileResult.value
+        : null;
+    const receiverProfile =
+      receiverProfileResult.status === 'fulfilled'
+        ? receiverProfileResult.value
+        : null;
+
+    if (senderProfileResult.status === 'rejected') {
+      this.logger.warn(
+        `Gift sender profile lookup failed: ${String(senderProfileResult.reason)}`,
+      );
+    }
+    if (receiverProfileResult.status === 'rejected') {
+      this.logger.warn(
+        `Gift receiver profile lookup failed: ${String(receiverProfileResult.reason)}`,
+      );
+    }
 
     // Trim payload to only essential fields for real-time broadcast.
     // animation_url can be hundreds of bytes; send it only when populated.
