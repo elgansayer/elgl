@@ -14,6 +14,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { MetricsService } from '../metrics/metrics.service';
+import * as crypto from 'crypto';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
@@ -574,7 +575,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = Math.floor(Math.random() * 6) + 5;
+    const reward = crypto.randomInt(5, 11);
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 

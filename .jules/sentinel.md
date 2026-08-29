@@ -79,3 +79,8 @@
 **Vulnerability:** The TransferService could initialize using the well-known insecure fallback `test-transfer-secret` if the environment variable was omitted or masked in a production environment.
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
+## 2026-08-29 - Fixed Insecure Random Number Generation
+
+**Vulnerability:** Found uses of the predictable `Math.random()` pseudo-random number generator to determine coin economy rewards (`backend/src/economy/economy.service.ts`) and host dashboard earned coins (`backend/src/host-dashboard/host-dashboard.service.ts`).
+**Learning:** `Math.random()` is not cryptographically secure and its outputs can be predicted by an attacker who observes enough values, potentially allowing them to min-max economy rewards. Node's native `crypto` module should be used instead.
+**Prevention:** When generating random numbers for any logic that affects the platform's economy, tokens, or security-sensitive paths, always use `crypto.randomInt()` or `crypto.randomBytes()` to ensure cryptographic randomness and unpredictability.
