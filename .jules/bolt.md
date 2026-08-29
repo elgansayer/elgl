@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-08-29 - Parallelize Profile Fetching in Gift Transaction Broadcast
+**Learning:** In the `economy.service.ts` gift transaction logic, fetching sender and receiver user profiles sequentially using `await this.usersService.getProfile()` adds unnecessary additive network latency. Because these profile fetches are independent, they can be executed concurrently.
+**Action:** Always look for independent sequential async calls in broadcast/event-emitting logic and group them using `Promise.all` to reduce overall transaction time.
