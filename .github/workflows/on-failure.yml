@@ -1,6 +1,8 @@
 name: Self-Healing Workflow Monitor
 
 on:
+  push:
+    branches: [main]
   workflow_run:
     workflows:
       - CI
@@ -16,13 +18,17 @@ permissions:
 
 jobs:
   ensure-main-ci:
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'push' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       actions: write
       contents: read
     steps:
+      - name: Allow native push CI to register
+        if: github.event_name == 'push'
+        run: sleep 20
+
       - name: Recover a missing canonical main CI run
         env:
           GH_TOKEN: ${{ github.token }}
