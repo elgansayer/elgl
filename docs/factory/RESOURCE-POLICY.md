@@ -39,7 +39,7 @@ The Factory also bounds provider input before invocation:
 
 These are deterministic character limits, not claimed token counts. Subscription CLIs do not expose one portable tokenizer or exact remaining-quota API. Oversized untrusted text keeps its beginning and end with an explicit omission marker, which preserves the issue summary and trailing acceptance/verification details without forwarding unlimited release notes, logs or generated prose to every provider.
 
-`README.md` remains excluded from unconditional implementation context. `AGENTS.md` and `TODO.md` are included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
+`README.md` remains excluded from unconditional implementation context. `AGENTS.md` is included only inside the shared context budget, while task-specific source inspection remains the agent's responsibility inside the worktree.
 
 ## What counts as an AI-backed route
 

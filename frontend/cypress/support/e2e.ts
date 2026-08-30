@@ -1,11 +1,21 @@
 import './commands';
 
-// Harden Cypress: Fail tests if any network request returns a 401 or 500+ error
+const EXPECTED_ERROR_HEADER = 'x-cypress-expected-error';
+const EXPECTED_CONSOLE_ERROR_KEY = '__cypressExpectedConsoleError';
+
+type ExpectedErrorWindow = Window & {
+  [EXPECTED_CONSOLE_ERROR_KEY]?: string;
+};
+
+// Harden Cypress: Fail tests if any unexpected network request returns a 401 or 500+ error
 beforeEach(() => {
   cy.intercept('**/*', (req) => {
     req.on('response', (res) => {
-      // 401 Unauthorized or 500+ Server Errors indicate a failure state that shouldn't occur
-      if (res.statusCode === 401 || res.statusCode >= 500) {
+      const isExpectedFailure = res.headers[EXPECTED_ERROR_HEADER] === 'true';
+
+      // 401 Unauthorized or 500+ Server Errors indicate a failure state that shouldn't occur.
+      // Failure-path specs may opt out for a single mocked response using the test-only header.
+      if (!isExpectedFailure && (res.statusCode === 401 || res.statusCode >= 500)) {
         throw new Error(
           `E2E FAILURE: Caught unexpected ${res.statusCode} on ${req.method} ${req.url}`,
         );
@@ -17,8 +27,17 @@ beforeEach(() => {
 // Harden Cypress: Fail tests on unexpected console.error (catches Angular runtime crashes)
 Cypress.on('window:before:load', (win) => {
   cy.stub(win.console, 'error').callsFake((msg, ..._args) => {
-    // We can whitelist specific expected errors here if needed in the future
     const message = typeof msg === 'string' ? msg : JSON.stringify(msg);
+    const expectedWindow = win as ExpectedErrorWindow;
+    const expectedConsoleError = expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
+
+    // Failure-path specs can permit one specific, handled console error without weakening
+    // the suite-wide guard for unrelated runtime failures.
+    if (expectedConsoleError && message.includes(expectedConsoleError)) {
+      delete expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
+      return;
+    }
+
     if (
       message.includes('Expected Error') ||
       message.includes('Centrifugo error:') ||

@@ -3,9 +3,9 @@ requires = ["hatchling==1.32.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hellotalk-openhands-factory"
+name = "repo-factory"
 version = "0.1.0"
-description = "Supervised autonomous development factory for HelloTalk"
+description = "Supervised autonomous development control plane for multiple repositories"
 requires-python = ">=3.12"
 dependencies = [
   "filelock==3.32.3",
@@ -24,6 +24,7 @@ development = [
 ]
 
 [project.scripts]
+repo-factory = "openhands_factory.cli:main"
 hellotalk-factory = "openhands_factory.cli:main"
 
 [tool.hatch.build.targets.wheel]
