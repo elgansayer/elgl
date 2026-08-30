@@ -4,6 +4,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 
 const ENABLED_MODE_PATTERN = /MOCK_BACKEND_MODE\s*[:=]\s*['"]?(?:local|test|demo)\b/i;
 const ENABLED_CLIENT_PATTERN = /mockBackendMode\s*[:=]\s*['"](?:local|test|demo)['"]/i;
+const DECLARED_MODE_PATTERN =
+  /['"]disabled['"]\s*,\s*['"]local['"]\s*,\s*['"]test['"]\s*,\s*['"]demo['"]/;
 const TEXT_EXTENSIONS = new Set(['.yml', '.yaml', '.json', '.env', '.sh', '.ts', '.js', '.mjs']);
 
 function extension(path) {
@@ -48,10 +50,7 @@ export function verifyMockBackendBoundary(root) {
   const failures = [];
   const required = [
     ['backend/src/config/environment.validation.ts', 'assertMockBackendActivationBoundary'],
-    [
-      'backend/src/config/mock-backend-mode.ts',
-      /['"]disabled['"]\s*,\s*['"]local['"]\s*,\s*['"]test['"]\s*,\s*['"]demo['"]/,
-    ],
+    ['backend/src/config/mock-backend-mode.ts', DECLARED_MODE_PATTERN],
     ['backend/src/mock-data.ts', 'const fixturesEnabled = isMockBackendEnabled()'],
     ['backend/test/setup.ts', "process.env.MOCK_BACKEND_MODE = 'test'"],
     ['frontend/src/app/core/config/configuration.service.ts', 'MOCK_CLIENT_ENVIRONMENTS'],
@@ -70,11 +69,8 @@ export function verifyMockBackendBoundary(root) {
       failures.push(`missing required mock-boundary file: ${path}`);
       continue;
     }
-    const hasMarker =
-      marker instanceof RegExp ? marker.test(source) : source.includes(marker);
-    if (!hasMarker) {
-      failures.push(`${path} is missing boundary marker: ${marker}`);
-    }
+    const hasMarker = marker instanceof RegExp ? marker.test(source) : source.includes(marker);
+    if (!hasMarker) failures.push(`${path} is missing boundary marker: ${marker}`);
   }
 
   for (const path of walk(root)) {

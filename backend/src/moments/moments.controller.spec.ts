@@ -40,7 +40,11 @@ describe('MomentsController', () => {
         },
         {
           provide: MomentsRankingService,
-          useValue: { rankForYou: vi.fn() },
+          useValue: {
+            rankForYou: vi
+              .fn()
+              .mockImplementation(async (_userId, moments) => moments),
+          },
         },
       ],
     })

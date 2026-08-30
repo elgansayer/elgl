@@ -114,7 +114,7 @@ legacy comma-separated value (silently drops the whole declaration). */
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-touch-callout: none;
-    padding-block-start: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top);
     padding-inline-start: env(safe-area-inset-left);
     padding-inline-end: env(safe-area-inset-right);
   }
@@ -125,13 +125,10 @@ legacy comma-separated value (silently drops the whole declaration). */
     user-select: text;
   }
 
-  /* Support RTL mirroring natively */
-  html[dir='rtl'] {
-    text-align: start;
-  }
-
+  /* Support RTL mirroring natively, including physical viewport safe areas. */
   html[dir='rtl'],
   html[dir='rtl'] body {
+    text-align: start;
     padding-inline-start: env(safe-area-inset-right);
     padding-inline-end: env(safe-area-inset-left);
   }

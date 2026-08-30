@@ -115,9 +115,9 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             )
 
         daemon_module.select_batch = gated_select_batch
-        self.pipeline.github.merge_pull_request = gated_merge_pull_request
+        self.pipeline.github.merge_pull_request = gated_merge_pull_request  # type: ignore[method-assign]
         try:
             return super()._loop()
         finally:
             daemon_module.select_batch = original_select
-            self.pipeline.github.merge_pull_request = original_merge
+            self.pipeline.github.merge_pull_request = original_merge  # type: ignore[method-assign]

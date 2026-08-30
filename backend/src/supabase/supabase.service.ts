@@ -1469,18 +1469,24 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived: boolean;
+          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [
@@ -2274,7 +2280,7 @@ export class SupabaseService implements OnModuleDestroy {
     this.redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
-      // Preserve ioredis 5 response shapes while adopting v6 fixes.
+      // ioredis 6 defaults to RESP3; retain v5 response shapes for cache callers.
       protocol: 2,
     });
     this.redisClient.on('error', (err) => {

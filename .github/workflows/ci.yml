@@ -7,12 +7,13 @@ on:
     branches: [main]
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -29,43 +30,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify impact classifier regression suite
+        run: bash scripts/classify-ci-impact.test.sh
+
       - name: Classify pull-request impact
         id: impact
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          run_application=true
-          run_factory=true
 
           # Pushes and merge-queue candidates remain full health checks. Only PRs
-          # receive path-sensitive savings, and unknown/shared paths fail open to
-          # the full application matrix.
+          # receive path-sensitive savings. The shared classifier fails open for
+          # unknown paths and for an empty/unreadable pull-request diff.
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
-
-            run_application=false
-            while IFS= read -r path; do
-              [ -z "$path" ] && continue
-              case "$path" in
-                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
-                  ;;
-                *)
-                  run_application=true
-                  ;;
-              esac
-            done <<< "$changed"
-
-            run_factory=false
-            if grep -Eq '^(automation/|config/factory/|config/systemd/|\.github/workflows/ci\.yml$)' <<< "$changed"; then
-              run_factory=true
-            fi
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" \
+              | bash scripts/classify-ci-impact.sh "$GITHUB_OUTPUT"
+          else
+            echo "run_application=true" >> "$GITHUB_OUTPUT"
+            echo "run_factory=true" >> "$GITHUB_OUTPUT"
+            echo "Application verification required: true"
+            echo "Factory verification required: true"
           fi
-
-          echo "run_application=$run_application" >> "$GITHUB_OUTPUT"
-          echo "run_factory=$run_factory" >> "$GITHUB_OUTPUT"
-          echo "Application verification required: $run_application"
-          echo "Factory verification required: $run_factory"
 
   application-checks:
     name: ${{ matrix.directory }} / ${{ matrix.check }}

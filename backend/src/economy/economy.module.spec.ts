@@ -3,8 +3,8 @@ import { EconomyModule } from './economy.module';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { AtomicEconomyController } from './atomic-economy.controller';
-import { AtomicEconomyService } from './atomic-economy.service';
 import { EconomyService } from './economy.service';
+import { AtomicEconomyService } from './atomic-economy.service';
 
 describe('EconomyModule', () => {
   it('should be defined', () => {
@@ -27,7 +27,7 @@ describe('EconomyModule', () => {
     expect(controllersMetadata).toContain(AtomicEconomyController);
   });
 
-  it('should bind EconomyService to AtomicEconomyService', () => {
+  it('should register EconomyService in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', EconomyModule) as unknown[]) ?? [];
 
