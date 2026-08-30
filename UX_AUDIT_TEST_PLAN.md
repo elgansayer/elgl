@@ -1,6 +1,6 @@
-# Mobile UI Audit Report (Test Plan & Hypotheses)
+# Mobile UI Audit Test Plan & Hypotheses
 
-This report outlines the unverified static assumptions found during code inspection and provides a concrete validation plan for active runtime verification. Static presence of CSS or APIs is not proof of mobile behavior; actual reproducible runtime results are required before marking any of these as verified.
+This report outlines the unverified static assumptions found during code inspection and provides a concrete validation plan for active runtime verification. Static presence of CSS or APIs is not proof of mobile behavior; actual reproducible runtime results are required before marking any of these as verified. This document serves as a test plan for future device testing.
 
 ## 1. Thumb Reach
 - **Observation (Hypothesis):** The primary navigation is pinned to the bottom of the screen via `app-navigation-tabs` (`app.component.html:143`, using classes `fixed bottom-0`).
