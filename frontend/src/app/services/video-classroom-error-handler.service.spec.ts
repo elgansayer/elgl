@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { VideoClassroomErrorHandlerService } from './video-classroom-error-handler.service';
 import { AuthService } from './auth.service';
 
-const API_ERROR_URL = 'http://localhost:3000/api/analytics/client-error';
+const API_ERROR_URL = 'http://127.0.0.1:3000/api/analytics/client-error';
 
 describe('VideoClassroomErrorHandlerService', () => {
   let service: VideoClassroomErrorHandlerService;

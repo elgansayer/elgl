@@ -1,41 +1,66 @@
-# AI conversation starters
+# Conversation starters
 
-Issue #662 adds AI-assisted starter prompts to genuinely new one-to-one chats. The feature reuses the existing `POST /chat/conversation-starters` API and the existing frontend `ChatService.getConversationStarters()` client.
+Issue #662 adds optional AI-assisted opening prompts to genuinely new one-to-one chats.
 
-## User experience
+## User flow
 
-Conversation starters are requested only after the chat room has loaded, has no messages, has exactly two participants, and the current composer is empty. Three suggestions are displayed as normal keyboard-focusable buttons with mobile-sized hit targets. Selecting a suggestion copies it into the composer and dismisses the starter panel; it never sends a message automatically.
+The `chat/:id` route now renders `ChatRoomPageComponent`, which composes the existing `ChatRoomComponent` with `ConversationStarterPanelComponent` without duplicating chat state or message delivery.
 
-The panel disappears when a message exists, when a message arrives in real time, when the user starts composing, or when a restored draft already contains text. Group chats never request starters. Loading and request-error states are announced using existing translated UI strings so the feature does not introduce untranslated static copy.
+The starter panel is eligible only when all of these conditions are true:
 
-## Privacy and safety boundary
+- the chat has finished loading;
+- the loaded conversation contains no messages;
+- the local composer is still blank;
+- the authenticated user belongs to a room with exactly one other member.
 
-The backend does not treat `partnerId` as permission to read a profile. Before any profile or interest data is read, `ConversationStarterService` verifies that:
+Selecting a starter copies the bounded suggestion into the existing chat composer and persists it through the existing draft path. It never sends a message automatically. As soon as the user types their own text or a message exists, the panel is removed from the interaction flow.
 
-1. the caller is not requesting suggestions for themselves;
-2. caller and partner share a chat room whose membership is exactly two users; and
-3. neither user is in the caller's blocked/blocker set.
+Group rooms never request AI starters.
 
-Requests that fail these checks return a generic forbidden response and do not invoke the LLM. This prevents the authenticated endpoint from becoming an arbitrary profile-probing surface. Profile fields included in the generation prompt are bounded in length, interests/languages are capped, and the prompt explicitly treats profile data as untrusted content. Prompt contents are not logged.
+## Backend trust boundary
 
-## Quota protection
+`POST /api/chat/conversation-starters` remains authenticated by `SupabaseAuthGuard` and covered by the application-wide NestJS throttle of 10 requests per minute. The request DTO accepts only a UUID partner identifier.
 
-Generated results, including deterministic fallbacks, are cached per caller/partner pair. The default TTL is 15 minutes and can be changed with `CONVERSATION_STARTER_CACHE_TTL_MS` (minimum 1 second, capped at 1 hour). Concurrent requests for the same pair share the same in-flight generation promise so one page-opening burst consumes at most one LLM request per backend instance.
+`ConversationStarterService` no longer treats that identifier as permission to read an arbitrary profile. Before profile or interest data is read, it verifies:
 
-The service also applies a conversation-starter-specific per-user request window. The default is 6 requests per minute and can be changed with `CONVERSATION_STARTER_RATE_LIMIT_PER_MINUTE` (capped at 60). The application-wide Nest throttler remains an additional outer limit.
+1. the requested partner is not the authenticated user;
+2. neither account blocks the other through `SafetyService`;
+3. both users share a current chat room;
+4. that room is a direct room rather than a group;
+5. the room has exactly those two members;
+6. the partner account is not pending deletion;
+7. the partner profile is visible to the caller, including the VIP-only visibility rule.
 
-Both the cache and request-window maps are bounded/pruned to avoid unbounded process memory growth. Eligibility and block checks are repeated even when generated copy is served from cache, so a newly blocked user cannot keep receiving cached personalised starters.
+Eligibility is rechecked before every cache read so a later block or privacy change takes effect immediately.
 
-## LLM failure behaviour
+## LLM privacy and cost controls
 
-If the partner profile cannot be loaded after authorisation, the service returns three generic language-exchange prompts. If the LLM fails, returns no usable lines, duplicates lines, or returns fewer than three valid suggestions, deterministic profile-aware fallbacks fill the response to three entries. Model lines longer than 240 characters are discarded.
+Only the minimum visible profile context needed to personalise a starter is sent to the configured LLM provider. Profile fields are whitespace/control-character normalised and bounded before prompt construction:
+
+- display name: 80 characters;
+- bio: 240 characters;
+- native language: 40 characters;
+- up to five target languages at 40 characters each;
+- up to five interests at 60 characters each.
+
+The prompt explicitly labels profile content as untrusted and instructs the provider not to follow instructions embedded in it. Provider prompts, bios, interests, identifiers, and model responses are not logged by this feature.
+
+Generated suggestions are de-numbered, normalised, deduplicated, capped at three, and limited to 160 characters each. Provider failure degrades to deterministic safe questions rather than blocking chat.
+
+A per-user/per-partner in-memory cache keeps results for 10 minutes, is bounded to 500 entries, and is consulted only after current authorisation is revalidated. Concurrent cache misses for the same user/partner pair share one in-flight LLM request. Together with the global HTTP throttle, reopening a new room cannot repeatedly consume model quota at navigation speed.
+
+## Failure behaviour
+
+Membership, profile, visibility, or safety verification failures fail closed. Storage outages return an error rather than falling back to private or synthetic profile data. LLM failure alone is non-fatal and returns bounded deterministic starter questions.
+
+The Angular panel treats room membership and starter responses as untrusted network data. It rejects non-direct rooms, duplicate member IDs, malformed suggestions, oversized suggestions, and more than three suggestions. Loading and provider/API failures use accessible status/alert regions, and retry is explicit. User-generated suggestions use `dir="auto"` so mixed-direction language content remains readable.
 
 ## Verification
 
-Backend tests cover eligible direct chats, cached generation, blocked partners, group-member rejection, deterministic fallback filling, and the endpoint-specific request limit. Frontend tests cover empty-vs-existing chats, group suppression, request deduplication, selection-to-composer without auto-send, hiding after typing, keyboard-native buttons, mobile hit-target sizing, and request errors.
+Focused backend tests cover blocked users, arbitrary profile probing, hidden profiles, bounded model output, provider fallback, and cache reuse. Frontend tests cover empty versus existing chats, group suppression, loading, failure/retry state, starter selection, draft persistence, and protection against overwriting user-composed text.
+
+Repository verification should include the normal backend and frontend lint/build/unit suites plus the existing E2E, RTL, translation-safe, Spartan/Relay, and design-sync contracts.
 
 ## Rollout and rollback
 
-No database migration is required. Roll out the backend and frontend together so the UI's request behaviour and the hardened authorisation boundary arrive in the same release. Monitor 403/429 rates and LLM request volume after deployment.
-
-Rollback is code-only: revert the issue #662 PR. There are no persisted schema changes or data migrations to undo. If generation volume needs to be reduced without a deploy, lower `CONVERSATION_STARTER_RATE_LIMIT_PER_MINUTE` or increase `CONVERSATION_STARTER_CACHE_TTL_MS` within the documented caps.
+No database migration or external configuration change is required. The route wrapper is additive around the existing chat room and can be rolled back by restoring `chat/:id` to load `ChatRoomComponent` directly. The backend security/cache changes are independently reversible by restoring the prior `ConversationStarterService`; no persisted data requires cleanup.

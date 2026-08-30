@@ -31,11 +31,14 @@ import {
   GroupParticipant,
 } from '../group-participant-drawer/group-participant-drawer.component';
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
+import { ChatMediaShareComponent } from '../chat-media-share/chat-media-share.component';
+import { ChatMediaMessageComponent } from '../chat-media-message/chat-media-message.component';
 import { DraftService } from '../../services/draft.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppInputComponent } from '../primitives/input/input.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+import { applyChatRoomRealtimeEvent } from './chat-room-realtime';
 
 @Component({
   selector: 'app-chat-room',
@@ -58,6 +61,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
     ChatSearchComponent,
+    ChatMediaShareComponent,
+    ChatMediaMessageComponent,
     AppCardComponent,
     AppInputComponent,
     AppButtonPrimaryComponent,
@@ -84,7 +89,6 @@ export class ChatRoomComponent implements OnDestroy {
   constructor() {
     effect(() => {
       const roomId = this.id();
-      // Save draft for the previous room before switching
       if (this.roomId && this.roomId !== roomId) {
         this.saveChatDrafts();
       }
@@ -95,6 +99,7 @@ export class ChatRoomComponent implements OnDestroy {
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isLoading = signal<boolean>(true);
+  readonly isCheckingGrammar = signal<boolean>(false);
   readonly isTyping = signal<boolean>(false);
   readonly showDoodleModal = signal<boolean>(false);
   readonly showVoiceModal = signal<boolean>(false);
@@ -106,11 +111,6 @@ export class ChatRoomComponent implements OnDestroy {
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
   readonly autoPlayVoiceNotes = signal(false);
-  readonly conversationStarters = signal<string[]>([]);
-  readonly conversationStartersLoading = signal(false);
-  readonly conversationStartersError = signal(false);
-  readonly conversationStartersDismissed = signal(false);
-  readonly composerHasText = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
@@ -129,14 +129,6 @@ export class ChatRoomComponent implements OnDestroy {
     const blocked = this.blockedUserIds();
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
   });
-  readonly showConversationStarters = computed(
-    () =>
-      !this.isLoading() &&
-      this.messages().length === 0 &&
-      this.participants().length === 2 &&
-      !this.composerHasText() &&
-      !this.conversationStartersDismissed(),
-  );
 
   readonly replyingTo = signal<ChatMessage | null>(null);
   readonly highlightedMessageId = signal<string | null>(null);
@@ -148,7 +140,6 @@ export class ChatRoomComponent implements OnDestroy {
   readonly activeWordToken = signal<string | null>(null);
   readonly activeWordContext = signal<string>('');
 
-  // @mention filtering stays product-specific. Keyboard/listbox ownership lives in Spartan.
   readonly mentionQuery = signal<string | null>(null);
   readonly mentionSuggestions = computed<GroupMember[]>(() => {
     const query = this.mentionQuery();
@@ -165,7 +156,6 @@ export class ChatRoomComponent implements OnDestroy {
   });
   private mentionRangeStart = 0;
   private mentionRangeEnd = 0;
-  private conversationStarterRequestKey: string | null = null;
 
   readonly mentionItemToString = (value: unknown): string => {
     if (!value || typeof value !== 'object' || !('user_id' in value)) return this.textInput;
@@ -194,13 +184,10 @@ export class ChatRoomComponent implements OnDestroy {
   explanationText = '';
 
   private subscription: { unsubscribe: () => void } | null = null;
-
-  private isChatEventPayload(value: unknown): value is { message?: ChatMessage; typing?: boolean } {
-    return !!value && typeof value === 'object' && ('message' in value || 'typing' in value);
-  }
+  private subscribedRoomId: string | null = null;
+  private readonly pendingReadReceipts = new Set<string>();
 
   private async initializeRoom(): Promise<void> {
-    this.resetConversationStarters();
     await this.loadRoomDetails();
     if (this.isLocked()) {
       this.pendingUnlock.set(true);
@@ -215,77 +202,8 @@ export class ChatRoomComponent implements OnDestroy {
     this.restoreDraft();
     await this.setupRealTime();
     await this.loadParticipants();
-    await this.loadConversationStarters();
     await this.resolvePartnerLanguage();
     await this.loadAutoPlayPreference();
-  }
-
-  private resetConversationStarters(): void {
-    this.conversationStarters.set([]);
-    this.conversationStartersLoading.set(false);
-    this.conversationStartersError.set(false);
-    this.conversationStartersDismissed.set(false);
-    this.composerHasText.set(false);
-    this.conversationStarterRequestKey = null;
-  }
-
-  async loadConversationStarters(): Promise<void> {
-    if (
-      this.isLoading() ||
-      this.messages().length !== 0 ||
-      this.composerHasText() ||
-      this.participants().length !== 2
-    ) {
-      return;
-    }
-
-    const currentUserId = this.authService.currentUser()?.id;
-    if (!currentUserId) return;
-    const partner = this.participants().find((member) => member.user_id !== currentUserId);
-    if (!partner || this.blockedUserIds().includes(partner.user_id)) return;
-
-    const requestRoomId = this.roomId;
-    const requestKey = `${requestRoomId}:${partner.user_id}`;
-    if (
-      this.conversationStarterRequestKey === requestKey &&
-      (this.conversationStartersLoading() ||
-        this.conversationStarters().length > 0 ||
-        this.conversationStartersError())
-    ) {
-      return;
-    }
-
-    this.conversationStarterRequestKey = requestKey;
-    this.conversationStartersLoading.set(true);
-    this.conversationStartersError.set(false);
-
-    try {
-      const suggestions = await this.chatService.getConversationStarters(partner.user_id);
-      if (this.roomId !== requestRoomId || this.messages().length !== 0) return;
-      const cleanSuggestions = suggestions
-        .filter((suggestion) => typeof suggestion === 'string' && suggestion.trim().length > 0)
-        .map((suggestion) => suggestion.trim())
-        .slice(0, 3);
-      this.conversationStarters.set(cleanSuggestions);
-      this.conversationStartersError.set(cleanSuggestions.length === 0);
-    } catch {
-      if (this.roomId !== requestRoomId) return;
-      this.conversationStarters.set([]);
-      this.conversationStartersError.set(true);
-    } finally {
-      if (this.conversationStarterRequestKey === requestKey) {
-        this.conversationStartersLoading.set(false);
-      }
-    }
-  }
-
-  selectConversationStarter(suggestion: string): void {
-    if (!this.showConversationStarters() || !suggestion.trim()) return;
-    this.textInput = suggestion.trim();
-    this.composerHasText.set(true);
-    this.conversationStartersDismissed.set(true);
-    this.mentionQuery.set(null);
-    this.saveChatDrafts();
   }
 
   private async loadAutoPlayPreference(): Promise<void> {
@@ -367,9 +285,12 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.subscription) {
-      this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
+    if (this.subscribedRoomId) {
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.subscribedRoomId = null;
+      this.subscription = null;
     }
+    this.pendingReadReceipts.clear();
     this.typingService.disconnect();
     this.saveChatDrafts();
   }
@@ -397,10 +318,6 @@ export class ChatRoomComponent implements OnDestroy {
       if (v2Draft.explanationText) this.explanationText = v2Draft.explanationText;
       if (v2Draft.replyToId) this._restoredReplyToId = v2Draft.replyToId;
     }
-
-    const hasDraftText = this.textInput.trim().length > 0;
-    this.composerHasText.set(hasDraftText);
-    if (hasDraftText) this.conversationStartersDismissed.set(true);
   }
 
   private clearChatDrafts(): void {
@@ -415,7 +332,7 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
-      if (data.length > 0) this.conversationStartersDismissed.set(true);
+      void this.markUnreadMessagesRead(data);
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
         if (target) this.replyingTo.set(target);
@@ -430,20 +347,87 @@ export class ChatRoomComponent implements OnDestroy {
 
   async setupRealTime(): Promise<void> {
     await this.centrifugeService.connect();
-    if (this.subscription) {
-      this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
+
+    if (this.subscribedRoomId && this.subscribedRoomId !== this.roomId) {
+      this.centrifugeService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.subscribedRoomId = null;
+      this.subscription = null;
     }
-    this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
-      const payload = this.isChatEventPayload(data) ? data : null;
-      if (payload?.message) {
-        this.conversationStartersDismissed.set(true);
-        this.messages.update((list) => [...list, payload.message!]);
-      } else if (payload?.typing) {
-        this.isTyping.set(true);
-        setTimeout(() => this.isTyping.set(false), 3000);
-      }
-    });
+
+    if (this.subscribedRoomId !== this.roomId) {
+      const subscribedRoomId = this.roomId;
+      this.subscription = this.centrifugeService.subscribe(
+        `chat:${subscribedRoomId}`,
+        (data: unknown) => this.handleRealtimeEvent(data, subscribedRoomId),
+      );
+      this.subscribedRoomId = subscribedRoomId;
+    }
+
     this.typingService.connect(this.roomId);
+  }
+
+  private handleRealtimeEvent(data: unknown, eventRoomId: string): void {
+    // A late callback from a previous subscription must never mutate the newly
+    // selected room.
+    if (eventRoomId !== this.roomId) return;
+
+    const currentUserId = this.authService.currentUser()?.id;
+    const currentMessages = this.messages();
+    const result = applyChatRoomRealtimeEvent(
+      currentMessages,
+      data,
+      eventRoomId,
+      currentUserId,
+    );
+
+    if (result.messages !== currentMessages) {
+      this.messages.set(result.messages);
+    }
+
+    if (result.incomingMessageToMarkRead) {
+      void this.markMessageRead(result.incomingMessageToMarkRead);
+    }
+  }
+
+  private async markUnreadMessagesRead(messages: ChatMessage[]): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+
+    const unreadIncoming = messages.filter(
+      (message) =>
+        message.sender_id !== currentUserId &&
+        message.delivery_status !== 'read' &&
+        !this.pendingReadReceipts.has(message.id),
+    );
+
+    await Promise.allSettled(unreadIncoming.map((message) => this.markMessageRead(message)));
+  }
+
+  private async markMessageRead(message: ChatMessage): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (
+      !currentUserId ||
+      message.sender_id === currentUserId ||
+      message.delivery_status === 'read' ||
+      this.pendingReadReceipts.has(message.id)
+    ) {
+      return;
+    }
+
+    this.pendingReadReceipts.add(message.id);
+    try {
+      await this.chatService.markMessageStatus(message.id, 'read');
+      this.messages.update((messages) =>
+        messages.map((candidate) =>
+          candidate.id === message.id ? { ...candidate, delivery_status: 'read' } : candidate,
+        ),
+      );
+    } catch {
+      // Receipt delivery is best-effort. Persisted message history remains usable
+      // and a later room load or realtime event can retry the idempotent update.
+    } finally {
+      this.pendingReadReceipts.delete(message.id);
+    }
   }
 
   onWordClicked(event: { token: string; context: string }): void {
@@ -454,9 +438,6 @@ export class ChatRoomComponent implements OnDestroy {
   onComposerInput(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
-    const hasText = target.value.trim().length > 0;
-    this.composerHasText.set(hasText);
-    if (hasText) this.conversationStartersDismissed.set(true);
     const cursor = target.selectionStart ?? target.value.length;
     const textBeforeCursor = target.value.slice(0, cursor);
     const match = /@([\wÀ-ɏ؀-ۿ]*)$/.exec(textBeforeCursor);
@@ -472,7 +453,6 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
-    // Spartan owns ArrowUp/ArrowDown/Escape/selection while the autocomplete is open.
     if (event.key === 'Enter' && this.mentionSuggestions().length === 0) {
       event.preventDefault();
       this.sendTextMessage();
@@ -486,11 +466,28 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async sendTextMessage(): Promise<void> {
-    if (!this.textInput.trim()) return;
+    if (!this.textInput.trim() || this.isCheckingGrammar()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
+
+    this.isCheckingGrammar.set(true);
+    try {
+      const grammar = await this.vocabStore.checkGrammar(
+        text,
+        this.partnerLanguage() ?? undefined,
+      );
+      const corrected = grammar.corrected.trim();
+      if (grammar.errors_found > 0 && corrected && corrected !== text) {
+        this.textInput = corrected;
+        this.saveChatDrafts();
+        showToast(grammar.explanation);
+        return;
+      }
+    } finally {
+      this.isCheckingGrammar.set(false);
+    }
 
     try {
       const sent = await this.chatService.sendMessage({
@@ -502,8 +499,6 @@ export class ChatRoomComponent implements OnDestroy {
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
       this.textInput = '';
-      this.composerHasText.set(false);
-      this.conversationStartersDismissed.set(true);
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);

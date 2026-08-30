@@ -1,195 +1,168 @@
-import type { Mock } from 'vitest';
-import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@nestjs/common';
-import { ConversationStarterService } from './conversation-starter.service';
-import { SupabaseService } from '../supabase/supabase.service';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { SafetyService } from '../safety/safety.service';
+import { SupabaseService } from '../supabase/supabase.service';
+import { ConversationStarterService } from './conversation-starter.service';
 
-interface QueryChain {
-  select: Mock;
-  eq: Mock;
-  in: Mock;
-  limit: Mock;
-  single: Mock;
+interface QueryResponse {
+  data?: unknown;
+  error?: { message: string } | null;
 }
 
-function resolvedChain(result: { data: unknown; error: unknown }): QueryChain {
-  const chain = {
-    select: vi.fn(),
-    eq: vi.fn(),
-    in: vi.fn(),
-    limit: vi.fn(),
-    single: vi.fn(),
-  } as QueryChain;
-  chain.select.mockReturnValue(chain);
-  chain.eq.mockReturnValue(chain);
-  chain.in.mockReturnValue(chain);
-  chain.limit.mockResolvedValue(result);
-  chain.single.mockResolvedValue(result);
-  return chain;
+function makeQuery(response: QueryResponse) {
+  const query: Record<string, unknown> = {};
+  for (const method of ['select', 'eq', 'in', 'is', 'limit']) {
+    query[method] = vi.fn(() => query);
+  }
+  query['returns'] = vi.fn(() => Promise.resolve(response));
+  query['maybeSingle'] = vi.fn(() => Promise.resolve(response));
+  query['then'] = (
+    resolve: (value: QueryResponse) => unknown,
+    reject?: (reason: unknown) => unknown,
+  ) => Promise.resolve(response).then(resolve, reject);
+  return query;
+}
+
+const userId = '11111111-1111-4111-8111-111111111111';
+const partnerId = '22222222-2222-4222-8222-222222222222';
+const roomId = '33333333-3333-4333-8333-333333333333';
+
+function eligibleResponses(
+  profile: QueryResponse = {
+    data: {
+      display_name: 'Mika',
+      bio_text: 'I like hiking and cooking.',
+      native_language: 'ja',
+      target_languages: ['en'],
+      profile_visibility: 'everyone',
+      is_deletion_pending: false,
+    },
+    error: null,
+  },
+): QueryResponse[] {
+  return [
+    { data: [{ room_id: roomId }], error: null },
+    { data: [{ room_id: roomId }], error: null },
+    { data: [{ id: roomId }], error: null },
+    {
+      data: [
+        { room_id: roomId, user_id: userId },
+        { room_id: roomId, user_id: partnerId },
+      ],
+      error: null,
+    },
+    profile,
+  ];
 }
 
 describe('ConversationStarterService', () => {
-  let from: Mock;
-  let llmProxy: { proxyMessage: Mock };
-  let safetyService: { getBlockedAndBlockerIds: Mock };
-  let configService: { get: Mock };
+  let from: ReturnType<typeof vi.fn>;
+  let llm: { proxyMessage: ReturnType<typeof vi.fn> };
+  let safety: { getBlockedAndBlockerIds: ReturnType<typeof vi.fn> };
   let service: ConversationStarterService;
-
-  const currentUserId = 'current-user';
-  const partnerId = 'partner-user';
 
   beforeEach(() => {
     from = vi.fn();
-    llmProxy = { proxyMessage: vi.fn() };
-    safetyService = { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) };
-    configService = { get: vi.fn().mockReturnValue(undefined) };
-
+    llm = { proxyMessage: vi.fn() };
+    safety = { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) };
     service = new ConversationStarterService(
-      configService as unknown as ConfigService,
       { getClient: () => ({ from }) } as unknown as SupabaseService,
-      llmProxy as unknown as LlmProxyService,
-      safetyService as unknown as SafetyService,
+      llm as unknown as LlmProxyService,
+      safety as unknown as SafetyService,
     );
   });
 
-  function queueEligibleDirectRoom(): void {
-    const membershipQueries = [
-      resolvedChain({ data: [{ room_id: 'direct-room' }], error: null }),
-      resolvedChain({ data: [{ room_id: 'direct-room' }], error: null }),
-      resolvedChain({
-        data: [
-          { room_id: 'direct-room', user_id: currentUserId },
-          { room_id: 'direct-room', user_id: partnerId },
-        ],
-        error: null,
-      }),
-    ];
+  it('rejects blocked partners before reading profile data', async () => {
+    safety.getBlockedAndBlockerIds.mockResolvedValue([partnerId]);
 
-    from.mockImplementation((table: string) => {
-      if (table === 'chat_room_members') {
-        const next = membershipQueries.shift();
-        if (!next) throw new Error('Unexpected chat_room_members query');
-        return next;
-      }
-      if (table === 'users') {
-        return resolvedChain({
-          data: {
-            display_name: 'Mika',
-            bio_text: 'I like hiking and coffee.',
-            native_language: 'ja',
-            target_languages: ['en'],
-          },
-          error: null,
-        });
-      }
-      if (table === 'user_interests') {
-        return resolvedChain({
-          data: [{ interest: { name: 'Hiking' } }],
-          error: null,
-        });
-      }
-      throw new Error(`Unexpected table ${table}`);
-    });
-  }
-
-  it('returns three generated suggestions for an eligible direct-chat partner', async () => {
-    queueEligibleDirectRoom();
-    llmProxy.proxyMessage.mockResolvedValue({
-      response: 'What trail do you recommend?\nWhat coffee do you like?\nHow are you practising English?',
-    });
-
-    const result = await service.getSuggestions(currentUserId, partnerId);
-
-    expect(result).toEqual([
-      'What trail do you recommend?',
-      'What coffee do you like?',
-      'How are you practising English?',
-    ]);
-    expect(llmProxy.proxyMessage).toHaveBeenCalledTimes(1);
-    const prompt = llmProxy.proxyMessage.mock.calls[0][0] as string;
-    expect(prompt).toContain('untrusted user content');
-    expect(prompt).toContain('PROFILE_JSON');
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(from).not.toHaveBeenCalled();
+    expect(llm.proxyMessage).not.toHaveBeenCalled();
   });
 
-  it('caches generated suggestions so repeated opens do not consume LLM quota', async () => {
-    queueEligibleDirectRoom();
-    llmProxy.proxyMessage.mockResolvedValue({
-      response: 'Question one?\nQuestion two?\nQuestion three?',
+  it('rejects arbitrary profile probing without a two-member direct room', async () => {
+    from.mockReturnValueOnce(makeQuery({ data: [], error: null }));
+
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(llm.proxyMessage).not.toHaveBeenCalled();
+  });
+
+  it('rejects hidden partner profiles even when a direct room exists', async () => {
+    const responses = eligibleResponses({
+      data: {
+        display_name: 'Hidden',
+        profile_visibility: 'hidden',
+        is_deletion_pending: false,
+      },
+      error: null,
+    });
+    from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
+
+    await expect(
+      service.getSuggestions(userId, partnerId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(llm.proxyMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns three bounded suggestions and strips model list prefixes', async () => {
+    const responses = [
+      ...eligibleResponses(),
+      { data: [{ interests: { name: 'Hiking' } }], error: null },
+    ];
+    from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
+    llm.proxyMessage.mockResolvedValue({
+      response:
+        '1. What trail would you recommend?\n- What food do you enjoy cooking?\n* What are you learning this week?',
     });
 
-    const first = await service.getSuggestions(currentUserId, partnerId);
+    const suggestions = await service.getSuggestions(userId, partnerId);
 
-    // Eligibility and blocking are intentionally re-checked on every request even
-    // when the generated copy itself is cached.
-    queueEligibleDirectRoom();
-    const second = await service.getSuggestions(currentUserId, partnerId);
+    expect(suggestions).toEqual([
+      'What trail would you recommend?',
+      'What food do you enjoy cooking?',
+      'What are you learning this week?',
+    ]);
+    expect(suggestions.every((suggestion) => suggestion.length <= 160)).toBe(
+      true,
+    );
+  });
+
+  it('uses deterministic fallbacks when the LLM provider is unavailable', async () => {
+    const responses = [
+      ...eligibleResponses(),
+      { data: [{ interests: { name: 'Hiking' } }], error: null },
+    ];
+    from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
+    llm.proxyMessage.mockRejectedValue(new Error('provider unavailable'));
+
+    const suggestions = await service.getSuggestions(userId, partnerId);
+
+    expect(suggestions).toHaveLength(3);
+    expect(suggestions[0]).toContain('Hiking');
+    expect(suggestions.join(' ')).not.toContain('provider unavailable');
+  });
+
+  it('reuses cached suggestions without spending another LLM request', async () => {
+    const responses = [
+      ...eligibleResponses(),
+      { data: [], error: null },
+      ...eligibleResponses(),
+    ];
+    from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
+    llm.proxyMessage.mockResolvedValue({
+      response:
+        'What are you studying?\nWhat made you smile today?\nWhat place would you recommend?',
+    });
+
+    const first = await service.getSuggestions(userId, partnerId);
+    const second = await service.getSuggestions(userId, partnerId);
 
     expect(second).toEqual(first);
-    expect(llmProxy.proxyMessage).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejects blocked partners before reading profile data or calling the LLM', async () => {
-    queueEligibleDirectRoom();
-    safetyService.getBlockedAndBlockerIds.mockResolvedValue([partnerId]);
-
-    await expect(
-      service.getSuggestions(currentUserId, partnerId),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-
-    expect(llmProxy.proxyMessage).not.toHaveBeenCalled();
-  });
-
-  it('rejects a shared group member that is not also a direct-chat partner', async () => {
-    const membershipQueries = [
-      resolvedChain({ data: [{ room_id: 'group-room' }], error: null }),
-      resolvedChain({ data: [{ room_id: 'group-room' }], error: null }),
-      resolvedChain({
-        data: [
-          { room_id: 'group-room', user_id: currentUserId },
-          { room_id: 'group-room', user_id: partnerId },
-          { room_id: 'group-room', user_id: 'third-user' },
-        ],
-        error: null,
-      }),
-    ];
-    from.mockImplementation((table: string) => {
-      if (table !== 'chat_room_members') throw new Error('Unexpected profile query');
-      const next = membershipQueries.shift();
-      if (!next) throw new Error('Unexpected membership query');
-      return next;
-    });
-
-    await expect(
-      service.getSuggestions(currentUserId, partnerId),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(llmProxy.proxyMessage).not.toHaveBeenCalled();
-  });
-
-  it('fills empty or partial model output with deterministic fallback questions', async () => {
-    queueEligibleDirectRoom();
-    llmProxy.proxyMessage.mockResolvedValue({ response: '' });
-
-    const result = await service.getSuggestions(currentUserId, partnerId);
-
-    expect(result).toHaveLength(3);
-    expect(result.every((suggestion) => suggestion.length > 0)).toBe(true);
-    expect(result[0]).toContain('Hiking');
-  });
-
-  it('enforces a conversation-starter-specific request limit', async () => {
-    configService.get.mockImplementation((key: string) =>
-      key === 'CONVERSATION_STARTER_RATE_LIMIT_PER_MINUTE' ? '1' : undefined,
-    );
-    queueEligibleDirectRoom();
-    llmProxy.proxyMessage.mockResolvedValue({
-      response: 'One?\nTwo?\nThree?',
-    });
-    await service.getSuggestions(currentUserId, partnerId);
-
-    await expect(service.getSuggestions(currentUserId, partnerId)).rejects.toMatchObject({
-      status: 429,
-    });
+    expect(llm.proxyMessage).toHaveBeenCalledTimes(1);
   });
 });

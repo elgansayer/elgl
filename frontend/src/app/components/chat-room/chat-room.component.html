@@ -141,43 +141,6 @@
         </div>
       }
 
-      @if (showConversationStarters()) {
-        <section
-          data-testid="conversation-starters"
-          class="mx-auto mt-3 w-full max-w-xl rounded-card border border-primary/20 bg-primary/5 ps-3 pe-3 pt-3 pb-3"
-          role="region"
-          [attr.aria-label]="'aiPartner.start' | t"
-        >
-          @if (conversationStartersLoading()) {
-            <p class="text-center text-sm text-text-secondary" role="status" aria-live="polite">
-              {{ 'aiPartner.typing' | t }}
-            </p>
-          } @else if (conversationStartersError()) {
-            <p class="text-center text-sm text-danger" role="alert">
-              {{ 'aiPartner.error' | t }}
-            </p>
-          } @else if (conversationStarters().length > 0) {
-            <div class="grid gap-2 sm:grid-cols-3">
-              @for (starter of conversationStarters(); track starter) {
-                <button
-                  hlmBtn
-                  type="button"
-                  data-testid="conversation-starter"
-                  class="min-h-11 w-full whitespace-normal rounded-xl border border-primary/20 bg-surface-200 ps-3 pe-3 pt-2.5 pb-2.5 text-start text-sm font-medium text-text-primary shadow-sm transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                  (click)="selectConversationStarter(starter)"
-                >
-                  {{ starter }}
-                </button>
-              }
-            </div>
-          } @else {
-            <p class="text-center text-sm text-text-secondary" role="status">
-              {{ 'chatRoom.noMessages' | t }}
-            </p>
-          }
-        </section>
-      }
-
       @for (msg of filteredMessages(); track msg.id) {
         @if (msg.message_type === 'system' && msg.system_event) {
           <app-chat-system-bubble
@@ -373,6 +336,7 @@
                     <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                   </div>
                 }
+                <app-chat-media-message [message]="msg"></app-chat-media-message>
                 @if (msg.message_type === 'doodle' && msg.media_url) {
                   <img
                     loading="lazy"
@@ -541,7 +505,7 @@
           (cancelReply)="cancelReply()"
         ></app-reply-preview>
       }
-      <div class="mb-2 flex items-center gap-2">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
         <app-button-secondary
           (clicked)="showCorrectionForm.set(!showCorrectionForm())"
           customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
@@ -563,6 +527,7 @@
         >
           {{ 'chatRoom.voiceBtn' | t }}
         </app-button-secondary>
+        <app-chat-media-share [roomId]="roomId"></app-chat-media-share>
         <app-button-secondary
           (clicked)="showStickerDrawer.set(!showStickerDrawer())"
           customClass="bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
