@@ -8,6 +8,7 @@ import { ChatService } from '../../services/chat.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideLanguages } from '@ng-icons/lucide';
+import { diffArrays } from 'diff';
 
 interface DiffSegment {
   type: 'unchanged' | 'removed' | 'added';
@@ -150,31 +151,20 @@ export class VisualDiffComponent {
     const corrTokens = Array.from(segmenter.segment(corr)).map((s) => s.segment);
 
     const result: DiffSegment[] = [];
-    let i = 0;
-    let j = 0;
     let indexCounter = 0;
 
-    while (i < origTokens.length || j < corrTokens.length) {
-      if (
-        i < origTokens.length &&
-        j < corrTokens.length &&
-        origTokens[i].toLowerCase() === corrTokens[j].toLowerCase()
-      ) {
-        result.push({ type: 'unchanged', text: corrTokens[j], index: indexCounter++ });
-        i++;
-        j++;
-      } else if (
-        i < origTokens.length &&
-        !corrTokens.slice(j, j + 5).some((t) => t.toLowerCase() === origTokens[i].toLowerCase())
-      ) {
-        result.push({ type: 'removed', text: origTokens[i], index: indexCounter++ });
-        i++;
-      } else if (j < corrTokens.length) {
-        result.push({ type: 'added', text: corrTokens[j], index: indexCounter++ });
-        j++;
-      } else if (i < origTokens.length) {
-        result.push({ type: 'removed', text: origTokens[i], index: indexCounter++ });
-        i++;
+    const diffs = diffArrays(origTokens, corrTokens, {
+      comparator: (a: string, b: string) => a.toLowerCase() === b.toLowerCase(),
+    });
+
+    for (const diff of diffs) {
+      const type = diff.added ? 'added' : diff.removed ? 'removed' : 'unchanged';
+      for (const val of diff.value) {
+        result.push({
+          type,
+          text: val,
+          index: indexCounter++,
+        });
       }
     }
 

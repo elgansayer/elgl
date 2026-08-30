@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VisualDiffComponent } from './visual-diff.component';
 
-describe.skip('VisualDiffComponent', () => {
+describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
 
@@ -12,6 +12,10 @@ describe.skip('VisualDiffComponent', () => {
 
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
+
+    // Set initial required inputs before detectChanges()
+    fixture.componentRef.setInput('original', '');
+    fixture.componentRef.setInput('corrected', '');
     fixture.detectChanges();
   });
 
