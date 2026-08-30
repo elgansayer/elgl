@@ -25,6 +25,16 @@ def test_build_system_prompt_reads_the_system_contract(tmp_path: Path) -> None:
     assert prompt == "system contract"
 
 
+def test_profile_system_prompt_can_be_separate_from_shared_templates(tmp_path: Path) -> None:
+    prompt_dir = tmp_path / "shared"
+    prompt_dir.mkdir()
+    (prompt_dir / "system.md").write_text("default", encoding="utf-8")
+    profile_prompt = tmp_path / "workout-system.md"
+    profile_prompt.write_text("workout", encoding="utf-8")
+
+    assert build_system_prompt(prompt_dir, system_prompt_path=profile_prompt) == "workout"
+
+
 def test_build_task_prompt_includes_issue_and_verification_sections(
     tmp_path: Path,
 ) -> None:

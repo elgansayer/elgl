@@ -560,7 +560,43 @@ def test_equivalent_pr_search_combines_all_supported_identity_signals(
     assert matches[3].reasons == frozenset({"changed-path-fingerprint"})
     assert not matches[3].is_open_canonical
     assert "--state" in runner.calls[0] and "all" in runner.calls[0]
-    assert any("closingIssuesReferences,files" in argument for argument in runner.calls[0])
+    json_fields = runner.calls[0][runner.calls[0].index("--json") + 1]
+    assert "closingIssuesReferences" not in json_fields
+    assert json_fields.endswith("author,files")
+
+
+def test_equivalent_pr_search_omits_files_until_path_fingerprint_is_known(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 90,
+            "title": "Different wording",
+            "body": "Fixes #42",
+            "baseRefName": "main",
+            "headRefName": "factory/42-fix-build",
+            "headRefOid": "head-90",
+            "state": "OPEN",
+            "closedAt": None,
+            "mergedAt": None,
+            "isCrossRepository": False,
+            "labels": [],
+        }
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    matches = client.find_equivalent_pull_requests(
+        Task("42", "Fix build", "Body", "github-issue", 0),
+        known_branch="factory/42-fix-build",
+        now=datetime(2026, 8, 24, tzinfo=UTC),
+    )
+
+    assert [match.number for match in matches] == [90]
+    assert matches[0].reasons == frozenset({"issue-link", "branch-metadata"})
+    json_fields = runner.calls[0][runner.calls[0].index("--json") + 1]
+    assert json_fields.endswith("labels,author")
+    assert "files" not in json_fields.split(",")
 
 
 def test_equivalent_pr_search_does_not_trust_factory_branch_prefix(

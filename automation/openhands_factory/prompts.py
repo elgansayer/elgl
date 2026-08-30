@@ -51,8 +51,8 @@ def _bounded_text(value: str, max_chars: int) -> str:
     return f"{value[:head_chars]}{marker}{tail}"
 
 
-def build_system_prompt(prompt_dir: Path) -> str:
-    return (prompt_dir / "system.md").read_text(encoding="utf-8")
+def build_system_prompt(prompt_dir: Path, *, system_prompt_path: Path | None = None) -> str:
+    return (system_prompt_path or prompt_dir / "system.md").read_text(encoding="utf-8")
 
 
 def build_task_prompt(

@@ -1,0 +1,60 @@
+name: SSR Compatibility Contract
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/angular.json'
+      - 'frontend/src/app/app.config.ts'
+      - 'frontend/src/app/app.config.server.ts'
+      - 'frontend/src/app/app.routes.server.ts'
+      - 'frontend/src/main.server.ts'
+      - 'visual-contract.matrix.json'
+      - 'scripts/verify-ssr-compatibility.mjs'
+      - 'scripts/verify-ssr-compatibility.test.mjs'
+      - 'docs/ssr-compatibility.md'
+      - 'docs/ssr-compatibility-verification.md'
+      - 'package.json'
+      - '.github/workflows/ssr-compatibility.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/angular.json'
+      - 'frontend/src/app/app.config.ts'
+      - 'frontend/src/app/app.config.server.ts'
+      - 'frontend/src/app/app.routes.server.ts'
+      - 'frontend/src/main.server.ts'
+      - 'visual-contract.matrix.json'
+      - 'scripts/verify-ssr-compatibility.mjs'
+      - 'scripts/verify-ssr-compatibility.test.mjs'
+      - 'docs/ssr-compatibility.md'
+      - 'docs/ssr-compatibility-verification.md'
+      - 'package.json'
+      - '.github/workflows/ssr-compatibility.yml'
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ssr-compatibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify SSR contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run verifier regression tests
+        run: node --test scripts/verify-ssr-compatibility.test.mjs
+
+      - name: Verify repository SSR contract
+        run: node scripts/verify-ssr-compatibility.mjs

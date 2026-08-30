@@ -38,13 +38,21 @@ from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskClaimConflict, TaskStore
-from openhands_factory.verification import commands_for, run_verification
+from openhands_factory.verification import commands_for, run_verification, verification_descriptions
 
 if TYPE_CHECKING:
     from openhands_factory.agents.router import AgentRouter
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
+QUARANTINE_NOTICE_PREFIX = "OpenHands Factory paused this task after the same task-side failure "
+QUARANTINE_NOTICE = (
+    f"{QUARANTINE_NOTICE_PREFIX}repeated to its configured safety limit. "
+    "Provider outages and busy "
+    "subscriptions do not trigger this circuit. This is a bounded, "
+    "automatic cooldown - the Factory will requeue and retry this task "
+    "on its own; no manual action is needed."
+)
 CODE_MUTATING_AGENT_PHASES = {
     "architecture",
     "implementation",
@@ -121,8 +129,10 @@ class FactoryPipeline:
             config.github_repository,
             AlertService(config),
         )
-        self.prompt_dir = config.repository / "automation/prompts"
-        self.system_prompt = build_system_prompt(self.prompt_dir)
+        self.prompt_dir = config.prompt_dir
+        self.system_prompt = build_system_prompt(
+            self.prompt_dir, system_prompt_path=config.system_prompt_path
+        )
         openhands_settings = config.agents.providers["openhands"]
         openhands_runtime_config = config.model_copy(
             update={
@@ -287,10 +297,7 @@ class FactoryPipeline:
             policy=ConfigRoutingPolicy(config.agents),
             health_store=self.health_store,
             capacity_store=ProviderCapacityStore(
-                config.state_dir,
-                factory_generation=(
-                    config.factory_generation if config.factory_generation != "unknown" else None
-                ),
+                config.provider_capacity_dir,
                 max_lease_seconds=maximum_agent_lease_seconds(config),
             ),
             provider_limits=provider_limits,
@@ -581,14 +588,11 @@ class FactoryPipeline:
         try:
             self.github.remove_issue_labels(issue, ("factory-active", "swarm-active"))
             self.github.add_issue_labels(issue, ("factory-quarantined",))
-            self.github.add_comment(
-                issue,
-                "OpenHands Factory paused this task after the same task-side failure "
-                "repeated to its configured safety limit. Provider outages and busy "
-                "subscriptions do not trigger this circuit. This is a bounded, "
-                "automatic cooldown - the Factory will requeue and retry this task "
-                "on its own; no manual action is needed.",
-            )
+            existing_comments = self.github.list_issue_comments(issue)
+            if not any(
+                comment.body.startswith(QUARANTINE_NOTICE_PREFIX) for comment in existing_comments
+            ):
+                self.github.add_comment(issue, QUARANTINE_NOTICE)
         except FactoryError:
             LOGGER.exception(
                 "factory.job.quarantine_notification_failed task=%s",
@@ -1531,7 +1535,7 @@ class FactoryPipeline:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
-        commands = commands_for(workflow.repository, changed)
+        commands = commands_for(workflow.repository, changed, self.config.repository_profile)
         # Only commands that bind a fixed host port (frontend-e2e's dev server)
         # need to be serialized across workers; everything else - lint, build,
         # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
@@ -1578,7 +1582,7 @@ class FactoryPipeline:
         # every task needs; the issue body already carries whatever
         # task-specific scope README.md would otherwise repeat.
         context: list[tuple[Path, str]] = []
-        for relative in (Path("AGENTS.md"), Path("TODO.md")):
+        for relative in (Path("AGENTS.md"),):
             path = worktree / relative
             if path.is_file():
                 context.append((relative, path.read_text(encoding="utf-8")))
@@ -1586,27 +1590,7 @@ class FactoryPipeline:
 
     def _verification_descriptions(self, worktree: Path) -> list[str]:
         del worktree
-        return [
-            "npm run check:constitution",
-            "npm run check:agent-ui-governance",
-            "npm run check:design-sync",
-            "npm run check:spartan-boundaries",
-            "npm run check:spartan-full-tree",
-            "npm run check:component-system",
-            "npm run check:design-sync-drift",
-            "npm run check:legacy-primitive-delta",
-            "node scripts/check-conflict-markers.mjs",
-            "node scripts/check-admin-audit-integrity.mjs",
-            "node scripts/check-migration-delta.mjs",
-            "cd automation && uv run --frozen ruff format --check .",
-            "cd automation && uv run --frozen ruff check .",
-            "cd automation && uv run --frozen mypy",
-            "cd automation && uv run --frozen pytest",
-            "cd frontend && npm run lint:check && npm run build && npm run test",
-            "cd frontend && npm run e2e when frontend or e2e files changed",
-            "cd backend && npm run lint:check && npm run build && npm run test && npm run test:e2e",
-            "cd admin-portal && npm run lint:check && npm run build && npm run test",
-        ]
+        return verification_descriptions(self.config.repository_profile)
 
     def _pull_request_body(self, job: Job) -> str:
         successful = [entry for entry in job.provider_history if entry.get("success") is True]
@@ -1777,6 +1761,62 @@ class FactoryPipeline:
                     "next_attempt_at": None,
                     "provider_history": job.provider_history,
                 }
+            )
+
+    def run_stall_investigation(self, reason: str, diagnostics: str) -> None:
+        """Best-effort: alert immediately with deterministic evidence, then add an AI diagnosis.
+
+        Two Telegram sends, not one, because the first must never depend on a healthy agent
+        provider - the exact thing a stall may itself have taken down. The AI pass is a
+        strictly-optional addition that reasons over the already-gathered evidence; it has no
+        tool access and cannot make the situation worse by touching the repository or host.
+        Never raises - this always runs from a background thread and must not affect scheduling.
+        """
+        from openhands_factory.agents.base import AgentPhase, AgentRequest
+
+        alerts = AlertService(self.config)
+        started_at = datetime.now(UTC)
+        alerts.send(
+            f"OpenHands factory alert: scheduling stalled\n\n{reason}\n\n{diagnostics}",
+            category="factory-scheduling-stalled",
+        )
+
+        cycle_id = f"stall-investigation-{started_at.strftime('%Y%m%dT%H%M%SZ')}"
+        task = Task(
+            identifier=cycle_id,
+            title="Factory stall investigation",
+            body=diagnostics,
+            source="factory-internal",
+            priority=0,
+        )
+        job = Job(task=task)
+        prompt = (
+            (self.prompt_dir / "stall_investigation.md").read_text(encoding="utf-8")
+            + "\n\n## Diagnostic snapshot\n\n"
+            + diagnostics
+        )
+        # A plain empty directory, not a git worktree - this call never reads or
+        # writes repository files, only reasons over the diagnostics text above.
+        scratch = self.config.worktree_dir / "stall-investigation"
+        scratch.mkdir(parents=True, exist_ok=True)
+        request = AgentRequest(
+            phase=AgentPhase.GENERAL_ACTION,
+            task=task,
+            prompt=prompt,
+            cwd=scratch,
+            system_prompt=self.system_prompt,
+        )
+        try:
+            result = self.router.run(request, job)
+            findings = (result.summary or "").strip() if result.success else None
+        except Exception as error:
+            LOGGER.warning("factory.stall_investigation.agent_failed error=%s", error)
+            findings = None
+
+        if findings:
+            alerts.send(
+                f"OpenHands factory alert: stall investigation findings\n\n{findings}",
+                category="factory-scheduling-stalled-findings",
             )
 
     def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:

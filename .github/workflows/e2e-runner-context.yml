@@ -5,6 +5,12 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'automation/**'
+      - 'docs/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - '.github/dependabot.yml'
   merge_group:
     types: [checks_requested]
 
