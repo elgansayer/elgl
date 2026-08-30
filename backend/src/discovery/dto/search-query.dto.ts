@@ -169,7 +169,7 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Sort order. "best_match" promotes Partner of the Week first, then by study_streak_days and correction_ratio. "online_now" sorts by last_active_at. "nearest" sorts by distance. "newest" sorts by created_at.',
+      'Sort order. "best_match" promotes Partner of the Week first, then uses reciprocal languages, proficiency, availability, interests, correction behaviour, and learning seriousness. "online_now" sorts by last_active_at. "nearest" sorts by distance. "newest" sorts by created_at.',
     enum: ['best_match', 'online_now', 'nearest', 'newest'],
     default: 'best_match',
     example: 'best_match',

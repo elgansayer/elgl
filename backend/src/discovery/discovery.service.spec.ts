@@ -1071,6 +1071,17 @@ describe('DiscoveryService', () => {
   // Sort algorithms
   // ---------------------------------------------------------------------------
   describe('sort algorithms', () => {
+    const currentProfile = (overrides: Record<string, unknown> = {}) =>
+      ({
+        id: 'current-user',
+        native_languages: [],
+        target_languages: [],
+        is_vip: false,
+        is_serious_learner: false,
+        interests: [],
+        ...overrides,
+      }) as never;
+
     it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));
       const partners = [
@@ -1089,6 +1100,178 @@ describe('DiscoveryService', () => {
         'partner-b',
         'partner-a',
       ]);
+    });
+
+    it('best_match: ranks reciprocal language, proficiency, overnight availability, and interests together', async () => {
+      const profile = currentProfile({
+        native_languages: ['English'],
+        target_languages: ['Spanish'],
+        proficiency_level: 'B1',
+        available_time_start: '23:00',
+        available_time_end: '01:00',
+        interests: ['Music'],
+        is_serious_learner: true,
+      });
+      stubLimitResponse([
+        {
+          id: 'generic',
+          native_languages: ['French'],
+          target_languages: ['German'],
+          proficiency_level: 'B1',
+          correction_ratio: 1,
+          study_streak_days: 30,
+          is_serious_learner: true,
+        },
+        {
+          id: 'reciprocal',
+          native_languages: ['spanish'],
+          target_languages: ['ENGLISH'],
+          proficiency_level: 'B1',
+          available_time_start: '00:30',
+          available_time_end: '02:00',
+          interests: ['music'],
+          correction_ratio: 0,
+          study_streak_days: 0,
+          is_serious_learner: false,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['reciprocal', 'generic']);
+    });
+
+    it('best_match: treats missing or malformed availability as neutral', async () => {
+      const profile = currentProfile({
+        available_time_start: '09:00',
+        available_time_end: '11:00',
+      });
+      stubLimitResponse([
+        {
+          id: 'missing',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+        {
+          id: 'malformed',
+          available_time_start: '99:00',
+          available_time_end: '10:00',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+        {
+          id: 'overlap',
+          available_time_start: '10:00',
+          available_time_end: '12:00',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'overlap',
+        'malformed',
+        'missing',
+      ]);
+    });
+
+    it('best_match: gives unknown proficiency values no accidental score', async () => {
+      const profile = currentProfile({ proficiency_level: 'B1' });
+      stubLimitResponse([
+        {
+          id: 'unknown-level',
+          proficiency_level: 'unknown',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+        {
+          id: 'same-level',
+          proficiency_level: 'b1',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['same-level', 'unknown-level']);
+    });
+
+    it('best_match: does not fabricate behaviour or compatibility from activity and hard filters', async () => {
+      const profile = currentProfile();
+      stubLimitResponse([
+        {
+          id: 'b-recent-older',
+          last_active_at: '2099-01-01T00:00:00.000Z',
+          age: 50,
+          country: 'United Kingdom',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+        {
+          id: 'a-old-younger',
+          last_active_at: '2000-01-01T00:00:00.000Z',
+          age: 18,
+          country: 'United Kingdom',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+        age_min: 18,
+        country: 'United Kingdom',
+      });
+
+      expect(result.map((u) => u.id)).toEqual([
+        'a-old-younger',
+        'b-recent-older',
+      ]);
+    });
+
+    it('best_match: keeps partner-of-week ahead of a stronger composite match', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(['weekly']));
+      const profile = currentProfile({
+        native_languages: ['English'],
+        target_languages: ['Spanish'],
+        proficiency_level: 'B2',
+        interests: ['music', 'travel'],
+      });
+      stubLimitResponse([
+        {
+          id: 'stronger',
+          native_languages: ['Spanish'],
+          target_languages: ['English'],
+          proficiency_level: 'B2',
+          interests: ['music', 'travel'],
+          correction_ratio: 1,
+          study_streak_days: 30,
+          is_serious_learner: true,
+        },
+        {
+          id: 'weekly',
+          native_languages: [],
+          target_languages: [],
+          correction_ratio: 0,
+          study_streak_days: 0,
+          is_serious_learner: false,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['weekly', 'stronger']);
     });
 
     it('online_now: orders by most recent last_active_at first', async () => {

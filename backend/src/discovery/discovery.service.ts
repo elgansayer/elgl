@@ -448,7 +448,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, available_time_start, available_time_end',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -544,7 +544,7 @@ export class DiscoveryService {
         is_partner_of_week: partnerSet.has(u.id),
       }));
       return sanitiseDiscoveryData(
-        this.sortUsers(enriched, query.sort, _currentUserProfile, query),
+        this.sortUsers(enriched, query.sort, _currentUserProfile),
       );
     };
 
@@ -761,7 +761,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
@@ -838,7 +838,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
@@ -882,7 +882,7 @@ export class DiscoveryService {
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
@@ -938,7 +938,7 @@ export class DiscoveryService {
     let queryBuilder = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
@@ -1062,96 +1062,125 @@ export class DiscoveryService {
     return sanitiseDiscoveryData(results);
   }
 
-  private getCompositeScore(
-    u: DiscoveryUser,
-    c: UserProfile,
-    query: SearchQueryDto,
-  ): number {
+  private getCompositeScore(u: DiscoveryUser, c: UserProfile): number {
     let score = 0;
-    const uNat = u.native_languages || [];
-    const uTar = u.target_languages || [];
-    const cNat = c.native_languages || [];
-    const cTar = c.target_languages || [];
 
-    // 1. Complementary Languages (max 20 points)
-    const isComplementary =
-      uNat.some((l) => cTar.includes(l)) && uTar.some((l) => cNat.includes(l));
-    if (isComplementary) score += 20;
-
-    // 2. Proficiency Level Gap (max 10 points)
-    const profOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-    if (u.proficiency_level && c.proficiency_level) {
-      const gap = Math.abs(
-        profOrder.indexOf(u.proficiency_level) -
-          profOrder.indexOf(c.proficiency_level),
+    const normaliseValues = (values: string[] | undefined): Set<string> =>
+      new Set(
+        (values ?? [])
+          .map((value) => value.trim().toLowerCase())
+          .filter(Boolean),
       );
-      if (
-        gap <= 1 ||
-        (u.proficiency_level === 'C2' && c.proficiency_level === 'A1') ||
-        (u.proficiency_level === 'A1' && c.proficiency_level === 'C2')
-      ) {
-        score += 10;
-      }
+    const intersects = (left: Set<string>, right: Set<string>): boolean =>
+      [...left].some((value) => right.has(value));
+
+    const candidateNative = normaliseValues(u.native_languages);
+    const candidateTarget = normaliseValues(u.target_languages);
+    const currentNative = normaliseValues(c.native_languages);
+    const currentTarget = normaliseValues(c.target_languages);
+
+    // Reciprocal language exchange is the strongest profile-level signal.
+    const candidateHelpsCurrent = intersects(candidateNative, currentTarget);
+    const currentHelpsCandidate = intersects(currentNative, candidateTarget);
+    if (candidateHelpsCurrent && currentHelpsCandidate) {
+      score += 50;
+    } else if (candidateHelpsCurrent || currentHelpsCandidate) {
+      score += 20;
     }
 
-    // 3. Timezone / Active Hours Overlap (max 15 points)
-    const cAvailStart = c.available_time_start;
-    const cAvailEnd = c.available_time_end;
+    const proficiencyOrder = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const candidateLevel = proficiencyOrder.indexOf(
+      u.proficiency_level?.toUpperCase() ?? '',
+    );
+    const currentLevel = proficiencyOrder.indexOf(
+      c.proficiency_level?.toUpperCase() ?? '',
+    );
+    if (candidateLevel >= 0 && currentLevel >= 0) {
+      const gap = Math.abs(candidateLevel - currentLevel);
+      if (gap === 0) score += 10;
+      else if (gap === 1) score += 7;
+      else if (gap === 2) score += 3;
+    }
+
     if (
       u.available_time_start &&
       u.available_time_end &&
-      cAvailStart &&
-      cAvailEnd
+      c.available_time_start &&
+      c.available_time_end &&
+      this.timeRangesOverlap(
+        u.available_time_start,
+        u.available_time_end,
+        c.available_time_start,
+        c.available_time_end,
+      )
     ) {
-      if (
-        u.available_time_start <= cAvailEnd &&
-        u.available_time_end >= cAvailStart
-      ) {
-        score += 15;
-      }
-    } else {
-      score += 15; // default to overlap if not specified
+      score += 15;
     }
 
-    // 4. Interests (max 10 points)
-    if (u.interests && c.interests) {
-      const common = u.interests.filter((i) => c.interests?.includes(i));
-      score += Math.min(10, common.length * 2);
-    }
+    const candidateInterests = normaliseValues(u.interests);
+    const currentInterests = normaliseValues(c.interests);
+    const commonInterestCount = [...candidateInterests].filter((interest) =>
+      currentInterests.has(interest),
+    ).length;
+    score += Math.min(10, commonInterestCount * 2);
 
-    // 5. Response Behaviour (max 10 points)
-    // Assume recent activity is proxy for response rate if not explicitly recorded
-    if (u.last_active_at) {
-      const daysSinceActive =
-        (new Date().getTime() - new Date(u.last_active_at).getTime()) /
-        (1000 * 3600 * 24);
-      if (daysSinceActive <= 1) score += 10;
-      else if (daysSinceActive <= 7) score += 5;
-    }
+    const correctionRatio = Number.isFinite(u.correction_ratio)
+      ? Math.min(1, Math.max(0, u.correction_ratio))
+      : 0;
+    score += correctionRatio * 15;
 
-    // 6. Correction Behaviour (max 15 points)
-    if (u.correction_ratio) {
-      score += Math.min(15, u.correction_ratio * 15);
-    }
-
-    // 7. Learning Seriousness (max 10 points)
-    if (u.study_streak_days) {
-      score += Math.min(10, u.study_streak_days); // 1 point per day up to 10
-    }
-
-    // 8. Conversation Compatibility (max 10 points)
-    // Assume country/age match provides baseline compatibility if explicitly filtered
-    if (
-      query.country &&
-      (u.country ?? '').toLowerCase().includes(query.country.toLowerCase())
-    )
-      score += 5;
-    if (query.age_min && u.age! >= query.age_min) score += 5;
-
-    // Partner of week boost (override all)
-    if (u.is_partner_of_week) score += 1000;
+    const streakDays = Number.isFinite(u.study_streak_days)
+      ? Math.max(0, u.study_streak_days)
+      : 0;
+    const seriousnessWeight = c.is_serious_learner ? 10 : 4;
+    const seriousLearnerMultiplier = u.is_serious_learner ? 1 : 0.5;
+    score +=
+      Math.min(1, streakDays / 30) *
+      seriousnessWeight *
+      seriousLearnerMultiplier;
 
     return score;
+  }
+
+  private timeRangesOverlap(
+    firstStart: string,
+    firstEnd: string,
+    secondStart: string,
+    secondEnd: string,
+  ): boolean {
+    const parseTime = (value: string): number | null => {
+      const match = /^(\d{2}):(\d{2})$/.exec(value);
+      if (!match) return null;
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      if (hours > 23 || minutes > 59) return null;
+      return hours * 60 + minutes;
+    };
+    const toIntervals = (start: number, end: number): [number, number][] =>
+      start <= end
+        ? [[start, end]]
+        : [
+            [start, 24 * 60],
+            [0, end],
+          ];
+
+    const startsAndEnds = [firstStart, firstEnd, secondStart, secondEnd].map(
+      parseTime,
+    );
+    if (startsAndEnds.some((value) => value === null)) return false;
+    const [
+      firstStartMinutes,
+      firstEndMinutes,
+      secondStartMinutes,
+      secondEndMinutes,
+    ] = startsAndEnds as [number, number, number, number];
+
+    return toIntervals(firstStartMinutes, firstEndMinutes).some(
+      ([startA, endA]) =>
+        toIntervals(secondStartMinutes, secondEndMinutes).some(
+          ([startB, endB]) => startA <= endB && startB <= endA,
+        ),
+    );
   }
 
   private async filterByVoiceRoomActive<T extends UserProfile>(
@@ -1300,7 +1329,6 @@ export class DiscoveryService {
     users: UserProfile[],
     sort?: string,
     currentUserProfile?: UserProfile | null,
-    query?: SearchQueryDto,
     _searchLat?: number,
     _searchLon?: number,
   ): UserProfile[] {
@@ -1308,12 +1336,27 @@ export class DiscoveryService {
     const discoveryUsers = users as DiscoveryUser[];
     switch (sort) {
       case 'best_match':
-        if (currentUserProfile && query) {
+        if (currentUserProfile) {
+          const compositeScores = new Map(
+            discoveryUsers.map((user) => [
+              user.id,
+              this.getCompositeScore(user, currentUserProfile),
+            ]),
+          );
           return discoveryUsers.sort((a, b) => {
-            const scoreA = this.getCompositeScore(a, currentUserProfile, query);
-            const scoreB = this.getCompositeScore(b, currentUserProfile, query);
+            const aPow = a.is_partner_of_week ? 1 : 0;
+            const bPow = b.is_partner_of_week ? 1 : 0;
+            if (aPow !== bPow) return bPow - aPow;
+            const scoreA = compositeScores.get(a.id) ?? 0;
+            const scoreB = compositeScores.get(b.id) ?? 0;
             if (scoreA !== scoreB) return scoreB - scoreA;
-            return (b.correction_ratio ?? 0) - (a.correction_ratio ?? 0);
+            const ratioDifference =
+              (b.correction_ratio ?? 0) - (a.correction_ratio ?? 0);
+            if (ratioDifference !== 0) return ratioDifference;
+            const streakDifference =
+              (b.study_streak_days ?? 0) - (a.study_streak_days ?? 0);
+            if (streakDifference !== 0) return streakDifference;
+            return a.id.localeCompare(b.id);
           });
         }
         return discoveryUsers.sort((a, b) => {
@@ -1362,7 +1405,7 @@ export class DiscoveryService {
     let qb = supabase
       .from('users')
       .select(
-        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at, interests, age, country, city, available_time_start, available_time_end',
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false);
