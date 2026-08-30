@@ -80,7 +80,8 @@
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
 
-## 2026-08-30 - [Strict Secrets Validation in Production for Centrifugo]
-**Vulnerability:** Centrifugo real-time chat service relied on weak development fallback strings (`test-centrifugo-api-key`, `test-centrifugo-secret`) if credentials were missing in production, permitting unauthorized access to websocket authentication.
-**Learning:** Checking for the presence of variables in `NODE_ENV === 'production'` is insufficient if the configuration schema (like `Joi`) automatically injects insecure development fallback strings.
-**Prevention:** Apply strict fail-fast validation in service constructors or `onModuleInit` to explicitly throw an `Error` in production if the resolved configuration matches the known insecure dev default strings.
+## 2026-08-30 - [Fail-Fast Centrifugo Credentials in Production]
+
+**Vulnerability:** Centrifugo `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET` could reach production as configuration defaults, tracked example placeholders, or whitespace-only values.
+**Learning:** Configuration defaults and example environment files can mask missing deployment secrets with predictable strings. Protect the service startup boundary against every repository-known placeholder, not only the schema default.
+**Prevention:** In production, reject missing, whitespace-padded, test-default, and example-placeholder Centrifugo credentials before any Redis or Centrifugo initialization. Keep focused regression tests for every tracked insecure value and a valid production case.
