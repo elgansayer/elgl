@@ -85,9 +85,7 @@ export class UsersService {
     // Fetch related profile data concurrently to improve performance
     const [scoreRes, fcRes, fngRes, xpTotal] = await Promise.all([
       this.correctorScoreService
-        ? this.correctorScoreService
-            .getCorrectorScore(userId)
-            .catch(() => ({ averageScore: 0 }))
+        ? this.correctorScoreService.getCorrectorScore(userId)
         : Promise.resolve({ averageScore: 0 }),
       (async () => {
         try {
@@ -109,7 +107,7 @@ export class UsersService {
           return { count: 0 };
         }
       })(),
-      this.xpService.getTotalXp(userId).catch(() => 0),
+      this.xpService.getTotalXp(userId),
     ]);
 
     profile.corrector_score = scoreRes?.averageScore ?? 0;
