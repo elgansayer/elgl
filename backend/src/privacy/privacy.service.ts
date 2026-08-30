@@ -225,10 +225,7 @@ export class PrivacyService {
       offset < rows.length;
       offset += ARCHIVE_CLEANUP_CONCURRENCY
     ) {
-      const batch = rows.slice(
-        offset,
-        offset + ARCHIVE_CLEANUP_CONCURRENCY,
-      );
+      const batch = rows.slice(offset, offset + ARCHIVE_CLEANUP_CONCURRENCY);
       const results = await Promise.allSettled(
         batch.map(async (row) => {
           if (row.object_key) {

@@ -319,10 +319,7 @@ describe('PrivacyService', () => {
         () =>
           new Promise<{ error: null }>((resolve) => {
             activeRemovals += 1;
-            maxActiveRemovals = Math.max(
-              maxActiveRemovals,
-              activeRemovals,
-            );
+            maxActiveRemovals = Math.max(maxActiveRemovals, activeRemovals);
             releases.push(() => {
               activeRemovals -= 1;
               resolve({ error: null });
