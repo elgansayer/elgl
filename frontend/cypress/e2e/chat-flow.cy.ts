@@ -133,7 +133,6 @@ describe('Chat Flow (Mocked)', () => {
 
     cy.url().should('include', `/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').should('have.length', 1);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('sends a text message with the canonical room and message payload', () => {
