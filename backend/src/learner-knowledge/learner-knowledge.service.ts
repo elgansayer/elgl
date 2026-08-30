@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { VocabularyResultItem } from '../hobby-tags/hobby-tags.service';
+import { LessonRecord } from '../lessons/lessons.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { AssessmentsService } from '../assessments/assessments.service';
@@ -80,9 +82,7 @@ export class LearnerKnowledgeService {
       this.flashcardsService
         .getFlashcards(userId, undefined, 50)
         .catch(() => []),
-      this.hobbyTagsService
-        .getUserVocabulary(userId, language)
-        .catch(() => []),
+      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
       this.assessmentsService.getQuestions(language).catch(() => []),
       this.lessonsService.listLessons().catch(() => []),
       this.momentsService
@@ -118,7 +118,7 @@ export class LearnerKnowledgeService {
     // Extract recent encounters from lessons
     const recentEncounters: RecentEncounter[] = lessons
       .slice(0, 5)
-      .map((l: any) => ({
+      .map((l: LessonRecord) => ({
         topic: l.title || 'Unknown Topic',
         source: 'lesson',
         timestamp: new Date(l.created_at || Date.now()),
@@ -126,7 +126,7 @@ export class LearnerKnowledgeService {
 
     // Process vocabulary from hobby tags
     if (Array.isArray(vocabulary)) {
-      vocabulary.forEach((v: any) => {
+      vocabulary.forEach((v: VocabularyResultItem) => {
         const id = `vocab:${v.word}`;
         if (!knowledgeItems.has(id)) {
           knowledgeItems.set(id, {
@@ -143,8 +143,12 @@ export class LearnerKnowledgeService {
     }
 
     // Evaluate skills heuristically from counts
-    const calculateSkill = (base: number, bonusCounts: number, divisor: number) => {
-      return Math.min(1.0, base + (bonusCounts / divisor));
+    const calculateSkill = (
+      base: number,
+      bonusCounts: number,
+      divisor: number,
+    ) => {
+      return Math.min(1.0, base + bonusCounts / divisor);
     };
 
     const baseLevel = userProfile?.proficiency_level || 'A1';

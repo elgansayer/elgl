@@ -118,7 +118,7 @@ describe('LearnerKnowledgeService', () => {
       lessonsService.listLessons.mockResolvedValue(mockLessons);
 
       hobbyTagsService.getUserVocabulary.mockResolvedValue([
-        { word: 'hobbyWord' }
+        { word: 'hobbyWord' },
       ]);
       assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
@@ -180,7 +180,9 @@ describe('LearnerKnowledgeService', () => {
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );
-      usersService.getProfile.mockRejectedValue(new Error('User profile failed'));
+      usersService.getProfile.mockRejectedValue(
+        new Error('User profile failed'),
+      );
 
       const profile = await service.getProfile('user2', 'fr');
 
