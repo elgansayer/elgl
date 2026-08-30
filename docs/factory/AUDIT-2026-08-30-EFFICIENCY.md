@@ -113,11 +113,38 @@ Together with branch hygiene, the two control-plane schedules fall from **28 sch
 9/day**, a **67.9% reduction** in their scheduled invocations, while retaining event-driven repair and
 manual branch-hygiene execution.
 
+## Finding: three static product-contract workflows ran for every Factory-only pull request
+
+The Simplify Text, Translation Cache, and Draft Persistence workflows were triggered for every pull
+request and every matching branch push even though each job is a static Node contract that reads a
+small, explicit set of product source files. A Factory-only change cannot change the strings or files
+those tests inspect, so allocating three Ubuntu runners on every automation-only PR was pure CI fan-out.
+
+The test sources themselves make the dependency sets deterministic: Simplify reads six named
+frontend/backend files, Translation Cache reads four named frontend files, and Draft Persistence reads
+four named frontend files.
+
+### Implemented change
+
+Each workflow now has explicit `paths` filters for exactly the product files it reads, its contract test
+script, and its own workflow definition. `merge_group` remains unchanged and unconditional.
+
+Deterministic effect for an ordinary Factory-only pull request:
+
+- Simplify Text Contract: **1 product runner -> 0**;
+- Translation Cache Contract: **1 product runner -> 0**;
+- Draft Persistence Contract: **1 product runner -> 0**.
+
+That removes **3 unrelated product-contract runners per Factory-only PR** without removing any test
+when its actual inputs change. Changes to each workflow definition also continue to self-trigger its
+own contract.
+
 ## GitHub merge safety verification
 
 The active `main` ruleset requires `CI / required`. The independent Factory review is enforced by its
-separate active ruleset. None of the read-only schedules changed in this audit is a required merge
-status, so reducing their schedule cannot strand pull requests waiting for a missing required check.
+separate active ruleset. None of the read-only schedules or standalone static product contracts
+changed in this audit is a required merge status, so the trigger reductions cannot strand pull
+requests waiting for a missing required check.
 
 ## Deliberately unchanged
 
@@ -128,6 +155,10 @@ Several tempting reductions were rejected because they would trade away useful t
 - security review was not skipped for executable source changes;
 - independent code review was not removed or merged into implementation;
 - provider diversity and first-failure circuit breaking were not weakened;
+- Mock Backend Production Boundary was not path-filtered away from workflow changes because its
+  verifier explicitly scans production workflow files for mock-backend activation;
+- Playwright Test Boundary was not path-filtered away from workflow changes because workflow files are
+  part of the boundary it verifies;
 - the five-minute GitHub discovery refresh was not stretched again in this pass. The backlog is very
   large, but source-specific issue/PR refresh requires a dedicated reconciliation change so faster PR
   progress is not coupled to slower issue discovery. That needs explicit lifecycle tests before it is
@@ -135,17 +166,20 @@ Several tempting reductions were rejected because they would trade away useful t
 
 ## Regression coverage
 
-`automation/tests/test_factory_control_plane_efficiency.py` locks the three production policies:
+`automation/tests/test_factory_control_plane_efficiency.py` locks the production policies:
 
 - open-ended Claude planning/architecture remain on Opus while security review matches the Sonnet
   implementation tier;
-- branch hygiene remains daily with seven-day artifacts and manual dispatch; and
+- branch hygiene remains daily with seven-day artifacts and manual dispatch;
 - the self-healing schedule remains a three-hour backstop while push and workflow-run triggers stay
-  present.
+  present; and
+- the three static product contracts retain pull-request path filters for the exact source families
+  their tests inspect.
 
 ## Expected result
 
-This pass removes recurring work that does not directly create, review, repair, or merge code, and it
-stops a bounded checklist phase from consuming the primary planning-tier model. Productive Factory
+This pass removes recurring work that does not directly create, review, repair, or merge code, stops
+a bounded checklist phase from consuming the primary planning-tier model, and prevents three static
+product contracts from allocating runners on unrelated Factory-only changes. Productive Factory
 throughput, provider fallback, security review, independent review, required CI, and exact-head merge
 safety remain intact.
