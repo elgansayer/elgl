@@ -21,6 +21,7 @@ import {
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
 import { withExponentialBackoff } from '../common/http-retry.helper';
+import * as crypto from 'crypto';
 
 export interface VirtualGiftRow {
   id: string;
@@ -574,7 +575,8 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = Math.floor(Math.random() * 6) + 5;
+    // Use crypto.randomInt instead of Math.random to prevent predictable rewards
+    const reward = crypto.randomInt(5, 11);
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
