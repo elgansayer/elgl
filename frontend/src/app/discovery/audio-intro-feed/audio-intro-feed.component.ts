@@ -5,7 +5,6 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
-import { getLanguageFlag } from '../../components/primitives/language-picker/language-picker.component';
 
 @Component({
   selector: 'app-audio-intro-feed',
@@ -132,14 +131,13 @@ export class AudioIntroFeedComponent {
     };
 
     player.addEventListener('ended', clearCurrentPlayer, { once: true });
-    player.addEventListener(
-      'error',
-      () => {
-        clearCurrentPlayer();
-        this.playbackError.set(true);
-      },
-      { once: true },
-    );
+    const failCurrentPlayer = () => {
+      if (this.audioPlayer !== player) return;
+      clearCurrentPlayer();
+      this.playbackError.set(true);
+    };
+
+    player.addEventListener('error', failCurrentPlayer, { once: true });
 
     try {
       await player.play();
@@ -147,13 +145,8 @@ export class AudioIntroFeedComponent {
         this.playingId.set(userId);
       }
     } catch {
-      clearCurrentPlayer();
-      this.playbackError.set(true);
+      failCurrentPlayer();
     }
-  }
-
-  getFlag(code: string): string {
-    return getLanguageFlag(code);
   }
 
   constructor() {

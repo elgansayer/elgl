@@ -172,4 +172,37 @@ describe('AudioIntroFeedComponent', () => {
       'audioPlayer.error',
     );
   });
+
+  it('ignores a stale playback rejection after a newer introduction starts', async () => {
+    let rejectFirstPlay!: (error: Error) => void;
+    const firstPlay = new Promise<void>((_resolve, reject) => {
+      rejectFirstPlay = reject;
+    });
+
+    class RacingAudio extends MockAudio {
+      override readonly play = vi.fn(() =>
+        this.src.endsWith('/first.mp3') ? firstPlay : Promise.resolve(),
+      );
+    }
+    vi.stubGlobal('Audio', RacingAudio);
+
+    const firstToggle = component.togglePlay('u1', 'https://example.com/first.mp3');
+    await component.togglePlay('u2', 'https://example.com/second.mp3');
+
+    rejectFirstPlay(new Error('stale request failed'));
+    await firstToggle;
+
+    expect(component.playingId()).toBe('u2');
+    expect(component.playbackError()).toBe(false);
+  });
+
+  it('ignores stale media errors after a newer introduction starts', async () => {
+    await component.togglePlay('u1', 'https://example.com/first.mp3');
+    await component.togglePlay('u2', 'https://example.com/second.mp3');
+
+    MockAudio.instances[0]?.emit('error');
+
+    expect(component.playingId()).toBe('u2');
+    expect(component.playbackError()).toBe(false);
+  });
 });
