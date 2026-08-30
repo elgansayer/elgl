@@ -11,17 +11,15 @@ from openhands_factory.agents.base import AgentPhase, AgentRequest, ProviderHeal
 from openhands_factory.agents.cli import CLIProvider, classify_process_failure
 from openhands_factory.agents.process import ProcessResult
 
-# Keep maximum reasoning for open-ended planning, architecture, and implementation
-# where broad exploration can materially improve the result. Security review is a
-# bounded checklist over an existing diff and keeps a medium reasoning floor. Routine
-# quality repair, code review, and CI repair are bounded further by deterministic
-# findings/check failures and always flow back through verification/re-review, so low
-# effort avoids spending maximum thinking allowance on every iteration. General action
-# stays medium because its scope is not necessarily represented by a validated diff.
+# Keep maximum reasoning for open-ended planning, architecture, implementation, and
+# security review, where broad exploration can materially improve the result or prevent
+# a missed vulnerability. Independent code review and general action retain a medium
+# reasoning floor. Quality repair and CI repair are bounded by deterministic findings or
+# failed checks and always flow back through verification and re-review, so low effort
+# avoids spending maximum thinking allowance on every routine repair iteration.
 _REASONING_EFFORT_BY_PHASE: dict[AgentPhase, str] = {
-    AgentPhase.SECURITY_REVIEW: "medium",
     AgentPhase.QUALITY_REPAIR: "low",
-    AgentPhase.CODE_REVIEW: "low",
+    AgentPhase.CODE_REVIEW: "medium",
     AgentPhase.CI_REPAIR: "low",
     AgentPhase.GENERAL_ACTION: "medium",
 }

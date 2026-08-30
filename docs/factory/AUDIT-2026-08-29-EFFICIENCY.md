@@ -24,15 +24,15 @@ Fallback to a different healthy provider remains intact. Task, test, repository 
 
 ### 3. Codex reasoning was oversized for bounded loops
 
-Codex is the first production route for quality repair, code review and CI repair. Those phases are constrained by an existing diff, validated review artifact or failed checks and are followed by deterministic verification/re-review. They do not need the same reasoning setting as open-ended implementation.
+Codex is the first production route for quality repair, code review and CI repair. Quality repair and CI repair are constrained by deterministic findings or failed checks and are followed by verification and re-review. Independent code review retains a stronger reasoning floor because it must discover issues that deterministic checks missed.
 
 Codex now uses:
 
-- maximum reasoning for planning, architecture and implementation;
-- medium reasoning for security review and general action;
-- low reasoning for quality repair, code review and CI repair.
+- maximum reasoning for planning, architecture, implementation and security review;
+- medium reasoning for independent code review and general action;
+- low reasoning for quality repair and CI repair.
 
-This is a deterministic reduction in requested reasoning tier on the most common Codex-first bounded loops. No token percentage is claimed because subscription CLIs do not expose a portable, trustworthy token/allowance meter.
+This is a deterministic reduction in requested reasoning tier on bounded repair loops without weakening independent review or security analysis. No token percentage is claimed because subscription CLIs do not expose a portable, trustworthy token/allowance meter.
 
 ## Safeguards intentionally preserved
 
