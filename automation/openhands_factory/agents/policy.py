@@ -38,6 +38,15 @@ class ConfigRoutingPolicy(RoutingPolicy):
             if name not in target:
                 target.append(name)
 
+        # Factory-internal GENERAL_ACTION work is strictly best-effort control-plane
+        # analysis. The current caller is stall diagnosis, which already sends a
+        # deterministic diagnostic snapshot to the operator before invoking an agent.
+        # Do not cascade that optional analysis across subscriptions or into an
+        # emergency/PAYG provider: one healthy regular provider is sufficient, and a
+        # failure should leave the deterministic evidence intact for the next cycle.
+        if phase is AgentPhase.GENERAL_ACTION and job.task.source == "factory-internal":
+            return eligible[:1]
+
         if phase in {AgentPhase.QUALITY_REPAIR, AgentPhase.CI_REPAIR}:
             used = {
                 str(entry.get("provider"))
