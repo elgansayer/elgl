@@ -4,12 +4,21 @@ import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  VIDEO_CALLS_RATE_LIMIT_KEY,
+  VideoCallsRateLimiterGuard,
+} from './video-calls-rate-limiter.guard';
 
 describe('VideoCallsController', () => {
   let controller: VideoCallsController;
   let videoCallsService: VideoCallsService;
 
-  const mockUser = { id: 'user-1', email: 'test@hellotalk.com' };
+  const mockUser = {
+    id: '11111111-1111-4111-8111-111111111111',
+    email: 'test@hellotalk.com',
+  };
+  const remoteUserId = '22222222-2222-4222-8222-222222222222';
+  const roomName = 'video_a1b2c3d4-e5f6-4789-abcd-ef1234567890';
 
   const mockDegradationService = {
     getAllBreakerStates: vi.fn().mockReturnValue(new Map()),
@@ -32,9 +41,15 @@ describe('VideoCallsController', () => {
           provide: VideoCallsDegradationService,
           useValue: mockDegradationService,
         },
+        {
+          provide: VideoCallsRateLimiterGuard,
+          useValue: { canActivate: vi.fn().mockReturnValue(true) },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
+      .overrideGuard(VideoCallsRateLimiterGuard)
       .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
@@ -50,87 +65,116 @@ describe('VideoCallsController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('should attach authentication and video-call rate-limit guards', () => {
+    const guards = Reflect.getMetadata(
+      '__guards__',
+      VideoCallsController,
+    ) as unknown[];
+
+    expect(guards).toEqual(
+      expect.arrayContaining([SupabaseAuthGuard, VideoCallsRateLimiterGuard]),
+    );
+  });
+
+  it('should rate-limit call mutations while leaving health unmetered', () => {
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.startCall,
+      ),
+    ).toEqual({ maxRequests: 3, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.acceptCall,
+      ),
+    ).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    expect(
+      Reflect.getMetadata(
+        VIDEO_CALLS_RATE_LIMIT_KEY,
+        VideoCallsController.prototype.health,
+      ),
+    ).toBeUndefined();
+  });
+
   describe('startCall', () => {
-    it('should create a room and return the sanitised response', async () => {
-      const mockResponse = { token: 'livekit-token', roomName: 'video_abc123' };
+    it('should bind room creation to the authenticated caller and intended recipient', async () => {
+      const mockResponse = {
+        token: 'livekit-token',
+        roomName,
+        e2eeKey: 'ephemeral-key',
+      };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.startCall(req);
+      const result = await controller.startCall(req, { remoteUserId });
 
-      expect(videoCallsService.createRoom).toHaveBeenCalledWith('user-1');
+      expect(videoCallsService.createRoom).toHaveBeenCalledWith(
+        mockUser.id,
+        remoteUserId,
+      );
       expect(result).toEqual(mockResponse);
     });
 
-    it('should return degraded flag from the service', async () => {
+    it('should return encryption and degraded state from the service unchanged', async () => {
       const mockResponse = {
         token: 'fallback-token',
-        roomName: 'video_abc123',
+        roomName,
+        e2eeKey: 'ephemeral-key',
         degraded: true,
         degradationReason: 'Service livekit failed: timeout',
       };
       (videoCallsService.createRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.startCall(req);
+      const result = await controller.startCall(req, { remoteUserId });
 
       expect(result).toEqual(mockResponse);
+      expect(result.e2eeKey).toBe('ephemeral-key');
       expect(result.degraded).toBe(true);
     });
 
     it('should propagate errors from the service', async () => {
       (videoCallsService.createRoom as Mock).mockRejectedValue(
-        new Error('LiveKit unavailable'),
+        new Error('Encrypted calls unavailable'),
       );
 
       const req = { user: mockUser } as any;
 
-      await expect(controller.startCall(req)).rejects.toThrow(
-        'LiveKit unavailable',
+      await expect(controller.startCall(req, { remoteUserId })).rejects.toThrow(
+        'Encrypted calls unavailable',
       );
     });
   });
 
   describe('acceptCall', () => {
-    it('should join a room and return the sanitised response', async () => {
-      const mockResponse = { token: 'livekit-join-token', roomName: 'room-1' };
+    it('should request join material for the authenticated participant', async () => {
+      const mockResponse = {
+        token: 'livekit-join-token',
+        roomName,
+        e2eeKey: 'same-ephemeral-key',
+      };
       (videoCallsService.joinRoom as Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
-      const result = await controller.acceptCall(req, 'room-1');
+      const result = await controller.acceptCall(req, { roomName });
 
       expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
-        'user-1',
-        'room-1',
+        mockUser.id,
+        roomName,
       );
       expect(result).toEqual(mockResponse);
     });
 
-    it('should pass sanitised room name to the service', async () => {
-      (videoCallsService.joinRoom as Mock).mockResolvedValue({
-        token: 'tok',
-        roomName: 'clean-room',
-      });
-
-      const req = { user: mockUser } as any;
-      const result = await controller.acceptCall(req, 'clean-room');
-
-      expect(videoCallsService.joinRoom).toHaveBeenCalledWith(
-        'user-1',
-        'clean-room',
-      );
-      expect(result).toEqual({ token: 'tok', roomName: 'clean-room' });
-    });
-
-    it('should propagate errors from the service', async () => {
+    it('should propagate authorization and availability errors from the service', async () => {
       (videoCallsService.joinRoom as Mock).mockRejectedValue(
-        new Error('Room not found'),
+        new Error('Call is unavailable'),
       );
 
       const req = { user: mockUser } as any;
 
-      await expect(controller.acceptCall(req, 'no-room')).rejects.toThrow(
-        'Room not found',
+      await expect(controller.acceptCall(req, { roomName })).rejects.toThrow(
+        'Call is unavailable',
       );
     });
   });

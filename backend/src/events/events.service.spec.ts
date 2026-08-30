@@ -36,8 +36,181 @@ describe('EventsService', () => {
     service = module.get<EventsService>(EventsService);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('event reminders', () => {
+    const reminderService = () =>
+      service as unknown as { checkReminders(): Promise<void> };
+
+    function createReminderClient(claims: unknown[], rpcError: unknown = null) {
+      const finalizeEq = vi.fn().mockResolvedValue({ error: null });
+      const finalizeIn = vi.fn().mockReturnValue({ eq: finalizeEq });
+      const update = vi.fn().mockReturnValue({ in: finalizeIn });
+      const from = vi.fn().mockReturnValue({ update });
+      const rpc = vi.fn().mockResolvedValue({ data: claims, error: rpcError });
+      return { rpc, from, update, finalizeIn, finalizeEq };
+    }
+
+    it('atomically claims and sends a due reminder with an event deep link', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-1',
+          event_id: 'event-1',
+          user_id: 'user-1',
+          event_title: '  Spanish   Learning Event  ',
+          event_date_time: '2026-08-23T10:15:00.000Z',
+          attempt_count: 1,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+      notificationsService.sendPushNotification.mockResolvedValue('sent');
+
+      await reminderService().checkReminders();
+
+      expect(client.rpc).toHaveBeenCalledWith('claim_due_event_reminders', {
+        p_now: '2026-08-23T10:00:00.000Z',
+        p_limit: 200,
+        p_lease_seconds: 120,
+      });
+      expect(notificationsService.sendPushNotification).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({
+          type: 'event_reminder',
+          title: 'Event Reminder: Spanish Learning Event',
+          body: 'Your event "Spanish Learning Event" starts in 15 minutes.',
+          category: 'groups',
+          data: {
+            eventId: 'event-1',
+            route: '/events/event-1',
+            startsAt: '2026-08-23T10:15:00.000Z',
+          },
+        }),
+      );
+      expect(client.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'sent',
+          claimed_at: null,
+          next_attempt_at: null,
+        }),
+      );
+      expect(client.finalizeIn).toHaveBeenCalledWith('id', ['reminder-1']);
+    });
+
+    it('releases retryable dispatches instead of marking them sent', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-2',
+          event_id: 'event-2',
+          user_id: 'user-2',
+          event_title: 'Conversation Club',
+          event_date_time: '2026-08-23T10:08:00.000Z',
+          attempt_count: 2,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+      notificationsService.sendPushNotification.mockResolvedValue('retry');
+
+      await reminderService().checkReminders();
+
+      expect(client.update).toHaveBeenCalledTimes(1);
+      expect(client.update).toHaveBeenCalledWith({
+        claimed_at: null,
+        next_attempt_at: '2026-08-23T10:01:00.000Z',
+        updated_at: '2026-08-23T10:00:00.000Z',
+      });
+      expect(client.finalizeIn).toHaveBeenCalledWith('id', ['reminder-2']);
+    });
+
+    it('treats intentional push suppression as terminal without retrying', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-suppressed',
+          event_id: 'event-suppressed',
+          user_id: 'user-suppressed',
+          event_title: 'Quiet Event',
+          event_date_time: '2026-08-23T10:10:00.000Z',
+          attempt_count: 1,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+      notificationsService.sendPushNotification.mockResolvedValue('suppressed');
+
+      await reminderService().checkReminders();
+
+      expect(client.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'sent', next_attempt_at: null }),
+      );
+      expect(client.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores malformed claim rows rather than sending untrusted reminder data', async () => {
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-bad',
+          event_id: 'event-bad',
+          user_id: 'user-bad',
+          event_title: 'Bad event',
+          event_date_time: 'not-a-date',
+          attempt_count: 1,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+
+      await reminderService().checkReminders();
+
+      expect(notificationsService.sendPushNotification).not.toHaveBeenCalled();
+      expect(client.update).not.toHaveBeenCalled();
+    });
+
+    it('fails the scheduler tick closed when the claim RPC is unavailable', async () => {
+      const client = createReminderClient([], {
+        message: 'database unavailable',
+      });
+      supabaseService.getClient.mockReturnValue(client);
+
+      await expect(reminderService().checkReminders()).resolves.toBeUndefined();
+      expect(notificationsService.sendPushNotification).not.toHaveBeenCalled();
+      expect(client.from).not.toHaveBeenCalled();
+    });
+
+    it('bounds and sanitizes long event titles before they reach push payloads', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
+      const client = createReminderClient([
+        {
+          reminder_id: 'reminder-3',
+          event_id: 'event-3',
+          user_id: 'user-3',
+          event_title: `   ${'a'.repeat(100)}   `,
+          event_date_time: '2026-08-23T10:05:00.000Z',
+          attempt_count: 1,
+        },
+      ]);
+      supabaseService.getClient.mockReturnValue(client);
+      notificationsService.sendPushNotification.mockResolvedValue('sent');
+
+      await reminderService().checkReminders();
+
+      expect(notificationsService.sendPushNotification).toHaveBeenCalledWith(
+        'user-3',
+        expect.objectContaining({
+          title: `Event Reminder: ${'a'.repeat(80)}`,
+          body: `Your event "${'a'.repeat(80)}" starts in 5 minutes.`,
+        }),
+      );
+    });
   });
 
   describe('createEvent', () => {
@@ -195,14 +368,6 @@ describe('EventsService', () => {
         host_id: 'host123',
         host: { display_name: 'Host Name', avatar_url: 'https://avatar.url' },
       };
-
-      const createCountQuery = (result: { count: number }) => ({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ count: result.count }),
-          }),
-        }),
-      });
 
       const mockClient = {
         from: vi.fn().mockImplementation((table: string) => {

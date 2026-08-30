@@ -1,143 +1,82 @@
 import { Injectable } from '@angular/core';
 
-const TRANSLATION_CACHE_PREFIX = 'elgl:tr:';
 const MAX_CACHE_ENTRIES = 500;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 interface TranslationCacheEntry {
-  sourceText: string;
-  targetLanguage: string;
   value: string;
   timestamp: number;
 }
 
+/**
+ * Process-local cache for translated private content.
+ *
+ * Chat and Moment text can contain sensitive personal data. Translation results
+ * are therefore intentionally kept in memory only: they must not survive a page
+ * reload, browser restart, logout, or another user opening the same browser
+ * profile. The cache is a performance optimisation, never a source of truth.
+ */
 @Injectable({ providedIn: 'root' })
 export class TranslationCacheService {
-  /**
-   * Returns a cached translation for the given text+targetLang pair,
-   * or null if no valid cached entry exists. Browser storage is an optional
-   * optimisation: privacy modes, quota failures, or disabled storage must never
-   * break translation actions.
-   */
+  private readonly cache = new Map<string, TranslationCacheEntry>();
+
+  /** Returns a fresh cached translation for an exact source/target pair. */
   get(text: string, targetLang: string): string | null {
     const key = this.buildKey(text, targetLang);
-    let raw: string | null;
+    if (!key) return null;
 
-    try {
-      raw = localStorage.getItem(key);
-    } catch {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > MAX_AGE_MS) {
+      this.cache.delete(key);
       return null;
     }
 
-    if (!raw) return null;
-
-    try {
-      const entry = JSON.parse(raw) as Partial<TranslationCacheEntry>;
-      if (
-        typeof entry.value !== 'string' ||
-        typeof entry.timestamp !== 'number' ||
-        Date.now() - entry.timestamp > MAX_AGE_MS ||
-        (typeof entry.sourceText === 'string' && entry.sourceText !== text) ||
-        (typeof entry.targetLanguage === 'string' && entry.targetLanguage !== targetLang)
-      ) {
-        this.removeSafely(key);
-        return null;
-      }
-      return entry.value;
-    } catch {
-      this.removeSafely(key);
-      return null;
-    }
+    // Refresh insertion order so the bounded cache behaves as a small LRU.
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.value;
   }
 
   /**
-   * Stores a translation result for the given text+targetLang pair.
-   * Cache writes are best-effort and intentionally never make a successful
-   * translation fail when browser storage is unavailable.
+   * Stores a translation for the current application lifetime only.
+   * Empty or malformed cache inputs are ignored because cache availability must
+   * never affect whether the translation itself can be shown.
    */
   set(text: string, targetLang: string, translatedText: string): void {
-    if (!translatedText) return;
+    const key = this.buildKey(text, targetLang);
+    if (!key || !translatedText.trim()) return;
 
-    try {
-      this.evictIfNeeded();
-      const key = this.buildKey(text, targetLang);
-      const entry: TranslationCacheEntry = {
-        sourceText: text,
-        targetLanguage: targetLang,
-        value: translatedText,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(key, JSON.stringify(entry));
-    } catch {
-      // Storage is an optional performance optimisation. Ignore quota/security
-      // failures so the translated result can still be rendered to the user.
-    }
+    this.cache.delete(key);
+    this.cache.set(key, {
+      value: translatedText,
+      timestamp: Date.now(),
+    });
+    this.evictIfNeeded();
   }
 
-  /** Removes all translation cache entries without failing the caller. */
+  /** Removes all in-memory translation entries. */
   clear(): void {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith(TRANSLATION_CACHE_PREFIX)) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach((key) => this.removeSafely(key));
-    } catch {
-      // Clearing a cache must remain safe when storage access is denied.
-    }
+    this.cache.clear();
   }
 
-  private buildKey(text: string, targetLang: string): string {
-    const hash = this.hashString(text);
-    return `${TRANSLATION_CACHE_PREFIX}${hash}:${targetLang}`;
-  }
+  private buildKey(text: string, targetLang: string): string | null {
+    if (!text) return null;
+    const normalizedTarget = targetLang.trim().toLowerCase();
+    if (!normalizedTarget) return null;
 
-  private hashString(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const chr = str.charCodeAt(i);
-      hash = ((hash << 5) - hash + chr) | 0;
-    }
-    return Math.abs(hash).toString(36);
-  }
-
-  private removeSafely(key: string): void {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // Best-effort cache cleanup only.
-    }
+    // JSON encoding is collision-free for this pair and avoids the old
+    // non-cryptographic text hash, which could return a translation belonging to
+    // a different source string after a hash collision.
+    return JSON.stringify([normalizedTarget, text]);
   }
 
   private evictIfNeeded(): void {
-    const keys: Array<{ key: string; timestamp: number }> = [];
-
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key?.startsWith(TRANSLATION_CACHE_PREFIX)) continue;
-
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-
-        try {
-          const entry = JSON.parse(raw) as { timestamp?: number };
-          keys.push({ key, timestamp: entry.timestamp ?? 0 });
-        } catch {
-          keys.push({ key, timestamp: 0 });
-        }
-      }
-    } catch {
-      return;
-    }
-
-    if (keys.length > MAX_CACHE_ENTRIES) {
-      keys.sort((a, b) => a.timestamp - b.timestamp);
-      const toRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES + 50);
-      toRemove.forEach(({ key }) => this.removeSafely(key));
+    while (this.cache.size > MAX_CACHE_ENTRIES) {
+      const oldestKey = this.cache.keys().next().value as string | undefined;
+      if (oldestKey === undefined) return;
+      this.cache.delete(oldestKey);
     }
   }
 }

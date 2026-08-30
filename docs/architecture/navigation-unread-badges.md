@@ -1,10 +1,10 @@
 # Navigation unread badges
 
-Issue #1045 is implemented by the shared `UnreadCounterService` and the primary navigation surfaces.
+Issues #1045 and #1046 are implemented by the shared `UnreadCounterService` and both primary navigation surfaces.
 
 ## Runtime contract
 
-The service owns independent counters for the five primary destinations:
+`UnreadCounterService` is the single in-memory owner for the five primary destinations:
 
 - Chat: `chatUnread`
 - Moments: `momentsUnread`
@@ -12,32 +12,54 @@ The service owns independent counters for the five primary destinations:
 - Live Rooms: `audioRoomsUnread`
 - Profile: `notificationUnread`
 
-Both the desktop sidebar and the mobile bottom navigation read those counters through `tabCount(tab)`. A badge is rendered only when the corresponding count is greater than zero. Visible badge text is capped at `99+`; the service retains the full numeric count so totals, decrements, and later rendering are not lossy.
+Both the desktop sidebar and mobile bottom navigation read those counters through `tabCount(tab)`. A visual badge is rendered only when the corresponding count is greater than zero. `badgeText(tab)` caps visual text at `99+`, while the full integer remains in service state for totals, assistive technology, later decrements, and the application badge.
 
-The global notification control is separate from the per-tab navigation contract. Realtime user-channel events and the initial unread-count bootstrap remain responsible for updating service state; navigation components only render that state and do not perform network requests.
+Counter producers remain separate from presentation. The root user-channel subscription and unread bootstrap populate chat/notification state, while feature-specific producers may update the other tab counters through the same service. Navigation components perform no network requests and must not fabricate counts when a producer is unavailable.
 
-## Accessibility and responsive behaviour
+## Defensive count handling
 
-Navigation destinations remain native links with visible keyboard focus and route-aware `aria-current="page"` state where applicable. Badges are supplemental visual state inside those links and do not replace the translated destination label.
+All values passed to `set()` are normalized before becoming navigation state:
 
-The desktop sidebar is intentionally hidden below the repository's desktop breakpoint, while the mobile bottom navigation owns the same five counters below that breakpoint. No counter state is duplicated between the two layouts.
+- negative, `NaN`, and infinite values become zero;
+- fractional values are floored to an integer;
+- increments saturate at `Number.MAX_SAFE_INTEGER` rather than overflowing into an unsafe value.
 
-## Failure behaviour
+This prevents malformed provider/API values from producing `NaN`, `Infinity`, negative, or unstable badge content. Legacy chat/profile helper methods delegate to the same normalization path.
 
-Unread-count bootstrap and realtime delivery are best-effort. If a backend count request or realtime event is unavailable, navigation remains usable and displays the latest in-memory count. The UI must not fabricate unread values to conceal a provider or network failure.
+## Accessibility and responsive behavior
 
-Counts are clamped to zero by `UnreadCounterService`; negative badge values are therefore never rendered.
+The desktop sidebar and mobile bottom navigation expose the same five counters without duplicating state.
+
+- Desktop visual badge text is marked `aria-hidden`; a visually hidden localized unread count remains part of the link's accessible name.
+- Mobile links include the full localized unread count in `aria-label`, even when the visible badge is capped at `99+`.
+- Mobile primary links now expose `aria-current="page"` through `RouterLinkActive`, matching desktop route semantics.
+- Emoji icons are decorative for the mobile primary links and are hidden from assistive technology.
+- Both navigation landmarks use the translated `nav.mainNav` label and retain visible keyboard focus treatment.
+
+The desktop sidebar remains hidden below the repository's desktop breakpoint, while the mobile bottom navigation owns the same service state below that breakpoint.
+
+## Failure behavior
+
+Unread bootstrap and realtime delivery are best-effort. If a backend count request or realtime event is unavailable, navigation remains usable and displays the latest valid in-memory count. The UI does not invent unread values to conceal provider or network failures.
+
+Application Badge API failures remain non-fatal because browser support is optional. The navigation UI continues to display service state even when `navigator.setAppBadge()` or `navigator.clearAppBadge()` is unavailable or rejects.
+
+## Security and privacy
+
+Unread counters contain aggregate numbers only. Navigation does not persist message contents, notification payloads, credentials, tokens, or user identifiers. No new API, database, storage, analytics, or logging surface is introduced by this implementation.
 
 ## Verification
 
 Relevant automated coverage lives in:
 
-- `frontend/src/app/services/unread-counter.service.spec.ts` for counter updates, clamping, totals, and application-badge integration;
-- `frontend/src/app/components/desktop-sidebar/desktop-sidebar.component.spec.ts` for per-tab navigation binding, zero-state badge removal, `99+` presentation, native-link semantics, focus treatment, and active-route semantics;
+- `frontend/src/app/services/unread-counter.service.spec.ts` for per-tab state, normalization, saturation, compact badge presentation, totals, and optional application-badge integration;
+- `frontend/src/app/components/desktop-sidebar/desktop-sidebar.component.spec.ts` for all five tab bindings, zero-state removal, `99+` presentation, full assistive unread text, native-link semantics, focus treatment, and active-route semantics;
 - `frontend/src/app/app.component.spec.ts` for root-service wiring and realtime unread updates.
 
-Frontend CI should run the normal unit, static-analysis, and production-build gates before merge.
+Frontend CI should run the normal unit, static-analysis, production-build, translation-safety, UI-design, and repository verification gates before merge.
 
 ## Rollout and rollback
 
-This completion change adds regression coverage and documentation around the existing production integration. It introduces no schema, API, route, storage, authentication, or migration changes. Rollback is a normal revert of the test/documentation commit; production unread behaviour is unchanged.
+This is a frontend-only compatibility change. It introduces no schema, API, route, persistence, authentication, or migration changes and is safe to deploy independently of the backend.
+
+Rollback is a normal revert of the issue #1046 commits. Existing producer APIs and persisted data require no cleanup or downgrade procedure.

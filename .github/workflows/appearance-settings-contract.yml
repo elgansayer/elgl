@@ -1,0 +1,33 @@
+name: Appearance Settings Contract
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/app/routes/settings.routes.ts'
+      - 'frontend/src/app/pages/settings/appearance-settings/**'
+      - 'scripts/appearance-settings-contract.test.mjs'
+      - 'docs/appearance-settings.md'
+      - '.github/workflows/appearance-settings-contract.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/src/app/routes/settings.routes.ts'
+      - 'frontend/src/app/pages/settings/appearance-settings/**'
+      - 'scripts/appearance-settings-contract.test.mjs'
+      - 'docs/appearance-settings.md'
+      - '.github/workflows/appearance-settings-contract.yml'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  appearance-settings-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Appearance Settings product contract
+        run: node --test scripts/appearance-settings-contract.test.mjs
