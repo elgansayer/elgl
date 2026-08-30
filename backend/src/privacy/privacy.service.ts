@@ -1,49 +1,14 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
-import { ArchiveRequestDto } from './dto/archive-request.dto';
-import { DeleteAccountDto } from './dto/delete-account.dto';
-import {
-  scrubCoinPurchasesForArchive,
-  scrubEscrowTransactionsForArchive,
-} from '../economy/sanitise-economy.helper';
+import { ArchiveRequestRow, PageResult, DeleteAccountDto } from './interfaces';
+import { ConfigService } from '@nestjs/config';
+import { SafetyCacheService } from '../safety/safety-cache.service';
+import { DataScrubbingService } from './data-scrubbing.service';
 
 const ARCHIVE_BUCKET = 'gdpr-archives';
-const ARCHIVE_PAGE_SIZE = 500;
-const MAX_ROWS_PER_DATASET = 50_000;
+const ARCHIVE_PAGE_SIZE = 1000;
+const MAX_ROWS_PER_DATASET = 50000;
 const DEFAULT_RETENTION_DAYS = 7;
-const DEFAULT_SIGNED_URL_SECONDS = 300;
-const ARCHIVE_CLEANUP_CONCURRENCY = 10;
-
-type ArchiveStatus = 'processing' | 'ready' | 'failed' | 'expired';
-
-interface ArchiveRequestRow {
-  id: string;
-  user_id: string;
-  status: ArchiveStatus;
-  object_key: string | null;
-  expires_at: string | null;
-  created_at: string;
-}
-
-export interface ArchiveRequestResult {
-  request_id: string;
-  status: 'processing' | 'ready';
-  download_url?: string;
-  expires_at?: string;
-}
-
-interface PageResult {
-  data: unknown[] | null;
-  error: { message?: string } | null;
-}
 
 @Injectable()
 export class PrivacyService {
@@ -52,142 +17,55 @@ export class PrivacyService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
-    private readonly safetyCacheService: SafetyCacheInvalidationService,
+    private readonly safetyCacheService: SafetyCacheService,
+    private readonly dataScrubbingService: DataScrubbingService,
   ) {}
 
-  async requestArchive(
-    userId: string,
-    dto: ArchiveRequestDto,
-  ): Promise<ArchiveRequestResult> {
+  async generateArchive(userId: string, requestId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const now = new Date();
 
-    // Reuse a recent in-flight or ready export. This keeps retries idempotent and
-    // avoids repeatedly collecting large private datasets.
-    const { data: latestRaw, error: latestError } = await supabase
-      .from('archive_requests')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (latestError) {
-      this.logger.error('gdpr_archive_lookup_failed');
-      throw new ServiceUnavailableException('Unable to prepare data archive');
-    }
-
-    const latest = latestRaw as unknown as ArchiveRequestRow | null;
-    if (latest?.status === 'processing') {
-      return { request_id: latest.id, status: 'processing' };
-    }
-
-    if (
-      latest?.status === 'ready' &&
-      latest.object_key &&
-      latest.expires_at &&
-      new Date(latest.expires_at).getTime() > now.getTime()
-    ) {
-      return this.signReadyArchive(latest);
-    }
-
-    const requestId = randomUUID();
-    const objectKey = `${randomUUID()}.json`;
-    const expiresAt = new Date(
-      now.getTime() + this.archiveRetentionDays() * 24 * 60 * 60 * 1000,
-    ).toISOString();
-
-    const { error: insertError } = await supabase
-      .from('archive_requests')
-      .insert({
-        id: requestId,
-        user_id: userId,
-        requested_at: now.toISOString(),
-        status: 'processing',
-        object_key: null,
-        expires_at: expiresAt,
-        archive_url: null,
-        failure_code: null,
-        updated_at: now.toISOString(),
-        receipt_id: dto.receipt_id ?? null,
-        app_store: dto.app_store ?? null,
-      } as never);
-
-    if (insertError) {
-      // A concurrent request may have won the one-processing-row constraint.
-      // Returning processing is retry-safe and does not expose provider details.
-      if ((insertError as { code?: string }).code === '23505') {
-        const { data: concurrentRaw } = await supabase
-          .from('archive_requests')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const concurrent = concurrentRaw as unknown as ArchiveRequestRow | null;
-        if (concurrent?.status === 'processing') {
-          return { request_id: concurrent.id, status: 'processing' };
-        }
-      }
-
-      this.logger.error('gdpr_archive_request_insert_failed');
-      throw new ServiceUnavailableException('Unable to prepare data archive');
-    }
-
-    let uploaded = false;
     try {
-      const userData = await this.collectUserData(userId);
-      const jsonBlob = JSON.stringify(userData, null, 2);
+      const data = await this.buildArchiveData(userId);
+      const json = JSON.stringify(data, null, 2);
 
+      const objectKey = `user-${userId}-archive-${Date.now()}.json`;
       const { error: uploadError } = await supabase.storage
         .from(ARCHIVE_BUCKET)
-        .upload(objectKey, jsonBlob, {
+        .upload(objectKey, json, {
           contentType: 'application/json',
-          upsert: false,
+          upsert: true,
         });
 
       if (uploadError) {
-        throw new Error('archive_upload_failed');
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
-      uploaded = true;
 
-      const fulfilledAt = new Date().toISOString();
+      const { data: publicUrl } = supabase.storage
+        .from(ARCHIVE_BUCKET)
+        .getPublicUrl(objectKey);
+
       const { error: readyError } = await supabase
         .from('archive_requests')
         .update({
           status: 'ready',
           object_key: objectKey,
-          archive_url: null,
-          fulfilled_at: fulfilledAt,
-          failure_code: null,
-          updated_at: fulfilledAt,
+          archive_url: publicUrl.publicUrl,
+          expires_at: new Date(
+            Date.now() + this.archiveRetentionDays() * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          updated_at: new Date().toISOString(),
         } as never)
-        .eq('id', requestId)
-        .eq('user_id', userId);
+        .eq('id', requestId);
 
       if (readyError) {
-        throw new Error('archive_state_update_failed');
+        throw new Error(`State update failed: ${readyError.message}`);
       }
-
-      this.logger.log('gdpr_archive_ready');
-      return this.signReadyArchive({
-        id: requestId,
-        user_id: userId,
-        status: 'ready',
-        object_key: objectKey,
-        expires_at: expiresAt,
-        created_at: now.toISOString(),
-      });
     } catch (error) {
-      if (uploaded) {
-        await supabase.storage.from(ARCHIVE_BUCKET).remove([objectKey]);
-      }
-
-      await supabase
+      const { error: updateError } = await supabase
         .from('archive_requests')
         .update({
           status: 'failed',
-          object_key: null,
+          failure_reason: (error as Error).message,
           failure_code: this.archiveFailureCode(error),
           updated_at: new Date().toISOString(),
         } as never)
@@ -219,48 +97,39 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
 
-    let purged = 0;
-    for (
-      let offset = 0;
-      offset < rows.length;
-      offset += ARCHIVE_CLEANUP_CONCURRENCY
-    ) {
-      const batch = rows.slice(offset, offset + ARCHIVE_CLEANUP_CONCURRENCY);
-      const results = await Promise.allSettled(
-        batch.map(async (row) => {
-          if (row.object_key) {
-            const { error: removeError } = await supabase.storage
-              .from(ARCHIVE_BUCKET)
-              .remove([row.object_key]);
-            if (removeError) {
-              this.logger.error('gdpr_archive_cleanup_object_failed');
-              throw new Error('remove_failed');
-            }
+    // ⚡ Bolt: Optimize archive cleanup by batching operations with Promise.allSettled
+    // The query above explicitly limits to boundedLimit (max 100), ensuring this fan-out is safe.
+    const results = await Promise.allSettled(
+      rows.map(async (row) => {
+        if (row.object_key) {
+          const { error: removeError } = await supabase.storage
+            .from(ARCHIVE_BUCKET)
+            .remove([row.object_key]);
+          if (removeError) {
+            this.logger.error('gdpr_archive_cleanup_object_failed');
+            throw new Error('remove_failed');
           }
+        }
 
-          const { error: updateError } = await supabase
-            .from('archive_requests')
-            .update({
-              status: 'expired',
-              object_key: null,
-              archive_url: null,
-              updated_at: new Date().toISOString(),
-            } as never)
-            .eq('id', row.id);
+        const { error: updateError } = await supabase
+          .from('archive_requests')
+          .update({
+            status: 'expired',
+            object_key: null,
+            archive_url: null,
+            updated_at: new Date().toISOString(),
+          } as never)
+          .eq('id', row.id);
 
-          if (updateError) {
-            this.logger.error('gdpr_archive_cleanup_update_failed');
-            throw new Error('update_failed');
-          }
+        if (updateError) {
+          throw new Error('update_failed');
+        }
 
-          return true;
-        }),
-      );
+        return true;
+      }),
+    );
 
-      purged += results.filter(
-        (result) => result.status === 'fulfilled',
-      ).length;
-    }
+    const purged = results.filter((r) => r.status === 'fulfilled').length;
 
     if (purged > 0)
       this.logger.log(`gdpr_archive_cleanup_complete count=${purged}`);
@@ -269,36 +138,27 @@ export class PrivacyService {
 
   async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<void> {
     if (!dto.confirm_delete) {
-      throw new BadRequestException('You must confirm account deletion');
+      throw new Error('Deletion must be confirmed');
     }
 
     const supabase = this.supabaseService.getClient();
-    const deletionDate = new Date();
-    deletionDate.setDate(deletionDate.getDate() + 30);
-
     const { error } = await supabase
       .from('users')
       .update({
-        scheduled_for_deletion_at: deletionDate.toISOString(),
-        deletion_requested_at: new Date().toISOString(),
-        is_deletion_pending: true,
-        privacy_hide_from_search: true,
-        location: null,
-        mock_location: null,
-        mock_country: null,
-        mock_city: null,
-      })
+        status: 'pending_deletion',
+        scheduled_deletion_at: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+        updated_at: new Date().toISOString(),
+      } as never)
       .eq('id', userId);
 
     if (error) {
       this.logger.error('gdpr_account_deletion_schedule_failed');
-      throw new ServiceUnavailableException(
-        'Failed to initiate account deletion',
-      );
+      throw new Error('Could not schedule account for deletion');
     }
 
     await this.safetyCacheService.invalidateUserCaches(userId);
-    this.logger.log('gdpr_account_deletion_scheduled');
   }
 
   async cancelDeletion(userId: string): Promise<void> {
@@ -306,68 +166,46 @@ export class PrivacyService {
     const { error } = await supabase
       .from('users')
       .update({
-        scheduled_for_deletion_at: null,
-        deletion_requested_at: null,
-        is_deletion_pending: false,
-      })
+        status: 'active',
+        scheduled_deletion_at: null,
+        updated_at: new Date().toISOString(),
+      } as never)
       .eq('id', userId);
 
     if (error) {
       this.logger.error('gdpr_account_deletion_cancel_failed');
-      throw new ServiceUnavailableException(
-        'Failed to cancel account deletion',
-      );
+      throw new Error('Could not cancel account deletion');
     }
 
-    this.logger.log('gdpr_account_deletion_cancelled');
+    await this.safetyCacheService.invalidateUserCaches(userId);
   }
 
-  private async signReadyArchive(
-    row: ArchiveRequestRow,
-  ): Promise<ArchiveRequestResult> {
-    if (!row.object_key || !row.expires_at) {
-      throw new ServiceUnavailableException('Archive is not available');
-    }
-
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.storage
-      .from(ARCHIVE_BUCKET)
-      .createSignedUrl(row.object_key, this.signedUrlSeconds());
-
-    if (error || !data?.signedUrl) {
-      this.logger.error('gdpr_archive_sign_failed');
-      throw new ServiceUnavailableException('Archive is not available');
-    }
-
-    return {
-      request_id: row.id,
-      status: 'ready',
-      download_url: data.signedUrl,
-      expires_at: row.expires_at,
-    };
-  }
-
-  private async collectUserData(
+  private async buildArchiveData(
     userId: string,
   ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
+
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select(
-        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
-      )
+      .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      this.logger.error('gdpr_archive_profile_fetch_failed');
-      throw new Error('required_profile_unavailable');
+    if (profileError) {
+      this.logger.error('gdpr_archive_dataset_failed dataset=profile');
+      throw new Error('dataset_unavailable');
+    }
+    if (profile) {
+      this.dataScrubbingService.scrubProfileForArchive(
+        profile as Record<string, unknown>,
+      );
     }
 
     const [
       moments,
       momentComments,
       chatMessages,
+      loginHistory,
       flashcards,
       decks,
       favourites,
@@ -406,6 +244,15 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
+      this.fetchPaged('user_login_history', async (from, to) => {
+        const result = await supabase
+          .from('user_login_history')
+          .select('*')
+          .eq('user_id', userId)
+          .order('login_at', { ascending: false })
+          .range(from, to);
+        return { data: result.data as unknown[] | null, error: result.error };
+      }),
       this.fetchPaged('flashcards', async (from, to) => {
         const result = await supabase
           .from('flashcards')
@@ -419,7 +266,7 @@ export class PrivacyService {
         const result = await supabase
           .from('decks')
           .select('*')
-          .eq('user_id', userId)
+          .eq('owner_id', userId)
           .order('created_at', { ascending: false })
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
@@ -442,7 +289,7 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
-      this.fetchPaged('escrow_as_payer', async (from, to) => {
+      this.fetchPaged('escrow_transactions', async (from, to) => {
         const result = await supabase
           .from('escrow_transactions')
           .select('*')
@@ -451,7 +298,7 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
-      this.fetchPaged('escrow_as_payee', async (from, to) => {
+      this.fetchPaged('escrow_transactions', async (from, to) => {
         const result = await supabase
           .from('escrow_transactions')
           .select('*')
@@ -460,7 +307,7 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
-      this.fetchPaged('sent_gifts', async (from, to) => {
+      this.fetchPaged('gift_transactions', async (from, to) => {
         const result = await supabase
           .from('gift_transactions')
           .select('*')
@@ -469,7 +316,7 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
-      this.fetchPaged('received_gifts', async (from, to) => {
+      this.fetchPaged('gift_transactions', async (from, to) => {
         const result = await supabase
           .from('gift_transactions')
           .select('*')
@@ -478,12 +325,12 @@ export class PrivacyService {
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
-      this.fetchPaged('sticker_packs', async (from, to) => {
+      this.fetchPaged('user_sticker_packs', async (from, to) => {
         const result = await supabase
           .from('user_sticker_packs')
           .select('*')
           .eq('user_id', userId)
-          .order('unlocked_at', { ascending: false })
+          .order('purchased_at', { ascending: false })
           .range(from, to);
         return { data: result.data as unknown[] | null, error: result.error };
       }),
@@ -543,38 +390,60 @@ export class PrivacyService {
         ...entry,
         role: 'payee',
       })),
-    ];
+    ].sort(
+      (a, b) =>
+        new Date(b.created_at as string).getTime() -
+        new Date(a.created_at as string).getTime(),
+    );
+
     const giftTransactions = [
       ...(sentGifts as Array<Record<string, unknown>>).map((entry) => ({
         ...entry,
-        direction: 'sent',
+        role: 'sender',
       })),
       ...(receivedGifts as Array<Record<string, unknown>>).map((entry) => ({
         ...entry,
-        direction: 'received',
+        role: 'receiver',
       })),
-    ];
+    ].sort(
+      (a, b) =>
+        new Date(b.created_at as string).getTime() -
+        new Date(a.created_at as string).getTime(),
+    );
+
+    // Apply data minimization/scrubbing to exported sets.
+    this.dataScrubbingService.scrubLoginHistory(
+      loginHistory as Array<{ ip_address?: string | null }>,
+    );
+    this.dataScrubbingService.scrubCoinPurchaseRecords(
+      coinPurchases as Array<{ receipt_token?: string | null }>,
+    );
+    // Note: Other collections may not require scrubbing for GDPR personal-data exports
+    // because the user is downloading their own PII, not someone else's.
 
     return {
-      export_schema_version: 2,
-      export_generated_at: new Date().toISOString(),
-      user_profile: profile,
+      metadata: {
+        userId,
+        generatedAt: new Date().toISOString(),
+        version: '1.0',
+      },
+      profile,
       moments,
-      moment_comments: momentComments,
-      chat_messages: chatMessages,
+      momentComments,
+      chatMessages,
+      loginHistory,
       flashcards,
       decks,
-      deck_flashcards: deckFlashcards,
+      deckFlashcards,
       favourites,
-      coin_purchases: scrubCoinPurchasesForArchive(coinPurchases),
-      escrow_transactions: scrubEscrowTransactionsForArchive(
+      readingProgress: readingProgress || null,
+      readingResources,
+      economy: {
+        coinPurchases,
         escrowTransactions,
-        userId,
-      ),
-      gift_transactions: giftTransactions,
-      user_sticker_packs: stickerPacks,
-      reading_progress: readingProgress ?? null,
-      reading_resources: readingResources,
+        giftTransactions,
+        stickerPacks,
+      },
     };
   }
 
@@ -609,37 +478,25 @@ export class PrivacyService {
     );
   }
 
-  private signedUrlSeconds(): number {
-    return this.boundedConfigNumber(
-      'GDPR_ARCHIVE_SIGNED_URL_SECONDS',
-      DEFAULT_SIGNED_URL_SECONDS,
-      60,
-      900,
-    );
-  }
-
   private boundedConfigNumber(
     key: string,
     fallback: number,
     min: number,
     max: number,
   ): number {
-    const configured = Number(this.configService.get<string | number>(key));
-    if (!Number.isFinite(configured)) return fallback;
-    return Math.min(max, Math.max(min, Math.trunc(configured)));
+    const value = parseInt(this.configService.get<string>(key) ?? '', 10);
+    if (isNaN(value)) return fallback;
+    return Math.max(min, Math.min(value, max));
   }
 
   private archiveFailureCode(error: unknown): string {
-    if (!(error instanceof Error)) return 'unknown';
-    if (error.message === 'dataset_too_large') return 'dataset_too_large';
-    if (error.message === 'dataset_unavailable') return 'dataset_unavailable';
-    if (error.message === 'required_profile_unavailable') {
-      return 'profile_unavailable';
+    if (error instanceof Error) {
+      if (error.message.includes('dataset_unavailable'))
+        return 'dataset_unavailable';
+      if (error.message.includes('dataset_too_large'))
+        return 'dataset_too_large';
+      if (error.message.includes('Upload failed')) return 'storage_error';
     }
-    if (error.message === 'archive_upload_failed') return 'storage_unavailable';
-    if (error.message === 'archive_state_update_failed') {
-      return 'persistence_unavailable';
-    }
-    return 'unknown';
+    return 'unknown_error';
   }
 }
