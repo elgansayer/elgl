@@ -7,6 +7,7 @@ def test_production_provider_policy_is_locked() -> None:
     config = json.loads(path.read_text(encoding="utf-8"))
     providers = config["providers"]
     routing = config["routing"]
+    breaker = config["circuit_breaker"]
     expected_routes = {
         "planning": ["claude", "codex", "google", "opencode", "pi"],
         "architecture": ["claude", "codex", "google", "opencode", "pi"],
@@ -47,3 +48,8 @@ def test_production_provider_policy_is_locked() -> None:
     assert expected_routes.keys() <= routing.keys()
     assert all(routing[phase] == route for phase, route in expected_routes.items())
     assert "openhands" not in routing["planning"]
+
+    # With only six real provider starts admitted per hour in conservative mode,
+    # rediscovering a known provider-wide outage is material allowance waste.
+    assert breaker["failure_threshold"] == 1
+    assert breaker["rate_limit_cooldown_seconds"] >= 900
