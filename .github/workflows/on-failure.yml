@@ -1,24 +1,82 @@
 name: Self-Healing Workflow Monitor
 
 on:
+  push:
+    branches: [main]
   workflow_run:
     workflows:
       - CI
       - Deploy
       - Admin portal CI
     types: [completed]
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: read
   issues: write
 
 jobs:
+  ensure-main-ci:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Allow native push CI to register
+        if: github.event_name == 'push'
+        run: sleep 20
+
+      - name: Recover a missing canonical main CI run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          current_sha=$(gh api "repos/${REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          runs=$(gh api "repos/${REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&per_page=100")
+          state=$(
+            jq -r --arg sha "$current_sha" '
+              [.workflow_runs[] | select(.head_sha == $sha)] as $runs
+              | if ($runs | length) == 0 then "missing"
+                elif any($runs[]; .status == "queued" or .status == "in_progress" or .status == "waiting" or .status == "requested" or .status == "pending") then "active"
+                elif any($runs[]; .conclusion == "success") then "success"
+                elif any($runs[]; .conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required" or .conclusion == "startup_failure") then "failed"
+                elif all($runs[]; .conclusion == "cancelled" or .conclusion == "skipped" or .conclusion == "neutral") then "retryable"
+                else "unknown"
+                end
+            ' <<< "$runs"
+          )
+
+          echo "Current main SHA: ${current_sha}"
+          echo "Canonical CI state: ${state}"
+
+          case "$state" in
+            success|active)
+              echo "Canonical main CI is already healthy or running."
+              ;;
+            missing|retryable)
+              echo "Canonical main CI is absent or was cancelled; dispatching ci.yml for current main."
+              gh workflow run ci.yml --repo "$REPOSITORY" --ref main
+              ;;
+            failed)
+              echo "Canonical main CI has a real failure; leaving repair ownership with the existing failure incident path."
+              ;;
+            *)
+              echo "::error::Could not classify canonical CI state for ${current_sha}; refusing to dispatch blindly."
+              exit 1
+              ;;
+          esac
+
   report-failure:
     # Pull-request failures already belong to the Factory's PR repair state.
     # Creating a second issue for the same head would duplicate ownership and
     # ask an issue worktree based on main to repair code that exists only on the
     # pull-request branch.
-    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -39,7 +97,8 @@ jobs:
             gh issue list \
               --repo "$REPOSITORY" \
               --state open \
-              --limit 1000 \
+              --search "\"${INCIDENT_TITLE}\" in:title" \
+              --limit 10 \
               --json number,title |
               jq -r --arg title "$INCIDENT_TITLE" \
                 '.[] | select(.title == $title) | .number' |
@@ -80,7 +139,10 @@ jobs:
             --add-label "priority:high,factory-ready" || true
 
   resolve-recovery:
-    if: github.event.workflow_run.conclusion == 'success'
+    # PR failures never create incidents above, so successful PR workflow runs
+    # cannot possibly have an incident to close. Non-PR recovery checks use a
+    # title-scoped search instead of downloading the first 1,000 open issues.
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -100,7 +162,8 @@ jobs:
             gh issue list \
               --repo "$REPOSITORY" \
               --state open \
-              --limit 1000 \
+              --search "\"${INCIDENT_TITLE}\" in:title" \
+              --limit 10 \
               --json number,title |
               jq -r --arg title "$INCIDENT_TITLE" \
                 '.[] | select(.title == $title) | .number' |

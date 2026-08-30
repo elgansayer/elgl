@@ -53,10 +53,55 @@ describe('LessonsService', () => {
     await expect(resultPromise).resolves.toMatchObject({ id: 'lesson/with spaces' });
   });
 
+  it('loads authenticated resumable progress', async () => {
+    const resultPromise = firstValueFrom(service.getLessonProgress('lesson/one'));
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/lessons/lesson%2Fone/progress`,
+    );
+
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer lesson-token');
+    request.flush({
+      lesson_id: 'lesson/one',
+      segment_index: 2,
+      completed: false,
+      completed_at: null,
+      updated_at: '2026-08-26T20:00:00.000Z',
+    });
+
+    await expect(resultPromise).resolves.toMatchObject({ segment_index: 2 });
+  });
+
+  it('persists progress through the authenticated idempotent endpoint', async () => {
+    const resultPromise = firstValueFrom(
+      service.saveLessonProgress('lesson-1', {
+        segment_index: 3,
+        completed: true,
+      }),
+    );
+    const request = httpMock.expectOne(`${environment.apiUrl}/lessons/lesson-1/progress`);
+
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer lesson-token');
+    expect(request.request.body).toEqual({ segment_index: 3, completed: true });
+    request.flush({
+      lesson_id: 'lesson-1',
+      segment_index: 3,
+      completed: true,
+      completed_at: '2026-08-26T20:01:00.000Z',
+      updated_at: '2026-08-26T20:01:00.000Z',
+    });
+
+    await expect(resultPromise).resolves.toMatchObject({ completed: true });
+  });
+
   it('fails closed before making a request when there is no access token', () => {
     auth.getAccessToken.mockReturnValue(null);
 
     expect(() => service.getLessons()).toThrow('Authentication required to load lessons');
+    expect(() => service.getLessonProgress('lesson-1')).toThrow(
+      'Authentication required to load lessons',
+    );
     httpMock.expectNone(`${environment.apiUrl}/lessons`);
   });
 

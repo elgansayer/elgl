@@ -69,9 +69,15 @@ export class RecommendationsService {
 
     const flushPipeline = async (): Promise<void> => {
       if (pipelineOps > 0) {
-        await pipeline.exec();
+        const pendingPipeline = pipeline;
         pipeline = redis.pipeline();
         pipelineOps = 0;
+
+        const results = await pendingPipeline.exec();
+        const failedCommand = results?.find(([commandError]) => commandError);
+        if (failedCommand?.[0]) {
+          throw failedCommand[0];
+        }
       }
     };
 
@@ -144,6 +150,9 @@ export class RecommendationsService {
         for (let i = 0; i < batchPairs.length; i++) {
           const pairKey = batchPairs[i];
           const matchesData = results[i];
+          if (matchesData.error) {
+            throw new Error('Failed to fetch daily recommendation matches');
+          }
           const matchRows = matchesData.data as UserRow[] | null;
 
           if (!matchRows || matchRows.length === 0) {
