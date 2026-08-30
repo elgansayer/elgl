@@ -14,6 +14,9 @@ const rowLevelSecurity = readMigration('009_row_level_security.sql');
 
 describe('003_chat_and_favourites migration contract', () => {
   it('creates the chat_messages storage shape required by the chat API', () => {
+    expect(initialSchema).toContain(
+      'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";',
+    );
     expect(chatAndFavourites).toMatch(
       /CREATE TABLE IF NOT EXISTS public\.chat_messages\s*\([\s\S]*?id UUID PRIMARY KEY DEFAULT uuid_generate_v4\(\)/,
     );
@@ -55,6 +58,10 @@ describe('003_chat_and_favourites migration contract', () => {
     );
     expect(chatAndFavourites).toMatch(
       /message_id UUID NOT NULL REFERENCES public\.chat_messages\(id\) ON DELETE CASCADE/,
+    );
+    expect(chatAndFavourites).toMatch(/note_text TEXT/);
+    expect(chatAndFavourites).toMatch(
+      /created_at TIMESTAMPTZ NOT NULL DEFAULT now\(\)/,
     );
     expect(chatAndFavourites).toMatch(
       /CONSTRAINT unique_user_favourite UNIQUE \(user_id, message_id\)/,
