@@ -1,162 +1,186 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { Mock } from 'vitest';
 import { SupabaseService } from '../supabase/supabase.service';
-import { LessonsService } from './lessons.service';
+import { LessonsService, type LessonRecord } from './lessons.service';
 
-function chain(overrides: Record<string, unknown> = {}) {
-  const builder: Record<string, any> = {};
-  for (const name of ['select', 'eq', 'neq', 'order', 'in', 'limit', 'single', 'maybeSingle']) {
-    builder[name] = vi.fn().mockReturnValue(builder);
+type MockResult = {
+  data: unknown;
+  error: { code?: string; message: string } | null;
+};
+
+type QueryChainMock = {
+  select: Mock;
+  eq: Mock;
+  order: Mock;
+  insert: Mock;
+  update: Mock;
+  delete: Mock;
+  upsert: Mock;
+  single: Mock;
+  maybeSingle: Mock;
+  _setResolveData: (result: MockResult) => void;
+  then: (resolve: (value: MockResult) => void) => undefined;
+};
+
+const createQueryChain = (): QueryChainMock => {
+  const chain = {} as QueryChainMock;
+  for (const method of [
+    'select',
+    'eq',
+    'order',
+    'insert',
+    'update',
+    'delete',
+    'upsert',
+    'single',
+    'maybeSingle',
+  ] as const) {
+    chain[method] = vi.fn().mockReturnValue(chain);
   }
-  Object.assign(builder, overrides);
-  return builder;
-}
 
-describe('LessonsService learner flows', () => {
-  it('lists only learner-visible lessons and joins progress without N+1 queries', async () => {
-    const userQuery = chain({
-      maybeSingle: vi.fn().mockResolvedValue({ data: { is_vip: false }, error: null }),
-    });
-    const lessonsQuery = chain({
-      limit: vi.fn().mockResolvedValue({
-        data: [
-          {
-            id: 'lesson-1',
-            title: 'Greetings',
-            language_code: 'ja',
-            is_published: true,
-            visibility: 'public',
-            sort_order: 1,
-          },
-        ],
-        error: null,
-      }),
-    });
-    const progressQuery = chain({
-      in: vi.fn().mockResolvedValue({
-        data: [
-          {
-            lesson_id: 'lesson-1',
-            progress_percent: 40,
-            last_position: 2,
-            completed_at: null,
-          },
-        ],
-        error: null,
-      }),
-    });
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === 'users') return userQuery;
-        if (table === 'lessons') return lessonsQuery;
-        if (table === 'lesson_progress') return progressQuery;
-        throw new Error(`Unexpected table ${table}`);
-      }),
-    };
-    const service = new LessonsService({
-      getClient: () => client,
-    } as unknown as SupabaseService);
+  let result: MockResult = { data: null, error: null };
+  chain._setResolveData = (next) => {
+    result = next;
+  };
+  chain.then = (resolve) => {
+    resolve(result);
+    return undefined;
+  };
+  return chain;
+};
 
-    const result = await service.listLearnerLessons('user-1', 'ja');
+const lesson: LessonRecord = {
+  id: '11111111-1111-4111-8111-111111111111',
+  title: 'Introductions',
+  description: 'Practise introductions.',
+  language_code: 'ja',
+  content_json: {
+    segments: [{ text: 'First' }, { text: 'Second' }, { text: 'Third' }],
+  },
+};
 
-    expect(lessonsQuery.eq).toHaveBeenCalledWith('is_published', true);
-    expect(lessonsQuery.neq).toHaveBeenCalledWith('visibility', 'hidden');
-    expect(lessonsQuery.neq).toHaveBeenCalledWith('visibility', 'vip');
-    expect(lessonsQuery.eq).toHaveBeenCalledWith('language_code', 'ja');
-    expect(lessonsQuery.limit).toHaveBeenCalledWith(100);
-    expect(progressQuery.in).toHaveBeenCalledWith('lesson_id', ['lesson-1']);
-    expect(result[0]?.progress).toEqual({
-      progress_percent: 40,
-      last_position: 2,
-      completed: false,
-      completed_at: null,
-    });
+describe('LessonsService progress', () => {
+  let service: LessonsService;
+  let supabase: { from: Mock };
+
+  beforeEach(async () => {
+    supabase = { from: vi.fn() };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        LessonsService,
+        {
+          provide: SupabaseService,
+          useValue: { getClient: vi.fn().mockReturnValue(supabase) },
+        },
+      ],
+    }).compile();
+
+    service = module.get(LessonsService);
   });
 
-  it('fails closed when an unavailable or hidden lesson is requested', async () => {
-    const lessonsQuery = chain({
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
-    const service = new LessonsService({
-      getClient: () => ({ from: vi.fn().mockReturnValue(lessonsQuery) }),
-    } as unknown as SupabaseService);
+  it('returns a zero progress record when the learner has never opened the lesson', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    progressQuery._setResolveData({ data: null, error: null });
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
 
-    await expect(service.getLearnerLesson('user-1', 'hidden-1')).rejects.toThrow(
-      NotFoundException,
+    await expect(
+      service.getLessonProgress('user-1', lesson.id),
+    ).resolves.toEqual({
+      lesson_id: lesson.id,
+      segment_index: 0,
+      completed: false,
+      completed_at: null,
+      updated_at: null,
+    });
+    expect(progressQuery.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(progressQuery.eq).toHaveBeenCalledWith('lesson_id', lesson.id);
+  });
+
+  it('upserts progress scoped to the authenticated learner', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    progressQuery._setResolveData({
+      data: {
+        lesson_id: lesson.id,
+        segment_index: 1,
+        completed: false,
+        completed_at: null,
+        updated_at: '2026-08-26T20:00:00.000Z',
+      },
+      error: null,
+    });
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
+
+    await expect(
+      service.saveLessonProgress('user-1', lesson.id, 1, false),
+    ).resolves.toMatchObject({ segment_index: 1, completed: false });
+    expect(progressQuery.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 'user-1',
+        lesson_id: lesson.id,
+        segment_index: 1,
+        completed: false,
+      }),
+      { onConflict: 'user_id,lesson_id' },
     );
   });
 
-  it('fails closed on VIP entitlement lookup errors', async () => {
-    const userQuery = chain({
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'profile unavailable' },
-      }),
-    });
-    const lessonsQuery = chain({
-      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-    });
-    const client = {
-      from: vi.fn((table: string) => (table === 'users' ? userQuery : lessonsQuery)),
-    };
-    const service = new LessonsService({
-      getClient: () => client,
-    } as unknown as SupabaseService);
+  it('rejects progress beyond the lesson content before writing', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
 
-    await service.listLearnerLessons('user-1');
-
-    expect(lessonsQuery.neq).toHaveBeenCalledWith('visibility', 'vip');
+    await expect(
+      service.saveLessonProgress('user-1', lesson.id, 3, false),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(progressQuery.upsert).not.toHaveBeenCalled();
   });
 
-  it('uses the atomic progress RPC and returns the persisted state', async () => {
-    const progressQuery = chain({
-      single: vi.fn().mockResolvedValue({
-        data: {
-          user_id: 'user-1',
-          lesson_id: 'lesson-1',
-          progress_percent: 100,
-          last_position: 4,
-          completed_at: '2026-08-20T16:00:00.000Z',
-        },
-        error: null,
-      }),
-    });
-    const client = {
-      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
-      from: vi.fn().mockReturnValue(progressQuery),
-    };
-    const service = new LessonsService({
-      getClient: () => client,
-    } as unknown as SupabaseService);
-    vi.spyOn(service, 'getLearnerLesson').mockResolvedValue({
-      id: 'lesson-1',
-      title: 'Greetings',
-      language_code: 'ja',
-      progress: {
-        progress_percent: 50,
-        last_position: 2,
-        completed: false,
-        completed_at: null,
+  it('only accepts completion on the final readable segment', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
+
+    await expect(
+      service.saveLessonProgress('user-1', lesson.id, 1, true),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(progressQuery.upsert).not.toHaveBeenCalled();
+  });
+
+  it('marks the final segment completed and returns the persisted row', async () => {
+    const lessonQuery = createQueryChain();
+    lessonQuery._setResolveData({ data: lesson, error: null });
+    const progressQuery = createQueryChain();
+    progressQuery._setResolveData({
+      data: {
+        lesson_id: lesson.id,
+        segment_index: 2,
+        completed: true,
+        completed_at: '2026-08-26T20:01:00.000Z',
+        updated_at: '2026-08-26T20:01:00.000Z',
       },
+      error: null,
     });
+    supabase.from.mockImplementation((table: string) =>
+      table === 'lessons' ? lessonQuery : progressQuery,
+    );
 
-    const result = await service.updateLearnerProgress('user-1', 'lesson-1', {
-      progressPercent: 100,
-      lastPosition: 4,
-      completed: true,
-    });
-
-    expect(client.rpc).toHaveBeenCalledWith('upsert_lesson_progress', {
-      p_user_id: 'user-1',
-      p_lesson_id: 'lesson-1',
-      p_progress_percent: 100,
-      p_last_position: 4,
-      p_complete: true,
-    });
-    expect(result).toEqual({
-      progress_percent: 100,
-      last_position: 4,
-      completed: true,
-      completed_at: '2026-08-20T16:00:00.000Z',
-    });
+    await expect(
+      service.saveLessonProgress('user-1', lesson.id, 2, true),
+    ).resolves.toMatchObject({ segment_index: 2, completed: true });
   });
 });

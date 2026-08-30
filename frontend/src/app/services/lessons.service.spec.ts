@@ -1,97 +1,115 @@
-import { HttpHeaders, provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { firstValueFrom } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { LessonsService } from './lessons.service';
 
-const lesson = {
-  id: 'lesson-1',
-  title: 'Greetings',
-  language_code: 'ja',
-  progress: {
-    progress_percent: 0,
-    last_position: 0,
-    completed: false,
-    completed_at: null,
-  },
-};
-
 describe('LessonsService', () => {
   let service: LessonsService;
-  let http: HttpTestingController;
+  let httpMock: HttpTestingController;
+  const auth = { getAccessToken: vi.fn().mockReturnValue('lesson-token') };
 
   beforeEach(() => {
+    auth.getAccessToken.mockReturnValue('lesson-token');
     TestBed.configureTestingModule({
       providers: [
         LessonsService,
+        { provide: AuthService, useValue: auth },
         provideHttpClient(),
         provideHttpClientTesting(),
-        {
-          provide: AuthService,
-          useValue: {
-            getBearerHeaders: () => new HttpHeaders({ Authorization: 'Bearer test-token' }),
-          },
-        },
       ],
     });
-
     service = TestBed.inject(LessonsService);
-    http = TestBed.inject(HttpTestingController);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => httpMock.verify());
 
-  it('loads the authenticated lesson catalogue with an optional language filter', async () => {
-    const promise = service.listLessons('ja');
+  it('loads the authenticated learner lesson list', async () => {
+    const resultPromise = firstValueFrom(service.getLessons());
+    const request = httpMock.expectOne(`${environment.apiUrl}/lessons`);
 
-    const request = http.expectOne(
-      (req) => req.url === `${environment.apiUrl}/lessons` && req.params.get('language') === 'ja',
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer lesson-token');
+    request.flush([{ id: 'lesson-1', title: 'Greetings', language_code: 'ja' }]);
+
+    await expect(resultPromise).resolves.toEqual([
+      { id: 'lesson-1', title: 'Greetings', language_code: 'ja' },
+    ]);
+  });
+
+  it('encodes lesson identifiers before requesting details', async () => {
+    const resultPromise = firstValueFrom(service.getLesson('lesson/with spaces'));
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/lessons/lesson%2Fwith%20spaces`,
     );
-    expect(request.request.method).toBe('GET');
-    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
-    request.flush([lesson]);
 
-    await expect(promise).resolves.toEqual([lesson]);
+    expect(request.request.method).toBe('GET');
+    request.flush({ id: 'lesson/with spaces', title: 'Lesson', language_code: 'es' });
+
+    await expect(resultPromise).resolves.toMatchObject({ id: 'lesson/with spaces' });
   });
 
-  it('loads a lesson by deep-link id', async () => {
-    const promise = service.getLesson('lesson-1');
+  it('loads authenticated resumable progress', async () => {
+    const resultPromise = firstValueFrom(service.getLessonProgress('lesson/one'));
+    const request = httpMock.expectOne(
+      `${environment.apiUrl}/lessons/lesson%2Fone/progress`,
+    );
 
-    const request = http.expectOne(`${environment.apiUrl}/lessons/lesson-1`);
     expect(request.request.method).toBe('GET');
-    request.flush(lesson);
-
-    await expect(promise).resolves.toEqual(lesson);
-  });
-
-  it('persists resumable progress with PUT semantics', async () => {
-    const promise = service.updateProgress('lesson-1', {
-      progressPercent: 50,
-      lastPosition: 2,
-    });
-
-    const request = http.expectOne(`${environment.apiUrl}/lessons/lesson-1/progress`);
-    expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({
-      progressPercent: 50,
-      lastPosition: 2,
-    });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer lesson-token');
     request.flush({
-      progress_percent: 50,
-      last_position: 2,
+      lesson_id: 'lesson/one',
+      segment_index: 2,
       completed: false,
       completed_at: null,
+      updated_at: '2026-08-26T20:00:00.000Z',
     });
 
-    await expect(promise).resolves.toEqual({
-      progress_percent: 50,
-      last_position: 2,
-      completed: false,
-      completed_at: null,
+    await expect(resultPromise).resolves.toMatchObject({ segment_index: 2 });
+  });
+
+  it('persists progress through the authenticated idempotent endpoint', async () => {
+    const resultPromise = firstValueFrom(
+      service.saveLessonProgress('lesson-1', {
+        segment_index: 3,
+        completed: true,
+      }),
+    );
+    const request = httpMock.expectOne(`${environment.apiUrl}/lessons/lesson-1/progress`);
+
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer lesson-token');
+    expect(request.request.body).toEqual({ segment_index: 3, completed: true });
+    request.flush({
+      lesson_id: 'lesson-1',
+      segment_index: 3,
+      completed: true,
+      completed_at: '2026-08-26T20:01:00.000Z',
+      updated_at: '2026-08-26T20:01:00.000Z',
     });
+
+    await expect(resultPromise).resolves.toMatchObject({ completed: true });
+  });
+
+  it('fails closed before making a request when there is no access token', () => {
+    auth.getAccessToken.mockReturnValue(null);
+
+    expect(() => service.getLessons()).toThrow('Authentication required to load lessons');
+    expect(() => service.getLessonProgress('lesson-1')).toThrow(
+      'Authentication required to load lessons',
+    );
+    httpMock.expectNone(`${environment.apiUrl}/lessons`);
+  });
+
+  it('propagates API failures instead of returning fabricated lessons', async () => {
+    const resultPromise = firstValueFrom(service.getLessons());
+    const request = httpMock.expectOne(`${environment.apiUrl}/lessons`);
+    request.flush({ message: 'unavailable' }, { status: 503, statusText: 'Unavailable' });
+
+    await expect(resultPromise).rejects.toMatchObject({ status: 503 });
   });
 });

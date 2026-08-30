@@ -1,12 +1,12 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AdminModule } from '../admin/admin.module';
-import { LearnerLessonsController } from './learner-lessons.controller';
+import { LearningLessonsController } from './learning-lessons.controller';
 import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
 
 @Module({
   imports: [forwardRef(() => AdminModule)],
-  controllers: [LessonsController, LearnerLessonsController],
+  controllers: [LessonsController, LearningLessonsController],
   providers: [LessonsService],
   exports: [LessonsService],
 })

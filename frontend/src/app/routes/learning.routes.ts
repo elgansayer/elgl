@@ -63,12 +63,6 @@ export const learningRoutes: Routes = [
     title: 'Lessons - HelloTalk',
   },
   {
-    path: 'lessons/:id',
-    loadComponent: () =>
-      import('../pages/lessons/lesson-detail.component').then((m) => m.LessonDetailComponent),
-    title: 'Lesson - HelloTalk',
-  },
-  {
     path: 'quests',
     loadComponent: () =>
       import('../components/quests/quests.component').then((m) => m.QuestsComponent),
@@ -117,13 +111,5 @@ export const learningRoutes: Routes = [
     loadComponent: () =>
       import('../ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',
-  },
-  {
-    path: 'language',
-    loadComponent: () =>
-      import('../pages/language-settings/language-settings.component').then(
-        (m) => m.LanguageSettingsComponent,
-      ),
-    title: 'Language Settings - HelloTalk',
   },
 ];

@@ -1,10 +1,12 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService, type LessonRow } from '../supabase/supabase.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { UpdateLessonProgressDto } from './dto/update-lesson-progress.dto';
-
-export type LessonVisibility = 'public' | 'vip' | 'hidden';
 
 export interface LessonRecord {
   id: string;
@@ -15,45 +17,20 @@ export interface LessonRecord {
   difficulty_level?: number | null;
   cover_image_url?: string | null;
   audio_url?: string | null;
-  is_published?: boolean;
-  visibility?: LessonVisibility;
-  sort_order?: number;
   created_at?: string;
   updated_at?: string | null;
 }
 
 export interface LessonProgressRecord {
-  progress_percent: number;
-  last_position: number;
+  lesson_id: string;
+  segment_index: number;
   completed: boolean;
   completed_at: string | null;
+  updated_at: string | null;
 }
-
-export interface LearnerLessonRecord extends LessonRecord {
-  progress: LessonProgressRecord;
-}
-
-type LessonProgressRow = {
-  user_id: string;
-  lesson_id: string;
-  progress_percent: number;
-  last_position: number;
-  completed_at: string | null;
-  started_at?: string;
-  updated_at?: string;
-};
-
-const EMPTY_PROGRESS: LessonProgressRecord = {
-  progress_percent: 0,
-  last_position: 0,
-  completed: false,
-  completed_at: null,
-};
 
 @Injectable()
 export class LessonsService {
-  private readonly logger = new Logger(LessonsService.name);
-
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async listLessons(): Promise<LessonRecord[]> {
@@ -75,8 +52,74 @@ export class LessonsService {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Lesson ${id} not found`);
+      }
+      throw error;
+    }
+    if (!data) throw new NotFoundException(`Lesson ${id} not found`);
     return data;
+  }
+
+  async getLessonProgress(
+    userId: string,
+    lessonId: string,
+  ): Promise<LessonProgressRecord> {
+    await this.getLesson(lessonId);
+    const client = this.progressClient();
+    const { data, error } = await client
+      .from('lesson_progress')
+      .select('lesson_id, segment_index, completed, completed_at, updated_at')
+      .eq('user_id', userId)
+      .eq('lesson_id', lessonId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return this.emptyProgress(lessonId);
+    return this.normaliseProgress(data, lessonId);
+  }
+
+  async saveLessonProgress(
+    userId: string,
+    lessonId: string,
+    segmentIndex: number,
+    completed: boolean,
+  ): Promise<LessonProgressRecord> {
+    const lesson = await this.getLesson(lessonId);
+    const maxSegmentIndex = this.maxSegmentIndex(lesson);
+    if (segmentIndex > maxSegmentIndex) {
+      throw new BadRequestException(
+        'Lesson progress is outside the lesson content',
+      );
+    }
+    if (completed && segmentIndex !== maxSegmentIndex) {
+      throw new BadRequestException(
+        'A lesson can only complete on its final segment',
+      );
+    }
+
+    const client = this.progressClient();
+    const now = new Date().toISOString();
+    const { data, error } = await client
+      .from('lesson_progress')
+      .upsert(
+        {
+          user_id: userId,
+          lesson_id: lessonId,
+          segment_index: segmentIndex,
+          completed,
+          completed_at: completed ? now : null,
+          updated_at: now,
+        },
+        { onConflict: 'user_id,lesson_id' },
+      )
+      .select('lesson_id, segment_index, completed, completed_at, updated_at')
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Lesson progress write returned no row');
+    return this.normaliseProgress(data, lessonId);
   }
 
   async createLesson(dto: CreateLessonDto): Promise<LessonRecord> {
@@ -130,185 +173,73 @@ export class LessonsService {
     if (error) throw error;
   }
 
-  async listLearnerLessons(
-    userId: string,
-    language?: string,
-  ): Promise<LearnerLessonRecord[]> {
-    const supabase = this.supabaseService.getClient() as any;
-    const isVip = await this.isVipUser(userId);
-
-    let query = supabase
-      .from('lessons')
-      .select(
-        'id,title,description,language_code,difficulty_level,cover_image_url,audio_url,is_published,visibility,sort_order,created_at,updated_at',
-      )
-      .eq('is_published', true)
-      .neq('visibility', 'hidden');
-
-    if (!isVip) {
-      query = query.neq('visibility', 'vip');
-    }
-    if (language) {
-      query = query.eq('language_code', language);
-    }
-
-    const { data, error } = await query
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(100);
-
-    if (error) {
-      this.logger.error(`Failed to list learner lessons: ${error.message}`);
-      throw error;
-    }
-
-    const lessons = (data ?? []) as LessonRecord[];
-    const progress = await this.getProgressForLessons(
-      userId,
-      lessons.map((lesson) => lesson.id),
-    );
-
-    return lessons.map((lesson) => ({
-      ...lesson,
-      progress: progress.get(lesson.id) ?? { ...EMPTY_PROGRESS },
-    }));
-  }
-
-  async getLearnerLesson(
-    userId: string,
-    lessonId: string,
-  ): Promise<LearnerLessonRecord> {
-    const supabase = this.supabaseService.getClient() as any;
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('id', lessonId)
-      .eq('is_published', true)
-      .neq('visibility', 'hidden')
-      .maybeSingle();
-
-    if (error) {
-      this.logger.error(`Failed to load learner lesson ${lessonId}: ${error.message}`);
-      throw error;
-    }
-    if (!data) {
-      throw new NotFoundException('Lesson not found');
-    }
-
-    const lesson = data as LessonRecord;
-    if (lesson.visibility === 'vip' && !(await this.isVipUser(userId))) {
-      // Do not disclose the existence of entitlement-gated lesson content.
-      throw new NotFoundException('Lesson not found');
-    }
-
-    const progress = await this.getProgressForLessons(userId, [lessonId]);
-    return {
-      ...lesson,
-      progress: progress.get(lessonId) ?? { ...EMPTY_PROGRESS },
-    };
-  }
-
-  async updateLearnerProgress(
-    userId: string,
-    lessonId: string,
-    dto: UpdateLessonProgressDto,
-  ): Promise<LessonProgressRecord> {
-    // Authorize against the same published/visibility rules used by reads before
-    // mutating progress so hidden or VIP-only lesson identifiers cannot be probed.
-    await this.getLearnerLesson(userId, lessonId);
-
-    const supabase = this.supabaseService.getClient() as any;
-    const { error: rpcError } = await supabase.rpc('upsert_lesson_progress', {
-      p_user_id: userId,
-      p_lesson_id: lessonId,
-      p_progress_percent: dto.progressPercent ?? 0,
-      p_last_position: dto.lastPosition ?? 0,
-      p_complete: dto.completed ?? false,
-    });
-
-    if (rpcError) {
-      this.logger.error(
-        `Failed to update learner progress for lesson ${lessonId}: ${rpcError.message}`,
-      );
-      throw rpcError;
-    }
-
-    const { data, error } = await supabase
-      .from('lesson_progress')
-      .select(
-        'user_id,lesson_id,progress_percent,last_position,completed_at,started_at,updated_at',
-      )
-      .eq('user_id', userId)
-      .eq('lesson_id', lessonId)
-      .single();
-
-    if (error || !data) {
-      if (error) {
-        this.logger.error(
-          `Failed to read updated learner progress for lesson ${lessonId}: ${error.message}`,
-        );
-        throw error;
-      }
-      throw new Error('Lesson progress update did not return a row');
-    }
-
-    return this.toProgressRecord(data as LessonProgressRow);
-  }
-
   async completeLesson(userId: string, lessonId: string): Promise<void> {
-    await this.updateLearnerProgress(userId, lessonId, { completed: true });
-  }
-
-  private async isVipUser(userId: string): Promise<boolean> {
-    const supabase = this.supabaseService.getClient() as any;
-    const { data, error } = await supabase
-      .from('users')
-      .select('is_vip')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      // Entitlement lookup fails closed: public lessons remain available while
-      // VIP-only content is never exposed on an uncertain authorization state.
-      this.logger.warn(`VIP entitlement lookup failed: ${error.message}`);
-      return false;
-    }
-
-    return data?.is_vip === true;
-  }
-
-  private async getProgressForLessons(
-    userId: string,
-    lessonIds: string[],
-  ): Promise<Map<string, LessonProgressRecord>> {
-    if (lessonIds.length === 0) return new Map();
-
-    const supabase = this.supabaseService.getClient() as any;
-    const { data, error } = await supabase
-      .from('lesson_progress')
-      .select('lesson_id,progress_percent,last_position,completed_at')
-      .eq('user_id', userId)
-      .in('lesson_id', lessonIds);
-
-    if (error) {
-      this.logger.error(`Failed to load learner lesson progress: ${error.message}`);
-      throw error;
-    }
-
-    return new Map(
-      ((data ?? []) as LessonProgressRow[]).map((row) => [
-        row.lesson_id,
-        this.toProgressRecord(row),
-      ]),
+    const lesson = await this.getLesson(lessonId);
+    await this.saveLessonProgress(
+      userId,
+      lessonId,
+      this.maxSegmentIndex(lesson),
+      true,
     );
   }
 
-  private toProgressRecord(row: LessonProgressRow): LessonProgressRecord {
+  private progressClient(): SupabaseClient {
+    return this.supabaseService.getClient();
+  }
+
+  private emptyProgress(lessonId: string): LessonProgressRecord {
     return {
-      progress_percent: row.progress_percent,
-      last_position: row.last_position,
-      completed: row.completed_at !== null || row.progress_percent >= 100,
-      completed_at: row.completed_at,
+      lesson_id: lessonId,
+      segment_index: 0,
+      completed: false,
+      completed_at: null,
+      updated_at: null,
     };
+  }
+
+  private normaliseProgress(
+    value: unknown,
+    lessonId: string,
+  ): LessonProgressRecord {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('Lesson progress response was malformed');
+    }
+
+    const record = value as Record<string, unknown>;
+    const segmentIndex = record['segment_index'];
+    const completed = record['completed'];
+    const completedAt = record['completed_at'];
+    const updatedAt = record['updated_at'];
+
+    if (
+      typeof segmentIndex !== 'number' ||
+      !Number.isInteger(segmentIndex) ||
+      segmentIndex < 0 ||
+      typeof completed !== 'boolean' ||
+      (completedAt !== null && typeof completedAt !== 'string') ||
+      (updatedAt !== null && typeof updatedAt !== 'string')
+    ) {
+      throw new Error('Lesson progress response was malformed');
+    }
+
+    return {
+      lesson_id: lessonId,
+      segment_index: segmentIndex,
+      completed,
+      completed_at: completedAt,
+      updated_at: updatedAt,
+    };
+  }
+
+  private maxSegmentIndex(lesson: LessonRecord): number {
+    const segments = lesson.content_json?.['segments'];
+    if (!Array.isArray(segments)) return 0;
+    const usableCount = segments.filter((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+      const text = (value as Record<string, unknown>)['text'];
+      return typeof text === 'string' && text.trim().length > 0;
+    }).length;
+    return Math.max(0, usableCount - 1);
   }
 }

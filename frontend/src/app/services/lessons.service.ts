@@ -1,12 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import type { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import type {
-  Lesson,
-  LessonProgress,
-  LessonProgressUpdate,
-} from '../pages/lessons/lessons.model';
+import type { Lesson, LessonProgress } from '../pages/lessons/lessons.model';
 import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
@@ -15,36 +11,39 @@ export class LessonsService {
   private readonly authService = inject(AuthService);
   private readonly baseUrl = `${environment.apiUrl}/lessons`;
 
-  async listLessons(language?: string): Promise<Lesson[]> {
-    let params = new HttpParams();
-    if (language) params = params.set('language', language);
+  getLessons(): Observable<Lesson[]> {
+    return this.http.get<Lesson[]>(this.baseUrl, { headers: this.authHeaders() });
+  }
 
-    return firstValueFrom(
-      this.http.get<Lesson[]>(this.baseUrl, {
-        headers: this.authService.getBearerHeaders(),
-        params,
-      }),
+  getLesson(id: string): Observable<Lesson> {
+    return this.http.get<Lesson>(`${this.baseUrl}/${encodeURIComponent(id)}`, {
+      headers: this.authHeaders(),
+    });
+  }
+
+  getLessonProgress(id: string): Observable<LessonProgress> {
+    return this.http.get<LessonProgress>(
+      `${this.baseUrl}/${encodeURIComponent(id)}/progress`,
+      { headers: this.authHeaders() },
     );
   }
 
-  async getLesson(id: string): Promise<Lesson> {
-    return firstValueFrom(
-      this.http.get<Lesson>(`${this.baseUrl}/${encodeURIComponent(id)}`, {
-        headers: this.authService.getBearerHeaders(),
-      }),
-    );
-  }
-
-  async updateProgress(
+  saveLessonProgress(
     id: string,
-    update: LessonProgressUpdate,
-  ): Promise<LessonProgress> {
-    return firstValueFrom(
-      this.http.put<LessonProgress>(
-        `${this.baseUrl}/${encodeURIComponent(id)}/progress`,
-        update,
-        { headers: this.authService.getBearerHeaders() },
-      ),
+    progress: Pick<LessonProgress, 'segment_index' | 'completed'>,
+  ): Observable<LessonProgress> {
+    return this.http.put<LessonProgress>(
+      `${this.baseUrl}/${encodeURIComponent(id)}/progress`,
+      progress,
+      { headers: this.authHeaders() },
     );
+  }
+
+  private authHeaders(): HttpHeaders {
+    const token = this.authService.getAccessToken();
+    if (!token) {
+      throw new Error('Authentication required to load lessons');
+    }
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 }

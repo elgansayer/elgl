@@ -115,6 +115,28 @@ class GitWorkflow:
         self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
         return branch
 
+    def prepare_claimed_worktree(
+        self,
+        worktree: Path,
+        branch: str,
+        initial_base_sha: str | None,
+    ) -> None:
+        """Rebuild a crash-recovered branch from its durable canonical identity."""
+
+        ensure_push_target(branch, self.base_branch)
+        fetch = _run_with_lock_retry(
+            self.runner,
+            ("git", "fetch", "origin", self.base_branch),
+            self.repository,
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        self._add_worktree(
+            worktree,
+            branch,
+            initial_base_sha or f"origin/{self.base_branch}",
+        )
+
     def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
         """Check out an existing pull request branch for independent review.
 
@@ -156,6 +178,7 @@ class GitWorkflow:
             Path("backend/node_modules"),
             Path("e2e/node_modules"),
             Path("admin-portal/node_modules"),
+            Path(".venv"),
         ):
             source = self.repository / relative
             destination = worktree / relative
@@ -311,7 +334,27 @@ class GitWorkflow:
         ):
             raise RepositorySafetyError("Recovery directory cannot be inside the worktree")
         resolved_recovery.mkdir(parents=True, exist_ok=False)
-        shutil.copytree(resolved_worktree, resolved_recovery, symlinks=True, dirs_exist_ok=True)
+        # The point of this archive is to not lose hand-edited uncommitted
+        # work - none of these directories are ever hand-edited, all are
+        # regenerable (npm/uv install, a build), and copying them in full
+        # is what turned a ~63 MB archive into a 2+ GB one, exhausting the
+        # disk-space reserve that gates Factory scheduling.
+        shutil.copytree(
+            resolved_worktree,
+            resolved_recovery,
+            symlinks=True,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(
+                "node_modules",
+                "dist",
+                ".angular",
+                ".venv",
+                "__pycache__",
+                ".mypy_cache",
+                ".pytest_cache",
+                ".ruff_cache",
+            ),
+        )
         (resolved_recovery / "RECOVERY.txt").write_text(
             "This is a preserved OpenHands worktree archive. The original Git worktree "
             "registration was removed after the daemon could no longer safely retire it.\n"
