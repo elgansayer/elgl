@@ -217,6 +217,19 @@ class ConservativeAgentRouter(AgentRouter):
                 retry_after_seconds=_gate_retry_seconds(gate, now),
             )
 
+    def _admit_review(self, job: Job, now: datetime) -> None:
+        """Charge one exact-head review only when a provider is about to start."""
+
+        gate = self._review_admission
+        if gate is None:
+            return
+        if not gate.admit(self._review_key(job), now):
+            raise ProviderCapacityUnavailable(
+                "Independent PR review budget is exhausted "
+                f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
+                retry_after_seconds=_gate_retry_seconds(gate, now),
+            )
+
     def run(
         self,
         request: AgentRequest,
@@ -243,10 +256,9 @@ class ConservativeAgentRouter(AgentRouter):
                     "Global conservative agent-route budget is exhausted",
                     retry_after_seconds=_gate_retry_seconds(route_gate, now),
                 )
-            # Check task fairness before consuming a SHA-scoped review admission.
-            # Otherwise a task that already exhausted its route share could burn a
-            # review slot without ever starting a provider and delay that review for
-            # another full review window.
+            # Check task fairness before reserving review concurrency. Otherwise a
+            # task that already exhausted its route share could delay a useful review
+            # even though it cannot start a provider in this scheduling attempt.
             self._ensure_task_route_available(job, now)
             if request.phase is AgentPhase.CODE_REVIEW:
                 if not self._review_slots.acquire(blocking=False):
@@ -255,30 +267,27 @@ class ConservativeAgentRouter(AgentRouter):
                         retry_after_seconds=_RESOURCE_RETRY_SECONDS,
                     )
                 review_slot_acquired = True
-                if self._review_admission is not None and not self._review_admission.admit(
-                    self._review_key(job), now
-                ):
-                    raise ProviderCapacityUnavailable(
-                        "Independent PR review budget is exhausted "
-                        f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
-                        retry_after_seconds=_gate_retry_seconds(self._review_admission, now),
-                    )
 
             # A logical route can examine provider health/capacity and still start no
             # paid agent process at all. Do not consume durable allowance for those
             # control-plane-only attempts. AgentRouter invokes prepare_attempt only
             # after a provider slot is successfully reserved and immediately before
-            # provider.run(); wrapping it makes the admission count real provider
-            # starts, including distinct fallback starts, rather than scheduler calls.
+            # provider.run(); wrapping it makes both route and review admissions count
+            # real provider starts rather than scheduler calls.
             original_prepare_attempt = request.prepare_attempt
+            review_admitted = False
 
             def prepare_and_admit_provider_start() -> None:
+                nonlocal review_admitted
                 if original_prepare_attempt is not None:
                     original_prepare_attempt()
                 attempt_now = datetime.now(UTC)
                 # Re-check task fairness at the actual start boundary so concurrent
                 # work cannot race past the per-task allowance after the early check.
                 self._ensure_task_route_available(job, attempt_now)
+                if request.phase is AgentPhase.CODE_REVIEW and not review_admitted:
+                    self._admit_review(job, attempt_now)
+                    review_admitted = True
                 self._admit_agent_route(request, job, attempt_now)
 
             routed_request = replace(
