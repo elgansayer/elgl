@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-gdpr',
+  standalone: true,
   imports: [HlmCheckbox, TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="app-screen bg-surface-50">
@@ -27,6 +28,9 @@ import { I18nService } from '../../services/i18n.service';
 
       <main class="mx-auto max-w-lg space-y-6 ps-4 pe-4 pt-4 pb-4">
         <p class="text-sm text-text-secondary">{{ 'gdpr.description' | t }}</p>
+        @if (statusLoadError()) {
+          <p class="text-xs text-danger" role="alert">{{ 'common.loadError' | t }}</p>
+        }
 
         <section class="space-y-4">
           <h2 class="text-sm font-bold uppercase tracking-wider text-text-secondary">
@@ -43,25 +47,25 @@ import { I18nService } from '../../services/i18n.service';
               class="w-full"
               (click)="requestArchive()"
               [disabled]="loading()"
+              [attr.aria-busy]="loading()"
               [attr.aria-label]="'gdpr.requestArchiveBtn' | t"
             >
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
             </button>
-            @if (archiveSuccess()) {
-              <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
-            }
             @if (archiveDownloadUrl()) {
-              <a
+              <button
                 hlmBtn
+                type="button"
+                variant="secondary"
                 size="touch"
                 class="w-full"
-                [href]="archiveDownloadUrl()"
-                target="_blank"
-                rel="noopener noreferrer"
-                [attr.aria-label]="'privacy.hub.downloadData' | t"
+                (click)="downloadLatestArchive()"
               >
                 {{ 'privacy.hub.downloadData' | t }}
-              </a>
+              </button>
+            }
+            @if (archiveSuccess()) {
+              <p class="text-xs text-success" role="status">{{ 'gdpr.archiveSuccess' | t }}</p>
             }
             @if (archiveError()) {
               <p class="text-xs text-danger" role="alert">{{ archiveError() }}</p>
@@ -93,6 +97,7 @@ import { I18nService } from '../../services/i18n.service';
               class="w-full"
               (click)="deleteAccount()"
               [disabled]="!confirmDelete() || deleting()"
+              [attr.aria-busy]="deleting()"
               [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
             >
               {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
@@ -121,12 +126,15 @@ import { I18nService } from '../../services/i18n.service';
                 class="w-full border-warning/30 text-warning"
                 (click)="cancelDeletion()"
                 [disabled]="cancelling()"
+                [attr.aria-busy]="cancelling()"
                 [attr.aria-label]="'gdpr.cancelDeletionBtn' | t"
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
               @if (cancelSuccess()) {
-                <p class="text-xs text-success" role="status">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+                <p class="text-xs text-success" role="status">
+                  {{ 'gdpr.cancelDeletionSuccess' | t }}
+                </p>
               }
               @if (cancelError()) {
                 <p class="text-xs text-danger" role="alert">{{ cancelError() }}</p>
@@ -142,24 +150,20 @@ export class GdprComponent {
   private readonly gdprService = inject(GdprService);
   private readonly i18n = inject(I18nService);
 
+  readonly statusLoadError = signal(false);
   readonly privacyStatusResource = resource({
-    loader: () => this.gdprService.getStatus(),
+    loader: async () => {
+      this.statusLoadError.set(false);
+      try {
+        return await this.gdprService.getStatus();
+      } catch {
+        this.statusLoadError.set(true);
+        return undefined;
+      }
+    },
   });
-
-  readonly loading = signal(false);
-  readonly archiveSuccess = signal(false);
-  readonly archiveError = signal('');
-  private readonly archiveDownloadOverride = signal<string | null>(null);
-
-  readonly confirmDelete = signal(false);
-  readonly deleting = signal(false);
-  readonly deleteSuccess = signal(false);
-  readonly deleteError = signal('');
-
   private readonly deletionPendingOverride = signal<boolean | null>(null);
-  readonly cancelling = signal(false);
-  readonly cancelSuccess = signal(false);
-  readonly cancelError = signal('');
+  private readonly archiveDownloadOverride = signal<string | null>(null);
 
   readonly isPendingDeletion = computed(
     () =>
@@ -167,7 +171,6 @@ export class GdprComponent {
       this.privacyStatusResource.value()?.is_deletion_pending ??
       false,
   );
-
   readonly archiveDownloadUrl = computed(
     () =>
       this.archiveDownloadOverride() ??
@@ -175,20 +178,38 @@ export class GdprComponent {
       '',
   );
 
+  loading = signal(false);
+  archiveSuccess = signal(false);
+  archiveError = signal('');
+
+  confirmDelete = signal(false);
+  deleting = signal(false);
+  deleteSuccess = signal(false);
+  deleteError = signal('');
+
+  cancelling = signal(false);
+  cancelSuccess = signal(false);
+  cancelError = signal('');
+
   goBack(): void {
     window.history.back();
   }
 
   async requestArchive(): Promise<void> {
+    if (this.loading()) return;
     this.loading.set(true);
     this.archiveSuccess.set(false);
     this.archiveError.set('');
-    this.archiveDownloadOverride.set(null);
     try {
-      await this.gdprService.requestArchive();
+      const archive = await this.gdprService.requestArchive();
+      if (archive.status === 'ready') {
+        if (!archive.download_url) throw new Error('Missing archive URL');
+        this.downloadArchive(archive.download_url);
+        this.archiveDownloadOverride.set(archive.download_url);
+      } else {
+        this.privacyStatusResource.reload();
+      }
       this.archiveSuccess.set(true);
-      const status = await this.gdprService.getStatus();
-      this.archiveDownloadOverride.set(status.latest_archive?.download_url ?? '');
     } catch {
       this.archiveError.set(this.i18n.translate('common.loadError'));
     } finally {
@@ -197,7 +218,7 @@ export class GdprComponent {
   }
 
   async deleteAccount(): Promise<void> {
-    if (!this.confirmDelete()) return;
+    if (!this.confirmDelete() || this.deleting()) return;
     this.deleting.set(true);
     this.deleteSuccess.set(false);
     this.deleteError.set('');
@@ -213,6 +234,7 @@ export class GdprComponent {
   }
 
   async cancelDeletion(): Promise<void> {
+    if (this.cancelling()) return;
     this.cancelling.set(true);
     this.cancelSuccess.set(false);
     this.cancelError.set('');
@@ -225,5 +247,29 @@ export class GdprComponent {
     } finally {
       this.cancelling.set(false);
     }
+  }
+
+  downloadLatestArchive(): void {
+    try {
+      this.downloadArchive(this.archiveDownloadUrl());
+    } catch {
+      this.archiveError.set(this.i18n.translate('common.loadError'));
+    }
+  }
+
+  private downloadArchive(rawUrl: string): void {
+    const url = new URL(rawUrl, window.location.origin);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new Error('Unsupported archive URL');
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = url.href;
+    anchor.download = 'elgl-personal-data.json';
+    anchor.rel = 'noopener noreferrer';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   }
 }
