@@ -10,6 +10,6 @@
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 
-## 2026-08-30 - [Optimize Archive Cleanup via Promise.allSettled]
-**Learning:** In the backend `privacy.service.ts`, iterating through rows of expired archives to sequentially remove objects from Supabase storage and update database statuses (`supabase.storage.from().remove()` and `supabase.from('archive_requests').update()`) inside a `for...of` loop causes additive N+1 latency, significantly delaying GDPR archive cleanup tasks when many archives expire simultaneously. A concurrent map can reduce overall task execution time. However, unbounded Promise.all is unsafe. We should use Promise.allSettled so one failure does not cascade, or if possible Promise.all.
-**Action:** Replace sequential storage deletion and database update requests in a `for...of` loop with a single concurrent `Promise.all` batch using `.map`. This allows all API and DB interactions for an expired archive batch to resolve concurrently, drastically reducing execution time for cleanup jobs. (Batch size is already limited to boundedLimit which maxes out at 100 via the SQL limit clause upstream)
+## 2026-08-30 - [Bound Archive Cleanup Concurrency]
+**Learning:** Sequential cleanup creates additive latency, but launching the full 100-row query limit at once can overload storage and database providers. Query size is not a safe concurrency bound.
+**Action:** Process expired archives in batches of 10 with `Promise.allSettled()`. Regression tests assert the ten-operation cap, later-batch progress, and per-row failure isolation.
