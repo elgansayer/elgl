@@ -6,6 +6,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { environment } from '../../../environments/environment';
 
 type TransferStatus = 'generating' | 'ready' | 'consuming' | 'done' | 'error';
 type CopyStatus = 'idle' | 'copying' | 'copied' | 'error';
@@ -72,6 +73,7 @@ export class DeviceTransferComponent {
   private readonly authService = inject(AuthService);
   private readonly supabaseService = inject(SupabaseService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly apiBase = environment.apiUrl;
 
   readonly deviceLink = signal('');
   readonly status = signal<TransferStatus>('generating');
@@ -106,12 +108,12 @@ export class DeviceTransferComponent {
     try {
       // Call backend to consume the one-time token and obtain a swap JWT.
       const consumeRes = await lastValueFrom(
-        this.http.post<{ swapToken: string }>('/api/transfer/consume', { token }),
+        this.http.post<{ swapToken: string }>(`${this.apiBase}/transfer/consume`, { token }),
       );
       // Exchange the swap JWT for a real session.
       const swapRes = await lastValueFrom(
         this.http.post<{ access_token: string; refresh_token: string; user_id: string }>(
-          '/api/transfer/swap',
+          `${this.apiBase}/transfer/swap`,
           { swapToken: consumeRes.swapToken },
         ),
       );
