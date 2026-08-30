@@ -379,7 +379,7 @@ export class ChatMessageComponent {
   async fetchTranscription(audioUrl: string): Promise<void> {
     this.voiceTranscribing.set(true);
     try {
-      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-voice`, {
+      const res = await fetch(`${environment.apiUrl}/nlp/transcribe-audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_url: audioUrl }),
@@ -388,7 +388,7 @@ export class ChatMessageComponent {
         throw new Error('Transcription request failed');
       }
       const data = await res.json();
-      this.voiceTranscription.set(data.original_text || null);
+      this.voiceTranscription.set(data.transcription || null);
     } catch (err) {
       console.error('Transcription error:', err);
       this.voiceTranscription.set(null);
