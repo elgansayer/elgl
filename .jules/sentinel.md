@@ -80,7 +80,7 @@
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
 
-## 2026-08-30 - [Insecure Randomness for Financial Rewards]
-**Vulnerability:** Weak random number generation (`Math.random()`) used to determine financial/economy rewards like daily check-ins and dashboard earnings.
-**Learning:** `Math.random()` is cryptographically insecure and predictable. Using it to dictate economy values can lead to exploitation where an attacker could predict sequence states and manipulate timing to maximize rewards.
-**Prevention:** Always use `crypto.randomInt()` or `crypto.randomBytes()` for any application logic relating to security, tokens, financial data, or randomized economic rewards.
+## 2026-08-30 - [Secure Random Rewards and Honest Financial Placeholders]
+**Vulnerability:** A daily coin reward used predictable `Math.random()`, while the host dashboard fabricated earnings that were not backed by transaction data.
+**Learning:** Actual randomized economic rewards need a cryptographically secure generator. Missing financial aggregates must not be replaced with random values, regardless of generator quality.
+**Prevention:** Use Node's `randomInt()` for real randomized rewards. Return zero until host earnings can be derived from the gift ledger, and cover that fail-honest behavior with a regression test.

@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { HostDashboardStatsDto } from './dto/host-dashboard.dto';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -27,8 +26,8 @@ export class HostDashboardService {
       };
     }
 
-    // Earned coins will eventually be calculated from a gift_transactions table
-    const earnedCoins = crypto.randomInt(1, 11);
+    // Do not fabricate financial data while gift-ledger aggregation is pending.
+    const earnedCoins = 0;
 
     return {
       roomId,

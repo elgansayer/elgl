@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import { randomInt } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -575,7 +575,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = crypto.randomInt(5, 11);
+    const reward = randomInt(5, 11);
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
