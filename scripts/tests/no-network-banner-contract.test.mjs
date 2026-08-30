@@ -12,9 +12,10 @@ async function read(relativePath) {
 
 test('app shell mounts the global no-network banner', async () => {
   const appComponent = await read('frontend/src/app/app.component.ts');
+  const appTemplate = await read('frontend/src/app/app.component.html');
 
   assert.match(appComponent, /NoNetworkBannerComponent/);
-  assert.match(appComponent, /<app-no-network-banner><\/app-no-network-banner>/);
+  assert.match(appTemplate, /<app-no-network-banner\s*\/>/);
 });
 
 test('banner renders only while offline with translated assertive alert semantics', async () => {
@@ -22,7 +23,8 @@ test('banner renders only while offline with translated assertive alert semantic
     'frontend/src/app/components/primitives/no-network-banner/no-network-banner.component.ts',
   );
 
-  assert.match(banner, /@if \(!networkStatus\.isOnline\(\)\)/);
+  assert.match(banner, /@if \(!isOnline\(\)\)/);
+  assert.match(banner, /readonly isOnline = this\.networkStatus\.isOnline/);
   assert.match(banner, /role="alert"/);
   assert.match(banner, /aria-live="assertive"/);
   assert.match(banner, /no_network_banner\.message/);

@@ -50,6 +50,16 @@ describe('ChatSystemBubbleComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('member left the group');
   });
 
+  it('normalizes surrounding whitespace on known event types before rendering', () => {
+    fixture.componentRef.setInput('eventType', '  missedCall  ');
+    fixture.componentRef.setInput('params', { name: 'Partner' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.normalizedEventType()).toBe('missedCall');
+    expect(fixture.componentInstance.i18nKey()).toBe('system.missedCall');
+    expect(fixture.nativeElement.textContent).toContain('Partner');
+  });
+
   it('falls back to the generic localized system alert for unknown event types', () => {
     fixture.componentRef.setInput('eventType', 'unknownEventType');
     fixture.detectChanges();
@@ -83,6 +93,29 @@ describe('ChatSystemBubbleComponent', () => {
     expect(fixture.componentInstance.i18nKey()).toBe('notifications.systemAlert');
     expect(fixture.nativeElement.textContent).not.toContain('{{name}}');
   });
+
+  it('falls back when a required string parameter is blank', () => {
+    fixture.componentRef.setInput('eventType', 'profileUpdated');
+    fixture.componentRef.setInput('params', { name: '   ' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.i18nKey()).toBe('notifications.systemAlert');
+    expect(fixture.nativeElement.textContent).toContain('System alert');
+    expect(fixture.nativeElement.textContent).not.toContain('{{name}}');
+  });
+
+  it.each([-1, 1.5, Number.NaN])(
+    'falls back when memberAdded receives an invalid count (%s)',
+    (count) => {
+      fixture.componentRef.setInput('eventType', 'memberAdded');
+      fixture.componentRef.setInput('params', { count });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.i18nKey()).toBe('notifications.systemAlert');
+      expect(fixture.nativeElement.textContent).toContain('System alert');
+      expect(fixture.nativeElement.textContent).not.toContain('{{count}}');
+    },
+  );
 
   it('keeps only bounded scalar interpolation params and reserves type for the backend', () => {
     fixture.componentRef.setInput('eventType', 'announcement');
