@@ -346,6 +346,23 @@ describe('PrivacyService', () => {
       expect(mockCreateSignedUrl).not.toHaveBeenCalled();
     });
 
+    it('fails closed on a malformed ready-archive expiry', async () => {
+      latestArchive = {
+        id: '88888888-8888-4888-8888-888888888888',
+        user_id: 'user-1',
+        status: 'ready',
+        object_key: 'malformed-expiry.json',
+        expires_at: 'not-a-date',
+        created_at: '2026-08-30T00:00:00.000Z',
+      };
+
+      const result = await service.getStatus('user-1');
+
+      expect(result.latest_archive).toMatchObject({ status: 'expired' });
+      expect(result.latest_archive).not.toHaveProperty('download_url');
+      expect(mockCreateSignedUrl).not.toHaveBeenCalled();
+    });
+
     it('keeps deletion state available during a transient signing failure', async () => {
       latestArchive = {
         id: '77777777-7777-4777-8777-777777777777',

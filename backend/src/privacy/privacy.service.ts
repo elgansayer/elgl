@@ -240,10 +240,12 @@ export class PrivacyService {
     const latest = latestRaw as unknown as ArchiveRequestRow | null;
     let latestArchive: PrivacyStatus['latest_archive'] = null;
     if (latest) {
+      const expiresAt = latest.expires_at
+        ? new Date(latest.expires_at).getTime()
+        : Number.NaN;
       const isExpired =
         latest.status === 'ready' &&
-        (!latest.expires_at ||
-          new Date(latest.expires_at).getTime() <= Date.now());
+        (!Number.isFinite(expiresAt) || expiresAt <= Date.now());
       const status: ArchiveStatus = isExpired ? 'expired' : latest.status;
       let downloadUrl: string | undefined;
 
