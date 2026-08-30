@@ -175,7 +175,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
               </div>
 
               <button hlmBtn [routerLink]="['/review']" size="touch" variant="outline" class="w-full mt-3 border-primary text-primary hover:bg-primary/10">
-                Review Flashcards
+                {{ 'wordModal.reviewFlashcardsBtn' | t }}
               </button>
             </div>
           </div>

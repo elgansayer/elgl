@@ -167,9 +167,9 @@ type ReviewGrade = 'again' | 'good' | 'known';
               <app-button-primary (clicked)="restart()" customClass="ps-5 pe-5 text-xs font-bold">
                 {{ 'review.restart' | t }}
               </app-button-primary>
-              <app-button-primary [routerLink]="['/ai-conversation']" customClass="ps-5 pe-5 text-xs font-bold w-full mt-3">
-                Practice in AI Conversation
-              </app-button-primary>
+              <button hlmBtn [routerLink]="['/ai-conversation']" class="w-full mt-3">
+                {{ 'review.practiceInAiConversationBtn' | t }}
+              </button>
             </section>
           } @else {
             <!-- Flashcard -->
