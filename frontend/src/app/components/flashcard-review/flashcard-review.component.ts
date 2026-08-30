@@ -19,6 +19,7 @@ import {
 } from '../srs-error-boundary/srs-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { RouterLink } from '@angular/router';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
@@ -30,6 +31,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
   selector: 'app-flashcard-review',
   standalone: true,
   imports: [
+    RouterLink,
     HlmButton,
     TranslatePipe,
     SrsErrorBoundaryComponent,
@@ -164,6 +166,9 @@ type ReviewGrade = 'again' | 'good' | 'known';
               </div>
               <app-button-primary (clicked)="restart()" customClass="ps-5 pe-5 text-xs font-bold">
                 {{ 'review.restart' | t }}
+              </app-button-primary>
+              <app-button-primary [routerLink]="['/ai-conversation']" customClass="ps-5 pe-5 text-xs font-bold w-full mt-3">
+                Practice in AI Conversation
               </app-button-primary>
             </section>
           } @else {

@@ -9,6 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 
@@ -23,7 +24,7 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
 
 @Component({
   selector: 'app-word-definition-modal',
-  imports: [...HlmButtonImports, ...HlmDialogImports, TranslatePipe],
+  imports: [RouterLink, ...HlmButtonImports, ...HlmDialogImports, TranslatePipe],
   template: `
     <hlm-dialog state="open" (stateChanged)="onDialogStateChanged($event)">
       <hlm-dialog-content
@@ -172,6 +173,10 @@ const LANGUAGE_CODE_RE = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
                   {{ 'wordModal.knownBtn' | t }}
                 </button>
               </div>
+
+              <button hlmBtn [routerLink]="['/review']" size="touch" variant="outline" class="w-full mt-3 border-primary text-primary hover:bg-primary/10">
+                Review Flashcards
+              </button>
             </div>
           </div>
         }
