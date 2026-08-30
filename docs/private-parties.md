@@ -1,6 +1,6 @@
 # Private Parties
 
-Private Parties are the invite-only audio-room mode tracked by issue #1315. The feature reuses the existing authenticated audio-room, LiveKit and Centrifugo stack rather than creating a second realtime system.
+Private Parties are the invite-only audio-room mode tracked by issues #1315 and #1507. The feature reuses the existing authenticated audio-room, LiveKit and Centrifugo stack rather than creating a second realtime system.
 
 ## Product contract
 
@@ -24,8 +24,21 @@ Backend DTO validation rejects empty, malformed, duplicate, or more-than-50 invi
 - Invite selection is bounded to the authenticated host's Following list in the first-party UI.
 - Invitation payloads contain user IDs only; the feature does not persist the browser's friend-search text.
 - Credentials, LiveKit secrets and access tokens are never part of the invitation payload.
+- Direct authenticated Supabase clients cannot create a private room, promote a public room to private, or attach invite IDs. Those mutations are backend-only and therefore cannot bypass the VIP entitlement check.
+- New and updated rows must keep invite state structurally consistent: public rooms carry no invite list, while private rooms carry between 1 and 50 invitees.
 
-The API-level UUID, uniqueness and size constraints are required even though the first-party UI selects known users, because HTTP payloads are untrusted input.
+The API-level UUID, uniqueness and size constraints are required even though the first-party UI selects known users, because HTTP payloads are untrusted input. The database boundary is defence in depth for leaked authenticated Supabase credentials and future direct-to-Supabase clients; the NestJS service-role client remains the canonical write path.
+
+## Database boundary
+
+Migration `20260827123000_harden_private_party_service_boundary.sql` narrows direct authenticated RLS access without changing the NestJS API contract:
+
+- `audio_rooms_insert_own` permits authenticated direct inserts only for non-private rooms owned by the caller and with no invite list;
+- `audio_rooms_update_own` permits direct host/co-host updates only for active, non-private rooms and cannot introduce invite state;
+- `audio_rooms_select_authenticated` keeps private-room visibility limited to the host, co-host, explicit invitees and admins;
+- `audio_rooms_private_invites_valid` enforces the public/private invite-state invariant for all new and changed rows.
+
+The constraint is introduced as `NOT VALID`. PostgreSQL still enforces it for new or updated rows, while deployment is not blocked by an unknown legacy row. A later audited migration may validate the full historical table after any legacy inconsistencies are remediated.
 
 ## Accessibility and responsive behaviour
 
@@ -40,10 +53,14 @@ Automated coverage includes:
 - following-list load and selection behavior;
 - fail-closed invitation form behavior during directory outages;
 - retry recovery and stale-selection removal;
-- final create payload composition.
+- final create payload composition;
+- database contract coverage proving direct authenticated clients cannot bypass private-room entitlement or invite-state ownership;
+- database visibility coverage for host, co-host, invitee and admin access to private rooms.
 
-Canonical repository CI remains authoritative for backend/frontend unit suites, lint/static analysis, builds, dependency review and broader audio-room integration checks.
+Canonical repository CI remains authoritative for the clean Supabase migration replay, backend/frontend unit suites, lint/static analysis, builds, dependency review and broader audio-room integration checks.
 
 ## Rollout and rollback
 
-No schema migration or data backfill is required. Deploying the backend validation before or with the frontend is backward compatible with valid existing clients. A rollback is a normal application revert; existing private rooms and invitation data do not require cleanup.
+Deploy the migration before or with the application version. Current NestJS private-party writes use `service_role`, so valid API traffic is unaffected by the RLS tightening. Direct authenticated Supabase writes that attempted to create or mutate private rooms will begin failing as intended.
+
+The migration is forward-only. If an emergency rollback is required, restore the previous `audio_rooms_insert_own` and `audio_rooms_update_own` policies with a new migration rather than editing migration history. The `NOT VALID` consistency constraint may safely remain in place because it accepts every valid public/private room shape produced by supported application versions. No private-room data backfill or deletion is required.
