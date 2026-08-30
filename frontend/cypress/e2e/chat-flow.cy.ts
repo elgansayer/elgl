@@ -180,10 +180,12 @@ describe('Chat Flow (Mocked)', () => {
     visitChat(`/chat/${roomId}`);
     cy.get('[data-testid="chat-message"]').then((messages) => {
       const initialCount = messages.length;
+      cy.wait('@centrifugoUnavailable').its('response.statusCode').should('eq', 200);
+      cy.window().should((win) => {
+        expect((win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError).to.be.undefined;
+      });
       cy.window().then((win) => {
-        (
-          win as typeof win & { __cypressExpectedConsoleError?: string }
-        ).__cypressExpectedConsoleError = 'Error sending message:';
+        (win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError = 'Error sending message:';
       });
       cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
