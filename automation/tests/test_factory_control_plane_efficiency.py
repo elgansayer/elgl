@@ -38,3 +38,29 @@ def test_self_healing_schedule_is_only_a_backstop_to_event_driven_checks() -> No
     assert "      - CI\n" in workflow
     assert "      - Deploy\n" in workflow
     assert "      - Admin portal CI\n" in workflow
+
+
+def test_static_product_contracts_only_run_when_their_inputs_change() -> None:
+    expected_inputs = {
+        "simplify-text-contract.yml": (
+            "frontend/src/app/services/nlp.service.ts",
+            "backend/src/nlp/nlp.controller.ts",
+            "scripts/verify-simplify-text-contract.test.mjs",
+        ),
+        "translation-cache-contract.yml": (
+            "frontend/src/app/services/translation-cache.service.ts",
+            "frontend/src/app/components/moments-feed/moments-feed.component.ts",
+            "scripts/translation-cache-contract.test.mjs",
+        ),
+        "draft-persistence-contract.yml": (
+            "frontend/src/app/services/draft.service.ts",
+            "frontend/src/app/components/chat-room/chat-room.component.ts",
+            "scripts/draft-persistence-contract.test.mjs",
+        ),
+    }
+
+    for workflow_name, inputs in expected_inputs.items():
+        workflow = _workflow(workflow_name)
+        assert "  pull_request:\n    branches: [main]\n    paths:\n" in workflow
+        for path in inputs:
+            assert f"      - '{path}'\n" in workflow
