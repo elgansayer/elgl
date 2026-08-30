@@ -73,10 +73,14 @@ export class PronunciationScoringService {
 
     const language = (dto.language || 'en-US').trim();
     if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(language)) {
-      throw new BadRequestException('Language must be a valid BCP 47 language tag');
+      throw new BadRequestException(
+        'Language must be a valid BCP 47 language tag',
+      );
     }
 
-    const speechKey = this.configService.get<string>('AZURE_SPEECH_KEY')?.trim();
+    const speechKey = this.configService
+      .get<string>('AZURE_SPEECH_KEY')
+      ?.trim();
     const region = this.configService
       .get<string>('AZURE_SPEECH_REGION')
       ?.trim()
@@ -218,8 +222,13 @@ export class PronunciationScoringService {
     }
 
     const allowedHosts = this.getAllowedAudioHosts();
-    if (allowedHosts.size === 0 || !allowedHosts.has(url.hostname.toLowerCase())) {
-      throw new BadRequestException('Audio URL is not from an approved media host');
+    if (
+      allowedHosts.size === 0 ||
+      !allowedHosts.has(url.hostname.toLowerCase())
+    ) {
+      throw new BadRequestException(
+        'Audio URL is not from an approved media host',
+      );
     }
 
     return url;

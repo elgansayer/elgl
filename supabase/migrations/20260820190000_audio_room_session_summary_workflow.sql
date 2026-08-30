@@ -79,6 +79,8 @@ DROP POLICY IF EXISTS "Users can delete own audio room participation"
 ALTER TABLE public.audio_room_transcripts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Authenticated users can view transcripts"
   ON public.audio_room_transcripts;
+DROP POLICY IF EXISTS audio_room_transcripts_select_authenticated
+  ON public.audio_room_transcripts;
 DROP POLICY IF EXISTS "Room participants can view transcripts"
   ON public.audio_room_transcripts;
 

@@ -26,6 +26,7 @@ export interface AudioRoomArchiveSummary {
   vocabulary: string[];
   summary_status: AudioRoomSummaryStatus;
   summary_attempts: number;
+  can_retry: boolean;
   updated_at: string;
 }
 
@@ -51,29 +52,21 @@ export class AudioRoomArchivesService {
     );
   }
 
-  recordParticipation(roomId: string): Promise<void> {
+  finalize(roomId: string): Promise<unknown> {
     return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${roomId}/participation`, {}, {
-        headers: this.headers(),
-      }),
-    );
-  }
-
-  finalize(roomId: string, recordingUrl?: string): Promise<unknown> {
-    return firstValueFrom(
-      this.http.post(
-        `${this.baseUrl}/${roomId}/finalize`,
-        { recording_url: recordingUrl },
-        { headers: this.headers() },
-      ),
+      this.http.post(`${this.baseUrl}/${roomId}/finalize`, {}, { headers: this.headers() }),
     );
   }
 
   retry(roomId: string): Promise<unknown> {
     return firstValueFrom(
-      this.http.post(`${this.baseUrl}/${roomId}/retry`, {}, {
-        headers: this.headers(),
-      }),
+      this.http.post(
+        `${this.baseUrl}/${roomId}/retry`,
+        {},
+        {
+          headers: this.headers(),
+        },
+      ),
     );
   }
 

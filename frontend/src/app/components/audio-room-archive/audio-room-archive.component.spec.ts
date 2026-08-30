@@ -44,6 +44,7 @@ describe('AudioRoomArchiveComponent', () => {
     vocabulary: ['ticket', 'platform'],
     summary_status: 'ready',
     summary_attempts: 1,
+    can_retry: false,
     updated_at: '2026-08-20T12:01:00.000Z',
   };
 
@@ -112,6 +113,7 @@ describe('AudioRoomArchiveComponent', () => {
       vocabulary: [],
       summary_status: 'failed',
       summary_attempts: 4,
+      can_retry: true,
     });
 
     fixture.detectChanges();

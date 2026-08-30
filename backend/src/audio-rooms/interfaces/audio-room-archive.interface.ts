@@ -9,6 +9,7 @@ export interface AudioRoomArchiveSummary {
   vocabulary: string[];
   summary_status: AudioRoomSummaryStatus;
   summary_attempts: number;
+  can_retry: boolean;
   updated_at: string;
 }
 

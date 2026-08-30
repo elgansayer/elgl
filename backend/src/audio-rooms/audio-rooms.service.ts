@@ -131,8 +131,23 @@ export class AudioRoomsService implements OnModuleInit {
 
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const secretKey = this.configService.get<string>('LIVEKIT_SECRET');
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+
     if (!apiKey || !secretKey) {
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
+    }
+
+    if (env === 'production') {
+      if (
+        apiKey === 'test-livekit-api-key' ||
+        apiKey === 'dev_livekit_key_test_value_123' ||
+        secretKey === 'test-livekit-secret' ||
+        secretKey === 'dev_livekit_secret_test_value_123'
+      ) {
+        throw new Error(
+          'LIVEKIT_API_KEY and LIVEKIT_SECRET must be securely configured in production',
+        );
+      }
     }
 
     this.apiKey = apiKey;
@@ -188,6 +203,7 @@ export class AudioRoomsService implements OnModuleInit {
     const sessionSummary = await this.generateAiSessionSummary(transcriptText);
 
     if (sessionSummary.summary || sessionSummary.vocabulary.length > 0) {
+      const completedAt = new Date().toISOString();
       await supabase.from('audio_room_transcripts').upsert(
         {
           room_id: room.id,
@@ -195,6 +211,10 @@ export class AudioRoomsService implements OnModuleInit {
           transcript_text: transcriptText,
           session_summary: sessionSummary.summary,
           vocabulary_list: sessionSummary.vocabulary,
+          summary_status: 'ready',
+          summary_ready_at: completedAt,
+          summary_error_code: null,
+          updated_at: completedAt,
         },
         { onConflict: 'room_id' },
       );
@@ -620,6 +640,16 @@ export class AudioRoomsService implements OnModuleInit {
         .from('audio_rooms')
         .update({ listeners_count: newCount })
         .eq('id', room.id);
+    }
+
+    const { error: participationError } = await supabase
+      .from('audio_room_participants')
+      .upsert(
+        { room_id: room.id, user_id: userId },
+        { onConflict: 'room_id,user_id' },
+      );
+    if (participationError) {
+      throw new Error('Failed to record audio room participation');
     }
 
     return {
@@ -1330,6 +1360,10 @@ export class AudioRoomsService implements OnModuleInit {
         transcript_text: transcriptText,
         session_summary: sessionSummary.summary,
         vocabulary_list: sessionSummary.vocabulary,
+        summary_status: 'ready',
+        summary_ready_at: new Date().toISOString(),
+        summary_error_code: null,
+        updated_at: new Date().toISOString(),
       },
       { onConflict: 'room_id' },
     );

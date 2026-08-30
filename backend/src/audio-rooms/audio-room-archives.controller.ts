@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Get,
   HttpCode,
@@ -25,10 +24,6 @@ import {
 
 interface AuthUser {
   id: string;
-}
-
-interface FinalizeArchiveBody {
-  recording_url?: string | null;
 }
 
 @ApiTags('Audio Room Archives')
@@ -62,19 +57,6 @@ export class AudioRoomArchivesController {
     return this.archives.getSummary(user.id, roomId);
   }
 
-  @Post(':id/participation')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Record authenticated participation in an audio room',
-  })
-  async recordParticipation(
-    @CurrentUser() user: AuthUser | null,
-    @Param('id') roomId: string,
-  ): Promise<void> {
-    if (!user) return;
-    await this.archives.recordParticipation(user.id, roomId);
-  }
-
   @Post(':id/finalize')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
@@ -84,10 +66,9 @@ export class AudioRoomArchivesController {
   async finalize(
     @CurrentUser() user: AuthUser | null,
     @Param('id') roomId: string,
-    @Body() body: FinalizeArchiveBody,
   ): Promise<FinalizeAudioRoomArchiveResult | null> {
     if (!user) return null;
-    return this.archives.finalizeRoom(user.id, roomId, body.recording_url);
+    return this.archives.finalizeRoom(user.id, roomId);
   }
 
   @Post(':id/retry')

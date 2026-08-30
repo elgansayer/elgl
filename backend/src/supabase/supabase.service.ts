@@ -134,7 +134,20 @@ type AudioRoomTranscriptRow = {
   transcript_text: string | null;
   session_summary: string | null;
   vocabulary_list: string[] | null;
+  summary_status?: 'pending' | 'processing' | 'ready' | 'failed';
+  summary_attempts?: number;
+  summary_last_attempt_at?: string | null;
+  summary_next_retry_at?: string | null;
+  summary_ready_at?: string | null;
+  summary_error_code?: string | null;
+  updated_at?: string;
   created_at: string;
+};
+
+type AudioRoomParticipantRow = {
+  room_id: string;
+  user_id: string;
+  joined_at?: string;
 };
 
 type AudioRoomTipRow = {
@@ -830,6 +843,12 @@ export interface Database {
         Update: Partial<AudioRoomTranscriptRow>;
         Relationships: [];
       };
+      audio_room_participants: {
+        Row: AudioRoomParticipantRow;
+        Insert: Partial<AudioRoomParticipantRow>;
+        Update: Partial<AudioRoomParticipantRow>;
+        Relationships: [];
+      };
       audio_room_tips: {
         Row: AudioRoomTipRow;
         Insert: Partial<AudioRoomTipRow>;
@@ -1469,18 +1488,24 @@ export interface Database {
           user_id: string;
           room_id: string;
           is_locked: boolean;
+          is_archived: boolean;
+          archived_at: string | null;
           created_at?: string;
         };
         Insert: Partial<{
           user_id: string;
           room_id: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Update: Partial<{
           user_id?: string;
           room_id?: string;
           is_locked?: boolean;
+          is_archived?: boolean;
+          archived_at?: string | null;
           created_at?: string;
         }>;
         Relationships: [

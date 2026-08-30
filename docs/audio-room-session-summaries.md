@@ -4,7 +4,7 @@ Issue #680 adds participant-scoped, AI-generated learning summaries to archived 
 
 ## User flow
 
-1. An authenticated user joins an audio room. The backend records participation in `audio_room_participants` after the normal room access checks have passed.
+1. An authenticated user requests an authorised LiveKit join token. The backend records participation in `audio_room_participants` only after the normal room access checks have passed and the token has been issued.
 2. The host chooses **End and archive**. `POST /audio-room-archives/:id/finalize` marks the room inactive, finalises the LiveKit/Cloudflare recording when available, and creates a durable `audio_room_transcripts` summary job.
 3. The request returns with `summary_status=pending`. Transcription and summarisation happen outside the archive request.
 4. The scheduled worker advances the job through `pending -> processing -> ready` or `failed`.
@@ -23,7 +23,7 @@ Issue #680 adds participant-scoped, AI-generated learning summaries to archived 
 - `summary_error_code`
 - `updated_at`
 
-The worker checks the queue every 30 seconds, processes a bounded batch, and recovers `processing` jobs that have been abandoned for more than ten minutes. The application also guards duplicate work inside each process. A unique index on `room_id` makes duplicate archive callbacks idempotent at the database layer.
+The worker checks the queue every 30 seconds, processes a bounded batch, and recovers `processing` jobs that have been abandoned for more than ten minutes. Optimistic database claims prevent separate application instances from processing the same attempt concurrently. A unique index on `room_id` makes duplicate archive callbacks idempotent at the database layer.
 
 The migration de-duplicates historical rows before creating the unique index, so it remains safe on installations that previously accepted more than one transcript row for a room.
 
@@ -49,12 +49,12 @@ Archived recordings, transcripts, and summaries are not public assets in the pro
 
 - the host
 - the co-host
-- approved speakers or explicitly invited users
-- authenticated users whose successful room participation was recorded
+- approved speakers
+- authenticated users whose authorised room join-token issuance was recorded
 
 The new archive API performs this check in the NestJS service. RLS on `audio_room_transcripts` mirrors the same participant rule. The legacy `GET /audio-rooms/:id/transcript` route is covered by a compatibility interceptor because the existing audio-room service uses the service-role Supabase client and therefore bypasses RLS.
 
-Private-room participation can only be recorded for the host, co-host, approved speakers, or invited users. Direct client inserts into `audio_room_participants` are not permitted by RLS.
+Private-room participation is recorded as part of the existing host/invite access-checked token issuance path. Invitation alone does not grant archive access. There is no public participation-write endpoint, and direct client inserts into `audio_room_participants` are not permitted by RLS.
 
 Summary error storage is intentionally non-sensitive. `summary_error_code` contains only machine-readable categories such as `transcription_failed` or `summary_generation_failed`. Provider payloads and transcript content are never written to error fields or warning logs.
 
@@ -70,7 +70,6 @@ Cloudflare recording-object lifecycle remains governed by the existing media ret
 
 - `GET /audio-room-archives`: archived rooms visible to the authenticated participant
 - `GET /audio-room-archives/:id`: recording/transcript/summary state for one authorised archive
-- `POST /audio-room-archives/:id/participation`: record a successful authenticated room visit
 - `POST /audio-room-archives/:id/finalize`: host-only archive and enqueue operation
 - `POST /audio-room-archives/:id/retry`: host-only reset of a failed summary job
 
@@ -81,6 +80,8 @@ All archive responses are sent with `Cache-Control: no-store` through the existi
 Relevant automated coverage includes:
 
 - participant-only and private-room access checks
+- removal of both historical broad transcript-read policies
+- cross-process optimistic worker-claim behaviour
 - long-transcript chunking and output de-duplication
 - local NLP fallback when all LLM chunks fail
 - retry state reset and re-queue behaviour

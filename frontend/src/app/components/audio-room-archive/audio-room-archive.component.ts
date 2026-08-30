@@ -29,9 +29,14 @@ import { AudioRoomArchivesService } from '../../services/audio-room-archives.ser
           {{ 'chatRoom.transcriptEmpty' | t }}
         </p>
       } @else {
-        <section class="grid gap-3 md:grid-cols-2" [attr.aria-label]="'chatRoom.transcriptLabel' | t">
+        <section
+          class="grid gap-3 md:grid-cols-2"
+          [attr.aria-label]="'chatRoom.transcriptLabel' | t"
+        >
           @for (room of archives.value() ?? []; track room.id) {
-            <article class="flex flex-col gap-3 rounded-app border border-outline bg-surface-200 p-4">
+            <article
+              class="flex flex-col gap-3 rounded-app border border-outline bg-surface-200 p-4"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <h2 class="truncate font-semibold text-text-primary">{{ room.title }}</h2>
@@ -88,14 +93,16 @@ import { AudioRoomArchivesService } from '../../services/audio-room-archives.ser
             } @else if (item.summary_status === 'failed') {
               <div role="alert" class="flex flex-wrap items-center gap-3">
                 <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
-                <button
-                  hlmBtn
-                  type="button"
-                  [disabled]="retrying()"
-                  (click)="retry(item.room_id)"
-                >
-                  {{ 'discovery.retrySearch' | t }}
-                </button>
+                @if (item.can_retry) {
+                  <button
+                    hlmBtn
+                    type="button"
+                    [disabled]="retrying()"
+                    (click)="retry(item.room_id)"
+                  >
+                    {{ 'discovery.retrySearch' | t }}
+                  </button>
+                }
               </div>
             } @else {
               <div class="flex flex-col gap-5">

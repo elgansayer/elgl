@@ -37,6 +37,7 @@ import {
   buildStageViewModel,
   normaliseAudienceCount,
 } from './audio-room-view-model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-audio-room',
@@ -71,8 +72,10 @@ export class AudioRoomComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly confirmService = inject(ConfirmService);
   private readonly archiveService = inject(AudioRoomArchivesService);
+  private readonly apiBase = environment.apiUrl;
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly isCreatingRoom = signal<boolean>(false);
   readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showTipModal = signal<boolean>(false);
@@ -139,7 +142,7 @@ export class AudioRoomComponent implements OnInit {
     try {
       const result = await firstValueFrom(
         this.httpClient.get<{ emojiId: string; name: string; animationUrl: string }[]>(
-          '/audio-rooms/exclusive-emojis',
+          `${this.apiBase}/audio-rooms/exclusive-emojis`,
         ),
       );
       this.exclusiveEmojis.set(result);
@@ -167,6 +170,9 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async createRoom(payload: VoiceroomCreatePayload): Promise<void> {
+    if (this.isCreatingRoom()) return;
+
+    this.isCreatingRoom.set(true);
     try {
       const room = await this.store.createRoom(
         payload.title,
@@ -176,10 +182,11 @@ export class AudioRoomComponent implements OnInit {
       );
       this.showCreateModal.set(false);
       await this.store.joinRoom(room);
-      await this.recordParticipationSafely(room.id);
     } catch (e) {
       console.error('Error creating live room:', e);
       showToast(this.i18n.translate('audioRoom.launchError'));
+    } finally {
+      this.isCreatingRoom.set(false);
     }
   }
 
@@ -194,7 +201,6 @@ export class AudioRoomComponent implements OnInit {
       });
       this.showPrivatePartyModal.set(false);
       await this.store.joinRoom(room);
-      await this.recordParticipationSafely(room.id);
     } catch (e) {
       console.error('Error creating private party:', e);
       showToast(this.i18n.translate('privateParty.createError'));
@@ -203,7 +209,6 @@ export class AudioRoomComponent implements OnInit {
 
   async join(room: AudioRoomRecord): Promise<void> {
     await this.store.joinRoom(room);
-    await this.recordParticipationSafely(room.id);
   }
 
   leave(): void {
@@ -278,7 +283,9 @@ export class AudioRoomComponent implements OnInit {
     const room = this.store.currentRoom();
     if (!room) return;
     try {
-      await firstValueFrom(this.httpClient.post(`/audio-rooms/${room.id}/reactions`, { emojiId }));
+      await firstValueFrom(
+        this.httpClient.post(`${this.apiBase}/audio-rooms/${room.id}/reactions`, { emojiId }),
+      );
       showToast(this.i18n.translate('audioRoom.reactionSent'));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : this.i18n.translate('common.error');
@@ -309,16 +316,6 @@ export class AudioRoomComponent implements OnInit {
           ? this.i18n.translate('quickPoll.alreadyVoted')
           : this.i18n.translate('common.error');
       showToast(msg);
-    }
-  }
-
-  private async recordParticipationSafely(roomId: string): Promise<void> {
-    try {
-      await this.archiveService.recordParticipation(roomId);
-    } catch (error) {
-      // Joining the live room remains available if archive history persistence is
-      // temporarily unavailable. The backend will still retain host access.
-      console.warn('Audio room participation could not be recorded:', error);
     }
   }
 }

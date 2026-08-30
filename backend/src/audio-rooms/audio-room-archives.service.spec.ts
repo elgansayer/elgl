@@ -180,18 +180,6 @@ describe('AudioRoomArchivesService', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('rejects uninvited users before recording private-room participation', async () => {
-    audioRooms.single.mockResolvedValue({
-      data: { ...room, is_private: true },
-      error: null,
-    });
-
-    await expect(
-      service.recordParticipation('stranger-1', room.id),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(participants.upsert).not.toHaveBeenCalled();
-  });
-
   it('chunks long transcripts and aggregates bounded summary vocabulary', async () => {
     const generateSummary = service['generateSummary'].bind(service);
     const result = await generateSummary('x'.repeat(3500));
@@ -216,6 +204,23 @@ describe('AudioRoomArchivesService', () => {
 
   it('resets retry metadata and schedules processing for a host retry', async () => {
     const processSpy = vi.spyOn(service, 'processRoom').mockResolvedValue();
+    transcripts.maybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          room_id: room.id,
+          recording_url: room.recording_url,
+          transcript_text: null,
+          session_summary: null,
+          vocabulary_list: [],
+          summary_status: 'failed',
+          summary_attempts: 2,
+          summary_last_attempt_at: room.created_at,
+          summary_next_retry_at: null,
+          updated_at: room.created_at,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { room_id: room.id }, error: null });
 
     await service.retrySummary('host-1', room.id);
 
@@ -227,5 +232,61 @@ describe('AudioRoomArchivesService', () => {
       }),
     );
     expect(processSpy).toHaveBeenCalledWith(room.id);
+  });
+
+  it('does not reset a ready summary through the retry endpoint', async () => {
+    transcripts.maybeSingle.mockResolvedValueOnce({
+      data: {
+        room_id: room.id,
+        recording_url: room.recording_url,
+        transcript_text: 'A transcript',
+        session_summary: 'A summary',
+        vocabulary_list: [],
+        summary_status: 'ready',
+        summary_attempts: 1,
+        summary_last_attempt_at: room.created_at,
+        summary_next_retry_at: null,
+        updated_at: room.created_at,
+      },
+      error: null,
+    });
+
+    await expect(service.retrySummary('host-1', room.id)).rejects.toThrow(
+      'Only a failed summary can be retried',
+    );
+    expect(transcripts.update).not.toHaveBeenCalled();
+  });
+
+  it('stops when another worker wins the optimistic summary claim', async () => {
+    transcripts.maybeSingle
+      .mockResolvedValueOnce({
+        data: {
+          room_id: room.id,
+          recording_url: room.recording_url,
+          transcript_text: 'A transcript',
+          session_summary: null,
+          vocabulary_list: [],
+          summary_status: 'pending',
+          summary_attempts: 0,
+          summary_last_attempt_at: null,
+          summary_next_retry_at: null,
+          updated_at: room.created_at,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: null });
+
+    await service.processRoom(room.id);
+
+    expect(transcripts.eq).toHaveBeenCalledWith('summary_status', 'pending');
+    expect(transcripts.eq).toHaveBeenCalledWith('summary_attempts', 0);
+    expect(chatCompletion).not.toHaveBeenCalled();
+  });
+
+  it('guards completion writes with the claimed attempt', async () => {
+    await service['markReady'](room.id, 3, 'Transcript', 'Summary', ['word']);
+
+    expect(transcripts.eq).toHaveBeenCalledWith('summary_status', 'processing');
+    expect(transcripts.eq).toHaveBeenCalledWith('summary_attempts', 3);
   });
 });
