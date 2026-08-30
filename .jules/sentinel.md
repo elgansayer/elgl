@@ -79,3 +79,8 @@
 **Vulnerability:** The TransferService could initialize using the well-known insecure fallback `test-transfer-secret` if the environment variable was omitted or masked in a production environment.
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
+
+## 2026-08-30 - [Strict Secrets Validation in Production for Centrifugo]
+**Vulnerability:** Centrifugo real-time chat service relied on weak development fallback strings (`test-centrifugo-api-key`, `test-centrifugo-secret`) if credentials were missing in production, permitting unauthorized access to websocket authentication.
+**Learning:** Checking for the presence of variables in `NODE_ENV === 'production'` is insufficient if the configuration schema (like `Joi`) automatically injects insecure development fallback strings.
+**Prevention:** Apply strict fail-fast validation in service constructors or `onModuleInit` to explicitly throw an `Error` in production if the resolved configuration matches the known insecure dev default strings.
