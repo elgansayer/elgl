@@ -123,6 +123,7 @@ test('allows the Node test runner for repository contract tests', () => {
     analyse({
       '.github/workflows/contracts.yml':
         'run: node --test scripts/verify-playwright-test-boundary.test.mjs',
+      'scripts/setup-and-report.sh': 'node scripts/setup.mjs && echo e2e/tests/auth.spec.ts',
     }),
     [],
   );

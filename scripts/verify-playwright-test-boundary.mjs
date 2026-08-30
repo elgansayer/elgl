@@ -118,28 +118,30 @@ function scanWrongRunnerInvocations(files) {
     const lines = content.split(/\r?\n/);
     lines.forEach((line, index) => {
       const command = normalizeCommandLine(line);
-      const specTarget = command.match(
-        /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s;&|)]*\.spec\.[cm]?[jt]sx?(?=$|[\s;&|)])/i,
-      );
-      if (
-        specTarget &&
-        targetBelongsToE2e(specTarget, lines, index, path) &&
-        /\b(?:node|tsx|ts-node|bun)\b/i.test(command)
-      ) {
-        violations.push(
-          `${path}:${index + 1} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
+      for (const segment of command.split(/[;&|]+/)) {
+        const specTarget = segment.match(
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s)]*\.spec\.[cm]?[jt]sx?(?=$|[\s)])/i,
         );
-      }
+        if (
+          specTarget &&
+          targetBelongsToE2e(specTarget, lines, index, path) &&
+          /\b(?:node|tsx|ts-node|bun)\b/i.test(segment)
+        ) {
+          violations.push(
+            `${path}:${index + 1} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
+          );
+        }
 
-      const testsTarget = command.match(
-        /(?:^|[\s(])((?:\.\/)?e2e\/)?tests(?:\/[^\s;&|)]*)?(?=$|[\s;&|)])/i,
-      );
-      if (
-        testsTarget &&
-        targetBelongsToE2e(testsTarget, lines, index, path) &&
-        /\b(?:vitest|jest)\b/i.test(command)
-      ) {
-        violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
+        const testsTarget = segment.match(
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests(?:\/[^\s)]*)?(?=$|[\s)])/i,
+        );
+        if (
+          testsTarget &&
+          targetBelongsToE2e(testsTarget, lines, index, path) &&
+          /\b(?:vitest|jest)\b/i.test(segment)
+        ) {
+          violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
+        }
       }
     });
   }
