@@ -5,6 +5,7 @@ import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
+import { UsersService } from '../users/users.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('LearnerKnowledgeService', () => {
@@ -14,6 +15,7 @@ describe('LearnerKnowledgeService', () => {
   let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
+  let usersService: { getProfile: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     flashcardsService = {
@@ -31,6 +33,9 @@ describe('LearnerKnowledgeService', () => {
     momentsService = {
       getLifetimeCounts: vi.fn(),
     };
+    usersService = {
+      getProfile: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +45,7 @@ describe('LearnerKnowledgeService', () => {
         { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
+        { provide: UsersService, useValue: usersService },
       ],
     }).compile();
 
@@ -111,12 +117,17 @@ describe('LearnerKnowledgeService', () => {
       ];
       lessonsService.listLessons.mockResolvedValue(mockLessons);
 
-      hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
+      hobbyTagsService.getUserVocabulary.mockResolvedValue([
+        { word: 'hobbyWord' }
+      ]);
       assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
         translations: 5,
+      });
+      usersService.getProfile.mockResolvedValue({
+        proficiency_level: 'B2',
       });
 
       const profile = await service.getProfile('user1', 'es');
@@ -124,10 +135,10 @@ describe('LearnerKnowledgeService', () => {
       // Assert profile metadata
       expect(profile.userId).toBe('user1');
       expect(profile.language).toBe('es');
-      expect(profile.overallProficiency.level).toBe('B1');
+      expect(profile.overallProficiency.level).toBe('B2');
 
       // Assert knowledge items
-      expect(profile.knowledgeItems.size).toBe(4);
+      expect(profile.knowledgeItems.size).toBe(5);
 
       const known = profile.knowledgeItems.get('vocab:knownWord');
       expect(known?.status).toBe('known');
@@ -145,6 +156,9 @@ describe('LearnerKnowledgeService', () => {
 
       const newWord = profile.knowledgeItems.get('vocab:newWord');
       expect(newWord?.status).toBe('new');
+
+      const hobbyWord = profile.knowledgeItems.get('vocab:hobbyWord');
+      expect(hobbyWord?.status).toBe('new');
 
       // Assert recent encounters
       expect(profile.recentEncounters.length).toBe(2);
@@ -166,6 +180,7 @@ describe('LearnerKnowledgeService', () => {
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );
+      usersService.getProfile.mockRejectedValue(new Error('User profile failed'));
 
       const profile = await service.getProfile('user2', 'fr');
 
@@ -173,6 +188,7 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.language).toBe('fr');
       expect(profile.knowledgeItems.size).toBe(0);
       expect(profile.recentEncounters.length).toBe(0);
+      expect(profile.overallProficiency.level).toBe('A1');
     });
   });
 });
