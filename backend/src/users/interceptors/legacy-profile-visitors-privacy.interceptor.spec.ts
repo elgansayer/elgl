@@ -39,7 +39,9 @@ describe('LegacyProfileVisitorsPrivacyInterceptor', () => {
       user: { id: 'owner-1' },
     };
     const response = {
-      setHeader: vi.fn((name: string, value: string) => headers.set(name, value)),
+      setHeader: vi.fn((name: string, value: string) =>
+        headers.set(name, value),
+      ),
     };
     const context = {
       getType: () => 'http',
@@ -55,7 +57,11 @@ describe('LegacyProfileVisitorsPrivacyInterceptor', () => {
 
   it('masks identities for non-VIP callers of the deprecated endpoint', async () => {
     const { interceptor, context, next, headers } = setup({
-      data: { is_vip: false, is_deleted: false, scheduled_for_deletion_at: null },
+      data: {
+        is_vip: false,
+        is_deleted: false,
+        scheduled_for_deletion_at: null,
+      },
       error: null,
     });
 
@@ -83,13 +89,17 @@ describe('LegacyProfileVisitorsPrivacyInterceptor', () => {
 
   it('preserves identities only for a server-verified VIP caller', async () => {
     const { interceptor, context, next } = setup({
-      data: { is_vip: true, is_deleted: false, scheduled_for_deletion_at: null },
+      data: {
+        is_vip: true,
+        is_deleted: false,
+        scheduled_for_deletion_at: null,
+      },
       error: null,
     });
 
-    await expect(firstValueFrom(interceptor.intercept(context, next))).resolves.toEqual(
-      legacyPayload,
-    );
+    await expect(
+      firstValueFrom(interceptor.intercept(context, next)),
+    ).resolves.toEqual(legacyPayload);
   });
 
   it('fails closed when entitlement cannot be verified', async () => {
@@ -98,9 +108,9 @@ describe('LegacyProfileVisitorsPrivacyInterceptor', () => {
       error: { message: 'database unavailable' },
     });
 
-    await expect(firstValueFrom(interceptor.intercept(context, next))).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      firstValueFrom(interceptor.intercept(context, next)),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('does not alter unrelated routes', async () => {
@@ -112,8 +122,24 @@ describe('LegacyProfileVisitorsPrivacyInterceptor', () => {
     request.path = '/users/me';
     request.route.path = 'me';
 
-    await expect(firstValueFrom(interceptor.intercept(context, next))).resolves.toEqual(
-      legacyPayload,
-    );
+    await expect(
+      firstValueFrom(interceptor.intercept(context, next)),
+    ).resolves.toEqual(legacyPayload);
+  });
+
+  it('protects the deprecated endpoint when the application prefix is present', async () => {
+    const { interceptor, context, next } = setup({
+      data: {
+        is_vip: false,
+        is_deleted: false,
+        scheduled_for_deletion_at: null,
+      },
+      error: null,
+    });
+    context.switchToHttp().getRequest().path = '/api/users/me/visitors';
+
+    const result = await firstValueFrom(interceptor.intercept(context, next));
+
+    expect(JSON.stringify(result)).not.toContain('Secret Visitor');
   });
 });

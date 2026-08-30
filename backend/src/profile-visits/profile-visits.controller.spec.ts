@@ -37,9 +37,9 @@ describe('ProfileVisitsController', () => {
   afterEach(() => vi.clearAllMocks());
 
   it('fails closed when the authenticated user is missing', async () => {
-    await expect(controller.recordVisit(null, 'target-1')).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      controller.recordVisit(null, 'target-1'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(controller.getMyVisitors(null, 20, 0)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );

@@ -130,7 +130,9 @@ describe('ProfileVisitorsComponent', () => {
     expect(alert.textContent).toContain('common.error_generic');
     expect(component.visitors()).toEqual([]);
 
-    getMyVisitors.mockResolvedValueOnce(makePage({ items: [makeVisit('visit-2')], identity_visible: true }));
+    getMyVisitors.mockResolvedValueOnce(
+      makePage({ items: [makeVisit('visit-2')], identity_visible: true }),
+    );
     component.retry();
     await settle();
 

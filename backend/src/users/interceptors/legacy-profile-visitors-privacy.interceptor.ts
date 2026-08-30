@@ -42,20 +42,20 @@ export class LegacyProfileVisitorsPrivacyInterceptor implements NestInterceptor 
 
     return from(this.canSeeVisitorIdentity(request.user.id)).pipe(
       switchMap((identityVisible) =>
-        next.handle().pipe(
-          map((value: unknown) =>
-            identityVisible ? value : this.maskLegacyVisitorPayload(value),
+        next
+          .handle()
+          .pipe(
+            map((value: unknown) =>
+              identityVisible ? value : this.maskLegacyVisitorPayload(value),
+            ),
           ),
-        ),
       ),
     );
   }
 
   private isLegacyVisitorsRequest(request: Request): boolean {
-    const routePath = request.route?.path as string | undefined;
     return (
-      request.method === 'GET' &&
-      (request.path === '/users/me/visitors' || routePath === 'me/visitors')
+      request.method === 'GET' && request.path.endsWith('/users/me/visitors')
     );
   }
 

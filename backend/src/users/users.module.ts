@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersController } from './users.controller';
 import { DeviceLinkController } from './device-link.controller';
 import { UsersService } from './users.service';
@@ -8,11 +9,17 @@ import { MediaModule } from '../media/media.module';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { LegacyProfileVisitorsPrivacyInterceptor } from './interceptors/legacy-profile-visitors-privacy.interceptor';
+import { ProfileUpdateIntegrityInterceptor } from './interceptors/profile-update-integrity.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+
+// Keep the existing controller implementation free of documentation-only churn while
+// still making the full profile surface discoverable and authenticated in live Swagger.
+ApiTags('User Profiles')(UsersController);
+ApiBearerAuth('bearer')(UsersController);
 
 @Module({
   imports: [
@@ -34,6 +41,10 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: LegacyProfileVisitorsPrivacyInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ProfileUpdateIntegrityInterceptor,
     },
   ],
   exports: [UsersService, DataExportWorker],

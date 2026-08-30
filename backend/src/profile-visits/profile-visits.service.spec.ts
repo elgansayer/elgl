@@ -74,7 +74,9 @@ describe('ProfileVisitsService', () => {
         error: null,
       });
 
-      await expect(service.recordVisit('viewer-1', 'target-1')).resolves.toEqual({
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
         recorded: false,
         ignored: true,
         reason: 'incognito',
@@ -92,6 +94,7 @@ describe('ProfileVisitsService', () => {
         .mockResolvedValueOnce({
           data: {
             id: 'target-1',
+            is_vip: true,
             is_deleted: false,
             scheduled_for_deletion_at: null,
             profile_visibility: 'hidden',
@@ -99,12 +102,41 @@ describe('ProfileVisitsService', () => {
           error: null,
         });
 
-      await expect(service.recordVisit('viewer-1', 'target-1')).resolves.toEqual({
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
         recorded: false,
         ignored: true,
         reason: 'unavailable',
       });
       expect(query.insert).not.toHaveBeenCalled();
+    });
+
+    it('never lets a non-VIP caller forge a visit to a VIP-only profile', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'vips_only',
+          },
+          error: null,
+        });
+
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'unavailable',
+      });
+      expect(query.insert).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('never records a visit when either user has blocked the other', async () => {
@@ -127,7 +159,9 @@ describe('ProfileVisitsService', () => {
         error: null,
       });
 
-      await expect(service.recordVisit('viewer-1', 'target-1')).resolves.toEqual({
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
         recorded: false,
         ignored: true,
         reason: 'blocked',
@@ -158,18 +192,17 @@ describe('ProfileVisitsService', () => {
         .mockResolvedValueOnce({ data: [], error: null })
         .mockResolvedValueOnce({ data: [], error: null });
 
-      await expect(service.recordVisit('viewer-1', 'target-1')).resolves.toEqual({
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
         recorded: false,
         ignored: true,
         reason: 'duplicate',
       });
-      expect(query.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          visitor_id: 'viewer-1',
-          viewed_id: 'target-1',
-          visit_day: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        }),
-      );
+      expect(query.insert).toHaveBeenCalledWith({
+        visitor_id: 'viewer-1',
+        viewed_id: 'target-1',
+      });
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
@@ -182,6 +215,7 @@ describe('ProfileVisitsService', () => {
         .mockResolvedValueOnce({
           data: {
             id: 'target-1',
+            is_vip: true,
             is_deleted: false,
             scheduled_for_deletion_at: null,
             profile_visibility: 'everyone',
@@ -196,12 +230,22 @@ describe('ProfileVisitsService', () => {
         .mockResolvedValueOnce({ data: [], error: null })
         .mockResolvedValueOnce({ data: [], error: null });
 
-      await expect(service.recordVisit('viewer-1', 'target-1')).resolves.toEqual({
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
         recorded: true,
         ignored: false,
         visit_id: 'visit-1',
       });
       expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'profile.visit',
+        expect.objectContaining({
+          viewerId: 'viewer-1',
+          viewedUserId: 'target-1',
+          identityVisible: true,
+        }),
+      );
     });
 
     it('fails closed if privacy or block state cannot be verified', async () => {
@@ -233,7 +277,11 @@ describe('ProfileVisitsService', () => {
 
     it('never returns visitor identity to a non-VIP API caller', async () => {
       query.single.mockResolvedValueOnce({
-        data: { is_vip: false, is_deleted: false, scheduled_for_deletion_at: null },
+        data: {
+          is_vip: false,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
       query.range.mockResolvedValueOnce({
@@ -266,7 +314,11 @@ describe('ProfileVisitsService', () => {
 
     it('returns full visitor identity to a verified VIP owner', async () => {
       query.single.mockResolvedValueOnce({
-        data: { is_vip: true, is_deleted: false, scheduled_for_deletion_at: null },
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
       query.range.mockResolvedValueOnce({
@@ -290,7 +342,11 @@ describe('ProfileVisitsService', () => {
 
     it('filters historical rows for visitors who are now hidden or deletion-pending', async () => {
       query.single.mockResolvedValueOnce({
-        data: { is_vip: true, is_deleted: false, scheduled_for_deletion_at: null },
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
       query.range.mockResolvedValueOnce({
@@ -319,7 +375,11 @@ describe('ProfileVisitsService', () => {
 
     it('bounds pagination and exposes an explicit next offset', async () => {
       query.single.mockResolvedValueOnce({
-        data: { is_vip: true, is_deleted: false, scheduled_for_deletion_at: null },
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
       query.range.mockResolvedValueOnce({
@@ -343,7 +403,11 @@ describe('ProfileVisitsService', () => {
 
     it('surfaces storage failures instead of turning them into an empty state', async () => {
       query.single.mockResolvedValueOnce({
-        data: { is_vip: true, is_deleted: false, scheduled_for_deletion_at: null },
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
       query.range.mockResolvedValueOnce({

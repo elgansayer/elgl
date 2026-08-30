@@ -40,11 +40,7 @@ const PAGE_SIZE = 20;
             <a [routerLink]="['/profile', visit.visitor.id]" class="profile-visitor-item">
               <div class="profile-visitor-avatar">
                 @if (visit.visitor.avatar_url) {
-                  <img
-                    [src]="visit.visitor.avatar_url"
-                    alt=""
-                    class="profile-visitor-avatar-img"
-                  />
+                  <img [src]="visit.visitor.avatar_url" alt="" class="profile-visitor-avatar-img" />
                 } @else {
                   <div class="profile-visitor-avatar-placeholder" aria-hidden="true">
                     {{ (visit.visitor.display_name || '?')[0] }}

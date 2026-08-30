@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -57,9 +54,7 @@ describe('ProfileVisitsService', () => {
 
   it('records a profile view without sending entitlement state in the body', async () => {
     const resultPromise = service.recordVisit('target-1');
-    const request = http.expectOne(
-      `${environment.apiUrl}/profile-visits/target-1`,
-    );
+    const request = http.expectOne(`${environment.apiUrl}/profile-visits/target-1`);
 
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeNull();

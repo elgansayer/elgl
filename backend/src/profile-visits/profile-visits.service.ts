@@ -34,11 +34,7 @@ export interface ProfileVisitorsPage {
 }
 
 export type ProfileVisitIgnoreReason =
-  | 'self'
-  | 'incognito'
-  | 'blocked'
-  | 'unavailable'
-  | 'duplicate';
+  'self' | 'incognito' | 'blocked' | 'unavailable' | 'duplicate';
 
 export interface RecordProfileVisitResult {
   recorded: boolean;
@@ -68,6 +64,7 @@ interface VisitorPrivacyRow {
 
 interface ViewedProfileRow {
   id: string;
+  is_vip?: boolean | null;
   is_deleted?: boolean | null;
   scheduled_for_deletion_at?: string | null;
   profile_visibility?: string | null;
@@ -98,7 +95,9 @@ export class ProfileVisitsService {
       .single();
 
     if (visitorError || !visitor) {
-      this.logger.warn('Profile visit rejected because viewer privacy could not be verified');
+      this.logger.warn(
+        'Profile visit rejected because viewer privacy could not be verified',
+      );
       throw new Error('Failed to verify profile-visit privacy');
     }
 
@@ -113,16 +112,27 @@ export class ProfileVisitsService {
 
     const { data: viewedProfile, error: viewedProfileError } = await supabase
       .from('users')
-      .select('id, is_deleted, scheduled_for_deletion_at, profile_visibility')
+      .select(
+        'id, is_vip, is_deleted, scheduled_for_deletion_at, profile_visibility',
+      )
       .eq('id', viewedId)
       .single();
 
     if (viewedProfileError) {
-      this.logger.warn('Profile visit rejected because target visibility could not be verified');
+      this.logger.warn(
+        'Profile visit rejected because target visibility could not be verified',
+      );
       throw new Error('Failed to verify viewed profile');
     }
 
-    if (!viewedProfile || this.isUnavailableProfile(viewedProfile as ViewedProfileRow)) {
+    const viewedProfilePrivacy = viewedProfile as ViewedProfileRow | null;
+    if (
+      !viewedProfilePrivacy ||
+      this.isUnavailableProfile(
+        viewedProfilePrivacy,
+        Boolean(visitorPrivacy.is_vip),
+      )
+    ) {
       return { recorded: false, ignored: true, reason: 'unavailable' };
     }
 
@@ -147,7 +157,9 @@ export class ProfileVisitsService {
         return { recorded: false, ignored: true, reason: 'duplicate' };
       }
 
-      this.logger.error(`Failed to persist profile visit: ${response.error.message}`);
+      this.logger.error(
+        `Failed to persist profile visit: ${response.error.message}`,
+      );
       throw new Error('Failed to record profile visit');
     }
 
@@ -157,8 +169,12 @@ export class ProfileVisitsService {
     }
 
     this.eventEmitter.emit(
-      'profile.view',
-      new ProfileViewEvent(visitorId, viewedId),
+      'profile.visit',
+      new ProfileViewEvent(
+        visitorId,
+        viewedId,
+        Boolean(viewedProfilePrivacy.is_vip),
+      ),
     );
 
     return {
@@ -315,7 +331,10 @@ export class ProfileVisitsService {
     return response.data;
   }
 
-  private async areUsersBlocked(visitorId: string, viewedId: string): Promise<boolean> {
+  private async areUsersBlocked(
+    visitorId: string,
+    viewedId: string,
+  ): Promise<boolean> {
     const supabase = this.supabaseService.getClient();
     const directions = [
       [visitorId, viewedId],
@@ -331,7 +350,9 @@ export class ProfileVisitsService {
         .limit(1);
 
       if (error) {
-        this.logger.warn('Profile visit rejected because block state could not be verified');
+        this.logger.warn(
+          'Profile visit rejected because block state could not be verified',
+        );
         throw new Error('Failed to verify profile-visit block state');
       }
 
@@ -341,19 +362,23 @@ export class ProfileVisitsService {
     return false;
   }
 
-  private isUnavailableProfile(profile: ViewedProfileRow): boolean {
+  private isUnavailableProfile(
+    profile: ViewedProfileRow,
+    visitorIsVip: boolean,
+  ): boolean {
     return Boolean(
       profile.is_deleted ||
-        profile.scheduled_for_deletion_at ||
-        profile.profile_visibility === 'hidden',
+      profile.scheduled_for_deletion_at ||
+      profile.profile_visibility === 'hidden' ||
+      (profile.profile_visibility === 'vips_only' && !visitorIsVip),
     );
   }
 
   private isUnavailableVisitor(visitor: RawVisitorUser): boolean {
     return Boolean(
       visitor.is_deleted ||
-        visitor.scheduled_for_deletion_at ||
-        visitor.profile_visibility === 'hidden',
+      visitor.scheduled_for_deletion_at ||
+      visitor.profile_visibility === 'hidden',
     );
   }
 

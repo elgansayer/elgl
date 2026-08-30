@@ -39,10 +39,8 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'visitors',
-    loadComponent: () =>
-      import('../components/visitor-logs/visitor-logs.component').then(
-        (m) => m.VisitorLogsComponent,
-      ),
+    redirectTo: 'profile/visitors',
+    pathMatch: 'full',
   },
   {
     path: 'profile/visitors',
@@ -86,11 +84,8 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'notification-preferences',
-    loadComponent: () =>
-      import('../components/notification-preferences/notification-preferences.component').then(
-        (m) => m.NotificationPreferencesComponent,
-      ),
-    title: 'Notification Preferences - HelloTalk',
+    redirectTo: 'settings/notification',
+    pathMatch: 'full',
   },
   {
     path: 'events',
@@ -108,19 +103,13 @@ export const socialRoutes: Routes = [
   },
   {
     path: 'language-parties',
-    loadComponent: () =>
-      import('../components/language-parties/language-parties.component').then(
-        (m) => m.LanguagePartiesComponent,
-      ),
-    title: 'Language Parties - HelloTalk',
+    redirectTo: 'community/language-parties',
+    pathMatch: 'full',
   },
   {
     path: 'language-islands',
-    loadComponent: () =>
-      import('../pages/language-islands/language-islands.component').then(
-        (m) => m.LanguageIslandsComponent,
-      ),
-    title: 'Language Islands - HelloTalk',
+    redirectTo: 'community/language-islands',
+    pathMatch: 'full',
   },
   {
     path: 'business-profile',
