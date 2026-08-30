@@ -81,6 +81,7 @@ describe('Chat Flow (Mocked)', () => {
     }).as('getRooms');
 
     cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/archived-rooms', { body: [] }).as('getArchivedRooms');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
     cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
@@ -131,13 +132,13 @@ describe('Chat Flow (Mocked)', () => {
     cy.contains('Language Exchange with Maria').should('be.visible').click();
 
     cy.url().should('include', `/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
     cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('sends a text message with the canonical room and message payload', () => {
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     const testMessage = 'I am doing great, thanks for asking!';
     cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
@@ -160,7 +161,7 @@ describe('Chat Flow (Mocked)', () => {
 
   it('does not submit whitespace-only messages', () => {
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     cy.get('[data-testid="chat-message-input"]').type('   {enter}');
 
@@ -175,7 +176,7 @@ describe('Chat Flow (Mocked)', () => {
     const retryMessage = 'Please keep this draft if sending fails.';
 
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
     cy.window().then((win) => {
       (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
         'Error sending message:';
