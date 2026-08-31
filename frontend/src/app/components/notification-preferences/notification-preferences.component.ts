@@ -135,12 +135,7 @@ export class NotificationPreferencesComponent {
   private readonly service = inject(NotificationPreferencesService);
   private readonly i18n = inject(I18nService);
 
-  readonly channels: NotificationChannel[] = [
-    'push',
-    'email',
-    'in_app',
-    'badges',
-  ];
+  readonly channels: NotificationChannel[] = ['push', 'email', 'in_app', 'badges'];
 
   private readonly prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
@@ -247,9 +242,7 @@ export class NotificationPreferencesComponent {
     try {
       const updated = await this.service.resetToDefaults();
       this.applyPreferences(updated);
-      this.statusMessage.set(
-        this.i18n.translate('notification_settings.saved_message'),
-      );
+      this.statusMessage.set(this.i18n.translate('notification_settings.saved_message'));
     } catch {
       this.actionError.set(true);
     } finally {
@@ -277,9 +270,7 @@ export class NotificationPreferencesComponent {
         this.buildSavePayload(prefs, start, end),
       );
       this.applyPreferences(updated);
-      this.statusMessage.set(
-        this.i18n.translate('notification_settings.saved_message'),
-      );
+      this.statusMessage.set(this.i18n.translate('notification_settings.saved_message'));
     } catch {
       this.actionError.set(true);
     } finally {

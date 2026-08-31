@@ -96,12 +96,8 @@ export class NotificationPreferencesService {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
   }
 
-  async updatePreferences(
-    dto: UpdateNotificationPreferences,
-  ): Promise<NotificationPreferences> {
-    return firstValueFrom(
-      this.http.put<NotificationPreferences>(this.baseUrl, dto),
-    );
+  async updatePreferences(dto: UpdateNotificationPreferences): Promise<NotificationPreferences> {
+    return firstValueFrom(this.http.put<NotificationPreferences>(this.baseUrl, dto));
   }
 
   async toggleCategoryChannel(
@@ -120,9 +116,7 @@ export class NotificationPreferencesService {
   }
 
   resetToDefaults(): Promise<NotificationPreferences> {
-    return firstValueFrom(
-      this.http.post<NotificationPreferences>(`${this.baseUrl}/reset`, {}),
-    );
+    return firstValueFrom(this.http.post<NotificationPreferences>(`${this.baseUrl}/reset`, {}));
   }
 
   toggleDoNotDisturb(enabled: boolean): Promise<NotificationPreferences> {
@@ -131,9 +125,7 @@ export class NotificationPreferencesService {
 
   getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
     return firstValueFrom(
-      this.http.get<LegacyNotificationPreferences>(
-        `${this.notificationsUrl}/preferences`,
-      ),
+      this.http.get<LegacyNotificationPreferences>(`${this.notificationsUrl}/preferences`),
     );
   }
 
@@ -153,13 +145,10 @@ export class NotificationPreferencesService {
     vibrationPattern?: number[],
   ): Promise<void> {
     return firstValueFrom(
-      this.http.patch<void>(
-        `${environment.apiUrl}/users/me/notification-preferences`,
-        {
-          custom_tone_url: customToneUrl,
-          vibration_pattern: vibrationPattern,
-        },
-      ),
+      this.http.patch<void>(`${environment.apiUrl}/users/me/notification-preferences`, {
+        custom_tone_url: customToneUrl,
+        vibration_pattern: vibrationPattern,
+      }),
     );
   }
 

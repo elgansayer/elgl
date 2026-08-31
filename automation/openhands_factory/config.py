@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
@@ -92,9 +92,15 @@ class AgentTimeoutsConfig(BaseModel):
     architecture: int = 1800
     implementation: int = 3600
     security_review: int = 1800
-    quality_repair: int = 3600
-    code_review: int = 1800
-    ci_repair: int = 3600
+    # Repair/review phases now route to each provider's fast/low-effort tier
+    # (see phase_models and claude.py's per-phase --effort), so a runaway
+    # attempt on a narrow CI failure or review pass shouldn't need the same
+    # hour-long ceiling implementation gets. Left generous enough that a
+    # genuinely slow attempt still finishes rather than getting killed into
+    # an extra retry cycle.
+    quality_repair: int = 1800
+    code_review: int = 900
+    ci_repair: int = 1800
     general_action: int = 1800
 
     @model_validator(mode="after")
@@ -386,6 +392,12 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
+    repository_profile: Literal["hellotalk", "workout-agent"] = "hellotalk"
+    prompt_dir: Path = Path("/var/lib/hellotalk-factory/repository/automation/prompts")
+    system_prompt_path: Path = Path(
+        "/var/lib/hellotalk-factory/repository/automation/prompts/system.md"
+    )
+    provider_capacity_dir: Path = Path("/var/lib/hellotalk-factory")
     # Static architecture identity. This is deliberately separate from
     # factory_generation, which generation.py replaces with a unique per-daemon
     # ownership UUID after the host-level lock is acquired.
@@ -429,7 +441,20 @@ class FactoryConfig(BaseModel):
     provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    # archive_worktree() writes a full worktree copy into recovery_dir on every
+    # crash-recovery path with nothing that ever deletes them; left unpruned,
+    # these silently consume the disk-space reserve minimum_free_disk_gib
+    # protects, permanently pausing scheduling with no further log output
+    # once the check has already failed once (it only logs on state changes).
+    recovery_retention_hours: float = 72
     max_no_pr_hours: float = 6
+    # How long a stall condition (storage blocked, or no PR progress past
+    # max_no_pr_hours) must persist continuously before the daemon dispatches
+    # a Telegram alert and a best-effort AI investigation. Both signals were
+    # previously only checkable on demand (hellotalk-factory doctor); nothing
+    # evaluated them proactively, so a real multi-hour stall produced no
+    # notification at all until an operator happened to look.
+    stall_alert_minutes: float = 20
     architect_interval_hours: float = 168
     architect_max_new_issues: int = 8
     # Quarantine (after FACTORY_MAX_CONSECUTIVE_FAILURES repeated identical
@@ -457,7 +482,15 @@ class FactoryConfig(BaseModel):
     dry_run: bool = False
 
     @field_validator(
-        "repository", "state_dir", "log_dir", "profile_store", "worktree_dir", "recovery_dir"
+        "repository",
+        "state_dir",
+        "log_dir",
+        "profile_store",
+        "worktree_dir",
+        "recovery_dir",
+        "prompt_dir",
+        "system_prompt_path",
+        "provider_capacity_dir",
     )
     @classmethod
     def absolute_paths(cls, value: Path) -> Path:
@@ -513,6 +546,10 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
+        if self.recovery_retention_hours <= 0:
+            raise ValueError("recovery retention must be positive")
+        if self.stall_alert_minutes <= 0:
+            raise ValueError("stall alert threshold must be positive")
         if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
@@ -554,6 +591,8 @@ class FactoryConfig(BaseModel):
                 raise ConfigurationError(f"Invalid FACTORY_AGENTS_CONFIG: {error}") from error
 
         github_repository = env.get("GITHUB_REPOSITORY", "elgansayer/elgl")
+        repository = Path(env.get("FACTORY_REPOSITORY", cls.model_fields["repository"].default))
+        state_dir = Path(env.get("FACTORY_STATE_DIR", cls.model_fields["state_dir"].default))
         repository_owner = github_repository.partition("/")[0]
         trusted_github_actors = frozenset(
             actor.strip().casefold()
@@ -569,11 +608,9 @@ class FactoryConfig(BaseModel):
         try:
             return cls(
                 agents=agents_config,
-                repository=Path(
-                    env.get("FACTORY_REPOSITORY", cls.model_fields["repository"].default)
-                ),
+                repository=repository,
                 base_branch=env.get("FACTORY_BASE_BRANCH", "main"),
-                state_dir=Path(env.get("FACTORY_STATE_DIR", cls.model_fields["state_dir"].default)),
+                state_dir=state_dir,
                 log_dir=Path(env.get("FACTORY_LOG_DIR", cls.model_fields["log_dir"].default)),
                 profile_store=Path(
                     env.get("FACTORY_PROFILE_STORE", cls.model_fields["profile_store"].default)
@@ -583,6 +620,22 @@ class FactoryConfig(BaseModel):
                 ),
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
+                ),
+                repository_profile=cast(
+                    Literal["hellotalk", "workout-agent"],
+                    env.get("FACTORY_REPOSITORY_PROFILE", "hellotalk"),
+                ),
+                prompt_dir=Path(
+                    env.get("FACTORY_PROMPT_DIR", str(repository / "automation" / "prompts"))
+                ),
+                system_prompt_path=Path(
+                    env.get(
+                        "FACTORY_SYSTEM_PROMPT_PATH",
+                        str(repository / "automation" / "prompts" / "system.md"),
+                    )
+                ),
+                provider_capacity_dir=Path(
+                    env.get("FACTORY_PROVIDER_CAPACITY_DIR", str(state_dir))
                 ),
                 factory_architecture=env.get("FACTORY_ARCHITECTURE", EXPECTED_FACTORY_ARCHITECTURE),
                 factory_generation=env.get("FACTORY_GENERATION", "unknown"),
@@ -636,7 +689,9 @@ class FactoryConfig(BaseModel):
                 provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                recovery_retention_hours=float(env.get("FACTORY_RECOVERY_RETENTION_HOURS", "72")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
+                stall_alert_minutes=float(env.get("FACTORY_STALL_ALERT_MINUTES", "20")),
                 architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
                 architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 quarantine_recovery_minutes=int(

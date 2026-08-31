@@ -94,9 +94,7 @@ describe('NotificationPreferencesComponent', () => {
     const startInput = fixture.nativeElement.querySelector(
       '#quiet-hours-start',
     ) as HTMLInputElement;
-    const endInput = fixture.nativeElement.querySelector(
-      '#quiet-hours-end',
-    ) as HTMLInputElement;
+    const endInput = fixture.nativeElement.querySelector('#quiet-hours-end') as HTMLInputElement;
 
     startInput.value = '21:30';
     startInput.dispatchEvent(new Event('input'));
@@ -130,9 +128,7 @@ describe('NotificationPreferencesComponent', () => {
   });
 
   it('rejects an unpaired quiet-hours edit before making a request', async () => {
-    const endInput = fixture.nativeElement.querySelector(
-      '#quiet-hours-end',
-    ) as HTMLInputElement;
+    const endInput = fixture.nativeElement.querySelector('#quiet-hours-end') as HTMLInputElement;
     endInput.value = '';
     endInput.dispatchEvent(new Event('input'));
 
@@ -177,6 +173,18 @@ describe('NotificationPreferencesComponent', () => {
     await component.save();
 
     expect(component.actionError()).toBe(true);
+    expect(component.dirty()).toBe(true);
+  });
+
+  it('preserves unsaved quiet hours while editing a category', () => {
+    component.quietStart.set('23:15');
+    component.quietEnd.set('06:45');
+
+    component.toggle('new_message', 'email');
+
+    expect(component.quietStart()).toBe('23:15');
+    expect(component.quietEnd()).toBe('06:45');
+    expect(component.channelEnabled('new_message', 'email')).toBe(true);
     expect(component.dirty()).toBe(true);
   });
 });

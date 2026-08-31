@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { ChatArchiveService } from '../../services/chat-archive.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
@@ -29,6 +30,8 @@ interface ChatRoomPreview {
   unreadCount: number;
 }
 
+type ArchiveState = 'loading' | 'ready' | 'error';
+
 @Component({
   selector: 'app-chat-list',
   imports: [
@@ -46,6 +49,7 @@ interface ChatRoomPreview {
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
+  private readonly chatArchiveService = inject(ChatArchiveService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
@@ -65,6 +69,13 @@ export class ChatListComponent implements OnInit {
   readonly lockedRoomIds = signal<string[]>([]);
   readonly showLocked = signal<boolean>(false);
 
+  // ---------- Archived chat state ----------
+  readonly archivedRoomIds = signal<string[]>([]);
+  readonly archiveState = signal<ArchiveState>('loading');
+  readonly showArchived = signal<boolean>(false);
+  readonly archiveBusyRoomIds = signal<Set<string>>(new Set<string>());
+  readonly archiveStatusMessage = signal<string>('');
+
   switchTab(tab: 'chats' | 'groups'): void {
     this.activeTab.set(tab);
     if (tab === 'groups' && this.groups().length === 0) {
@@ -77,14 +88,26 @@ export class ChatListComponent implements OnInit {
     this.groups.set(await this.groupsService.getDiscoverableGroups());
   }
 
-  // Computed previews after excluding locked rooms
+  // Computed previews after excluding locked and archived rooms. Locked wins if
+  // a membership happens to have both flags, so the archive folder cannot leak
+  // a protected conversation before app unlock.
   readonly regularAndPinnedPreviews = computed(() => {
-    const lockedIds = this.lockedRoomIds();
-    return this.filteredPreviews().filter((p) => !lockedIds.includes(p.id));
+    const lockedIds = new Set(this.lockedRoomIds());
+    const archivedIds = new Set(this.archivedRoomIds());
+    return this.filteredPreviews().filter(
+      (preview) => !lockedIds.has(preview.id) && !archivedIds.has(preview.id),
+    );
   });
   readonly lockedPreviews = computed(() => {
-    const lockedIds = this.lockedRoomIds();
-    return this.previews().filter((p) => lockedIds.includes(p.id));
+    const lockedIds = new Set(this.lockedRoomIds());
+    return this.previews().filter((preview) => lockedIds.has(preview.id));
+  });
+  readonly archivedPreviews = computed(() => {
+    const lockedIds = new Set(this.lockedRoomIds());
+    const archivedIds = new Set(this.archivedRoomIds());
+    return this.filteredPreviews().filter(
+      (preview) => archivedIds.has(preview.id) && !lockedIds.has(preview.id),
+    );
   });
 
   // --------------------------------------------------------------------
@@ -184,9 +207,12 @@ export class ChatListComponent implements OnInit {
   );
 
   async ngOnInit(): Promise<void> {
-    await this.loadPreviews();
-    await this.loadLockedRooms();
-    await this.loadLabels();
+    await Promise.all([
+      this.loadPreviews(),
+      this.loadLockedRooms(),
+      this.loadArchivedRooms(),
+      this.loadLabels(),
+    ]);
   }
 
   async loadPreviews(): Promise<void> {
@@ -209,7 +235,8 @@ export class ChatListComponent implements OnInit {
       });
 
       this.previews.set(previewList);
-      // Sync global chat unread counter
+      // Sync global chat unread counter. Archiving changes inbox organization,
+      // not delivery/read semantics, so archived unread messages still count.
       const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
       this.unreadCounter.setChatUnread(totalChatUnread);
     } catch (error) {
@@ -263,6 +290,67 @@ export class ChatListComponent implements OnInit {
     } catch (error) {
       console.error('Failed to update chat lock status:', error);
       showToast(this.i18n.translate('chatList.lockActionFailed'), 'error');
+    }
+  }
+
+  async loadArchivedRooms(): Promise<void> {
+    this.archiveState.set('loading');
+    try {
+      this.archivedRoomIds.set(await this.chatArchiveService.getArchivedRoomIds());
+      this.archiveState.set('ready');
+    } catch {
+      // Fail closed: until the authoritative archive list is available we do
+      // not render ordinary chats, because an archived conversation could
+      // otherwise appear in the main inbox.
+      this.archivedRoomIds.set([]);
+      this.showArchived.set(false);
+      this.archiveState.set('error');
+    }
+  }
+
+  toggleArchivedFolder(): void {
+    this.showArchived.update((visible) => !visible);
+  }
+
+  isRoomArchived(roomId: string): boolean {
+    return this.archivedRoomIds().includes(roomId);
+  }
+
+  isArchiveBusy(roomId: string): boolean {
+    return this.archiveBusyRoomIds().has(roomId);
+  }
+
+  async toggleRoomArchive(event: Event, roomId: string): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.isArchiveBusy(roomId)) {
+      return;
+    }
+
+    const wasArchived = this.isRoomArchived(roomId);
+    this.archiveBusyRoomIds.update((ids) => new Set(ids).add(roomId));
+    this.archiveStatusMessage.set('');
+
+    try {
+      if (wasArchived) {
+        await this.chatArchiveService.unarchiveRoom(roomId);
+        this.archivedRoomIds.update((ids) => ids.filter((id) => id !== roomId));
+        this.archiveStatusMessage.set('Chat restored to the main inbox.');
+      } else {
+        await this.chatArchiveService.archiveRoom(roomId);
+        this.archivedRoomIds.update((ids) => [...ids, roomId]);
+        this.archiveStatusMessage.set('Chat moved to Archived chats.');
+      }
+    } catch {
+      showToast(this.i18n.translate('common.error_generic'), 'error');
+      this.archiveStatusMessage.set('Could not update the archived chat. Please try again.');
+    } finally {
+      this.archiveBusyRoomIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(roomId);
+        return next;
+      });
     }
   }
 

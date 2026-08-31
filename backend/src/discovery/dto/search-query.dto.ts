@@ -7,6 +7,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -18,7 +19,10 @@ export class SearchQueryDto {
     maximum: 90,
     example: 51.5074,
   })
-  @IsOptional()
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )
@@ -34,7 +38,10 @@ export class SearchQueryDto {
     maximum: 180,
     example: -0.1278,
   })
-  @IsOptional()
+  @ValidateIf(
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
+  )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
   )

@@ -1,8 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  Database,
-  SupabaseService,
-} from '../supabase/supabase.service';
+import { Database, SupabaseService } from '../supabase/supabase.service';
 import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
 import {
   NotificationPreferences,
@@ -97,7 +94,7 @@ export class NotificationPreferencesService {
       return this.createDefaultPreferences(userId);
     }
 
-    return this.mapDbToPreferences(data as DbNotificationPreferences);
+    return this.mapDbToPreferences(data);
   }
 
   async updatePreferences(
@@ -110,12 +107,10 @@ export class NotificationPreferencesService {
     const merged = this.mergePreferences(existing, dto);
     this.validateQuietHours(merged);
 
-    // The repository's hand-maintained Supabase Database interface intentionally
-    // trails additive migrations. Narrow the payload to its canonical Insert
-    // contract before passing it to the generated client; the runtime object still
-    // carries quiet_hours_timezone for PostgREST after this migration is applied.
-    const dbPayload: DbNotificationPreferencesInsert =
-      this.mapPreferencesToDb(userId, merged);
+    const dbPayload: DbNotificationPreferencesInsert = this.mapPreferencesToDb(
+      userId,
+      merged,
+    );
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -130,14 +125,16 @@ export class NotificationPreferencesService {
       throw new Error(dbError.message || 'Database error');
     }
 
-    return this.mapDbToPreferences(dbData as DbNotificationPreferences);
+    return this.mapDbToPreferences(dbData);
   }
 
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
     const defaults = this.createDefaultPreferences(userId);
     const supabase = this.supabaseService.getClient();
-    const dbPayload: DbNotificationPreferencesInsert =
-      this.mapPreferencesToDb(userId, defaults);
+    const dbPayload: DbNotificationPreferencesInsert = this.mapPreferencesToDb(
+      userId,
+      defaults,
+    );
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -152,7 +149,7 @@ export class NotificationPreferencesService {
       throw new Error(dbError.message || 'Database error');
     }
 
-    return this.mapDbToPreferences(dbData as DbNotificationPreferences);
+    return this.mapDbToPreferences(dbData);
   }
 
   async shouldSendNotification(
