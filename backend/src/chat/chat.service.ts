@@ -127,7 +127,7 @@ export class ChatService {
       return null;
     }
 
-    const prompt = `Explain simply why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctedText}"\nProvide a short explanation.`;
+    const prompt = `You are a language teacher providing meaningful feedback to maximise learning.\nExplain why the following sentence was corrected.\nOriginal: "${originalText}"\nCorrected: "${correctedText}"\nProvide a short, pedagogical grammatical rationale and a simple usage example to help the learner understand and practice the rule.`;
     try {
       const { response } = await this.chatLlmService.proxyMessage(prompt);
       if (response && response.trim().length > 0) {

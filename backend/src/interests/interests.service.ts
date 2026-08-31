@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
 // Simple DTOs (no separate file)
 export interface InterestVocabularyDto {
@@ -35,7 +36,10 @@ interface VocabRow {
 
 @Injectable()
 export class InterestsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly llmProxyService: LlmProxyService,
+  ) {}
 
   private get supabase(): SupabaseClient {
     return this.supabaseService.getClient();
@@ -129,15 +133,29 @@ export class InterestsService {
       throw new Error(vocabError.message);
     }
 
-    const flashcardRows = (vocabList ?? []).map((v) => ({
-      user_id: userId,
-      word_token: v.word.toLowerCase(),
-      source_language: targetLanguage,
-      translation: v.translation ?? '',
-      srs_level: 0,
-      next_review_at: new Date().toISOString(),
-      context_sentence: '',
-    }));
+    const flashcardRows = await Promise.all(
+      (vocabList ?? []).map(async (v) => {
+        let context_sentence = '';
+        try {
+          const prompt = `Write a very simple, single-sentence example in ${targetLanguage} using the word/phrase "${v.word}". Provide only the sentence, nothing else.`;
+          const result = await this.llmProxyService.proxyMessage(prompt);
+          if (result.response && result.response.trim().length > 0) {
+            context_sentence = result.response.trim();
+          }
+        } catch {
+          // Fallback to empty context sentence on LLM failure
+        }
+        return {
+          user_id: userId,
+          word_token: v.word.toLowerCase(),
+          source_language: targetLanguage,
+          translation: v.translation ?? '',
+          srs_level: 0,
+          next_review_at: new Date().toISOString(),
+          context_sentence,
+        };
+      })
+    );
 
     const { error: insertError } = await this.supabase
       .from('flashcards')

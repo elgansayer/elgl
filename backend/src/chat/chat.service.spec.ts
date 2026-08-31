@@ -258,14 +258,14 @@ describe('ChatService', () => {
         error: null,
       });
       (chatLlmService.proxyMessage as Mock).mockResolvedValue({
-        response: 'The past tense of "go" is "went".',
+        response: 'The past tense of "go" is "went". For example: "I went to the store yesterday."',
       });
 
       const result = (await service.sendMessage('sender-1', dto)) as any;
 
       expect(chatLlmService.proxyMessage).toHaveBeenCalled();
       expect(result.correction_payload.explanation).toBe(
-        'The past tense of "go" is "went".',
+        'The past tense of "go" is "went". For example: "I went to the store yesterday."',
       );
     }, 15000);
 
