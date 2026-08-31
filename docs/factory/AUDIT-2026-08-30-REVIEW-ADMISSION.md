@@ -18,7 +18,8 @@ Review admission is now charged at the same provider-start boundary used by the 
 2. the base router resolves provider health and capacity;
 3. review preparation runs;
 4. immediately before the first review provider process starts, the exact-head review admission is persisted;
-5. provider execution proceeds normally.
+5. if the coupled route admission loses a concurrent race, that exact review admission is rolled back;
+6. provider execution proceeds normally.
 
 A fallback provider in the same logical review does not consume a second exact-head review admission. The ordinary provider-route budget still charges every real provider start, including fallback starts.
 
@@ -50,4 +51,5 @@ Focused tests verify that:
 
 - a busy provider consumes no exact-head review admission;
 - once provider capacity becomes available, the same review starts and consumes exactly one admission;
-- a preparation failure before provider start consumes no review admission.
+- a preparation failure before provider start consumes no review admission;
+- a concurrent route-budget race rolls back the exact-head review admission.

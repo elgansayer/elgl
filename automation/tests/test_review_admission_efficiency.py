@@ -108,3 +108,35 @@ def test_prepare_failure_does_not_consume_exact_head_review_budget(tmp_path: Pat
     assert provider.calls == 0
     assert router._review_admission is not None
     assert router._review_admission.available_slots() == 2
+
+
+def test_route_budget_race_rolls_back_exact_head_review_admission(tmp_path: Path) -> None:
+    provider = Provider()
+    router = ConservativeAgentRouter(
+        [provider],
+        capacity_store=ProviderCapacityStore(tmp_path),
+        provider_limits={"first": 1},
+        enabled=True,
+    )
+    request, job = review_request(tmp_path)
+    route_gate = router._agent_route_admission
+    assert route_gate is not None
+
+    now = datetime.now(UTC)
+    for index in range(route_gate.max_admissions - 1):
+        assert route_gate.admit(f"other-task-{index}", now)
+
+    def consume_last_route_slot() -> None:
+        assert route_gate.admit("concurrent-provider-start", datetime.now(UTC))
+
+    request.prepare_attempt = consume_last_route_slot
+
+    with pytest.raises(
+        ProviderCapacityUnavailable,
+        match="Global conservative agent-route budget is exhausted",
+    ):
+        router.run(request, job)
+
+    assert provider.calls == 0
+    assert router._review_admission is not None
+    assert router._review_admission.available_slots() == 2

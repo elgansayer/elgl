@@ -217,18 +217,20 @@ class ConservativeAgentRouter(AgentRouter):
                 retry_after_seconds=_gate_retry_seconds(gate, now),
             )
 
-    def _admit_review(self, job: Job, now: datetime) -> None:
+    def _admit_review(self, job: Job, now: datetime) -> tuple[str, datetime] | None:
         """Charge one exact-head review only when a provider is about to start."""
 
         gate = self._review_admission
         if gate is None:
-            return
-        if not gate.admit(self._review_key(job), now):
+            return None
+        review_key = self._review_key(job)
+        if not gate.admit(review_key, now):
             raise ProviderCapacityUnavailable(
                 "Independent PR review budget is exhausted "
                 f"({REVIEWS_PER_INTERVAL} reviews/hour or SHA already admitted)",
                 retry_after_seconds=_gate_retry_seconds(gate, now),
             )
+        return review_key, now
 
     def run(
         self,
@@ -285,10 +287,21 @@ class ConservativeAgentRouter(AgentRouter):
                 # Re-check task fairness at the actual start boundary so concurrent
                 # work cannot race past the per-task allowance after the early check.
                 self._ensure_task_route_available(job, attempt_now)
+                review_admission: tuple[str, datetime] | None = None
                 if request.phase is AgentPhase.CODE_REVIEW and not review_admitted:
-                    self._admit_review(job, attempt_now)
+                    review_admission = self._admit_review(job, attempt_now)
+                try:
+                    self._admit_agent_route(request, job, attempt_now)
+                except Exception:
+                    # The route gate can become full after the early availability
+                    # check. Roll back this attempt's exact review admission so a
+                    # provider-capacity race cannot spend review budget without
+                    # starting any provider process.
+                    if review_admission is not None and self._review_admission is not None:
+                        self._review_admission.revoke(*review_admission, now=attempt_now)
+                    raise
+                if review_admission is not None:
                     review_admitted = True
-                self._admit_agent_route(request, job, attempt_now)
 
             routed_request = replace(
                 request,
