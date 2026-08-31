@@ -80,6 +80,6 @@
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
 ## 2026-08-31 - [Replace Insecure Math.random() in Economy Service]
-**Vulnerability:** Weak random number generation (`Math.random()`) was used to generate rewards (coins) in the `EconomyService`.
-**Learning:** `Math.random()` generates predictable values. Using it to generate rewards makes the application susceptible to abuse, as attackers could potentially predict the PRNG state to maximize their payouts.
-**Prevention:** Always use Node.js's native `crypto.randomInt()` or `crypto.randomBytes()` for generating random numbers that involve security-sensitive logic, economy rewards, or tokens.
+**Vulnerability:** Weak random number generation was used by both the legacy `EconomyService` implementation and the database-authoritative daily check-in RPC.
+**Learning:** Fix the active production boundary, not only a superclass implementation that the production provider overrides. Random values mapped onto a range also need unbiased sampling.
+**Prevention:** Use `crypto.randomInt()` in Node.js and rejection-sampled `pgcrypto` bytes in PostgreSQL for security-sensitive economy rewards. Add a migration contract that verifies the production RPC and its privilege boundary.
