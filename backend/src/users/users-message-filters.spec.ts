@@ -72,4 +72,27 @@ describe('UsersService message filters', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(from).not.toHaveBeenCalled();
   });
+
+  it('rejects a partial update that inverts the persisted age range', async () => {
+    const read = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          message_filters: {
+            enabled: true,
+            age_max: 20,
+          },
+        },
+        error: null,
+      }),
+    };
+    const from = vi.fn().mockReturnValue(read);
+    const service = createService(from);
+
+    await expect(
+      service.setMessageFilters('user-1', { age_min: 50 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(from).toHaveBeenCalledTimes(1);
+  });
 });
