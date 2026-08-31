@@ -11,4 +11,4 @@
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
 ## 2026-08-31 - [Batch Archive Cleanup Queries with Promise.allSettled]
 **Learning:** Sequential awaits in `for...of` loops during maintenance jobs like `purgeExpiredArchives` create significant N+1 database latency, especially since each loop execution awaits both object storage deletion and database table row updates.
-**Action:** Replace `for...of` sequential awaiting with a `Promise.allSettled` execution on bounded chunk arrays (e.g., chunked by size 10) mapping over the batch. This allows concurrent HTTP network execution to the Supabase APIs without exhausting server database pool connections, and drastically reduces execution time. Ensure to throw errors within the `map` callback so `allSettled` properly marks failed promises as rejected.
+**Action:** Replace sequential awaiting with `Promise.allSettled` over bounded chunks. Inspect every settled result and emit a privacy-safe aggregate failure count so concurrency retains partial progress without hiding provider or database failures.

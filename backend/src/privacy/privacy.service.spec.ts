@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -351,6 +352,40 @@ describe('PrivacyService', () => {
       expect(mockRemove).toHaveBeenCalledTimes(25);
       expect(peakRemovals).toBeGreaterThan(1);
       expect(peakRemovals).toBeLessThanOrEqual(10);
+    });
+
+    it('reports failed cleanup items without blocking successful items', async () => {
+      tableRows.set('archive_requests', [
+        {
+          id: 'archive-failed',
+          user_id: 'private-user',
+          status: 'ready',
+          object_key: 'private-failed.json',
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        },
+        {
+          id: 'archive-success',
+          user_id: 'private-user',
+          status: 'ready',
+          object_key: 'private-success.json',
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        },
+      ]);
+      mockRemove
+        .mockRejectedValueOnce(new Error('private provider detail'))
+        .mockResolvedValueOnce({ error: null });
+      const errorLog = vi.spyOn(Logger.prototype, 'error');
+
+      await expect(service.purgeExpiredArchives()).resolves.toBe(1);
+
+      expect(errorLog).toHaveBeenCalledWith(
+        'gdpr_archive_cleanup_items_failed count=1',
+      );
+      expect(errorLog).not.toHaveBeenCalledWith(
+        expect.stringContaining('private'),
+      );
     });
   });
 

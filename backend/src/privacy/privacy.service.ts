@@ -20,6 +20,7 @@ const ARCHIVE_PAGE_SIZE = 500;
 const MAX_ROWS_PER_DATASET = 50_000;
 const DEFAULT_RETENTION_DAYS = 7;
 const DEFAULT_SIGNED_URL_SECONDS = 300;
+const ARCHIVE_CLEANUP_CONCURRENCY = 10;
 
 type ArchiveStatus = 'processing' | 'ready' | 'failed' | 'expired';
 
@@ -219,14 +220,12 @@ export class PrivacyService {
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
 
-    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.allSettled chunks
-    // to process batch deletions and metadata updates concurrently without exhausting
-    // database connections, significantly reducing query latency for cleanup jobs.
-    const chunkSize = 10;
-    for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
+    // Process bounded batches concurrently so cleanup latency does not grow by
+    // one storage and database round trip per archive.
+    for (let i = 0; i < rows.length; i += ARCHIVE_CLEANUP_CONCURRENCY) {
+      const chunk = rows.slice(i, i + ARCHIVE_CLEANUP_CONCURRENCY);
 
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         chunk.map(async (row) => {
           if (row.object_key) {
             const { error: removeError } = await supabase.storage
@@ -255,6 +254,14 @@ export class PrivacyService {
           purged += 1;
         }),
       );
+
+      const failed = results.filter(
+        (result) => result.status === 'rejected',
+      ).length;
+      if (failed > 0) {
+        // Do not include provider errors, object keys, request IDs or user IDs.
+        this.logger.error(`gdpr_archive_cleanup_items_failed count=${failed}`);
+      }
     }
 
     if (purged > 0)
