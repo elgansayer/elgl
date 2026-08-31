@@ -4,6 +4,16 @@ describe('Chat Flow (Mocked)', () => {
   let failNextSend = false;
   let sendAttempts = 0;
 
+  function visitChat(path: string): Cypress.Chainable<Cypress.AUTWindow> {
+    return cy.visit(path, {
+      onBeforeLoad(win) {
+        Object.assign(win, {
+          __cypressExpectedConsoleError: 'Centrifugo connection error.',
+        });
+      },
+    });
+  }
+
   beforeEach(() => {
     failNextSend = false;
     sendAttempts = 0;
@@ -19,11 +29,9 @@ describe('Chat Flow (Mocked)', () => {
       statusCode: 200,
       body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
     }).as('dailyCheckIn');
-    cy.intercept('POST', '**/api/chat/token', {
-      statusCode: 429,
-      headers: { 'retry-after': '30' },
-      body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
-    }).as('centrifugoUnavailable');
+    cy.intercept('POST', '**/api/chat/token', { body: { token: 'mock-centrifugo-token' } }).as(
+      'getChatToken',
+    );
     cy.intercept('GET', '**/api/chat/rooms/*/members', { body: [] }).as('getRoomMembers');
     cy.intercept('GET', '**/api/chat/groups/*/members', { body: [] }).as('getGroupMembers');
     cy.intercept('PATCH', '**/api/chat/messages/*/status', { statusCode: 204, body: {} }).as(
@@ -102,7 +110,7 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('displays the chat list and navigates to the selected room', () => {
-    cy.visit('/chat');
+    visitChat('/chat');
 
     cy.wait('@getRooms');
     cy.contains('Language Exchange with Maria').should('be.visible').click();
@@ -113,7 +121,7 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('sends a text message with the canonical room and message payload', () => {
-    cy.visit(`/chat/${roomId}`);
+    visitChat(`/chat/${roomId}`);
     cy.wait('@getMessages');
 
     const testMessage = 'I am doing great, thanks for asking!';
@@ -136,7 +144,7 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('does not submit whitespace-only messages', () => {
-    cy.visit(`/chat/${roomId}`);
+    visitChat(`/chat/${roomId}`);
     cy.wait('@getMessages');
 
     cy.get('[data-testid="chat-message-input"]').type('   {enter}');
@@ -151,7 +159,7 @@ describe('Chat Flow (Mocked)', () => {
     failNextSend = true;
     const retryMessage = 'Please keep this draft if sending fails.';
 
-    cy.visit(`/chat/${roomId}`);
+    visitChat(`/chat/${roomId}`);
     cy.wait('@getMessages');
     cy.window().then((win) => {
       (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
