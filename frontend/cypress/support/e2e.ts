@@ -2,15 +2,10 @@ import './commands';
 
 const EXPECTED_ERROR_HEADER = 'x-cypress-expected-error';
 const EXPECTED_CONSOLE_ERROR_KEY = '__cypressExpectedConsoleError';
-let expectedRunnerConsoleError: string | undefined;
 
 type ExpectedErrorWindow = Window & {
   [EXPECTED_CONSOLE_ERROR_KEY]?: string;
 };
-
-Cypress.Commands.add('expectConsoleError', (message: string) => {
-  expectedRunnerConsoleError = message;
-});
 
 // Harden Cypress: Fail tests if any unexpected network request returns a 401 or 500+ error
 beforeEach(() => {
@@ -40,16 +35,6 @@ Cypress.on('window:before:load', (win) => {
     // the suite-wide guard for unrelated runtime failures.
     if (expectedConsoleError && message.includes(expectedConsoleError)) {
       delete expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
-      return;
-    }
-
-    // Some asynchronous failures happen outside the spec's command queue. Specs may permit
-    // one exact error through runner state; the allowance is consumed by the matching error.
-    if (
-      typeof expectedRunnerConsoleError === 'string' &&
-      message === expectedRunnerConsoleError
-    ) {
-      expectedRunnerConsoleError = undefined;
       return;
     }
 
