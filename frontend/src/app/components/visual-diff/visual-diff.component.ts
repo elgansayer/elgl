@@ -16,8 +16,6 @@ interface DiffSegment {
   index: number;
 }
 
-const MAX_DIFF_EDIT_LENGTH = 512;
-
 @Component({
   selector: 'app-visual-diff',
   imports: [...HlmButtonImports, TranslatePipe, NgIcon],
@@ -157,17 +155,7 @@ export class VisualDiffComponent {
 
     const diffs = diffArrays(origTokens, corrTokens, {
       comparator: (a: string, b: string) => a.toLowerCase() === b.toLowerCase(),
-      maxEditLength: MAX_DIFF_EDIT_LENGTH,
     });
-
-    // Avoid locking the UI on very large, unrelated inputs. The coarse fallback still
-    // represents the correction faithfully when the bounded Myers search gives up.
-    if (!diffs) {
-      const fallback: DiffSegment[] = [];
-      if (orig) fallback.push({ type: 'removed', text: orig, index: fallback.length });
-      if (corr) fallback.push({ type: 'added', text: corr, index: fallback.length });
-      return fallback;
-    }
 
     for (const diff of diffs) {
       const type = diff.added ? 'added' : diff.removed ? 'removed' : 'unchanged';
