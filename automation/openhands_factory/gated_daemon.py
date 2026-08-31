@@ -143,10 +143,14 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
 
         daemon_module.select_batch = gated_select_batch
         self.pipeline.github.merge_pull_request = gated_merge_pull_request  # type: ignore[method-assign]
-        self.pipeline.github.collect_open_issues = admission_aware_collect_open_issues  # type: ignore[method-assign]
+        self.pipeline.github.collect_open_issues = (  # type: ignore[method-assign]
+            admission_aware_collect_open_issues
+        )
         try:
             return super()._loop()
         finally:
             daemon_module.select_batch = original_select
             self.pipeline.github.merge_pull_request = original_merge  # type: ignore[method-assign]
-            self.pipeline.github.collect_open_issues = original_collect_issues  # type: ignore[method-assign]
+            self.pipeline.github.collect_open_issues = (  # type: ignore[method-assign]
+                original_collect_issues
+            )
