@@ -3,8 +3,26 @@ name: Simplify Text Contract
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts'
+      - 'frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts'
+      - 'frontend/src/app/services/nlp.service.ts'
+      - 'backend/src/nlp/nlp.controller.ts'
+      - 'backend/src/nlp/dto/simplify.dto.ts'
+      - 'backend/src/nlp/nlp.service.ts'
+      - 'scripts/verify-simplify-text-contract.test.mjs'
+      - '.github/workflows/simplify-text-contract.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.ts'
+      - 'frontend/src/app/components/long-press-context-menu/long-press-context-menu.component.spec.ts'
+      - 'frontend/src/app/services/nlp.service.ts'
+      - 'backend/src/nlp/nlp.controller.ts'
+      - 'backend/src/nlp/dto/simplify.dto.ts'
+      - 'backend/src/nlp/nlp.service.ts'
+      - 'scripts/verify-simplify-text-contract.test.mjs'
+      - '.github/workflows/simplify-text-contract.yml'
   merge_group:
     types: [checks_requested]
 
