@@ -71,25 +71,20 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources concurrently
-    const [
-      flashcards,
-      vocabulary,
-      assessments,
-      lessons,
-      momentsCounts,
-      userProfile,
-    ] = await Promise.all([
-      this.flashcardsService
-        .getFlashcards(userId, undefined, 50)
-        .catch(() => []),
-      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
-      this.assessmentsService.getQuestions(language).catch(() => []),
-      this.lessonsService.listLessons().catch(() => []),
-      this.momentsService
-        .getLifetimeCounts(userId)
-        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-      this.usersService.getProfile(userId).catch(() => null),
-    ]);
+    const [flashcards, vocabulary, lessons, momentsCounts, userProfile] =
+      await Promise.all([
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 50)
+          .catch(() => []),
+        this.hobbyTagsService
+          .getUserVocabulary(userId, language)
+          .catch(() => []),
+        this.lessonsService.listLessons().catch(() => []),
+        this.momentsService
+          .getLifetimeCounts(userId)
+          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+        this.usersService.getProfile(userId).catch(() => null),
+      ]);
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
@@ -151,7 +146,7 @@ export class LearnerKnowledgeService {
       return Math.min(1.0, base + bonusCounts / divisor);
     };
 
-    const baseLevel = userProfile?.proficiency_level || 'A1';
+    const baseLevel = 'A1'; // Fallback to validated CEFR default until language-scoped assessment data exists
 
     // Synthesize the profile
     return {

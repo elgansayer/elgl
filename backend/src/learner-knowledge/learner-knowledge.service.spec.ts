@@ -120,7 +120,6 @@ describe('LearnerKnowledgeService', () => {
       hobbyTagsService.getUserVocabulary.mockResolvedValue([
         { word: 'hobbyWord' },
       ]);
-      assessmentsService.getQuestions.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
@@ -135,7 +134,7 @@ describe('LearnerKnowledgeService', () => {
       // Assert profile metadata
       expect(profile.userId).toBe('user1');
       expect(profile.language).toBe('es');
-      expect(profile.overallProficiency.level).toBe('B2');
+      expect(profile.overallProficiency.level).toBe('A1'); // Should fallback to A1 regardless of user profile
 
       // Assert knowledge items
       expect(profile.knowledgeItems.size).toBe(5);
@@ -166,15 +165,35 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.recentEncounters[0].source).toBe('lesson');
     });
 
+    it('should explicitly fallback to A1 for multi-language requests or invalid values', async () => {
+      flashcardsService.getFlashcards.mockResolvedValue([]);
+      hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
+      lessonsService.listLessons.mockResolvedValue([]);
+      momentsService.getLifetimeCounts.mockResolvedValue({
+        moments: 0,
+        corrections: 0,
+        translations: 0,
+      });
+
+      // Setup a user profile with an invalid/arbitrary string
+      usersService.getProfile.mockResolvedValue({
+        proficiency_level: 'Advanced-Conversational',
+      });
+
+      const profileFr = await service.getProfile('user-multi', 'fr');
+      const profileDe = await service.getProfile('user-multi', 'de');
+
+      // Regardless of the invalid profile value, it should always return A1 until language-scoped assessments exist
+      expect(profileFr.overallProficiency.level).toBe('A1');
+      expect(profileDe.overallProficiency.level).toBe('A1');
+    });
+
     it('should handle service failures gracefully', async () => {
       flashcardsService.getFlashcards.mockRejectedValue(
         new Error('Flashcards failed'),
       );
       hobbyTagsService.getUserVocabulary.mockRejectedValue(
         new Error('Tags failed'),
-      );
-      assessmentsService.getQuestions.mockRejectedValue(
-        new Error('Assessments failed'),
       );
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
       momentsService.getLifetimeCounts.mockRejectedValue(
