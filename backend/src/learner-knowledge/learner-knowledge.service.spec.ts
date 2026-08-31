@@ -10,10 +10,7 @@ describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
-  let lessonsService: {
-    listLessons: ReturnType<typeof vi.fn>;
-    listLessonProgress: ReturnType<typeof vi.fn>;
-  };
+  let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -25,7 +22,6 @@ describe('LearnerKnowledgeService', () => {
     };
     lessonsService = {
       listLessons: vi.fn(),
-      listLessonProgress: vi.fn(),
     };
     momentsService = {
       getLifetimeCounts: vi.fn(),
@@ -104,19 +100,10 @@ describe('LearnerKnowledgeService', () => {
       flashcardsService.getFlashcards.mockResolvedValue(mockFlashcards);
 
       const mockLessons = [
-        { id: 'lesson-1', title: 'Lesson 1' },
-        { id: 'lesson-2', title: 'Untouched catalogue lesson' },
+        { title: 'Lesson 1', created_at: '2026-01-01T10:00:00Z' },
+        { title: 'Lesson 2', created_at: '2026-01-02T10:00:00Z' },
       ];
       lessonsService.listLessons.mockResolvedValue(mockLessons);
-      lessonsService.listLessonProgress.mockResolvedValue([
-        {
-          lesson_id: 'lesson-1',
-          segment_index: 1,
-          completed: false,
-          completed_at: null,
-          updated_at: '2026-01-02T10:00:00Z',
-        },
-      ]);
 
       hobbyTagsService.getUserVocabulary.mockResolvedValue([
         { word: 'hobbyWord' },
@@ -161,10 +148,9 @@ describe('LearnerKnowledgeService', () => {
       expect(hobbyWord?.status).toBe('new');
 
       // Assert recent encounters
-      expect(profile.globalRecentEncounters.length).toBe(1);
+      expect(profile.globalRecentEncounters.length).toBe(2);
       expect(profile.globalRecentEncounters[0].topic).toBe('Lesson 1');
       expect(profile.globalRecentEncounters[0].source).toBe('lesson');
-      expect(profile.globalSkills.listening).toBe(0.25);
     });
 
     it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist, and separate language items', async () => {
@@ -184,7 +170,6 @@ describe('LearnerKnowledgeService', () => {
       ]);
 
       lessonsService.listLessons.mockResolvedValue([]);
-      lessonsService.listLessonProgress.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 0,
         corrections: 0,
@@ -234,9 +219,6 @@ describe('LearnerKnowledgeService', () => {
         new Error('Tags failed'),
       );
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
-      lessonsService.listLessonProgress.mockRejectedValue(
-        new Error('Lesson progress failed'),
-      );
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );

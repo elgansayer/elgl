@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VocabularyResultItem } from '../hobby-tags/hobby-tags.service';
-import { LessonProgressRecord, LessonRecord } from '../lessons/lessons.service';
+import { LessonRecord } from '../lessons/lessons.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { LessonsService } from '../lessons/lessons.service';
@@ -68,20 +68,16 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources concurrently
-    const [flashcards, vocabulary, lessons, lessonProgress, momentsCounts] =
-      await Promise.all([
-        this.flashcardsService
-          .getFlashcards(userId, undefined, 50)
-          .catch(() => []),
-        this.hobbyTagsService
-          .getUserVocabulary(userId, language)
-          .catch(() => []),
-        this.lessonsService.listLessons().catch(() => []),
-        this.lessonsService.listLessonProgress(userId).catch(() => []),
-        this.momentsService
-          .getLifetimeCounts(userId)
-          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-      ]);
+    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
+      this.flashcardsService
+        .getFlashcards(userId, undefined, 50)
+        .catch(() => []),
+      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
+      this.lessonsService.listLessons().catch(() => []),
+      this.momentsService
+        .getLifetimeCounts(userId)
+        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+    ]);
 
     const globalKnowledgeItems = new Map<string, KnowledgeItem>();
     const languageKnowledgeItems = new Map<string, KnowledgeItem>();
@@ -104,24 +100,17 @@ export class LearnerKnowledgeService {
         confidenceScore: f.easiness_factor,
         errorFrequency: status === 'struggling' ? 0.5 : 0,
         sourceIds: { flashcardId: f.id },
-        lastEncounteredAt: new Date(f.created_at),
+        lastEncounteredAt: new Date(f.next_review_at),
       });
     });
 
-    const lessonsById = new Map(
-      (lessons as LessonRecord[]).map((lesson) => [lesson.id, lesson]),
-    );
-
-    // Extract only the learner's persisted lesson activity as recent encounters.
-    const recentEncounters: RecentEncounter[] = (
-      lessonProgress as LessonProgressRecord[]
-    )
-      .filter((progress) => progress.updated_at !== null)
+    // Extract recent encounters from lessons
+    const recentEncounters: RecentEncounter[] = lessons
       .slice(0, 5)
-      .map((progress) => ({
-        topic: lessonsById.get(progress.lesson_id)?.title || progress.lesson_id,
+      .map((l: LessonRecord) => ({
+        topic: l.title || 'Unknown Topic',
         source: 'lesson',
-        timestamp: new Date(progress.updated_at as string),
+        timestamp: new Date(l.created_at || Date.now()),
       }));
 
     // Process vocabulary from hobby tags
@@ -160,7 +149,7 @@ export class LearnerKnowledgeService {
       globalProficiency: { level: baseLevel },
       globalSkills: {
         speaking: calculateSkill(0.2, momentsCounts.moments, 50),
-        listening: calculateSkill(0.2, lessonProgress.length, 20),
+        listening: calculateSkill(0.2, lessons.length, 20),
         reading: calculateSkill(0.2, momentsCounts.translations, 100),
         writing: calculateSkill(0.2, momentsCounts.moments, 50),
         grammar: calculateSkill(0.2, momentsCounts.corrections, 40),
