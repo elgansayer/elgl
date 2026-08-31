@@ -5,7 +5,6 @@ import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
-import { UsersService } from '../users/users.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('LearnerKnowledgeService', () => {
@@ -15,7 +14,6 @@ describe('LearnerKnowledgeService', () => {
   let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
-  let usersService: { getProfile: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     flashcardsService = {
@@ -33,9 +31,6 @@ describe('LearnerKnowledgeService', () => {
     momentsService = {
       getLifetimeCounts: vi.fn(),
     };
-    usersService = {
-      getProfile: vi.fn(),
-    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,7 +40,6 @@ describe('LearnerKnowledgeService', () => {
         { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
-        { provide: UsersService, useValue: usersService },
       ],
     }).compile();
 
@@ -125,9 +119,6 @@ describe('LearnerKnowledgeService', () => {
         corrections: 2,
         translations: 5,
       });
-      usersService.getProfile.mockResolvedValue({
-        proficiency_level: 'B2',
-      });
 
       const profile = await service.getProfile('user1', 'es');
 
@@ -175,11 +166,6 @@ describe('LearnerKnowledgeService', () => {
         translations: 0,
       });
 
-      // Setup a user profile with an invalid/arbitrary string
-      usersService.getProfile.mockResolvedValue({
-        proficiency_level: 'Advanced-Conversational',
-      });
-
       const profileFr = await service.getProfile('user-multi', 'fr');
       const profileDe = await service.getProfile('user-multi', 'de');
 
@@ -198,9 +184,6 @@ describe('LearnerKnowledgeService', () => {
       lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
       momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
-      );
-      usersService.getProfile.mockRejectedValue(
-        new Error('User profile failed'),
       );
 
       const profile = await service.getProfile('user2', 'fr');

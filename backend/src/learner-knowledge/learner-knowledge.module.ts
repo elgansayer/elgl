@@ -5,7 +5,6 @@ import { HobbyTagsModule } from '../hobby-tags/hobby-tags.module';
 import { AssessmentsModule } from '../assessments/assessments.module';
 import { LessonsModule } from '../lessons/lessons.module';
 import { MomentsModule } from '../moments/moments.module';
-import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -14,7 +13,6 @@ import { UsersModule } from '../users/users.module';
     AssessmentsModule,
     LessonsModule,
     MomentsModule,
-    UsersModule,
   ],
   providers: [LearnerKnowledgeService],
   exports: [LearnerKnowledgeService],

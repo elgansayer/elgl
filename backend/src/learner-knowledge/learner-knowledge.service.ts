@@ -6,7 +6,6 @@ import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
 import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
-import { UsersService } from '../users/users.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
 
 export interface CEFRLevel {
@@ -59,7 +58,6 @@ export class LearnerKnowledgeService {
     private readonly assessmentsService: AssessmentsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
-    private readonly usersService: UsersService,
   ) {}
 
   async getProfile(
@@ -71,20 +69,16 @@ export class LearnerKnowledgeService {
     );
 
     // Fetch data from various sources concurrently
-    const [flashcards, vocabulary, lessons, momentsCounts, userProfile] =
-      await Promise.all([
-        this.flashcardsService
-          .getFlashcards(userId, undefined, 50)
-          .catch(() => []),
-        this.hobbyTagsService
-          .getUserVocabulary(userId, language)
-          .catch(() => []),
-        this.lessonsService.listLessons().catch(() => []),
-        this.momentsService
-          .getLifetimeCounts(userId)
-          .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
-        this.usersService.getProfile(userId).catch(() => null),
-      ]);
+    const [flashcards, vocabulary, lessons, momentsCounts] = await Promise.all([
+      this.flashcardsService
+        .getFlashcards(userId, undefined, 50)
+        .catch(() => []),
+      this.hobbyTagsService.getUserVocabulary(userId, language).catch(() => []),
+      this.lessonsService.listLessons().catch(() => []),
+      this.momentsService
+        .getLifetimeCounts(userId)
+        .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
+    ]);
 
     const knowledgeItems = new Map<string, KnowledgeItem>();
 
