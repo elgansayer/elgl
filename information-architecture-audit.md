@@ -20,4 +20,4 @@ The audit revealed numerous "legacy" or duplicate paths that simply redirect to 
 - **Chat:** `/chat-settings`, `/groups/create`, `/communities`, `/message-filters`, `/blocks` are redundant root-level aliases for canonical paths under `/settings` or `/community`.
 
 ## Consolidation Strategy
-Remove the redundant `redirectTo` legacy routes from the respective routing definition files (`auth.routes.ts`, `commerce.routes.ts`, `social.routes.ts`, `settings.routes.ts`, `chat.routes.ts`). The canonical paths are well-established and components should link directly to them.
+Due to the PR review, these routes will not be removed right now. They need to be preserved for compatibility with bookmarks, search results, notifications, and older clients. We need to implement a staged deprecation or migration boundary with server-side redirects and focused deep-link compatibility tests before removing the client side paths.

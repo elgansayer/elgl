@@ -116,7 +116,7 @@ describe('CoinEconomyDashboard Spartan interaction ownership', () => {
 
   it('should preserve native anchor navigation for all quick actions', () => {
     const quickActionLinks = TEMPLATE.match(/<a\b[\s\S]*?>/g) ?? [];
-    const routes = ['/subscription', '/chat', '/sticker-store', '/shop', '/subscription', '/escrow'];
+    const routes = ['/vip', '/chat', '/sticker-store', '/shop', '/vip', '/escrow'];
 
     expect(quickActionLinks).toHaveLength(routes.length);
     for (const [index, link] of quickActionLinks.entries()) {

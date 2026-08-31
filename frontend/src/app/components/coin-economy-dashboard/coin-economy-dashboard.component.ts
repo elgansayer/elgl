@@ -74,7 +74,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.buyCoinsDesc' | t }}</p>
               <a
                 hlmBtn
-                routerLink="/subscription"
+                routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
                 {{ 'coinEconomy.buyCoinsBtn' | t }}
@@ -138,7 +138,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               <p class="text-sm text-text-secondary">{{ 'coinEconomy.vipDesc' | t }}</p>
               <a
                 hlmBtn
-                routerLink="/subscription"
+                routerLink="/vip"
                 class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 transition-colors inline-block"
               >
                 {{ 'coinEconomy.vipBtn' | t }}

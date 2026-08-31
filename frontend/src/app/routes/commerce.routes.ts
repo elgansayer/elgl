@@ -2,6 +2,11 @@ import { Routes } from '@angular/router';
 
 export const commerceRoutes: Routes = [
   {
+    path: 'vip',
+    redirectTo: 'subscription',
+    pathMatch: 'full',
+  },
+  {
     path: 'subscription',
     loadComponent: () =>
       import('../pages/subscription/subscription-page.component').then(
@@ -24,6 +29,11 @@ export const commerceRoutes: Routes = [
         (m) => m.SubscriptionCancelComponent,
       ),
     title: 'Subscription Cancelled - HelloTalk',
+  },
+  {
+    path: 'my-subscription',
+    redirectTo: 'settings/subscription',
+    pathMatch: 'full',
   },
   {
     path: 'settings/subscription',
