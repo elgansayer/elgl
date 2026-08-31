@@ -7,9 +7,7 @@ describe('Chat Flow (Mocked)', () => {
   beforeEach(() => {
     failNextSend = false;
     sendAttempts = 0;
-    Object.assign(Cypress, {
-      __cypressExpectedRunnerConsoleError: 'Centrifugo connection error.',
-    });
+    cy.expectConsoleError('Centrifugo connection error.');
 
     // Keep the chat flow deterministic and isolated from external services.
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
@@ -103,7 +101,7 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   afterEach(() => {
-    Reflect.deleteProperty(Cypress, '__cypressExpectedRunnerConsoleError');
+    cy.clearExpectedConsoleError();
   });
 
   it('displays the chat list and navigates to the selected room', () => {

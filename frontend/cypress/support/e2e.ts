@@ -2,11 +2,19 @@ import './commands';
 
 const EXPECTED_ERROR_HEADER = 'x-cypress-expected-error';
 const EXPECTED_CONSOLE_ERROR_KEY = '__cypressExpectedConsoleError';
-const EXPECTED_RUNNER_CONSOLE_ERROR_KEY = '__cypressExpectedRunnerConsoleError';
+let expectedRunnerConsoleError: string | undefined;
 
 type ExpectedErrorWindow = Window & {
   [EXPECTED_CONSOLE_ERROR_KEY]?: string;
 };
+
+Cypress.Commands.add('expectConsoleError', (message: string) => {
+  expectedRunnerConsoleError = message;
+});
+
+Cypress.Commands.add('clearExpectedConsoleError', () => {
+  expectedRunnerConsoleError = undefined;
+});
 
 // Harden Cypress: Fail tests if any unexpected network request returns a 401 or 500+ error
 beforeEach(() => {
@@ -31,10 +39,6 @@ Cypress.on('window:before:load', (win) => {
     const message = typeof msg === 'string' ? msg : JSON.stringify(msg);
     const expectedWindow = win as ExpectedErrorWindow;
     const expectedConsoleError = expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
-    const expectedRunnerConsoleError = Object.getOwnPropertyDescriptor(
-      Cypress,
-      EXPECTED_RUNNER_CONSOLE_ERROR_KEY,
-    )?.value;
 
     // Failure-path specs can permit one specific, handled console error without weakening
     // the suite-wide guard for unrelated runtime failures.
@@ -49,7 +53,7 @@ Cypress.on('window:before:load', (win) => {
       typeof expectedRunnerConsoleError === 'string' &&
       message === expectedRunnerConsoleError
     ) {
-      Reflect.deleteProperty(Cypress, EXPECTED_RUNNER_CONSOLE_ERROR_KEY);
+      expectedRunnerConsoleError = undefined;
       return;
     }
 

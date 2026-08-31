@@ -7,9 +7,10 @@
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
-    // eslint-disable-next-line @typescript-eslint/no-empty-interface
-    interface Chainable<Subject = unknown> {
-      // Custom command types can be added here as needed
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+    interface Chainable<Subject = any> {
+      expectConsoleError(message: string): Chainable<void>;
+      clearExpectedConsoleError(): Chainable<void>;
     }
   }
 }
