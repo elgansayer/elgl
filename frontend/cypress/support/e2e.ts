@@ -12,10 +12,6 @@ Cypress.Commands.add('expectConsoleError', (message: string) => {
   expectedRunnerConsoleError = message;
 });
 
-Cypress.Commands.add('clearExpectedConsoleError', () => {
-  expectedRunnerConsoleError = undefined;
-});
-
 // Harden Cypress: Fail tests if any unexpected network request returns a 401 or 500+ error
 beforeEach(() => {
   cy.intercept('**/*', (req) => {
@@ -47,8 +43,8 @@ Cypress.on('window:before:load', (win) => {
       return;
     }
 
-    // Some startup failures happen before a spec can access the application window.
-    // Specs may permit one exact startup error through runner state, which is consumed here.
+    // Some asynchronous failures happen outside the spec's command queue. Specs may permit
+    // one exact error through runner state; the allowance is consumed by the matching error.
     if (
       typeof expectedRunnerConsoleError === 'string' &&
       message === expectedRunnerConsoleError

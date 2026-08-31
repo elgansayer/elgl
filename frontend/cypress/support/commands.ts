@@ -10,7 +10,6 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
     interface Chainable<Subject = any> {
       expectConsoleError(message: string): Chainable<void>;
-      clearExpectedConsoleError(): Chainable<void>;
     }
   }
 }

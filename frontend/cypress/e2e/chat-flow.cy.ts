@@ -100,10 +100,6 @@ describe('Chat Flow (Mocked)', () => {
     }).as('sendMessage');
   });
 
-  afterEach(() => {
-    cy.clearExpectedConsoleError();
-  });
-
   it('displays the chat list and navigates to the selected room', () => {
     cy.visit('/chat');
 
