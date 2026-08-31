@@ -15,6 +15,10 @@ describe('Chat Flow (Mocked)', () => {
     cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
       'getBlockedAndBlockerIds',
     );
+    cy.intercept('POST', '**/api/economy/daily-check-in', {
+      statusCode: 200,
+      body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
+    }).as('dailyCheckIn');
     cy.intercept('POST', '**/api/chat/token', { body: { token: 'mock-centrifugo-token' } }).as(
       'getChatToken',
     );
