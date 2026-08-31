@@ -1,0 +1,47 @@
+name: Draft Persistence Contract
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/src/app/services/draft.service.ts'
+      - 'frontend/src/app/services/draft.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/draft-persistence-contract.test.mjs'
+      - '.github/workflows/draft-persistence-contract.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/src/app/services/draft.service.ts'
+      - 'frontend/src/app/services/draft.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/draft-persistence-contract.test.mjs'
+      - '.github/workflows/draft-persistence-contract.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-persistence-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: frontend / local-drafts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify chat and Moment draft persistence
+        run: node --test scripts/draft-persistence-contract.test.mjs

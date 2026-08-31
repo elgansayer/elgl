@@ -1,0 +1,47 @@
+name: Translation Cache Contract
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/src/app/services/translation-cache.service.ts'
+      - 'frontend/src/app/services/translation-cache.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.translation-corrections.spec.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/translation-cache-contract.test.mjs'
+      - '.github/workflows/translation-cache-contract.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/src/app/services/translation-cache.service.ts'
+      - 'frontend/src/app/services/translation-cache.service.spec.ts'
+      - 'frontend/src/app/components/chat-room/chat-room.translation-corrections.spec.ts'
+      - 'frontend/src/app/components/moments-feed/moments-feed.component.ts'
+      - 'scripts/translation-cache-contract.test.mjs'
+      - '.github/workflows/translation-cache-contract.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translation-cache-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  translation-cache-contract:
+    name: frontend / translation-cache-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify translation cache contract
+        run: node --test scripts/translation-cache-contract.test.mjs

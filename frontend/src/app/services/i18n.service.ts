@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -2364,6 +2365,28 @@ export class I18nService {
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.messageFilters.title': 'Message filters',
+    'settings.messageFilters.description': 'Control who can start a direct conversation with you',
+    'settings.messageFilters.subtitle':
+      'These rules do not interrupt established conversations or group chats.',
+    'settings.messageFilters.everyone': 'Everyone',
+    'settings.messageFilters.everyoneHint': 'Allow anyone to start a direct conversation.',
+    'settings.messageFilters.matchingProfile': 'Matching profile',
+    'settings.messageFilters.sameNativeLanguage': 'Same native language',
+    'settings.messageFilters.sameTargetLanguage': 'Same target language',
+    'settings.messageFilters.sameGender': 'Same gender',
+    'settings.messageFilters.sameAge': 'Same age',
+    'settings.messageFilters.gender': 'Allowed genders',
+    'settings.messageFilters.genderHint': 'Leave empty to allow every gender.',
+    'settings.messageFilters.ageRange': 'Age range',
+    'settings.messageFilters.ageMin': 'Minimum age',
+    'settings.messageFilters.ageMax': 'Maximum age',
+    'settings.messageFilters.allowedNativeLanguages': 'Allowed native languages',
+    'settings.messageFilters.allowedNativeLanguagesHint':
+      'Leave empty to allow every native language.',
+    'settings.messageFilters.invalidAgeRange': 'Minimum age cannot exceed maximum age.',
+    'settings.messageFilters.saveError': 'Message filters could not be saved. Try again.',
+    'settings.messageFilters.saved': 'Message filters saved.',
     'settings.age': 'Age',
     'settings.ageMinPlaceholder': 'Min',
     'settings.ageMaxPlaceholder': 'Max',
@@ -2469,14 +2492,16 @@ export class I18nService {
     }
   }
 
-  private authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
 
   private applyDocumentRtlAndLocale(lang: string): void {
-    if (typeof document !== 'undefined' && document.documentElement) {
-      document.documentElement.lang = lang;
-      const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
-      document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
-    }
+    const document = this.document;
+    if (!document?.documentElement) return;
+
+    document.documentElement.lang = lang;
+    const isRtlLang = ['ar', 'he', 'fa', 'ur'].includes(lang.toLowerCase());
+    document.documentElement.dir = isRtlLang ? 'rtl' : 'ltr';
   }
 
   async setLanguage(langCode: string): Promise<void> {

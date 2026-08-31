@@ -1,0 +1,76 @@
+name: Core Compose Contract
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'automation/**'
+      - 'docs/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - '.github/dependabot.yml'
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-compose-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  impact:
+    name: infrastructure / impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_compose: ${{ steps.impact.outputs.run_compose }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect application impact
+        id: impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          run_compose=true
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+            run_compose=false
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              case "$path" in
+                automation/*|docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                  ;;
+                *)
+                  run_compose=true
+                  ;;
+              esac
+            done <<< "$changed"
+          fi
+          echo "run_compose=$run_compose" >> "$GITHUB_OUTPUT"
+          echo "Compose contract required: $run_compose"
+
+  compose-contract:
+    name: infrastructure / core-compose
+    needs: impact
+    if: needs.impact.outputs.run_compose == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Verify core Docker Compose orchestration
+        run: node --test scripts/verify-compose-orchestration.test.mjs

@@ -18,32 +18,64 @@ import { Type } from 'class-transformer';
 
 export class CoordinatesDto {
   @IsNumber()
+  @Min(-90)
+  @Max(90)
   latitude!: number;
 
   @IsNumber()
+  @Min(-180)
+  @Max(180)
   longitude!: number;
 }
 
 export class MessageFiltersDto {
   @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allow_everyone?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(120)
   age_min?: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(120)
   age_max?: number;
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(10)
   @IsString({ each: true })
   allowed_genders?: string[];
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @IsString({ each: true })
   allowed_native_languages?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  same_native_language?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_target_language?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_gender?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  same_age?: boolean;
 }
 
 export class BusinessCatalogItemDto {
