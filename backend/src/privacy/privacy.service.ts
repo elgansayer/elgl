@@ -218,27 +218,43 @@ export class PrivacyService {
 
     const rows = (rowsRaw ?? []) as unknown as ArchiveRequestRow[];
     let purged = 0;
-    for (const row of rows) {
-      if (row.object_key) {
-        const { error: removeError } = await supabase.storage
-          .from(ARCHIVE_BUCKET)
-          .remove([row.object_key]);
-        if (removeError) {
-          this.logger.error('gdpr_archive_cleanup_object_failed');
-          continue;
-        }
-      }
 
-      const { error: updateError } = await supabase
-        .from('archive_requests')
-        .update({
-          status: 'expired',
-          object_key: null,
-          archive_url: null,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', row.id);
-      if (!updateError) purged += 1;
+    // ⚡ Bolt Optimization: Replaced sequential await loop with Promise.allSettled chunks
+    // to process batch deletions and metadata updates concurrently without exhausting
+    // database connections, significantly reducing query latency for cleanup jobs.
+    const chunkSize = 10;
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+
+      await Promise.allSettled(
+        chunk.map(async (row) => {
+          if (row.object_key) {
+            const { error: removeError } = await supabase.storage
+              .from(ARCHIVE_BUCKET)
+              .remove([row.object_key]);
+            if (removeError) {
+              this.logger.error('gdpr_archive_cleanup_object_failed');
+              throw removeError;
+            }
+          }
+
+          const { error: updateError } = await supabase
+            .from('archive_requests')
+            .update({
+              status: 'expired',
+              object_key: null,
+              archive_url: null,
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', row.id);
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          purged += 1;
+        }),
+      );
     }
 
     if (purged > 0)
