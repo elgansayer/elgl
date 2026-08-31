@@ -124,6 +124,9 @@ export class NotificationPreferencesService {
     if (dbError) {
       throw new Error(dbError.message || 'Database error');
     }
+    if (!dbData) {
+      throw new Error('Database returned no notification preferences');
+    }
 
     return this.mapDbToPreferences(dbData);
   }
@@ -147,6 +150,9 @@ export class NotificationPreferencesService {
 
     if (dbError) {
       throw new Error(dbError.message || 'Database error');
+    }
+    if (!dbData) {
+      throw new Error('Database returned no notification preferences');
     }
 
     return this.mapDbToPreferences(dbData);
