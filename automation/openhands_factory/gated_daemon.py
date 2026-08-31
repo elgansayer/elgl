@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 
 from openhands_factory import daemon as daemon_module
 from openhands_factory.config import FactoryConfig
 from openhands_factory.main_merge_gate import MainBranchMergeGate, gate_merge_batch
-from openhands_factory.models import Job, JobState
+from openhands_factory.models import Job, JobState, Task
 
 SelectBatch = Callable[..., list[Job]]
 MergePullRequest = Callable[[int, str], None]
+CollectOpenIssues = Callable[[int], list[Task]]
 
 
 class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
@@ -83,9 +84,32 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
             return
         original(pull_request, expected_head_sha)
 
+    def _collect_open_issues_for_refresh(
+        self,
+        original: CollectOpenIssues,
+        limit: int = 10_000,
+        *,
+        now: datetime | None = None,
+    ) -> list[Task]:
+        """Refresh the large issue backlog only when admission can consume it.
+
+        Pull requests still refresh on every normal control-plane cycle. While the
+        new-issue admission window is full, durable cached issue tasks are sufficient
+        because the scheduler cannot admit another discovered issue anyway. The first
+        refresh with an available admission performs a full GitHub issue scan before
+        scheduling, so stale or closed backlog entries cannot consume the newly-opened
+        slot. Disabling issue admission limits preserves the original full-scan behavior.
+        """
+
+        available = self.issue_admission.available_slots(now or datetime.now(UTC))
+        if available is None or available > 0:
+            return original(limit)
+        return [task for task in self.pipeline.tasks.cached() if task.source == "github-issue"]
+
     def _loop(self) -> int:
         original_select = daemon_module.select_batch
         original_merge = self.pipeline.github.merge_pull_request
+        original_collect_issues = self.pipeline.github.collect_open_issues
 
         def gated_select_batch(
             jobs: dict[str, Job],
@@ -114,10 +138,15 @@ class MainCiGatedFactoryDaemon(daemon_module.FactoryDaemon):
                 expected_head_sha,
             )
 
+        def admission_aware_collect_open_issues(limit: int = 10_000) -> list[Task]:
+            return self._collect_open_issues_for_refresh(original_collect_issues, limit)
+
         daemon_module.select_batch = gated_select_batch
         self.pipeline.github.merge_pull_request = gated_merge_pull_request  # type: ignore[method-assign]
+        self.pipeline.github.collect_open_issues = admission_aware_collect_open_issues  # type: ignore[method-assign]
         try:
             return super()._loop()
         finally:
             daemon_module.select_batch = original_select
             self.pipeline.github.merge_pull_request = original_merge  # type: ignore[method-assign]
+            self.pipeline.github.collect_open_issues = original_collect_issues  # type: ignore[method-assign]
