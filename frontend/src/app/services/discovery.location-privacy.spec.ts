@@ -14,10 +14,15 @@ import { MatchmakingAlgorithmService } from './matchmaking-algorithm.service';
 describe('DiscoveryService location privacy', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('sends precise coordinates without placing them in the persistent cache key', async () => {
+  function configureService(isOnline: boolean) {
     const buildFiltersKey = vi.fn().mockReturnValue('nearby-cache-key');
-    const httpGet = vi.fn((url: string, _options?: { params?: HttpParams }) =>
-      of(url.endsWith('/partner-of-week') ? [] : []),
+    const cacheSearchResults = vi.fn().mockResolvedValue(undefined);
+    const cachePartners = vi.fn().mockResolvedValue(undefined);
+    const getCachedSearchResults = vi.fn().mockResolvedValue([]);
+    const getAllCachedPartners = vi.fn().mockResolvedValue([]);
+    const httpGet = vi.fn(
+      (url: string, _options?: { params?: HttpParams }) =>
+        of(url.endsWith('/partner-of-week') ? [] : []),
     );
 
     TestBed.configureTestingModule({
@@ -26,11 +31,16 @@ describe('DiscoveryService location privacy', () => {
         { provide: HttpClient, useValue: { get: httpGet } },
         {
           provide: AuthService,
-          useValue: { currentUser: signal(null), getAccessToken: vi.fn().mockReturnValue('token') },
+          useValue: {
+            currentUser: signal(null),
+            getAccessToken: vi.fn().mockReturnValue('token'),
+          },
         },
         {
           provide: SafetyService,
-          useValue: { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) },
+          useValue: {
+            getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
+          },
         },
         { provide: ChatService, useValue: {} },
         { provide: UserService, useValue: {} },
@@ -38,37 +48,87 @@ describe('DiscoveryService location privacy', () => {
           provide: OfflineDiscoveryCacheService,
           useValue: {
             buildFiltersKey,
-            isOnline: signal(true),
-            cacheSearchResults: vi.fn().mockResolvedValue(undefined),
-            cachePartners: vi.fn().mockResolvedValue(undefined),
+            isOnline: signal(isOnline),
+            cacheSearchResults,
+            cachePartners,
+            getCachedSearchResults,
+            getAllCachedPartners,
           },
         },
         { provide: MatchmakingAlgorithmService, useValue: {} },
       ],
     });
 
-    await TestBed.inject(DiscoveryService).findPartners({
+    return {
+      service: TestBed.inject(DiscoveryService),
+      buildFiltersKey,
+      cacheSearchResults,
+      cachePartners,
+      getCachedSearchResults,
+      getAllCachedPartners,
+      httpGet,
+    };
+  }
+
+  it('sends each precise origin without persisting location-derived results', async () => {
+    const {
+      service,
+      buildFiltersKey,
+      cacheSearchResults,
+      cachePartners,
+      httpGet,
+    } = configureService(true);
+
+    await service.findPartners({
+      latitude: 51.5074,
+      longitude: -0.1278,
+      radius_metres: 10_000,
+      sort: 'nearest',
+    });
+    await service.findPartners({
+      latitude: 35.6762,
+      longitude: 139.6503,
+      radius_metres: 10_000,
+      sort: 'nearest',
+    });
+
+    expect(buildFiltersKey).not.toHaveBeenCalled();
+    expect(cacheSearchResults).not.toHaveBeenCalled();
+    expect(cachePartners).not.toHaveBeenCalled();
+
+    const partnerRequests = httpGet.mock.calls.filter(([url]) =>
+      String(url).endsWith('/discovery/partners'),
+    );
+    expect(partnerRequests).toHaveLength(2);
+
+    const londonParams = partnerRequests[0][1]?.params;
+    const tokyoParams = partnerRequests[1][1]?.params;
+    expect(londonParams).toBeInstanceOf(HttpParams);
+    expect(tokyoParams).toBeInstanceOf(HttpParams);
+    expect(londonParams?.get('latitude')).toBe('51.5074');
+    expect(londonParams?.get('longitude')).toBe('-0.1278');
+    expect(tokyoParams?.get('latitude')).toBe('35.6762');
+    expect(tokyoParams?.get('longitude')).toBe('139.6503');
+  });
+
+  it('does not reuse persistent discovery data for an offline location search', async () => {
+    const {
+      service,
+      getCachedSearchResults,
+      getAllCachedPartners,
+      httpGet,
+    } = configureService(false);
+
+    const result = await service.findPartners({
       latitude: 51.5074,
       longitude: -0.1278,
       radius_metres: 10_000,
       sort: 'nearest',
     });
 
-    expect(buildFiltersKey).toHaveBeenCalledWith({
-      radius_metres: 10_000,
-      sort: 'nearest',
-      location_cache_scope: 'nearby-memory-origin',
-    });
-    expect(buildFiltersKey.mock.calls[0][0]).not.toHaveProperty('latitude');
-    expect(buildFiltersKey.mock.calls[0][0]).not.toHaveProperty('longitude');
-
-    const partnerRequest = httpGet.mock.calls.find(([url]) =>
-      String(url).endsWith('/discovery/partners'),
-    );
-    const params = partnerRequest?.[1]?.params;
-    expect(params).toBeInstanceOf(HttpParams);
-    if (!params) throw new Error('Expected partner request parameters');
-    expect(params.get('latitude')).toBe('51.5074');
-    expect(params.get('longitude')).toBe('-0.1278');
+    expect(result).toEqual([]);
+    expect(getCachedSearchResults).not.toHaveBeenCalled();
+    expect(getAllCachedPartners).not.toHaveBeenCalled();
+    expect(httpGet).not.toHaveBeenCalled();
   });
 });
