@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LearnerKnowledgeService } from './learner-knowledge.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
-import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -11,7 +10,6 @@ describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
-  let assessmentsService: { getQuestions: ReturnType<typeof vi.fn> };
   let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
   let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
 
@@ -21,9 +19,6 @@ describe('LearnerKnowledgeService', () => {
     };
     hobbyTagsService = {
       getUserVocabulary: vi.fn(),
-    };
-    assessmentsService = {
-      getQuestions: vi.fn(),
     };
     lessonsService = {
       listLessons: vi.fn(),
@@ -37,7 +32,6 @@ describe('LearnerKnowledgeService', () => {
         LearnerKnowledgeService,
         { provide: FlashcardsService, useValue: flashcardsService },
         { provide: HobbyTagsService, useValue: hobbyTagsService },
-        { provide: AssessmentsService, useValue: assessmentsService },
         { provide: LessonsService, useValue: lessonsService },
         { provide: MomentsService, useValue: momentsService },
       ],
@@ -156,7 +150,7 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.recentEncounters[0].source).toBe('lesson');
     });
 
-    it('should explicitly fallback to A1 for multi-language requests or invalid values', async () => {
+    it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist', async () => {
       flashcardsService.getFlashcards.mockResolvedValue([]);
       hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
       lessonsService.listLessons.mockResolvedValue([]);

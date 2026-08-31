@@ -3,7 +3,6 @@ import { VocabularyResultItem } from '../hobby-tags/hobby-tags.service';
 import { LessonRecord } from '../lessons/lessons.service';
 import { FlashcardsService } from '../flashcards/flashcards.service';
 import { HobbyTagsService } from '../hobby-tags/hobby-tags.service';
-import { AssessmentsService } from '../assessments/assessments.service';
 import { LessonsService } from '../lessons/lessons.service';
 import { MomentsService } from '../moments/moments.service';
 import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
@@ -55,7 +54,6 @@ export class LearnerKnowledgeService {
   constructor(
     private readonly flashcardsService: FlashcardsService,
     private readonly hobbyTagsService: HobbyTagsService,
-    private readonly assessmentsService: AssessmentsService,
     private readonly lessonsService: LessonsService,
     private readonly momentsService: MomentsService,
   ) {}
