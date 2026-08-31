@@ -8,6 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const config = JSON.parse(read('config/centrifugo/config.json'));
 const composeFiles = ['docker-compose.yml', 'docker-compose.dev.yml', 'docker-compose.prod.yml'];
+const productionComposeFiles = ['docker-compose.yml', 'docker-compose.prod.yml'];
 
 test('Centrifugo uses the shared Redis service with bounded realtime namespaces', () => {
   assert.equal(config.engine, 'redis');
@@ -38,10 +39,39 @@ for (const path of composeFiles) {
     const compose = read(path);
     assert.match(compose, /REDIS_URL=redis:\/\/cache:6379/);
     assert.match(compose, /CENTRIFUGO_URL=http:\/\/websocket:8000/);
-    assert.match(compose, /CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=\$\{CENTRIFUGO_SECRET\}/);
-    assert.match(compose, /CENTRIFUGO_API_KEY=\$\{CENTRIFUGO_API_KEY\}/);
+    assert.match(
+      compose,
+      /CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=\$\{CENTRIFUGO_SECRET(?::[^}]*)?\}/,
+    );
+    assert.match(
+      compose,
+      /CENTRIFUGO_API_KEY=\$\{CENTRIFUGO_API_KEY(?::[^}]*)?\}/,
+    );
     assert.match(compose, /image: redis:7-alpine/);
     assert.match(compose, /image: centrifugo\/centrifugo:v5/);
+  });
+}
+
+for (const path of productionComposeFiles) {
+  test(`${path} fails closed before exposing production Centrifugo`, () => {
+    const compose = read(path);
+    assert.match(
+      compose,
+      /CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=\$\{CENTRIFUGO_SECRET:\?CENTRIFUGO_SECRET must be set in production\}/,
+    );
+    assert.match(
+      compose,
+      /CENTRIFUGO_API_KEY=\$\{CENTRIFUGO_API_KEY:\?CENTRIFUGO_API_KEY must be set in production\}/,
+    );
+
+    const apiStart = compose.indexOf('  api:');
+    const websocketStart = compose.indexOf('  websocket:');
+    const websocketEnd = compose.indexOf('\n  sfu:', websocketStart);
+    const apiBlock = compose.slice(apiStart, compose.indexOf('\n  web:', apiStart));
+    const websocketBlock = compose.slice(websocketStart, websocketEnd);
+
+    assert.doesNotMatch(apiBlock, /\n\s+- websocket\s*$/m);
+    assert.match(websocketBlock, /api:\n\s+condition: service_healthy/);
   });
 }
 

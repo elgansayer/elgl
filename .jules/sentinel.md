@@ -84,4 +84,4 @@
 
 **Vulnerability:** Centrifugo `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET` could reach production as configuration defaults, tracked example placeholders, or whitespace-only values.
 **Learning:** Configuration defaults and example environment files can mask missing deployment secrets with predictable strings. Protect the service startup boundary against every repository-known placeholder, not only the schema default.
-**Prevention:** In production, reject missing, whitespace-padded, test-default, and example-placeholder Centrifugo credentials before any Redis or Centrifugo initialization. Keep focused regression tests for every tracked insecure value and a valid production case.
+**Prevention:** Reject missing, blank, whitespace-padded, test-default and example-placeholder Centrifugo credentials in the global production environment validator. Require both variables during production Compose interpolation and start Centrifugo only after the validated API is healthy, so predictable credentials are never exposed by the standalone WebSocket container.

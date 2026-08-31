@@ -71,14 +71,17 @@ test('core services remain on the approved technology stack', () => {
 });
 
 test('core dependency ordering remains explicit', () => {
-  for (const path of composeFiles) {
-    const document = readCompose(path);
+  const production = readCompose('docker-compose.yml');
+  expectDependency(serviceBlock(production, 'api'), 'cache');
+  expectDependency(serviceBlock(production, 'web'), 'api');
+  expectDependency(serviceBlock(production, 'websocket'), 'cache');
+  expectDependency(serviceBlock(production, 'websocket'), 'api');
 
-    expectDependency(serviceBlock(document, 'api'), 'cache');
-    expectDependency(serviceBlock(document, 'api'), 'websocket');
-    expectDependency(serviceBlock(document, 'web'), 'api');
-    expectDependency(serviceBlock(document, 'websocket'), 'cache');
-  }
+  const development = readCompose('docker-compose.dev.yml');
+  expectDependency(serviceBlock(development, 'api'), 'cache');
+  expectDependency(serviceBlock(development, 'api'), 'websocket');
+  expectDependency(serviceBlock(development, 'web'), 'api');
+  expectDependency(serviceBlock(development, 'websocket'), 'cache');
 });
 
 test('every core service retains health and network contracts', () => {

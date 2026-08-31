@@ -22,7 +22,7 @@ The Compose services map the existing application variables into the Centrifugo 
 - `CENTRIFUGO_SECRET` -> `CENTRIFUGO_TOKEN_HMAC_SECRET_KEY`
 - `CENTRIFUGO_API_KEY` -> `CENTRIFUGO_API_KEY`
 
-The NestJS `CentrifugoService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup already rejects missing critical credentials.
+The NestJS `CentrifugoService` consumes the same `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` values when minting client tokens and calling the Centrifugo HTTP API. Production startup rejects missing, blank, whitespace-padded and repository-known placeholder credentials through the global environment validator. Production Compose additionally requires both values during interpolation and waits for the validated API health check before starting Centrifugo.
 
 Do not commit real signing keys, API keys, connection tokens or Redis credentials. They belong in the deployment secret store or runtime environment. The browser never needs either Centrifugo server credential.
 
@@ -30,7 +30,8 @@ The existing `allowed_origins` behavior is intentionally unchanged by #1316; tig
 
 ## Failure behavior
 
-- Missing Centrifugo credentials in production fail the application configuration/startup boundary rather than silently minting unusable credentials.
+- Missing, blank, whitespace-padded or repository-known placeholder Centrifugo credentials fail the application configuration/startup boundary.
+- Production Compose does not start Centrifugo until the API has validated the shared credentials and become healthy, so a predictable signing secret is never exposed while the API is failing.
 - An unavailable Centrifugo container fails its health check and prevents dependent application startup according to the Compose dependency policy.
 - An unavailable Redis service prevents Centrifugo's Redis engine from becoming healthy. The NestJS connection-rate limiter retains its existing degradation behavior when its own Redis client is unavailable.
 - No fallback realtime provider or fabricated connection success is introduced.
@@ -53,15 +54,15 @@ The contract verifies:
 - example environment ownership; and
 - Prometheus metrics scraping.
 
-For a deployment smoke test, provide non-placeholder `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY`, start `cache` and `websocket`, verify the Centrifugo health endpoint, then start `api` and verify a minted connection token can establish an authenticated client connection.
+For a deployment smoke test, provide non-placeholder `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY`, start the production stack, verify that the API becomes healthy before `websocket`, then verify that a minted connection token can establish an authenticated client connection.
 
 ## Rollout and rollback
 
 No database migration or persisted-data transformation is required.
 
 1. Provision non-placeholder `CENTRIFUGO_SECRET` and `CENTRIFUGO_API_KEY` in the deployment secret store.
-2. Deploy Redis and Centrifugo with the updated environment mapping.
-3. Verify Centrifugo health and Prometheus metrics.
-4. Deploy the NestJS API and verify token minting plus an authenticated subscription.
+2. Deploy Redis and the NestJS API so the shared credentials pass startup validation.
+3. Allow Compose to start Centrifugo after the API health check succeeds.
+4. Verify Centrifugo health, Prometheus metrics, token minting and an authenticated subscription.
 
 Rollback is a normal application/Compose revert. Do not restore real credentials to the tracked JSON configuration during rollback; keep secrets runtime-owned.
