@@ -119,35 +119,37 @@ describe('LearnerKnowledgeService', () => {
       // Assert profile metadata
       expect(profile.userId).toBe('user1');
       expect(profile.language).toBe('es');
-      expect(profile.overallProficiency.level).toBe('A1'); // Should fallback to A1 regardless of user profile
+      expect(profile.globalProficiency.level).toBe('A1'); // Should fallback to A1 regardless of user profile
 
       // Assert knowledge items
-      expect(profile.knowledgeItems.size).toBe(5);
+      expect(profile.globalKnowledgeItems.size).toBe(5);
 
-      const known = profile.knowledgeItems.get('vocab:knownWord');
+      const known = profile.globalKnowledgeItems.get('vocab:knownWord');
       expect(known?.status).toBe('known');
       expect(known?.confidenceScore).toBe(2.5);
       expect(known?.errorFrequency).toBe(0);
 
-      const struggling = profile.knowledgeItems.get('vocab:strugglingWord');
+      const struggling = profile.globalKnowledgeItems.get(
+        'vocab:strugglingWord',
+      );
       expect(struggling?.status).toBe('struggling');
       expect(struggling?.confidenceScore).toBe(1.5);
       expect(struggling?.errorFrequency).toBe(0.5);
 
-      const learning = profile.knowledgeItems.get('vocab:learningWord');
+      const learning = profile.globalKnowledgeItems.get('vocab:learningWord');
       expect(learning?.status).toBe('learning');
       expect(learning?.confidenceScore).toBe(2.1);
 
-      const newWord = profile.knowledgeItems.get('vocab:newWord');
+      const newWord = profile.globalKnowledgeItems.get('vocab:newWord');
       expect(newWord?.status).toBe('new');
 
-      const hobbyWord = profile.knowledgeItems.get('vocab:hobbyWord');
+      const hobbyWord = profile.globalKnowledgeItems.get('vocab:hobbyWord');
       expect(hobbyWord?.status).toBe('new');
 
       // Assert recent encounters
-      expect(profile.recentEncounters.length).toBe(2);
-      expect(profile.recentEncounters[0].topic).toBe('Lesson 1');
-      expect(profile.recentEncounters[0].source).toBe('lesson');
+      expect(profile.globalRecentEncounters.length).toBe(2);
+      expect(profile.globalRecentEncounters[0].topic).toBe('Lesson 1');
+      expect(profile.globalRecentEncounters[0].source).toBe('lesson');
     });
 
     it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist', async () => {
@@ -164,8 +166,8 @@ describe('LearnerKnowledgeService', () => {
       const profileDe = await service.getProfile('user-multi', 'de');
 
       // Regardless of the invalid profile value, it should always return A1 until language-scoped assessments exist
-      expect(profileFr.overallProficiency.level).toBe('A1');
-      expect(profileDe.overallProficiency.level).toBe('A1');
+      expect(profileFr.globalProficiency.level).toBe('A1');
+      expect(profileDe.globalProficiency.level).toBe('A1');
     });
 
     it('should handle service failures gracefully', async () => {
@@ -184,9 +186,9 @@ describe('LearnerKnowledgeService', () => {
 
       expect(profile.userId).toBe('user2');
       expect(profile.language).toBe('fr');
-      expect(profile.knowledgeItems.size).toBe(0);
-      expect(profile.recentEncounters.length).toBe(0);
-      expect(profile.overallProficiency.level).toBe('A1');
+      expect(profile.globalKnowledgeItems.size).toBe(0);
+      expect(profile.globalRecentEncounters.length).toBe(0);
+      expect(profile.globalProficiency.level).toBe('A1');
     });
   });
 });

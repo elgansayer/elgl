@@ -305,7 +305,7 @@ The user's role: Someone practising casual English.
     const targetLanguages = profile?.target_languages?.join(', ') || 'English';
     const interests = profile?.interests?.join(', ') || 'various topics';
     const level =
-      learnerKnowledge?.overallProficiency?.level ||
+      learnerKnowledge?.globalProficiency?.level ||
       profile?.proficiency_level ||
       'beginner/intermediate';
 
@@ -318,7 +318,7 @@ The user's role: Someone practising casual English.
     let knowledgeContext = '';
     if (learnerKnowledge) {
       const strugglingItems = Array.from(
-        learnerKnowledge.knowledgeItems.values(),
+        learnerKnowledge.globalKnowledgeItems.values(),
       )
         .filter((item) => item.status === 'struggling')
         .map((item) => item.id.replace('vocab:', ''))

@@ -34,8 +34,8 @@ export interface RecentEncounter {
 export interface LearnerKnowledgeProfile {
   userId: string;
   language: string;
-  overallProficiency: CEFRLevel;
-  skills: {
+  globalProficiency: CEFRLevel;
+  globalSkills: {
     speaking: number;
     listening: number;
     reading: number;
@@ -43,8 +43,8 @@ export interface LearnerKnowledgeProfile {
     grammar: number;
     vocabulary: number;
   };
-  knowledgeItems: Map<string, KnowledgeItem>;
-  recentEncounters: RecentEncounter[];
+  globalKnowledgeItems: Map<string, KnowledgeItem>;
+  globalRecentEncounters: RecentEncounter[];
 }
 
 @Injectable()
@@ -144,8 +144,8 @@ export class LearnerKnowledgeService {
     return {
       userId,
       language,
-      overallProficiency: { level: baseLevel },
-      skills: {
+      globalProficiency: { level: baseLevel },
+      globalSkills: {
         speaking: calculateSkill(0.2, momentsCounts.moments, 50),
         listening: calculateSkill(0.2, lessons.length, 20),
         reading: calculateSkill(0.2, momentsCounts.translations, 100),
@@ -153,8 +153,8 @@ export class LearnerKnowledgeService {
         grammar: calculateSkill(0.2, momentsCounts.corrections, 40),
         vocabulary: calculateSkill(0.2, flashcards.length, 200),
       },
-      knowledgeItems,
-      recentEncounters,
+      globalKnowledgeItems: knowledgeItems,
+      globalRecentEncounters: recentEncounters,
     };
   }
 }
