@@ -328,10 +328,9 @@ The user's role: Someone practising casual English.
 
     let knowledgeContext = '';
     if (learnerKnowledge) {
-      const strugglingItems = Array.from([
-        ...learnerKnowledge.globalKnowledgeItems.values(),
-        ...learnerKnowledge.languageKnowledgeItems.values(),
-      ])
+      const strugglingItems = Array.from(
+        learnerKnowledge.languageKnowledgeItems.values(),
+      )
         .filter((item) => item.status === 'struggling')
         .map((item) => item.id.replace('vocab:', ''))
         .join(', ');

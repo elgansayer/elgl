@@ -80,6 +80,32 @@ export class LessonsService {
     return this.normaliseProgress(data, lessonId);
   }
 
+  async listLessonProgress(userId: string): Promise<LessonProgressRecord[]> {
+    const client = this.progressClient();
+    const { data, error } = await client
+      .from('lesson_progress')
+      .select('lesson_id, segment_index, completed, completed_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    if (!data) return [];
+    if (!Array.isArray(data)) {
+      throw new Error('Lesson progress response was malformed');
+    }
+
+    return data.map((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('Lesson progress response was malformed');
+      }
+      const lessonId = (value as Record<string, unknown>)['lesson_id'];
+      if (typeof lessonId !== 'string' || lessonId.length === 0) {
+        throw new Error('Lesson progress response was malformed');
+      }
+      return this.normaliseProgress(value, lessonId);
+    });
+  }
+
   async saveLessonProgress(
     userId: string,
     lessonId: string,

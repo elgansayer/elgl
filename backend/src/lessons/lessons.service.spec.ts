@@ -101,6 +101,38 @@ describe('LessonsService progress', () => {
     expect(progressQuery.eq).toHaveBeenCalledWith('lesson_id', lesson.id);
   });
 
+  it('lists only progress rows scoped to the authenticated learner', async () => {
+    const progressQuery = createQueryChain();
+    progressQuery._setResolveData({
+      data: [
+        {
+          lesson_id: lesson.id,
+          segment_index: 1,
+          completed: false,
+          completed_at: null,
+          updated_at: '2026-08-26T20:00:00.000Z',
+        },
+      ],
+      error: null,
+    });
+    supabase.from.mockReturnValue(progressQuery);
+
+    await expect(service.listLessonProgress('user-1')).resolves.toEqual([
+      {
+        lesson_id: lesson.id,
+        segment_index: 1,
+        completed: false,
+        completed_at: null,
+        updated_at: '2026-08-26T20:00:00.000Z',
+      },
+    ]);
+    expect(supabase.from).toHaveBeenCalledWith('lesson_progress');
+    expect(progressQuery.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(progressQuery.order).toHaveBeenCalledWith('updated_at', {
+      ascending: false,
+    });
+  });
+
   it('upserts progress scoped to the authenticated learner', async () => {
     const lessonQuery = createQueryChain();
     lessonQuery._setResolveData({ data: lesson, error: null });

@@ -182,17 +182,17 @@ describe('AiConversationService', () => {
         interests: ['culture'],
       });
 
-      // Provide both global and language items
+      // Global flashcards are not language-scoped, so only language items are safe.
       learnerKnowledgeService.getProfile.mockResolvedValue({
         globalProficiency: { level: 'A2' },
         globalKnowledgeItems: new Map([
           [
-            'vocab:globalWord',
-            { id: 'vocab:globalWord', status: 'struggling' },
+            'vocab:englishOnly',
+            { id: 'vocab:englishOnly', status: 'struggling' },
           ],
         ]),
         languageKnowledgeItems: new Map([
-          ['vocab:hola', { id: 'vocab:hallo', status: 'struggling' }],
+          ['vocab:hola', { id: 'vocab:hola', status: 'struggling' }],
         ]),
       });
 
@@ -209,13 +209,11 @@ describe('AiConversationService', () => {
 
       const llmMessages = llmProxy.chatCompletion.mock.calls[0][0];
       const systemPrompt = llmMessages.find(
-        (m: any) => m.role === 'system',
-      ).content;
+        (message: { role: string }) => message.role === 'system',
+      )?.content;
 
-      // Should contain the Spanish struggling word 'hallo' and the global one 'globalWord'
-      // It should NOT fetch 'en' explicitly
-      expect(systemPrompt).toContain('globalWord');
-      expect(systemPrompt).toContain('hallo');
+      expect(systemPrompt).toContain('hola');
+      expect(systemPrompt).not.toContain('englishOnly');
     });
 
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {
