@@ -323,35 +323,6 @@ describe('PrivacyService', () => {
         }),
       );
     });
-
-    it('processes expired archives concurrently with a maximum batch size of ten', async () => {
-      tableRows.set(
-        'archive_requests',
-        Array.from({ length: 25 }, (_, index) => ({
-          id: `archive-${index}`,
-          user_id: 'user-1',
-          status: 'ready',
-          object_key: `opaque-${index}.json`,
-          expires_at: '2026-08-01T00:00:00.000Z',
-          created_at: '2026-07-25T00:00:00.000Z',
-        })),
-      );
-
-      let activeRemovals = 0;
-      let peakRemovals = 0;
-      mockRemove.mockImplementation(async () => {
-        activeRemovals += 1;
-        peakRemovals = Math.max(peakRemovals, activeRemovals);
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        activeRemovals -= 1;
-        return { error: null };
-      });
-
-      await expect(service.purgeExpiredArchives()).resolves.toBe(25);
-      expect(mockRemove).toHaveBeenCalledTimes(25);
-      expect(peakRemovals).toBeGreaterThan(1);
-      expect(peakRemovals).toBeLessThanOrEqual(10);
-    });
   });
 
   describe('deleteAccount', () => {

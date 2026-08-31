@@ -14,7 +14,7 @@
       "phase_models": {
         "planning": "opus",
         "architecture": "opus",
-        "security_review": "sonnet",
+        "security_review": "opus",
         "implementation": "sonnet",
         "quality_repair": "haiku",
         "code_review": "haiku",
