@@ -133,29 +133,65 @@ export class InterestsService {
       throw new Error(vocabError.message);
     }
 
-    const flashcardRows = await Promise.all(
-      (vocabList ?? []).map(async (v) => {
-        let context_sentence = '';
-        try {
-          const prompt = `Write a very simple, single-sentence example in ${targetLanguage} using the word/phrase "${v.word}". Provide only the sentence, nothing else.`;
-          const result = await this.llmProxyService.proxyMessage(prompt);
-          if (result.response && result.response.trim().length > 0) {
-            context_sentence = result.response.trim();
-          }
-        } catch {
-          // Fallback to empty context sentence on LLM failure
-        }
-        return {
-          user_id: userId,
-          word_token: v.word.toLowerCase(),
-          source_language: targetLanguage,
-          translation: v.translation ?? '',
-          srs_level: 0,
-          next_review_at: new Date().toISOString(),
-          context_sentence,
-        };
-      })
+    const MAX_CONCURRENT_LLM_REQUESTS = 5;
+    const MAX_VOCAB_PROCESS_LIMIT = 20;
+
+    const limitedVocabList = (vocabList ?? []).slice(
+      0,
+      MAX_VOCAB_PROCESS_LIMIT,
     );
+
+    const flashcardRows: Array<{
+      user_id: string;
+      word_token: string;
+      source_language: string;
+      translation: string;
+      srs_level: number;
+      next_review_at: string;
+      context_sentence: string;
+    }> = [];
+
+    for (
+      let i = 0;
+      i < limitedVocabList.length;
+      i += MAX_CONCURRENT_LLM_REQUESTS
+    ) {
+      const chunk = limitedVocabList.slice(i, i + MAX_CONCURRENT_LLM_REQUESTS);
+      const results = await Promise.all(
+        chunk.map(async (v) => {
+          let context_sentence = '';
+          try {
+            const prompt = `Write a very simple, single-sentence example in ${targetLanguage} using the word/phrase "${v.word}". Provide only the sentence, nothing else. Do not wrap in quotes or explain. Maximum 15 words.`;
+            const result = await this.llmProxyService.proxyMessage(prompt);
+
+            if (result.response && result.response.trim().length > 0) {
+              const cleaned = result.response
+                .trim()
+                .replace(/^["']|["']$/g, '');
+              if (
+                cleaned.length < 150 &&
+                !cleaned.includes('\n') &&
+                !cleaned.toLowerCase().startsWith('here is a')
+              ) {
+                context_sentence = cleaned;
+              }
+            }
+          } catch {
+            // Fallback to empty context sentence on LLM failure
+          }
+          return {
+            user_id: userId,
+            word_token: v.word.toLowerCase(),
+            source_language: targetLanguage,
+            translation: v.translation ?? '',
+            srs_level: 0,
+            next_review_at: new Date().toISOString(),
+            context_sentence,
+          };
+        }),
+      );
+      flashcardRows.push(...results);
+    }
 
     const { error: insertError } = await this.supabase
       .from('flashcards')
