@@ -116,7 +116,7 @@ function checkFile(filePath) {
       if (match && !line.includes('// ignore-check')) {
         console.error(`❌ [CONTROL FLOW VIOLATION] ${relPath}:${lineNum}`);
         console.error(
-          `   Found legacy control flow '*${match[1]}'. Strictly use native control flow (@if, @for, @switch) (AGENTS.md Section 6).`,
+          `   Found legacy control flow '*${match[1]}'. Strictly use native control flow (@if, @for, @switch) (frontend/AGENTS.md, Templates).`,
         );
         totalErrors++;
       }

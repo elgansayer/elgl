@@ -79,9 +79,14 @@ export class DiscoveryService {
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
     abortSignal?: AbortSignal,
   ): Promise<UserProfile[]> {
-    const filtersKey = this.offlineCache.buildFiltersKey(
-      Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)),
+    const hasLocationPair = filters.latitude !== undefined && filters.longitude !== undefined;
+    const cacheFilters = Object.fromEntries(
+      Object.entries(filters).filter(
+        ([key, value]) => value !== undefined && key !== 'latitude' && key !== 'longitude',
+      ),
     );
+    if (hasLocationPair) cacheFilters['location_cache_scope'] = 'nearby-memory-origin';
+    const filtersKey = this.offlineCache.buildFiltersKey(cacheFilters);
     const isOnline = this.offlineCache.isOnline();
 
     let params = new HttpParams();

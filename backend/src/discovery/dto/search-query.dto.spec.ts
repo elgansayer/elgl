@@ -15,13 +15,16 @@ describe('SearchQueryDto', () => {
   };
 
   describe('latitude', () => {
-    it('should accept valid latitude with longitude', async () => {
-      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
+    it('should accept valid latitude when longitude is also provided', async () => {
+      const errors = await validateDto({
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
       expect(errors).toHaveLength(0);
     });
 
     it('should parse string latitude to number', () => {
-      const dto = buildDto({ latitude: '51.5074' });
+      const dto = buildDto({ latitude: '51.5074', longitude: '-0.1278' });
       expect(dto.latitude).toBe(51.5074);
     });
 
@@ -36,16 +39,25 @@ describe('SearchQueryDto', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('latitude');
     });
+
+    it('should reject latitude without longitude', async () => {
+      const errors = await validateDto({ latitude: 51.5074 });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('longitude');
+    });
   });
 
   describe('longitude', () => {
-    it('should accept valid longitude with latitude', async () => {
-      const errors = await validateDto({ latitude: 51.5074, longitude: -0.1278 });
+    it('should accept valid longitude when latitude is also provided', async () => {
+      const errors = await validateDto({
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
       expect(errors).toHaveLength(0);
     });
 
     it('should parse string longitude to number', () => {
-      const dto = buildDto({ longitude: '-0.1278' });
+      const dto = buildDto({ latitude: '51.5074', longitude: '-0.1278' });
       expect(dto.longitude).toBe(-0.1278);
     });
 
@@ -59,6 +71,12 @@ describe('SearchQueryDto', () => {
       const errors = await validateDto({ latitude: 0, longitude: 181 });
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('longitude');
+    });
+
+    it('should reject longitude without latitude', async () => {
+      const errors = await validateDto({ longitude: -0.1278 });
+      expect(errors).toHaveLength(1);
+      expect(errors[0].property).toBe('latitude');
     });
   });
 

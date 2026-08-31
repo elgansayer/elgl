@@ -20,8 +20,8 @@ export class SearchQueryDto {
     example: 51.5074,
   })
   @ValidateIf(
-    (object: SearchQueryDto) =>
-      object.latitude !== undefined || object.longitude !== undefined,
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
   )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,
@@ -39,8 +39,8 @@ export class SearchQueryDto {
     example: -0.1278,
   })
   @ValidateIf(
-    (object: SearchQueryDto) =>
-      object.latitude !== undefined || object.longitude !== undefined,
+    (query: SearchQueryDto) =>
+      query.latitude !== undefined || query.longitude !== undefined,
   )
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? parseFloat(value) : value,

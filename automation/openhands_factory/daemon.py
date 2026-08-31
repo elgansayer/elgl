@@ -12,7 +12,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
-from threading import Semaphore
+from threading import Semaphore, Thread
 
 from filelock import FileLock, Timeout
 
@@ -21,17 +21,19 @@ from openhands_factory.agents.router import AgentRouter
 from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.controlled_recovery import recover_due_quarantines
-from openhands_factory.doctor import disk_space_checks
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.doctor import disk_space_checks, no_pr_progress_check
+from openhands_factory.exceptions import FactoryError, ProviderCapacityUnavailable
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
     FactoryGeneration,
     activate_generation,
     assert_generation_current,
 )
+from openhands_factory.host_diagnostics import gather_diagnostics
 from openhands_factory.issue_admission import IssueAdmissionGate
 from openhands_factory.models import Job, JobState
 from openhands_factory.pipeline import FactoryPipeline
+from openhands_factory.recovery_retention import prune_recovery_archives
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
@@ -205,6 +207,40 @@ def await_refresh(
             publish_heartbeat()
 
 
+def stall_alert_decision(
+    *,
+    storage_blocked: bool,
+    no_pr_progress_warning: bool,
+    no_pr_progress_detail: str,
+    stall_since: datetime | None,
+    now: datetime,
+    stall_alert_minutes: float,
+    already_dispatched: bool,
+) -> tuple[datetime | None, str | None]:
+    """Pure decision: is this a stall, how long has it run, should it alert now.
+
+    Returns (updated_stall_since, alert_reason). alert_reason is non-None only
+    once the stall has persisted at least stall_alert_minutes and no alert has
+    already been dispatched for this continuous episode (already_dispatched) -
+    the caller tracks that flag and must reset it once stall_since comes back
+    None, so a later, distinct episode can alert again.
+    """
+    stalled = storage_blocked or no_pr_progress_warning
+    if not stalled:
+        return None, None
+    since = stall_since or now
+    elapsed_minutes = (now - since).total_seconds() / 60
+    if elapsed_minutes < stall_alert_minutes or already_dispatched:
+        return since, None
+    reasons = []
+    if storage_blocked:
+        reasons.append("storage reserve blocked")
+    if no_pr_progress_warning:
+        reasons.append(no_pr_progress_detail)
+    reason = f"Scheduling has been stalled for {elapsed_minutes:.0f} minutes: " + "; ".join(reasons)
+    return since, reason
+
+
 def queue_snapshot(
     jobs: dict[str, Job],
     active_task_ids: set[str] | None = None,
@@ -283,6 +319,8 @@ class FactoryDaemon:
         self.verification_slots = Semaphore(1)
         self.provider_health: dict[str, ProviderHealth] = {}
         self.storage_blocked = False
+        self.stall_since: datetime | None = None
+        self.stall_investigation_dispatched = False
 
     @staticmethod
     def _issue_admission_gate(config: FactoryConfig) -> IssueAdmissionGate:
@@ -322,6 +360,42 @@ class FactoryDaemon:
             LOGGER.info("Factory storage reserve recovered; scheduling can resume")
         self.storage_blocked = blocked
         return not blocked
+
+    def _check_stall(self) -> None:
+        """Notice a stall that has persisted past stall_alert_minutes and
+        dispatch a best-effort Telegram alert plus AI investigation.
+
+        Two independent signals, either sufficient on its own: storage_blocked
+        (this daemon's own scheduling gate) and no_pr_progress_check (whether
+        any job with an open PR has moved in max_no_pr_hours) - the latter
+        catches stall causes this daemon has no specific detector for. Neither
+        signal was previously evaluated proactively; both were only checkable
+        on demand via `hellotalk-factory doctor`, so a real stall produced no
+        notification until an operator happened to look.
+        """
+        no_pr_progress = no_pr_progress_check(self.config)
+        self.stall_since, reason = stall_alert_decision(
+            storage_blocked=self.storage_blocked,
+            no_pr_progress_warning=no_pr_progress.warning,
+            no_pr_progress_detail=no_pr_progress.detail,
+            stall_since=self.stall_since,
+            now=datetime.now(UTC),
+            stall_alert_minutes=self.config.stall_alert_minutes,
+            already_dispatched=self.stall_investigation_dispatched,
+        )
+        if self.stall_since is None:
+            self.stall_investigation_dispatched = False
+        if reason is None:
+            return
+        self.stall_investigation_dispatched = True
+        LOGGER.warning("factory.stall_detected reason=%s", reason)
+        diagnostics = gather_diagnostics(self.config.state_dir)
+        Thread(
+            target=self.pipeline.run_stall_investigation,
+            args=(reason, diagnostics),
+            daemon=True,
+            name="factory-stall-investigation",
+        ).start()
 
     def _activate_generation(self) -> None:
         from openhands_factory.agents.process import AgentProcessRunner
@@ -388,7 +462,9 @@ class FactoryDaemon:
         active: dict[Future[Job | None], str] = {}
         active_started_at: dict[str, str] = {}
         next_refresh_at = 0.0
+        next_prune_at = 0.0
         architect_future: Future[None] | None = None
+        architect_retry_not_before: datetime | None = None
         # Publish liveness before the first provider probe and GitHub refresh.
         # A large queue can make that first scheduling cycle slower than the
         # watchdog interval, but the daemon already owns its generation here.
@@ -417,7 +493,29 @@ class FactoryDaemon:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
                 active_task_ids = set(active.values())
                 capacity = self.config.max_parallel_jobs - len(active)
+                # storage_ready and everything in this block must run
+                # unconditionally, before the scheduling gate below and
+                # regardless of pause/capacity state: pruning is what's
+                # supposed to correct a low-disk state, and the stall check
+                # is what's supposed to notice when it or anything else
+                # hasn't. Gating either behind storage_ready/scheduling (as
+                # an earlier version of the pruning fix did) deadlocks -
+                # once blocked, nothing ever runs to notice or unblock it.
                 storage_ready = self._storage_ready()
+                prune_now = time.monotonic()
+                if prune_now >= next_prune_at:
+                    next_prune_at = prune_now + self.config.cooldown_seconds
+                    pruned = prune_recovery_archives(
+                        self.config.recovery_dir,
+                        timedelta(hours=self.config.recovery_retention_hours),
+                    )
+                    if pruned:
+                        LOGGER.info(
+                            "Pruned %d recovery archive(s) older than %sh",
+                            len(pruned),
+                            self.config.recovery_retention_hours,
+                        )
+                    self._check_stall()
                 if not self.paused() and storage_ready and capacity > 0:
                     now = time.monotonic()
                     if now >= next_refresh_at:
@@ -527,9 +625,20 @@ class FactoryDaemon:
                     if architect_future is not None:
                         try:
                             architect_future.result()
+                        except ProviderCapacityUnavailable as error:
+                            retry = (
+                                error.retry_after_seconds or self.config.provider_cooldown_seconds
+                            )
+                            architect_retry_not_before = datetime.now(UTC) + timedelta(
+                                seconds=max(retry, 1)
+                            )
+                            LOGGER.warning("Architect cycle deferred: %s", error)
                         except Exception:
                             LOGGER.exception("Architect cycle crashed")
-                    if self.pipeline.architect_due():
+                    if (
+                        architect_retry_not_before is None
+                        or datetime.now(UTC) >= architect_retry_not_before
+                    ) and self.pipeline.architect_due():
                         self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(
