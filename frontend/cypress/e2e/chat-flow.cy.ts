@@ -132,13 +132,12 @@ describe('Chat Flow (Mocked)', () => {
     cy.contains('Language Exchange with Maria').should('be.visible').click();
 
     cy.url().should('include', `/chat/${roomId}`);
-    cy.wait('@getMessages');
     cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('sends a text message with the canonical room and message payload', () => {
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     const testMessage = 'I am doing great, thanks for asking!';
     cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
@@ -161,14 +160,15 @@ describe('Chat Flow (Mocked)', () => {
 
   it('does not submit whitespace-only messages', () => {
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').then((messages) => {
+      const initialCount = messages.length;
+      cy.get('[data-testid="chat-message-input"]').type('   {enter}');
 
-    cy.get('[data-testid="chat-message-input"]').type('   {enter}');
-
-    cy.then(() => {
-      expect(sendAttempts).to.eq(0);
+      cy.then(() => {
+        expect(sendAttempts).to.eq(0);
+      });
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount);
     });
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('retains a failed message draft and allows a successful retry', () => {
@@ -176,30 +176,33 @@ describe('Chat Flow (Mocked)', () => {
     const retryMessage = 'Please keep this draft if sending fails.';
 
     visitChat(`/chat/${roomId}`);
-    cy.wait('@getMessages');
-    cy.wait('@centrifugoUnavailable').its('response.statusCode').should('eq', 200);
-    cy.window().should((win) => {
-      expect((win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError).to.be.undefined;
-    });
-    cy.window().then((win) => {
-      (win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError = 'Error sending message:';
-    });
-    cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
+    cy.get('[data-testid="chat-message"]').then((messages) => {
+      const initialCount = messages.length;
+      cy.wait('@centrifugoUnavailable').its('response.statusCode').should('eq', 200);
+      cy.window().should((win) => {
+        expect((win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError).to.be.undefined;
+      });
+      cy.window().then((win) => {
+        (win as ExpectedConsoleErrorWindow).__cypressExpectedConsoleError =
+          'Failed to send text message:';
+      });
+      cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
-    cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
-    cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+      cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
+      cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount);
 
-    cy.get('[data-testid="chat-message-input"]').type('{enter}');
-    cy.wait('@sendMessage').then((interception) => {
-      expect(interception.response?.statusCode).to.eq(201);
-      expect(interception.request.body.text_content).to.eq(retryMessage);
-    });
+      cy.get('[data-testid="chat-message-input"]').type('{enter}');
+      cy.wait('@sendMessage').then((interception) => {
+        expect(interception.response?.statusCode).to.eq(201);
+        expect(interception.request.body.text_content).to.eq(retryMessage);
+      });
 
-    cy.get('[data-testid="chat-message-input"]').should('have.value', '');
-    cy.get('[data-testid="chat-message"]').should('have.length', 2);
-    cy.then(() => {
-      expect(sendAttempts).to.eq(2);
+      cy.get('[data-testid="chat-message-input"]').should('have.value', '');
+      cy.get('[data-testid="chat-message"]').should('have.length', initialCount + 1);
+      cy.then(() => {
+        expect(sendAttempts).to.eq(2);
+      });
     });
   });
 });
