@@ -86,7 +86,8 @@ export class LessonsService {
       .from('lesson_progress')
       .select('lesson_id, segment_index, completed, completed_at, updated_at')
       .eq('user_id', userId)
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .limit(20);
 
     if (error) throw error;
     if (!data) return [];

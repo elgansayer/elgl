@@ -13,6 +13,7 @@ type QueryChainMock = {
   select: Mock;
   eq: Mock;
   order: Mock;
+  limit: Mock;
   insert: Mock;
   update: Mock;
   delete: Mock;
@@ -29,6 +30,7 @@ const createQueryChain = (): QueryChainMock => {
     'select',
     'eq',
     'order',
+    'limit',
     'insert',
     'update',
     'delete',
@@ -131,6 +133,7 @@ describe('LessonsService progress', () => {
     expect(progressQuery.order).toHaveBeenCalledWith('updated_at', {
       ascending: false,
     });
+    expect(progressQuery.limit).toHaveBeenCalledWith(20);
   });
 
   it('upserts progress scoped to the authenticated learner', async () => {
