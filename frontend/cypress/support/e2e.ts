@@ -31,7 +31,10 @@ Cypress.on('window:before:load', (win) => {
     const message = typeof msg === 'string' ? msg : JSON.stringify(msg);
     const expectedWindow = win as ExpectedErrorWindow;
     const expectedConsoleError = expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
-    const expectedRunnerConsoleError = Cypress.env(EXPECTED_RUNNER_CONSOLE_ERROR_KEY);
+    const expectedRunnerConsoleError = Object.getOwnPropertyDescriptor(
+      Cypress,
+      EXPECTED_RUNNER_CONSOLE_ERROR_KEY,
+    )?.value;
 
     // Failure-path specs can permit one specific, handled console error without weakening
     // the suite-wide guard for unrelated runtime failures.
@@ -46,7 +49,7 @@ Cypress.on('window:before:load', (win) => {
       typeof expectedRunnerConsoleError === 'string' &&
       message === expectedRunnerConsoleError
     ) {
-      Cypress.env(EXPECTED_RUNNER_CONSOLE_ERROR_KEY, null);
+      Reflect.deleteProperty(Cypress, EXPECTED_RUNNER_CONSOLE_ERROR_KEY);
       return;
     }
 
