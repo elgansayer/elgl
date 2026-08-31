@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 
 export type UsersRow = {
   id: string;

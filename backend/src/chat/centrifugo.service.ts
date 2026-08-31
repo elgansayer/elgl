@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 import { randomUUID } from 'crypto';
 
 /**

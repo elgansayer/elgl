@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
 import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
-import Redis from 'ioredis';
+import Redis from 'ioredis-v6';
 
 vi.mock('jsonwebtoken', () => ({
   sign: vi.fn(),
@@ -17,7 +17,7 @@ const LUA_SHA_SEED = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 // the mock constructor will return the updated object.
 const mockRedis: Record<string, Mock> = {};
 
-vi.mock('ioredis', () => ({
+vi.mock('ioredis-v6', () => ({
   __esModule: true,
   default: vi.fn(function () {
     return mockRedis;
