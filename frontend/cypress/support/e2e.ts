@@ -2,6 +2,7 @@ import './commands';
 
 const EXPECTED_ERROR_HEADER = 'x-cypress-expected-error';
 const EXPECTED_CONSOLE_ERROR_KEY = '__cypressExpectedConsoleError';
+const EXPECTED_RUNNER_CONSOLE_ERROR_KEY = '__cypressExpectedRunnerConsoleError';
 
 type ExpectedErrorWindow = Window & {
   [EXPECTED_CONSOLE_ERROR_KEY]?: string;
@@ -30,11 +31,22 @@ Cypress.on('window:before:load', (win) => {
     const message = typeof msg === 'string' ? msg : JSON.stringify(msg);
     const expectedWindow = win as ExpectedErrorWindow;
     const expectedConsoleError = expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
+    const expectedRunnerConsoleError = Cypress.env(EXPECTED_RUNNER_CONSOLE_ERROR_KEY);
 
     // Failure-path specs can permit one specific, handled console error without weakening
     // the suite-wide guard for unrelated runtime failures.
     if (expectedConsoleError && message.includes(expectedConsoleError)) {
       delete expectedWindow[EXPECTED_CONSOLE_ERROR_KEY];
+      return;
+    }
+
+    // Some startup failures happen before a spec can access the application window.
+    // Specs may permit one exact startup error through runner state, which is consumed here.
+    if (
+      typeof expectedRunnerConsoleError === 'string' &&
+      message === expectedRunnerConsoleError
+    ) {
+      Cypress.env(EXPECTED_RUNNER_CONSOLE_ERROR_KEY, null);
       return;
     }
 
