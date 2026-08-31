@@ -57,5 +57,9 @@ describe('WordDefinitionModalComponent Navigation', () => {
 
     const linkDe = fixture.debugElement.query(By.directive(RouterLink));
     expect(linkDe).toBeTruthy();
+
+    const routerLink = linkDe.injector.get(RouterLink);
+    // Angular routerLink returns an array representation internally for bound inputs
+    expect(routerLink.urlTree?.toString()).toBe('/review');
   });
 });
