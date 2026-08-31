@@ -44,6 +44,7 @@ export interface LearnerKnowledgeProfile {
     vocabulary: number;
   };
   globalKnowledgeItems: Map<string, KnowledgeItem>;
+  languageKnowledgeItems: Map<string, KnowledgeItem>;
   globalRecentEncounters: RecentEncounter[];
 }
 
@@ -78,7 +79,8 @@ export class LearnerKnowledgeService {
         .catch(() => ({ moments: 0, corrections: 0, translations: 0 })),
     ]);
 
-    const knowledgeItems = new Map<string, KnowledgeItem>();
+    const globalKnowledgeItems = new Map<string, KnowledgeItem>();
+    const languageKnowledgeItems = new Map<string, KnowledgeItem>();
 
     // Process flashcards to populate knowledge items
     (flashcards as Flashcard[]).forEach((f) => {
@@ -91,7 +93,7 @@ export class LearnerKnowledgeService {
         status = 'learning';
       }
 
-      knowledgeItems.set(`vocab:${f.word_token}`, {
+      globalKnowledgeItems.set(`vocab:${f.word_token}`, {
         id: `vocab:${f.word_token}`,
         type: 'vocabulary',
         status,
@@ -115,8 +117,8 @@ export class LearnerKnowledgeService {
     if (Array.isArray(vocabulary)) {
       vocabulary.forEach((v: VocabularyResultItem) => {
         const id = `vocab:${v.word}`;
-        if (!knowledgeItems.has(id)) {
-          knowledgeItems.set(id, {
+        if (!languageKnowledgeItems.has(id)) {
+          languageKnowledgeItems.set(id, {
             id,
             type: 'vocabulary',
             status: 'new',
@@ -153,7 +155,8 @@ export class LearnerKnowledgeService {
         grammar: calculateSkill(0.2, momentsCounts.corrections, 40),
         vocabulary: calculateSkill(0.2, flashcards.length, 200),
       },
-      globalKnowledgeItems: knowledgeItems,
+      globalKnowledgeItems,
+      languageKnowledgeItems,
       globalRecentEncounters: recentEncounters,
     };
   }

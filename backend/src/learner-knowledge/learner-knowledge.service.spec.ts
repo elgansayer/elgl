@@ -122,7 +122,8 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.globalProficiency.level).toBe('A1'); // Should fallback to A1 regardless of user profile
 
       // Assert knowledge items
-      expect(profile.globalKnowledgeItems.size).toBe(5);
+      expect(profile.globalKnowledgeItems.size).toBe(4);
+      expect(profile.languageKnowledgeItems.size).toBe(1);
 
       const known = profile.globalKnowledgeItems.get('vocab:knownWord');
       expect(known?.status).toBe('known');
@@ -143,7 +144,7 @@ describe('LearnerKnowledgeService', () => {
       const newWord = profile.globalKnowledgeItems.get('vocab:newWord');
       expect(newWord?.status).toBe('new');
 
-      const hobbyWord = profile.globalKnowledgeItems.get('vocab:hobbyWord');
+      const hobbyWord = profile.languageKnowledgeItems.get('vocab:hobbyWord');
       expect(hobbyWord?.status).toBe('new');
 
       // Assert recent encounters
@@ -152,9 +153,22 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.globalRecentEncounters[0].source).toBe('lesson');
     });
 
-    it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist', async () => {
-      flashcardsService.getFlashcards.mockResolvedValue([]);
-      hobbyTagsService.getUserVocabulary.mockResolvedValue([]);
+    it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist, and separate language items', async () => {
+      flashcardsService.getFlashcards.mockResolvedValue([
+        {
+          word_token: 'globalFlashcard',
+          repetitions: 1,
+          srs_level: 2,
+          easiness_factor: 2.1,
+          id: 'f1',
+          next_review_at: '2026-01-01T00:00:00Z',
+          translation: 'w1',
+          user_id: 'user-multi',
+          interval_days: 10,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ]);
+
       lessonsService.listLessons.mockResolvedValue([]);
       momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 0,
@@ -162,12 +176,39 @@ describe('LearnerKnowledgeService', () => {
         translations: 0,
       });
 
+      hobbyTagsService.getUserVocabulary.mockImplementation(
+        async (userId, language) => {
+          if (language === 'fr') {
+            return [{ word: 'bonjour' }];
+          }
+          if (language === 'de') {
+            return [{ word: 'hallo' }];
+          }
+          return [];
+        },
+      );
+
       const profileFr = await service.getProfile('user-multi', 'fr');
       const profileDe = await service.getProfile('user-multi', 'de');
 
       // Regardless of the invalid profile value, it should always return A1 until language-scoped assessments exist
       expect(profileFr.globalProficiency.level).toBe('A1');
       expect(profileDe.globalProficiency.level).toBe('A1');
+
+      // Global items should be the same
+      expect(profileFr.globalKnowledgeItems.has('vocab:globalFlashcard')).toBe(
+        true,
+      );
+      expect(profileDe.globalKnowledgeItems.has('vocab:globalFlashcard')).toBe(
+        true,
+      );
+
+      // Language items should be distinct
+      expect(profileFr.languageKnowledgeItems.has('vocab:bonjour')).toBe(true);
+      expect(profileFr.languageKnowledgeItems.has('vocab:hallo')).toBe(false);
+
+      expect(profileDe.languageKnowledgeItems.has('vocab:hallo')).toBe(true);
+      expect(profileDe.languageKnowledgeItems.has('vocab:bonjour')).toBe(false);
     });
 
     it('should handle service failures gracefully', async () => {
@@ -187,6 +228,7 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.userId).toBe('user2');
       expect(profile.language).toBe('fr');
       expect(profile.globalKnowledgeItems.size).toBe(0);
+      expect(profile.languageKnowledgeItems.size).toBe(0);
       expect(profile.globalRecentEncounters.length).toBe(0);
       expect(profile.globalProficiency.level).toBe('A1');
     });
