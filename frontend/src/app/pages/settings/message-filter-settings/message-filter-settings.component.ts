@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { MessageFilterService } from '../../../services/message-filter.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -28,7 +29,7 @@ const LANGUAGE_OPTIONS = [
 @Component({
   selector: 'app-message-filter-settings',
   templateUrl: './message-filter-settings.component.html',
-  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
+  imports: [HlmInput, HlmButton, HlmCheckbox, TranslatePipe, FormsModule],
 })
 export class MessageFilterSettingsComponent implements OnInit {
   private readonly messageFilterService = inject(MessageFilterService);
