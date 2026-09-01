@@ -224,7 +224,7 @@ export class InterestsService {
         word_token: wordToken,
         source_language: targetLanguage,
         translation: item.translation ?? '',
-        original_context: generatedContexts.get(wordToken) ?? word,
+        original_context: generatedContexts.get(wordToken) ?? null,
       };
     });
 

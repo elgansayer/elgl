@@ -128,7 +128,7 @@ describe('InterestsService', () => {
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
-        { id: 0, sentence: 'Das Gift ist gefahrlich.' },
+        { id: 0, sentence: 'Das Gift ist gefährlich.' },
       ]),
     });
 
@@ -140,14 +140,14 @@ describe('InterestsService', () => {
           word_token: 'gift',
           source_language: 'de',
           translation: 'Poison',
-          original_context: 'Das Gift ist gefahrlich.',
+          original_context: 'Das Gift ist gefährlich.',
         }),
       ],
       expect.any(Object),
     );
   });
 
-  it('uses the vocabulary term as a deterministic fallback for invalid output', async () => {
+  it('keeps invalid provider output retryable', async () => {
     results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
@@ -158,7 +158,7 @@ describe('InterestsService', () => {
     await service.generateFlashcards('user-1', 'es');
 
     expect(upsert).toHaveBeenCalledWith(
-      [expect.objectContaining({ original_context: 'Casa' })],
+      [expect.objectContaining({ original_context: null })],
       expect.any(Object),
     );
   });
@@ -174,7 +174,7 @@ describe('InterestsService', () => {
     await service.generateFlashcards('user-1', 'en');
 
     expect(upsert).toHaveBeenCalledWith(
-      [expect.objectContaining({ original_context: 'cat' })],
+      [expect.objectContaining({ original_context: null })],
       expect.any(Object),
     );
   });
@@ -216,7 +216,7 @@ describe('InterestsService', () => {
     await service.generateFlashcards('user-1', 'ja');
 
     expect(upsert).toHaveBeenCalledWith(
-      [expect.objectContaining({ original_context: '猫' })],
+      [expect.objectContaining({ original_context: null })],
       expect.any(Object),
     );
   });
@@ -256,7 +256,7 @@ describe('InterestsService', () => {
     expect(upsert.mock.calls[0][0]).toHaveLength(50);
   });
 
-  it('falls back after the provider deadline', async () => {
+  it('keeps a provider timeout retryable', async () => {
     vi.useFakeTimers();
     results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
     let receivedSignal: AbortSignal | undefined;
@@ -272,7 +272,7 @@ describe('InterestsService', () => {
 
     expect(receivedSignal?.aborted).toBe(true);
     expect(upsert).toHaveBeenCalledWith(
-      [expect.objectContaining({ original_context: 'Casa' })],
+      [expect.objectContaining({ original_context: null })],
       expect.any(Object),
     );
   });
