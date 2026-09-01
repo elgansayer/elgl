@@ -14,7 +14,9 @@ import { UserProfile } from '../../services/user.service';
       class="bg-surface-500 px-4 py-6 md:px-6 lg:px-8"
       aria-labelledby="audio-intro-feed-heading"
     >
-      <div class="mx-auto max-w-3xl overflow-hidden rounded-card border border-surface-100 bg-surface-400 shadow-card">
+      <div
+        class="mx-auto max-w-3xl overflow-hidden rounded-card border border-surface-100 bg-surface-400 shadow-card"
+      >
         <header class="border-b border-surface-100 px-4 py-4 sm:px-5">
           <h1 id="audio-intro-feed-heading" class="text-xl font-bold text-text-primary">
             {{ 'audioIntro.title' | t }}
@@ -22,12 +24,23 @@ import { UserProfile } from '../../services/user.service';
         </header>
 
         @if (isLoading()) {
-          <div class="flex items-center justify-center gap-2 py-10" role="status" aria-live="polite">
+          <div
+            class="flex items-center justify-center gap-2 py-10"
+            role="status"
+            aria-live="polite"
+          >
             <span
               class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary"
               aria-hidden="true"
             ></span>
             <span class="sr-only">{{ 'common.loading' | t }}</span>
+          </div>
+        } @else if (loadError()) {
+          <div class="flex flex-col items-center gap-3 px-4 py-10 text-center" role="alert">
+            <p class="text-sm text-danger">{{ 'common.error_generic' | t }}</p>
+            <button hlmBtn type="button" variant="secondary" size="touch" (click)="retryLoad()">
+              {{ 'common.retry' | t }}
+            </button>
           </div>
         } @else {
           <div class="divide-y divide-surface-100">
@@ -51,7 +64,8 @@ import { UserProfile } from '../../services/user.service';
                       {{ user.display_name }}
                     </p>
                     <p class="truncate text-xs text-text-secondary">
-                      {{ user.native_languages?.join(', ') }} → {{ user.target_languages?.join(', ') }}
+                      {{ user.native_languages?.join(', ') }} →
+                      {{ user.target_languages?.join(', ') }}
                     </p>
                   </div>
                 </a>
@@ -107,7 +121,12 @@ export class AudioIntroFeedComponent {
 
   readonly users = computed<UserProfile[]>(() => this.usersResource.value() ?? []);
   readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly loadError = computed(() => Boolean(this.usersResource.error()));
   readonly userList = this.users;
+
+  retryLoad(): void {
+    this.usersResource.reload();
+  }
 
   async togglePlay(userId: string, url: string | undefined): Promise<void> {
     if (!url) return;

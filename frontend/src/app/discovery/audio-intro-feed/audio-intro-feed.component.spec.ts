@@ -122,6 +122,44 @@ describe('AudioIntroFeedComponent', () => {
     );
   });
 
+  it('distinguishes a load failure from an empty feed and retries', async () => {
+    getAudioIntros.mockClear();
+    getAudioIntros.mockRejectedValueOnce(new Error('service unavailable'));
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [AudioIntroFeedComponent],
+      providers: [
+        provideRouter([]),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            translations: signal({}),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const errorFixture = TestBed.createComponent(AudioIntroFeedComponent);
+    errorFixture.detectChanges();
+    await errorFixture.whenStable();
+    errorFixture.detectChanges();
+
+    const element = errorFixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain('common.error_generic');
+    expect(element.textContent).not.toContain('discovery.audioIntroFeed.noAudioIntros');
+
+    (element.querySelector('button') as HTMLButtonElement).click();
+    errorFixture.detectChanges();
+    await errorFixture.whenStable();
+    errorFixture.detectChanges();
+
+    expect(getAudioIntros).toHaveBeenCalledTimes(2);
+    expect(element.textContent).toContain('Kenji');
+  });
+
   it('does not create an audio player when the profile has no audio URL', async () => {
     await component.togglePlay('u1', undefined);
 
@@ -137,9 +175,9 @@ describe('AudioIntroFeedComponent', () => {
     expect(MockAudio.instances).toHaveLength(1);
     expect(MockAudio.instances[0]?.play).toHaveBeenCalledOnce();
 
-    const playButton = fixture.nativeElement.querySelector('button[aria-pressed="true"]') as
-      | HTMLButtonElement
-      | null;
+    const playButton = fixture.nativeElement.querySelector(
+      'button[aria-pressed="true"]',
+    ) as HTMLButtonElement | null;
     expect(playButton?.getAttribute('aria-label')).toBe('audioIntro.pause');
     expect(playButton?.getAttribute('aria-describedby')).toBe('audio-intro-user-u1');
 
@@ -168,9 +206,9 @@ describe('AudioIntroFeedComponent', () => {
 
     expect(component.playingId()).toBeNull();
     expect(component.playbackError()).toBe(true);
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent).toContain(
-      'audioPlayer.error',
-    );
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent,
+    ).toContain('audioPlayer.error');
   });
 
   it('ignores a stale playback rejection after a newer introduction starts', async () => {

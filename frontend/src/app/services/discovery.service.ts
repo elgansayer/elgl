@@ -299,12 +299,10 @@ export class DiscoveryService {
     if (filters?.country !== undefined) params = params.set('country', filters.country);
     if (filters?.city !== undefined) params = params.set('city', filters.city);
     const users = await firstValueFrom(
-      this.http
-        .get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(catchError(() => of<UserProfile[]>([]))),
+      this.http.get<UserProfile[]>(`${this.baseUrl}/audio-intros`, {
+        headers: this.getHeaders(),
+        params,
+      }),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -409,8 +407,8 @@ export class DiscoveryService {
         this.http.post<{ translated_text: string }>(
           `${environment.apiUrl}/nlp/translate-bio`,
           { target_user_id: targetUserId, target_language: targetLanguage },
-          { headers: this.getHeaders() }
-        )
+          { headers: this.getHeaders() },
+        ),
       );
       return result.translated_text;
     } catch {
