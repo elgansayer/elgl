@@ -9,8 +9,8 @@ This report evaluates the current implementation of language learning mechanics 
 
 ## 2. Meaningful Feedback (Corrections & Pronunciation)
 - **Observation:** Visual diff corrections via native speakers and AI pronunciation scoring offer direct, actionable feedback on active production.
-- **Analysis:** The explanation generation for corrections (`chat.service.ts`) currently uses a generic prompt. It does not consistently provide the grammatical rationale in the learner's native language, nor does it generate follow-up exercises to ensure the correction is internalised.
-- **Recommendation:** Enhance the AI correction prompt to be explicitly pedagogical, offering simpler vocabulary, grammatical explanations, and targeted retrieval practice opportunities.
+- **Analysis:** At baseline, correction explanation generation (`chat.service.ts`) used a generic prompt. This change adds a grammatical rationale and usage example, while native-language explanations and follow-up retrieval exercises remain future integration gaps.
+- **Recommendation:** Extend the new pedagogical prompt with the learner's native language and targeted retrieval practice opportunities.
 
 ## 3. Retrieval Practice & Spaced Repetition (Vocabulary & Flashcards)
 - **Observation:** The SRS flashcard system allows users to save vocabulary from interests and reading sessions.
