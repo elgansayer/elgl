@@ -83,6 +83,17 @@ test('does not let a later directory change legitimise an earlier invocation', (
   );
 });
 
+test('does not propagate a conditional directory change past its shell chain', () => {
+  assert.deepEqual(
+    analyse({
+      'automation/qa-loop.sh': 'false && cd e2e; npx playwright test',
+    }),
+    [
+      'automation/qa-loop.sh:1 invokes Playwright without the e2e working directory or explicit e2e config',
+    ],
+  );
+});
+
 test('rejects Playwright launched from the frontend working directory', () => {
   const violations = analyse({
     'automation/qa-loop.sh': '(cd frontend && npx playwright test)',
@@ -93,12 +104,15 @@ test('rejects Playwright launched from the frontend working directory', () => {
 });
 
 test('rejects root Playwright discovery without an explicit e2e config', () => {
-  const violations = analyse({
-    'automation/qa-loop.sh': 'npx playwright test',
-  });
-
-  assert.equal(violations.length, 1);
-  assert.match(violations[0], /without the e2e working directory or explicit e2e config/);
+  for (const command of ['npx playwright test', 'npm exec playwright -- test']) {
+    const violations = analyse({ 'automation/qa-loop.sh': command });
+    assert.equal(violations.length, 1, command);
+    assert.match(
+      violations[0],
+      /without the e2e working directory or explicit e2e config/,
+      command,
+    );
+  }
 });
 
 test('accepts root Playwright discovery with the canonical e2e config', () => {
@@ -159,6 +173,7 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'cd e2e && node ./tests/auth.spec.ts',
     'bun run e2e/tests/auth.spec.ts',
     'npx -y tsx e2e/tests/auth.spec.ts',
+    'npm exec --yes tsx e2e/tests/auth.spec.ts',
     'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
@@ -218,6 +233,19 @@ test('does not treat runner option values as Playwright targets', () => {
     analyse({ '.agents/automations/qa.md': 'vitest run --exclude e2e/tests frontend/src' }),
     [],
   );
+});
+
+test('treats runner selection-option values as Playwright targets', () => {
+  for (const command of [
+    'vitest --dir e2e/tests',
+    'vitest --include e2e/tests',
+    'jest --root e2e/tests',
+    'jest --testPathPattern e2e/tests',
+  ]) {
+    const violations = analyse({ '.agents/automations/qa.md': command });
+    assert.equal(violations.length, 1, command);
+    assert.match(violations[0], /Playwright suite to Vitest or Jest/, command);
+  }
 });
 
 test('allows reporter names containing runner words', () => {
