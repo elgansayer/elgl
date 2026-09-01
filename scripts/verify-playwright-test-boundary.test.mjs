@@ -157,11 +157,22 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'ts-node .\\e2e\\tests\\auth.spec.ts',
     'cd e2e && bun test tests/auth.spec.ts',
     'cd e2e && node ./tests/auth.spec.ts',
+    'bun run e2e/tests/auth.spec.ts',
+    'npx -y tsx e2e/tests/auth.spec.ts',
+    'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /generic JavaScript\/TypeScript runtime/, command);
   }
+});
+
+test('rejects generic-runtime execution in an inline workflow step', () => {
+  const violations = analyse({
+    '.github/workflows/qa.yml': '- run: node e2e/tests/auth.spec.ts',
+  });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /generic JavaScript\/TypeScript runtime/);
 });
 
 test('allows generic runtimes to receive Playwright paths as reporter arguments', () => {
@@ -194,11 +205,19 @@ test('rejects Playwright files or directories passed to Vitest and Jest', () => 
     'cd e2e && vitest run tests',
     'cd e2e && jest ./tests',
     'vitest run tests e2e/tests',
+    'npx --yes vitest run e2e/tests',
   ]) {
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /Playwright suite to Vitest or Jest/, command);
   }
+});
+
+test('does not treat runner option values as Playwright targets', () => {
+  assert.deepEqual(
+    analyse({ '.agents/automations/qa.md': 'vitest run --exclude e2e/tests frontend/src' }),
+    [],
+  );
 });
 
 test('allows reporter names containing runner words', () => {
@@ -226,6 +245,15 @@ test('scans minified package scripts independently', () => {
         report: 'node scripts/report.mjs',
         mention: 'echo e2e/tests/auth.spec.ts',
       },
+    }),
+  };
+  assert.deepEqual(analyse(files), []);
+});
+
+test('accepts a minified package script with the canonical Playwright config', () => {
+  const files = {
+    'package.json': JSON.stringify({
+      scripts: { e2e: 'playwright test --config e2e/playwright.config.ts' },
     }),
   };
   assert.deepEqual(analyse(files), []);
