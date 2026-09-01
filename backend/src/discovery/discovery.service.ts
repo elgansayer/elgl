@@ -1178,7 +1178,7 @@ export class DiscoveryService {
     return toIntervals(firstStartMinutes, firstEndMinutes).some(
       ([startA, endA]) =>
         toIntervals(secondStartMinutes, secondEndMinutes).some(
-          ([startB, endB]) => startA <= endB && startB <= endA,
+          ([startB, endB]) => startA < endB && startB < endA,
         ),
     );
   }
