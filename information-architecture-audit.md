@@ -14,7 +14,7 @@
 The route table contains legacy aliases intended to redirect to canonical paths. Some work as compatibility boundaries, while others are currently shadowed or target routes that are not registered.
 
 - **Auth:** `/help` and `/help-about` redirect to `/support`.
-- **Commerce:** `/vip` redirects to `/subscription`; `/my-subscription` redirects to `/settings/subscription`.
+- **Commerce:** `/vip` redirects to `/subscription`; `/my-subscription` redirects to `/settings/subscription`. The subscription-success action navigates to unregistered `/dashboard`, which falls through to the wildcard redirect.
 - **Social:** `/notification-preferences` redirects to `/settings/notification`. `/visitors` redirects to `/profile/visitors`, but the earlier `/profile/:userId` route shadows that destination. `/language-parties` and `/language-islands` redirect to unregistered `/community/language-*` destinations.
 - **Settings:** Legacy root paths (`/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`) redirect to nested settings paths. The Settings declaration of `/blocks` appears first and is the effective compatibility alias. `/settings/notification-customization` redirects to `/settings/notification`.
 - **Chat:** `/chat-settings`, `/communities`, and `/message-filters` are root-level compatibility aliases. Chat declares `/blocks` again, but that later declaration is unreachable because the Settings alias already matches it. `/groups/create` redirects to the unregistered `/community/groups/create` destination.
