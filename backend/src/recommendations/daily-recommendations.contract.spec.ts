@@ -77,6 +77,7 @@ describe('daily recommendations contract', () => {
         getClient: vi.fn().mockReturnValue({ from }),
         getRedisClient: vi.fn().mockReturnValue(redis),
       } as never,
+      { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
       {} as never,
       { isAvailable: vi.fn().mockReturnValue(true) } as never,
       { reportCrash: vi.fn().mockResolvedValue({}) } as never,

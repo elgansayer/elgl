@@ -7,6 +7,7 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
+import { SafetyService } from '../safety/safety.service';
 
 export interface RecommendedUserDto {
   id: string;
@@ -56,6 +57,7 @@ export class RecommendationsService {
     @InjectPinoLogger(RecommendationsService.name)
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
+    private readonly safetyService: SafetyService,
     private readonly metricsService: MetricsService,
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly crashReportService: MatchmakingCrashReportService,
@@ -247,6 +249,10 @@ export class RecommendationsService {
   }
 
   async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const blockedIds = new Set(
+      await this.safetyService.getBlockedAndBlockerIds(userId),
+    );
+
     try {
       const redis = this.supabaseService.getRedisClient();
       const cached = await redis.get(`recommendations:daily:${userId}`);
@@ -297,8 +303,11 @@ export class RecommendationsService {
               discoverableIds.has(candidate.id),
             );
 
-            if (safeRecommendations.length > 0) {
-              return safeRecommendations;
+            const unblockedRecommendations = safeRecommendations.filter(
+              (candidate) => !blockedIds.has(candidate.id),
+            );
+            if (unblockedRecommendations.length > 0) {
+              return unblockedRecommendations;
             }
           }
         }
@@ -317,8 +326,11 @@ export class RecommendationsService {
 
     try {
       const liveResults = await this.recommendationsByLanguageExchange(userId);
-      if (liveResults.length > 0) {
-        return liveResults;
+      const unblockedResults = liveResults.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedResults.length > 0) {
+        return unblockedResults;
       }
     } catch (error) {
       this.logger.warn(
@@ -336,10 +348,17 @@ export class RecommendationsService {
   }
 
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const blockedIds = new Set(
+      await this.safetyService.getBlockedAndBlockerIds(userId),
+    );
+
     try {
       const interestResults = await this.recommendationsByInterests(userId);
-      if (interestResults.length > 0) {
-        return interestResults;
+      const unblockedResults = interestResults.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedResults.length > 0) {
+        return unblockedResults;
       }
     } catch (error) {
       this.logger.warn(
@@ -356,8 +375,11 @@ export class RecommendationsService {
     try {
       const languageMatches =
         await this.recommendationsByLanguageExchange(userId);
-      if (languageMatches.length > 0) {
-        return languageMatches;
+      const unblockedMatches = languageMatches.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedMatches.length > 0) {
+        return unblockedMatches;
       }
     } catch (error) {
       this.logger.warn(`Language exchange fallback failed for user ${userId}`);
@@ -371,8 +393,11 @@ export class RecommendationsService {
 
     try {
       const activeUsers = await this.recommendationsByActiveUsers(userId);
-      if (activeUsers.length > 0) {
-        return activeUsers;
+      const unblockedUsers = activeUsers.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedUsers.length > 0) {
+        return unblockedUsers;
       }
     } catch (error) {
       this.logger.error(
@@ -388,16 +413,23 @@ export class RecommendationsService {
     }
 
     const mockResults = this.recommendationsFromMock(userId);
-    return mockResults;
+    return mockResults.filter((candidate) => !blockedIds.has(candidate.id));
   }
 
   async getRecommendationsWithFallback(
     userId: string,
   ): Promise<RecommendedUserDto[]> {
+    const blockedIds = new Set(
+      await this.safetyService.getBlockedAndBlockerIds(userId),
+    );
+
     try {
       const interestResults = await this.recommendationsByInterests(userId);
-      if (interestResults.length > 0) {
-        return interestResults.map((r) => ({
+      const unblockedResults = interestResults.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedResults.length > 0) {
+        return unblockedResults.map((r) => ({
           ...r,
           matchTier: 'interest' as const,
         }));
@@ -417,8 +449,11 @@ export class RecommendationsService {
     try {
       const languageResults =
         await this.recommendationsByLanguageExchange(userId);
-      if (languageResults.length > 0) {
-        return languageResults.map((r) => ({
+      const unblockedResults = languageResults.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedResults.length > 0) {
+        return unblockedResults.map((r) => ({
           ...r,
           matchTier: 'language_exchange' as const,
         }));
@@ -437,8 +472,11 @@ export class RecommendationsService {
 
     try {
       const activeResults = await this.recommendationsByActiveUsers(userId);
-      if (activeResults.length > 0) {
-        return activeResults.map((r) => ({
+      const unblockedResults = activeResults.filter(
+        (candidate) => !blockedIds.has(candidate.id),
+      );
+      if (unblockedResults.length > 0) {
+        return unblockedResults.map((r) => ({
           ...r,
           matchTier: 'active_users' as const,
         }));
@@ -456,7 +494,7 @@ export class RecommendationsService {
     }
 
     const mockResults = this.recommendationsFromMock(userId);
-    return mockResults;
+    return mockResults.filter((candidate) => !blockedIds.has(candidate.id));
   }
 
   /** Reports a tier degradation event to the crash reporting service without blocking the response. */

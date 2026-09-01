@@ -8,6 +8,7 @@ import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyService } from '../safety/safety.service';
 
 vi.mock('../common/retry', async () => {
   const actual =
@@ -102,6 +103,7 @@ describe('RecommendationsService', () => {
     setMatchmakingTierSuccessRate: Mock;
   };
   let mockCrashReportService: { reportCrash: Mock };
+  let mockSafetyService: { getBlockedAndBlockerIds: Mock };
 
   beforeEach(async () => {
     mockPipeline = {
@@ -131,6 +133,9 @@ describe('RecommendationsService', () => {
     mockCrashReportService = {
       reportCrash: vi.fn().mockResolvedValue({}),
     };
+    mockSafetyService = {
+      getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
+    };
 
     mockLogger = {
       info: vi.fn(),
@@ -158,6 +163,10 @@ describe('RecommendationsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: SafetyService,
+          useValue: mockSafetyService,
         },
         {
           provide: CircuitBreakerService,
@@ -373,6 +382,45 @@ describe('RecommendationsService', () => {
       expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
     });
 
+    it('removes blocked users from cached recommendations', async () => {
+      const dtos = [
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+        {
+          id: 'blocked',
+          displayName: 'Blocked',
+          avatarUrl: null,
+          nativeLanguage: 'fr',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: false,
+          studyStreakDays: 2,
+          correctionRatio: 0.5,
+        },
+      ] satisfies RecommendedUserDto[];
+      mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }, { id: 'blocked' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
+      expect(mockSafetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
+        'user-123',
+      );
+    });
+
     it('never returns cached users when privacy revalidation fails', async () => {
       mockRedis.get.mockResolvedValue(
         JSON.stringify([
@@ -464,6 +512,33 @@ describe('RecommendationsService', () => {
       mockFrom.mockReturnValueOnce(userChain);
 
       const result = await service.getDailyRecommendations('user-123');
+      expect(result).toEqual([]);
+    });
+
+    it('removes blocked users from the live daily fallback', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue([
+        'blocked-partner',
+      ]);
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_languages: ['en'],
+        target_languages: ['es'],
+      });
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'blocked-partner',
+          display_name: 'Blocked Partner',
+          native_languages: ['es'],
+          target_languages: ['en'],
+        },
+      ]);
+      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
       expect(result).toEqual([]);
     });
 
