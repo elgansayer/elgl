@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
 
 import { DiscoveryService } from './discovery.service';
 import { AuthService } from './auth.service';
@@ -11,6 +12,8 @@ import { UserService } from './user.service';
 import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
 
 describe('DiscoveryService offline privacy boundary', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
   it('returns no profiles without contacting or reading the API while offline', async () => {
     const get = vi.fn();
     const getCachedSearchResults = vi.fn();
@@ -46,5 +49,71 @@ describe('DiscoveryService offline privacy boundary', () => {
     expect(get).not.toHaveBeenCalled();
     expect(getCachedSearchResults).not.toHaveBeenCalled();
     expect(getAllCachedPartners).not.toHaveBeenCalled();
+  });
+
+  it('returns no profiles when the partners API fails online', async () => {
+    const get = vi.fn(() => throwError(() => new Error('service unavailable')));
+
+    await TestBed.configureTestingModule({
+      providers: [
+        DiscoveryService,
+        { provide: HttpClient, useValue: { get } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: vi.fn(() => 'token'),
+            currentUser: signal({ id: 'viewer-1' }),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: { getBlockedAndBlockerIds: vi.fn() },
+        },
+        { provide: ChatService, useValue: {} },
+        { provide: UserService, useValue: {} },
+        {
+          provide: OfflineDiscoveryCacheService,
+          useValue: { isOnline: signal(true) },
+        },
+      ],
+    }).compileComponents();
+
+    const service = TestBed.inject(DiscoveryService);
+    await expect(service.findPartners({})).resolves.toEqual([]);
+  });
+
+  it('returns no profiles when the client block graph cannot be verified', async () => {
+    const get = vi.fn(() => of([{ id: 'partner-1' }]));
+    const getBlockedAndBlockerIds = vi.fn(() =>
+      Promise.reject(new Error('block graph unavailable')),
+    );
+
+    await TestBed.configureTestingModule({
+      providers: [
+        DiscoveryService,
+        { provide: HttpClient, useValue: { get } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: vi.fn(() => 'token'),
+            currentUser: signal({ id: 'viewer-1' }),
+          },
+        },
+        {
+          provide: SafetyService,
+          useValue: { getBlockedAndBlockerIds },
+        },
+        { provide: ChatService, useValue: {} },
+        { provide: UserService, useValue: {} },
+        {
+          provide: OfflineDiscoveryCacheService,
+          useValue: { isOnline: signal(true) },
+        },
+      ],
+    }).compileComponents();
+
+    const service = TestBed.inject(DiscoveryService);
+    await expect(service.findPartners({})).resolves.toEqual([]);
+    expect(getBlockedAndBlockerIds).toHaveBeenCalledWith('viewer-1');
   });
 });

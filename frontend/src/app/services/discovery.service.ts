@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of, timeout, retry, Subject, takeUntil } from 'rxjs';
-import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
@@ -146,7 +145,7 @@ export class DiscoveryService {
     const cancel$ = new Subject<void>();
     if (abortSignal) {
       if (abortSignal.aborted) {
-        return MOCK_PARTNERS;
+        return [];
       }
       abortSignal.addEventListener('abort', () => cancel$.next(), { once: true });
     }
@@ -158,7 +157,7 @@ export class DiscoveryService {
           timeout(15000),
           retry({ count: 1, delay: 1000 }),
           takeUntil(cancel$),
-          catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
+          catchError(() => of<UserProfile[]>([])),
         ),
     );
 
@@ -169,17 +168,8 @@ export class DiscoveryService {
     users: UserProfile[],
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
   ): Promise<UserProfile[]> {
-    // Filter out blocked users client-side
-    const currentUser = this.authService.currentUser();
-    let filtered = users;
-    if (currentUser?.id) {
-      const blockedIds = await this.safetyService
-        .getBlockedAndBlockerIds(currentUser.id)
-        .catch((): string[] => []);
-      if (blockedIds.length > 0) {
-        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-      }
-    }
+    const filtered = await this.filterByVerifiedBlockGraph(users);
+    if (filtered.length === 0) return [];
 
     // Attach is_partner_of_week flag using separate endpoint
     const partnerIds = await this.getPartnerOfWeekIds();
@@ -202,6 +192,22 @@ export class DiscoveryService {
     return enriched;
   }
 
+  private async filterByVerifiedBlockGraph(users: UserProfile[]): Promise<UserProfile[]> {
+    if (users.length === 0) return [];
+
+    const currentUser = this.authService.currentUser();
+    if (!currentUser?.id) return [];
+
+    try {
+      const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+      if (blockedIds.length === 0) return users;
+      const blockedSet = new Set(blockedIds);
+      return users.filter((user) => !blockedSet.has(user.id));
+    } catch {
+      return [];
+    }
+  }
+
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
     let params = new HttpParams();
     if (country?.trim()) {
@@ -216,9 +222,9 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
+        .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    return users;
+    return this.filterByVerifiedBlockGraph(users);
   }
 
   async getAudioIntros(filters?: SearchFilterParams): Promise<UserProfile[]> {
@@ -240,17 +246,7 @@ export class DiscoveryService {
         params,
       }),
     );
-    const currentUser = this.authService.currentUser();
-    let filtered = users;
-    if (currentUser?.id) {
-      const blockedIds = await this.safetyService
-        .getBlockedAndBlockerIds(currentUser.id)
-        .catch((): string[] => []);
-      if (blockedIds.length > 0) {
-        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-      }
-    }
-    return filtered;
+    return this.filterByVerifiedBlockGraph(users);
   }
 
   async getRecentNativeSpeakers(): Promise<UserProfile[]> {
@@ -261,17 +257,7 @@ export class DiscoveryService {
         })
         .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    const currentUser = this.authService.currentUser();
-    let filtered = users;
-    if (currentUser?.id) {
-      const blockedIds = await this.safetyService
-        .getBlockedAndBlockerIds(currentUser.id)
-        .catch((): string[] => []);
-      if (blockedIds.length > 0) {
-        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-      }
-    }
-    return filtered;
+    return this.filterByVerifiedBlockGraph(users);
   }
 
   async getSpotlightUsers(): Promise<UserProfile[]> {
@@ -283,17 +269,7 @@ export class DiscoveryService {
           })
           .pipe(catchError(() => of<UserProfile[]>([]))),
       );
-      const currentUser = this.authService.currentUser();
-      let filtered = users;
-      if (currentUser?.id) {
-        const blockedIds = await this.safetyService
-          .getBlockedAndBlockerIds(currentUser.id)
-          .catch((): string[] => []);
-        if (blockedIds.length > 0) {
-          filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-        }
-      }
-      return filtered;
+      return this.filterByVerifiedBlockGraph(users);
     } catch {
       return [];
     }
@@ -324,17 +300,7 @@ export class DiscoveryService {
         })
         .pipe(catchError(() => of<UserProfile[]>([]))),
     );
-    const currentUser = this.authService.currentUser();
-    let filtered = users;
-    if (currentUser?.id) {
-      const blockedIds = await this.safetyService
-        .getBlockedAndBlockerIds(currentUser.id)
-        .catch((): string[] => []);
-      if (blockedIds.length > 0) {
-        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-      }
-    }
-    return filtered;
+    return this.filterByVerifiedBlockGraph(users);
   }
 
   async translateBio(targetUserId: string, targetLanguage: string): Promise<string> {
