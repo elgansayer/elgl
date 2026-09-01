@@ -128,7 +128,7 @@ describe('InterestsService', () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it('regenerates a same-spelling card after the target language changes', async () => {
+  it('preserves a same-spelling card and its progress after the target language changes', async () => {
     results.interest_vocabulary.data = [
       { word: 'Gift', translation: 'Poison' },
     ];
@@ -139,24 +139,10 @@ describe('InterestsService', () => {
         original_context: 'This gift is for you.',
       },
     ];
-    proxyMessage.mockResolvedValue({
-      response: JSON.stringify([
-        { id: 0, sentence: 'Das Gift ist gefährlich.' },
-      ]),
-    });
-
     await service.generateFlashcards('user-1', 'de');
 
-    expect(update).toHaveBeenCalledWith({
-      source_language: 'de',
-      translation: 'Poison',
-      original_context: 'Das Gift ist gefährlich.',
-    });
-    expect(eq).toHaveBeenCalledWith('source_language', 'en');
-    expect(eq).toHaveBeenCalledWith(
-      'original_context',
-      'This gift is for you.',
-    );
+    expect(proxyMessage).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
     expect(upsert).not.toHaveBeenCalled();
   });
 
@@ -198,7 +184,10 @@ describe('InterestsService', () => {
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
-        { id: 0, sentence: 'I travelled to New York yesterday.' },
+        {
+          id: 0,
+          sentence: 'New York is a beautiful city that I visited yesterday.',
+        },
       ]),
     });
 
@@ -207,9 +196,40 @@ describe('InterestsService', () => {
     expect(upsert).toHaveBeenCalledWith(
       [
         expect.objectContaining({
-          original_context: 'I travelled to New York yesterday.',
+          original_context:
+            'New York is a beautiful city that I visited yesterday.',
         }),
       ],
+      expect.any(Object),
+    );
+  });
+
+  it('rejects a sentence detected in a different language', async () => {
+    results.interest_vocabulary.data = [
+      { word: 'radio', translation: 'Radio' },
+    ];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([{ id: 0, sentence: 'The radio is loud.' }]),
+    });
+
+    await service.generateFlashcards('user-1', 'es');
+
+    expect(upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ original_context: null })],
+      expect.any(Object),
+    );
+  });
+
+  it('rejects a bare term without contextual words', async () => {
+    results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([{ id: 0, sentence: 'Casa.' }]),
+    });
+
+    await service.generateFlashcards('user-1', 'es');
+
+    expect(upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ original_context: null })],
       expect.any(Object),
     );
   });

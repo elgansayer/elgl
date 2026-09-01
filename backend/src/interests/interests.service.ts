@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Language } from 'node-nlp';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
@@ -53,6 +54,8 @@ const MAX_CONTEXT_LENGTH = 500;
 
 @Injectable()
 export class InterestsService {
+  private readonly languageDetector = new Language();
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly llmProxyService: LlmProxyService,
@@ -181,17 +184,16 @@ export class InterestsService {
         card,
       ]),
     );
-    const existingContexts = new Map(
-      [...existingCardsByToken.values()]
-        .filter((card) => card.source_language === targetLanguage)
-        .map((card) => [
-          card.word_token.toLowerCase(),
-          card.original_context?.trim() ?? '',
-        ]),
-    );
-    const vocabularyNeedingContext = uniqueVocabulary.filter(
-      (item) => !existingContexts.get(item.word.trim().toLowerCase()),
-    );
+    const vocabularyNeedingContext = uniqueVocabulary.filter((item) => {
+      const existingCard = existingCardsByToken.get(
+        item.word.trim().toLowerCase(),
+      );
+      return (
+        !existingCard ||
+        (existingCard.source_language === targetLanguage &&
+          !existingCard.original_context?.trim())
+      );
+    });
 
     const generatedContexts = new Map<string, string>();
     const batches: VocabRow[][] = [];
@@ -343,7 +345,13 @@ export class InterestsService {
         sentence.length > MAX_CONTEXT_LENGTH ||
         sentence.includes('\n') ||
         this.countWords(sentence, targetLanguage) > MAX_CONTEXT_WORDS ||
-        !this.containsTerm(sentence, vocabularyItem.word, targetLanguage)
+        !this.containsTerm(sentence, vocabularyItem.word, targetLanguage) ||
+        !this.hasContextBeyondTerm(
+          sentence,
+          vocabularyItem.word,
+          targetLanguage,
+        ) ||
+        !this.matchesLanguage(sentence, targetLanguage)
       ) {
         continue;
       }
@@ -409,6 +417,27 @@ export class InterestsService {
         (segment, offset) => sentenceSegments[start + offset] === segment,
       ),
     );
+  }
+
+  private hasContextBeyondTerm(
+    sentence: string,
+    term: string,
+    locale: string,
+  ): boolean {
+    return this.countWords(sentence, locale) > this.countWords(term, locale);
+  }
+
+  private matchesLanguage(sentence: string, expectedLanguage: string): boolean {
+    const expectedCode = expectedLanguage.trim().toLowerCase().split(/[-_]/)[0];
+    if (!expectedCode) return false;
+
+    try {
+      return this.languageDetector
+        .guess(sentence, undefined, 3)
+        .some((candidate) => candidate.alpha2 === expectedCode);
+    } catch {
+      return false;
+    }
   }
 
   private async withTimeout<T>(
