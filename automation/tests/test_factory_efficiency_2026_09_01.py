@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from openhands_factory.agents.base import AgentPhase, AgentRequest
 from openhands_factory.agents.pi import PiProvider
+from openhands_factory.config import FactoryConfig
 from openhands_factory.models import Task
+from openhands_factory.provider_capacity import maximum_agent_lease_seconds
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -40,14 +41,17 @@ def test_pi_reasoning_is_phase_scoped(
 
 
 def test_production_resource_policy_has_no_immediate_retry_and_bounds_diagnostics() -> None:
-    config = json.loads(
-        (REPOSITORY_ROOT / "config" / "factory" / "agents.production.json").read_text(
-            encoding="utf-8"
-        )
+    agents_path = REPOSITORY_ROOT / "config" / "factory" / "agents.production.json"
+    config = FactoryConfig.from_environment(
+        {
+            "FACTORY_AGENTS_CONFIG": str(agents_path),
+            "GITHUB_TOKEN": "test-token",
+        }
     )
 
-    assert config["routing"]["same_provider_retries"] == 0
-    assert config["timeouts"]["general_action"] == 600
+    assert config.agents.routing.same_provider_retries == 0
+    assert config.agents.timeouts.general_action == 600
+    assert maximum_agent_lease_seconds(config) == 3900
 
 
 def test_dependency_compatibility_schedule_is_only_a_daily_backstop() -> None:
