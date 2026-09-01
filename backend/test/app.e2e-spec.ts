@@ -108,6 +108,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       gt: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       lt: vi.fn().mockReturnThis(),

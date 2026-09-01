@@ -14,6 +14,7 @@ type QueryBuilder = {
   select: ReturnType<typeof vi.fn>;
   neq: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  is: ReturnType<typeof vi.fn>;
   contains: ReturnType<typeof vi.fn>;
   gt: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
@@ -33,6 +34,7 @@ function createQueryBuilder(): QueryBuilder {
     select: vi.fn(),
     neq: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
     contains: vi.fn(),
     gt: vi.fn(),
     gte: vi.fn(),
@@ -50,6 +52,7 @@ function createQueryBuilder(): QueryBuilder {
   builder.select.mockReturnValue(builder);
   builder.neq.mockReturnValue(builder);
   builder.eq.mockReturnValue(builder);
+  builder.is.mockReturnValue(builder);
   builder.contains.mockReturnValue(builder);
   builder.gt.mockReturnValue(builder);
   builder.gte.mockReturnValue(builder);
