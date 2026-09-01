@@ -102,6 +102,40 @@ function normalizeCommandLine(line) {
     .trim();
 }
 
+function logicalCommandLines(lines, path) {
+  const commands = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const foldedRun = /^(\s*)(?:-\s*)?run\s*:\s*>[+-]?\s*$/.exec(line);
+    if (/\.ya?ml$/.test(path) && foldedRun) {
+      const indent = foldedRun[1].length;
+      const parts = [line];
+      let cursor = index + 1;
+      for (; cursor < lines.length; cursor += 1) {
+        const next = lines[cursor];
+        if (next.trim() && next.match(/^\s*/)[0].length <= indent) {
+          break;
+        }
+        parts.push(next.trim());
+      }
+      commands.push({ command: parts.join(' '), index });
+      index = cursor - 1;
+      continue;
+    }
+
+    const startIndex = index;
+    let command = line;
+    while (/\\\s*$/.test(command) && index + 1 < lines.length) {
+      command = `${command.replace(/\\\s*$/, '')} ${lines[index + 1].trim()}`;
+      index += 1;
+    }
+    commands.push({ command, index: startIndex });
+  }
+
+  return commands;
+}
+
 function targetBelongsToE2e(match, lines, index, path) {
   return Boolean(match?.[1]) || hasSafePlaywrightContext(lines, index, path);
 }
@@ -116,8 +150,8 @@ function scanWrongRunnerInvocations(files) {
     }
 
     const lines = content.split(/\r?\n/);
-    lines.forEach((line, index) => {
-      const command = normalizeCommandLine(line);
+    for (const { command: rawCommand, index } of logicalCommandLines(lines, path)) {
+      const command = normalizeCommandLine(rawCommand);
       for (const segment of command.split(/[;&|]+/)) {
         const specTarget = segment.match(
           /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s)]*\.spec\.[cm]?[jt]sx?(?=$|[\s)])/i,
@@ -143,7 +177,7 @@ function scanWrongRunnerInvocations(files) {
           violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
         }
       }
-    });
+    }
   }
 
   return violations;
@@ -159,10 +193,10 @@ function scanPlaywrightInvocations(files) {
     }
 
     const lines = content.split(/\r?\n/);
-    lines.forEach((line, index) => {
-      const normalizedLine = line.replace(/\s+/g, ' ').trim();
+    for (const { command, index } of logicalCommandLines(lines, path)) {
+      const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
       if (!normalizedLine.includes('playwright test')) {
-        return;
+        continue;
       }
 
       if (!hasSafePlaywrightContext(lines, index, path)) {
@@ -170,7 +204,7 @@ function scanPlaywrightInvocations(files) {
           `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,
         );
       }
-    });
+    }
   }
 
   return violations;

@@ -106,6 +106,20 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
   }
 });
 
+test('rejects runner invocations split across shell continuations', () => {
+  for (const command of ['node \\\n  e2e/tests/auth.spec.ts', 'npx playwright \\\n  test']) {
+    const violations = analyse({ '.github/workflows/qa.yml': `run: |\n  ${command}` });
+    assert.equal(violations.length, 1, command);
+  }
+});
+
+test('rejects runner invocations split across folded workflow commands', () => {
+  for (const command of ['node\n  e2e/tests/auth.spec.ts', 'npx playwright\n  test']) {
+    const violations = analyse({ '.github/workflows/qa.yml': `run: >\n  ${command}` });
+    assert.equal(violations.length, 1, command);
+  }
+});
+
 test('rejects Playwright files or directories passed to Vitest and Jest', () => {
   for (const command of [
     'npx vitest run e2e/tests/chat-messaging.spec.ts',
