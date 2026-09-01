@@ -26,6 +26,7 @@ export class GrammarCheckService {
       'Return only one JSON object with exactly these fields:',
       '{"corrected":"string","explanation":"short string","errors_found":number}',
       'errors_found must be the number of meaningful edits. Use 0 when no change is needed.',
+      'In the explanation field, provide Meaningful Feedback by explaining the *why* behind corrections in a clear, pedagogical way.',
       'Do not wrap the JSON in Markdown or add any other text.',
       `Language hint: ${JSON.stringify(language)}`,
       `Untrusted text: ${JSON.stringify(original)}`,
