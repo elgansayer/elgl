@@ -85,6 +85,7 @@ function commandStartsInE2e(lines, index, path) {
 
 function isCommandSource(path) {
   return (
+    ['.sh', '.bash'].includes(extname(path)) ||
     path.endsWith('package.json') ||
     COMMAND_SOURCE_PREFIXES.some((prefix) => path.startsWith(prefix))
   );
@@ -334,7 +335,13 @@ function runnerTargets(invocation) {
   }
 
   const selectingOptions = new Set(['--dir', '--include', '--root', '--testPathPattern']);
-  const nonSelectingOptions = new Set(['--config', '--exclude', '--testNamePattern', '-t']);
+  const nonSelectingOptions = new Set([
+    '--config',
+    '--exclude',
+    '--testNamePattern',
+    '--testPathIgnorePatterns',
+    '-t',
+  ]);
   const targets = [];
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -413,16 +420,25 @@ function scanWrongRunnerInvocations(files) {
     }
 
     const lines = content.split(/\r?\n/);
+    const persistsCwd = ['.sh', '.bash'].includes(extname(path));
+    let fileCwdState = {
+      cwdIsE2e: path.startsWith('e2e/'),
+      cwdIsConditional: false,
+    };
     for (const { command: rawCommand, index } of commandEntries(content, path)) {
       const command = normalizeCommandLine(rawCommand);
-      const baseCwdIsE2e = commandStartsInE2e(lines, index, path);
-      let cwdState = { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+      const baseCwdIsE2e = persistsCwd
+        ? fileCwdState.cwdIsE2e
+        : commandStartsInE2e(lines, index, path);
+      let cwdState = persistsCwd
+        ? { ...fileCwdState }
+        : { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
       let previousSeparator = null;
       for (const segment of commandSegments(command)) {
         const invocation = commandInvocation(segment.command);
         const entrypoint = runtimeEntrypoint(invocation);
         const specTarget = entrypoint?.match(
-          /^((?:\.\/)?e2e\/)?(?:\.\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?$/i,
+          /^((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*\.spec\.[cm]?[jt]sx?)?$/i,
         );
         if (specTarget && targetBelongsToE2e(specTarget, cwdState.cwdIsE2e)) {
           violations.push(
@@ -448,6 +464,9 @@ function scanWrongRunnerInvocations(files) {
         );
         previousSeparator = segment.separatorAfter;
       }
+      if (persistsCwd) {
+        fileCwdState = cwdState;
+      }
     }
   }
 
@@ -468,10 +487,19 @@ function scanPlaywrightInvocations(files) {
     }
 
     const lines = content.split(/\r?\n/);
+    const persistsCwd = ['.sh', '.bash'].includes(extname(path));
+    let fileCwdState = {
+      cwdIsE2e: path.startsWith('e2e/'),
+      cwdIsConditional: false,
+    };
     for (const { command, index } of commandEntries(content, path)) {
       const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
-      const baseCwdIsE2e = commandStartsInE2e(lines, index, path);
-      let cwdState = { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
+      const baseCwdIsE2e = persistsCwd
+        ? fileCwdState.cwdIsE2e
+        : commandStartsInE2e(lines, index, path);
+      let cwdState = persistsCwd
+        ? { ...fileCwdState }
+        : { cwdIsE2e: baseCwdIsE2e, cwdIsConditional: false };
       let previousSeparator = null;
       for (const segment of commandSegments(normalizedLine)) {
         const invocation = commandInvocation(segment.command);
@@ -494,6 +522,9 @@ function scanPlaywrightInvocations(files) {
           previousSeparator,
         );
         previousSeparator = segment.separatorAfter;
+      }
+      if (persistsCwd) {
+        fileCwdState = cwdState;
       }
     }
   }

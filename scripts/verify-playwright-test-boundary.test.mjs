@@ -205,11 +205,19 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'npx tsx@latest e2e/tests/auth.spec.ts',
     'ts-node --cwd . e2e/tests/auth.spec.ts',
     'tsx watch e2e/tests/auth.spec.ts',
+    'bun test e2e/tests',
+    'cd e2e && bun test tests',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /generic JavaScript\/TypeScript runtime/, command);
   }
+});
+
+test('checks tracked root shell scripts and preserves their working directory', () => {
+  assert.equal(analyse({ 'setup-debian.sh': 'node e2e/tests/auth.spec.ts' }).length, 1);
+  assert.deepEqual(analyse({ 'setup-debian.sh': 'cd e2e\nnpx playwright test' }), []);
+  assert.equal(analyse({ 'setup-debian.sh': 'cd e2e\nnode tests/auth.spec.ts' }).length, 1);
 });
 
 test('rejects version-qualified Playwright root discovery', () => {
@@ -265,10 +273,13 @@ test('rejects Playwright files or directories passed to Vitest and Jest', () => 
 });
 
 test('does not treat runner option values as Playwright targets', () => {
-  assert.deepEqual(
-    analyse({ '.agents/automations/qa.md': 'vitest run --exclude e2e/tests frontend/src' }),
-    [],
-  );
+  for (const command of [
+    'vitest run --exclude e2e/tests frontend/src',
+    'jest --testPathIgnorePatterns e2e/tests frontend/src',
+    'jest --testPathIgnorePatterns=e2e/tests frontend/src',
+  ]) {
+    assert.deepEqual(analyse({ '.agents/automations/qa.md': command }), [], command);
+  }
 });
 
 test('treats runner selection-option values as Playwright targets', () => {
