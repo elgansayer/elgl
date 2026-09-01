@@ -9,9 +9,7 @@ const economyService = readFileSync(
 
 describe('economy reward RNG contract', () => {
   it('uses the exclusive-upper-bound crypto API for rewards 5 through 10', () => {
-    expect(economyService).toMatch(
-      /const reward = crypto\.randomInt\(5, 11\);/,
-    );
+    expect(economyService).toMatch(/const reward = crypto\.randomInt\(5, 11\);/);
     expect(economyService).not.toMatch(/Math\.random\(\)/);
   });
 });
