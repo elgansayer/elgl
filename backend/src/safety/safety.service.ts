@@ -262,10 +262,36 @@ export class SafetyService {
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    const [blocked, blockers] = await Promise.all([
-      this.getBlockedUserIds(userId),
-      this.getBlockerUserIds(userId),
+    const supabase = this.supabaseService.getClient();
+    const [blockedResult, blockerResult] = await Promise.all([
+      supabase.from('blocks').select('blocked_id').eq('blocker_id', userId),
+      supabase.from('blocks').select('blocker_id').eq('blocked_id', userId),
     ]);
+
+    if (
+      blockedResult.error ||
+      blockerResult.error ||
+      !Array.isArray(blockedResult.data) ||
+      !Array.isArray(blockerResult.data)
+    ) {
+      this.logger.error(`Failed to load complete block graph for ${userId}`);
+      throw new Error('Failed to load complete block graph');
+    }
+
+    const blocked = blockedResult.data.flatMap((row: unknown) =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocked_id?: unknown }).blocked_id === 'string'
+        ? [(row as { blocked_id: string }).blocked_id]
+        : [],
+    );
+    const blockers = blockerResult.data.flatMap((row: unknown) =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocker_id?: unknown }).blocker_id === 'string'
+        ? [(row as { blocker_id: string }).blocker_id]
+        : [],
+    );
     return [...new Set([...blocked, ...blockers])];
   }
 

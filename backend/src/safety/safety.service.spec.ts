@@ -517,6 +517,36 @@ describe('SafetyService', () => {
       expect(result).toContain('blocked-1');
       expect(result).toContain('blocker-1');
     });
+
+    it('should fail closed when either direction of the block graph fails', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'database unavailable' } }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
+
+    it('should fail closed when either block query has an invalid response', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [], error: null }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
   });
 
   describe('getBlockedUserDetails', () => {

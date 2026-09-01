@@ -421,6 +421,18 @@ describe('RecommendationsService', () => {
       );
     });
 
+    it('fails closed before reading recommendations when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('Failed to load complete block graph'),
+      );
+
+      await expect(service.getDailyRecommendations('user-123')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+      expect(mockFrom).not.toHaveBeenCalled();
+      expect(mockRedis.get).not.toHaveBeenCalled();
+    });
+
     it('never returns cached users when privacy revalidation fails', async () => {
       mockRedis.get.mockResolvedValue(
         JSON.stringify([
