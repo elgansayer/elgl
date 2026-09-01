@@ -1439,6 +1439,28 @@ describe('MomentsService', () => {
       const votesResult = new Promise<{ data: never[] }>((resolve) => {
         resolveVotes = resolve;
       });
+      const profilesQuery = {
+        then: vi.fn(
+          (
+            onFulfilled: (value: { data: never[] }) => unknown,
+            onRejected?: (reason: unknown) => unknown,
+          ) => {
+            profilesStarted = true;
+            return profilesResult.then(onFulfilled, onRejected);
+          },
+        ),
+      };
+      const votesQuery = {
+        then: vi.fn(
+          (
+            onFulfilled: (value: { data: never[] }) => unknown,
+            onRejected?: (reason: unknown) => unknown,
+          ) => {
+            votesStarted = true;
+            return votesResult.then(onFulfilled, onRejected);
+          },
+        ),
+      };
 
       mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === 'moment_comments') {
@@ -1451,19 +1473,13 @@ describe('MomentsService', () => {
         if (table === 'users') {
           return {
             select: vi.fn().mockReturnThis(),
-            in: vi.fn().mockImplementation(() => {
-              profilesStarted = true;
-              return profilesResult;
-            }),
+            in: vi.fn().mockReturnValue(profilesQuery),
           };
         }
         if (table === 'moment_comment_votes') {
           return {
             select: vi.fn().mockReturnThis(),
-            in: vi.fn().mockImplementation(() => {
-              votesStarted = true;
-              return votesResult;
-            }),
+            in: vi.fn().mockReturnValue(votesQuery),
           };
         }
         return mockQueryBuilder;
