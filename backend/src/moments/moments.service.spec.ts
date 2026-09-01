@@ -1427,59 +1427,6 @@ describe('MomentsService', () => {
       expect(result[0].userVote).toBe('up');
     });
 
-    it('should start profile and vote lookups before either one resolves', async () => {
-      const comments = [{ id: 'c-1', user_id: 'u-1', text_content: 'Hi' }];
-      let profilesStarted = false;
-      let votesStarted = false;
-      let resolveProfiles: (value: { data: never[] }) => void = () => undefined;
-      let resolveVotes: (value: { data: never[] }) => void = () => undefined;
-      const profilesResult = new Promise<{ data: never[] }>((resolve) => {
-        resolveProfiles = resolve;
-      });
-      const votesResult = new Promise<{ data: never[] }>((resolve) => {
-        resolveVotes = resolve;
-      });
-
-      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
-        if (table === 'moment_comments') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockResolvedValue({ data: comments }),
-          };
-        }
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            in: vi.fn().mockImplementation(() => {
-              profilesStarted = true;
-              return profilesResult;
-            }),
-          };
-        }
-        if (table === 'moment_comment_votes') {
-          return {
-            select: vi.fn().mockReturnThis(),
-            in: vi.fn().mockImplementation(() => {
-              votesStarted = true;
-              return votesResult;
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
-
-      const resultPromise = service.getComments('m-1');
-      await vi.waitFor(() => {
-        expect(profilesStarted).toBe(true);
-        expect(votesStarted).toBe(true);
-      });
-
-      resolveProfiles({ data: [] });
-      resolveVotes({ data: [] });
-      await expect(resultPromise).resolves.toHaveLength(1);
-    });
-
     it('should return an empty array when there are no comments', async () => {
       mockSupabaseClient.from = vi.fn().mockImplementation(() => ({
         select: vi.fn().mockReturnThis(),

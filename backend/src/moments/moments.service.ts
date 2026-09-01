@@ -1080,7 +1080,7 @@ export class MomentsService {
     const authorIds = Array.from(new Set(commentRows.map((c) => c.user_id)));
     const commentIds = commentRows.map((c) => c.id);
 
-    // Overlap the two independent bulk lookups to avoid additive network latency.
+    // ⚡ Bolt Optimization: Group overlapping bulk lookups with a concurrent Promise.all batch fetch to reduce sequential network latency.
     const [profilesResponse, { data: votesData }] = await Promise.all([
       supabase
         .from('users')
@@ -1096,6 +1096,8 @@ export class MomentsService {
     const profileRows = profiles ?? [];
     const profileMap = new Map<string, UserProfileRow>();
     profileRows.forEach((p) => profileMap.set(p.id, p));
+
+    // Fetch vote data for these comments
 
     const votesMap = new Map<string, { up: number; down: number }>();
     const myVotesMap = new Map<string, string>();
