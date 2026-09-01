@@ -97,6 +97,17 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert "## End untrusted task and evidence data" in prompt
 
 
+def test_build_phase_prompt_makes_independent_review_evidence_only(tmp_path: Path) -> None:
+    (tmp_path / "review.md").write_text("review instructions", encoding="utf-8")
+
+    prompt = build_phase_prompt(tmp_path, "review", task())
+
+    assert "Independent review is evidence-only" in prompt
+    assert "do not modify repository-tracked files" in prompt
+    assert "separate repair phase owns code changes" in prompt
+    assert "If defects are found, correct them" not in prompt
+
+
 def test_build_phase_prompt_bounds_large_evidence(tmp_path: Path) -> None:
     (tmp_path / "repair.md").write_text("repair instructions", encoding="utf-8")
     evidence = "EVIDENCE-HEAD-" + ("y" * (MAX_PHASE_EXTRA_CHARS * 2)) + "-EVIDENCE-TAIL"
