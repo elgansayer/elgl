@@ -21,7 +21,7 @@ interface DiscoverableGroup {
 }
 
 interface InterestTopic {
-  id: string;
+  tag: string;
   name: string;
 }
 
@@ -52,19 +52,19 @@ interface InterestTopic {
           >
             {{ 'groups_discovery_all_topics' | t }}
           </button>
-          @for (topic of interestPills(); track topic.id) {
+          @for (topic of interestPills(); track topic.tag) {
             <button
               hlmBtn
-              (click)="selectedInterest.set(topic.id)"
+              (click)="selectedInterest.set(topic.tag)"
               class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
-              [class.bg-accent-500]="selectedInterest() === topic.id"
-              [class.text-on-fill]="selectedInterest() === topic.id"
-              [class.bg-surface-300]="selectedInterest() !== topic.id"
-              [class.text-text-secondary]="selectedInterest() !== topic.id"
-              [class.border]="selectedInterest() !== topic.id"
-              [class.border-surface-200]="selectedInterest() !== topic.id"
+              [class.bg-accent-500]="selectedInterest() === topic.tag"
+              [class.text-on-fill]="selectedInterest() === topic.tag"
+              [class.bg-surface-300]="selectedInterest() !== topic.tag"
+              [class.text-text-secondary]="selectedInterest() !== topic.tag"
+              [class.border]="selectedInterest() !== topic.tag"
+              [class.border-surface-200]="selectedInterest() !== topic.tag"
               role="radio"
-              [attr.aria-checked]="selectedInterest() === topic.id"
+              [attr.aria-checked]="selectedInterest() === topic.tag"
               [attr.aria-label]="topic.name"
             >
               {{ topic.name }}

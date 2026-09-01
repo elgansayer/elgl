@@ -46,12 +46,13 @@ export class InterestsController {
   @Post('select')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async selectInterests(
-    @Body('interestIds') interestIds: string[],
+    @Body() body: { interestTags?: string[]; interestIds?: string[] },
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.id;
     const targetLanguage = req.user?.target_languages?.[0] ?? 'en';
-    await this.interestsService.setUserInterests(userId, interestIds);
+    const interestTags = body.interestTags ?? body.interestIds ?? [];
+    await this.interestsService.setUserInterests(userId, interestTags);
     await this.interestsService.generateFlashcards(userId, targetLanguage);
     return { success: true };
   }

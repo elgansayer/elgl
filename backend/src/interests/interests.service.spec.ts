@@ -9,8 +9,11 @@ interface QueryResult {
 describe('InterestsService', () => {
   let service: InterestsService;
   let from: ReturnType<typeof vi.fn>;
+  let select: ReturnType<typeof vi.fn>;
   let eq: ReturnType<typeof vi.fn>;
+  let inQuery: ReturnType<typeof vi.fn>;
   let is: ReturnType<typeof vi.fn>;
+  let insert: ReturnType<typeof vi.fn>;
   let update: ReturnType<typeof vi.fn>;
   let upsert: ReturnType<typeof vi.fn>;
   let proxyMessage: ReturnType<
@@ -22,20 +25,26 @@ describe('InterestsService', () => {
 
   beforeEach(() => {
     results = {
-      user_interests: { data: [{ interest_id: 'i1' }], error: null },
+      user_interests: { data: [{ tag: 'travel' }], error: null },
       interest_vocabulary: { data: [], error: null },
       flashcards: { data: [], error: null },
     };
     upsert = vi.fn().mockResolvedValue({ error: null });
     const query: Record<string, unknown> & { error: null } = { error: null };
     eq = vi.fn(() => query);
+    inQuery = vi.fn(() => query);
     is = vi.fn(() => query);
+    insert = vi.fn(() => query);
     update = vi.fn(() => query);
+    select = vi.fn(() => query);
     Object.assign(query, {
-      select: vi.fn(() => query),
+      select,
       eq,
       is,
-      in: vi.fn(() => query),
+      in: inQuery,
+      limit: vi.fn(() => query),
+      delete: vi.fn(() => query),
+      insert,
       returns: vi.fn(),
       update,
       upsert,
@@ -53,10 +62,43 @@ describe('InterestsService', () => {
     );
   });
 
+  it('lists and stores interests using canonical tags', async () => {
+    results.interest_vocabulary.data = [
+      {
+        interest_tag: 'travel',
+        vocab_word: 'Casa',
+        translation: 'House',
+      },
+      {
+        interest_tag: 'travel',
+        vocab_word: 'Libro',
+        translation: null,
+      },
+    ];
+
+    await expect(service.findAll('es')).resolves.toEqual([
+      {
+        tag: 'travel',
+        name: 'travel',
+        vocabulary: [
+          { word: 'Casa', translation: 'House' },
+          { word: 'Libro', translation: '' },
+        ],
+      },
+    ]);
+    await service.setUserInterests('user-1', ['travel']);
+
+    expect(from).not.toHaveBeenCalledWith('interests');
+    expect(select).toHaveBeenCalledWith(
+      'interest_tag, vocab_word, translation',
+    );
+    expect(insert).toHaveBeenCalledWith([{ user_id: 'user-1', tag: 'travel' }]);
+  });
+
   it('batches contextual examples into the canonical flashcard field', async () => {
     results.interest_vocabulary.data = [
-      { word: 'Casa', translation: 'House' },
-      { word: 'Libro', translation: 'Book' },
+      { vocab_word: 'Casa', translation: 'House' },
+      { vocab_word: 'Libro', translation: 'Book' },
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
@@ -74,6 +116,10 @@ describe('InterestsService', () => {
       ),
       expect.any(AbortSignal),
     );
+    expect(select).toHaveBeenCalledWith('tag');
+    expect(select).toHaveBeenCalledWith('vocab_word, translation');
+    expect(inQuery).toHaveBeenCalledWith('interest_tag', ['travel']);
+    expect(proxyMessage.mock.calls[0][0]).toContain('"gloss":"House"');
     expect(upsert).toHaveBeenCalledWith(
       [
         {
@@ -95,10 +141,27 @@ describe('InterestsService', () => {
     );
   });
 
+  it('sends the intended gloss for a homograph to context generation', async () => {
+    results.interest_vocabulary.data = [
+      { vocab_word: 'bank', translation: 'river bank' },
+    ];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([
+        { id: 0, sentence: 'We sat on the bank beside the river.' },
+      ]),
+    });
+
+    await service.generateFlashcards('user-1', 'en');
+
+    const prompt = proxyMessage.mock.calls[0][0];
+    expect(prompt).toContain("match the item's gloss");
+    expect(prompt).toContain('"term":"bank","gloss":"river bank"');
+  });
+
   it('generates and writes only cards whose context is missing', async () => {
     results.interest_vocabulary.data = [
-      { word: 'Casa', translation: 'House' },
-      { word: 'Libro', translation: 'Book' },
+      { vocab_word: 'Casa', translation: 'House' },
+      { vocab_word: 'Libro', translation: 'Book' },
     ];
     results.flashcards.data = [
       {
@@ -128,7 +191,7 @@ describe('InterestsService', () => {
 
   it('fills an empty migrated context without replacing the translation', async () => {
     results.interest_vocabulary.data = [
-      { word: 'Casa', translation: 'Generated translation' },
+      { vocab_word: 'Casa', translation: 'Generated translation' },
     ];
     results.flashcards.data = [
       {
@@ -152,7 +215,7 @@ describe('InterestsService', () => {
 
   it('preserves a same-spelling card and its progress after the target language changes', async () => {
     results.interest_vocabulary.data = [
-      { word: 'Gift', translation: 'Poison' },
+      { vocab_word: 'Gift', translation: 'Poison' },
     ];
     results.flashcards.data = [
       {
@@ -169,7 +232,9 @@ describe('InterestsService', () => {
   });
 
   it('keeps invalid provider output retryable', async () => {
-    results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
+    results.interest_vocabulary.data = [
+      { vocab_word: 'Casa', translation: 'House' },
+    ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
         { id: 0, sentence: 'Here is an unrelated sentence.' },
@@ -185,7 +250,9 @@ describe('InterestsService', () => {
   });
 
   it('rejects a term that appears only inside another word', async () => {
-    results.interest_vocabulary.data = [{ word: 'cat', translation: 'Cat' }];
+    results.interest_vocabulary.data = [
+      { vocab_word: 'cat', translation: 'Cat' },
+    ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
         { id: 0, sentence: 'Education matters every day.' },
@@ -202,7 +269,7 @@ describe('InterestsService', () => {
 
   it('accepts a multi-word term as consecutive word segments', async () => {
     results.interest_vocabulary.data = [
-      { word: 'New York', translation: 'Nueva York' },
+      { vocab_word: 'New York', translation: 'Nueva York' },
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
@@ -228,7 +295,7 @@ describe('InterestsService', () => {
 
   it('rejects a sentence detected in a different language', async () => {
     results.interest_vocabulary.data = [
-      { word: 'radio', translation: 'Radio' },
+      { vocab_word: 'radio', translation: 'Radio' },
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([{ id: 0, sentence: 'The radio is loud.' }]),
@@ -243,7 +310,9 @@ describe('InterestsService', () => {
   });
 
   it('rejects a bare term without contextual words', async () => {
-    results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
+    results.interest_vocabulary.data = [
+      { vocab_word: 'Casa', translation: 'House' },
+    ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([{ id: 0, sentence: 'Casa.' }]),
     });
@@ -257,7 +326,9 @@ describe('InterestsService', () => {
   });
 
   it('counts CJK words with Intl.Segmenter before accepting output', async () => {
-    results.interest_vocabulary.data = [{ word: '猫', translation: 'Cat' }];
+    results.interest_vocabulary.data = [
+      { vocab_word: '猫', translation: 'Cat' },
+    ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([
         {
@@ -280,7 +351,7 @@ describe('InterestsService', () => {
     results.interest_vocabulary.data = Array.from(
       { length: 50 },
       (_, index) => ({
-        word: `Word${index}`,
+        vocab_word: `Word${index}`,
         translation: `Translation${index}`,
       }),
     );
@@ -292,7 +363,7 @@ describe('InterestsService', () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       inFlight -= 1;
       const input = JSON.parse(prompt.split('Untrusted input: ')[1]) as {
-        items: Array<{ id: number; term: string }>;
+        items: Array<{ id: number; term: string; gloss: string }>;
       };
       return {
         response: JSON.stringify(
@@ -313,7 +384,9 @@ describe('InterestsService', () => {
 
   it('keeps a provider timeout retryable', async () => {
     vi.useFakeTimers();
-    results.interest_vocabulary.data = [{ word: 'Casa', translation: 'House' }];
+    results.interest_vocabulary.data = [
+      { vocab_word: 'Casa', translation: 'House' },
+    ];
     let receivedSignal: AbortSignal | undefined;
     proxyMessage.mockImplementation((_prompt: string, signal: AbortSignal) => {
       receivedSignal = signal;
