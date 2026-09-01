@@ -9,6 +9,9 @@ interface QueryResult {
 describe('InterestsService', () => {
   let service: InterestsService;
   let from: ReturnType<typeof vi.fn>;
+  let eq: ReturnType<typeof vi.fn>;
+  let is: ReturnType<typeof vi.fn>;
+  let update: ReturnType<typeof vi.fn>;
   let upsert: ReturnType<typeof vi.fn>;
   let proxyMessage: ReturnType<
     typeof vi.fn<
@@ -24,15 +27,25 @@ describe('InterestsService', () => {
       flashcards: { data: [], error: null },
     };
     upsert = vi.fn().mockResolvedValue({ error: null });
-    from = vi.fn((table: string) => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      returns: vi
-        .fn()
-        .mockImplementation(() => Promise.resolve(results[table])),
+    const query: Record<string, unknown> & { error: null } = { error: null };
+    eq = vi.fn(() => query);
+    is = vi.fn(() => query);
+    update = vi.fn(() => query);
+    Object.assign(query, {
+      select: vi.fn(() => query),
+      eq,
+      is,
+      in: vi.fn(() => query),
+      returns: vi.fn(),
+      update,
       upsert,
-    }));
+    });
+    from = vi.fn((table: string) => {
+      (query.returns as ReturnType<typeof vi.fn>).mockResolvedValue(
+        results[table],
+      );
+      return query;
+    });
     proxyMessage = vi.fn();
     service = new InterestsService(
       { getClient: () => ({ from }) } as never,
@@ -78,7 +91,7 @@ describe('InterestsService', () => {
           original_context: 'El libro es interesante.',
         },
       ],
-      { onConflict: 'user_id,word_token' },
+      { onConflict: 'user_id,word_token', ignoreDuplicates: true },
     );
   });
 
@@ -104,15 +117,15 @@ describe('InterestsService', () => {
     const prompt = proxyMessage.mock.calls[0][0];
     expect(prompt).toContain('Libro');
     expect(prompt).not.toContain('Casa');
-    expect(upsert).toHaveBeenCalledWith(
-      [
-        expect.objectContaining({
-          word_token: 'libro',
-          original_context: 'Este libro es nuevo.',
-        }),
-      ],
-      expect.any(Object),
-    );
+    expect(update).toHaveBeenCalledWith({
+      source_language: 'es',
+      translation: 'Book',
+      original_context: 'Este libro es nuevo.',
+    });
+    expect(eq).toHaveBeenCalledWith('word_token', 'libro');
+    expect(eq).toHaveBeenCalledWith('source_language', 'es');
+    expect(is).toHaveBeenCalledWith('original_context', null);
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('regenerates a same-spelling card after the target language changes', async () => {
@@ -134,17 +147,17 @@ describe('InterestsService', () => {
 
     await service.generateFlashcards('user-1', 'de');
 
-    expect(upsert).toHaveBeenCalledWith(
-      [
-        expect.objectContaining({
-          word_token: 'gift',
-          source_language: 'de',
-          translation: 'Poison',
-          original_context: 'Das Gift ist gefährlich.',
-        }),
-      ],
-      expect.any(Object),
+    expect(update).toHaveBeenCalledWith({
+      source_language: 'de',
+      translation: 'Poison',
+      original_context: 'Das Gift ist gefährlich.',
+    });
+    expect(eq).toHaveBeenCalledWith('source_language', 'en');
+    expect(eq).toHaveBeenCalledWith(
+      'original_context',
+      'This gift is for you.',
     );
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('keeps invalid provider output retryable', async () => {

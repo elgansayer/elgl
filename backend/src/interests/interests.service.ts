@@ -175,8 +175,14 @@ export class InterestsService {
       throw new Error(existingCardsError.message);
     }
 
+    const existingCardsByToken = new Map(
+      (existingCards ?? []).map((card) => [
+        card.word_token.toLowerCase(),
+        card,
+      ]),
+    );
     const existingContexts = new Map(
-      (existingCards ?? [])
+      [...existingCardsByToken.values()]
         .filter((card) => card.source_language === targetLanguage)
         .map((card) => [
           card.word_token.toLowerCase(),
@@ -216,24 +222,63 @@ export class InterestsService {
       }
     }
 
-    const flashcardRows = vocabularyNeedingContext.map((item) => {
+    const newFlashcardRows: Array<{
+      user_id: string;
+      word_token: string;
+      source_language: string;
+      translation: string;
+      original_context: string | null;
+    }> = [];
+    for (const item of vocabularyNeedingContext) {
       const word = item.word.trim();
       const wordToken = word.toLowerCase();
-      return {
+      const generatedContext = generatedContexts.get(wordToken) ?? null;
+      const existingCard = existingCardsByToken.get(wordToken);
+      const row = {
         user_id: userId,
         word_token: wordToken,
         source_language: targetLanguage,
         translation: item.translation ?? '',
-        original_context: generatedContexts.get(wordToken) ?? null,
+        original_context: generatedContext,
       };
-    });
 
-    if (flashcardRows.length === 0) return;
+      if (!existingCard) {
+        newFlashcardRows.push(row);
+        continue;
+      }
+
+      if (!generatedContext) {
+        continue;
+      }
+
+      let updateQuery = this.supabase
+        .from('flashcards')
+        .update({
+          source_language: row.source_language,
+          translation: row.translation,
+          original_context: row.original_context,
+        })
+        .eq('user_id', userId)
+        .eq('word_token', wordToken);
+      updateQuery = existingCard.source_language
+        ? updateQuery.eq('source_language', existingCard.source_language)
+        : updateQuery.is('source_language', null);
+      updateQuery = existingCard.original_context
+        ? updateQuery.eq('original_context', existingCard.original_context)
+        : updateQuery.is('original_context', null);
+      const { error: updateError } = await updateQuery;
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+    }
+
+    if (newFlashcardRows.length === 0) return;
 
     const { error: insertError } = await this.supabase
       .from('flashcards')
-      .upsert(flashcardRows, {
+      .upsert(newFlashcardRows, {
         onConflict: 'user_id,word_token',
+        ignoreDuplicates: true,
       });
 
     if (insertError) {
