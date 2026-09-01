@@ -438,7 +438,10 @@ function cwdAfterSegment(cwdState, baseCwdIsE2e, segment, separatorAfter, preced
   const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
   if (cdMatch) {
     const target = normalizePath(cdMatch[1].replace(/^['"]|['"]$/g, '')).replace(/\/+$/, '');
-    cwdIsE2e = precedingSeparator === '||' ? baseCwdIsE2e : target === 'e2e';
+    cwdIsE2e =
+      precedingSeparator === '||' || precedingSeparator === '|'
+        ? baseCwdIsE2e
+        : target === 'e2e' || target.startsWith('e2e/');
     cwdIsConditional = precedingSeparator === '&&';
   }
 
@@ -492,7 +495,12 @@ function scanWrongRunnerInvocations(files) {
         const specTarget = entrypoint?.match(
           /^((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*\.spec\.[cm]?[jt]sx?)?$/i,
         );
-        if (specTarget && targetBelongsToE2e(specTarget, cwdState.cwdIsE2e)) {
+        const cwdRelativeSpecTarget =
+          cwdState.cwdIsE2e && entrypoint?.match(/^(?:\.\/)?[^\s),]*\.spec\.[cm]?[jt]sx?$/i);
+        if (
+          (specTarget && targetBelongsToE2e(specTarget, cwdState.cwdIsE2e)) ||
+          cwdRelativeSpecTarget
+        ) {
           violations.push(
             `${location ?? `${path}:${index + 1}`} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
           );
@@ -681,7 +689,7 @@ function readTrackedFiles(repoRoot) {
     }
     const path = normalizePath(rawPath);
     const extension = extname(path);
-    const automationMarkdown = path.startsWith('.agents/automations/') && extension === '.md';
+    const automationMarkdown = extension === '.md' && isCommandSource(path);
     if (
       !SCRIPT_EXTENSIONS.has(extension) &&
       !/\.(?:spec|test)\.ts$/.test(path) &&

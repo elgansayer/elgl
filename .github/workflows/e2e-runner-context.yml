@@ -40,7 +40,7 @@ jobs:
             while IFS= read -r path; do
               [ -z "$path" ] && continue
               case "$path" in
-                docs/*|config/factory/*|config/systemd/*|.github/dependabot.yml)
+                docs/*|config/factory/*|.github/dependabot.yml)
                   ;;
                 *)
                   run_e2e=true

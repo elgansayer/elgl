@@ -113,6 +113,14 @@ test('does not propagate a conditional directory change past its shell chain', (
   }
 });
 
+test('does not propagate a pipeline-local directory change', () => {
+  const violations = analyse({
+    'automation/qa-loop.sh': 'echo x | cd e2e; npx playwright test',
+  });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /without the e2e working directory/);
+});
+
 test('rejects Playwright launched from the frontend working directory', () => {
   const violations = analyse({
     'automation/qa-loop.sh': '(cd frontend && npx playwright test)',
@@ -139,6 +147,12 @@ test('checks Playwright context in automation Markdown', () => {
   assert.deepEqual(violations, [
     '.agents/automations/qa.md:1 invokes Playwright without the e2e working directory or explicit e2e config',
   ]);
+});
+
+test('checks Playwright context in automation prompt Markdown', () => {
+  const violations = analyse({ 'automation/prompts/qa.md': 'npx playwright test' });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /without the e2e working directory/);
 });
 
 test('accepts root Playwright discovery with the canonical e2e config', () => {
@@ -217,6 +231,7 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'bun --cwd . test e2e/tests/auth.spec.ts',
     'bun test e2e/tests',
     'cd e2e && bun test tests',
+    'cd e2e/tests && node auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);
