@@ -20,6 +20,12 @@ describe('daily check-in reward RNG migration contract', () => {
     expect(migration).not.toMatch(/\brandom\s*\(\s*\)/i);
   });
 
+  it('resolves pgcrypto from Supabase without exposing a writable search path', () => {
+    expect(migration).toMatch(
+      /SET search_path = extensions, public, pg_temp/i,
+    );
+  });
+
   it('uses rejection sampling to map bytes uniformly onto rewards 5 through 10', () => {
     expect(migration).toMatch(/EXIT WHEN v_random_byte < 252/i);
     expect(migration).toMatch(/v_reward := \(v_random_byte % 6\) \+ 5/i);
