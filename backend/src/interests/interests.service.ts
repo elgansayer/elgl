@@ -134,12 +134,7 @@ export class InterestsService {
     }
 
     const MAX_CONCURRENT_LLM_REQUESTS = 5;
-    const MAX_VOCAB_PROCESS_LIMIT = 20;
-
-    const limitedVocabList = (vocabList ?? []).slice(
-      0,
-      MAX_VOCAB_PROCESS_LIMIT,
-    );
+    const vocabListArray = vocabList ?? [];
 
     const flashcardRows: Array<{
       user_id: string;
@@ -151,12 +146,8 @@ export class InterestsService {
       context_sentence: string;
     }> = [];
 
-    for (
-      let i = 0;
-      i < limitedVocabList.length;
-      i += MAX_CONCURRENT_LLM_REQUESTS
-    ) {
-      const chunk = limitedVocabList.slice(i, i + MAX_CONCURRENT_LLM_REQUESTS);
+    for (let i = 0; i < vocabListArray.length; i += MAX_CONCURRENT_LLM_REQUESTS) {
+      const chunk = vocabListArray.slice(i, i + MAX_CONCURRENT_LLM_REQUESTS);
       const results = await Promise.all(
         chunk.map(async (v) => {
           let context_sentence = '';
@@ -165,11 +156,10 @@ export class InterestsService {
             const result = await this.llmProxyService.proxyMessage(prompt);
 
             if (result.response && result.response.trim().length > 0) {
-              const cleaned = result.response
-                .trim()
-                .replace(/^["']|["']$/g, '');
+              const cleaned = result.response.trim().replace(/^["']|["']$/g, '');
+              const wordCount = cleaned.split(/\s+/).length;
               if (
-                cleaned.length < 150 &&
+                wordCount <= 15 &&
                 !cleaned.includes('\n') &&
                 !cleaned.toLowerCase().startsWith('here is a')
               ) {

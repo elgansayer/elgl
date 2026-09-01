@@ -45,7 +45,9 @@ describe('InterestsService', () => {
         };
       });
 
-      mockLlmProxyService.proxyMessage.mockResolvedValue({ response: 'Test sentence.' });
+      mockLlmProxyService.proxyMessage.mockResolvedValue({
+        response: 'Test sentence.',
+      });
 
       await service.generateFlashcards('user-1', 'es');
 
@@ -53,7 +55,7 @@ describe('InterestsService', () => {
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
     });
 
-    it('respects concurrency and limits when creating flashcards', async () => {
+    it('respects concurrency limit of 5 when creating flashcards for all items', async () => {
       let selectCounter = 0;
       const massiveVocabList = Array.from({ length: 50 }, (_, i) => ({ word: `Word${i}`, translation: `Trans${i}` }));
 
@@ -74,12 +76,25 @@ describe('InterestsService', () => {
         };
       });
 
-      mockLlmProxyService.proxyMessage.mockResolvedValue({ response: 'Test sentence.' });
+      let inFlight = 0;
+      let maxInFlight = 0;
+
+      mockLlmProxyService.proxyMessage.mockImplementation(async () => {
+        inFlight++;
+        if (inFlight > maxInFlight) {
+          maxInFlight = inFlight;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight--;
+        return { response: 'Test sentence.' };
+      });
 
       await service.generateFlashcards('user-1', 'es');
 
-      // Should cap at 20 processing limit (MAX_VOCAB_PROCESS_LIMIT)
-      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledTimes(20);
+      // Should process all 50 items
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledTimes(50);
+      // Peak concurrency should never exceed 5
+      expect(maxInFlight).toBeLessThanOrEqual(5);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
     });
 
@@ -96,9 +111,7 @@ describe('InterestsService', () => {
               return Promise.resolve({ data: [{ interest_id: 'i1' }] });
             } else {
               return Promise.resolve({
-                data: [
-                  { word: 'Word1', translation: 'Trans1' },
-                ],
+                data: [{ word: 'Word1', translation: 'Trans1' }],
               });
             }
           }),
@@ -106,21 +119,26 @@ describe('InterestsService', () => {
         };
       });
 
-      mockLlmProxyService.proxyMessage.mockResolvedValue({ response: 'Here is a sentence: El gato.' });
+      mockLlmProxyService.proxyMessage.mockResolvedValue({
+        response: 'Here is a sentence: El gato.',
+      });
 
       await service.generateFlashcards('user-1', 'es');
 
       expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledTimes(1);
       // The upsert should have been called with an empty context_sentence because it was rejected
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      const upsertMock = mockSupabaseClient.from.mock.results[mockSupabaseClient.from.mock.results.length - 1].value.upsert;
+      const upsertMock =
+        mockSupabaseClient.from.mock.results[
+          mockSupabaseClient.from.mock.results.length - 1
+        ].value.upsert;
       expect(upsertMock).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
             context_sentence: '',
           }),
         ]),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
