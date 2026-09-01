@@ -97,14 +97,14 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert "## End untrusted task and evidence data" in prompt
 
 
-def test_build_phase_prompt_makes_independent_review_evidence_only(tmp_path: Path) -> None:
+def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path) -> None:
     (tmp_path / "review.md").write_text("review instructions", encoding="utf-8")
 
     prompt = build_phase_prompt(tmp_path, "review", task())
 
-    assert "Independent review is evidence-only" in prompt
-    assert "do not modify repository-tracked files" in prompt
-    assert "separate repair phase owns code changes" in prompt
+    assert "only when required to correct a blocking" in prompt
+    assert "Do not perform non-blocking cleanup" in prompt
+    assert "If no blocking defect exists, leave tracked files unchanged" in prompt
     assert "If defects are found, correct them" not in prompt
 
 
