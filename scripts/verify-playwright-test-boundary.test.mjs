@@ -207,6 +207,35 @@ test('treats hash characters inside shell words as data', () => {
   assert.match(violations[0], /generic JavaScript\/TypeScript runtime/);
 });
 
+test('strips shell comments from every command source form', () => {
+  const files = {
+    'automation/qa-loop.sh': 'echo ok # note; node e2e/tests/auth.spec.ts',
+    '.github/workflows/inline.yml': 'run: echo ok # note; node e2e/tests/auth.spec.ts',
+    '.github/workflows/folded.yml': [
+      'run: >',
+      '  echo ok # note;',
+      '  node e2e/tests/auth.spec.ts',
+    ].join('\n'),
+  };
+
+  assert.deepEqual(analyse(files), []);
+});
+
+test('does not interpret workflow metadata as shell commands', () => {
+  assert.deepEqual(
+    analyse({
+      '.github/workflows/e2e.yml': [
+        '- name: node e2e/tests/auth.spec.ts',
+        '  uses: example/node-e2e-tests@v1',
+        '  with:',
+        '    description: npx playwright test',
+        '  run: echo safe',
+      ].join('\n'),
+    }),
+    [],
+  );
+});
+
 test('preserves a leading directory change in folded workflow run blocks', () => {
   assert.deepEqual(
     analyse({

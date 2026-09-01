@@ -156,17 +156,25 @@ function logicalCommandLines(lines, path) {
         const separator = command && literalRun && !continued ? ' ; ' : command ? ' ' : '';
         command = `${command.replace(/\\\s*$/, '')}${separator}${part}`;
       }
+      if (foldedRun) {
+        command = stripUnquotedShellComment(command);
+      }
       commands.push({ command, index });
       index = cursor - 1;
       continue;
     }
 
     const startIndex = index;
-    let command = line;
+    const inlineRun = /^(?:\s*)(?:-\s*)?run\s*:\s*(.+)$/.exec(line);
+    if (/\.ya?ml$/.test(path) && !inlineRun) {
+      continue;
+    }
+    let command = inlineRun?.[1] ?? line;
     while (/\\\s*$/.test(command) && index + 1 < lines.length) {
       command = `${command.replace(/\\\s*$/, '')} ${lines[index + 1].trim()}`;
       index += 1;
     }
+    command = stripUnquotedShellComment(command);
     commands.push({ command, index: startIndex });
   }
 
