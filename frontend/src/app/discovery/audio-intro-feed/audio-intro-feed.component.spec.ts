@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AudioIntroFeedComponent } from './audio-intro-feed.component';
 import { socialRoutes } from '../../routes/social.routes';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -84,6 +84,11 @@ describe('AudioIntroFeedComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    TestBed.resetTestingModule();
   });
 
   it('loads and renders partners with audio introductions', () => {
