@@ -31,5 +31,5 @@ This report evaluates the current implementation of language learning mechanics 
 The individual features are robust but operate largely in silos. To transform this from a feature-rich app into a cohesive language acquisition engine, the systems must interact.
 
 **Immediate Changes Implemented:**
-1. **Contextual Flashcard Generation:** Modified `interests.service.ts` to populate `original_context` for flashcards that lack context, using bounded batched LLM requests and leaving failed or invalid generations null for a later retry.
+1. **Contextual Flashcard Generation:** Modified `interests.service.ts` to populate `original_context` for flashcards that lack context, using bounded batched LLM requests with a deterministic vocabulary fallback.
 2. **Pedagogical Correction Explanations:** Upgraded the AI prompt in `chat.service.ts` (`generateCorrectionPayloadIfNeeded`) to provide grammatical rationale and usage examples rather than just a simple explanation.

@@ -6,29 +6,18 @@ export interface ChatMessage {
   content: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 @Injectable()
 export class LlmProxyService {
   constructor(private readonly configService: ConfigService) {}
 
-  async proxyMessage(
-    text: string,
-    signal?: AbortSignal,
-  ): Promise<{ response: string }> {
-    const response = await this.chatCompletion(
-      [{ role: 'user', content: text }],
-      signal,
-    );
+  async proxyMessage(text: string): Promise<{ response: string }> {
+    const response = await this.chatCompletion([
+      { role: 'user', content: text },
+    ]);
     return { response };
   }
 
-  async chatCompletion(
-    messages: ChatMessage[],
-    signal?: AbortSignal,
-  ): Promise<string> {
+  async chatCompletion(messages: ChatMessage[]): Promise<string> {
     const apiKey = this.configService.get<string>('LLM_API_KEY');
     const apiUrl = this.configService.get<string>(
       'LLM_API_URL',
@@ -53,19 +42,8 @@ export class LlmProxyService {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
-      signal,
     });
-    if (!response.ok) {
-      throw new Error(`LLM provider returned HTTP ${response.status}`);
-    }
-
-    const data: unknown = await response.json();
-    if (!isRecord(data) || !Array.isArray(data.choices)) return '';
-    const choices = data.choices as unknown[];
-    const firstChoice = choices[0];
-    if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) return '';
-    return typeof firstChoice.message.content === 'string'
-      ? firstChoice.message.content
-      : '';
+    const data = await response.json();
+    return data?.choices?.[0]?.message?.content ?? '';
   }
 }
