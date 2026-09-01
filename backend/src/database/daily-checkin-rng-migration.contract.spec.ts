@@ -21,9 +21,7 @@ describe('daily check-in reward RNG migration contract', () => {
   });
 
   it('resolves pgcrypto from Supabase without exposing a writable search path', () => {
-    expect(migration).toMatch(
-      /SET search_path = extensions, public, pg_temp/i,
-    );
+    expect(migration).toMatch(/SET search_path = extensions, public, pg_temp/i);
   });
 
   it('uses rejection sampling to map bytes uniformly onto rewards 5 through 10', () => {
