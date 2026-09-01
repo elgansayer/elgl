@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import * as crypto from 'crypto';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import Stripe from 'stripe';
@@ -574,7 +575,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = Math.floor(Math.random() * 6) + 5;
+    const reward = crypto.randomInt(5, 11);
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
