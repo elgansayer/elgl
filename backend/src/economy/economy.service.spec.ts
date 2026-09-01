@@ -876,7 +876,7 @@ describe('EconomyService', () => {
       );
       const logger = module.get<{ warn: Mock }>('PinoLogger:EconomyService');
       expect(logger.warn).toHaveBeenCalledWith(
-        'Gift profile enrichment failed for 1 lookup',
+        'Gift profile enrichment failed for sender lookup',
       );
       expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
         'SECRET-PROVIDER-DETAIL',
