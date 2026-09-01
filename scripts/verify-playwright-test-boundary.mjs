@@ -95,8 +95,10 @@ function logicalCommandLines(lines, path) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const foldedRun = /^(\s*)(?:-\s*)?run\s*:\s*>[+-]?\s*$/.exec(line);
-    if (/\.ya?ml$/.test(path) && foldedRun) {
-      const indent = foldedRun[1].length;
+    const literalRun = /^(\s*)(?:-\s*)?run\s*:\s*\|[+-]?\s*$/.exec(line);
+    const blockRun = foldedRun ?? literalRun;
+    if (/\.ya?ml$/.test(path) && blockRun) {
+      const indent = blockRun[1].length;
       const parts = [line];
       let cursor = index + 1;
       for (; cursor < lines.length; cursor += 1) {
@@ -106,7 +108,12 @@ function logicalCommandLines(lines, path) {
         }
         parts.push(next.trim());
       }
-      commands.push({ command: parts.join(' '), index });
+      let command = parts[0];
+      for (const part of parts.slice(1)) {
+        const continued = /\\\s*$/.test(command);
+        command = `${command.replace(/\\\s*$/, '')}${literalRun && !continued ? ' ; ' : ' '}${part}`;
+      }
+      commands.push({ command, index });
       index = cursor - 1;
       continue;
     }
@@ -140,9 +147,8 @@ function commandSegments(command) {
 }
 
 function cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment, separatorAfter) {
-  const cdPattern = /\bcd\s+([^\s;&|)]+)/gi;
-  let cdMatch;
-  while ((cdMatch = cdPattern.exec(segment))) {
+  const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
+  if (cdMatch) {
     const target = normalizePath(cdMatch[1]);
     cwdIsE2e = target === 'e2e';
   }
@@ -221,7 +227,9 @@ function scanPlaywrightInvocations(files) {
         if (
           segment.command.includes('playwright test') &&
           !cwdIsE2e &&
-          !/--config(?:=|\s+)(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)/.test(segment.command)
+          !/--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/.test(
+            segment.command,
+          )
         ) {
           violations.push(
             `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,

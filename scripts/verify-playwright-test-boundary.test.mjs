@@ -101,11 +101,32 @@ test('rejects root Playwright discovery without an explicit e2e config', () => {
 });
 
 test('accepts root Playwright discovery with the canonical e2e config', () => {
+  for (const command of [
+    'npx playwright test --config e2e/playwright.config.ts',
+    'npx playwright test --config "e2e/playwright.config.ts"',
+    "npx playwright test --config='e2e/playwright.config.ts'",
+  ]) {
+    assert.deepEqual(analyse({ 'automation/qa-loop.sh': command }), [], command);
+  }
+});
+
+test('preserves working directory changes in literal workflow run blocks', () => {
   assert.deepEqual(
     analyse({
-      'automation/qa-loop.sh': 'npx playwright test --config e2e/playwright.config.ts',
+      '.github/workflows/e2e.yml': ['run: |', '  cd e2e', '  npx playwright test'].join('\n'),
     }),
     [],
+  );
+});
+
+test('does not treat printed cd text as a working directory change', () => {
+  assert.deepEqual(
+    analyse({
+      'automation/qa-loop.sh': 'echo cd e2e; npx playwright test',
+    }),
+    [
+      'automation/qa-loop.sh:1 invokes Playwright without the e2e working directory or explicit e2e config',
+    ],
   );
 });
 
