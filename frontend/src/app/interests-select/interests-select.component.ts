@@ -5,6 +5,7 @@ import { TranslatePipe } from '../services/translate.pipe';
 import { environment } from '../../environments/environment';
 
 export interface InterestVocabulary {
+  id: string | null;
   tag: string;
   name: string;
   vocabulary: { word: string; translation: string }[];

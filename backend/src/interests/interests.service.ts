@@ -6,6 +6,7 @@ import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
 // Simple DTOs (no separate file)
 export interface InterestVocabularyDto {
+  id: string | null;
   tag: string;
   name: string;
   vocabulary: { word: string; translation: string }[];
@@ -20,6 +21,11 @@ interface InterestVocabularyRow {
   interest_tag: string;
   vocab_word: string;
   translation: string | null;
+}
+
+interface InterestRow {
+  id: string;
+  name: string;
 }
 
 interface UserInterestRow {
@@ -62,45 +68,89 @@ export class InterestsService {
   }
 
   async findAll(targetLanguage: string): Promise<InterestVocabularyDto[]> {
-    const { data, error } = await this.supabase
-      .from('interest_vocabulary')
-      .select('interest_tag, vocab_word, translation')
-      .eq('language', targetLanguage)
-      .returns<InterestVocabularyRow[]>();
+    const [interestResult, vocabularyResult] = await Promise.all([
+      this.supabase
+        .from('interests')
+        .select('id, name')
+        .returns<InterestRow[]>(),
+      this.supabase
+        .from('interest_vocabulary')
+        .select('interest_tag, vocab_word, translation')
+        .eq('language', targetLanguage)
+        .returns<InterestVocabularyRow[]>(),
+    ]);
 
-    if (error) {
-      throw new Error(error.message);
+    if (interestResult.error) {
+      throw new Error(interestResult.error.message);
+    }
+    if (vocabularyResult.error) {
+      throw new Error(vocabularyResult.error.message);
     }
 
-    const interests = new Map<string, InterestVocabularyDto>();
-    for (const row of data ?? []) {
-      const interest = interests.get(row.interest_tag) ?? {
+    const interests = new Map<string, InterestVocabularyDto>(
+      (interestResult.data ?? []).map((interest) => {
+        const normalisedTag = this.normaliseInterestTag(interest.name);
+        return [
+          normalisedTag,
+          {
+            id: interest.id,
+            tag: normalisedTag,
+            name: interest.name,
+            vocabulary: [],
+          },
+        ];
+      }),
+    );
+    for (const row of vocabularyResult.data ?? []) {
+      const normalisedTag = this.normaliseInterestTag(row.interest_tag);
+      const interest = interests.get(normalisedTag) ?? {
+        id: null,
         tag: row.interest_tag,
         name: row.interest_tag,
         vocabulary: [],
       };
+      interest.tag = row.interest_tag;
       interest.vocabulary.push({
         word: row.vocab_word,
         translation: row.translation ?? '',
       });
-      interests.set(row.interest_tag, interest);
+      interests.set(normalisedTag, interest);
     }
     return Array.from(interests.values());
   }
 
-  async findById(
-    tag: string,
-  ): Promise<Pick<InterestVocabularyDto, 'tag' | 'name'> | null> {
+  async findById(id: string): Promise<Pick<InterestRow, 'id' | 'name'> | null> {
     const { data, error } = await this.supabase
-      .from('interest_vocabulary')
-      .select('interest_tag')
-      .eq('interest_tag', tag)
-      .limit(1)
-      .returns<Array<Pick<InterestVocabularyRow, 'interest_tag'>>>();
-    if (error || !data?.[0]) {
+      .from('interests')
+      .select('id, name')
+      .eq('id', id)
+      .single();
+    if (error || !data) {
       return null;
     }
-    return { tag: data[0].interest_tag, name: data[0].interest_tag };
+    return data;
+  }
+
+  async resolveLegacyInterestIds(interestIds: string[]): Promise<string[]> {
+    if (interestIds.length === 0) return [];
+    const { data, error } = await this.supabase
+      .from('interests')
+      .select('id, name')
+      .in('id', interestIds)
+      .returns<InterestRow[]>();
+    if (error) {
+      throw new Error(error.message);
+    }
+    const tagsById = new Map(
+      (data ?? []).map((interest) => [
+        interest.id,
+        this.normaliseInterestTag(interest.name),
+      ]),
+    );
+    return interestIds.flatMap((id) => {
+      const tag = tagsById.get(id);
+      return tag ? [tag] : [];
+    });
   }
 
   async setUserInterests(userId: string, tags: string[]): Promise<void> {
@@ -437,6 +487,14 @@ export class InterestsService {
     locale: string,
   ): boolean {
     return this.countWords(sentence, locale) > this.countWords(term, locale);
+  }
+
+  private normaliseInterestTag(value: string): string {
+    return value
+      .trim()
+      .toLocaleLowerCase('en-GB')
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   private matchesLanguage(sentence: string, expectedLanguage: string): boolean {

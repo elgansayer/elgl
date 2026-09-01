@@ -20,7 +20,7 @@ describe('GroupsDiscoveryComponent', () => {
       max_members: 10,
       member_count: 5,
       is_member: false,
-      interest_id: 'spanish',
+      interest_id: 'interest-spanish',
       created_at: '2026-01-01T00:00:00Z',
     },
     {
@@ -30,14 +30,14 @@ describe('GroupsDiscoveryComponent', () => {
       max_members: 12,
       member_count: 7,
       is_member: true,
-      interest_id: 'japanese',
+      interest_id: 'interest-japanese',
       created_at: '2026-01-02T00:00:00Z',
     },
   ];
 
   const mockInterests = [
-    { tag: 'spanish', name: 'Spanish' },
-    { tag: 'japanese', name: 'Japanese' },
+    { id: 'interest-spanish', tag: 'spanish', name: 'Spanish' },
+    { id: 'interest-japanese', tag: 'japanese', name: 'Japanese' },
   ];
 
   beforeEach(async () => {
@@ -96,7 +96,7 @@ describe('GroupsDiscoveryComponent', () => {
   it('filters loaded groups by the selected topic without issuing another group request', async () => {
     await loadDiscovery();
 
-    (component as any).selectedInterest.set('spanish');
+    (component as any).selectedInterest.set('interest-spanish');
     fixture.detectChanges();
 
     expect((component as any).filteredGroups()).toEqual([mockGroups[0]]);
@@ -106,7 +106,7 @@ describe('GroupsDiscoveryComponent', () => {
   it('shows all groups again when the topic filter is cleared', async () => {
     await loadDiscovery();
 
-    (component as any).selectedInterest.set('japanese');
+    (component as any).selectedInterest.set('interest-japanese');
     expect((component as any).filteredGroups()).toEqual([mockGroups[1]]);
 
     (component as any).selectedInterest.set(null);

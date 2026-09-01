@@ -25,6 +25,7 @@ describe('InterestsService', () => {
 
   beforeEach(() => {
     results = {
+      interests: { data: [{ id: 'interest-1', name: 'Travel' }], error: null },
       user_interests: { data: [{ tag: 'travel' }], error: null },
       interest_vocabulary: { data: [], error: null },
       flashcards: { data: [], error: null },
@@ -43,6 +44,7 @@ describe('InterestsService', () => {
       is,
       in: inQuery,
       limit: vi.fn(() => query),
+      single: vi.fn(() => query),
       delete: vi.fn(() => query),
       insert,
       returns: vi.fn(),
@@ -78,8 +80,9 @@ describe('InterestsService', () => {
 
     await expect(service.findAll('es')).resolves.toEqual([
       {
+        id: 'interest-1',
         tag: 'travel',
-        name: 'travel',
+        name: 'Travel',
         vocabulary: [
           { word: 'Casa', translation: 'House' },
           { word: 'Libro', translation: '' },
@@ -88,11 +91,28 @@ describe('InterestsService', () => {
     ]);
     await service.setUserInterests('user-1', ['travel']);
 
-    expect(from).not.toHaveBeenCalledWith('interests');
+    expect(select).toHaveBeenCalledWith('id, name');
     expect(select).toHaveBeenCalledWith(
       'interest_tag, vocab_word, translation',
     );
     expect(insert).toHaveBeenCalledWith([{ user_id: 'user-1', tag: 'travel' }]);
+  });
+
+  it('translates legacy interest UUIDs before storing canonical tags', async () => {
+    results.interests.data = [
+      { id: 'interest-2', name: 'Food & Cooking' },
+      { id: 'interest-1', name: 'Travel' },
+    ];
+
+    await expect(
+      service.resolveLegacyInterestIds(['interest-1', 'interest-2', 'missing']),
+    ).resolves.toEqual(['travel', 'food-cooking']);
+
+    expect(inQuery).toHaveBeenCalledWith('id', [
+      'interest-1',
+      'interest-2',
+      'missing',
+    ]);
   });
 
   it('batches contextual examples into the canonical flashcard field', async () => {

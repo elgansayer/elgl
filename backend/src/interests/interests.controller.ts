@@ -51,7 +51,11 @@ export class InterestsController {
   ) {
     const userId = req.user.id;
     const targetLanguage = req.user?.target_languages?.[0] ?? 'en';
-    const interestTags = body.interestTags ?? body.interestIds ?? [];
+    const interestTags = Array.isArray(body.interestTags)
+      ? body.interestTags
+      : await this.interestsService.resolveLegacyInterestIds(
+          Array.isArray(body.interestIds) ? body.interestIds : [],
+        );
     await this.interestsService.setUserInterests(userId, interestTags);
     await this.interestsService.generateFlashcards(userId, targetLanguage);
     return { success: true };
