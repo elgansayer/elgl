@@ -29,7 +29,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const DAILY_REDIS_TTL = 86400;
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
-const GDPR_MATCHMAKING_FILTERS = { is_deleted: false };
+const GDPR_MATCHMAKING_FILTERS = {
+  is_deleted: false,
+  privacy_hide_from_search: false,
+  is_deletion_pending: false,
+};
 const CRON_USERS_LIMIT = 5000;
 const REDIS_PIPELINE_BATCH = 200;
 
@@ -86,6 +90,7 @@ export class RecommendationsService {
         .from('users')
         .select('id, native_languages, target_languages')
         .match(GDPR_MATCHMAKING_FILTERS)
+        .is('scheduled_for_deletion_at', null)
         .not('target_languages', 'is', null)
         .limit(CRON_USERS_LIMIT);
 
@@ -139,6 +144,7 @@ export class RecommendationsService {
               'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
             )
             .match(GDPR_MATCHMAKING_FILTERS)
+            .is('scheduled_for_deletion_at', null)
             .overlaps('native_languages', [targetCode])
             .overlaps('target_languages', [nativeCode])
             .order('is_serious_learner', { ascending: false })
@@ -247,7 +253,54 @@ export class RecommendationsService {
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
-          return parsed as RecommendedUserDto[];
+          const seenIds = new Set<string>();
+          const recommendations = parsed
+            .filter(
+              (candidate): candidate is RecommendedUserDto =>
+                isRecord(candidate) &&
+                typeof candidate['id'] === 'string' &&
+                candidate['id'].length > 0,
+            )
+            .filter((candidate) => {
+              if (seenIds.has(candidate.id)) return false;
+              seenIds.add(candidate.id);
+              return true;
+            })
+            .slice(0, DAILY_LIMIT);
+
+          if (recommendations.length > 0) {
+            const supabase = this.supabaseService.getClient();
+            const ids = recommendations.map((candidate) => candidate.id);
+            const { data: discoverableUsers, error } = await supabase
+              .from('users')
+              .select('id')
+              .in('id', ids)
+              .match(GDPR_MATCHMAKING_FILTERS)
+              .is('scheduled_for_deletion_at', null)
+              .limit(ids.length);
+
+            if (error || !Array.isArray(discoverableUsers)) {
+              throw new Error(
+                `Failed to revalidate cached recommendations: ${error?.message ?? 'invalid response'}`,
+              );
+            }
+
+            const discoverableIds = new Set(
+              discoverableUsers
+                .filter(
+                  (candidate): candidate is { id: string } =>
+                    isRecord(candidate) && typeof candidate['id'] === 'string',
+                )
+                .map((candidate) => candidate.id),
+            );
+            const safeRecommendations = recommendations.filter((candidate) =>
+              discoverableIds.has(candidate.id),
+            );
+
+            if (safeRecommendations.length > 0) {
+              return safeRecommendations;
+            }
+          }
         }
       }
     } catch (error) {
@@ -496,7 +549,8 @@ export class RecommendationsService {
         'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .in('id', candidateIds)
-      .match(GDPR_MATCHMAKING_FILTERS);
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .is('scheduled_for_deletion_at', null);
 
     if (usersError) {
       throw new Error(usersError.message);
@@ -559,6 +613,7 @@ export class RecommendationsService {
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
+      .is('scheduled_for_deletion_at', null)
       .overlaps('native_languages', targetLanguages)
       .overlaps('target_languages', nativeLangs)
       .order('is_serious_learner', { ascending: false })
@@ -597,6 +652,7 @@ export class RecommendationsService {
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
+      .is('scheduled_for_deletion_at', null)
       .order('study_streak_days', { ascending: false })
       .limit(FALLBACK_LIMIT);
 

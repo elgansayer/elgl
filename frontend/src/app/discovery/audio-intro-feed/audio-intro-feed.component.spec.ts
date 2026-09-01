@@ -106,6 +106,12 @@ describe('AudioIntroFeedComponent', () => {
     expect(el.querySelector('a[href="/profile/u1"]')).not.toBeNull();
     expect(el.querySelector('img')).toBeNull();
     expect(el.textContent).toContain('K');
+    const displayName = el.querySelector('#audio-intro-user-u1');
+    const languagePair = el.querySelector('[data-testid="audio-intro-language-pair"]');
+    expect(displayName?.classList).toContain('break-words');
+    expect(displayName?.classList).not.toContain('truncate');
+    expect(languagePair?.classList).toContain('break-words');
+    expect(languagePair?.classList).not.toContain('truncate');
     expect(el.querySelector('[role="status"]')?.textContent).toContain(
       'discovery.audioIntroFeed.resultCount',
     );
@@ -165,9 +171,7 @@ describe('AudioIntroFeedComponent', () => {
     const emptyStatus = (emptyFixture.nativeElement as HTMLElement).querySelector(
       '[role="status"]',
     );
-    expect(emptyStatus?.textContent).toContain(
-      'discovery.audioIntroFeed.noAudioIntros',
-    );
+    expect(emptyStatus?.textContent).toContain('discovery.audioIntroFeed.noAudioIntros');
   });
 
   it('distinguishes a load failure from an empty feed and retries', async () => {
@@ -216,9 +220,7 @@ describe('AudioIntroFeedComponent', () => {
   });
 
   it('renders a translated fallback for a profile without a display name', () => {
-    expect(component.displayName(makeUser({ display_name: undefined }))).toBe(
-      'common.unknownUser',
-    );
+    expect(component.displayName(makeUser({ display_name: undefined }))).toBe('common.unknownUser');
   });
 
   it('localises language codes again when the active locale changes', () => {
@@ -228,9 +230,7 @@ describe('AudioIntroFeedComponent', () => {
 
     expect(english).toBe('Japanese, English');
     expect(french).toBe('japonais, anglais');
-    expect(component.formatLanguages(['invalid_language_code'])).toBe(
-      'invalid_language_code',
-    );
+    expect(component.formatLanguages(['invalid_language_code'])).toBe('invalid_language_code');
   });
 
   it('only renders a language pair when both sides are present', () => {

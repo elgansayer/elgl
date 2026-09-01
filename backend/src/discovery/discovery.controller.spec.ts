@@ -7,10 +7,7 @@ import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
-import {
-  DISCOVERY_CACHE_NO_STORE,
-  DISCOVERY_CACHE_PRIVATE_SHORT,
-} from './cache.interceptor';
+import { DISCOVERY_CACHE_NO_STORE } from './cache.interceptor';
 
 vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
@@ -75,7 +72,14 @@ describe('DiscoveryController', () => {
 
   describe('privacy-safe cache partitioning', () => {
     const cacheDirectiveFor = (
-      method: 'getPartnerOfWeek' | 'getRecentNativeSpeakers' | 'getSpotlight',
+      method:
+        | 'findPartners'
+        | 'getPartnerOfWeek'
+        | 'getAudioIntros'
+        | 'getRecentNativeSpeakers'
+        | 'getSpotlight'
+        | 'findByLanguagePair'
+        | 'searchByLocation',
     ): Record<string, string> => {
       const interceptors = Reflect.getMetadata(
         INTERCEPTORS_METADATA,
@@ -84,19 +88,18 @@ describe('DiscoveryController', () => {
       return interceptors[0].directive;
     };
 
-    it('does not HTTP-cache Partner of the Week IDs', () => {
-      expect(cacheDirectiveFor('getPartnerOfWeek')).toEqual(
-        DISCOVERY_CACHE_NO_STORE,
-      );
-    });
-
-    it.each(['getRecentNativeSpeakers', 'getSpotlight'] as const)(
-      'partitions %s by authorization',
+    it.each([
+      'findPartners',
+      'getPartnerOfWeek',
+      'getAudioIntros',
+      'getRecentNativeSpeakers',
+      'getSpotlight',
+      'findByLanguagePair',
+      'searchByLocation',
+    ] as const)(
+      'does not HTTP-cache privacy-sensitive %s responses',
       (method) => {
-        expect(cacheDirectiveFor(method)).toEqual(
-          DISCOVERY_CACHE_PRIVATE_SHORT,
-        );
-        expect(cacheDirectiveFor(method).Vary).toBe('Authorization');
+        expect(cacheDirectiveFor(method)).toEqual(DISCOVERY_CACHE_NO_STORE);
       },
     );
   });

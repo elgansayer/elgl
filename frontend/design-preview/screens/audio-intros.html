@@ -53,7 +53,7 @@
         padding: 32px 16px 64px;
         background: rgb(var(--surface-600));
         color: rgb(var(--text-primary));
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
       button {
         min-height: 44px;
@@ -156,9 +156,8 @@
       .identity strong,
       .identity span {
         display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
+        white-space: normal;
       }
       .identity span {
         margin-top: 3px;
@@ -213,6 +212,49 @@
       .state.error p {
         color: rgb(var(--danger));
       }
+      .zoom-states {
+        width: min(100%, 820px);
+        margin: 18px auto 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .zoom-state {
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-400));
+      }
+      .zoom-state h3,
+      .zoom-state p {
+        margin: 0;
+      }
+      .zoom-state > p {
+        margin-top: 6px;
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .zoom-frame {
+        margin-top: 12px;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 12px;
+        background: rgb(var(--surface-500));
+      }
+      .zoom-200 .zoom-frame {
+        width: min(100%, 390px);
+      }
+      .zoom-400 .zoom-frame {
+        width: min(100%, 195px);
+      }
+      .zoom-frame .profile {
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .zoom-frame .identity-link {
+        flex-basis: calc(100% - 56px);
+      }
       .retry {
         border-radius: 999px;
         padding: 9px 18px;
@@ -252,6 +294,9 @@
         .states {
           grid-template-columns: 1fr;
         }
+        .zoom-states {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -259,16 +304,25 @@
     <header class="page-head">
       <div>
         <h1>Audio introductions</h1>
-        <p>/discovery/audio-intros · populated, playing, failure, empty, and loading states</p>
+        <p>
+          /discovery/audio-intros · populated, playing, failure, empty, loading, and high-zoom
+          reflow states
+        </p>
       </div>
       <div class="controls" aria-label="Preview controls">
-        <button class="control" type="button" onclick="document.documentElement.classList.toggle('dark')">
+        <button
+          class="control"
+          type="button"
+          onclick="document.documentElement.classList.toggle('dark')"
+        >
           Theme
         </button>
         <button
           class="control"
           type="button"
-          onclick="document.documentElement.dir = document.documentElement.dir === 'rtl' ? 'ltr' : 'rtl'"
+          onclick="
+            document.documentElement.dir = document.documentElement.dir === 'rtl' ? 'ltr' : 'rtl'
+          "
         >
           RTL
         </button>
@@ -293,11 +347,7 @@
                 <span class="avatar" aria-hidden="true">M</span>
                 <div class="identity"><strong>Maya</strong><span>English → Japanese</span></div>
               </a>
-              <button
-                class="play playing"
-                type="button"
-                aria-label="Pause Maya's introduction"
-              >
+              <button class="play playing" type="button" aria-label="Pause Maya's introduction">
                 ❚❚
               </button>
             </article>
@@ -323,6 +373,45 @@
           <div aria-hidden="true">🎙</div>
           <h3>No audio introductions</h3>
           <p>Empty results remain a valid, non-error state.</p>
+        </article>
+      </section>
+
+      <section class="zoom-states" aria-label="High zoom and reflow acceptance">
+        <article class="zoom-state zoom-200" data-state="200%-zoom">
+          <h3>200% zoom</h3>
+          <p>Identity, language details, and playback remain visible through vertical reflow.</p>
+          <div class="zoom-frame">
+            <article class="profile">
+              <a class="identity-link" href="/profile/long-name">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div class="identity">
+                  <strong>Alexandria-Montgomery Tanaka</strong>
+                  <span>Brazilian Portuguese, Japanese → English, French</span>
+                </div>
+              </a>
+              <button class="play" type="button" aria-label="Play Alexandria's introduction">
+                ▶
+              </button>
+            </article>
+          </div>
+        </article>
+        <article class="zoom-state zoom-400" data-state="400%-zoom">
+          <h3>400% zoom</h3>
+          <p>Content wraps without clipping; the 44px playback control stays reachable.</p>
+          <div class="zoom-frame">
+            <article class="profile">
+              <a class="identity-link" href="/profile/long-name">
+                <span class="avatar" aria-hidden="true">A</span>
+                <div class="identity">
+                  <strong>Alexandria-Montgomery Tanaka</strong>
+                  <span>Brazilian Portuguese, Japanese → English, French</span>
+                </div>
+              </a>
+              <button class="play" type="button" aria-label="Play Alexandria's introduction">
+                ▶
+              </button>
+            </article>
+          </div>
         </article>
       </section>
     </main>

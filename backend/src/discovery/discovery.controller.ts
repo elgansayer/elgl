@@ -23,7 +23,6 @@ import { DiscoveryService, DiscoveryResult } from './discovery.service';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import {
   DiscoveryCacheInterceptor,
-  DISCOVERY_CACHE_PRIVATE_SHORT,
   DISCOVERY_CACHE_NO_STORE,
 } from './cache.interceptor';
 import {
@@ -87,10 +86,10 @@ export class DiscoveryController {
   ) {}
 
   /**
-   * Personalised partner search: user-specific filters, private short cache.
+   * Personalised partner search: user-specific filters, never HTTP cached.
    */
   @Get('partners')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -166,10 +165,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Audio intro discovery: user-specific filters, private short cache.
+   * Audio intro discovery: user-specific filters, never HTTP cached.
    */
   @Get('audio-intros')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -214,10 +213,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Recently joined native speakers: viewer-specific, authorization-partitioned cache.
+   * Recently joined native speakers: viewer-specific and never HTTP cached.
    */
   @Get('recent-native-speakers')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -227,7 +226,7 @@ export class DiscoveryController {
     summary: 'Get recently joined native speakers',
     description:
       'Returns up to 10 users who joined within the last 7 days and have at least one native language set. ' +
-      'Results exclude the requester and blocked profiles, are cached only in an authorization-partitioned edge entry, and are enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are not HTTP cached so privacy transitions take effect immediately, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,
@@ -247,10 +246,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Spotlight users: viewer-specific, authorization-partitioned cache.
+   * Spotlight users: viewer-specific and never HTTP cached.
    */
   @Get('spotlight')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -260,7 +259,7 @@ export class DiscoveryController {
     summary: 'Get spotlight users',
     description:
       'Returns up to 5 recently created users with native languages set. ' +
-      'Results exclude the requester and blocked profiles, are cached only in an authorization-partitioned edge entry, and are enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are not HTTP cached so privacy transitions take effect immediately, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,
@@ -278,10 +277,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Language pair matching: user-specific, private short cache.
+   * Language pair matching: user-specific and never HTTP cached.
    */
   @Get('language-pair')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -317,10 +316,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Location-based search: user-specific, private short cache.
+   * Location-based search: user-specific and never HTTP cached.
    */
   @Get('search-by-location')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 20,
     vipMaxRequests: 80,
@@ -388,7 +387,7 @@ export class DiscoveryController {
    * Degradation-aware partner search: returns both data and degradation marker.
    */
   @Get('partners-with-degradation')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   async findPartnersWithDegradation(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,

@@ -29,6 +29,7 @@ type QueryChainMock = {
   single: Mock;
   maybeSingle: Mock;
   match: Mock;
+  is: Mock;
   _setResolve: (data: unknown, error?: { message: string } | null) => void;
   then: (resolve: (value: unknown) => void) => undefined;
 };
@@ -59,6 +60,7 @@ const makeQueryChain = (): QueryChainMock => {
     'single',
     'maybeSingle',
     'match',
+    'is',
   ];
   methodNames.forEach((m) => {
     (chain as Record<string, unknown>)[m] = vi.fn().mockReturnValue(chain);
@@ -237,6 +239,22 @@ describe('RecommendationsService', () => {
 
       await service.calculateDailyRecommendations();
 
+      const privacyFilters = {
+        is_deleted: false,
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
+      };
+      expect(usersChain.match).toHaveBeenCalledWith(privacyFilters);
+      expect(usersChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+      expect(matchesChain.match).toHaveBeenCalledWith(privacyFilters);
+      expect(matchesChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+
       expect(mockPipeline.set).toHaveBeenCalledTimes(1);
       expect(mockPipeline.set.mock.calls[0][0]).toBe(
         'recommendations:daily:user-a',
@@ -302,10 +320,89 @@ describe('RecommendationsService', () => {
         },
       ];
       mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'p-1' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('p-1');
+      expect(eligibilityChain.match).toHaveBeenCalledWith({
+        is_deleted: false,
+        privacy_hide_from_search: false,
+        is_deletion_pending: false,
+      });
+      expect(eligibilityChain.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+    });
+
+    it('removes newly hidden or deleting users from cached recommendations', async () => {
+      const dtos = [
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+        {
+          id: 'deleting',
+          displayName: 'Deleting',
+          avatarUrl: null,
+          nativeLanguage: 'fr',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: false,
+          studyStreakDays: 2,
+          correctionRatio: 0.5,
+        },
+      ] satisfies RecommendedUserDto[];
+      mockRedis.get.mockResolvedValue(JSON.stringify(dtos));
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
+    });
+
+    it('never returns cached users when privacy revalidation fails', async () => {
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify([
+          {
+            id: 'cached-user',
+            displayName: 'Cached',
+            avatarUrl: null,
+            nativeLanguage: 'es',
+            targetLanguages: ['en'],
+            sharedInterests: 0,
+            isSeriousLearner: true,
+            studyStreakDays: 3,
+            correctionRatio: 0.8,
+          },
+        ] satisfies RecommendedUserDto[]),
+      );
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve(null, { message: 'revalidation offline' });
+      const liveUserChain = makeQueryChain();
+      liveUserChain._setResolve(null, { message: 'fallback offline' });
+      mockFrom
+        .mockReturnValueOnce(eligibilityChain)
+        .mockReturnValueOnce(liveUserChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result).toEqual([]);
+      expect(result.map((candidate) => candidate.id)).not.toContain(
+        'cached-user',
+      );
     });
 
     it('should return empty array when nothing cached', async () => {

@@ -74,12 +74,15 @@ import { UserProfile } from '../../services/user.service';
                   <div class="min-w-0 flex-1">
                     <p
                       [id]="'audio-intro-user-' + user.id"
-                      class="truncate font-medium text-text-primary"
+                      class="break-words font-medium text-text-primary"
                     >
                       {{ displayName(user) }}
                     </p>
                     @if (hasLanguagePair(user)) {
-                      <p class="truncate text-xs text-text-secondary">
+                      <p
+                        data-testid="audio-intro-language-pair"
+                        class="break-words text-xs text-text-secondary"
+                      >
                         {{
                           'discovery.audioIntroFeed.languagePair'
                             | t
