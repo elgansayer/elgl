@@ -33,9 +33,7 @@ describe('HostDashboardService', () => {
     };
     const client = {
       from: vi.fn().mockReturnValue(roomQuery),
-      rpc: vi
-        .fn()
-        .mockResolvedValue({ data: earnings, error: earningsError }),
+      rpc: vi.fn().mockResolvedValue({ data: earnings, error: earningsError }),
     };
     const supabaseService = {
       getClient: vi.fn().mockReturnValue(client),
