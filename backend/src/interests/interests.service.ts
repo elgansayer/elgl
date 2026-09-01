@@ -337,7 +337,30 @@ export class InterestsService {
         return normalised.toLowerCase();
       }
     };
-    return normalise(sentence).includes(normalise(term.trim()));
+
+    const wordSegments = (value: string): string[] => {
+      let segmenter: Intl.Segmenter;
+      try {
+        segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
+      } catch {
+        segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
+      }
+      return Array.from(segmenter.segment(value))
+        .filter((segment) => segment.isWordLike)
+        .map((segment) => normalise(segment.segment));
+    };
+
+    const sentenceSegments = wordSegments(sentence);
+    const termSegments = wordSegments(term.trim());
+    if (termSegments.length === 0) {
+      return normalise(sentence).includes(normalise(term.trim()));
+    }
+
+    return sentenceSegments.some((_, start) =>
+      termSegments.every(
+        (segment, offset) => sentenceSegments[start + offset] === segment,
+      ),
+    );
   }
 
   private async withTimeout<T>(

@@ -127,6 +127,44 @@ describe('InterestsService', () => {
     );
   });
 
+  it('rejects a term that appears only inside another word', async () => {
+    results.interest_vocabulary.data = [{ word: 'cat', translation: 'Cat' }];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([
+        { id: 0, sentence: 'Education matters every day.' },
+      ]),
+    });
+
+    await service.generateFlashcards('user-1', 'en');
+
+    expect(upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ original_context: 'cat' })],
+      expect.any(Object),
+    );
+  });
+
+  it('accepts a multi-word term as consecutive word segments', async () => {
+    results.interest_vocabulary.data = [
+      { word: 'New York', translation: 'Nueva York' },
+    ];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([
+        { id: 0, sentence: 'I travelled to New York yesterday.' },
+      ]),
+    });
+
+    await service.generateFlashcards('user-1', 'en');
+
+    expect(upsert).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          original_context: 'I travelled to New York yesterday.',
+        }),
+      ],
+      expect.any(Object),
+    );
+  });
+
   it('counts CJK words with Intl.Segmenter before accepting output', async () => {
     results.interest_vocabulary.data = [{ word: '猫', translation: 'Cat' }];
     proxyMessage.mockResolvedValue({
