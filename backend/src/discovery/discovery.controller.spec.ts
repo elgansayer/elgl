@@ -74,6 +74,7 @@ describe('DiscoveryController', () => {
     const cacheDirectiveFor = (
       method:
         | 'findPartners'
+        | 'findPartnersWithDegradation'
         | 'getPartnerOfWeek'
         | 'getAudioIntros'
         | 'getRecentNativeSpeakers'
@@ -90,6 +91,7 @@ describe('DiscoveryController', () => {
 
     it.each([
       'findPartners',
+      'findPartnersWithDegradation',
       'getPartnerOfWeek',
       'getAudioIntros',
       'getRecentNativeSpeakers',
