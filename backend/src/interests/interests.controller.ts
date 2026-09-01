@@ -16,6 +16,7 @@ import {
   CACHE_PUBLIC_SHORT,
   CACHE_PRIVATE_NO_STORE,
 } from '../common/cache.interceptor';
+import { SelectInterestsDto } from './dto/select-interests.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -46,7 +47,7 @@ export class InterestsController {
   @Post('select')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async selectInterests(
-    @Body() body: { interestTags?: string[]; interestIds?: string[] },
+    @Body() body: SelectInterestsDto,
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.id;
