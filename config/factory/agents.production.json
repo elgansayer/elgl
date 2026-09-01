@@ -103,7 +103,7 @@
     "ci_repair": ["codex", "claude", "google", "opencode", "pi"],
     "general_action": ["opencode", "google", "codex", "claude", "pi"],
     "skip_busy_providers": true,
-    "same_provider_retries": 1
+    "same_provider_retries": 0
   },
   "timeouts": {
     "planning": 1200,
@@ -113,7 +113,7 @@
     "quality_repair": 1800,
     "code_review": 900,
     "ci_repair": 1800,
-    "general_action": 1800
+    "general_action": 600
   },
   "circuit_breaker": {
     "failure_threshold": 1,
