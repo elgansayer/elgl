@@ -69,6 +69,7 @@ describe('Chat Flow (Mocked)', () => {
     }).as('getRooms');
 
     cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/archived-rooms', { body: [] }).as('getArchivedRooms');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
     cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
@@ -166,7 +167,7 @@ describe('Chat Flow (Mocked)', () => {
     cy.wait('@getMessages');
     cy.window().then((win) => {
       (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
-        'Error sending message:';
+        'Failed to send text message:';
     });
     cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
