@@ -131,7 +131,11 @@ test('rejects Playwright launched from the frontend working directory', () => {
 });
 
 test('rejects root Playwright discovery without an explicit e2e config', () => {
-  for (const command of ['npx playwright test', 'npm exec playwright -- test']) {
+  for (const command of [
+    'npx playwright test',
+    'npm exec playwright -- test',
+    'npm x playwright -- test',
+  ]) {
     const violations = analyse({ 'automation/qa-loop.sh': command });
     assert.equal(violations.length, 1, command);
     assert.match(
@@ -223,6 +227,7 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'bun run e2e/tests/auth.spec.ts',
     'npx -y tsx e2e/tests/auth.spec.ts',
     'npm exec --yes tsx e2e/tests/auth.spec.ts',
+    'npm x tsx e2e/tests/auth.spec.ts',
     'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
     'npx tsx@latest e2e/tests/auth.spec.ts',
     'ts-node --cwd . e2e/tests/auth.spec.ts',

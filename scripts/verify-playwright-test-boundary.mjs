@@ -292,7 +292,7 @@ function commandInvocation(segment) {
   const wrapper = tokens[0];
   if (wrapper === 'npx') {
     tokens = consumeWrapperOptions(tokens.slice(1));
-  } else if (wrapper === 'npm' && tokens[1] === 'exec') {
+  } else if (wrapper === 'npm' && ['exec', 'x'].includes(tokens[1])) {
     tokens = consumeWrapperOptions(tokens.slice(2));
   } else if (['pnpm', 'yarn'].includes(wrapper) && tokens[1] === 'exec') {
     tokens = tokens.slice(2);
