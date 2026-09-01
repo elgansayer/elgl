@@ -738,48 +738,6 @@ describe('MomentsService', () => {
     });
   });
 
-  describe('getUserLearningCounts', () => {
-    it('scopes moments and corrections to the requested learner', async () => {
-      const momentsEq = vi.fn().mockResolvedValue({
-        data: [{ id: 'moment-1' }],
-        error: null,
-      });
-      const correctionsNot = vi.fn().mockResolvedValue({
-        data: [{ id: 'correction-1' }, { id: 'correction-2' }],
-        error: null,
-      });
-      const correctionsEq = vi.fn().mockReturnValue({
-        not: correctionsNot,
-      });
-
-      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
-        if (table === 'moments') {
-          return {
-            select: vi.fn().mockReturnValue({ eq: momentsEq }),
-          };
-        }
-        if (table === 'moment_comments') {
-          return {
-            select: vi.fn().mockReturnValue({ eq: correctionsEq }),
-          };
-        }
-        return mockQueryBuilder;
-      });
-
-      await expect(service.getUserLearningCounts('user-1')).resolves.toEqual({
-        corrections: 2,
-        moments: 1,
-      });
-      expect(momentsEq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(correctionsEq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(correctionsNot).toHaveBeenCalledWith(
-        'correction_payload',
-        'is',
-        null,
-      );
-    });
-  });
-
   describe('createStory', () => {
     it('should default expiry to 24 hours and return the story with author details', async () => {
       mockQueryBuilder.single.mockResolvedValue({

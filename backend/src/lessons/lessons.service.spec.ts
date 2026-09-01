@@ -19,7 +19,6 @@ type QueryChainMock = {
   upsert: Mock;
   single: Mock;
   maybeSingle: Mock;
-  limit: Mock;
   _setResolveData: (result: MockResult) => void;
   then: (resolve: (value: MockResult) => void) => undefined;
 };
@@ -36,7 +35,6 @@ const createQueryChain = (): QueryChainMock => {
     'upsert',
     'single',
     'maybeSingle',
-    'limit',
   ] as const) {
     chain[method] = vi.fn().mockReturnValue(chain);
   }
@@ -101,42 +99,6 @@ describe('LessonsService progress', () => {
     });
     expect(progressQuery.eq).toHaveBeenCalledWith('user_id', 'user-1');
     expect(progressQuery.eq).toHaveBeenCalledWith('lesson_id', lesson.id);
-  });
-
-  it('returns only recent lesson progress for the requested learner and language', async () => {
-    const progressQuery = createQueryChain();
-    progressQuery._setResolveData({
-      data: [
-        {
-          lesson_id: lesson.id,
-          updated_at: '2026-08-26T20:00:00.000Z',
-          lessons: {
-            id: lesson.id,
-            title: lesson.title,
-            language_code: lesson.language_code,
-          },
-        },
-      ],
-      error: null,
-    });
-    supabase.from.mockReturnValue(progressQuery);
-
-    await expect(
-      service.listRecentLessonsForUser('user-1', 'ja', 5),
-    ).resolves.toEqual([
-      {
-        id: lesson.id,
-        title: lesson.title,
-        language_code: 'ja',
-        encountered_at: '2026-08-26T20:00:00.000Z',
-      },
-    ]);
-    expect(progressQuery.eq).toHaveBeenCalledWith('user_id', 'user-1');
-    expect(progressQuery.eq).toHaveBeenCalledWith(
-      'lessons.language_code',
-      'ja',
-    );
-    expect(progressQuery.limit).toHaveBeenCalledWith(5);
   });
 
   it('upserts progress scoped to the authenticated learner', async () => {

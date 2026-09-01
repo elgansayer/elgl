@@ -63,33 +63,6 @@ interface MomentCommentRow {
 
 @Injectable()
 export class MomentsService {
-  async getUserLearningCounts(userId: string): Promise<{
-    corrections: number;
-    moments: number;
-  }> {
-    const supabase = this.supabaseService.getClient();
-    const [
-      { data: momentsData, error: momentsError },
-      { data: correctionsData, error: correctionsError },
-    ] = await Promise.all([
-      supabase.from('moments').select('id').eq('user_id', userId),
-      supabase
-        .from('moment_comments')
-        .select('id')
-        .eq('user_id', userId)
-        .not('correction_payload', 'is', null),
-    ]);
-
-    if (momentsError || correctionsError) {
-      throw new Error('Failed to fetch user learning counts');
-    }
-
-    return {
-      corrections: correctionsData?.length ?? 0,
-      moments: momentsData?.length ?? 0,
-    };
-  }
-
   async getLifetimeCounts(_userId?: string): Promise<{
     translations: number;
     corrections: number;

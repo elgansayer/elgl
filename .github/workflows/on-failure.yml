@@ -10,7 +10,7 @@ on:
       - Admin portal CI
     types: [completed]
   schedule:
-    - cron: '17 */3 * * *'
+    - cron: '17 * * * *'
 
 permissions:
   contents: read

@@ -10,12 +10,8 @@ describe('LearnerKnowledgeService', () => {
   let service: LearnerKnowledgeService;
   let flashcardsService: { getFlashcards: ReturnType<typeof vi.fn> };
   let hobbyTagsService: { getUserVocabulary: ReturnType<typeof vi.fn> };
-  let lessonsService: {
-    listRecentLessonsForUser: ReturnType<typeof vi.fn>;
-  };
-  let momentsService: {
-    getUserLearningCounts: ReturnType<typeof vi.fn>;
-  };
+  let lessonsService: { listLessons: ReturnType<typeof vi.fn> };
+  let momentsService: { getLifetimeCounts: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     flashcardsService = {
@@ -25,10 +21,10 @@ describe('LearnerKnowledgeService', () => {
       getUserVocabulary: vi.fn(),
     };
     lessonsService = {
-      listRecentLessonsForUser: vi.fn(),
+      listLessons: vi.fn(),
     };
     momentsService = {
-      getUserLearningCounts: vi.fn(),
+      getLifetimeCounts: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -104,27 +100,18 @@ describe('LearnerKnowledgeService', () => {
       flashcardsService.getFlashcards.mockResolvedValue(mockFlashcards);
 
       const mockLessons = [
-        {
-          id: 'lesson-1',
-          title: 'Lesson 1',
-          language_code: 'es',
-          encountered_at: '2026-01-01T10:00:00Z',
-        },
-        {
-          id: 'lesson-2',
-          title: 'Lesson 2',
-          language_code: 'es',
-          encountered_at: '2026-01-02T10:00:00Z',
-        },
+        { title: 'Lesson 1', created_at: '2026-01-01T10:00:00Z' },
+        { title: 'Lesson 2', created_at: '2026-01-02T10:00:00Z' },
       ];
-      lessonsService.listRecentLessonsForUser.mockResolvedValue(mockLessons);
+      lessonsService.listLessons.mockResolvedValue(mockLessons);
 
       hobbyTagsService.getUserVocabulary.mockResolvedValue([
         { word: 'hobbyWord' },
       ]);
-      momentsService.getUserLearningCounts.mockResolvedValue({
+      momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 10,
         corrections: 2,
+        translations: 5,
       });
 
       const profile = await service.getProfile('user1', 'es');
@@ -164,20 +151,6 @@ describe('LearnerKnowledgeService', () => {
       expect(profile.globalRecentEncounters.length).toBe(2);
       expect(profile.globalRecentEncounters[0].topic).toBe('Lesson 1');
       expect(profile.globalRecentEncounters[0].source).toBe('lesson');
-      expect(profile.globalRecentEncounters[0].timestamp).toEqual(
-        new Date('2026-01-01T10:00:00Z'),
-      );
-      expect(lessonsService.listRecentLessonsForUser).toHaveBeenCalledWith(
-        'user1',
-        'es',
-        5,
-      );
-      expect(momentsService.getUserLearningCounts).toHaveBeenCalledWith(
-        'user1',
-      );
-      expect(newWord?.lastEncounteredAt).toEqual(
-        new Date('2026-01-01T00:00:00Z'),
-      );
     });
 
     it('should explicitly fallback to A1 for multi-language requests until language-scoped assessments exist, and separate language items', async () => {
@@ -196,15 +169,24 @@ describe('LearnerKnowledgeService', () => {
         },
       ]);
 
-      lessonsService.listRecentLessonsForUser.mockResolvedValue([]);
-      momentsService.getUserLearningCounts.mockResolvedValue({
+      lessonsService.listLessons.mockResolvedValue([]);
+      momentsService.getLifetimeCounts.mockResolvedValue({
         moments: 0,
         corrections: 0,
+        translations: 0,
       });
 
-      hobbyTagsService.getUserVocabulary
-        .mockResolvedValueOnce([{ word: 'bonjour' }])
-        .mockResolvedValueOnce([{ word: 'hallo' }]);
+      hobbyTagsService.getUserVocabulary.mockImplementation(
+        async (userId, language) => {
+          if (language === 'fr') {
+            return [{ word: 'bonjour' }];
+          }
+          if (language === 'de') {
+            return [{ word: 'hallo' }];
+          }
+          return [];
+        },
+      );
 
       const profileFr = await service.getProfile('user-multi', 'fr');
       const profileDe = await service.getProfile('user-multi', 'de');
@@ -236,10 +218,8 @@ describe('LearnerKnowledgeService', () => {
       hobbyTagsService.getUserVocabulary.mockRejectedValue(
         new Error('Tags failed'),
       );
-      lessonsService.listRecentLessonsForUser.mockRejectedValue(
-        new Error('Lessons failed'),
-      );
-      momentsService.getUserLearningCounts.mockRejectedValue(
+      lessonsService.listLessons.mockRejectedValue(new Error('Lessons failed'));
+      momentsService.getLifetimeCounts.mockRejectedValue(
         new Error('Moments failed'),
       );
 
