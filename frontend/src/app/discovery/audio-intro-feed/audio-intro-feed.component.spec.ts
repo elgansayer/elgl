@@ -159,7 +159,10 @@ describe('AudioIntroFeedComponent', () => {
     await emptyFixture.whenStable();
     emptyFixture.detectChanges();
 
-    expect((emptyFixture.nativeElement as HTMLElement).textContent).toContain(
+    const emptyStatus = (emptyFixture.nativeElement as HTMLElement).querySelector(
+      '[role="status"]',
+    );
+    expect(emptyStatus?.textContent).toContain(
       'discovery.audioIntroFeed.noAudioIntros',
     );
   });

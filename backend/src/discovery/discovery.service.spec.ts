@@ -403,6 +403,14 @@ describe('DiscoveryService', () => {
         'privacy_hide_from_search',
         false,
       );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
       expect(result).toEqual(
         partners.map((p) => ({ ...p, is_partner_of_week: false })),

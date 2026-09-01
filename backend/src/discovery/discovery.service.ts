@@ -456,7 +456,8 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
-      .eq('is_deletion_pending', false);
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder

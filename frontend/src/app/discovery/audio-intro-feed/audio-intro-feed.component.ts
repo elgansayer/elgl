@@ -107,7 +107,10 @@ import { UserProfile } from '../../services/user.service';
                 </button>
               </article>
             } @empty {
-              <div class="flex flex-col items-center px-4 py-12 text-center text-text-secondary">
+              <div
+                class="flex flex-col items-center px-4 py-12 text-center text-text-secondary"
+                role="status"
+              >
                 <span class="i-ph-microphone-slash mb-2 text-4xl" aria-hidden="true"></span>
                 <p>{{ 'discovery.audioIntroFeed.noAudioIntros' | t }}</p>
               </div>
