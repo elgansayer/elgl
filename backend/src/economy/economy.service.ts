@@ -1343,13 +1343,16 @@ export class EconomyService {
         ? receiverProfileResult.value
         : null;
 
-    const failedProfileLookupCount = [
-      senderProfileResult,
-      receiverProfileResult,
-    ].filter((result) => result.status === 'rejected').length;
-    if (failedProfileLookupCount > 0) {
+    const failedProfileLookupRoles: string[] = [];
+    if (senderProfileResult.status === 'rejected') {
+      failedProfileLookupRoles.push('sender');
+    }
+    if (receiverProfileResult.status === 'rejected') {
+      failedProfileLookupRoles.push('receiver');
+    }
+    if (failedProfileLookupRoles.length > 0) {
       this.logger.warn(
-        `Gift profile enrichment failed for ${failedProfileLookupCount} lookup${failedProfileLookupCount === 1 ? '' : 's'}`,
+        `Gift profile enrichment failed for ${failedProfileLookupRoles.join(' and ')} lookup${failedProfileLookupRoles.length === 1 ? '' : 's'}`,
       );
     }
 
