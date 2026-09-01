@@ -484,7 +484,10 @@ export class SafetyService {
     const ids: unknown = await firstValueFrom(
       this.http.get<unknown>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
     );
-    if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string' && id.length > 0)) {
+    if (
+      !Array.isArray(ids) ||
+      !ids.every((id) => typeof id === 'string' && id.length > 0 && id === id.trim())
+    ) {
       throw new Error('Invalid block graph response');
     }
     return Array.from(new Set(ids));

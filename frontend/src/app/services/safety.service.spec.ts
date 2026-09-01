@@ -200,5 +200,12 @@ describe('SafetyService muted words', () => {
     await expect(service.getBlockedAndBlockerIdsStrict('user-a')).rejects.toThrow(
       'Invalid block graph response',
     );
+
+    for (const invalidId of ['', '   ', ' padded-id ']) {
+      get.mockReturnValueOnce(of(['valid-id', invalidId]));
+      await expect(service.getBlockedAndBlockerIdsStrict('user-a')).rejects.toThrow(
+        'Invalid block graph response',
+      );
+    }
   });
 });
