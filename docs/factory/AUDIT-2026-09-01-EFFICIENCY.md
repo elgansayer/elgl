@@ -4,7 +4,7 @@
 
 This audit reviewed the current OpenHands/Repo Factory on `main` after the August efficiency
 series, including provider routing and fallbacks, conservative admission, phase models and
-reasoning controls, prompt bounds, provider health/circuit state, issue/PR refresh behavior,
+reasoning controls, prompt bounds, provider health/circuit state, issue/PR refresh behaviour,
 Factory merge/review automation, scheduled GitHub Actions, and the current production instance
 configuration.
 
@@ -147,7 +147,8 @@ more precise control:
 
 - Pi's phase-specific thinking levels;
 - production zero same-provider retries;
-- the ten-minute production general-action ceiling; and
+- the ten-minute production general-action ceiling;
+- the resulting 3,900-second maximum agent lease envelope; and
 - event-driven dependency-lane reconciliation plus a single daily schedule backstop.
 
 ## Expected result
