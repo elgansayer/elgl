@@ -322,10 +322,13 @@ export class RecommendationsService {
     }
   }
 
-  async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
-    const blockedIds = new Set(
-      await this.safetyService.getBlockedAndBlockerIds(userId),
-    );
+  async getDailyRecommendations(
+    userId: string,
+    verifiedBlockedIds?: ReadonlySet<string>,
+  ): Promise<RecommendedUserDto[]> {
+    const blockedIds =
+      verifiedBlockedIds ??
+      new Set(await this.safetyService.getBlockedAndBlockerIds(userId));
 
     try {
       const redis = this.supabaseService.getRedisClient();

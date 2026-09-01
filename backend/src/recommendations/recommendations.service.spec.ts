@@ -77,6 +77,27 @@ const makeQueryChain = (): QueryChainMock => {
   return chain as QueryChainMock;
 };
 
+const recommendation = (id: string): RecommendedUserDto => ({
+  id,
+  displayName: `User ${id}`,
+  avatarUrl: null,
+  nativeLanguage: 'es',
+  targetLanguages: ['en'],
+  sharedInterests: 0,
+  isSeriousLearner: false,
+  studyStreakDays: 0,
+  correctionRatio: 0,
+});
+
+type RecommendationTiers = {
+  recommendationsByInterests(userId: string): Promise<RecommendedUserDto[]>;
+  recommendationsByLanguageExchange(
+    userId: string,
+  ): Promise<RecommendedUserDto[]>;
+  recommendationsByActiveUsers(userId: string): Promise<RecommendedUserDto[]>;
+  recommendationsFromMock(userId: string): RecommendedUserDto[];
+};
+
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
   let mockRedis: {
@@ -627,6 +648,43 @@ describe('RecommendationsService', () => {
   });
 
   describe('getRecommendations (graceful degradation)', () => {
+    it('filters blocked users from every tier before returning results', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const tiers = service as unknown as RecommendationTiers;
+      vi.spyOn(tiers, 'recommendationsByInterests').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByLanguageExchange').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByActiveUsers').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsFromMock').mockReturnValue([
+        recommendation('blocked'),
+        recommendation('visible'),
+      ]);
+
+      await expect(service.getRecommendations('user-123')).resolves.toEqual([
+        recommendation('visible'),
+      ]);
+    });
+
+    it('fails closed before evaluating tiers when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+      const tiers = service as unknown as RecommendationTiers;
+      const interests = vi
+        .spyOn(tiers, 'recommendationsByInterests')
+        .mockResolvedValue([recommendation('visible')]);
+
+      await expect(service.getRecommendations('user-123')).rejects.toThrow(
+        'block graph unavailable',
+      );
+      expect(interests).not.toHaveBeenCalled();
+    });
+
     it('should return interest-based results when available', async () => {
       const tagsChain = makeQueryChain();
       tagsChain._setResolve([{ tag: 'sports' }, { tag: 'music' }]);
@@ -914,6 +972,43 @@ describe('RecommendationsService', () => {
   });
 
   describe('getRecommendationsWithFallback', () => {
+    it('filters blocked users from every fallback tier', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      const tiers = service as unknown as RecommendationTiers;
+      vi.spyOn(tiers, 'recommendationsByInterests').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByLanguageExchange').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsByActiveUsers').mockResolvedValue([
+        recommendation('blocked'),
+      ]);
+      vi.spyOn(tiers, 'recommendationsFromMock').mockReturnValue([
+        recommendation('blocked'),
+        recommendation('visible'),
+      ]);
+
+      await expect(
+        service.getRecommendationsWithFallback('user-123'),
+      ).resolves.toEqual([recommendation('visible')]);
+    });
+
+    it('fails closed before fallback when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+      const tiers = service as unknown as RecommendationTiers;
+      const interests = vi
+        .spyOn(tiers, 'recommendationsByInterests')
+        .mockResolvedValue([recommendation('visible')]);
+
+      await expect(
+        service.getRecommendationsWithFallback('user-123'),
+      ).rejects.toThrow('block graph unavailable');
+      expect(interests).not.toHaveBeenCalled();
+    });
+
     it('should return interest-based results tagged with matchTier', async () => {
       const tagsChain = makeQueryChain();
       tagsChain._setResolve([{ tag: 'sports' }]);

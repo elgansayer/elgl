@@ -211,6 +211,13 @@ export class DiscoveryRecommendationsService {
       return [];
     }
 
+    // Resolve the privacy boundary once and share the verified snapshot with
+    // the daily seed. This avoids duplicate block-table queries and guarantees
+    // every discovery tier is evaluated against the same graph.
+    const blockedIds = new Set(
+      await this.safetyService.getBlockedAndBlockerIds(userId),
+    );
+
     const candidateIds = new Set<string>();
     const sharedInterestCounts = new Map<string, number>();
 
@@ -218,8 +225,10 @@ export class DiscoveryRecommendationsService {
     // Cached profile data itself is never returned: all IDs are re-hydrated below
     // through the current privacy/deletion/block boundary before ranking.
     try {
-      const daily =
-        await this.recommendationsService.getDailyRecommendations(userId);
+      const daily = await this.recommendationsService.getDailyRecommendations(
+        userId,
+        blockedIds,
+      );
       for (const recommendation of daily.slice(0, CANDIDATE_LIMIT)) {
         if (recommendation.id && recommendation.id !== userId) {
           candidateIds.add(recommendation.id);
@@ -302,9 +311,6 @@ export class DiscoveryRecommendationsService {
 
     if (candidateIds.size === 0) return [];
 
-    const blockedIds = new Set(
-      await this.safetyService.getBlockedAndBlockerIds(userId),
-    );
     const boundedIds = Array.from(candidateIds)
       .filter(
         (candidateId) => candidateId !== userId && !blockedIds.has(candidateId),

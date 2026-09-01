@@ -29,7 +29,7 @@ describe('DiscoveryService offline privacy boundary', () => {
         },
         {
           provide: SafetyService,
-          useValue: { getBlockedAndBlockerIds: vi.fn() },
+          useValue: { getBlockedAndBlockerIdsStrict: vi.fn() },
         },
         { provide: ChatService, useValue: {} },
         { provide: UserService, useValue: {} },
@@ -67,7 +67,7 @@ describe('DiscoveryService offline privacy boundary', () => {
         },
         {
           provide: SafetyService,
-          useValue: { getBlockedAndBlockerIds: vi.fn() },
+          useValue: { getBlockedAndBlockerIdsStrict: vi.fn() },
         },
         { provide: ChatService, useValue: {} },
         { provide: UserService, useValue: {} },
@@ -84,7 +84,7 @@ describe('DiscoveryService offline privacy boundary', () => {
 
   it('returns no profiles when the client block graph cannot be verified', async () => {
     const get = vi.fn(() => of([{ id: 'partner-1' }]));
-    const getBlockedAndBlockerIds = vi.fn(() =>
+    const getBlockedAndBlockerIdsStrict = vi.fn(() =>
       Promise.reject(new Error('block graph unavailable')),
     );
 
@@ -101,7 +101,7 @@ describe('DiscoveryService offline privacy boundary', () => {
         },
         {
           provide: SafetyService,
-          useValue: { getBlockedAndBlockerIds },
+          useValue: { getBlockedAndBlockerIdsStrict },
         },
         { provide: ChatService, useValue: {} },
         { provide: UserService, useValue: {} },
@@ -114,6 +114,6 @@ describe('DiscoveryService offline privacy boundary', () => {
 
     const service = TestBed.inject(DiscoveryService);
     await expect(service.findPartners({})).resolves.toEqual([]);
-    expect(getBlockedAndBlockerIds).toHaveBeenCalledWith('viewer-1');
+    expect(getBlockedAndBlockerIdsStrict).toHaveBeenCalledWith('viewer-1');
   });
 });

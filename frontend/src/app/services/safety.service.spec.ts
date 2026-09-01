@@ -1,7 +1,8 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 
@@ -175,5 +176,29 @@ describe('SafetyService muted words', () => {
         { id: 'visible', text_content: 'Public post' },
       ]),
     ).toEqual([{ id: 'visible', text_content: 'Public post' }]);
+  });
+
+  it('strictly loads, validates and deduplicates the block graph', async () => {
+    vi.spyOn(TestBed.inject(HttpClient), 'get').mockReturnValue(
+      of(['blocked-user', 'blocker-user', 'blocked-user']),
+    );
+
+    await expect(service.getBlockedAndBlockerIdsStrict('user-a')).resolves.toEqual([
+      'blocked-user',
+      'blocker-user',
+    ]);
+  });
+
+  it('rejects unavailable or malformed strict block graphs', async () => {
+    const get = vi.spyOn(TestBed.inject(HttpClient), 'get');
+    get.mockReturnValueOnce(throwError(() => new Error('service unavailable')));
+    await expect(service.getBlockedAndBlockerIdsStrict('user-a')).rejects.toThrow(
+      'service unavailable',
+    );
+
+    get.mockReturnValueOnce(of(['valid-id', null]));
+    await expect(service.getBlockedAndBlockerIdsStrict('user-a')).rejects.toThrow(
+      'Invalid block graph response',
+    );
   });
 });

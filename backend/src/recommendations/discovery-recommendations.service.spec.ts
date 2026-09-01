@@ -190,17 +190,17 @@ describe('DiscoveryRecommendationsService privacy contract', () => {
       .mockReturnValueOnce(currentUser)
       .mockReturnValueOnce(interests)
       .mockReturnValueOnce(candidates);
+    const getBlockedAndBlockerIds = vi.fn().mockResolvedValue([]);
+    const getDailyRecommendations = vi.fn().mockResolvedValue(
+      Array.from({ length: 10 }, (_, index) => ({
+        id: `candidate-${index + 1}`,
+      })),
+    );
     const service = new DiscoveryRecommendationsService(
       { warn: vi.fn() } as never,
       { getClient: vi.fn().mockReturnValue({ from }) } as never,
-      { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
-      {
-        getDailyRecommendations: vi.fn().mockResolvedValue(
-          Array.from({ length: 10 }, (_, index) => ({
-            id: `candidate-${index + 1}`,
-          })),
-        ),
-      } as never,
+      { getBlockedAndBlockerIds } as never,
+      { getDailyRecommendations } as never,
     );
 
     await service.getForDiscovery('viewer');
@@ -215,5 +215,10 @@ describe('DiscoveryRecommendationsService privacy contract', () => {
     );
     expect(candidates.eq).toHaveBeenCalledWith('is_deletion_pending', false);
     expect(candidates.eq).toHaveBeenCalledWith('is_deleted', false);
+    expect(getBlockedAndBlockerIds).toHaveBeenCalledTimes(1);
+    expect(getDailyRecommendations).toHaveBeenCalledWith(
+      'viewer',
+      expect.any(Set),
+    );
   });
 });
