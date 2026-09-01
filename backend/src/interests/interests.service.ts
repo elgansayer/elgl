@@ -179,6 +179,20 @@ export class InterestsService {
     }
   }
 
+  async interestTagsExist(tags: string[]): Promise<boolean> {
+    if (tags.length === 0) return true;
+    const { data, error } = await this.supabase
+      .from('interest_vocabulary')
+      .select('interest_tag')
+      .in('interest_tag', tags)
+      .returns<Array<Pick<InterestVocabularyRow, 'interest_tag'>>>();
+    if (error) {
+      throw new Error(error.message);
+    }
+    const availableTags = new Set((data ?? []).map((row) => row.interest_tag));
+    return tags.every((tag) => availableTags.has(tag));
+  }
+
   async generateFlashcards(
     userId: string,
     targetLanguage: string,

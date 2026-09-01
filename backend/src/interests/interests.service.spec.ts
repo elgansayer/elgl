@@ -115,6 +115,17 @@ describe('InterestsService', () => {
     ]);
   });
 
+  it('accepts only exact canonical interest tags', async () => {
+    results.interest_vocabulary.data = [{ interest_tag: 'travel' }];
+
+    await expect(service.interestTagsExist(['travel'])).resolves.toBe(true);
+    await expect(service.interestTagsExist(['Travel'])).resolves.toBe(false);
+    await expect(service.interestTagsExist([])).resolves.toBe(true);
+
+    expect(inQuery).toHaveBeenCalledWith('interest_tag', ['travel']);
+    expect(inQuery).toHaveBeenCalledWith('interest_tag', ['Travel']);
+  });
+
   it('batches contextual examples into the canonical flashcard field', async () => {
     results.interest_vocabulary.data = [
       { vocab_word: 'Casa', translation: 'House' },

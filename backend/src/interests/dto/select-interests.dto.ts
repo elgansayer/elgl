@@ -7,11 +7,34 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 const MAX_SELECTED_INTERESTS = 50;
 
+@ValidatorConstraint({ name: 'exactlyOneInterestSelection', async: false })
+class ExactlyOneInterestSelectionConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const body = args.object as SelectInterestsDto;
+    return (
+      Number(Array.isArray(body.interestTags)) +
+        Number(Array.isArray(body.interestIds)) ===
+      1
+    );
+  }
+
+  defaultMessage(): string {
+    return 'exactly one of interestTags or interestIds must be an array';
+  }
+}
+
 export class SelectInterestsDto {
+  @Validate(ExactlyOneInterestSelectionConstraint)
+  private readonly selectionContract?: never;
+
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(MAX_SELECTED_INTERESTS)

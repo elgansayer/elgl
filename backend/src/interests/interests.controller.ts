@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -52,11 +53,20 @@ export class InterestsController {
   ) {
     const userId = req.user.id;
     const targetLanguage = req.user?.target_languages?.[0] ?? 'en';
+    const legacyInterestIds = Array.isArray(body.interestIds)
+      ? body.interestIds
+      : null;
     const interestTags = Array.isArray(body.interestTags)
       ? body.interestTags
       : await this.interestsService.resolveLegacyInterestIds(
-          Array.isArray(body.interestIds) ? body.interestIds : [],
+          legacyInterestIds ?? [],
         );
+    if (legacyInterestIds && interestTags.length !== legacyInterestIds.length) {
+      throw new BadRequestException('Unknown interest ID');
+    }
+    if (!(await this.interestsService.interestTagsExist(interestTags))) {
+      throw new BadRequestException('Unknown interest tag');
+    }
     await this.interestsService.setUserInterests(userId, interestTags);
     await this.interestsService.generateFlashcards(userId, targetLanguage);
     return { success: true };
