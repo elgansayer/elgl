@@ -286,8 +286,10 @@ export class RecommendationsService {
               .limit(ids.length);
 
             if (error || !Array.isArray(discoverableUsers)) {
+              const errorCode =
+                error?.code?.match(/^[a-z0-9_-]{1,32}$/i)?.[0] ?? 'unknown';
               throw new Error(
-                `Failed to revalidate cached recommendations: ${error?.message ?? 'invalid response'}`,
+                `Failed to revalidate cached recommendations (${errorCode})`,
               );
             }
 

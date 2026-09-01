@@ -450,7 +450,10 @@ describe('RecommendationsService', () => {
         ] satisfies RecommendedUserDto[]),
       );
       const eligibilityChain = makeQueryChain();
-      eligibilityChain._setResolve(null, { message: 'revalidation offline' });
+      eligibilityChain._setResolve(null, {
+        code: 'PGRST500',
+        message: 'revalidation offline with provider details',
+      });
       const liveUserChain = makeQueryChain();
       liveUserChain._setResolve(null, { message: 'fallback offline' });
       mockFrom
@@ -463,6 +466,24 @@ describe('RecommendationsService', () => {
       expect(result.map((candidate) => candidate.id)).not.toContain(
         'cached-user',
       );
+      await vi.waitFor(() =>
+        expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+          expect.objectContaining({
+            operation: 'getDailyRecommendations:cache-revalidation',
+            error_message:
+              'Failed to revalidate cached recommendations (PGRST500)',
+          }),
+        ),
+      );
+      const revalidationReport = mockCrashReportService.reportCrash.mock.calls
+        .map(
+          ([report]) => report as { operation?: string; stack_trace?: string },
+        )
+        .find(
+          (report) =>
+            report.operation === 'getDailyRecommendations:cache-revalidation',
+        );
+      expect(revalidationReport?.stack_trace).not.toContain('provider details');
     });
 
     it('should return empty array when nothing cached', async () => {
