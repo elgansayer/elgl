@@ -393,6 +393,38 @@ describe('HelloTalk API E2E Integration Suite', () => {
         });
     });
 
+    it('/discovery/audio-intros (GET) - should return visible audio introductions', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'speaker-1',
+            display_name: 'Audio Partner',
+            native_languages: ['es'],
+            target_languages: ['en'],
+            audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+          },
+        ],
+        error: null,
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toEqual([
+            expect.objectContaining({
+              id: 'speaker-1',
+              display_name: 'Audio Partner',
+              audio_intro_url: 'https://media.example.test/audio-intro.mp3',
+            }),
+          ]);
+          expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+            'scheduled_for_deletion_at',
+            null,
+          );
+        });
+    });
+
     it('/audio-rooms/create (POST) - should create new audio room and return room object', () => {
       const newRoom = {
         id: 'room-101',
