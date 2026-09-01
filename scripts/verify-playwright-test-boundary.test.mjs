@@ -65,6 +65,23 @@ test('accepts root automation that explicitly changes into e2e', () => {
   );
 });
 
+test('does not let a later directory change legitimise an earlier invocation', () => {
+  assert.deepEqual(
+    analyse({
+      'automation/qa-loop.sh': 'npx playwright test; cd e2e',
+    }),
+    [
+      'automation/qa-loop.sh:1 invokes Playwright without the e2e working directory or explicit e2e config',
+    ],
+  );
+  assert.deepEqual(
+    analyse({
+      'automation/qa-loop.sh': 'npx vitest run tests; cd e2e',
+    }),
+    [],
+  );
+});
+
 test('rejects Playwright launched from the frontend working directory', () => {
   const violations = analyse({
     'automation/qa-loop.sh': '(cd frontend && npx playwright test)',
@@ -129,6 +146,15 @@ test('rejects Playwright files or directories passed to Vitest and Jest', () => 
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /Playwright suite to Vitest or Jest/, command);
+  }
+});
+
+test('rejects wrong runners in non-final package scripts', () => {
+  for (const command of ['node e2e/tests/auth.spec.ts', 'jest e2e/tests']) {
+    const files = {
+      'package.json': JSON.stringify({ scripts: { bad: command, after: 'echo complete' } }),
+    };
+    assert.equal(analyse(files).length, 1, command);
   }
 });
 

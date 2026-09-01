@@ -53,7 +53,7 @@ Playwright is the better home for cross-browser, RTL, device-profile, and full-s
 
 ## Runner context contract
 
-Test files must be executed by the package and runner that owns them. A Playwright spec imports globals such as `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and can surface misleading errors such as `ReferenceError: describe is not defined`.
+Test files must be executed by the package and runner that owns them. A Playwright spec imports `test`, `expect`, and suite helpers from `@playwright/test`; running that file directly through Node, `tsx`, `ts-node`, Bun, Vitest, or Jest bypasses Playwright's runner bootstrap and fails during initialisation or collection. Conversely, launching Playwright from the repository root or frontend can discover Angular/Vitest specs and produce misleading errors such as `ReferenceError: describe is not defined`.
 
 Use these package-owned entry points:
 

@@ -20,7 +20,6 @@ const IGNORED_SCAN_PATHS = new Set([
   'scripts/verify-playwright-test-boundary.mjs',
   'scripts/verify-playwright-test-boundary.test.mjs',
 ]);
-const CONTEXT_LINES = 10;
 const COMMAND_SOURCE_PREFIXES = [
   '.github/workflows/',
   '.agents/automations/',
@@ -61,29 +60,17 @@ function workflowStepContext(lines, index) {
   return lines.slice(start, end).join('\n');
 }
 
-function hasSafePlaywrightContext(lines, index, path) {
+function commandStartsInE2e(lines, index, path) {
   const normalizedPath = normalizePath(path);
   if (normalizedPath.startsWith('e2e/')) {
     return true;
   }
-
-  const context = /\.ya?ml$/.test(normalizedPath)
-    ? workflowStepContext(lines, index)
-    : lines
-        .slice(
-          Math.max(0, index - CONTEXT_LINES),
-          Math.min(lines.length, index + CONTEXT_LINES + 1),
-        )
-        .join('\n');
-
-  const changesIntoE2e = /\bcd\s+(?:\.\/)?e2e(?:\s|&&|;|\)|$)/m.test(context);
-  const usesE2eWorkingDirectory = /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(
-    context,
+  if (!/\.ya?ml$/.test(normalizedPath)) {
+    return false;
+  }
+  return /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(
+    workflowStepContext(lines, index),
   );
-  const usesE2eConfig =
-    /--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/m.test(context);
-
-  return changesIntoE2e || usesE2eWorkingDirectory || usesE2eConfig;
 }
 
 function isCommandSource(path) {
@@ -136,8 +123,38 @@ function logicalCommandLines(lines, path) {
   return commands;
 }
 
-function targetBelongsToE2e(match, lines, index, path) {
-  return Boolean(match?.[1]) || hasSafePlaywrightContext(lines, index, path);
+function commandSegments(command) {
+  const segments = [];
+  const separator = /&&|\|\||[;|&]/g;
+  let start = 0;
+  let match;
+  while ((match = separator.exec(command))) {
+    segments.push({
+      command: command.slice(start, match.index),
+      separatorAfter: match[0],
+    });
+    start = separator.lastIndex;
+  }
+  segments.push({ command: command.slice(start), separatorAfter: null });
+  return segments;
+}
+
+function cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment, separatorAfter) {
+  const cdPattern = /\bcd\s+([^\s;&|)]+)/gi;
+  let cdMatch;
+  while ((cdMatch = cdPattern.exec(segment))) {
+    const target = normalizePath(cdMatch[1]);
+    cwdIsE2e = target === 'e2e';
+  }
+
+  if (/\)\s*$/.test(segment) || !['&&', ';', null].includes(separatorAfter)) {
+    return baseCwdIsE2e;
+  }
+  return cwdIsE2e;
+}
+
+function targetBelongsToE2e(match, cwdIsE2e) {
+  return Boolean(match?.[1]) || cwdIsE2e;
 }
 
 function scanWrongRunnerInvocations(files) {
@@ -152,30 +169,33 @@ function scanWrongRunnerInvocations(files) {
     const lines = content.split(/\r?\n/);
     for (const { command: rawCommand, index } of logicalCommandLines(lines, path)) {
       const command = normalizeCommandLine(rawCommand);
-      for (const segment of command.split(/[;&|]+/)) {
-        const specTarget = segment.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s)]*\.spec\.[cm]?[jt]sx?(?=$|[\s)])/i,
+      const baseCwdIsE2e = commandStartsInE2e(lines, index, path);
+      let cwdIsE2e = baseCwdIsE2e;
+      for (const segment of commandSegments(command)) {
+        const specTarget = segment.command.match(
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?(?=$|[\s),])/i,
         );
         if (
           specTarget &&
-          targetBelongsToE2e(specTarget, lines, index, path) &&
-          /\b(?:node|tsx|ts-node|bun)\b/i.test(segment)
+          targetBelongsToE2e(specTarget, cwdIsE2e) &&
+          /\b(?:node|tsx|ts-node|bun)\b/i.test(segment.command)
         ) {
           violations.push(
             `${path}:${index + 1} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
           );
         }
 
-        const testsTarget = segment.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests(?:\/[^\s)]*)?(?=$|[\s)])/i,
+        const testsTarget = segment.command.match(
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests(?:\/[^\s),]*)?(?=$|[\s),])/i,
         );
         if (
           testsTarget &&
-          targetBelongsToE2e(testsTarget, lines, index, path) &&
-          /\b(?:vitest|jest)\b/i.test(segment)
+          targetBelongsToE2e(testsTarget, cwdIsE2e) &&
+          /\b(?:vitest|jest)\b/i.test(segment.command)
         ) {
           violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
         }
+        cwdIsE2e = cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment.command, segment.separatorAfter);
       }
     }
   }
@@ -195,14 +215,19 @@ function scanPlaywrightInvocations(files) {
     const lines = content.split(/\r?\n/);
     for (const { command, index } of logicalCommandLines(lines, path)) {
       const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
-      if (!normalizedLine.includes('playwright test')) {
-        continue;
-      }
-
-      if (!hasSafePlaywrightContext(lines, index, path)) {
-        violations.push(
-          `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,
-        );
+      const baseCwdIsE2e = commandStartsInE2e(lines, index, path);
+      let cwdIsE2e = baseCwdIsE2e;
+      for (const segment of commandSegments(normalizedLine)) {
+        if (
+          segment.command.includes('playwright test') &&
+          !cwdIsE2e &&
+          !/--config(?:=|\s+)(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)/.test(segment.command)
+        ) {
+          violations.push(
+            `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,
+          );
+        }
+        cwdIsE2e = cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment.command, segment.separatorAfter);
       }
     }
   }
