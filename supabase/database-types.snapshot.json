@@ -2,5 +2,5 @@
   "generator": "supabase gen types typescript --local",
   "supabaseCliVersion": "2.114.0",
   "verifiedMainSha": "dc97b1ded484ae8aaf7f02d46d3923985a3f9f57",
-  "sha256": "1762a22bdc73da9a19d100703ba38e5dc61de7ac107541153544e7f7ca6dbf16"
+  "sha256": "a0f1f6d8afb36331fbfc7d56102b2f08ca35d33bf7f422bf6ec166317afc62fe"
 }
