@@ -203,7 +203,13 @@ describe('AudioIntroFeedComponent', () => {
     expect(component.playingId()).toBeNull();
   });
 
-  it('plays and pauses the selected introduction with accessible pressed state', async () => {
+  it('renders a translated fallback for a profile without a display name', () => {
+    expect(component.displayName(makeUser({ display_name: undefined }))).toBe(
+      'common.unknownUser',
+    );
+  });
+
+  it('plays and pauses the selected introduction with an action label', async () => {
     await component.togglePlay('u1', 'https://example.com/intro.mp3');
     fixture.detectChanges();
 
@@ -212,10 +218,12 @@ describe('AudioIntroFeedComponent', () => {
     expect(MockAudio.instances[0]?.play).toHaveBeenCalledOnce();
 
     const playButton = fixture.nativeElement.querySelector(
-      'button[aria-pressed="true"]',
+      'button[aria-label="audioIntro.pause"]',
     ) as HTMLButtonElement | null;
     expect(playButton?.getAttribute('aria-label')).toBe('audioIntro.pause');
     expect(playButton?.getAttribute('aria-describedby')).toBe('audio-intro-user-u1');
+    expect(playButton?.getAttribute('aria-pressed')).toBeNull();
+    expect(playButton?.getAttribute('size')).toBe('icon-touch');
 
     await component.togglePlay('u1', 'https://example.com/intro.mp3');
     expect(component.playingId()).toBeNull();

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
@@ -19,7 +20,7 @@ import { UserProfile } from '../../services/user.service';
       >
         <header class="border-b border-surface-100 px-4 py-4 sm:px-5">
           <h1 id="audio-intro-feed-heading" class="text-xl font-bold text-text-primary">
-            {{ 'audioIntro.title' | t }}
+            {{ 'discovery.audioIntroFeed.title' | t }}
           </h1>
         </header>
 
@@ -62,7 +63,7 @@ import { UserProfile } from '../../services/user.service';
                       class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-200 font-semibold text-text-secondary"
                       aria-hidden="true"
                     >
-                      {{ user.display_name?.charAt(0) || '?' }}
+                      {{ displayName(user).charAt(0) }}
                     </span>
                   }
                   <div class="min-w-0 flex-1">
@@ -70,11 +71,17 @@ import { UserProfile } from '../../services/user.service';
                       [id]="'audio-intro-user-' + user.id"
                       class="truncate font-medium text-text-primary"
                     >
-                      {{ user.display_name }}
+                      {{ displayName(user) }}
                     </p>
                     <p class="truncate text-xs text-text-secondary">
-                      {{ user.native_languages?.join(', ') }} →
-                      {{ user.target_languages?.join(', ') }}
+                      {{
+                        'discovery.audioIntroFeed.languagePair'
+                          | t
+                            : {
+                                native: user.native_languages?.join(', '),
+                                target: user.target_languages?.join(', '),
+                              }
+                      }}
                     </p>
                   </div>
                 </a>
@@ -89,7 +96,6 @@ import { UserProfile } from '../../services/user.service';
                     playingId() === user.id ? ('audioIntro.pause' | t) : ('audioIntro.play' | t)
                   "
                   [attr.aria-describedby]="'audio-intro-user-' + user.id"
-                  [attr.aria-pressed]="playingId() === user.id"
                 >
                   @if (playingId() === user.id) {
                     <span class="i-ph-pause-fill text-lg" aria-hidden="true"></span>
@@ -119,6 +125,7 @@ import { UserProfile } from '../../services/user.service';
 export class AudioIntroFeedComponent {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18nService);
 
   readonly playingId = signal<string | null>(null);
   readonly playbackError = signal(false);
@@ -135,6 +142,10 @@ export class AudioIntroFeedComponent {
 
   retryLoad(): void {
     this.usersResource.reload();
+  }
+
+  displayName(user: UserProfile): string {
+    return user.display_name?.trim() || this.i18n.translate('common.unknownUser');
   }
 
   async togglePlay(userId: string, url: string | undefined): Promise<void> {

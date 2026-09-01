@@ -177,6 +177,13 @@ describe('I18nService', () => {
   });
 
   it('should translate the audio intro feed empty state from the base dictionary', () => {
+    expect(service.translate('discovery.audioIntroFeed.title')).toBe('Audio introductions');
+    expect(
+      service.translate('discovery.audioIntroFeed.languagePair', {
+        native: 'Japanese',
+        target: 'English',
+      }),
+    ).toBe('Japanese → English');
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );

@@ -149,7 +149,7 @@
         color: rgb(var(--on-fill));
         font-size: 18px;
       }
-      .play[aria-pressed="true"] {
+      .play.playing {
         outline: 3px solid rgb(var(--primary) / 0.25);
       }
       .playback-error {
@@ -264,10 +264,9 @@
               <span class="avatar" aria-hidden="true">M</span>
               <div class="identity"><strong>Maya</strong><span>English → Japanese</span></div>
               <button
-                class="play"
+                class="play playing"
                 type="button"
                 aria-label="Pause Maya's introduction"
-                aria-pressed="true"
               >
                 ❚❚
               </button>
