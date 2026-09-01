@@ -60,18 +60,18 @@ export class HostDashboardService {
     }
 
     if (room.host_id !== requesterId) {
-      throw new ForbiddenException('Only the room host can view dashboard stats');
+      throw new ForbiddenException(
+        'Only the room host can view dashboard stats',
+      );
     }
 
     // Aggregate in Postgres instead of materialising an unbounded room gift
     // history in the backend. The RPC also scopes gifts to the room host.
-    const { data: earnings, error: earningsError } = await this.getRpcClient().rpc(
-      'get_host_dashboard_earnings',
-      {
+    const { data: earnings, error: earningsError } =
+      await this.getRpcClient().rpc('get_host_dashboard_earnings', {
         p_room_id: roomId,
         p_host_id: room.host_id,
-      },
-    );
+      });
 
     return {
       roomId,
