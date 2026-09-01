@@ -256,8 +256,6 @@ export class InterestsService {
       let updateQuery = this.supabase
         .from('flashcards')
         .update({
-          source_language: row.source_language,
-          translation: row.translation,
           original_context: row.original_context,
         })
         .eq('user_id', userId)
@@ -265,9 +263,10 @@ export class InterestsService {
       updateQuery = existingCard.source_language
         ? updateQuery.eq('source_language', existingCard.source_language)
         : updateQuery.is('source_language', null);
-      updateQuery = existingCard.original_context
-        ? updateQuery.eq('original_context', existingCard.original_context)
-        : updateQuery.is('original_context', null);
+      updateQuery =
+        existingCard.original_context === null
+          ? updateQuery.is('original_context', null)
+          : updateQuery.eq('original_context', existingCard.original_context);
       const { error: updateError } = await updateQuery;
       if (updateError) {
         throw new Error(updateError.message);

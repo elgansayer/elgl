@@ -118,14 +118,36 @@ describe('InterestsService', () => {
     expect(prompt).toContain('Libro');
     expect(prompt).not.toContain('Casa');
     expect(update).toHaveBeenCalledWith({
-      source_language: 'es',
-      translation: 'Book',
       original_context: 'Este libro es nuevo.',
     });
     expect(eq).toHaveBeenCalledWith('word_token', 'libro');
     expect(eq).toHaveBeenCalledWith('source_language', 'es');
     expect(is).toHaveBeenCalledWith('original_context', null);
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('fills an empty migrated context without replacing the translation', async () => {
+    results.interest_vocabulary.data = [
+      { word: 'Casa', translation: 'Generated translation' },
+    ];
+    results.flashcards.data = [
+      {
+        word_token: 'casa',
+        source_language: 'es',
+        original_context: '',
+      },
+    ];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([{ id: 0, sentence: 'La casa es grande.' }]),
+    });
+
+    await service.generateFlashcards('user-1', 'es');
+
+    expect(update).toHaveBeenCalledWith({
+      original_context: 'La casa es grande.',
+    });
+    expect(eq).toHaveBeenCalledWith('original_context', '');
+    expect(is).not.toHaveBeenCalledWith('original_context', null);
   });
 
   it('preserves a same-spelling card and its progress after the target language changes', async () => {
