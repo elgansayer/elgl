@@ -111,11 +111,12 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = ""
     elif phase == "review":
         closing = (
             "Inspect AGENTS.md and the associated production and test files. Work only in the "
-            "assigned worktree. Independent review is evidence-only: do not modify repository-"
-            "tracked files or apply fixes. Record every blocking defect in .factory-review.json; "
-            "a separate repair phase owns code changes and the repaired head must pass verification "
-            "and a fresh independent review. You may run non-mutating verification commands needed "
-            "to support the report."
+            "assigned worktree. Change repository-tracked files only when required to correct a "
+            "blocking acceptance, correctness, security, or verification defect. Do not perform "
+            "non-blocking cleanup, style edits, refactors, speculative improvements, or unrelated "
+            "optimizations during independent review. If no blocking defect exists, leave tracked "
+            "files unchanged. Any blocking repair must be followed by verification and a fresh "
+            "independent review of the resulting head."
         )
     else:
         closing = (
