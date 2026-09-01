@@ -426,6 +426,26 @@ describe('HelloTalk API E2E Integration Suite', () => {
         });
     });
 
+    it('/discovery/audio-intros (GET) - should report a query outage as 503', () => {
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST503', message: 'sensitive database detail' },
+      });
+
+      return request(app.getHttpServer())
+        .get('/discovery/audio-intros')
+        .expect(503)
+        .expect((res) => {
+          expect(res.body).toMatchObject({
+            statusCode: 503,
+            message: 'Audio introductions are temporarily unavailable',
+          });
+          expect(JSON.stringify(res.body)).not.toContain(
+            'sensitive database detail',
+          );
+        });
+    });
+
     it('/audio-rooms/create (POST) - should create new audio room and return room object', () => {
       const newRoom = {
         id: 'room-101',

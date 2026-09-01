@@ -44,6 +44,11 @@ import { UserProfile } from '../../services/user.service';
             </button>
           </div>
         } @else {
+          @if (userList().length > 0) {
+            <div class="sr-only" role="status" aria-live="polite">
+              {{ 'discovery.audioIntroFeed.resultCount' | t: { count: userList().length } }}
+            </div>
+          }
           <div class="divide-y divide-surface-100">
             @for (user of userList(); track user.id) {
               <article class="flex min-w-0 items-center gap-3 p-3 sm:p-4">

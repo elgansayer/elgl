@@ -238,6 +238,7 @@ export class I18nService {
     'audioIntro.errorLoading': 'Could not load your audio introduction.',
     'discovery.audioIntroFeed.title': 'Audio introductions',
     'discovery.audioIntroFeed.languagePair': '{{native}} → {{target}}',
+    'discovery.audioIntroFeed.resultCount': '{{count}} audio introduction(s)',
     'discovery.audioIntroFeed.noAudioIntros': 'No audio introductions available.',
     'audioIntro.microphoneError': 'Microphone access denied or unavailable.',
     'audioIntro.uploadError': 'Could not upload your recording.',

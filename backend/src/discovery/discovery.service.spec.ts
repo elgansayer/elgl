@@ -203,6 +203,7 @@ describe('DiscoveryService', () => {
       target_languages: string[];
       privacy_hide_from_search: boolean;
       is_deletion_pending: boolean;
+      scheduled_for_deletion_at: string | null;
       correction_ratio: number;
       study_streak_days: number;
     }> =>
@@ -213,6 +214,7 @@ describe('DiscoveryService', () => {
         target_languages: ['ja'],
         privacy_hide_from_search: false,
         is_deletion_pending: false,
+        scheduled_for_deletion_at: null,
         correction_ratio: 0.6 + (count - i) * 0.005,
         study_streak_days: 10 + (count - i),
       }));
@@ -1246,6 +1248,14 @@ describe('DiscoveryService', () => {
 
       const result = await service.getRecentNativeSpeakers('user-1');
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].is_partner_of_week).toBe(true);
       expect(result[1].is_partner_of_week).toBe(false);
@@ -1272,6 +1282,14 @@ describe('DiscoveryService', () => {
 
       const result = await service.getSpotlightUsers('user-1');
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].is_partner_of_week).toBe(true);
     });
@@ -1302,6 +1320,14 @@ describe('DiscoveryService', () => {
         target_language: 'JA',
       });
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.contains).toHaveBeenCalledWith(
         'native_languages',
         ['JA'],
@@ -1429,6 +1455,14 @@ describe('DiscoveryService', () => {
         city: 'Tokyo',
       });
 
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Tokyo%');
       expect(result).toHaveLength(1);

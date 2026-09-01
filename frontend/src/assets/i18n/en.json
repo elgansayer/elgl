@@ -717,6 +717,7 @@
   "discovery.any_level": "Any Level",
   "discovery.audioIntroFeed.languagePair": "{{native}} → {{target}}",
   "discovery.audioIntroFeed.noAudioIntros": "No audio intros available",
+  "discovery.audioIntroFeed.resultCount": "{{count}} audio introduction(s)",
   "discovery.audioIntroFeed.title": "Audio introductions",
   "discovery.badge": "🔎 Discovery",
   "discovery.bannerDesc": "Get 1-on-1 native practice",

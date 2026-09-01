@@ -106,6 +106,9 @@ describe('AudioIntroFeedComponent', () => {
     expect(el.querySelector('a[href="/profile/u1"]')).not.toBeNull();
     expect(el.querySelector('img')).toBeNull();
     expect(el.textContent).toContain('K');
+    expect(el.querySelector('[role="status"]')?.textContent).toContain(
+      'discovery.audioIntroFeed.resultCount',
+    );
   });
 
   it('navigates to the exposed audio-intro route and renders the feed', async () => {

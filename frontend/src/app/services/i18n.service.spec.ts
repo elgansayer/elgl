@@ -184,6 +184,9 @@ describe('I18nService', () => {
         target: 'English',
       }),
     ).toBe('Japanese → English');
+    expect(
+      service.translate('discovery.audioIntroFeed.resultCount', { count: 2 }),
+    ).toBe('2 audio introduction(s)');
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );

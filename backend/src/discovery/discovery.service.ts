@@ -92,10 +92,11 @@ export class DiscoveryService {
       const { data: candidates, error } = await supabase
         .from('users')
         .select(
-          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, correction_ratio, study_streak_days',
+          'id, display_name, native_languages, target_languages, privacy_hide_from_search, is_deletion_pending, scheduled_for_deletion_at, correction_ratio, study_streak_days',
         )
         .eq('privacy_hide_from_search', false)
         .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
         .not('display_name', 'is', null)
         .not('native_languages', 'is', null)
         .not('target_languages', 'is', null)
@@ -117,6 +118,7 @@ export class DiscoveryService {
         (candidate) =>
           candidate.privacy_hide_from_search === false &&
           candidate.is_deletion_pending === false &&
+          candidate.scheduled_for_deletion_at === null &&
           typeof candidate.display_name === 'string' &&
           candidate.display_name.trim().length > 0 &&
           Array.isArray(candidate.native_languages) &&
@@ -854,6 +856,8 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -897,6 +901,8 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -953,7 +959,9 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -1273,7 +1281,9 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .is('scheduled_for_deletion_at', null);
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }
