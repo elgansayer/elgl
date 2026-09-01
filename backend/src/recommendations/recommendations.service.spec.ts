@@ -1570,7 +1570,7 @@ describe('RecommendationsService', () => {
 
       expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
         expect.objectContaining({
-          operation: 'getDailyRecommendations:redis',
+          operation: 'getDailyRecommendations:cache-revalidation',
           degraded_tier: 'language_exchange_live',
         }),
       );

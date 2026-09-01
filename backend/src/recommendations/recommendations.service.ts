@@ -314,10 +314,10 @@ export class RecommendationsService {
       }
     } catch (error) {
       this.logger.warn(
-        `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
+        `Cached daily recommendations unavailable or unsafe (user ${userId}), falling back to live computation`,
       );
       void this.reportTierDegradation(
-        'getDailyRecommendations:redis',
+        'getDailyRecommendations:cache-revalidation',
         userId,
         error,
         'language_exchange_live',
