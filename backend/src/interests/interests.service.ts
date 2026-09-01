@@ -36,6 +36,7 @@ interface VocabRow {
 
 interface ExistingFlashcardRow {
   word_token: string;
+  source_language: string | null;
   original_context: string | null;
 }
 
@@ -165,7 +166,7 @@ export class InterestsService {
     const { data: existingCards, error: existingCardsError } =
       await this.supabase
         .from('flashcards')
-        .select('word_token, original_context')
+        .select('word_token, source_language, original_context')
         .eq('user_id', userId)
         .in('word_token', wordTokens)
         .returns<ExistingFlashcardRow[]>();
@@ -175,10 +176,12 @@ export class InterestsService {
     }
 
     const existingContexts = new Map(
-      (existingCards ?? []).map((card) => [
-        card.word_token.toLowerCase(),
-        card.original_context?.trim() ?? '',
-      ]),
+      (existingCards ?? [])
+        .filter((card) => card.source_language === targetLanguage)
+        .map((card) => [
+          card.word_token.toLowerCase(),
+          card.original_context?.trim() ?? '',
+        ]),
     );
     const vocabularyNeedingContext = uniqueVocabulary.filter(
       (item) => !existingContexts.get(item.word.trim().toLowerCase()),

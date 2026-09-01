@@ -88,8 +88,12 @@ describe('InterestsService', () => {
       { word: 'Libro', translation: 'Book' },
     ];
     results.flashcards.data = [
-      { word_token: 'casa', original_context: 'Mi casa es azul.' },
-      { word_token: 'libro', original_context: null },
+      {
+        word_token: 'casa',
+        source_language: 'es',
+        original_context: 'Mi casa es azul.',
+      },
+      { word_token: 'libro', source_language: 'es', original_context: null },
     ];
     proxyMessage.mockResolvedValue({
       response: JSON.stringify([{ id: 0, sentence: 'Este libro es nuevo.' }]),
@@ -105,6 +109,38 @@ describe('InterestsService', () => {
         expect.objectContaining({
           word_token: 'libro',
           original_context: 'Este libro es nuevo.',
+        }),
+      ],
+      expect.any(Object),
+    );
+  });
+
+  it('regenerates a same-spelling card after the target language changes', async () => {
+    results.interest_vocabulary.data = [
+      { word: 'Gift', translation: 'Poison' },
+    ];
+    results.flashcards.data = [
+      {
+        word_token: 'gift',
+        source_language: 'en',
+        original_context: 'This gift is for you.',
+      },
+    ];
+    proxyMessage.mockResolvedValue({
+      response: JSON.stringify([
+        { id: 0, sentence: 'Das Gift ist gefahrlich.' },
+      ]),
+    });
+
+    await service.generateFlashcards('user-1', 'de');
+
+    expect(upsert).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          word_token: 'gift',
+          source_language: 'de',
+          translation: 'Poison',
+          original_context: 'Das Gift ist gefahrlich.',
         }),
       ],
       expect.any(Object),
