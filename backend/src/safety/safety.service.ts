@@ -268,30 +268,31 @@ export class SafetyService {
       supabase.from('blocks').select('blocker_id').eq('blocked_id', userId),
     ]);
 
+    const blockedRows = blockedResult.data;
+    const blockerRows = blockerResult.data;
+    const hasBlockedId = (row: unknown): row is { blocked_id: string } =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocked_id?: unknown }).blocked_id === 'string';
+    const hasBlockerId = (row: unknown): row is { blocker_id: string } =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocker_id?: unknown }).blocker_id === 'string';
+
     if (
       blockedResult.error ||
       blockerResult.error ||
-      !Array.isArray(blockedResult.data) ||
-      !Array.isArray(blockerResult.data)
+      !Array.isArray(blockedRows) ||
+      !Array.isArray(blockerRows) ||
+      !blockedRows.every(hasBlockedId) ||
+      !blockerRows.every(hasBlockerId)
     ) {
       this.logger.error(`Failed to load complete block graph for ${userId}`);
       throw new Error('Failed to load complete block graph');
     }
 
-    const blocked = blockedResult.data.flatMap((row: unknown) =>
-      typeof row === 'object' &&
-      row !== null &&
-      typeof (row as { blocked_id?: unknown }).blocked_id === 'string'
-        ? [(row as { blocked_id: string }).blocked_id]
-        : [],
-    );
-    const blockers = blockerResult.data.flatMap((row: unknown) =>
-      typeof row === 'object' &&
-      row !== null &&
-      typeof (row as { blocker_id?: unknown }).blocker_id === 'string'
-        ? [(row as { blocker_id: string }).blocker_id]
-        : [],
-    );
+    const blocked = blockedRows.map((row) => row.blocked_id);
+    const blockers = blockerRows.map((row) => row.blocker_id);
     return [...new Set([...blocked, ...blockers])];
   }
 

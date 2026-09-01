@@ -547,6 +547,21 @@ describe('SafetyService', () => {
         'Failed to load complete block graph',
       );
     });
+
+    it('should fail closed when either block query contains a malformed row', async () => {
+      mockQueryBuilder.then = vi
+        .fn()
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ blocked_id: 'blocked-1' }, {}], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ blocker_id: 'blocker-1' }], error: null }),
+        );
+
+      await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+        'Failed to load complete block graph',
+      );
+    });
   });
 
   describe('getBlockedUserDetails', () => {

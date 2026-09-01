@@ -1526,6 +1526,20 @@ describe('DiscoveryService', () => {
   // searchPartnersWithDegradation
   // ---------------------------------------------------------------------------
   describe('searchPartnersWithDegradation', () => {
+    it('should fail closed before degradation when the block graph is unavailable', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValueOnce(
+        new Error('Failed to load complete block graph'),
+      );
+
+      await expect(
+        service.searchPartnersWithDegradation('user-1', null, {}),
+      ).rejects.toThrow('Failed to load complete block graph');
+      expect(mockDegradationService.executeWithBreaker).not.toHaveBeenCalled();
+      expect(
+        mockDegradationService.recordDegradationEvent,
+      ).not.toHaveBeenCalled();
+    });
+
     it('should return results with a non-degraded marker on normal success', async () => {
       const partners = [{ id: 'p1', display_name: 'User One' }];
       stubLimitResponse(partners);

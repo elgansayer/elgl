@@ -442,11 +442,13 @@ export class DiscoveryService {
     currentUserId: string,
     _currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
+    verifiedBlockedIds?: string[],
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
 
     const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+      verifiedBlockedIds ??
+      (await this.safetyService.getBlockedAndBlockerIds(currentUserId));
 
     let searchLat = query.latitude;
     let searchLon = query.longitude;
@@ -728,6 +730,11 @@ export class DiscoveryService {
     currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
   ): Promise<DiscoveryResult> {
+    // The complete block graph is a security boundary, not an availability
+    // dependency. Resolve it before entering the circuit breaker so a failed or
+    // malformed lookup can never fall through to unfiltered fallback profiles.
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(currentUserId);
     const marker: DegradationMarker = {
       degraded: false,
       fallbackSource: 'none',
@@ -736,7 +743,13 @@ export class DiscoveryService {
     try {
       const result = await this.degradationService.executeWithBreaker(
         'discovery_partners',
-        () => this.searchPartners(currentUserId, currentUserProfile, query),
+        () =>
+          this.searchPartners(
+            currentUserId,
+            currentUserProfile,
+            query,
+            blockedIds,
+          ),
         () => {
           marker.fallbackSource = 'basic_query';
           return [] as UserProfile[];

@@ -8,7 +8,6 @@ import { SafetyService } from './safety.service';
 import { UserProfile, UserService } from './user.service';
 import { ChatService, ChatMessage } from './chat.service';
 import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
-import { MatchmakingAlgorithmService } from './matchmaking-algorithm.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -47,7 +46,6 @@ export class DiscoveryService {
   private chatService = inject(ChatService);
   private userService = inject(UserService);
   private offlineCache = inject(OfflineDiscoveryCacheService);
-  private matchmakingAlgorithm = inject(MatchmakingAlgorithmService);
   private baseUrl = `${environment.apiUrl}/discovery`;
 
   private getHeaders() {
@@ -79,9 +77,6 @@ export class DiscoveryService {
     filters: SearchFilterParams & { serious_learner_mode?: boolean },
     abortSignal?: AbortSignal,
   ): Promise<UserProfile[]> {
-    const filtersKey = this.offlineCache.buildFiltersKey(
-      Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)),
-    );
     const isOnline = this.offlineCache.isOnline();
 
     let params = new HttpParams();
@@ -140,29 +135,11 @@ export class DiscoveryService {
     if (filters.voice_room_active !== undefined)
       params = params.set('voice_room_active', filters.voice_room_active.toString());
 
-    // Offline-first: attempt cached results before making network request
+    // Discovery visibility depends on current privacy, deletion, and block
+    // state. None of those security boundaries can be revalidated offline, so
+    // never serve persisted or synthetic profiles without the API.
     if (!isOnline) {
-      const cached = await this.offlineCache.getCachedSearchResults(filtersKey);
-      if (cached && cached.length > 0) {
-        return this.enrichPartnersFallback(cached, filters);
-      }
-      // Fall back to all cached partners and apply client-side matchmaking algorithm
-      const allCached = await this.offlineCache.getAllCachedPartners();
-      if (allCached.length > 0) {
-        return this.enrichPartnersFallback(allCached, filters);
-      }
-      // Ultimate fallback: mock data with algorithm-based ranking
-      const currentUser = this.authService.currentUser();
-      if (currentUser?.id) {
-        const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
-        if (profile) {
-          const scored = this.matchmakingAlgorithm.scoreAndRank(profile, MOCK_PARTNERS);
-          const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
-          const fallbackUsers = scoreFiltered.data.map((s) => s.partner);
-          return this.enrichPartnersFallback(fallbackUsers, filters);
-        }
-      }
-      return MOCK_PARTNERS;
+      return [];
     }
 
     // Build cancellation notifier from AbortSignal
@@ -184,12 +161,6 @@ export class DiscoveryService {
           catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
         ),
     );
-
-    // Cache the fresh results for offline use
-    if (users !== MOCK_PARTNERS) {
-      void this.offlineCache.cacheSearchResults(filtersKey, users);
-      void this.offlineCache.cachePartners(users);
-    }
 
     return this.enrichPartners(users, filters);
   }
@@ -229,41 +200,6 @@ export class DiscoveryService {
     }
 
     return enriched;
-  }
-
-  /**
-   * Offline enrichment path that uses client-side matchmaking algorithm to
-   * score and rank cached partners. Skips server-dependent operations
-   * (partner-of-week flags) but still filters blocked users from cached data.
-   */
-  private async enrichPartnersFallback(
-    users: UserProfile[],
-    filters: SearchFilterParams & { serious_learner_mode?: boolean },
-  ): Promise<UserProfile[]> {
-    const currentUser = this.authService.currentUser();
-
-    // Filter out blocked users from cached data
-    let filtered = users;
-    if (currentUser?.id) {
-      const blockedIds = await this.safetyService
-        .getBlockedAndBlockerIds(currentUser.id)
-        .catch((): string[] => []);
-      if (blockedIds.length > 0) {
-        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
-      }
-    }
-
-    // Apply client-side matchmaking algorithm scoring when we have user profile data
-    if (currentUser?.id) {
-      const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
-      if (profile) {
-        const scored = this.matchmakingAlgorithm.scoreAndRank(profile, filtered);
-        const rankFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
-        return rankFiltered.data.map((s) => s.partner);
-      }
-    }
-
-    return filtered;
   }
 
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
