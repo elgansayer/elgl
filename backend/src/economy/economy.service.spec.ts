@@ -874,9 +874,7 @@ describe('EconomyService', () => {
           receiver_name: 'Receiver User',
         }),
       );
-      const logger = module.get<{ warn: Mock }>(
-        'PinoLogger:EconomyService',
-      );
+      const logger = module.get<{ warn: Mock }>('PinoLogger:EconomyService');
       expect(logger.warn).toHaveBeenCalledWith(
         'Gift profile enrichment failed for 1 lookup',
       );
