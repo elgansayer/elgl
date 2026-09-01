@@ -99,6 +99,34 @@ function normalizeCommandLine(line) {
     .trim();
 }
 
+function stripUnquotedShellComment(line) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === '#') {
+      return line.slice(0, index).trimEnd();
+    }
+  }
+  return line;
+}
+
 function logicalCommandLines(lines, path) {
   const commands = [];
 
@@ -119,7 +147,11 @@ function logicalCommandLines(lines, path) {
         parts.push(next.trim());
       }
       let command = '';
-      for (const part of parts) {
+      for (const rawPart of parts) {
+        const part = literalRun ? stripUnquotedShellComment(rawPart) : rawPart;
+        if (!part) {
+          continue;
+        }
         const continued = /\\\s*$/.test(command);
         const separator = command && literalRun && !continued ? ' ; ' : command ? ' ' : '';
         command = `${command.replace(/\\\s*$/, '')}${separator}${part}`;
@@ -241,6 +273,13 @@ function commandInvocation(segment) {
     .replace(/\)+\s*$/, '')
     .replace(/^-\s+/, '')
     .replace(/^(?:[-\w.]+\s*:\s*)/, '');
+  if (
+    command.length >= 2 &&
+    ((command.startsWith('"') && command.endsWith('"')) ||
+      (command.startsWith("'") && command.endsWith("'")))
+  ) {
+    command = command.slice(1, -1);
+  }
   let tokens = shellTokens(command);
 
   if (tokens[0] === 'env') {
@@ -282,13 +321,7 @@ function runtimeEntrypoint(invocation) {
     return null;
   }
 
-  const args = [...invocation.args];
-  if (invocation.executable === 'bun' && ['run', 'test'].includes(args[0])) {
-    args.shift();
-  }
-  if (invocation.executable === 'tsx' && args[0] === 'watch') {
-    args.shift();
-  }
+  let args = [...invocation.args];
   const optionsWithValues = {
     node: new Set([
       '--conditions',
@@ -318,13 +351,25 @@ function runtimeEntrypoint(invocation) {
     ]),
     bun: new Set(['--config', '--cwd', '--preload', '-r']),
   }[invocation.executable];
-  while (args[0]?.startsWith('-')) {
-    const flag = args.shift();
-    const optionName = flag.split('=', 1)[0];
-    if (!flag.includes('=') && optionsWithValues.has(optionName) && args.length > 0) {
-      args.shift();
+  const consumeOptions = (values) => {
+    const remaining = [...values];
+    while (remaining[0]?.startsWith('-')) {
+      const flag = remaining.shift();
+      const optionName = flag.split('=', 1)[0];
+      if (!flag.includes('=') && optionsWithValues.has(optionName) && remaining.length > 0) {
+        remaining.shift();
+      }
     }
+    return remaining;
+  };
+  args = consumeOptions(args);
+  if (invocation.executable === 'bun' && ['run', 'test'].includes(args[0])) {
+    args.shift();
   }
+  if (invocation.executable === 'tsx' && args[0] === 'watch') {
+    args.shift();
+  }
+  args = consumeOptions(args);
   return args[0] ?? null;
 }
 
@@ -334,7 +379,14 @@ function runnerTargets(invocation) {
     args.shift();
   }
 
-  const selectingOptions = new Set(['--dir', '--include', '--root', '--testPathPattern']);
+  const selectingOptions = new Set([
+    '--dir',
+    '--include',
+    '--root',
+    '--roots',
+    '--testPathPattern',
+    '--testPathPatterns',
+  ]);
   const nonSelectingOptions = new Set([
     '--config',
     '--exclude',
@@ -371,9 +423,9 @@ function commandEntries(content, path) {
   if (path.endsWith('package.json')) {
     try {
       const scripts = JSON.parse(content)?.scripts ?? {};
-      return Object.values(scripts)
-        .filter((command) => typeof command === 'string')
-        .map((command) => ({ command, index: 0 }));
+      return Object.entries(scripts)
+        .filter(([, command]) => typeof command === 'string')
+        .map(([name, command]) => ({ command, index: 0, location: `${path}#scripts.${name}` }));
     } catch {
       return [];
     }
@@ -425,7 +477,7 @@ function scanWrongRunnerInvocations(files) {
       cwdIsE2e: path.startsWith('e2e/'),
       cwdIsConditional: false,
     };
-    for (const { command: rawCommand, index } of commandEntries(content, path)) {
+    for (const { command: rawCommand, index, location } of commandEntries(content, path)) {
       const command = normalizeCommandLine(rawCommand);
       const baseCwdIsE2e = persistsCwd
         ? fileCwdState.cwdIsE2e
@@ -442,7 +494,7 @@ function scanWrongRunnerInvocations(files) {
         );
         if (specTarget && targetBelongsToE2e(specTarget, cwdState.cwdIsE2e)) {
           violations.push(
-            `${path}:${index + 1} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
+            `${location ?? `${path}:${index + 1}`} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
           );
         }
 
@@ -453,7 +505,9 @@ function scanWrongRunnerInvocations(files) {
             return testsTarget && targetBelongsToE2e(testsTarget, cwdState.cwdIsE2e);
           })
         ) {
-          violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
+          violations.push(
+            `${location ?? `${path}:${index + 1}`} sends the Playwright suite to Vitest or Jest`,
+          );
         }
         cwdState = cwdAfterSegment(
           cwdState,
@@ -492,7 +546,7 @@ function scanPlaywrightInvocations(files) {
       cwdIsE2e: path.startsWith('e2e/'),
       cwdIsConditional: false,
     };
-    for (const { command, index } of commandEntries(content, path)) {
+    for (const { command, index, location } of commandEntries(content, path)) {
       const normalizedLine = command.replace(/\\\s*/g, ' ').replace(/\s+/g, ' ').trim();
       const baseCwdIsE2e = persistsCwd
         ? fileCwdState.cwdIsE2e
@@ -511,7 +565,7 @@ function scanPlaywrightInvocations(files) {
           )
         ) {
           violations.push(
-            `${path}:${index + 1} invokes Playwright without the e2e working directory or explicit e2e config`,
+            `${location ?? `${path}:${index + 1}`} invokes Playwright without the e2e working directory or explicit e2e config`,
           );
         }
         cwdState = cwdAfterSegment(

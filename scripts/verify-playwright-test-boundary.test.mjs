@@ -170,6 +170,14 @@ test('preserves working directory changes in literal workflow run blocks', () =>
   );
 });
 
+test('preserves shell comments in literal workflow run blocks', () => {
+  const violations = analyse({
+    '.github/workflows/e2e.yml': ['run: |', '  # note; cd e2e', '  npx playwright test'].join('\n'),
+  });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /without the e2e working directory/);
+});
+
 test('preserves a leading directory change in folded workflow run blocks', () => {
   assert.deepEqual(
     analyse({
@@ -205,6 +213,8 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'npx tsx@latest e2e/tests/auth.spec.ts',
     'ts-node --cwd . e2e/tests/auth.spec.ts',
     'tsx watch e2e/tests/auth.spec.ts',
+    'tsx --tsconfig tsconfig.json watch e2e/tests/auth.spec.ts',
+    'bun --cwd . test e2e/tests/auth.spec.ts',
     'bun test e2e/tests',
     'cd e2e && bun test tests',
   ]) {
@@ -290,6 +300,8 @@ test('treats runner selection-option values as Playwright targets', () => {
     'jest --testPathPattern e2e/tests',
     'vitest --dir=e2e/tests',
     'jest --testPathPattern=e2e/tests',
+    'jest --roots=e2e/tests',
+    'jest --testPathPatterns=e2e/tests',
   ]) {
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);
@@ -322,7 +334,15 @@ test('rejects wrong runners in non-final package scripts', () => {
     const files = {
       'package.json': JSON.stringify({ scripts: { bad: command, after: 'echo complete' } }),
     };
-    assert.equal(analyse(files).length, 1, command);
+    const violations = analyse(files);
+    assert.equal(violations.length, 1, command);
+    assert.match(violations[0], /package\.json#scripts\.bad/, command);
+  }
+});
+
+test('rejects quoted inline workflow commands', () => {
+  for (const command of ['run: "npx playwright test"', "run: 'node e2e/tests/auth.spec.ts'"]) {
+    assert.equal(analyse({ '.github/workflows/qa.yml': command }).length, 1, command);
   }
 });
 
