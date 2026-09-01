@@ -1560,6 +1560,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should fall back to mock data when breaker degrades and search returns empty', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'fake-1',
+      ]);
       mockDegradationService.executeWithBreaker.mockImplementationOnce(
         (
           _svc: string,
@@ -1588,6 +1591,9 @@ describe('DiscoveryService', () => {
       expect(result.marker.fallbackSource).toBe('mock');
       expect(result.marker.reason).toContain('circuit open');
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data.map((candidate) => candidate.id)).not.toContain(
+        'fake-1',
+      );
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(
@@ -1632,6 +1638,9 @@ describe('DiscoveryService', () => {
     });
 
     it('should catch thrown errors and fall back to mock data', async () => {
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValueOnce([
+        'fake-1',
+      ]);
       mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
         new Error('supabase down'),
       );
@@ -1646,6 +1655,9 @@ describe('DiscoveryService', () => {
       expect(result.marker.fallbackSource).toBe('mock');
       expect(result.marker.reason).toBe('supabase down');
       expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data.map((candidate) => candidate.id)).not.toContain(
+        'fake-1',
+      );
       expect(
         mockDegradationService.recordDegradationEvent,
       ).toHaveBeenCalledWith(

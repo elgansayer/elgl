@@ -382,6 +382,46 @@ describe('RecommendationsService', () => {
       expect(result.map((candidate) => candidate.id)).toEqual(['eligible']);
     });
 
+    it('strictly validates and projects cached recommendation DTOs', async () => {
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify([
+          { id: 'malformed' },
+          {
+            id: 'eligible',
+            displayName: 'Eligible',
+            avatarUrl: null,
+            nativeLanguage: 'es',
+            targetLanguages: ['en'],
+            sharedInterests: 2,
+            isSeriousLearner: true,
+            studyStreakDays: 12,
+            correctionRatio: 0.9,
+            providerInternalField: 'must-not-leak',
+          },
+        ]),
+      );
+      const eligibilityChain = makeQueryChain();
+      eligibilityChain._setResolve([{ id: 'eligible' }]);
+      mockFrom.mockReturnValueOnce(eligibilityChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+
+      expect(result).toEqual([
+        {
+          id: 'eligible',
+          displayName: 'Eligible',
+          avatarUrl: null,
+          nativeLanguage: 'es',
+          targetLanguages: ['en'],
+          sharedInterests: 2,
+          isSeriousLearner: true,
+          studyStreakDays: 12,
+          correctionRatio: 0.9,
+        },
+      ]);
+      expect(result[0]).not.toHaveProperty('providerInternalField');
+    });
+
     it('removes blocked users from cached recommendations', async () => {
       const dtos = [
         {

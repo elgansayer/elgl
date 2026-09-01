@@ -758,7 +758,7 @@ export class DiscoveryService {
       );
 
       if (marker.degraded && result.length === 0) {
-        const mockData = this.getMockDiscoveryData(query, []);
+        const mockData = this.getMockDiscoveryData(query, blockedIds);
         await this.degradationService.recordDegradationEvent(
           '/discovery/partners',
           marker.reason ?? 'Search failed, using mock data',
@@ -784,7 +784,7 @@ export class DiscoveryService {
         'mock',
         currentUserId,
       );
-      const mockData = this.getMockDiscoveryData(query, []);
+      const mockData = this.getMockDiscoveryData(query, blockedIds);
       return {
         data: mockData,
         marker: {

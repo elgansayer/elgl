@@ -60,6 +60,15 @@ describe('OfflineDiscoveryCacheService', () => {
     expect(service.cachedDataAvailable()).toBe(false);
   });
 
+  it('absorbs synchronous IndexedDB deletion failures', async () => {
+    deleteDatabase.mockImplementationOnce(() => {
+      throw new DOMException('storage unavailable', 'SecurityError');
+    });
+
+    await expect(service.clearAll()).resolves.toBeUndefined();
+    expect(service.cachedDataAvailable()).toBe(false);
+  });
+
   it('retains live network status without exposing cached profiles', () => {
     expect(service.isOnline()).toBe(true);
     onlineSignal.set(false);

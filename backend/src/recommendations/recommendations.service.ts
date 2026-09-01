@@ -27,6 +27,80 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function parseCachedRecommendation(value: unknown): RecommendedUserDto | null {
+  if (!isRecord(value)) return null;
+
+  const requiredFields = [
+    'id',
+    'displayName',
+    'avatarUrl',
+    'nativeLanguage',
+    'targetLanguages',
+    'sharedInterests',
+    'isSeriousLearner',
+    'studyStreakDays',
+    'correctionRatio',
+  ] as const;
+  if (
+    !requiredFields.every((field) =>
+      Object.prototype.hasOwnProperty.call(value, field),
+    )
+  ) {
+    return null;
+  }
+
+  const id = value['id'];
+  const displayName = value['displayName'];
+  const avatarUrl = value['avatarUrl'];
+  const nativeLanguage = value['nativeLanguage'];
+  const targetLanguages = value['targetLanguages'];
+  const sharedInterests = value['sharedInterests'];
+  const isSeriousLearner = value['isSeriousLearner'];
+  const studyStreakDays = value['studyStreakDays'];
+  const correctionRatio = value['correctionRatio'];
+  const matchTier = value['matchTier'];
+
+  if (
+    typeof id !== 'string' ||
+    id.length === 0 ||
+    (displayName !== null && typeof displayName !== 'string') ||
+    (avatarUrl !== null && typeof avatarUrl !== 'string') ||
+    (nativeLanguage !== null && typeof nativeLanguage !== 'string') ||
+    (targetLanguages !== null &&
+      (!Array.isArray(targetLanguages) ||
+        !targetLanguages.every((language) => typeof language === 'string'))) ||
+    typeof sharedInterests !== 'number' ||
+    !Number.isFinite(sharedInterests) ||
+    (isSeriousLearner !== null && typeof isSeriousLearner !== 'boolean') ||
+    (studyStreakDays !== null &&
+      (typeof studyStreakDays !== 'number' ||
+        !Number.isFinite(studyStreakDays))) ||
+    (correctionRatio !== null &&
+      (typeof correctionRatio !== 'number' ||
+        !Number.isFinite(correctionRatio))) ||
+    (matchTier !== undefined &&
+      matchTier !== 'interest' &&
+      matchTier !== 'language_exchange' &&
+      matchTier !== 'active_users' &&
+      matchTier !== 'mock')
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    displayName,
+    avatarUrl,
+    nativeLanguage,
+    targetLanguages,
+    sharedInterests,
+    isSeriousLearner,
+    studyStreakDays,
+    correctionRatio,
+    ...(matchTier === undefined ? {} : { matchTier }),
+  };
+}
+
 const DAILY_REDIS_TTL = 86400;
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
@@ -261,11 +335,10 @@ export class RecommendationsService {
         if (Array.isArray(parsed)) {
           const seenIds = new Set<string>();
           const recommendations = parsed
+            .map(parseCachedRecommendation)
             .filter(
               (candidate): candidate is RecommendedUserDto =>
-                isRecord(candidate) &&
-                typeof candidate['id'] === 'string' &&
-                candidate['id'].length > 0,
+                candidate !== null,
             )
             .filter((candidate) => {
               if (seenIds.has(candidate.id)) return false;

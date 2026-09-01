@@ -30,7 +30,13 @@ export class OfflineDiscoveryCacheService {
     if (typeof window === 'undefined' || !window.indexedDB) return;
 
     await new Promise<void>((resolve) => {
-      const request = indexedDB.deleteDatabase(DB_NAME);
+      let request: IDBOpenDBRequest;
+      try {
+        request = indexedDB.deleteDatabase(DB_NAME);
+      } catch {
+        resolve();
+        return;
+      }
       request.onsuccess = () => resolve();
       request.onerror = () => resolve();
       request.onblocked = () => resolve();
