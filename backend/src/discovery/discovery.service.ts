@@ -267,6 +267,7 @@ export class DiscoveryService {
         .from('users')
         .select('id, native_languages, target_languages')
         .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
         .not('native_languages', 'is', null)
         .not('target_languages', 'is', null)
         .limit(1000);
@@ -322,6 +323,7 @@ export class DiscoveryService {
             .select('id')
             .eq('privacy_hide_from_search', false)
             .eq('is_deletion_pending', false)
+            .is('scheduled_for_deletion_at', null)
             .contains('native_languages', [targetCode])
             .contains('target_languages', [nativeCode])
             .order('study_streak_days', { ascending: false })

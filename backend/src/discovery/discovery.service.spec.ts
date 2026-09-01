@@ -331,6 +331,17 @@ describe('DiscoveryService', () => {
 
       await service.calculateDailyRecommendations();
 
+      expect(mockQueryBuilder.is).toHaveBeenCalledTimes(2);
+      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
+        1,
+        'scheduled_for_deletion_at',
+        null,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenNthCalledWith(
+        2,
+        'scheduled_for_deletion_at',
+        null,
+      );
       expect(mockPipelineSet).toHaveBeenCalledWith(
         'daily_recommendations:u1',
         '["u2"]',
