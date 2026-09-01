@@ -73,16 +73,18 @@ import { UserProfile } from '../../services/user.service';
                     >
                       {{ displayName(user) }}
                     </p>
-                    <p class="truncate text-xs text-text-secondary">
-                      {{
-                        'discovery.audioIntroFeed.languagePair'
-                          | t
-                            : {
-                                native: formatLanguages(user.native_languages),
-                                target: formatLanguages(user.target_languages),
-                              }
-                      }}
-                    </p>
+                    @if (hasLanguagePair(user)) {
+                      <p class="truncate text-xs text-text-secondary">
+                        {{
+                          'discovery.audioIntroFeed.languagePair'
+                            | t
+                              : {
+                                  native: formatLanguages(user.native_languages),
+                                  target: formatLanguages(user.target_languages),
+                                }
+                        }}
+                      </p>
+                    }
                   </div>
                 </a>
 
@@ -165,6 +167,10 @@ export class AudioIntroFeedComponent {
         }
       })
       .join(', ');
+  }
+
+  hasLanguagePair(user: UserProfile): boolean {
+    return Boolean(user.native_languages?.length && user.target_languages?.length);
   }
 
   async togglePlay(userId: string, url: string | undefined): Promise<void> {

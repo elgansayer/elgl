@@ -53,6 +53,7 @@ describe('DiscoveryService', () => {
       'order',
       'ilike',
       'overlaps',
+      'is',
     ];
     for (const method of chainableMethods) {
       builder[method] = vi.fn().mockReturnValue(builder);
@@ -1169,6 +1170,14 @@ describe('DiscoveryService', () => {
       const notCalls = (mockQueryBuilder.not as Mock).mock.calls;
       expect(notCalls.some((c: string[]) => c[0] === 'audio_intro_url')).toBe(
         true,
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
       );
     });
 

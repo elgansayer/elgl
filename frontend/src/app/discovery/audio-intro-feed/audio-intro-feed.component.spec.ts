@@ -227,6 +227,12 @@ describe('AudioIntroFeedComponent', () => {
     );
   });
 
+  it('only renders a language pair when both sides are present', () => {
+    expect(component.hasLanguagePair(makeUser())).toBe(true);
+    expect(component.hasLanguagePair(makeUser({ native_languages: [] }))).toBe(false);
+    expect(component.hasLanguagePair(makeUser({ target_languages: [] }))).toBe(false);
+  });
+
   it('plays and pauses the selected introduction with an action label', async () => {
     await component.togglePlay('u1', 'https://example.com/intro.mp3');
     fixture.detectChanges();
