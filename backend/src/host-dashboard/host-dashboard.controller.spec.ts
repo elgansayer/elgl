@@ -1,7 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { HostDashboardController } from './host-dashboard.controller';
 import { HostDashboardService } from './host-dashboard.service';
