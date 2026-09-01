@@ -16,8 +16,8 @@ The route table contains legacy aliases intended to redirect to canonical paths.
 - **Auth:** `/help` and `/help-about` redirect to `/support`.
 - **Commerce:** `/vip` redirects to `/subscription`; `/my-subscription` redirects to `/settings/subscription`.
 - **Social:** `/notification-preferences` redirects to `/settings/notification`. `/visitors` redirects to `/profile/visitors`, but the earlier `/profile/:userId` route shadows that destination. `/language-parties` and `/language-islands` redirect to unregistered `/community/language-*` destinations.
-- **Settings:** Legacy root paths (`/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`) redirect to nested settings paths. `/settings/notification-customization` redirects to `/settings/notification`.
-- **Chat:** `/chat-settings`, `/communities`, `/message-filters`, and `/blocks` are root-level compatibility aliases. `/groups/create` redirects to the unregistered `/community/groups/create` destination.
+- **Settings:** Legacy root paths (`/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`) redirect to nested settings paths. The Settings declaration of `/blocks` appears first and is the effective compatibility alias. `/settings/notification-customization` redirects to `/settings/notification`.
+- **Chat:** `/chat-settings`, `/communities`, and `/message-filters` are root-level compatibility aliases. Chat declares `/blocks` again, but that later declaration is unreachable because the Settings alias already matches it. `/groups/create` redirects to the unregistered `/community/groups/create` destination.
 
 ## Consolidation Strategy
 Do not remove compatibility routes until bookmarks, search results, notifications, and older clients have a migration boundary. First repair the shadowed and unregistered redirect destinations above and lock them with focused deep-link tests. Any later removal requires staged deprecation, server-side redirects, and evidence that supported clients no longer depend on the aliases.
