@@ -8,10 +8,10 @@ version = "0.1.0"
 description = "Supervised autonomous development control plane for multiple repositories"
 requires-python = ">=3.12"
 dependencies = [
-  "filelock==3.32.4",
+  "filelock==3.32.3",
   "httpx==0.28.1",
-  "openhands-sdk==1.44.0",
-  "openhands-tools==1.44.0",
+  "openhands-sdk==1.42.1",
+  "openhands-tools==1.42.1",
   "pydantic==2.13.4",
 ]
 
@@ -20,7 +20,7 @@ development = [
   "mypy==2.3.1",
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
-  "ruff==0.16.5",
+  "ruff==0.16.3",
 ]
 
 [project.scripts]
