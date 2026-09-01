@@ -236,6 +236,7 @@ export class I18nService {
     'audioIntro.pause': 'Pause',
     'audioIntro.recording': 'Recording... {{seconds}}s remaining',
     'audioIntro.errorLoading': 'Could not load your audio introduction.',
+    'discovery.audioIntroFeed.noAudioIntros': 'No audio introductions available.',
     'audioIntro.microphoneError': 'Microphone access denied or unavailable.',
     'audioIntro.uploadError': 'Could not upload your recording.',
 

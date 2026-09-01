@@ -50,12 +50,21 @@ import { UserProfile } from '../../services/user.service';
                   [routerLink]="['/profile', user.id]"
                   class="flex min-w-0 flex-1 items-center gap-3 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <img
-                    class="h-11 w-11 shrink-0 rounded-full object-cover"
-                    [src]="user.avatar_url || '/assets/default-avatar.png'"
-                    alt=""
-                    loading="lazy"
-                  />
+                  @if (user.avatar_url) {
+                    <img
+                      class="h-11 w-11 shrink-0 rounded-full object-cover"
+                      [src]="user.avatar_url"
+                      alt=""
+                      loading="lazy"
+                    />
+                  } @else {
+                    <span
+                      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-200 font-semibold text-text-secondary"
+                      aria-hidden="true"
+                    >
+                      {{ user.display_name?.charAt(0) || '?' }}
+                    </span>
+                  }
                   <div class="min-w-0 flex-1">
                     <p
                       [id]="'audio-intro-user-' + user.id"
@@ -150,6 +159,7 @@ export class AudioIntroFeedComponent {
     };
 
     player.addEventListener('ended', clearCurrentPlayer, { once: true });
+    player.addEventListener('pause', clearCurrentPlayer);
     const failCurrentPlayer = () => {
       if (this.audioPlayer !== player) return;
       clearCurrentPlayer();

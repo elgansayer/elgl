@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AudioIntroFeedComponent } from './audio-intro-feed.component';
+import { socialRoutes } from '../../routes/social.routes';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
 import { UserProfile } from '../../services/user.service';
@@ -91,6 +93,35 @@ describe('AudioIntroFeedComponent', () => {
     expect(component.users()).toHaveLength(1);
     expect(el.textContent).toContain('Kenji');
     expect(el.querySelector('a[href="/profile/u1"]')).not.toBeNull();
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.textContent).toContain('K');
+  });
+
+  it('navigates to the exposed audio-intro route and renders the feed', async () => {
+    getAudioIntros.mockClear();
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter(socialRoutes),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            translations: signal({}),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/discovery/audio-intros', AudioIntroFeedComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+
+    expect(getAudioIntros).toHaveBeenCalledOnce();
+    expect(harness.routeNativeElement?.textContent).toContain('Kenji');
   });
 
   it('renders an empty state when no audio introductions are available', async () => {
@@ -189,6 +220,13 @@ describe('AudioIntroFeedComponent', () => {
   it('clears playback state when the audio ends', async () => {
     await component.togglePlay('u1', 'https://example.com/intro.mp3');
     MockAudio.instances[0]?.emit('ended');
+
+    expect(component.playingId()).toBeNull();
+  });
+
+  it('clears playback state when the browser pauses the audio', async () => {
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+    MockAudio.instances[0]?.emit('pause');
 
     expect(component.playingId()).toBeNull();
   });

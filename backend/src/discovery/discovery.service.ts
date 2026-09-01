@@ -1,4 +1,8 @@
-import { Injectable, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -810,7 +814,10 @@ export class DiscoveryService {
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
-      return sanitiseDiscoveryData([]);
+      this.logger.error('Audio intro discovery query failed');
+      throw new ServiceUnavailableException(
+        'Audio introductions are temporarily unavailable',
+      );
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {

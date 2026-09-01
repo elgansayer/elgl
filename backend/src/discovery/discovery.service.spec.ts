@@ -1183,14 +1183,18 @@ describe('DiscoveryService', () => {
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Paris%');
     });
 
-    it('should return empty when query errors', async () => {
+    it('should fail closed when the audio intro query errors', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'fail' },
       });
 
-      const result = await service.getAudioIntros('user-1', null, {});
-      expect(result).toEqual([]);
+      await expect(
+        service.getAudioIntros('user-1', null, {}),
+      ).rejects.toMatchObject({
+        status: 503,
+        message: 'Audio introductions are temporarily unavailable',
+      });
     });
 
     it('should filter blocked users from results', async () => {

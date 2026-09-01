@@ -176,6 +176,12 @@ describe('I18nService', () => {
     expect(text).toBe('HelloTalk');
   });
 
+  it('should translate the audio intro feed empty state from the base dictionary', () => {
+    expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
+      'No audio introductions available.',
+    );
+  });
+
   it('should interpolate parameters e.g. coins inside string', () => {
     const text = service.translate('common.coinsBalance', { coins: 150 });
     expect(text).toBe('150 Coins');

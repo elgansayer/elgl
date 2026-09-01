@@ -117,6 +117,10 @@ export class DiscoveryController {
     status: 401,
     description: 'Unauthorized - missing or invalid JWT.',
   })
+  @ApiResponse({
+    status: 503,
+    description: 'Audio introduction discovery is temporarily unavailable.',
+  })
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
