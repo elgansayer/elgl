@@ -1,0 +1,301 @@
+<!-- @dsCard group="Screens" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relay - Screens · Audio introductions</title>
+    <style>
+      :root {
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --primary: 198, 82, 48;
+        --danger: 217, 58, 58;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+      }
+      html.dark {
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --primary: 255, 122, 82;
+        --danger: 255, 107, 107;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 16px 64px;
+        background: rgb(var(--surface-600));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      button {
+        min-height: 44px;
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+      .page-head {
+        width: min(100%, 820px);
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .page-head h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .page-head p {
+        margin: 3px 0 0;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+      .control {
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+      }
+      .viewport {
+        width: min(100%, 820px);
+        margin: 0 auto;
+        border-radius: 24px;
+        background: rgb(var(--surface-500));
+        box-shadow: 0 18px 48px rgb(var(--shadow) / 0.2);
+        overflow: hidden;
+      }
+      .shell {
+        padding: 22px;
+      }
+      .feed {
+        width: min(100%, 650px);
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-400));
+      }
+      .feed > header {
+        padding: 16px 18px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      .feed h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .profile {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 16px;
+        border-bottom: 1px solid rgb(var(--surface-100));
+      }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: rgb(var(--surface-300));
+        color: rgb(var(--text-secondary));
+        font-weight: 700;
+      }
+      .identity {
+        min-width: 0;
+        flex: 1;
+      }
+      .identity strong,
+      .identity span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .identity span {
+        margin-top: 3px;
+        color: rgb(var(--text-secondary));
+        font-size: 12px;
+      }
+      .play {
+        width: 44px;
+        min-width: 44px;
+        padding: 0;
+        border-radius: 50%;
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+        font-size: 18px;
+      }
+      .play[aria-pressed="true"] {
+        outline: 3px solid rgb(var(--primary) / 0.25);
+      }
+      .playback-error {
+        margin: 0;
+        padding: 12px 16px;
+        color: rgb(var(--danger));
+        font-size: 13px;
+      }
+      .states {
+        width: min(100%, 820px);
+        margin: 18px auto 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .state {
+        min-height: 170px;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 10px;
+        padding: 20px;
+        border: 1px solid rgb(var(--surface-100));
+        border-radius: 16px;
+        background: rgb(var(--surface-400));
+        text-align: center;
+      }
+      .state h3,
+      .state p {
+        margin: 0;
+      }
+      .state p {
+        color: rgb(var(--text-secondary));
+        font-size: 13px;
+      }
+      .state.error p {
+        color: rgb(var(--danger));
+      }
+      .retry {
+        border-radius: 999px;
+        padding: 9px 18px;
+        background: rgb(var(--surface-200));
+        color: rgb(var(--text-primary));
+        font-weight: 700;
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgb(var(--surface-100));
+        border-top-color: rgb(var(--primary));
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation: none;
+        }
+      }
+      @media (max-width: 620px) {
+        body {
+          padding: 20px 10px 48px;
+        }
+        .page-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .shell {
+          padding: 14px 10px;
+        }
+        .states {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page-head">
+      <div>
+        <h1>Audio introductions</h1>
+        <p>/discovery/audio-intros · populated, playing, failure, empty, and loading states</p>
+      </div>
+      <div class="controls" aria-label="Preview controls">
+        <button class="control" type="button" onclick="document.documentElement.classList.toggle('dark')">
+          Theme
+        </button>
+        <button
+          class="control"
+          type="button"
+          onclick="document.documentElement.dir = document.documentElement.dir === 'rtl' ? 'ltr' : 'rtl'"
+        >
+          RTL
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="viewport" aria-labelledby="populated-heading">
+        <div class="shell">
+          <div class="feed">
+            <header><h2 id="populated-heading">Audio introductions</h2></header>
+            <article class="profile">
+              <span class="avatar" aria-hidden="true">K</span>
+              <div class="identity"><strong>Kenji</strong><span>Japanese → English</span></div>
+              <button class="play" type="button" aria-label="Play Kenji's introduction">▶</button>
+            </article>
+            <article class="profile">
+              <span class="avatar" aria-hidden="true">M</span>
+              <div class="identity"><strong>Maya</strong><span>English → Japanese</span></div>
+              <button
+                class="play"
+                type="button"
+                aria-label="Pause Maya's introduction"
+                aria-pressed="true"
+              >
+                ❚❚
+              </button>
+            </article>
+            <p class="playback-error" role="alert">
+              A later playback failure appears here without hiding the feed.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="states" aria-label="Audio introduction feed states">
+        <article class="state">
+          <div class="spinner" aria-hidden="true"></div>
+          <h3>Loading</h3>
+          <p>Status is announced without motion when reduced motion is requested.</p>
+        </article>
+        <article class="state error">
+          <h3>Temporarily unavailable</h3>
+          <p role="alert">The feed could not be loaded. This is distinct from an empty result.</p>
+          <button class="retry" type="button">Retry</button>
+        </article>
+        <article class="state">
+          <div aria-hidden="true">🎙</div>
+          <h3>No audio introductions</h3>
+          <p>Empty results remain a valid, non-error state.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

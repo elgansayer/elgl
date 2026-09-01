@@ -24,6 +24,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: Mock;
   let mockPipelineSet: Mock;
   let mockPipelineExec: Mock;
+  let mockLoggerError: Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
   let mockDegradationService: {
@@ -96,6 +97,7 @@ describe('DiscoveryService', () => {
     mockAudioRoomsService = {
       getActiveHostIds: vi.fn().mockResolvedValue([]),
     };
+    mockLoggerError = vi.fn();
 
     mockDegradationService = {
       executeWithBreaker: vi
@@ -139,7 +141,7 @@ describe('DiscoveryService', () => {
           useValue: {
             info: vi.fn(),
             warn: vi.fn(),
-            error: vi.fn(),
+            error: mockLoggerError,
             debug: vi.fn(),
             trace: vi.fn(),
           },
@@ -1186,7 +1188,7 @@ describe('DiscoveryService', () => {
     it('should fail closed when the audio intro query errors', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: null,
-        error: { message: 'fail' },
+        error: { code: 'PGRST301', message: 'sensitive database detail' },
       });
 
       await expect(
@@ -1195,6 +1197,12 @@ describe('DiscoveryService', () => {
         status: 503,
         message: 'Audio introductions are temporarily unavailable',
       });
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        'Audio intro discovery query failed (code: PGRST301)',
+      );
+      expect(mockLoggerError.mock.calls.flat().join(' ')).not.toContain(
+        'sensitive database detail',
+      );
     });
 
     it('should filter blocked users from results', async () => {

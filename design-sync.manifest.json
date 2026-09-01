@@ -177,6 +177,29 @@
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {
+      "id": "screen.audio-intros",
+      "kind": "screen",
+      "ownerLayer": "feature",
+      "repositoryPaths": ["frontend/src/app/discovery/audio-intro-feed"],
+      "previewPaths": ["frontend/design-preview/screens/audio-intros.html"],
+      "claudeDesignPath": "screens/audio-intros.html",
+      "syncDirection": "reconcile",
+      "lastReconciledCommit": "887c80ff1b09168429aaf732827fa456092334a0",
+      "implementationAudit": "issue-690-audio-intros-feed-2026-09-01",
+      "requiredStates": [
+        "light",
+        "dark",
+        "loading",
+        "error",
+        "empty",
+        "playing",
+        "390px",
+        "wide",
+        "rtl",
+        "reduced-motion"
+      ]
+    },
+    {
       "id": "screen.profile",
       "kind": "screen",
       "ownerLayer": "feature",

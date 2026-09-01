@@ -30,7 +30,7 @@ import { UserProfile } from '../../services/user.service';
             aria-live="polite"
           >
             <span
-              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary"
+              class="i-ph-spinner-gap-bold animate-spin text-2xl text-primary motion-reduce:animate-none"
               aria-hidden="true"
             ></span>
             <span class="sr-only">{{ 'common.loading' | t }}</span>
@@ -82,7 +82,7 @@ import { UserProfile } from '../../services/user.service';
                 <button
                   hlmBtn
                   type="button"
-                  size="touch"
+                  size="icon-touch"
                   (click)="togglePlay(user.id, user.audio_intro_url)"
                   class="ms-auto shrink-0 rounded-full"
                   [attr.aria-label]="
