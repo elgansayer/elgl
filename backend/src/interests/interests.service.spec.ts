@@ -29,6 +29,7 @@ describe('InterestsService', () => {
       user_interests: { data: [{ tag: 'travel' }], error: null },
       interest_vocabulary: { data: [], error: null },
       flashcards: { data: [], error: null },
+      users: { data: [{ target_languages: ['es'] }], error: null },
     };
     upsert = vi.fn().mockResolvedValue({ error: null });
     const query: Record<string, unknown> & { error: null } = { error: null };
@@ -129,6 +130,14 @@ describe('InterestsService', () => {
     expect(inQuery).toHaveBeenCalledWith('interest_tag', ['travel']);
     expect(inQuery).toHaveBeenCalledWith('interest_tag', ['Travel']);
     expect(eq).toHaveBeenCalledWith('language', 'es');
+  });
+
+  it('resolves the target language from the persisted user profile', async () => {
+    await expect(service.resolveTargetLanguage('user-1')).resolves.toBe('es');
+
+    expect(from).toHaveBeenCalledWith('users');
+    expect(select).toHaveBeenCalledWith('target_languages');
+    expect(eq).toHaveBeenCalledWith('id', 'user-1');
   });
 
   it('omits catalogue topics without vocabulary unless explicitly requested', async () => {

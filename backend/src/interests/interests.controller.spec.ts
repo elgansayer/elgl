@@ -11,6 +11,7 @@ describe('InterestsController', () => {
   function createController() {
     const service = {
       resolveLegacyInterestIds: vi.fn().mockResolvedValue(['travel']),
+      resolveTargetLanguage: vi.fn().mockResolvedValue('es'),
       interestTagsExist: vi.fn().mockResolvedValue(true),
       setUserInterests: vi.fn().mockResolvedValue(undefined),
       generateFlashcards: vi.fn().mockResolvedValue(undefined),
@@ -33,6 +34,7 @@ describe('InterestsController', () => {
     } as never);
 
     expect(service.resolveLegacyInterestIds).not.toHaveBeenCalled();
+    expect(service.resolveTargetLanguage).toHaveBeenCalledWith(userId);
     expect(service.interestTagsExist).toHaveBeenCalledWith(['travel'], 'es');
     expect(service.setUserInterests).toHaveBeenCalledWith(userId, ['travel']);
     expect(service.generateFlashcards).toHaveBeenCalledWith(userId, 'es');
@@ -71,6 +73,22 @@ describe('InterestsController', () => {
 
     expect(service.setUserInterests).not.toHaveBeenCalled();
     expect(service.generateFlashcards).not.toHaveBeenCalled();
+  });
+
+  it('validates and generates against the stored profile language', async () => {
+    const body = plainToInstance(SelectInterestsDto, {
+      interestTags: ['reise'],
+    });
+    await expect(validate(body)).resolves.toHaveLength(0);
+    const { controller, service } = createController();
+    service.resolveTargetLanguage.mockResolvedValue('de');
+
+    await controller.selectInterests(body, {
+      user: { id: userId },
+    } as never);
+
+    expect(service.interestTagsExist).toHaveBeenCalledWith(['reise'], 'de');
+    expect(service.generateFlashcards).toHaveBeenCalledWith(userId, 'de');
   });
 
   it('rejects an unknown legacy ID before deleting existing selections', async () => {

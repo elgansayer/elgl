@@ -32,6 +32,10 @@ interface UserInterestRow {
   tag: string;
 }
 
+interface UserLanguageRow {
+  target_languages: string[] | null;
+}
+
 interface VocabRow {
   word: string;
   translation: string;
@@ -157,6 +161,19 @@ export class InterestsService {
       const tag = tagsById.get(id);
       return tag ? [tag] : [];
     });
+  }
+
+  async resolveTargetLanguage(userId: string): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('users')
+      .select('target_languages')
+      .eq('id', userId)
+      .limit(1)
+      .returns<UserLanguageRow[]>();
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data?.[0]?.target_languages?.[0] ?? 'en';
   }
 
   async setUserInterests(userId: string, tags: string[]): Promise<void> {
