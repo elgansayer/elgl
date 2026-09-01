@@ -136,8 +136,8 @@
       "previewPaths": ["frontend/design-preview/screens/shell.html"],
       "claudeDesignPath": "screens/shell.html",
       "syncDirection": "reconcile",
-      "lastReconciledCommit": "747e10455b282239a589e96ed208d3d78bc79d91",
-      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28",
+      "lastReconciledCommit": "a4640a0d7c236a1ed30d8ad2cfaf768ef2dd5c2b",
+      "implementationAudit": "ux-full-tree-spartan-convergence-2026-08-16; issue-934-moderation-query-params-2026-08-26; issue-1721-voiceroom-create-modal-2026-08-26; bolt-bounded-chat-unread-fetch-2026-08-28; issue-690-audio-intros-feed-2026-09-01",
       "requiredStates": ["light", "dark", "390px", "wide", "rtl"]
     },
     {

@@ -236,6 +236,29 @@ describe('AudioIntroFeedComponent', () => {
     expect(component.playingId()).toBeNull();
   });
 
+  it('surfaces a media error from the active player', async () => {
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+
+    MockAudio.instances[0]?.emit('error');
+    fixture.detectChanges();
+
+    expect(component.playingId()).toBeNull();
+    expect(component.playbackError()).toBe(true);
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent,
+    ).toContain('audioPlayer.error');
+  });
+
+  it('stops active playback when the component is destroyed', async () => {
+    await component.togglePlay('u1', 'https://example.com/intro.mp3');
+    const player = MockAudio.instances[0];
+
+    fixture.destroy();
+
+    expect(player?.pause).toHaveBeenCalledOnce();
+    expect(component.playingId()).toBeNull();
+  });
+
   it('surfaces playback failure and does not leave stale playing state', async () => {
     const failingPlay = vi.fn().mockRejectedValue(new Error('autoplay blocked'));
 
