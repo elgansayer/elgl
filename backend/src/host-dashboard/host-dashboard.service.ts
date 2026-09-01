@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { HostDashboardStatsDto } from './dto/host-dashboard.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -27,7 +28,7 @@ export class HostDashboardService {
     }
 
     // Earned coins will eventually be calculated from a gift_transactions table
-    const earnedCoins = Math.floor(Math.random() * 10) + 1;
+    const earnedCoins = crypto.randomInt(1, 11);
 
     return {
       roomId,
