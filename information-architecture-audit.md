@@ -10,14 +10,14 @@
 7. **Settings/Config:** `/settings`, `/settings/account`, `/settings/privacy`, `/settings/notification`, `/settings/appearance`. (Entry: profile -> settings).
 8. **Admin/Moderation:** `/admin`, `/admin/moderation`, `/admin/blocks`. (Entry: privileged).
 
-## Overlaps, Duplicates, and Redundancies
-The audit revealed numerous "legacy" or duplicate paths that simply redirect to a canonical modern path. These add unnecessary routing tree depth and confusion.
+## Overlaps, Duplicates, and Redirect Defects
+The route table contains legacy aliases intended to redirect to canonical paths. Some work as compatibility boundaries, while others are currently shadowed or target routes that are not registered.
 
-- **Auth:** `/help`, `/help-about` duplicate `/support`.
-- **Commerce:** `/vip` duplicates `/subscription`; `/my-subscription` duplicates `/settings/subscription`.
-- **Social:** `/visitors` duplicates `/profile/visitors`; `/notification-preferences` duplicates `/settings/notification`; `/language-parties` and `/language-islands` duplicate `community/...`.
-- **Settings:** Legacy root paths (`/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`) duplicate their nested counterparts under `/settings/...`. `/settings/notification-customization` duplicates `/settings/notification`.
-- **Chat:** `/chat-settings`, `/groups/create`, `/communities`, `/message-filters`, `/blocks` are redundant root-level aliases for canonical paths under `/settings` or `/community`.
+- **Auth:** `/help` and `/help-about` redirect to `/support`.
+- **Commerce:** `/vip` redirects to `/subscription`; `/my-subscription` redirects to `/settings/subscription`.
+- **Social:** `/notification-preferences` redirects to `/settings/notification`. `/visitors` redirects to `/profile/visitors`, but the earlier `/profile/:userId` route shadows that destination. `/language-parties` and `/language-islands` redirect to unregistered `/community/language-*` destinations.
+- **Settings:** Legacy root paths (`/language`, `/blocks`, `/data-storage`, `/device-transfer`, `/gdpr`, `/account/deletion`, `/version`) redirect to nested settings paths. `/settings/notification-customization` redirects to `/settings/notification`.
+- **Chat:** `/chat-settings`, `/communities`, `/message-filters`, and `/blocks` are root-level compatibility aliases. `/groups/create` redirects to the unregistered `/community/groups/create` destination.
 
 ## Consolidation Strategy
-Due to the PR review, these routes will not be removed right now. They need to be preserved for compatibility with bookmarks, search results, notifications, and older clients. We need to implement a staged deprecation or migration boundary with server-side redirects and focused deep-link compatibility tests before removing the client side paths.
+Do not remove compatibility routes until bookmarks, search results, notifications, and older clients have a migration boundary. First repair the shadowed and unregistered redirect destinations above and lock them with focused deep-link tests. Any later removal requires staged deprecation, server-side redirects, and evidence that supported clients no longer depend on the aliases.
