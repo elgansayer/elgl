@@ -18,7 +18,7 @@ describe('InterestsSelectComponent', () => {
             id: 'interest-travel',
             tag: 'travel',
             name: 'Travel',
-            vocabulary: [],
+            vocabulary: [{ word: 'casa', translation: 'house' }],
           },
         ]),
       })

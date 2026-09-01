@@ -37,9 +37,15 @@ export class InterestsController {
    */
   @Get()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
-  async listInterests(@Query('language') language: string) {
+  async listInterests(
+    @Query('language') language: string,
+    @Query('includeEmpty') includeEmpty?: string,
+  ) {
     const targetLanguage = language || 'en';
-    return this.interestsService.findAll(targetLanguage);
+    return this.interestsService.findAll(
+      targetLanguage,
+      includeEmpty === 'true',
+    );
   }
 
   /**
@@ -64,7 +70,12 @@ export class InterestsController {
     if (legacyInterestIds && interestTags.length !== legacyInterestIds.length) {
       throw new BadRequestException('Unknown interest ID');
     }
-    if (!(await this.interestsService.interestTagsExist(interestTags))) {
+    if (
+      !(await this.interestsService.interestTagsExist(
+        interestTags,
+        targetLanguage,
+      ))
+    ) {
       throw new BadRequestException('Unknown interest tag');
     }
     await this.interestsService.setUserInterests(userId, interestTags);

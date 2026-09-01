@@ -118,12 +118,39 @@ describe('InterestsService', () => {
   it('accepts only exact canonical interest tags', async () => {
     results.interest_vocabulary.data = [{ interest_tag: 'travel' }];
 
-    await expect(service.interestTagsExist(['travel'])).resolves.toBe(true);
-    await expect(service.interestTagsExist(['Travel'])).resolves.toBe(false);
-    await expect(service.interestTagsExist([])).resolves.toBe(true);
+    await expect(service.interestTagsExist(['travel'], 'es')).resolves.toBe(
+      true,
+    );
+    await expect(service.interestTagsExist(['Travel'], 'es')).resolves.toBe(
+      false,
+    );
+    await expect(service.interestTagsExist([], 'es')).resolves.toBe(true);
 
     expect(inQuery).toHaveBeenCalledWith('interest_tag', ['travel']);
     expect(inQuery).toHaveBeenCalledWith('interest_tag', ['Travel']);
+    expect(eq).toHaveBeenCalledWith('language', 'es');
+  });
+
+  it('omits catalogue topics without vocabulary unless explicitly requested', async () => {
+    results.interests.data = [
+      { id: 'interest-1', name: 'Travel' },
+      { id: 'interest-2', name: 'Music' },
+    ];
+    results.interest_vocabulary.data = [
+      {
+        interest_tag: 'travel',
+        vocab_word: 'Casa',
+        translation: 'House',
+      },
+    ];
+
+    await expect(service.findAll('es')).resolves.toEqual([
+      expect.objectContaining({ tag: 'travel' }),
+    ]);
+    await expect(service.findAll('es', true)).resolves.toEqual([
+      expect.objectContaining({ tag: 'travel' }),
+      expect.objectContaining({ tag: 'music', vocabulary: [] }),
+    ]);
   });
 
   it('batches contextual examples into the canonical flashcard field', async () => {

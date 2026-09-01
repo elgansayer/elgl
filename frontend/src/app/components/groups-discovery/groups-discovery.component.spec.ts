@@ -73,6 +73,7 @@ describe('GroupsDiscoveryComponent', () => {
     const interestsReq = httpTesting.expectOne((request) => request.url.includes('/interests'));
     expect(interestsReq.request.method).toBe('GET');
     expect(interestsReq.request.urlWithParams).toContain('language=en-GB');
+    expect(interestsReq.request.urlWithParams).toContain('includeEmpty=true');
     interestsReq.flush(mockInterests);
 
     const groupsReq = httpTesting.expectOne((request) =>

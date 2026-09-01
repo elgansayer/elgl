@@ -67,7 +67,10 @@ export class InterestsService {
     return this.supabaseService.getClient();
   }
 
-  async findAll(targetLanguage: string): Promise<InterestVocabularyDto[]> {
+  async findAll(
+    targetLanguage: string,
+    includeEmpty = false,
+  ): Promise<InterestVocabularyDto[]> {
     const [interestResult, vocabularyResult] = await Promise.all([
       this.supabase
         .from('interests')
@@ -116,7 +119,10 @@ export class InterestsService {
       });
       interests.set(normalisedTag, interest);
     }
-    return Array.from(interests.values());
+    const catalogue = Array.from(interests.values());
+    return includeEmpty
+      ? catalogue
+      : catalogue.filter((interest) => interest.vocabulary.length > 0);
   }
 
   async findById(id: string): Promise<Pick<InterestRow, 'id' | 'name'> | null> {
@@ -179,12 +185,16 @@ export class InterestsService {
     }
   }
 
-  async interestTagsExist(tags: string[]): Promise<boolean> {
+  async interestTagsExist(
+    tags: string[],
+    targetLanguage: string,
+  ): Promise<boolean> {
     if (tags.length === 0) return true;
     const { data, error } = await this.supabase
       .from('interest_vocabulary')
       .select('interest_tag')
       .in('interest_tag', tags)
+      .eq('language', targetLanguage)
       .returns<Array<Pick<InterestVocabularyRow, 'interest_tag'>>>();
     if (error) {
       throw new Error(error.message);

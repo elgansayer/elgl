@@ -6,15 +6,9 @@ const chatListTemplate = readFileSync(
   resolve(process.cwd(), 'src/app/components/chat-list/chat-list.component.html'),
   'utf8',
 );
-const chatRoutes = readFileSync(
-  resolve(process.cwd(), 'src/app/routes/chat.routes.ts'),
-  'utf8',
-);
+const chatRoutes = readFileSync(resolve(process.cwd(), 'src/app/routes/chat.routes.ts'), 'utf8');
 const discoverySource = readFileSync(
-  resolve(
-    process.cwd(),
-    'src/app/components/groups-discovery/groups-discovery.component.ts',
-  ),
+  resolve(process.cwd(), 'src/app/components/groups-discovery/groups-discovery.component.ts'),
   'utf8',
 );
 
@@ -37,10 +31,10 @@ describe('groups discovery product contract', () => {
 
   it('loads authenticated discoverable groups and topic metadata', () => {
     expect(discoverySource).toContain('`${this.apiUrl}/groups/discoverable`');
-    expect(discoverySource).toContain('`${this.apiUrl}/interests?language=${lang}`');
     expect(discoverySource).toContain(
-      'return groups.filter((g) => g.interest_id === interestId);',
+      '`${this.apiUrl}/interests?language=${lang}&includeEmpty=true`',
     );
+    expect(discoverySource).toContain('return groups.filter((g) => g.interest_id === interestId);');
   });
 
   it('keeps join state and capacity state explicit in the UI', () => {

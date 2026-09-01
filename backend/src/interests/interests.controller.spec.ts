@@ -33,7 +33,7 @@ describe('InterestsController', () => {
     } as never);
 
     expect(service.resolveLegacyInterestIds).not.toHaveBeenCalled();
-    expect(service.interestTagsExist).toHaveBeenCalledWith(['travel']);
+    expect(service.interestTagsExist).toHaveBeenCalledWith(['travel'], 'es');
     expect(service.setUserInterests).toHaveBeenCalledWith(userId, ['travel']);
     expect(service.generateFlashcards).toHaveBeenCalledWith(userId, 'es');
   });

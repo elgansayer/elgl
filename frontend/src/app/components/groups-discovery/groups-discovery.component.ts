@@ -212,7 +212,9 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         return await firstValueFrom(
-          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`),
+          this.http.get<InterestTopic[]>(
+            `${this.apiUrl}/interests?language=${lang}&includeEmpty=true`,
+          ),
         );
       } catch {
         return [];
