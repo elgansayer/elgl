@@ -56,6 +56,20 @@ test('does not borrow an e2e working directory from another workflow step', () =
   ]);
 });
 
+test('does not accept working-directory text printed inside a workflow command', () => {
+  for (const command of ['echo working-directory: e2e', '# working-directory: e2e']) {
+    const violations = analyse({
+      '.github/workflows/e2e.yml': [
+        '- name: Spoofed working directory',
+        '  run: |',
+        `    ${command}`,
+        '    npx playwright test',
+      ].join('\n'),
+    });
+    assert.equal(violations.length, 1, command);
+  }
+});
+
 test('accepts root automation that explicitly changes into e2e', () => {
   for (const command of [
     '(cd e2e && npx playwright test)',
@@ -175,11 +189,19 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'npx -y tsx e2e/tests/auth.spec.ts',
     'npm exec --yes tsx e2e/tests/auth.spec.ts',
     'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
+    'npx tsx@latest e2e/tests/auth.spec.ts',
+    'ts-node --cwd . e2e/tests/auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /generic JavaScript\/TypeScript runtime/, command);
   }
+});
+
+test('rejects version-qualified Playwright root discovery', () => {
+  const violations = analyse({ 'automation/qa-loop.sh': 'npx playwright@latest test' });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /without the e2e working directory/);
 });
 
 test('rejects generic-runtime execution in an inline workflow step', () => {
@@ -241,10 +263,23 @@ test('treats runner selection-option values as Playwright targets', () => {
     'vitest --include e2e/tests',
     'jest --root e2e/tests',
     'jest --testPathPattern e2e/tests',
+    'vitest --dir=e2e/tests',
+    'jest --testPathPattern=e2e/tests',
   ]) {
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /Playwright suite to Vitest or Jest/, command);
+  }
+});
+
+test('does not split shell separators inside quoted arguments', () => {
+  for (const command of [
+    'echo "warning; node e2e/tests/auth.spec.ts"',
+    "echo 'warning && npx playwright test'",
+    'node scripts/report.mjs "warning | jest e2e/tests"',
+    'echo warning\\; node e2e/tests/auth.spec.ts',
+  ]) {
+    assert.deepEqual(analyse({ 'automation/qa-loop.sh': command }), [], command);
   }
 });
 

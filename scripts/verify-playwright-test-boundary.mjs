@@ -68,9 +68,19 @@ function commandStartsInE2e(lines, index, path) {
   if (!/\.ya?ml$/.test(normalizedPath)) {
     return false;
   }
-  return /working-directory\s*:\s*["']?(?:\.\/)?e2e["']?\s*$/m.test(
-    workflowStepContext(lines, index),
-  );
+  const contextLines = workflowStepContext(lines, index).split('\n');
+  const stepIndent = contextLines[0]?.match(/^(\s*)-\s+/)?.[1].length;
+  if (stepIndent === undefined) {
+    return false;
+  }
+
+  return contextLines.some((line) => {
+    const match = /^(\s*)(-\s*)?working-directory\s*:\s*["']?(?:\.\/)?e2e\/?["']?\s*$/.exec(line);
+    if (!match) {
+      return false;
+    }
+    return match[2] ? match[1].length === stepIndent : match[1].length === stepIndent + 2;
+  });
 }
 
 function isCommandSource(path) {
@@ -82,8 +92,7 @@ function isCommandSource(path) {
 
 function normalizeCommandLine(line) {
   return line
-    .replaceAll('\\', '/')
-    .replaceAll(/['"`]/g, '')
+    .replace(/\\(?=[^;|&'"`\\\s])/g, '/')
     .replace(/\/{2,}/g, '/')
     .replace(/\s+/g, ' ')
     .trim();
@@ -133,18 +142,95 @@ function logicalCommandLines(lines, path) {
 
 function commandSegments(command) {
   const segments = [];
-  const separator = /&&|\|\||[;|&]/g;
   let start = 0;
-  let match;
-  while ((match = separator.exec(command))) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (![';', '|', '&'].includes(character)) {
+      continue;
+    }
+    const separator =
+      command[index + 1] === character && (character === '|' || character === '&')
+        ? character.repeat(2)
+        : character;
     segments.push({
-      command: command.slice(start, match.index),
-      separatorAfter: match[0],
+      command: command.slice(start, index),
+      separatorAfter: separator,
     });
-    start = separator.lastIndex;
+    if (separator.length === 2) {
+      index += 1;
+    }
+    start = index + 1;
   }
   segments.push({ command: command.slice(start), separatorAfter: null });
   return segments;
+}
+
+function shellTokens(command) {
+  const tokens = [];
+  let token = '';
+  let quote = null;
+  let escaped = false;
+  for (const character of command) {
+    if (escaped) {
+      token += character;
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      } else {
+        token += character;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (/\s/.test(character)) {
+      if (token) {
+        tokens.push(token);
+        token = '';
+      }
+    } else {
+      token += character;
+    }
+  }
+  if (escaped) {
+    token += '\\';
+  }
+  if (token) {
+    tokens.push(token);
+  }
+  return tokens;
+}
+
+function normalizeExecutable(token) {
+  const executable = token.split('/').at(-1) ?? '';
+  return executable.replace(/@[^@/]+$/, '');
 }
 
 function commandInvocation(segment) {
@@ -154,7 +240,7 @@ function commandInvocation(segment) {
     .replace(/\)+\s*$/, '')
     .replace(/^-\s+/, '')
     .replace(/^(?:[-\w.]+\s*:\s*)/, '');
-  let tokens = command.split(/\s+/).filter(Boolean);
+  let tokens = shellTokens(command);
 
   if (tokens[0] === 'env') {
     tokens = tokens.slice(1);
@@ -175,7 +261,7 @@ function commandInvocation(segment) {
     tokens = tokens.slice(1);
   }
 
-  const executable = tokens.shift()?.split('/').at(-1) ?? '';
+  const executable = normalizeExecutable(tokens.shift() ?? '');
   return { executable, args: tokens };
 }
 
@@ -199,12 +285,39 @@ function runtimeEntrypoint(invocation) {
   if (invocation.executable === 'bun' && ['run', 'test'].includes(args[0])) {
     args.shift();
   }
+  const optionsWithValues = {
+    node: new Set([
+      '--conditions',
+      '--env-file',
+      '--experimental-loader',
+      '--import',
+      '--loader',
+      '--require',
+      '-r',
+      '--test-name-pattern',
+      '--test-reporter',
+      '--test-reporter-destination',
+    ]),
+    tsx: new Set(['--tsconfig']),
+    'ts-node': new Set([
+      '--compiler',
+      '--compilerOptions',
+      '--cwd',
+      '--dir',
+      '--project',
+      '-P',
+      '--require',
+      '-r',
+      '--scopeDir',
+      '--transpiler',
+      '--tsconfig',
+    ]),
+    bun: new Set(['--config', '--cwd', '--preload', '-r']),
+  }[invocation.executable];
   while (args[0]?.startsWith('-')) {
     const flag = args.shift();
-    if (
-      ['--loader', '--import', '--require', '-r', '--tsconfig', '--project', '-P'].includes(flag) &&
-      args.length > 0
-    ) {
+    const optionName = flag.split('=', 1)[0];
+    if (!flag.includes('=') && optionsWithValues.has(optionName) && args.length > 0) {
       args.shift();
     }
   }
@@ -226,10 +339,15 @@ function runnerTargets(invocation) {
       continue;
     }
     if (argument.startsWith('-')) {
-      if (selectingOptions.has(argument) && args[index + 1]) {
+      const equalsIndex = argument.indexOf('=');
+      const optionName = equalsIndex === -1 ? argument : argument.slice(0, equalsIndex);
+      const inlineValue = equalsIndex === -1 ? null : argument.slice(equalsIndex + 1);
+      if (selectingOptions.has(optionName) && inlineValue) {
+        targets.push(inlineValue);
+      } else if (selectingOptions.has(optionName) && args[index + 1]) {
         targets.push(args[index + 1]);
         index += 1;
-      } else if (nonSelectingOptions.has(argument)) {
+      } else if (nonSelectingOptions.has(optionName) && inlineValue === null) {
         index += 1;
       }
       continue;
