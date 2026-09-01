@@ -184,7 +184,7 @@
       "previewPaths": ["frontend/design-preview/screens/audio-intros.html"],
       "claudeDesignPath": "screens/audio-intros.html",
       "syncDirection": "reconcile",
-      "lastReconciledCommit": "7bb4f53c8e66ccbf4ed89092bec9544221696b64",
+      "lastReconciledCommit": "24fd0e6a2ff8b12153bb141e5662874ed496907e",
       "implementationAudit": "issue-690-audio-intros-feed-2026-09-01",
       "requiredStates": [
         "light",
