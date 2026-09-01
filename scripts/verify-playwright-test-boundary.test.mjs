@@ -134,6 +134,13 @@ test('rejects root Playwright discovery without an explicit e2e config', () => {
   }
 });
 
+test('checks Playwright context in automation Markdown', () => {
+  const violations = analyse({ '.agents/automations/qa.md': 'npx playwright test' });
+  assert.deepEqual(violations, [
+    '.agents/automations/qa.md:1 invokes Playwright without the e2e working directory or explicit e2e config',
+  ]);
+});
+
 test('accepts root Playwright discovery with the canonical e2e config', () => {
   for (const command of [
     'npx playwright test --config e2e/playwright.config.ts',

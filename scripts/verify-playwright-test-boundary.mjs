@@ -459,7 +459,11 @@ function scanPlaywrightInvocations(files) {
 
   for (const [rawPath, content] of Object.entries(files)) {
     const path = normalizePath(rawPath);
-    if (IGNORED_SCAN_PATHS.has(path) || !SCRIPT_EXTENSIONS.has(extname(path))) {
+    const scansCommandMarkdown = extname(path) === '.md' && isCommandSource(path);
+    if (
+      IGNORED_SCAN_PATHS.has(path) ||
+      (!SCRIPT_EXTENSIONS.has(extname(path)) && !scansCommandMarkdown)
+    ) {
       continue;
     }
 
