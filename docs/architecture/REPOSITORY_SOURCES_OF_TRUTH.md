@@ -26,9 +26,9 @@ The default production execution path is:
 2. Inside OpenHands, OpenAI Codex subscription OAuth is the primary LLM provider.
 3. OpenCode Go is an optional fallback when both its API key and model are configured.
 4. Gemini fields remain migration/diagnostic compatibility only and cannot be enabled as a production Factory LLM tier.
-5. The optional outer `AgentRouter` may route explicit phase-specific CLI providers only when `routing_enabled` is deliberately configured. It is not the retired swarm and is disabled by default.
+5. The optional outer `AgentRouter` may route explicit phase-specific CLI providers only when `routing_enabled` is deliberately configured. It is disabled by default.
 
-The retired swarm/aider/guardian/resolver/reviewer control plane must not be recreated or share the Factory state directory.
+The Factory state directory must not be shared with other control planes.
 
 ## Tool-specific adapter directories
 

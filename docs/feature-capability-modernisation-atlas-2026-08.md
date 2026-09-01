@@ -501,7 +501,7 @@ Keep the Factory as the authority for:
 - planning, implementation, independent review and repair;
 - verification, CI repair, PR creation and merge safety.
 
-Do not revive the old swarm or let an individual provider bypass reviewed-SHA, verification or merge policy. Package governance must not copy subscription credentials into builds, worktrees or logs.
+Do not let an individual provider bypass reviewed-SHA, verification or merge policy. Package governance must not copy subscription credentials into builds, worktrees or logs.
 
 ## Candidate package decision table
 

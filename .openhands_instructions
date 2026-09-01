@@ -25,7 +25,7 @@ Do not replace conversation-scoped provider selection with a per-call cross-prov
 3. **Verification gate**: run the relevant local tests, lint, type checks, builds, and Factory quality/security gates before considering work complete.
 4. **Pull requests only**: use descriptive commits and branches. Never push autonomous work directly to protected `main` and never bypass required checks.
 5. **Credential boundary**: never copy controller OAuth caches, GitHub tokens, Telegram credentials, environment secrets, or unrelated host credentials into worker containers, task prompts, logs, commits, or PRs.
-6. **Legacy isolation**: if old swarm scripts, services, queues, state, tmux sessions, cron entries, or documentation are discovered, treat them as retired. Do not consume their state. Remove them when safe or clearly mark historical material as retired.
+6. **Legacy isolation**: do not consume legacy state. Remove historical material when safe.
 7. **Architecture changes require explicit review**: provider order, authentication, isolation, merge authority, and legacy-system reactivation require changes to `docs/factory/ACTIVE_ARCHITECTURE.md` plus corresponding tests.
 
 Read the architecture contract and `AGENTS.md` thoroughly before making changes.

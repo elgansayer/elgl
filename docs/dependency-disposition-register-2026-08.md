@@ -401,7 +401,6 @@ The Factory already contains provider-neutral adapters and routing for Claude, C
 
 Do not:
 
-- revive the old swarm;
 - put provider CLI credentials in Python/npm lockfiles or builds;
 - replace the scheduler/worktree/review/verification authority with one vendor CLI;
 - make standard CI consume subscription quotas;

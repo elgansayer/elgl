@@ -118,7 +118,7 @@ The current OpenHands Factory already contains an `agents/` package with provide
 
 That architecture should be preserved. The Factory remains the scheduler, worktree owner, verifier, reviewer and merge-safety authority. Provider CLIs remain interchangeable execution engines underneath it.
 
-Future work should audit completeness, tests, state migration and production diagnostics rather than revive the old swarm or replace the Factory with a single vendor CLI.
+Future work should audit completeness, tests, state migration and production diagnostics rather than replace the Factory with a single vendor CLI.
 
 ## Decision principles
 

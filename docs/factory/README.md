@@ -413,13 +413,13 @@ for a targeted reset. Recovery is quiet by default; add `--announce` only when a
 command reconciles the union of durable quarantine state and GitHub labels, so rerunning it safely completes a
 partially interrupted reset. Historical quarantine entries without the current reason marker are migrated into
 normal retry flow. Successful merge completion removes `factory-active` before closing the source issue. Existing
-historical `factory-active` and retired `swarm-active` drift is cleaned in batches of
+historical `factory-active` drift is cleaned in batches of
 `FACTORY_LABEL_RECONCILIATION_BATCH_SIZE` per scheduler refresh. Durable active jobs and currently protected
 workers retain ownership. Released issues always regain `factory-ready` because `factory-active` also carried
 trusted-intake authority. The configured batch is validated between 1 and 100. This avoids an unbounded startup
 mutation or GitHub comment burst while converging automatically.
 
-Never restore the old swarm or create a parallel one-off resolver to bypass a red diagnostic.
+Never create a parallel one-off resolver to bypass a red diagnostic.
 
 For an emergency stop:
 
