@@ -63,6 +63,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
     limit: Mock;
     range: Mock;
     single: Mock;
+    then: Mock;
   };
 
   beforeAll(async () => {
@@ -120,6 +121,9 @@ describe('HelloTalk API E2E Integration Suite', () => {
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       range: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: (value: unknown) => unknown) =>
+        resolve({ data: [], error: null }),
+      ),
       single: vi
         .fn()
         .mockResolvedValue({ data: { id: 'mock-id' }, error: null }),
