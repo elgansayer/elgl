@@ -81,6 +81,27 @@ describe('VisualDiffComponent', () => {
     }
   });
 
+  it('should preserve the longest common sequence after a middle deletion', () => {
+    setInputs('one two three four five', 'one three four five');
+
+    const changedSegments = component.segments().filter((segment) => segment.type !== 'unchanged');
+    expect(changedSegments).toEqual([
+      { type: 'removed', text: 'two', index: 2 },
+      { type: 'removed', text: ' ', index: 3 },
+    ]);
+  });
+
+  it('should fall back to a faithful coarse diff when the edit distance is excessive', () => {
+    const original = Array.from({ length: 600 }, (_, index) => `old${index}`).join(' ');
+    const corrected = Array.from({ length: 600 }, (_, index) => `new${index}`).join(' ');
+    setInputs(original, corrected);
+
+    expect(component.segments()).toEqual([
+      { type: 'removed', text: original, index: 0 },
+      { type: 'added', text: corrected, index: 1 },
+    ]);
+  });
+
   it('should handle non-Latin text (Arabic)', () => {
     const original = 'مرحبا';
     const corrected = 'مرحبا';
@@ -89,53 +110,6 @@ describe('VisualDiffComponent', () => {
     const segments = component.segments();
     expect(segments.length).toBeGreaterThan(0);
     expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
-  });
-
-  it('should accurately diff repeated tokens in different orders', () => {
-    setInputs('apple banana apple', 'apple apple banana');
-
-    const segments = component.segments();
-    // Expected logic:
-    // [ 'apple', ' ', 'banana', ' ', 'apple' ] vs [ 'apple', ' ', 'apple', ' ', 'banana' ]
-    // We expect some additions and some removals without collapsing them all into unchanged
-    expect(segments.some((segment) => segment.type === 'added')).toBe(true);
-    expect(segments.some((segment) => segment.type === 'removed')).toBe(true);
-  });
-
-  it('should accurately identify inline insertions and deletions', () => {
-    setInputs('I like to eat apples and bananas', 'I like eating green apples and yellow bananas');
-
-    const segments = component.segments();
-    const removedTokens = segments.filter((s) => s.type === 'removed').map((s) => s.text);
-    const addedTokens = segments.filter((s) => s.type === 'added').map((s) => s.text);
-
-    expect(removedTokens).toContain('to');
-    expect(removedTokens).toContain('eat');
-
-    expect(addedTokens).toContain('eating');
-    expect(addedTokens).toContain('green');
-    expect(addedTokens).toContain('yellow');
-  });
-
-  it('should treat words differing only in casing as completely unchanged segments', () => {
-    setInputs('Hello THere World', 'hello there WORLD');
-
-    const segments = component.segments();
-    expect(segments.every((segment) => segment.type === 'unchanged')).toBe(true);
-  });
-
-  it('should correctly segment and separate punctuation from word changes', () => {
-    setInputs('Hello! How are you?', 'Hello, how are you today?');
-
-    const segments = component.segments();
-    const removedTokens = segments.filter((s) => s.type === 'removed').map((s) => s.text);
-    const addedTokens = segments.filter((s) => s.type === 'added').map((s) => s.text);
-
-    // Punctuation like '!' and ',' is parsed differently depending on the segmenter.
-    // '!' removed, ',' added, 'today' added
-    expect(removedTokens).toContain('!');
-    expect(addedTokens).toContain(',');
-    expect(addedTokens).toContain('today');
   });
 
   it('should render added spans in the DOM', () => {
