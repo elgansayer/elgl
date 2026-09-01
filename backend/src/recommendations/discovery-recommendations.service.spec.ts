@@ -1,4 +1,8 @@
-import { rankDiscoveryRecommendations } from './discovery-recommendations.service';
+import type { Mock } from 'vitest';
+import {
+  DiscoveryRecommendationsService,
+  rankDiscoveryRecommendations,
+} from './discovery-recommendations.service';
 
 const NOW = Date.parse('2026-08-21T10:00:00Z');
 type Candidate = Parameters<typeof rankDiscoveryRecommendations>[1][number];
@@ -133,5 +137,83 @@ describe('rankDiscoveryRecommendations', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].recommendation_reasons).toEqual(['shared_interests']);
+  });
+});
+
+type QueryChain = {
+  select: Mock;
+  eq: Mock;
+  neq: Mock;
+  in: Mock;
+  is: Mock;
+  not: Mock;
+  overlaps: Mock;
+  limit: Mock;
+  maybeSingle: Mock;
+  then: (resolve: (value: { data: unknown; error: null }) => void) => undefined;
+};
+
+function queryChain(data: unknown): QueryChain {
+  const chain = {} as QueryChain;
+  for (const method of [
+    'select',
+    'eq',
+    'neq',
+    'in',
+    'is',
+    'not',
+    'overlaps',
+    'limit',
+    'maybeSingle',
+  ] as const) {
+    chain[method] = vi.fn().mockReturnValue(chain);
+  }
+  chain.then = (resolve) => {
+    resolve({ data, error: null });
+    return undefined;
+  };
+  return chain;
+}
+
+describe('DiscoveryRecommendationsService privacy contract', () => {
+  it('excludes scheduled deletions from final candidate hydration', async () => {
+    const currentUser = queryChain({
+      native_languages: ['en'],
+      target_languages: ['ja'],
+    });
+    const interests = queryChain([]);
+    const candidates = queryChain([
+      candidate('candidate-1', { display_name: 'Candidate One' }),
+    ]);
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(currentUser)
+      .mockReturnValueOnce(interests)
+      .mockReturnValueOnce(candidates);
+    const service = new DiscoveryRecommendationsService(
+      { warn: vi.fn() } as never,
+      { getClient: vi.fn().mockReturnValue({ from }) } as never,
+      { getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]) } as never,
+      {
+        getDailyRecommendations: vi.fn().mockResolvedValue(
+          Array.from({ length: 10 }, (_, index) => ({
+            id: `candidate-${index + 1}`,
+          })),
+        ),
+      } as never,
+    );
+
+    await service.getForDiscovery('viewer');
+
+    expect(candidates.is).toHaveBeenCalledWith(
+      'scheduled_for_deletion_at',
+      null,
+    );
+    expect(candidates.eq).toHaveBeenCalledWith(
+      'privacy_hide_from_search',
+      false,
+    );
+    expect(candidates.eq).toHaveBeenCalledWith('is_deletion_pending', false);
+    expect(candidates.eq).toHaveBeenCalledWith('is_deleted', false);
   });
 });

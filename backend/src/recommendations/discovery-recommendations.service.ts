@@ -284,6 +284,7 @@ export class DiscoveryRecommendationsService {
           .neq('id', userId)
           .eq('privacy_hide_from_search', false)
           .eq('is_deletion_pending', false)
+          .is('scheduled_for_deletion_at', null)
           .overlaps('native_languages', currentSignals.targetLanguages)
           .overlaps('target_languages', currentSignals.nativeLanguages)
           .limit(CANDIDATE_LIMIT);
@@ -321,6 +322,7 @@ export class DiscoveryRecommendationsService {
       .eq('privacy_hide_from_search', false)
       .eq('is_deletion_pending', false)
       .eq('is_deleted', false)
+      .is('scheduled_for_deletion_at', null)
       .not('display_name', 'is', null)
       .not('native_languages', 'is', null)
       .not('target_languages', 'is', null)
