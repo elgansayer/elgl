@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
+import {
+  initialiseOfflineDiscoveryCache,
+  OfflineDiscoveryCacheService,
+} from './offline-discovery-cache.service';
 import { NetworkStatusService } from './network-status.service';
 
 describe('OfflineDiscoveryCacheService', () => {
@@ -42,7 +45,11 @@ describe('OfflineDiscoveryCacheService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('purges the legacy profile cache on startup', () => {
+  it('purges the legacy profile cache during application initialisation', async () => {
+    const initialise = TestBed.runInInjectionContext(initialiseOfflineDiscoveryCache);
+
+    await initialise();
+
     expect(deleteDatabase).toHaveBeenCalledWith('hellotalk_discovery_cache');
     expect(service.cachedDataAvailable()).toBe(false);
   });

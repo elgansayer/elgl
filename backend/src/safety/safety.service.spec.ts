@@ -562,6 +562,29 @@ describe('SafetyService', () => {
         'Failed to load complete block graph',
       );
     });
+
+    it.each([
+      [{ blocked_id: '' }, { blocker_id: 'blocker-1' }],
+      [{ blocked_id: '   ' }, { blocker_id: 'blocker-1' }],
+      [{ blocked_id: 'blocked-1' }, { blocker_id: '' }],
+      [{ blocked_id: 'blocked-1' }, { blocker_id: ' padded ' }],
+    ])(
+      'should fail closed for blank or padded block IDs',
+      async (blockedRow, blockerRow) => {
+        mockQueryBuilder.then = vi
+          .fn()
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [blockedRow], error: null }),
+          )
+          .mockImplementationOnce((resolve: any) =>
+            resolve({ data: [blockerRow], error: null }),
+          );
+
+        await expect(service.getBlockedAndBlockerIds('user-1')).rejects.toThrow(
+          'Failed to load complete block graph',
+        );
+      },
+    );
   });
 
   describe('getBlockedUserDetails', () => {

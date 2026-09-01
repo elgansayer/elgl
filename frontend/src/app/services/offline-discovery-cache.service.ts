@@ -21,10 +21,6 @@ export class OfflineDiscoveryCacheService {
   readonly isOnline = this.networkStatus.isOnline;
   readonly cachedDataAvailable = signal(false);
 
-  constructor() {
-    void this.purgeLegacyCache();
-  }
-
   private async purgeLegacyCache(): Promise<void> {
     this.cachedDataAvailable.set(false);
     if (typeof window === 'undefined' || !window.indexedDB) return;
@@ -84,4 +80,10 @@ export class OfflineDiscoveryCacheService {
   async evictStaleEntries(): Promise<void> {
     await this.purgeLegacyCache();
   }
+}
+
+/** Ensure legacy discovery profiles are purged during every browser bootstrap. */
+export function initialiseOfflineDiscoveryCache(): () => Promise<void> {
+  const cache = inject(OfflineDiscoveryCacheService);
+  return () => cache.clearAll();
 }

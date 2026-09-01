@@ -273,11 +273,17 @@ export class SafetyService {
     const hasBlockedId = (row: unknown): row is { blocked_id: string } =>
       typeof row === 'object' &&
       row !== null &&
-      typeof (row as { blocked_id?: unknown }).blocked_id === 'string';
+      typeof (row as { blocked_id?: unknown }).blocked_id === 'string' &&
+      (row as { blocked_id: string }).blocked_id.trim().length > 0 &&
+      (row as { blocked_id: string }).blocked_id ===
+        (row as { blocked_id: string }).blocked_id.trim();
     const hasBlockerId = (row: unknown): row is { blocker_id: string } =>
       typeof row === 'object' &&
       row !== null &&
-      typeof (row as { blocker_id?: unknown }).blocker_id === 'string';
+      typeof (row as { blocker_id?: unknown }).blocker_id === 'string' &&
+      (row as { blocker_id: string }).blocker_id.trim().length > 0 &&
+      (row as { blocker_id: string }).blocker_id ===
+        (row as { blocker_id: string }).blocker_id.trim();
 
     if (
       blockedResult.error ||
