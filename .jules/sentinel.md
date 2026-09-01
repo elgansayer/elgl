@@ -79,3 +79,8 @@
 **Vulnerability:** The TransferService could initialize using the well-known insecure fallback `test-transfer-secret` if the environment variable was omitted or masked in a production environment.
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
+
+## 2024-09-02 - Language Corrections Flow Audit
+**Vulnerability:** Language corrections flow lacked a formal audit.
+**Learning:** The current implementation in `frontend/src/app/components/visual-diff/visual-diff.component.ts` successfully satisfies the requirements: speed, clarity, neutrality, translatability, and reusability. It uses `Intl.Segmenter` for universal tokenization and integrates with `FlashcardService`.
+**Prevention:** Maintain the current architecture and ensure any future modifications to the corrections flow adhere to these core requirements.

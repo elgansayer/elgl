@@ -255,7 +255,7 @@ interface AiChatMessage {
                       ) {
                         <div>
                           <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
-                          <p class="text-xs text-warning">✏️ Correction requested</p>
+                          <p class="text-xs text-warning">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
                         </div>
                       } @else {
                         <p>{{ msg.text_content }}</p>
