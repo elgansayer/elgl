@@ -22,6 +22,7 @@ import { SelectInterestsDto } from './dto/select-interests.dto';
 interface AuthenticatedRequest extends Request {
   user: {
     id: string;
+    target_languages?: string[];
   };
 }
 
@@ -57,8 +58,7 @@ export class InterestsController {
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.id;
-    const targetLanguage =
-      await this.interestsService.resolveTargetLanguage(userId);
+    const targetLanguage = req.user?.target_languages?.[0] ?? 'en';
     const legacyInterestIds = Array.isArray(body.interestIds)
       ? body.interestIds
       : null;
