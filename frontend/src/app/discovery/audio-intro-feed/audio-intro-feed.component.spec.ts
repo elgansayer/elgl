@@ -103,7 +103,10 @@ describe('AudioIntroFeedComponent', () => {
     expect(getAudioIntros).toHaveBeenCalledOnce();
     expect(component.users()).toHaveLength(1);
     expect(el.textContent).toContain('Kenji');
-    expect(el.querySelector('a[href="/profile/u1"]')).not.toBeNull();
+    const profileLink = el.querySelector('a[href="/profile/u1"]');
+    expect(profileLink).not.toBeNull();
+    expect(profileLink?.classList).toContain('focus-visible:outline-2');
+    expect(profileLink?.classList).not.toContain('focus-visible:outline-none');
     expect(el.querySelector('img')).toBeNull();
     expect(el.textContent).toContain('K');
     const displayName = el.querySelector('#audio-intro-user-u1');

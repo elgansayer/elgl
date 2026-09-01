@@ -54,7 +54,7 @@ import { UserProfile } from '../../services/user.service';
               <article class="flex min-w-0 items-center gap-3 p-3 sm:p-4">
                 <a
                   [routerLink]="['/profile', user.id]"
-                  class="flex min-w-0 flex-1 items-center gap-3 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  class="flex min-w-0 flex-1 items-center gap-3 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   @if (user.avatar_url) {
                     <img
