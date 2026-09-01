@@ -167,14 +167,14 @@ describe('DiscoveryService', () => {
   describe('getPartnerOfWeekIds', () => {
     it('should return empty array when redis returns null', async () => {
       mockRedisClient.get.mockResolvedValue(null);
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
 
     it('should return parsed array when redis has valid JSON', async () => {
       mockRedisClient.get.mockResolvedValue('["id-a","id-b"]');
       stubLimitResponse([{ id: 'id-a' }, { id: 'id-b' }]);
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual(['id-a', 'id-b']);
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
         'privacy_hide_from_search',
@@ -194,16 +194,39 @@ describe('DiscoveryService', () => {
       mockRedisClient.get.mockResolvedValue('["eligible","deleting"]');
       stubLimitResponse([{ id: 'eligible' }]);
 
-      await expect(service.getPartnerOfWeekIds()).resolves.toEqual([
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([
         'eligible',
       ]);
+    });
+
+    it('filters partners in the authenticated viewer block graph', async () => {
+      mockRedisClient.get.mockResolvedValue('["eligible","blocked"]');
+      mockSafetyService.getBlockedAndBlockerIds.mockResolvedValue(['blocked']);
+      stubLimitResponse([{ id: 'eligible' }, { id: 'blocked' }]);
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([
+        'eligible',
+      ]);
+      expect(mockSafetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
+        'viewer',
+      );
+    });
+
+    it('fails closed when the viewer block graph is unavailable', async () => {
+      mockRedisClient.get.mockResolvedValue('["cached-partner"]');
+      mockSafetyService.getBlockedAndBlockerIds.mockRejectedValue(
+        new Error('block graph unavailable'),
+      );
+
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([]);
+      expect(mockQueryBuilder.select).not.toHaveBeenCalled();
     });
 
     it('should fail closed when partner privacy revalidation fails', async () => {
       mockRedisClient.get.mockResolvedValue('["stale-partner"]');
       stubLimitResponse([], { message: 'database unavailable' });
 
-      await expect(service.getPartnerOfWeekIds()).resolves.toEqual([]);
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([]);
       expect(mockLoggerError).toHaveBeenCalledWith(
         'Failed to revalidate Partner of the Week privacy state',
       );
@@ -211,13 +234,13 @@ describe('DiscoveryService', () => {
 
     it('should return empty array on malformed JSON', async () => {
       mockRedisClient.get.mockResolvedValue('not-json');
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
 
     it('should return empty array when JSON is not an array', async () => {
       mockRedisClient.get.mockResolvedValue('{"a":1}');
-      const result = await service.getPartnerOfWeekIds();
+      const result = await service.getPartnerOfWeekIds('viewer');
       expect(result).toEqual([]);
     });
   });

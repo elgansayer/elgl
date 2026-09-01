@@ -139,7 +139,7 @@ describe('DiscoveryService regression boundaries', () => {
         error: null,
       });
 
-      await expect(service.getPartnerOfWeekIds()).resolves.toEqual([
+      await expect(service.getPartnerOfWeekIds('viewer')).resolves.toEqual([
         'partner-a',
         'partner-b',
       ]);

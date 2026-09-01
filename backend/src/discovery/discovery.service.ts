@@ -397,14 +397,18 @@ export class DiscoveryService {
 
   // Expose only Partner of the Week IDs that remain discoverable now. The
   // weekly Redis ranking is intentionally revalidated on every read so a
-  // privacy or account-deletion change cannot remain visible for its 7-day TTL.
-  async getPartnerOfWeekIds(): Promise<string[]> {
+  // privacy, account-deletion, or viewer block change cannot remain visible
+  // for its 7-day TTL.
+  async getPartnerOfWeekIds(viewerId: string): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
     const cachedIds = this.parseStringArray(raw);
     if (cachedIds.length === 0) return [];
 
     try {
+      const blockedIds = new Set(
+        await this.safetyService.getBlockedAndBlockerIds(viewerId),
+      );
       const { data, error } = await this.supabaseService
         .getClient()
         .from('users')
@@ -428,7 +432,9 @@ export class DiscoveryService {
           .filter((id): id is string => typeof id === 'string'),
       );
       return sanitiseDiscoveryData(
-        cachedIds.filter((id) => discoverableIds.has(id)),
+        cachedIds.filter(
+          (id) => discoverableIds.has(id) && !blockedIds.has(id),
+        ),
       );
     } catch {
       this.logger.error(

@@ -30,6 +30,7 @@ describe('DiscoveryController', () => {
               marker: { degraded: false, fallbackSource: 'none' as const },
             }),
             getAudioIntros: vi.fn().mockResolvedValue([]),
+            getPartnerOfWeekIds: vi.fn().mockResolvedValue([]),
           },
         },
         {
@@ -184,6 +185,26 @@ describe('DiscoveryController', () => {
 
       expect(query.serious_learner_mode).toBeUndefined();
       expect(query.serious_learner_only).toBeUndefined();
+    });
+  });
+
+  describe('getPartnerOfWeek', () => {
+    it('returns no IDs without an authenticated viewer', async () => {
+      await expect(controller.getPartnerOfWeek(null)).resolves.toEqual([]);
+      expect(discoveryService.getPartnerOfWeekIds).not.toHaveBeenCalled();
+    });
+
+    it('passes the authenticated viewer to privacy revalidation', async () => {
+      (discoveryService.getPartnerOfWeekIds as Mock).mockResolvedValue([
+        'partner-1',
+      ]);
+
+      await expect(
+        controller.getPartnerOfWeek({ id: 'viewer-1' } as any),
+      ).resolves.toEqual(['partner-1']);
+      expect(discoveryService.getPartnerOfWeekIds).toHaveBeenCalledWith(
+        'viewer-1',
+      );
     });
   });
 

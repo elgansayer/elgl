@@ -149,7 +149,7 @@ export class DiscoveryController {
     description:
       'Returns the current Partner of the Week user IDs, computed weekly by a cron job (Sundays at midnight). ' +
       'Partners are selected from top users with correction_ratio > 0.5, ordered by correction_ratio and study_streak_days. ' +
-      'Candidate IDs are cached in Redis for 7 days and revalidated against current privacy and deletion state on every read.',
+      'Candidate IDs are cached in Redis for 7 days and revalidated against current privacy, deletion, and viewer block state on every read.',
   })
   @ApiResponse({
     status: 200,
@@ -160,8 +160,9 @@ export class DiscoveryController {
       example: ['uuid-1', 'uuid-2'],
     },
   })
-  async getPartnerOfWeek(): Promise<string[]> {
-    return this.discoveryService.getPartnerOfWeekIds();
+  async getPartnerOfWeek(@CurrentUser() user: User | null): Promise<string[]> {
+    if (!user) return [];
+    return this.discoveryService.getPartnerOfWeekIds(user.id);
   }
 
   /**
