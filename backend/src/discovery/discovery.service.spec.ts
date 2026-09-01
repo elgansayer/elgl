@@ -1143,6 +1143,35 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['reciprocal', 'generic']);
     });
 
+    it('best_match: does not reward availability windows that only touch', async () => {
+      const profile = currentProfile({
+        available_time_start: '09:00',
+        available_time_end: '10:00',
+      });
+      stubLimitResponse([
+        {
+          id: 'a-touching',
+          available_time_start: '10:00',
+          available_time_end: '11:00',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+        {
+          id: 'z-overlap',
+          available_time_start: '09:59',
+          available_time_end: '11:00',
+          correction_ratio: 0,
+          study_streak_days: 0,
+        },
+      ]);
+
+      const result = await service.searchPartners('user-1', profile, {
+        sort: 'best_match',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['z-overlap', 'a-touching']);
+    });
+
     it('best_match: treats missing or malformed availability as neutral', async () => {
       const profile = currentProfile({
         available_time_start: '09:00',
