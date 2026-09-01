@@ -108,6 +108,15 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = ""
     instructions = (prompt_dir / f"{phase}.md").read_text(encoding="utf-8")
     if phase == "architect":
         closing = "Work only in the assigned worktree."
+    elif phase == "review":
+        closing = (
+            "Inspect AGENTS.md and the associated production and test files. Work only in the "
+            "assigned worktree. Independent review is evidence-only: do not modify repository-"
+            "tracked files or apply fixes. Record every blocking defect in .factory-review.json; "
+            "a separate repair phase owns code changes and the repaired head must pass verification "
+            "and a fresh independent review. You may run non-mutating verification commands needed "
+            "to support the report."
+        )
     else:
         closing = (
             "Inspect AGENTS.md and the associated production and test files. Work only in the "
