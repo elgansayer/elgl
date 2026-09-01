@@ -184,7 +184,7 @@
       "previewPaths": ["frontend/design-preview/screens/audio-intros.html"],
       "claudeDesignPath": "screens/audio-intros.html",
       "syncDirection": "reconcile",
-      "lastReconciledCommit": "24fd0e6a2ff8b12153bb141e5662874ed496907e",
+      "lastReconciledCommit": "d7a1dd41da4cef80c3e04e9a546b247163530d42",
       "implementationAudit": "issue-690-audio-intros-feed-2026-09-01",
       "requiredStates": [
         "light",
@@ -198,7 +198,9 @@
         "390px",
         "wide",
         "rtl",
-        "reduced-motion"
+        "reduced-motion",
+        "200%-zoom",
+        "400%-zoom"
       ]
     },
     {
