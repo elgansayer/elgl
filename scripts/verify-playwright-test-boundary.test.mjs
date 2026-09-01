@@ -57,12 +57,13 @@ test('does not borrow an e2e working directory from another workflow step', () =
 });
 
 test('accepts root automation that explicitly changes into e2e', () => {
-  assert.deepEqual(
-    analyse({
-      'automation/qa-loop.sh': '(cd e2e && npx playwright test)',
-    }),
-    [],
-  );
+  for (const command of [
+    '(cd e2e && npx playwright test)',
+    'cd e2e/ && npx playwright test',
+    "cd 'e2e/' && npx playwright test",
+  ]) {
+    assert.deepEqual(analyse({ 'automation/qa-loop.sh': command }), [], command);
+  }
 });
 
 test('does not let a later directory change legitimise an earlier invocation', () => {
@@ -110,10 +111,28 @@ test('accepts root Playwright discovery with the canonical e2e config', () => {
   }
 });
 
+test('rejects config paths that only prefix-match the canonical config', () => {
+  for (const command of [
+    'npx playwright test --config e2e/playwright.config.ts.backup',
+    'npx playwright test --config=e2e/playwright.config.tsx',
+  ]) {
+    assert.equal(analyse({ 'automation/qa-loop.sh': command }).length, 1, command);
+  }
+});
+
 test('preserves working directory changes in literal workflow run blocks', () => {
   assert.deepEqual(
     analyse({
       '.github/workflows/e2e.yml': ['run: |', '  cd e2e', '  npx playwright test'].join('\n'),
+    }),
+    [],
+  );
+});
+
+test('preserves a leading directory change in folded workflow run blocks', () => {
+  assert.deepEqual(
+    analyse({
+      '.github/workflows/e2e.yml': ['run: >', '  cd e2e &&', '  npx playwright test'].join('\n'),
     }),
     [],
   );
@@ -137,6 +156,7 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'tsx ./e2e/tests/auth.spec.ts',
     'ts-node .\\e2e\\tests\\auth.spec.ts',
     'cd e2e && bun test tests/auth.spec.ts',
+    'cd e2e && node ./tests/auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);
@@ -163,6 +183,7 @@ test('rejects Playwright files or directories passed to Vitest and Jest', () => 
     'npx vitest run e2e/tests/chat-messaging.spec.ts',
     'npm exec jest -- e2e/tests',
     'cd e2e && vitest run tests',
+    'cd e2e && jest ./tests',
   ]) {
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);

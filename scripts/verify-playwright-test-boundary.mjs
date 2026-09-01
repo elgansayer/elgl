@@ -99,7 +99,7 @@ function logicalCommandLines(lines, path) {
     const blockRun = foldedRun ?? literalRun;
     if (/\.ya?ml$/.test(path) && blockRun) {
       const indent = blockRun[1].length;
-      const parts = [line];
+      const parts = [];
       let cursor = index + 1;
       for (; cursor < lines.length; cursor += 1) {
         const next = lines[cursor];
@@ -108,10 +108,11 @@ function logicalCommandLines(lines, path) {
         }
         parts.push(next.trim());
       }
-      let command = parts[0];
-      for (const part of parts.slice(1)) {
+      let command = '';
+      for (const part of parts) {
         const continued = /\\\s*$/.test(command);
-        command = `${command.replace(/\\\s*$/, '')}${literalRun && !continued ? ' ; ' : ' '}${part}`;
+        const separator = command && literalRun && !continued ? ' ; ' : command ? ' ' : '';
+        command = `${command.replace(/\\\s*$/, '')}${separator}${part}`;
       }
       commands.push({ command, index });
       index = cursor - 1;
@@ -149,7 +150,7 @@ function commandSegments(command) {
 function cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment, separatorAfter) {
   const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
   if (cdMatch) {
-    const target = normalizePath(cdMatch[1]);
+    const target = normalizePath(cdMatch[1].replace(/^['"]|['"]$/g, '')).replace(/\/+$/, '');
     cwdIsE2e = target === 'e2e';
   }
 
@@ -179,7 +180,7 @@ function scanWrongRunnerInvocations(files) {
       let cwdIsE2e = baseCwdIsE2e;
       for (const segment of commandSegments(command)) {
         const specTarget = segment.command.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?(?=$|[\s),])/i,
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?(?:\.\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?(?=$|[\s),])/i,
         );
         if (
           specTarget &&
@@ -192,7 +193,7 @@ function scanWrongRunnerInvocations(files) {
         }
 
         const testsTarget = segment.command.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?tests(?:\/[^\s),]*)?(?=$|[\s),])/i,
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*)?(?=$|[\s),])/i,
         );
         if (
           testsTarget &&
@@ -227,7 +228,7 @@ function scanPlaywrightInvocations(files) {
         if (
           segment.command.includes('playwright test') &&
           !cwdIsE2e &&
-          !/--config(?:=|\s+)["']?(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)["']?/.test(
+          !/--config(?:=|\s+)(?:"(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)"|'(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs)'|(?:\.\/)?e2e\/playwright\.config\.(?:ts|js|mjs))(?=$|[\s;&|)])/.test(
             segment.command,
           )
         ) {
