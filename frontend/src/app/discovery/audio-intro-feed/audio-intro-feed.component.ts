@@ -5,6 +5,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
+import { AuthService } from '../../services/auth.service';
 import { UserProfile } from '../../services/user.service';
 
 @Component({
@@ -139,6 +140,7 @@ import { UserProfile } from '../../services/user.service';
 })
 export class AudioIntroFeedComponent {
   private readonly discoveryService = inject(DiscoveryService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(I18nService);
   private readonly languageDisplayNames = computed(() => {
@@ -154,11 +156,17 @@ export class AudioIntroFeedComponent {
   private audioPlayer: HTMLAudioElement | null = null;
 
   private readonly usersResource = resource({
+    params: () => {
+      if (this.authService.isLoading()) return undefined;
+      return this.authService.getAccessToken();
+    },
     loader: () => this.discoveryService.getAudioIntros(),
   });
 
   readonly users = computed<UserProfile[]>(() => this.usersResource.value() ?? []);
-  readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly isLoading = computed(
+    () => this.authService.isLoading() || this.usersResource.isLoading(),
+  );
   readonly loadError = computed(() => Boolean(this.usersResource.error()));
   readonly userList = this.users;
 

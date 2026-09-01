@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AudioIntroFeedComponent } from './audio-intro-feed.component';
 import { socialRoutes } from '../../routes/social.routes';
 import { DiscoveryService } from '../../services/discovery.service';
+import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { UserProfile } from '../../services/user.service';
 
@@ -60,6 +61,8 @@ describe('AudioIntroFeedComponent', () => {
   let fixture: ComponentFixture<AudioIntroFeedComponent>;
   let getAudioIntros: ReturnType<typeof vi.fn>;
   let currentLang: ReturnType<typeof signal<string>>;
+  let authLoading: ReturnType<typeof signal<boolean>>;
+  let accessToken: ReturnType<typeof signal<string | undefined>>;
 
   beforeEach(async () => {
     MockAudio.instances = [];
@@ -67,6 +70,12 @@ describe('AudioIntroFeedComponent', () => {
 
     getAudioIntros = vi.fn().mockResolvedValue([makeUser()]);
     currentLang = signal('en-GB');
+    authLoading = signal(false);
+    accessToken = signal<string | undefined>('session-token');
+    const authServiceMock = {
+      isLoading: authLoading,
+      getAccessToken: () => accessToken(),
+    };
     const i18nServiceMock = {
       translate: (key: string, params?: Record<string, unknown>) =>
         key === 'discovery.audioIntroFeed.languagePair'
@@ -81,6 +90,7 @@ describe('AudioIntroFeedComponent', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { getAudioIntros } },
+        { provide: AuthService, useValue: authServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
       ],
     }).compileComponents();
@@ -129,6 +139,10 @@ describe('AudioIntroFeedComponent', () => {
         provideRouter(socialRoutes),
         { provide: DiscoveryService, useValue: { getAudioIntros } },
         {
+          provide: AuthService,
+          useValue: { isLoading: authLoading, getAccessToken: () => accessToken() },
+        },
+        {
           provide: I18nService,
           useValue: {
             translate: (key: string) => key,
@@ -147,6 +161,48 @@ describe('AudioIntroFeedComponent', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Kenji');
   });
 
+  it('waits for auth restoration before loading the feed', async () => {
+    getAudioIntros.mockClear();
+    authLoading.set(true);
+    accessToken.set(undefined);
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [AudioIntroFeedComponent],
+      providers: [
+        provideRouter([]),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: AuthService,
+          useValue: { isLoading: authLoading, getAccessToken: () => accessToken() },
+        },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            translations: signal({}),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const delayedFixture = TestBed.createComponent(AudioIntroFeedComponent);
+    delayedFixture.detectChanges();
+    await delayedFixture.whenStable();
+
+    expect(getAudioIntros).not.toHaveBeenCalled();
+    expect(delayedFixture.componentInstance.isLoading()).toBe(true);
+
+    accessToken.set('restored-session-token');
+    authLoading.set(false);
+    delayedFixture.detectChanges();
+    await delayedFixture.whenStable();
+    delayedFixture.detectChanges();
+
+    expect(getAudioIntros).toHaveBeenCalledOnce();
+    expect(delayedFixture.componentInstance.users()).toHaveLength(1);
+  });
+
   it('renders an empty state when no audio introductions are available', async () => {
     getAudioIntros.mockResolvedValueOnce([]);
     TestBed.resetTestingModule();
@@ -156,6 +212,10 @@ describe('AudioIntroFeedComponent', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: AuthService,
+          useValue: { isLoading: authLoading, getAccessToken: () => accessToken() },
+        },
         {
           provide: I18nService,
           useValue: {
@@ -187,6 +247,10 @@ describe('AudioIntroFeedComponent', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: AuthService,
+          useValue: { isLoading: authLoading, getAccessToken: () => accessToken() },
+        },
         {
           provide: I18nService,
           useValue: {
@@ -232,6 +296,10 @@ describe('AudioIntroFeedComponent', () => {
       providers: [
         provideRouter([]),
         { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: AuthService,
+          useValue: { isLoading: authLoading, getAccessToken: () => accessToken() },
+        },
         {
           provide: I18nService,
           useValue: {
