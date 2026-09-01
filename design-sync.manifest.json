@@ -189,6 +189,7 @@
       "requiredStates": [
         "light",
         "dark",
+        "focus-visible",
         "loading",
         "error",
         "empty",

@@ -113,6 +113,20 @@
         padding: 13px 16px;
         border-bottom: 1px solid rgb(var(--surface-100));
       }
+      .identity-link {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 12px;
+        color: inherit;
+        text-decoration: none;
+      }
+      .identity-link:focus-visible {
+        outline: 3px solid rgb(var(--primary) / 0.45);
+        outline-offset: 3px;
+      }
       .avatar {
         width: 44px;
         height: 44px;
@@ -256,13 +270,17 @@
           <div class="feed">
             <header><h2 id="populated-heading">Audio introductions</h2></header>
             <article class="profile">
-              <span class="avatar" aria-hidden="true">K</span>
-              <div class="identity"><strong>Kenji</strong><span>Japanese → English</span></div>
+              <a class="identity-link" href="/profile/kenji">
+                <span class="avatar" aria-hidden="true">K</span>
+                <div class="identity"><strong>Kenji</strong><span>Japanese → English</span></div>
+              </a>
               <button class="play" type="button" aria-label="Play Kenji's introduction">▶</button>
             </article>
             <article class="profile">
-              <span class="avatar" aria-hidden="true">M</span>
-              <div class="identity"><strong>Maya</strong><span>English → Japanese</span></div>
+              <a class="identity-link" href="/profile/maya">
+                <span class="avatar" aria-hidden="true">M</span>
+                <div class="identity"><strong>Maya</strong><span>English → Japanese</span></div>
+              </a>
               <button
                 class="play playing"
                 type="button"

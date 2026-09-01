@@ -78,8 +78,8 @@ import { UserProfile } from '../../services/user.service';
                         'discovery.audioIntroFeed.languagePair'
                           | t
                             : {
-                                native: user.native_languages?.join(', '),
-                                target: user.target_languages?.join(', '),
+                                native: formatLanguages(user.native_languages),
+                                target: formatLanguages(user.target_languages),
                               }
                       }}
                     </p>
@@ -126,6 +126,13 @@ export class AudioIntroFeedComponent {
   private readonly discoveryService = inject(DiscoveryService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(I18nService);
+  private readonly languageDisplayNames = computed(() => {
+    try {
+      return new Intl.DisplayNames([this.i18n.currentLang()], { type: 'language' });
+    } catch {
+      return null;
+    }
+  });
 
   readonly playingId = signal<string | null>(null);
   readonly playbackError = signal(false);
@@ -146,6 +153,18 @@ export class AudioIntroFeedComponent {
 
   displayName(user: UserProfile): string {
     return user.display_name?.trim() || this.i18n.translate('common.unknownUser');
+  }
+
+  formatLanguages(codes: string[] | undefined): string {
+    return (codes ?? [])
+      .map((code) => {
+        try {
+          return this.languageDisplayNames()?.of(code) ?? code;
+        } catch {
+          return code;
+        }
+      })
+      .join(', ');
   }
 
   async togglePlay(userId: string, url: string | undefined): Promise<void> {

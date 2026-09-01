@@ -1198,7 +1198,8 @@ describe('DiscoveryService', () => {
         message: 'Audio introductions are temporarily unavailable',
       });
       expect(mockLoggerError).toHaveBeenCalledWith(
-        'Audio intro discovery query failed (code: PGRST301)',
+        { errorCode: 'PGRST301' },
+        'Audio intro discovery query failed',
       );
       expect(mockLoggerError.mock.calls.flat().join(' ')).not.toContain(
         'sensitive database detail',

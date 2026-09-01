@@ -816,9 +816,7 @@ export class DiscoveryService {
     if (response.error || !response.data) {
       const errorCode =
         response.error?.code?.match(/^[a-z0-9_-]{1,32}$/i)?.[0] ?? 'unknown';
-      this.logger.error(
-        `Audio intro discovery query failed (code: ${errorCode})`,
-      );
+      this.logger.error({ errorCode }, 'Audio intro discovery query failed');
       throw new ServiceUnavailableException(
         'Audio introductions are temporarily unavailable',
       );

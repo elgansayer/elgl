@@ -59,14 +59,20 @@ describe('AudioIntroFeedComponent', () => {
   let component: AudioIntroFeedComponent;
   let fixture: ComponentFixture<AudioIntroFeedComponent>;
   let getAudioIntros: ReturnType<typeof vi.fn>;
+  let currentLang: ReturnType<typeof signal<string>>;
 
   beforeEach(async () => {
     MockAudio.instances = [];
     vi.stubGlobal('Audio', MockAudio);
 
     getAudioIntros = vi.fn().mockResolvedValue([makeUser()]);
+    currentLang = signal('en-GB');
     const i18nServiceMock = {
-      translate: (key: string) => key,
+      translate: (key: string, params?: Record<string, unknown>) =>
+        key === 'discovery.audioIntroFeed.languagePair'
+          ? `${params?.['native']} → ${params?.['target']}`
+          : key,
+      currentLang,
       translations: signal({}) as unknown as I18nService['translations'],
     };
 
@@ -206,6 +212,18 @@ describe('AudioIntroFeedComponent', () => {
   it('renders a translated fallback for a profile without a display name', () => {
     expect(component.displayName(makeUser({ display_name: undefined }))).toBe(
       'common.unknownUser',
+    );
+  });
+
+  it('localises language codes again when the active locale changes', () => {
+    const english = component.formatLanguages(['ja', 'en']);
+    currentLang.set('fr');
+    const french = component.formatLanguages(['ja', 'en']);
+
+    expect(english).toBe('Japanese, English');
+    expect(french).toBe('japonais, anglais');
+    expect(component.formatLanguages(['invalid_language_code'])).toBe(
+      'invalid_language_code',
     );
   });
 
