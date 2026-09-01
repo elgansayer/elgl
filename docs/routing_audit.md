@@ -30,8 +30,6 @@ The following aliases deliberately preserve bookmarks, external links, notificat
 | `/my-subscription` | `/settings/subscription` |
 | `/visitors` | `/profile/visitors` |
 | `/notification-preferences` | `/settings/notification` |
-| `/language-parties` | `/community/language-parties` |
-| `/language-islands` | `/community/language-islands` |
 | `/language` | `/settings/language` |
 | `/blocks` | `/settings/blocks` |
 | `/data-storage` | `/settings/data-storage` |
@@ -41,11 +39,24 @@ The following aliases deliberately preserve bookmarks, external links, notificat
 | `/version` | `/settings/version` |
 | `/settings/notification-customization` | `/settings/notification` |
 | `/chat-settings` | `/settings/chat` |
-| `/groups/create` | `/community/groups/create` |
 | `/communities` | `/community` |
 | `/message-filters` | `/settings/message-filters` |
 
-The compatibility routes add intentional breadth to the route table, not competing implementations. First-party links may move to canonical routes while aliases remain available.
+The valid compatibility routes add intentional breadth to the route table, not competing implementations. First-party links may move to canonical routes while aliases remain available.
+
+## Unresolved route defects
+
+Three compatibility routes currently redirect to destinations that are not registered anywhere in the Angular route tree:
+
+| Compatibility route | Unregistered target |
+| --- | --- |
+| `/groups/create` | `/community/groups/create` |
+| `/language-parties` | `/community/language-parties` |
+| `/language-islands` | `/community/language-islands` |
+
+Until explicit child or top-level routes exist, these redirects must not be described as canonical mappings. Add focused deep-link tests and either register the intended destinations or retarget the aliases to valid routes.
+
+`/blocks` is also declared in both `settings.routes.ts` and `chat.routes.ts`. Both definitions point to `/settings/blocks`, so behaviour is consistent, but ownership should be consolidated into one feature route array without removing the public alias.
 
 ## Removal boundary
 
