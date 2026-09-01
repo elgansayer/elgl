@@ -848,7 +848,9 @@ describe('EconomyService', () => {
         });
       vi.spyOn(usersService, 'getProfile').mockImplementation((id: string) => {
         if (id === 'sender-1') {
-          return Promise.reject(new Error('profile unavailable'));
+          return Promise.reject(
+            new Error('profile unavailable SECRET-PROVIDER-DETAIL'),
+          );
         }
         return Promise.resolve({
           id: 'receiver-1',
@@ -871,6 +873,15 @@ describe('EconomyService', () => {
           sender_name: null,
           receiver_name: 'Receiver User',
         }),
+      );
+      const logger = module.get<{ warn: Mock }>(
+        'PinoLogger:EconomyService',
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Gift profile enrichment failed for 1 lookup',
+      );
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+        'SECRET-PROVIDER-DETAIL',
       );
     });
   });
