@@ -14,7 +14,7 @@ This report evaluates the current implementation of language learning mechanics 
 
 ## 3. Retrieval Practice & Spaced Repetition (Vocabulary & Flashcards)
 - **Observation:** The SRS flashcard system allows users to save vocabulary from interests and reading sessions.
-- **Analysis:** Flashcard generation from interests (`interests.service.ts`) currently defaults `srs_level` to 0 but lacks immediate context (e.g. `context_sentence` is left blank). Meaningful spaced repetition relies on contextual cues rather than isolated rote memorization.
+- **Analysis:** Flashcard generation from interests (`interests.service.ts`) historically left `original_context` blank. Meaningful spaced repetition relies on contextual cues rather than isolated rote memorisation.
 - **Recommendation:** Implement automated contextual sentence generation when saving vocabulary to provide associative hooks for retrieval practice.
 
 ## 4. Active Production (AI Conversations & Chat)
@@ -31,5 +31,5 @@ This report evaluates the current implementation of language learning mechanics 
 The individual features are robust but operate largely in silos. To transform this from a feature-rich app into a cohesive language acquisition engine, the systems must interact.
 
 **Immediate Changes Implemented:**
-1. **Contextual Flashcard Generation:** Modified `interests.service.ts` to populate the `context_sentence` for newly generated flashcards using LLM/AI services or template sentences, ensuring vocabulary is learned in context.
+1. **Contextual Flashcard Generation:** Modified `interests.service.ts` to populate `original_context` for flashcards that lack context, using bounded batched LLM requests with a deterministic vocabulary fallback.
 2. **Pedagogical Correction Explanations:** Upgraded the AI prompt in `chat.service.ts` (`generateCorrectionPayloadIfNeeded`) to provide grammatical rationale and usage examples rather than just a simple explanation.
