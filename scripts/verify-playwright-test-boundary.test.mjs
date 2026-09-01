@@ -98,14 +98,19 @@ test('does not let a later directory change legitimise an earlier invocation', (
 });
 
 test('does not propagate a conditional directory change past its shell chain', () => {
-  assert.deepEqual(
-    analyse({
-      'automation/qa-loop.sh': 'false && cd e2e; npx playwright test',
-    }),
-    [
-      'automation/qa-loop.sh:1 invokes Playwright without the e2e working directory or explicit e2e config',
-    ],
-  );
+  for (const command of [
+    'false && cd e2e; npx playwright test',
+    'true || cd e2e; npx playwright test',
+    'condition || cd e2e && npx playwright test',
+  ]) {
+    assert.deepEqual(
+      analyse({ 'automation/qa-loop.sh': command }),
+      [
+        'automation/qa-loop.sh:1 invokes Playwright without the e2e working directory or explicit e2e config',
+      ],
+      command,
+    );
+  }
 });
 
 test('rejects Playwright launched from the frontend working directory', () => {
@@ -134,6 +139,7 @@ test('accepts root Playwright discovery with the canonical e2e config', () => {
     'npx playwright test --config e2e/playwright.config.ts',
     'npx playwright test --config "e2e/playwright.config.ts"',
     "npx playwright test --config='e2e/playwright.config.ts'",
+    '(npx playwright test --config e2e/playwright.config.ts)',
   ]) {
     assert.deepEqual(analyse({ 'automation/qa-loop.sh': command }), [], command);
   }
@@ -191,6 +197,7 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
     'npx tsx@latest e2e/tests/auth.spec.ts',
     'ts-node --cwd . e2e/tests/auth.spec.ts',
+    'tsx watch e2e/tests/auth.spec.ts',
   ]) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: ${command}` });
     assert.equal(violations.length, 1, command);

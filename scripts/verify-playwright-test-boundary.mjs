@@ -285,6 +285,9 @@ function runtimeEntrypoint(invocation) {
   if (invocation.executable === 'bun' && ['run', 'test'].includes(args[0])) {
     args.shift();
   }
+  if (invocation.executable === 'tsx' && args[0] === 'watch') {
+    args.shift();
+  }
   const optionsWithValues = {
     node: new Set([
       '--conditions',
@@ -371,13 +374,13 @@ function commandEntries(content, path) {
   return logicalCommandLines(content.split(/\r?\n/), path);
 }
 
-function cwdAfterSegment(cwdState, baseCwdIsE2e, segment, separatorAfter, segmentIsConditional) {
+function cwdAfterSegment(cwdState, baseCwdIsE2e, segment, separatorAfter, precedingSeparator) {
   let { cwdIsE2e, cwdIsConditional } = cwdState;
   const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
   if (cdMatch) {
     const target = normalizePath(cdMatch[1].replace(/^['"]|['"]$/g, '')).replace(/\/+$/, '');
-    cwdIsE2e = target === 'e2e';
-    cwdIsConditional = segmentIsConditional;
+    cwdIsE2e = precedingSeparator === '||' ? baseCwdIsE2e : target === 'e2e';
+    cwdIsConditional = precedingSeparator === '&&';
   }
 
   if (/\)\s*$/.test(segment) || !['&&', ';', null].includes(separatorAfter)) {
@@ -441,7 +444,7 @@ function scanWrongRunnerInvocations(files) {
           baseCwdIsE2e,
           segment.command,
           segment.separatorAfter,
-          previousSeparator === '&&',
+          previousSeparator,
         );
         previousSeparator = segment.separatorAfter;
       }
@@ -484,7 +487,7 @@ function scanPlaywrightInvocations(files) {
           baseCwdIsE2e,
           segment.command,
           segment.separatorAfter,
-          previousSeparator === '&&',
+          previousSeparator,
         );
         previousSeparator = segment.separatorAfter;
       }
