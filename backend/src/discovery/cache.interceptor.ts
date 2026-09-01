@@ -24,15 +24,14 @@ import { Response } from 'express';
  *
  * ## Key design decisions
  *
- *  - Partner of the Week: public long-lived CDN cache (refreshed weekly by
- *    cron).  Cache-Tag `discovery:potw` enables programmatic invalidation
- *    when the cron job recalculates the list, without touching other discovery
- *    caches.
+ *  - Partner of the Week: weekly Redis ranking with no HTTP caching. The ID
+ *    list is revalidated against current privacy/deletion state on each read,
+ *    so an intermediary must not retain a user after that state changes.
  *
- *  - Recent native speakers / Spotlight: public short-lived cache.  These
- *    lists are fast-moving but benefit from a brief shared CDN TTL to absorb
- *    concurrent traffic from all users.  Tagged `discovery:public` so safety
- *    events (block/unblock/report) can purge shared discovery lists.
+ *  - Recent native speakers / Spotlight: viewer-specific edge cache. These
+ *    endpoints exclude the requester and blocked profiles, so they use the
+ *    same `Vary: Authorization` partition as other personalised discovery
+ *    reads. A shared public response would bypass viewer-specific blocks.
  *
  *  - Personalised search (partners, audio-intros, language-pair, location):
  *    browsers are told `private, max-age=0, must-revalidate` (never store),
@@ -92,6 +91,7 @@ export const DISCOVERY_CACHE_PUBLIC_SHORT = {
  * Medium-lived edge cache for user-specific discovery reads.
  *
  * Used by: GET /discovery/partners, GET /discovery/audio-intros,
+ *          GET /discovery/recent-native-speakers, GET /discovery/spotlight,
  *          GET /discovery/language-pair, GET /discovery/search-by-location
  *
  * Browsers: never cache (`private, max-age=0, must-revalidate`).

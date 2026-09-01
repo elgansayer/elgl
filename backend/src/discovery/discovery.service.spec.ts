@@ -173,8 +173,40 @@ describe('DiscoveryService', () => {
 
     it('should return parsed array when redis has valid JSON', async () => {
       mockRedisClient.get.mockResolvedValue('["id-a","id-b"]');
+      stubLimitResponse([{ id: 'id-a' }, { id: 'id-b' }]);
       const result = await service.getPartnerOfWeekIds();
       expect(result).toEqual(['id-a', 'id-b']);
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'privacy_hide_from_search',
+        false,
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+        'is_deletion_pending',
+        false,
+      );
+      expect(mockQueryBuilder.is).toHaveBeenCalledWith(
+        'scheduled_for_deletion_at',
+        null,
+      );
+    });
+
+    it('should remove cached partners that are no longer discoverable', async () => {
+      mockRedisClient.get.mockResolvedValue('["eligible","deleting"]');
+      stubLimitResponse([{ id: 'eligible' }]);
+
+      await expect(service.getPartnerOfWeekIds()).resolves.toEqual([
+        'eligible',
+      ]);
+    });
+
+    it('should fail closed when partner privacy revalidation fails', async () => {
+      mockRedisClient.get.mockResolvedValue('["stale-partner"]');
+      stubLimitResponse([], { message: 'database unavailable' });
+
+      await expect(service.getPartnerOfWeekIds()).resolves.toEqual([]);
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        'Failed to revalidate Partner of the Week privacy state',
+      );
     });
 
     it('should return empty array on malformed JSON', async () => {

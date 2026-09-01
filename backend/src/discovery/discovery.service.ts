@@ -395,11 +395,47 @@ export class DiscoveryService {
     }
   }
 
-  // Expose the current Partner of the Week IDs
+  // Expose only Partner of the Week IDs that remain discoverable now. The
+  // weekly Redis ranking is intentionally revalidated on every read so a
+  // privacy or account-deletion change cannot remain visible for its 7-day TTL.
   async getPartnerOfWeekIds(): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
-    return sanitiseDiscoveryData(this.parseStringArray(raw));
+    const cachedIds = this.parseStringArray(raw);
+    if (cachedIds.length === 0) return [];
+
+    try {
+      const { data, error } = await this.supabaseService
+        .getClient()
+        .from('users')
+        .select('id')
+        .in('id', cachedIds)
+        .eq('privacy_hide_from_search', false)
+        .eq('is_deletion_pending', false)
+        .is('scheduled_for_deletion_at', null)
+        .limit(cachedIds.length);
+
+      if (error || !data) {
+        this.logger.error(
+          'Failed to revalidate Partner of the Week privacy state',
+        );
+        return [];
+      }
+
+      const discoverableIds = new Set(
+        (data as Array<{ id?: unknown }>)
+          .map((row) => row.id)
+          .filter((id): id is string => typeof id === 'string'),
+      );
+      return sanitiseDiscoveryData(
+        cachedIds.filter((id) => discoverableIds.has(id)),
+      );
+    } catch {
+      this.logger.error(
+        'Failed to revalidate Partner of the Week privacy state',
+      );
+      return [];
+    }
   }
 
   async searchPartners(

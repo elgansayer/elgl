@@ -186,7 +186,7 @@ describe('I18nService', () => {
     ).toBe('Japanese → English');
     expect(
       service.translate('discovery.audioIntroFeed.resultCount', { count: 2 }),
-    ).toBe('2 audio introduction(s)');
+    ).toBe('Audio introduction results: 2');
     expect(service.translate('discovery.audioIntroFeed.noAudioIntros')).toBe(
       'No audio introductions available.',
     );

@@ -23,8 +23,6 @@ import { DiscoveryService, DiscoveryResult } from './discovery.service';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import {
   DiscoveryCacheInterceptor,
-  DISCOVERY_CACHE_PUBLIC_LONG,
-  DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
   DISCOVERY_CACHE_NO_STORE,
 } from './cache.interceptor';
@@ -138,10 +136,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Partner of the Week: refreshed weekly by cron, public long-lived CDN cache.
+   * Partner of the Week: refreshed weekly by cron and revalidated on read.
    */
   @Get('partner-of-week')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -152,7 +150,7 @@ export class DiscoveryController {
     description:
       'Returns the current Partner of the Week user IDs, computed weekly by a cron job (Sundays at midnight). ' +
       'Partners are selected from top users with correction_ratio > 0.5, ordered by correction_ratio and study_streak_days. ' +
-      'Results are cached in Redis for 7 days with public CDN caching.',
+      'Candidate IDs are cached in Redis for 7 days and revalidated against current privacy and deletion state on every read.',
   })
   @ApiResponse({
     status: 200,
@@ -216,10 +214,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Recently joined native speakers: shared list, public short-lived CDN cache.
+   * Recently joined native speakers: viewer-specific, authorization-partitioned cache.
    */
   @Get('recent-native-speakers')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -229,7 +227,7 @@ export class DiscoveryController {
     summary: 'Get recently joined native speakers',
     description:
       'Returns up to 10 users who joined within the last 7 days and have at least one native language set. ' +
-      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are cached only in an authorization-partitioned edge entry, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,
@@ -249,10 +247,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Spotlight users: shared list, public short-lived CDN cache.
+   * Spotlight users: viewer-specific, authorization-partitioned cache.
    */
   @Get('spotlight')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -262,7 +260,7 @@ export class DiscoveryController {
     summary: 'Get spotlight users',
     description:
       'Returns up to 5 recently created users with native languages set. ' +
-      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are cached only in an authorization-partitioned edge entry, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,

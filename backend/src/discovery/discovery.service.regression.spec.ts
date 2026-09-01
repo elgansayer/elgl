@@ -130,10 +130,14 @@ describe('DiscoveryService regression boundaries', () => {
 
   describe('Partner of the Week cache safety', () => {
     it('filters non-string values from the Redis partner list', async () => {
-      const { service, redis } = createHarness();
+      const { service, redis, queryBuilder } = createHarness();
       redis.get.mockResolvedValue(
         JSON.stringify(['partner-a', 42, null, { id: 'unsafe' }, 'partner-b']),
       );
+      queryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'partner-a' }, { id: 'partner-b' }],
+        error: null,
+      });
 
       await expect(service.getPartnerOfWeekIds()).resolves.toEqual([
         'partner-a',

@@ -6,6 +6,11 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import {
+  DISCOVERY_CACHE_NO_STORE,
+  DISCOVERY_CACHE_PRIVATE_SHORT,
+} from './cache.interceptor';
 
 vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
@@ -66,6 +71,34 @@ describe('DiscoveryController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('privacy-safe cache partitioning', () => {
+    const cacheDirectiveFor = (
+      method: 'getPartnerOfWeek' | 'getRecentNativeSpeakers' | 'getSpotlight',
+    ): Record<string, string> => {
+      const interceptors = Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        DiscoveryController.prototype[method],
+      ) as Array<{ directive: Record<string, string> }>;
+      return interceptors[0].directive;
+    };
+
+    it('does not HTTP-cache Partner of the Week IDs', () => {
+      expect(cacheDirectiveFor('getPartnerOfWeek')).toEqual(
+        DISCOVERY_CACHE_NO_STORE,
+      );
+    });
+
+    it.each(['getRecentNativeSpeakers', 'getSpotlight'] as const)(
+      'partitions %s by authorization',
+      (method) => {
+        expect(cacheDirectiveFor(method)).toEqual(
+          DISCOVERY_CACHE_PRIVATE_SHORT,
+        );
+        expect(cacheDirectiveFor(method).Vary).toBe('Authorization');
+      },
+    );
   });
 
   describe('findPartners', () => {
