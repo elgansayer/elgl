@@ -164,6 +164,15 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
   }
 });
 
+test('allows generic runtimes to receive Playwright paths as reporter arguments', () => {
+  for (const command of [
+    'node scripts/report.mjs e2e/tests/auth.spec.ts',
+    'tsx scripts/report.ts e2e/tests/auth.spec.ts',
+  ]) {
+    assert.deepEqual(analyse({ 'automation/qa-loop.sh': command }), [], command);
+  }
+});
+
 test('rejects runner invocations split across shell continuations', () => {
   for (const command of ['node \\\n  e2e/tests/auth.spec.ts', 'npx playwright \\\n  test']) {
     const violations = analyse({ '.github/workflows/qa.yml': `run: |\n  ${command}` });
@@ -184,11 +193,21 @@ test('rejects Playwright files or directories passed to Vitest and Jest', () => 
     'npm exec jest -- e2e/tests',
     'cd e2e && vitest run tests',
     'cd e2e && jest ./tests',
+    'vitest run tests e2e/tests',
   ]) {
     const violations = analyse({ '.agents/automations/qa.md': command });
     assert.equal(violations.length, 1, command);
     assert.match(violations[0], /Playwright suite to Vitest or Jest/, command);
   }
+});
+
+test('allows reporter names containing runner words', () => {
+  assert.deepEqual(
+    analyse({
+      'automation/qa-loop.sh': 'node scripts/jest-report.mjs e2e/tests',
+    }),
+    [],
+  );
 });
 
 test('rejects wrong runners in non-final package scripts', () => {
@@ -198,6 +217,18 @@ test('rejects wrong runners in non-final package scripts', () => {
     };
     assert.equal(analyse(files).length, 1, command);
   }
+});
+
+test('scans minified package scripts independently', () => {
+  const files = {
+    'package.json': JSON.stringify({
+      scripts: {
+        report: 'node scripts/report.mjs',
+        mention: 'echo e2e/tests/auth.spec.ts',
+      },
+    }),
+  };
+  assert.deepEqual(analyse(files), []);
 });
 
 test('allows the Node test runner for repository contract tests', () => {

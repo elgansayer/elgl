@@ -63,7 +63,7 @@ Use these package-owned entry points:
 - Standalone Playwright E2E: `cd e2e && npm test`
 - Playwright discovery without starting browsers: `cd e2e && npm test -- --list`
 
-Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that touch the standalone Playwright suite must enter the `e2e` package context first.
+Do not execute `e2e/tests/*.spec.ts` directly with a generic JavaScript/TypeScript runtime, and do not pass `e2e/tests` to Vitest or Jest. CI and automation commands that run the standalone Playwright suite must either enter the `e2e` package context or pass the explicit root config `--config e2e/playwright.config.ts`.
 
 `npm run check:playwright-test-boundary` is the repository guard for this ownership contract. It validates package and configuration ownership, rejects known wrong-runner command forms in workflows, scripts, package manifests, and automation instructions, and verifies that Playwright invocations use the `e2e` package context or its explicit configuration.
 

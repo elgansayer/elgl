@@ -147,6 +147,68 @@ function commandSegments(command) {
   return segments;
 }
 
+function commandInvocation(segment) {
+  let command = segment
+    .trim()
+    .replace(/^\(+\s*/, '')
+    .replace(/^(?:[-\w.]+\s*:\s*)/, '');
+  let tokens = command.split(/\s+/).filter(Boolean);
+
+  if (tokens[0] === 'env') {
+    tokens = tokens.slice(1);
+  }
+  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? '')) {
+    tokens = tokens.slice(1);
+  }
+
+  const wrapper = tokens[0];
+  if (wrapper === 'npx') {
+    tokens = tokens.slice(1);
+  } else if (wrapper === 'npm' && tokens[1] === 'exec') {
+    tokens = tokens.slice(2);
+  } else if (['pnpm', 'yarn'].includes(wrapper) && tokens[1] === 'exec') {
+    tokens = tokens.slice(2);
+  }
+  while (tokens[0] === '--') {
+    tokens = tokens.slice(1);
+  }
+
+  const executable = tokens.shift()?.split('/').at(-1) ?? '';
+  return { executable, args: tokens };
+}
+
+function runtimeEntrypoint(invocation) {
+  if (!['node', 'tsx', 'ts-node', 'bun'].includes(invocation.executable)) {
+    return null;
+  }
+
+  const args = [...invocation.args];
+  if (invocation.executable === 'bun' && args[0] === 'test') {
+    args.shift();
+  }
+  while (args[0]?.startsWith('-')) {
+    const flag = args.shift();
+    if (['--loader', '--import', '--require', '-r'].includes(flag) && args.length > 0) {
+      args.shift();
+    }
+  }
+  return args[0] ?? null;
+}
+
+function commandEntries(content, path) {
+  if (path.endsWith('package.json')) {
+    try {
+      const scripts = JSON.parse(content)?.scripts ?? {};
+      return Object.values(scripts)
+        .filter((command) => typeof command === 'string')
+        .map((command) => ({ command, index: 0 }));
+    } catch {
+      return [];
+    }
+  }
+  return logicalCommandLines(content.split(/\r?\n/), path);
+}
+
 function cwdAfterSegment(cwdIsE2e, baseCwdIsE2e, segment, separatorAfter) {
   const cdMatch = /^\s*(?:[-\w.]+\s*:\s*)?\(?\s*cd\s+([^\s;&|)]+)/i.exec(segment);
   if (cdMatch) {
@@ -174,31 +236,28 @@ function scanWrongRunnerInvocations(files) {
     }
 
     const lines = content.split(/\r?\n/);
-    for (const { command: rawCommand, index } of logicalCommandLines(lines, path)) {
+    for (const { command: rawCommand, index } of commandEntries(content, path)) {
       const command = normalizeCommandLine(rawCommand);
       const baseCwdIsE2e = commandStartsInE2e(lines, index, path);
       let cwdIsE2e = baseCwdIsE2e;
       for (const segment of commandSegments(command)) {
-        const specTarget = segment.command.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?(?:\.\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?(?=$|[\s),])/i,
+        const invocation = commandInvocation(segment.command);
+        const entrypoint = runtimeEntrypoint(invocation);
+        const specTarget = entrypoint?.match(
+          /^((?:\.\/)?e2e\/)?(?:\.\/)?tests\/[^\s),]*\.spec\.[cm]?[jt]sx?$/i,
         );
-        if (
-          specTarget &&
-          targetBelongsToE2e(specTarget, cwdIsE2e) &&
-          /\b(?:node|tsx|ts-node|bun)\b/i.test(segment.command)
-        ) {
+        if (specTarget && targetBelongsToE2e(specTarget, cwdIsE2e)) {
           violations.push(
             `${path}:${index + 1} executes a Playwright spec through a generic JavaScript/TypeScript runtime`,
           );
         }
 
-        const testsTarget = segment.command.match(
-          /(?:^|[\s(])((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*)?(?=$|[\s),])/i,
+        const testsTargets = segment.command.matchAll(
+          /(?:^|[\s(])((?:\.\/)?e2e\/)?(?:\.\/)?tests(?:\/[^\s),]*)?(?=$|[\s),])/gi,
         );
         if (
-          testsTarget &&
-          targetBelongsToE2e(testsTarget, cwdIsE2e) &&
-          /\b(?:vitest|jest)\b/i.test(segment.command)
+          ['vitest', 'jest'].includes(invocation.executable) &&
+          [...testsTargets].some((target) => targetBelongsToE2e(target, cwdIsE2e))
         ) {
           violations.push(`${path}:${index + 1} sends the Playwright suite to Vitest or Jest`);
         }
