@@ -12,7 +12,9 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+-- Supabase installs pgcrypto in extensions by default. Keep that trusted schema
+-- ahead of public while still supporting installations that placed it in public.
+SET search_path = extensions, public, pg_temp
 AS $$
 DECLARE
     v_checkin_date DATE := (now() AT TIME ZONE 'UTC')::DATE;
