@@ -196,6 +196,17 @@ test('preserves shell comments in literal workflow run blocks', () => {
   assert.match(violations[0], /without the e2e working directory/);
 });
 
+test('treats hash characters inside shell words as data', () => {
+  const violations = analyse({
+    '.github/workflows/e2e.yml': [
+      'run: |',
+      '  echo https://host/#note; node e2e/tests/auth.spec.ts',
+    ].join('\n'),
+  });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /generic JavaScript\/TypeScript runtime/);
+});
+
 test('preserves a leading directory change in folded workflow run blocks', () => {
   assert.deepEqual(
     analyse({
@@ -228,9 +239,13 @@ test('rejects direct generic-runtime execution of Playwright specs', () => {
     'npx -y tsx e2e/tests/auth.spec.ts',
     'npm exec --yes tsx e2e/tests/auth.spec.ts',
     'npm x tsx e2e/tests/auth.spec.ts',
+    '/usr/bin/env node e2e/tests/auth.spec.ts',
+    'env -i node e2e/tests/auth.spec.ts',
+    'env CI=1 node e2e/tests/auth.spec.ts',
     'tsx --tsconfig tsconfig.json e2e/tests/auth.spec.ts',
     'npx tsx@latest e2e/tests/auth.spec.ts',
     'ts-node --cwd . e2e/tests/auth.spec.ts',
+    "ts-node -O '{}' e2e/tests/auth.spec.ts",
     'tsx watch e2e/tests/auth.spec.ts',
     'tsx --tsconfig tsconfig.json watch e2e/tests/auth.spec.ts',
     'bun --cwd . test e2e/tests/auth.spec.ts',

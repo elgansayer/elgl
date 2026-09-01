@@ -120,7 +120,7 @@ function stripUnquotedShellComment(line) {
     }
     if (character === '"' || character === "'") {
       quote = character;
-    } else if (character === '#') {
+    } else if (character === '#' && (index === 0 || /[\s;|&()]/.test(line[index - 1]))) {
       return line.slice(0, index).trimEnd();
     }
   }
@@ -282,8 +282,23 @@ function commandInvocation(segment) {
   }
   let tokens = shellTokens(command);
 
-  if (tokens[0] === 'env') {
+  if (normalizeExecutable(tokens[0] ?? '') === 'env') {
     tokens = tokens.slice(1);
+    const envOptionsWithValues = new Set([
+      '-u',
+      '--unset',
+      '-C',
+      '--chdir',
+      '-S',
+      '--split-string',
+    ]);
+    while (tokens[0]?.startsWith('-')) {
+      const flag = tokens.shift();
+      const optionName = flag.split('=', 1)[0];
+      if (!flag.includes('=') && envOptionsWithValues.has(optionName) && tokens.length > 0) {
+        tokens.shift();
+      }
+    }
   }
   while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? '')) {
     tokens = tokens.slice(1);
@@ -339,6 +354,7 @@ function runtimeEntrypoint(invocation) {
     'ts-node': new Set([
       '--compiler',
       '--compilerOptions',
+      '-O',
       '--cwd',
       '--dir',
       '--project',
