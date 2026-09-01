@@ -42,13 +42,10 @@ import { Response } from 'express';
  *
  * ## Cloudflare invalidation
  *
- * Cache-Tag headers are set on every response.  The DiscoveryService cron
- * job for Partner of the Week calls `CloudflareCacheService.purgeByCacheTags`
- * with `['discovery:potw']` to invalidate the old list across all Cloudflare
- * edge PoPs immediately after it is recomputed.
- *
- * Authenticated user-returning discovery responses deliberately do not rely
- * on cache-tag invalidation for privacy correctness.
+ * Cache-Tag headers are retained only for legacy callers that explicitly pass
+ * tags to this interceptor. Current authenticated user-returning discovery
+ * responses use `private, no-store`, pass no tags, and do not rely on edge
+ * invalidation for privacy correctness. Error responses also remove any tag.
  */
 
 // ---------------------------------------------------------------------------

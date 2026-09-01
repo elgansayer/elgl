@@ -222,6 +222,34 @@ describe('AudioIntroFeedComponent', () => {
     expect(component.playingId()).toBeNull();
   });
 
+  it('does not render a dead playback control when the profile has no audio URL', async () => {
+    getAudioIntros.mockClear();
+    getAudioIntros.mockResolvedValueOnce([makeUser({ audio_intro_url: undefined })]);
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [AudioIntroFeedComponent],
+      providers: [
+        provideRouter([]),
+        { provide: DiscoveryService, useValue: { getAudioIntros } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (key: string) => key,
+            translations: signal({}),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const incompleteFixture = TestBed.createComponent(AudioIntroFeedComponent);
+    incompleteFixture.detectChanges();
+    await incompleteFixture.whenStable();
+    incompleteFixture.detectChanges();
+
+    expect(incompleteFixture.nativeElement.querySelector('button')).toBeNull();
+  });
+
   it('renders a translated fallback for a profile without a display name', () => {
     expect(component.displayName(makeUser({ display_name: undefined }))).toBe('common.unknownUser');
   });
