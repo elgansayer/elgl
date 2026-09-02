@@ -120,7 +120,7 @@ def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None
     assert "      - '.github/workflows/**'\n" not in workflow
 
 
-def test_mock_backend_boundary_skips_factory_only_pull_requests_before_runner_allocation() -> None:
+def test_mock_boundary_skips_factory_only_pull_requests() -> None:
     workflow = _workflow("mock-backend-boundary.yml")
 
     assert "  pull_request:\n" in workflow
