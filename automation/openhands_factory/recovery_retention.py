@@ -87,6 +87,18 @@ def _remove_archive(archive: _Archive) -> bool:
     return not os.path.lexists(archive.path)
 
 
+def _is_completed_archive(path: Path, *, is_directory: bool) -> bool:
+    """Return whether an archive has a no-follow completion marker."""
+
+    if not is_directory:
+        return True
+    try:
+        marker_mode = (path / "RECOVERY.txt").lstat().st_mode
+    except OSError:
+        return False
+    return stat.S_ISREG(marker_mode)
+
+
 def _archive_inventory(recovery_dir: Path) -> list[_Archive]:
     archives: list[_Archive] = []
     try:
@@ -100,7 +112,7 @@ def _archive_inventory(recovery_dir: Path) -> list[_Archive]:
         except OSError:
             continue
         is_directory = stat.S_ISDIR(metadata.st_mode)
-        completed = not is_directory or (entry / "RECOVERY.txt").is_file()
+        completed = _is_completed_archive(entry, is_directory=is_directory)
         archives.append(_Archive(entry, metadata.st_mtime, _entry_size(entry), completed))
     return sorted(archives, key=lambda archive: (archive.mtime, archive.path.name))
 
@@ -138,8 +150,9 @@ def prune_recovery_archives(
     free-space enforcement. The floor is dropped when the archive budget is
     already exceeded or free space is below the scheduling reserve, so one giant
     archive cannot permanently deadlock the Factory. A directory is considered
-    complete only after ``RECOVERY.txt`` exists, matching the archive writer's
-    final step. Paths are reported only after deletion succeeds.
+    complete only after a regular no-follow ``RECOVERY.txt`` marker exists,
+    matching the archive writer's final step. Paths are reported only after
+    deletion succeeds.
     """
 
     if retention <= timedelta(0):
@@ -197,6 +210,7 @@ def prune_recovery_archives(
     # headroom and stop pressure pruning too early.
     projected_free = filesystem.free
     retained_size = sum(archive.size for archive in survivors)
+    completed_survivors = sum(archive.completed for archive in survivors)
     candidates = [
         archive for archive in survivors if archive.completed and archive.mtime <= grace_cutoff
     ]
@@ -204,7 +218,7 @@ def prune_recovery_archives(
         critical = projected_free < reserve
         over_budget = retained_size > archive_budget
         keep_floor = 0 if critical or over_budget else minimum_archives
-        if len(survivors) <= keep_floor or not candidates:
+        if completed_survivors <= keep_floor or not candidates:
             break
         archive = candidates.pop(0)
         if archive not in survivors:
@@ -212,6 +226,7 @@ def prune_recovery_archives(
         if not _remove_archive(archive):
             continue
         survivors.remove(archive)
+        completed_survivors -= 1
         removed.append(archive.path)
         retained_size = max(retained_size - archive.size, 0)
         reclaimed += archive.size
@@ -221,11 +236,12 @@ def prune_recovery_archives(
             # Re-measure instead of assuming every logical byte became free.
             projected_free = shutil.disk_usage(recovery_dir).free
         except OSError:
+            # Keep the last measured value. Treating logical bytes as released
+            # space can stop pruning while the real filesystem remains blocked.
             LOGGER.exception(
                 "Could not re-measure recovery filesystem usage after removing %s",
                 archive.path,
             )
-            projected_free += archive.size
 
     if removed:
         LOGGER.info(
