@@ -32,7 +32,7 @@ def test_branch_hygiene_is_daily_and_retains_short_lived_evidence() -> None:
 def test_self_healing_schedule_is_only_a_backstop_to_event_driven_checks() -> None:
     workflow = _workflow("on-failure.yml")
 
-    assert "cron: '17 */3 * * *'" in workflow
+    assert "cron: '17 */6 * * *'" in workflow
     assert "  push:\n    branches: [main]\n" in workflow
     assert "  workflow_run:\n" in workflow
     assert "      - CI\n" in workflow
