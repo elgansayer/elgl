@@ -63,7 +63,11 @@ factory_git_read() {
 verify_commit_identity() {
   local actual commit=$1
   [[ "$commit" =~ ^[0-9a-f]{40,64}$ ]] || return 1
-  actual=$(factory_git_read cat-file commit "$commit" | git hash-object -t commit --stdin)
+  if ! actual=$(
+    factory_git_read cat-file commit "$commit" | git hash-object -t commit --stdin
+  ); then
+    return 1
+  fi
   [ "$actual" = "$commit" ]
 }
 
@@ -97,18 +101,28 @@ install_runtime_file_from_commit() {
   local mode=$4
   local actual_blob expected_blob temporary
 
-  expected_blob=$(factory_git_read rev-parse "${commit}:${relative_path}")
+  if ! expected_blob=$(factory_git_read rev-parse "${commit}:${relative_path}"); then
+    log "Could not resolve $relative_path from verified commit $commit"
+    return 1
+  fi
   [[ "$expected_blob" =~ ^[0-9a-f]{40,64}$ ]] || {
     log "Invalid blob identity for $relative_path"
     return 1
   }
-  install -d -o root -g root -m 0755 "$(dirname "$destination")"
-  temporary=$(mktemp "${destination}.new.XXXXXX")
+  if ! install -d -o root -g root -m 0755 "$(dirname "$destination")"; then
+    return 1
+  fi
+  if ! temporary=$(mktemp "${destination}.new.XXXXXX"); then
+    return 1
+  fi
   if ! factory_git_read cat-file blob "$expected_blob" > "$temporary"; then
     rm -f "$temporary"
     return 1
   fi
-  actual_blob=$(git hash-object "$temporary")
+  if ! actual_blob=$(git hash-object "$temporary"); then
+    rm -f "$temporary"
+    return 1
+  fi
   if [ "$actual_blob" != "$expected_blob" ]; then
     rm -f "$temporary"
     log "Blob verification failed for $relative_path"
@@ -116,41 +130,48 @@ install_runtime_file_from_commit() {
   fi
   if [ -f "$destination" ] && cmp -s "$temporary" "$destination"; then
     rm -f "$temporary"
-    return 0
+    chown root:root "$destination" && chmod "$mode" "$destination"
+    return
   fi
-  chown root:root "$temporary"
-  chmod "$mode" "$temporary"
-  # Replace paths instead of truncating running script inodes. Current updater
-  # and watchdog processes can finish while the next invocation sees new code.
-  mv -fT -- "$temporary" "$destination"
+  if ! chown root:root "$temporary" || \
+    ! chmod "$mode" "$temporary" || \
+    ! mv -fT -- "$temporary" "$destination"; then
+    rm -f "$temporary"
+    return 1
+  fi
 }
 
 record_runtime_commit() {
   local commit=$1
   local temporary
-  temporary=$(mktemp "${RUNTIME_SOURCE_SHA_FILE}.new.XXXXXX")
-  printf '%s\n' "$commit" > "$temporary"
-  chown root:root "$temporary"
-  chmod 0644 "$temporary"
-  mv -fT -- "$temporary" "$RUNTIME_SOURCE_SHA_FILE"
+  if ! temporary=$(mktemp "${RUNTIME_SOURCE_SHA_FILE}.new.XXXXXX"); then
+    return 1
+  fi
+  if ! printf '%s\n' "$commit" > "$temporary" || \
+    ! chown root:root "$temporary" || \
+    ! chmod 0644 "$temporary" || \
+    ! mv -fT -- "$temporary" "$RUNTIME_SOURCE_SHA_FILE"; then
+    rm -f "$temporary"
+    return 1
+  fi
 }
 
 install_runtime_bundle() {
   local commit=$1
-  verify_commit_identity "$commit"
+  verify_commit_identity "$commit" || return 1
   install_runtime_file_from_commit \
     "$commit" scripts/maintain-factory-host-storage.sh \
-    "$RUNTIME_MAINTENANCE" 0755
+    "$RUNTIME_MAINTENANCE" 0755 || return 1
   install_runtime_file_from_commit \
     "$commit" config/systemd/99-hellotalk-factory-storage.conf \
-    "$RUNTIME_ROOT/config/systemd/99-hellotalk-factory-storage.conf" 0644
+    "$RUNTIME_ROOT/config/systemd/99-hellotalk-factory-storage.conf" 0644 || return 1
   install_runtime_file_from_commit \
     "$commit" config/systemd/hellotalk-factory-watchdog.sh \
-    "$RUNTIME_ROOT/hellotalk-factory-watchdog.sh" 0755
+    "$RUNTIME_ROOT/hellotalk-factory-watchdog.sh" 0755 || return 1
   install_runtime_file_from_commit \
     "$commit" config/systemd/hellotalk-factory-update.sh \
-    "$RUNTIME_ROOT/hellotalk-factory-update.sh" 0755
-  record_runtime_commit "$commit"
+    "$RUNTIME_ROOT/hellotalk-factory-update.sh" 0755 || return 1
+  record_runtime_commit "$commit" || return 1
 }
 
 run_storage_maintenance() {
@@ -159,7 +180,7 @@ run_storage_maintenance() {
     log 'No verified runtime commit is available; refusing root maintenance refresh'
     return 1
   }
-  install_runtime_bundle "$commit"
+  install_runtime_bundle "$commit" || return 1
   "$RUNTIME_MAINTENANCE" --apply --prune-containers
 }
 
@@ -260,7 +281,10 @@ fi
 log "Pulled to ${pulled_sha:0:12}"
 
 log 'Refreshing root-owned Factory runtime scripts from verified Git blobs'
-install_runtime_bundle "$pulled_sha"
+if ! install_runtime_bundle "$pulled_sha"; then
+  log 'ERROR: could not install the verified runtime bundle'
+  exit 1
+fi
 
 log 'Reinstalling factory Python package'
 # Ensure dev can write the venv before uv runs as dev. Running uv as root with
