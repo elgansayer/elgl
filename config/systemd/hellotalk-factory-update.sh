@@ -4,6 +4,7 @@
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
+#   - Atomically refreshes the root-owned runtime scripts from that trusted pull.
 #   - Aborts on any error; systemd Restart=on-failure handles recovery.
 #   - Logs every decision so journalctl -u hellotalk-factory-update traces the run.
 #
@@ -20,6 +21,7 @@ SERVICE=${REPO_FACTORY_PRIMARY_SERVICE:-hellotalk-factory.service}
 SECONDARY_SERVICE=${REPO_FACTORY_SECONDARY_SERVICE:-}
 SECONDARY_HEARTBEAT=${REPO_FACTORY_SECONDARY_HEARTBEAT:-}
 FACTORY_VENV=/opt/hellotalk-factory/venv
+RUNTIME_ROOT=/opt/hellotalk-factory
 RESTART_GRACE_SECONDS=${FACTORY_UPDATE_RESTART_GRACE_SECONDS:-60}
 ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-300}
 GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
@@ -42,10 +44,21 @@ restore_services_on_failure() {
 }
 trap restore_services_on_failure EXIT
 
+install_runtime_script() {
+  local source=$1
+  local destination=$2
+  local temporary="${destination}.new"
+  install -o root -g root -m 0755 "$source" "$temporary"
+  # Replace the path rather than truncating the running update script's inode.
+  # The current process can finish on the old inode while the next timer run
+  # and every watchdog invocation see the newly pulled implementation.
+  mv -fT -- "$temporary" "$destination"
+}
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # 1. Host storage maintenance - runs every day, before the idle wait below
 #    and regardless of whether main has moved. It touches only dangling/
-#    unreferenced resources (journal, Docker build cache, unused uv cache
+#    unreferenced resources (journal, container build cache, unused uv cache
 #    entries), never anything an active job holds open, so it doesn't need
 #    the daemon idle or stopped. A busy factory can legitimately never go
 #    idle within ACTIVE_JOB_WAIT_SECONDS (a healthy, always-working queue
@@ -138,7 +151,7 @@ if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVIC
 fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# 6. Pull and reinstall.
+# 6. Pull, refresh host scripts, and reinstall.
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 log "Pulling main"
 timeout "${GIT_TIMEOUT}s" \
@@ -149,6 +162,14 @@ timeout "${GIT_TIMEOUT}s" \
 
 pulled_sha=$(runuser -u "$FACTORY_USER" -- git -C "$REPOSITORY" rev-parse HEAD)
 log "Pulled to ${pulled_sha:0:12}"
+
+log "Refreshing root-owned Factory runtime scripts"
+install_runtime_script \
+  "$REPOSITORY/config/systemd/hellotalk-factory-watchdog.sh" \
+  "$RUNTIME_ROOT/hellotalk-factory-watchdog.sh"
+install_runtime_script \
+  "$REPOSITORY/config/systemd/hellotalk-factory-update.sh" \
+  "$RUNTIME_ROOT/hellotalk-factory-update.sh"
 
 log "Reinstalling factory Python package"
 # Ensure dev can write the venv before uv runs as dev, regardless of what
