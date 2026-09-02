@@ -1,48 +1,102 @@
 # Factory host storage
 
-## Current host finding
+The Factory uses two independently constrained filesystems. Treating them as one
+pool hid the real failure modes and allowed a healthy daemon to remain alive
+while scheduling was silently blocked by its disk reserve.
 
-The 17 August 2026 investigation found two distinct storage domains:
+| Storage domain | Production path | Main growth sources |
+| --- | --- | --- |
+| Root filesystem | `/`, including `/home/dev` | provider credentials/history, npm and uv caches, system journal, Docker metadata, legacy checkouts |
+| Factory data volume | `/var/lib/hellotalk-factory`, `/var/log/hellotalk-factory` | live worktrees, crash-recovery archives, durable state, logs, rootless Podman graph storage |
 
-- `/dev/sda1` is the 38 GiB root filesystem. It reached 100 per cent utilisation.
-- `/dev/sdb` is the 50 GiB secondary volume mounted at `/mnt/HC_Volume_106574422`.
-  Factory state and logs are already bind-mounted from this volume.
+## Confirmed incident history
 
-The largest confirmed root consumers were:
+The storage failures were not one bug:
 
-- 3.6 GiB of persistent system journal data;
-- 3.1 GiB of developer OpenCode history;
-- 2.6 GiB of reproducible npm, uv, Cypress, and Playwright caches;
-- 547 MiB in an inactive developer-owned Factory tree;
-- Docker data beneath root-owned `/var/lib/docker`, whose exact size requires root access;
-- normal source checkouts, dependency trees, agent installations, and a 4 GiB swap file.
+1. On 14 August 2026 the 50 GiB Factory volume reached 100 per cent. The live
+   host contained 540 stale worktrees and 207 recovery backups. PR #3573 later
+   fixed one worktree-retirement gap for pull requests closed while in post-PR
+   states.
+2. On 23 August, 70 recovery archives created in four days reduced free space
+   below the 5 GiB scheduling reserve. The first fix added a 72-hour age limit.
+3. On 26 August, the problem recurred inside that 72-hour window. Regenerable
+   build output made individual archives exceed 2 GiB; 19 archives occupied
+   about 24 GiB. PR #8092 excluded known build trees and moved cleanup outside
+   the storage gate.
+4. Root separately reached its reserve because journald, package/browser caches,
+   root-owned uv entries, and subscription-provider state accumulated under
+   `/home/dev`. Observed provider/tool directories totalled about 6.8 GiB and
+   continued growing.
+5. Scheduled maintenance cleaned Docker, although the production worker image
+   and task containers use rootless Podman. Old Podman layers therefore escaped
+   the cleanup path.
 
-`du` run as an unprivileged user cannot account for root-only Docker and journal paths. Ext4 reserved blocks also
-make `df` available space lower than the raw free-block count. Use both `sudo du -xhd1 /` and `df -h /` when
-reconciling usage.
+The key design error was relying on age-only cleanup and a daily code-update job.
+A burst can fill a disk before a time-to-live expires, and maintenance must still
+run when `main` has not changed, an update fails, or scheduling is already disk
+blocked.
 
-During the investigation, only reproducible caches were deleted. OpenCode history was copied and verified before
-its standard data path was switched to the secondary volume. The inactive Factory tree was copied and verified
-before its root copy was removed. At 12:13 UTC, root had recovered from zero available space to 3.6 GiB available.
+## Steady-state policy
 
-The preserved host paths are:
+### Recovery archives
 
-```text
-/home/dev/.local/share/opencode
-  -> /mnt/HC_Volume_106574422/actions-runner/dev-data/opencode
+`automation/openhands_factory/recovery_retention.py` now applies three limits,
+in this order:
 
-/mnt/HC_Volume_106574422/actions-runner/dev-data/archives/
-  hellotalk-factory-legacy-20260809
+1. delete entries older than `FACTORY_RECOVERY_RETENTION_HOURS`;
+2. delete the oldest completed archives until aggregate logical size is at or
+   below `FACTORY_RECOVERY_MAX_TOTAL_GIB`;
+3. when the filesystem is low, delete the oldest completed archives until free
+   space reaches `FACTORY_MINIMUM_FREE_DISK_GIB` plus
+   `FACTORY_RECOVERY_FREE_HEADROOM_GIB`.
+
+Production defaults are:
+
+```dotenv
+FACTORY_MINIMUM_FREE_DISK_GIB=5
+FACTORY_RECOVERY_RETENTION_HOURS=72
+FACTORY_RECOVERY_MAX_TOTAL_GIB=2
+FACTORY_RECOVERY_FREE_HEADROOM_GIB=1
 ```
 
-These are developer-user paths. The daemon now runs as that same operator user (`dev`) and reads provider
-credentials directly from `/home/dev`, so there is no separate service home to keep in sync with it.
+`RECOVERY.txt` is written as the final archive step and is treated as the
+completion marker. Pressure cleanup also gives new archives a ten-minute grace
+period, so it cannot race a copy still in progress. Normally one archive is
+retained. That floor is removed when the archive budget is already exceeded or
+free space is below the scheduling reserve, preventing one oversized archive
+from permanently blocking the Factory.
 
-## Bounded retention policy
+Deletion errors are logged and are not reported as successful removals. Size
+walking uses `lstat()` and never follows symlinks outside the archive.
 
-The repository policy at `config/systemd/99-hellotalk-factory-storage.conf` limits persistent journals to 512 MiB,
-keeps at least 5 GiB free where possible, and removes entries older than 14 days. Production deployment installs
-the policy and performs one journal rotation and vacuum before refreshing dependencies.
+### Live worktrees
+
+The scheduler remains authoritative for worktree lifecycle. Merged jobs remove
+their worktree before entering `DONE`; inactive non-terminal jobs are retired by
+refresh; discovered jobs replace stale worktrees after archiving dirty changes.
+`QUARANTINED` is a bounded 30-minute cooldown, not permanent storage: recovery
+returns the job to discovery, where stale worktree retirement runs.
+
+Never bulk-delete active worktrees merely to recover space. Use durable job and
+heartbeat state to establish ownership first.
+
+### Host maintenance
+
+`maintain-factory-host-storage.sh` is safe to run repeatedly. It now:
+
+- takes a host-wide non-blocking lock;
+- installs and restarts journald only when its policy changed;
+- keeps archived journals within 512 MiB and 14 days;
+- prunes unused uv cache records as `dev`, avoiding root-owned cache creation;
+- skips an absent or unavailable Docker daemon without aborting the whole pass;
+- prunes Docker dangling images and bounded builder cache when Docker exists;
+- prunes the **rootless Podman** image/build-cache store used by the Factory;
+- reports root, Factory-state, container-engine, and provider-home storage in
+  read-only mode.
+
+It deliberately never invokes `docker system prune` or `podman system prune` and
+never removes volumes, named images, stopped/running containers, provider
+credentials, or provider history databases.
 
 Inspect without changing the host:
 
@@ -50,90 +104,114 @@ Inspect without changing the host:
 sudo scripts/maintain-factory-host-storage.sh
 ```
 
-Install the policy and vacuum archived journals:
+Apply bounded maintenance:
 
 ```bash
-sudo scripts/maintain-factory-host-storage.sh --apply
+sudo scripts/maintain-factory-host-storage.sh --apply --prune-containers
 ```
 
-Optionally remove only dangling Docker images older than seven days and unused build cache above 2 GB:
+`--prune-docker` remains a compatibility alias for older deployment scripts, but
+it now covers both container engines. Docker and Podman dangling images are
+limited to objects older than seven days by default.
+
+The existing two-minute health watchdog invokes this command at most hourly,
+independently of the daily update service:
+
+```dotenv
+FACTORY_STORAGE_MAINTENANCE_INTERVAL_SECONDS=3600
+FACTORY_STORAGE_MAINTENANCE_TIMEOUT_SECONDS=75
+```
+
+It skips the pass while `hellotalk-factory-update.service` is active, preventing
+cleanup from overlapping a worker-image build. Maintenance failure is logged but
+does not turn a healthy daemon into a restart loop.
+
+### Provider state and caches
+
+Provider authentication and history are durable writable mounts by design. They
+must not be deleted as if they were generic caches. The structural fix is to
+move their normal paths off the non-resizable root filesystem.
+
+The relocation command now defaults to the already-attached Factory secondary
+volume, `/mnt/HC_Volume_106574422`, rather than waiting for a separate unattached
+device:
 
 ```bash
-sudo scripts/maintain-factory-host-storage.sh --apply --prune-docker
+sudo scripts/relocate-home-cache-to-second-disk.sh
+sudo scripts/relocate-home-cache-to-second-disk.sh --apply
 ```
 
-The maintenance command never removes Docker volumes, named images, or containers. It deliberately does not use
-`docker system prune`. Docker pruning is not automatic during Factory deployment because the host Docker daemon
-may serve workloads outside the Factory.
+It migrates `.cache`, `.local`, `.gemini`, `.pi`, `.codex`, `.claude`, `.npm`,
+`.npm-global`, `.opencode`, and `.config`. The service is stopped only when it
+was running, each copy is verified with an rsync checksum dry run, bind mounts
+are persisted in `/etc/fstab`, ownership is restored, and the service returns to
+its prior running/stopped state. Credentials and histories are moved intact.
 
-To roll back the journal policy:
+A custom disk is still supported by setting both
+`RELOCATE_CACHE_MOUNT_POINT` and `RELOCATE_CACHE_DEVICE_BY_ID`. An unformatted
+explicitly configured device is formatted only during `--apply`; a mounted
+default volume never requires a block-device argument.
+
+## Diagnosis
+
+Start with filesystem truth, then attribute space within each device:
 
 ```bash
-sudo rm /etc/systemd/journald.conf.d/99-hellotalk-factory-storage.conf
-sudo systemctl restart systemd-journald.service
+df -h / /var/lib/hellotalk-factory
+sudo du -xhd1 /
+sudo du -xhd1 /home/dev
+sudo du -xhd1 /var/lib/hellotalk-factory
+sudo journalctl --disk-usage
+sudo scripts/maintain-factory-host-storage.sh
 ```
 
-Removing the policy does not restore already vacuumed journal entries.
+Use both `df` and `du`. Open-but-deleted files, ext4 reserved blocks, mount
+boundaries, and root-only paths can make their totals differ. For deleted files
+still held open:
 
-## Control-panel storage health
+```bash
+sudo lsof +L1
+```
 
-The GitHub control panel reports root and Factory-state volume usage separately. Each row includes used
-percentage, free GiB, the configured reserve, state, and a projected exhaustion timestamp when a meaningful
-short-term decline is observed.
+For Factory-state pressure, inspect:
 
-The states are:
+```bash
+sudo du -sh /var/lib/hellotalk-factory/worktrees \
+  /var/lib/hellotalk-factory/recovery \
+  /var/lib/hellotalk-factory/repository \
+  /var/log/hellotalk-factory
+sudo git -C /var/lib/hellotalk-factory/repository worktree list --porcelain
+```
 
-- `healthy`: at least twice the configured reserve is free;
-- `warning`: between one and two reserves are free;
-- `critical`: less than the configured reserve is free;
-- `unavailable`: the volume could not be measured.
-
-`FACTORY_MINIMUM_FREE_DISK_GIB` is 5 GiB in production. A warning, critical, or unavailable volume prevents a
-green top-level indicator. Projection starts only after at least 64 MiB is consumed over at least one minute.
-It is a short-term trend estimate, not a quota promise, and can change after builds, cache cleanup, or log
-rotation.
-
-The daemon checks both reserves before each scheduling cycle. Falling below either reserve stops new task and
-architect work without terminating active workers, consuming task attempts, quarantining jobs, or stopping the
-daemon. Scheduling resumes automatically after both reserves recover. The durable daemon snapshot exposes
-`storage_blocked` so restart and panel diagnostics remain explicit.
+Do not remove a worktree listed by an active job. Do not delete `jobs.json`,
+provider health/provenance state, or the canonical repository.
 
 ## Root recovery sequence
 
-When root is full, use this order:
+1. Pause new scheduling without deleting durable jobs.
+2. Capture `df`, `du`, journal usage, `lsof +L1`, Docker usage, and rootless
+   Podman usage.
+3. Run bounded host maintenance.
+4. Confirm recovery archives are being pruned by age, aggregate size, or disk
+   pressure as appropriate.
+5. Relocate provider/tool state if it still lives on root.
+6. Run `hellotalk-factory doctor --online`, inspect the durable `storage_blocked`
+   field, and perform one control-panel sync.
+7. Resume scheduling only after root and Factory-state reserves are both green.
 
-1. Pause new Factory scheduling, but do not delete jobs or worktrees.
-2. Record `df -h`, `sudo journalctl --disk-usage`, `sudo docker system df -v`, and `sudo du -xhd1 /`.
-3. Clear reproducible package and browser caches with their native commands.
-4. Apply the bounded journal policy.
-5. Run the optional bounded Docker prune only after confirming the Docker daemon is not performing a build.
-6. Move durable histories only through copy, byte-for-byte verification, path switch, smoke test, then contraction.
-7. Run `doctor --online`, provider health checks, and one harmless control-panel sync before resuming work.
+## Remaining limits
 
-Do not delete `/var/lib/docker`, provider databases, credential directories, Factory `jobs.json`, worktrees, or
-runner installations to create emergency space.
+The Factory intentionally preserves dirty work before retiring a worktree.
+Archive exclusions and the aggregate cap prevent long-term accumulation, but a
+single archive can transiently grow while its copy is in progress; incomplete
+archives are not deleted underneath the writer. The 5 GiB reserve, known build
+artifact exclusions, three-job concurrency limit, and immediate post-completion
+pressure sweep bound this risk. A future patch-format recovery archive could
+reduce that transient further, but it must first prove equivalent restoration
+of binary changes and untracked files.
 
-If Docker remains the dominant root consumer after bounded pruning, schedule a maintenance window to migrate its
-data root to the secondary volume. Stop Docker, make a resumable `rsync -aHAX` copy, validate the copy, switch via
-an explicit Docker `data-root` or bind mount, start Docker, and verify every required workload before deleting the
-old tree. Keep a rollback copy until that verification passes. This migration is intentionally not performed by
-normal Factory deployment.
-
-## Secondary-volume failure
-
-The OpenCode developer path is a symlink. If the secondary volume is unavailable, do not run OpenCode against a
-dangling or partially mounted path. Restore it only after stopping OpenCode and confirming root has room for the
-full database:
-
-```bash
-rsync -aH /mnt/HC_Volume_106574422/actions-runner/dev-data/opencode/ \
-  /home/dev/.local/share/opencode.restore/
-rsync -aHnci --delete /mnt/HC_Volume_106574422/actions-runner/dev-data/opencode/ \
-  /home/dev/.local/share/opencode.restore/
-unlink /home/dev/.local/share/opencode
-mv /home/dev/.local/share/opencode.restore /home/dev/.local/share/opencode
-```
-
-After restoration, run `opencode auth list` and a read-only database count before deleting the secondary copy.
-The Factory service-home bind mounts have their own recovery procedure in
-`scripts/migrate-factory-to-secondary-disk.sh`; do not replace those mounts with developer-user symlinks.
+Provider-native databases may continue to grow after relocation. That consumes
+the expandable secondary volume rather than root, but it is still monitored and
+must be expanded or given provider-specific retention if its documented format
+supports safe compaction. Opaque credential/history data is never automatically
+trimmed.
