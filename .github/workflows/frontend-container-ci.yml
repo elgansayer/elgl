@@ -36,7 +36,7 @@ jobs:
             echo "=== Alpine release ==="
             cat /etc/alpine-release
             echo "=== security-relevant runtime packages ==="
-            apk info -v nginx nginx-module-* libcrypto3 libssl3 musl zlib pcre2 2>/dev/null || true
+            apk info -v nginx nginx-module-* libcrypto3 libssl3 libexpat musl zlib pcre2 2>/dev/null || true
           '
 
       - name: Scan production web image
