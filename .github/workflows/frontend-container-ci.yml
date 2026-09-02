@@ -27,5 +27,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Build production frontend image
+      - name: Build production web image
         run: docker build --target production --tag "elgl-web-ci:${GITHUB_SHA}" frontend
+
+      - name: Report production runtime package versions
+        run: |
+          docker run --rm "elgl-web-ci:${GITHUB_SHA}" sh -ec '
+            echo "=== Alpine release ==="
+            cat /etc/alpine-release
+            echo "=== security-relevant runtime packages ==="
+            apk info -v nginx nginx-module-* libcrypto3 libssl3 musl zlib pcre2 2>/dev/null || true
+          '
+
+      - name: Scan production web image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: "elgl-web-ci:${{ github.sha }}"
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          timeout: 10m
