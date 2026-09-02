@@ -354,9 +354,38 @@ jobs:
       - name: Generate schema-derived TypeScript evidence
         if: steps.changes.outputs.run_database == 'true'
         run: |
-          npx --yes supabase@2.114.0 gen types typescript --local > test-results/database.types.ts
-          test -s test-results/database.types.ts
-          grep -q 'export type Database' test-results/database.types.ts
+          set -euo pipefail
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            attempt_log="test-results/supabase-typegen-attempt-${attempt}.log"
+            attempt_output="test-results/database.types.attempt-${attempt}.ts"
+            echo "Supabase type generation attempt ${attempt}/${max_attempts}"
+
+            if npx --yes supabase@2.114.0 gen types typescript --local > "$attempt_output" 2> "$attempt_log"; then
+              if ! test -s "$attempt_output" || ! grep -q 'export type Database' "$attempt_output"; then
+                echo "Supabase type generation returned malformed output; refusing to retry."
+                cat "$attempt_log"
+                exit 1
+              fi
+              mv "$attempt_output" test-results/database.types.ts
+              exit 0
+            fi
+
+            cat "$attempt_log"
+            rm -f "$attempt_output"
+
+            if ! grep -Eiq 'toomanyrequests|rate exceeded|HTTP 429|TLS handshake timeout|connection reset|i/o timeout|temporarily unavailable|unexpected EOF' "$attempt_log"; then
+              echo "Non-transient Supabase type-generation failure detected; refusing to retry."
+              exit 1
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Supabase type generation failed after ${max_attempts} transient attempts."
+              exit 1
+            fi
+
+            sleep $((attempt * 20))
+          done
 
       - name: Enforce generated Supabase type drift baseline
         if: steps.changes.outputs.run_database == 'true'
