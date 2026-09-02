@@ -12,7 +12,7 @@ def test_host_maintenance_covers_the_actual_container_runtime() -> None:
 
     assert "--prune-containers|--prune-docker" in script
     assert 'arguments=(image prune --force --filter "until=$PRUNE_AGE")' in script
-    assert 'pressure_arguments=(image prune --force)' in script
+    assert "pressure_arguments=(image prune --force)" in script
     assert "filesystem_below_target" in script
     assert "--build-cache" in script
     assert 'run_as_factory_user "$podman"' in script
