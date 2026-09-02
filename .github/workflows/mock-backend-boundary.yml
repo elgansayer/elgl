@@ -2,6 +2,14 @@ name: Mock Backend Production Boundary
 
 on:
   pull_request:
+    # The verifier reads application/deployment inputs and all workflow files, but
+    # Factory-only Python/config/docs cannot change its result. Avoid allocating a
+    # runner or holding CI convergence open for those autonomous maintenance PRs.
+    paths-ignore:
+      - 'automation/**'
+      - 'config/factory/**'
+      - 'config/systemd/**'
+      - 'docs/**'
   push:
     branches: [main]
 
