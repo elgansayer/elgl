@@ -36,7 +36,7 @@ RELOCATABLE_DIRECTORIES=(
   .config
 )
 if [ -n "${RELOCATE_CACHE_DIRECTORIES:-}" ]; then
-  read -r -a RELOCATABLE_DIRECTORIES <<< "$RELOCATE_CACHE_DIRECTORIES"
+  IFS=' ' read -r -a RELOCATABLE_DIRECTORIES <<< "$RELOCATE_CACHE_DIRECTORIES"
 fi
 
 usage() {
@@ -103,7 +103,9 @@ verify_dedicated_mount() {
 append_fstab_line() {
   local line=$1
   local temporary
-  temporary=$(mktemp "${FSTAB_PATH}.factory.XXXXXX")
+  if ! temporary=$(mktemp "${FSTAB_PATH}.factory.XXXXXX"); then
+    return 1
+  fi
   if ! cp --preserve=all "$FSTAB_PATH" "$temporary" || \
     ! printf '%s\n' "$line" >> "$temporary" || \
     ! mv -fT -- "$temporary" "$FSTAB_PATH"; then
@@ -221,7 +223,6 @@ if ! mountpoint -q "$MOUNT_POINT"; then
   fi
   mkdir -p "$MOUNT_POINT"
   fstab_source=$(awk -v target="$MOUNT_POINT" '$2 == target {print $1; exit}' "$FSTAB_PATH")
-  added_volume_fstab=false
   if [ -n "$fstab_source" ]; then
     mount "$MOUNT_POINT"
   else
@@ -238,7 +239,6 @@ if ! mountpoint -q "$MOUNT_POINT"; then
       echo "Could not persist provider-state volume mount in $FSTAB_PATH" >&2
       exit 1
     fi
-    added_volume_fstab=true
     log "Added persistent volume mount for $MOUNT_POINT"
   fi
 fi
@@ -263,7 +263,7 @@ for directory in "${RELOCATABLE_DIRECTORIES[@]}"; do
 done
 
 if [ "${#pending[@]}" -eq 0 ]; then
-  log 'Nothing to relocate; every provider/tool directory is bind-mounted'
+  log 'Nothing to relocate; every existing provider/tool directory is bind-mounted'
   MIGRATION_SUCCEEDED=true
   report_status
   exit 0
