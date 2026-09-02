@@ -118,3 +118,25 @@ def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None
     assert "      - 'automation/pyproject.toml'\n" not in workflow
     assert "      - 'automation/uv.lock'\n" not in workflow
     assert "      - '.github/workflows/**'\n" not in workflow
+
+
+def test_mock_backend_boundary_skips_factory_only_pull_requests_before_runner_allocation() -> None:
+    workflow = _workflow("mock-backend-boundary.yml")
+
+    assert "  pull_request:\n" in workflow
+    assert "    paths-ignore:\n" in workflow
+    for path in (
+        "automation/**",
+        "config/factory/**",
+        "config/systemd/**",
+        "docs/**",
+    ):
+        assert f"      - '{path}'\n" in workflow
+
+    # Workflow files and product/deployment inputs remain intentionally in scope:
+    # the verifier scans them for accidental production fixture activation.
+    assert "      - '.github/workflows/**'\n" not in workflow
+    assert "      - 'backend/**'\n" not in workflow
+    assert "      - 'frontend/**'\n" not in workflow
+    assert "      - 'deploy/**'\n" not in workflow
+    assert "      - 'infra/**'\n" not in workflow
