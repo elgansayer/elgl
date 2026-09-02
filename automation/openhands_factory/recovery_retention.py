@@ -151,9 +151,7 @@ def prune_recovery_archives(
     if not recovery_dir.is_dir():
         return []
 
-    reserve_gib = _positive_environment_float(
-        "FACTORY_MINIMUM_FREE_DISK_GIB", _DEFAULT_RESERVE_GIB
-    )
+    reserve_gib = _positive_environment_float("FACTORY_MINIMUM_FREE_DISK_GIB", _DEFAULT_RESERVE_GIB)
     headroom_gib = _positive_environment_float(
         "FACTORY_RECOVERY_FREE_HEADROOM_GIB", _DEFAULT_HEADROOM_GIB
     )
@@ -162,11 +160,7 @@ def prune_recovery_archives(
     )
     archive_budget = int(budget_gib * _GIB) if max_total_bytes is None else max_total_bytes
     reserve = int(reserve_gib * _GIB) if minimum_free_bytes is None else minimum_free_bytes
-    target = (
-        reserve + int(headroom_gib * _GIB)
-        if target_free_bytes is None
-        else target_free_bytes
-    )
+    target = reserve + int(headroom_gib * _GIB) if target_free_bytes is None else target_free_bytes
     if archive_budget <= 0:
         raise ValueError("max_total_bytes must be positive")
     if reserve < 0:
@@ -204,9 +198,7 @@ def prune_recovery_archives(
     projected_free = filesystem.free
     retained_size = sum(archive.size for archive in survivors)
     candidates = [
-        archive
-        for archive in survivors
-        if archive.completed and archive.mtime <= grace_cutoff
+        archive for archive in survivors if archive.completed and archive.mtime <= grace_cutoff
     ]
     while retained_size > archive_budget or projected_free < target:
         critical = projected_free < reserve
