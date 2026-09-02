@@ -50,13 +50,20 @@ def test_watchdog_runs_storage_cleanup_independently_of_daily_update() -> None:
     assert watchdog.index("maintain_storage\n") < watchdog.index("if healthy; then")
 
 
-def test_provider_home_relocation_uses_the_attached_secondary_volume() -> None:
+def test_provider_home_relocation_uses_a_dedicated_expandable_volume() -> None:
     script = _read("scripts/relocate-home-cache-to-second-disk.sh")
 
-    assert "/mnt/HC_Volume_106574422" in script
-    assert "RELOCATE_CACHE_DEVICE_BY_ID:-}" in script
+    assert "/mnt/HC_Volume_106720613" in script
+    assert "/dev/disk/by-id/scsi-0HC_Volume_106720613" in script
+    assert "/mnt/HC_Volume_106574422" not in script
     assert ".claude" in script
     assert "rsync -aHAXnci --delete" in script
+    assert 'backup="${target}.factory-relocation-backup"' in script
+    assert 'mount --bind "$destination" "$target"' in script
+    assert 'mv -- "$backup" "$target"' in script
+    assert script.index('mount --bind "$destination" "$target"') < script.index(
+        'rm -rf --one-file-system -- "${backup:?}"'
+    )
     assert "SERVICE_WAS_ACTIVE" in script
     assert "x-systemd.requires-mounts-for" in script
 
