@@ -43,7 +43,7 @@ for argument in "$@"; do
 done
 
 if [ "$PRUNE_CONTAINERS" = true ] && [ "$APPLY" != true ]; then
-  echo '--prune-containers requires --apply.' >&2
+  echo '--prune-docker requires --apply; --prune-containers has the same requirement.' >&2
   exit 2
 fi
 
@@ -165,6 +165,7 @@ prune_docker_storage() {
     log 'Docker daemon unavailable; skipping Docker cleanup'
     return 0
   fi
+  # Invoke docker image prune through the resolved executable.
   if ! "$docker" image prune --force --filter "until=$PRUNE_AGE"; then
     log 'WARNING: Docker image prune failed'
   fi
