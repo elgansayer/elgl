@@ -222,8 +222,18 @@ def prune_recovery_archives(
         survivors.remove(archive)
         removed.append(archive.path)
         retained_size = max(retained_size - archive.size, 0)
-        projected_free += archive.size
         reclaimed += archive.size
+        try:
+            # Logical file sizes can differ from actually released blocks for
+            # sparse files, hard links, compression, and filesystem metadata.
+            # Re-measure instead of assuming every logical byte became free.
+            projected_free = shutil.disk_usage(recovery_dir).free
+        except OSError:
+            LOGGER.exception(
+                "Could not re-measure recovery filesystem usage after removing %s",
+                archive.path,
+            )
+            projected_free += archive.size
 
     if removed:
         LOGGER.info(
