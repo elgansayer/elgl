@@ -120,23 +120,33 @@ def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None
     assert "      - '.github/workflows/**'\n" not in workflow
 
 
-def test_mock_boundary_skips_factory_only_pull_requests() -> None:
+def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
     workflow = _workflow("mock-backend-boundary.yml")
+    paths_block = workflow.split("    paths:\n", 1)[1].split("  push:\n", 1)[0]
+    paths = [
+        line.removeprefix("      - '").removesuffix("'")
+        for line in paths_block.splitlines()
+        if line.startswith("      - '")
+    ]
 
-    assert "  pull_request:\n" in workflow
-    assert "    paths-ignore:\n" in workflow
-    for path in (
-        "automation/**",
-        "config/factory/**",
-        "config/systemd/**",
-        "docs/**",
-    ):
-        assert f"      - '{path}'\n" in workflow
-
-    # Workflow files and product/deployment inputs remain intentionally in scope:
-    # the verifier scans them for accidental production fixture activation.
-    assert "      - '.github/workflows/**'\n" not in workflow
-    assert "      - 'backend/**'\n" not in workflow
-    assert "      - 'frontend/**'\n" not in workflow
-    assert "      - 'deploy/**'\n" not in workflow
-    assert "      - 'infra/**'\n" not in workflow
+    dockerfile = "**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]"
+    compose = "**/*[Dd][Oo][Cc][Kk][Ee][Rr]-[Cc][Oo][Mm][Pp][Oo][Ss][Ee]"
+    production = "**/*.[Pp][Rr][Oo][Dd][Uu][Cc][Tt][Ii][Oo][Nn]"
+    prod = "**/*.[Pp][Rr][Oo][Dd]."
+    assert paths == [
+        "**",
+        "!automation/**/*.py",
+        "!automation/prompts/**",
+        "!config/factory/**",
+        "!config/systemd/**",
+        "!docs/**",
+        f"{dockerfile}*",
+        f"{dockerfile}*/**",
+        f"{compose}*",
+        f"{compose}*/**",
+        f"{production}*",
+        f"{production}*/**",
+        f"{prod}*",
+        f"{prod}*/**",
+    ]
+    assert "paths-ignore:" not in workflow
