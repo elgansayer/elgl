@@ -7,8 +7,54 @@ FACTORY_PYTHON=/opt/hellotalk-factory/venv/bin/python
 FACTORY_USER=dev
 HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
 CONTROL_REQUEST=/var/lib/hellotalk-factory/control_request.json
+STORAGE_MAINTENANCE=/var/lib/hellotalk-factory/repository/scripts/maintain-factory-host-storage.sh
+STORAGE_STAMP=/run/hellotalk-factory-storage-maintenance.stamp
 MAX_TASK_MINUTES=${FACTORY_MAX_TASK_MINUTES:-120}
 RESTART_GRACE_SECONDS=${FACTORY_WATCHDOG_RESTART_GRACE_SECONDS:-30}
+STORAGE_INTERVAL_SECONDS=${FACTORY_STORAGE_MAINTENANCE_INTERVAL_SECONDS:-3600}
+STORAGE_TIMEOUT_SECONDS=${FACTORY_STORAGE_MAINTENANCE_TIMEOUT_SECONDS:-75}
+
+positive_integer() {
+  case "$1" in
+    ''|*[!0-9]*|0) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+maintain_storage() {
+  local last=0
+  local now
+  now=$(date +%s)
+  if ! positive_integer "$STORAGE_INTERVAL_SECONDS" || \
+    ! positive_integer "$STORAGE_TIMEOUT_SECONDS"; then
+    echo 'factory watchdog: invalid storage maintenance interval/timeout' >&2
+    return 0
+  fi
+  if [ -r "$STORAGE_STAMP" ]; then
+    read -r last < "$STORAGE_STAMP" || last=0
+    positive_integer "$last" || last=0
+  fi
+  if [ $((now - last)) -lt "$STORAGE_INTERVAL_SECONDS" ]; then
+    return 0
+  fi
+  # The update service performs the same maintenance before rebuilding the
+  # worker image. Never prune a rootless image store while that build is live.
+  if systemctl is-active --quiet hellotalk-factory-update.service; then
+    return 0
+  fi
+  if [ ! -x "$STORAGE_MAINTENANCE" ]; then
+    echo "factory watchdog: storage maintenance command is missing: $STORAGE_MAINTENANCE" >&2
+    return 0
+  fi
+
+  # Stamp before starting. A persistent host/daemon problem must not turn the
+  # two-minute watchdog into a repeated root cleanup loop.
+  printf '%s\n' "$now" > "$STORAGE_STAMP"
+  if ! timeout --signal=TERM --kill-after=5s "${STORAGE_TIMEOUT_SECONDS}s" \
+    "$STORAGE_MAINTENANCE" --apply --prune-containers; then
+    echo 'factory watchdog: host storage maintenance failed' >&2
+  fi
+}
 
 sync_dashboard() {
   timeout --signal=TERM --kill-after=5s 45s \
@@ -70,6 +116,10 @@ except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
 raise SystemExit(0 if healthy else 1)
 PY
 }
+
+# Storage pressure previously left the process healthy but scheduling blocked.
+# Run bounded maintenance independently of code updates and heartbeat recovery.
+maintain_storage
 
 # The unprivileged control panel can request only this fixed operation. The
 # validator checks ownership, permissions, schema and age, consumes the file,
