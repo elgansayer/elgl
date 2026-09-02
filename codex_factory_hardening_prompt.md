@@ -21,7 +21,7 @@ The canonical autonomous development system is under:
 - `config/systemd`
 - `docs/factory`
 
-GitHub Actions are CI and final merge gates only. They must not become a second autonomous issue resolver or duplicate reviewer swarm.
+GitHub Actions are CI and final merge gates only.
 
 Read the repository's `AGENTS.md` before making changes and follow it exactly.
 
@@ -743,13 +743,10 @@ Search for:
 - existing labels,
 - existing reviewer phases,
 - existing quality checks,
-- retired swarm infrastructure,
 - duplicate prompt files,
 - duplicate pipeline implementations.
 
 Do not recreate existing functionality under a new filename.
-
-Do not restore the old GitHub Actions issue resolver/reviewer swarm.
 
 If documentation describes a historical system that is no longer active, update or clearly mark it historical.
 
@@ -1048,7 +1045,6 @@ The hardening work is complete only if all of the following are true.
 Do not do any of the following.
 
 - Do not create a second autonomous issue resolver.
-- Do not restore a retired GitHub Actions AI swarm.
 - Do not create a second PR reviewer system.
 - Do not add hidden backdoors around `factory-ready`.
 - Do not make the gate pass by deleting tests.
