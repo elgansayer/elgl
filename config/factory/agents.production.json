@@ -84,7 +84,7 @@
       "phase_models": {
         "planning": "github-copilot/claude-opus-5",
         "architecture": "github-copilot/claude-opus-5",
-        "security_review": "github-copilot/claude-opus-5",
+        "security_review": "github-copilot/claude-sonnet-5",
         "implementation": "github-copilot/claude-sonnet-5",
         "quality_repair": "github-copilot/claude-haiku-4.5",
         "code_review": "github-copilot/claude-haiku-4.5",
