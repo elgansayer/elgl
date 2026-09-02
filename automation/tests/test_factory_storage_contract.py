@@ -82,9 +82,6 @@ def test_daily_update_atomically_refreshes_runtime_watchdog() -> None:
 
     assert "install_runtime_script()" in updater
     assert 'mv -fT -- "$temporary" "$destination"' in updater
-    assert (
-        '"$REPOSITORY/config/systemd/hellotalk-factory-watchdog.sh"'
-        in updater
-    )
+    assert '"$REPOSITORY/config/systemd/hellotalk-factory-watchdog.sh"' in updater
     assert '"$RUNTIME_ROOT/hellotalk-factory-watchdog.sh"' in updater
     assert '"$REPOSITORY/config/systemd/hellotalk-factory-update.sh"' in updater
