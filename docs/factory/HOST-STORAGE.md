@@ -132,9 +132,8 @@ Provider authentication and history are durable writable mounts by design. They
 must not be deleted as if they were generic caches. The structural fix is to
 move their normal paths off the non-resizable root filesystem.
 
-The relocation command now defaults to the already-attached Factory secondary
-volume, `/mnt/HC_Volume_106574422`, rather than waiting for a separate unattached
-device:
+The relocation command uses the pre-staged **dedicated provider-state volume**
+`HC_Volume_106720613` at `/mnt/HC_Volume_106720613`:
 
 ```bash
 sudo scripts/relocate-home-cache-to-second-disk.sh
@@ -147,10 +146,17 @@ was running, each copy is verified with an rsync checksum dry run, bind mounts
 are persisted in `/etc/fstab`, ownership is restored, and the service returns to
 its prior running/stopped state. Credentials and histories are moved intact.
 
-A custom disk is still supported by setting both
-`RELOCATE_CACHE_MOUNT_POINT` and `RELOCATE_CACHE_DEVICE_BY_ID`. An unformatted
-explicitly configured device is formatted only during `--apply`; a mounted
-default volume never requires a block-device argument.
+Attach `HC_Volume_106720613` before `--apply`; the script reports a clear error
+without modifying the host while it is absent. A custom disk is supported by
+setting both `RELOCATE_CACHE_MOUNT_POINT` and `RELOCATE_CACHE_DEVICE_BY_ID`. An
+unformatted configured device is formatted only during `--apply`; an already
+mounted volume is never reformatted.
+
+Do not point this at `/mnt/HC_Volume_106574422`, which backs Factory state and
+rootless Podman. Provider-native histories have no safe generic retention API;
+placing them there would move, rather than remove, the unbounded pressure that
+can block scheduling. The dedicated volume isolates that failure domain and can
+be expanded without growing the boot filesystem.
 
 ## Diagnosis
 
