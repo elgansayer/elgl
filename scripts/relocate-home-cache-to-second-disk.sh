@@ -1,51 +1,54 @@
 #!/usr/bin/env bash
-# Move growth-prone CLI tool caches under the factory operator's home
-# directory off the root filesystem and onto a second disk via bind mounts.
-#
-# Root cannot be resized on this host (cloud provider only allows attaching
-# new volumes, not growing the boot disk), so every byte these caches grow
-# is permanent pressure against minimum_free_disk_gib's root check - the
-# same class of incident that paused scheduling for hours twice already
-# (see automation/openhands_factory/recovery_retention.py and the daily
-# self-update least-privilege fix). Moving them off root is the structural
-# fix; recovery_dir pruning and uv cache prune only slow the growth.
-#
-# Idempotent: safe to re-run. Directories already bind-mounted from the
-# target disk are left alone. Requires the second disk's block device to
-# already be attached (this only formats/mounts/migrates - it does not
-# attach cloud storage).
+# Move growth-prone subscription-agent and tool state off the non-resizable
+# root filesystem while preserving every provider's normal path and ownership.
 set -euo pipefail
 
-FACTORY_USER=dev
-FACTORY_HOME=/home/dev
-SERVICE=hellotalk-factory.service
-DEVICE_BY_ID=${RELOCATE_CACHE_DEVICE_BY_ID:-/dev/disk/by-id/scsi-0HC_Volume_106720613}
-MOUNT_POINT=${RELOCATE_CACHE_MOUNT_POINT:-/mnt/HC_Volume_106720613}
-CACHE_ROOT="$MOUNT_POINT/dev-home-cache"
+FACTORY_USER=${RELOCATE_CACHE_USER:-dev}
+FACTORY_HOME=${RELOCATE_CACHE_HOME:-/home/dev}
+SERVICE=${RELOCATE_CACHE_SERVICE:-hellotalk-factory.service}
+# The Factory state/log volume is already attached and mounted in production.
+# It is a usable default now that recovery archives are independently bounded.
+MOUNT_POINT=${RELOCATE_CACHE_MOUNT_POINT:-/mnt/HC_Volume_106574422}
+DEVICE_BY_ID=${RELOCATE_CACHE_DEVICE_BY_ID:-}
+CACHE_ROOT=${RELOCATE_CACHE_ROOT:-$MOUNT_POINT/provider-home}
 APPLY=false
+SERVICE_WAS_ACTIVE=false
+MIGRATION_STARTED=false
+MIGRATION_SUCCEEDED=false
 
-# Every one of these has been observed growing without bound from routine
-# multi-provider agent usage (.gemini, .pi, .codex, .npm, .opencode) or from
-# tooling that writes into $HOME regardless of which disk is under it (.cache,
-# .local via uv/pip). .config is included because opencode and gh both keep
-# non-trivial state there.
-RELOCATABLE_DIRECTORIES=(.cache .local .gemini .pi .codex .npm .opencode .config)
+# These paths contain provider credentials/history or reproducible tool caches
+# known to grow during continuous multi-provider operation. Bind mounts keep the
+# original CLI paths stable. They are migrated, never pruned as opaque data.
+RELOCATABLE_DIRECTORIES=(
+  .cache
+  .local
+  .gemini
+  .pi
+  .codex
+  .claude
+  .npm
+  .npm-global
+  .opencode
+  .config
+)
 
 usage() {
-  cat <<'EOF'
+  cat <<'USAGE'
 Usage: relocate-home-cache-to-second-disk.sh [--apply]
 
-Without --apply, reports whether the target device is attached, whether it's
-already formatted/mounted, and which of the relocatable directories still
-live on root vs. are already bind-mounted from the second disk.
+Without --apply, reports the mounted backing filesystem and which growth-prone
+provider/tool directories still consume root storage.
 
-With --apply (must run as root): formats the device if unformatted, mounts
-it, stops the factory service, migrates any directory still on root to the
-second disk with rsync, replaces it with an empty directory, adds a bind
-mount to /etc/fstab, mounts the bind, restores dev:dev ownership, and
-restarts the factory service. Each directory is handled independently and
-skipped if already relocated, so a partial prior run is safe to resume.
-EOF
+With --apply (must run as root), migrates each path to the already-mounted
+secondary volume, verifies the copy with a dry-run checksum comparison, creates
+an idempotent bind mount, restores ownership, and returns the Factory service to
+its prior running/stopped state.
+
+The default target is /mnt/HC_Volume_106574422, the existing Factory secondary
+volume. To prepare a different unformatted attached disk, set both
+RELOCATE_CACHE_MOUNT_POINT and RELOCATE_CACHE_DEVICE_BY_ID; the latter is never
+required or formatted when the mount point is already active.
+USAGE
 }
 
 for argument in "$@"; do
@@ -56,34 +59,52 @@ for argument in "$@"; do
   esac
 done
 
-log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] relocate-cache: $*"; }
+log() { printf '[%s] relocate-provider-home: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 
-if [ ! -e "$DEVICE_BY_ID" ]; then
-  echo "Device not attached: $DEVICE_BY_ID" >&2
-  echo "Attach the second disk first (cloud provider console), then re-run." >&2
-  exit 1
-fi
+source_for() {
+  findmnt -no SOURCE -T "$1" 2>/dev/null || printf 'unmounted'
+}
 
 report_status() {
-  log "Device present: $DEVICE_BY_ID -> $(readlink -f "$DEVICE_BY_ID")"
+  local directory size source target
   if mountpoint -q "$MOUNT_POINT" 2>/dev/null; then
-    log "Mounted at $MOUNT_POINT"
+    log "Secondary volume mounted at $MOUNT_POINT ($(source_for "$MOUNT_POINT"))"
     df -h "$MOUNT_POINT"
   else
-    log "Not yet mounted at $MOUNT_POINT"
+    log "Secondary volume is not mounted at $MOUNT_POINT"
+    if [ -n "$DEVICE_BY_ID" ]; then
+      if [ -e "$DEVICE_BY_ID" ]; then
+        log "Configured device is present: $DEVICE_BY_ID -> $(readlink -f "$DEVICE_BY_ID")"
+      else
+        log "Configured device is absent: $DEVICE_BY_ID"
+      fi
+    fi
   fi
+
   for directory in "${RELOCATABLE_DIRECTORIES[@]}"; do
     target="$FACTORY_HOME/$directory"
     if mountpoint -q "$target" 2>/dev/null; then
-      log "$target: already relocated (bind mount active)"
+      log "$target: relocated ($(source_for "$target"))"
     elif [ -e "$target" ]; then
-      size=$(du -sh "$target" 2>/dev/null | cut -f1 || echo '?')
-      log "$target: still on root ($size)"
+      size=$(du -sh "$target" 2>/dev/null | awk '{print $1}' || printf '?')
+      source=$(source_for "$target")
+      log "$target: not bind-mounted ($size on $source)"
     else
-      log "$target: does not exist yet"
+      log "$target: absent"
     fi
   done
 }
+
+restore_service_on_failure() {
+  if [ "$MIGRATION_STARTED" = true ] && \
+    [ "$MIGRATION_SUCCEEDED" = false ] && \
+    [ "$SERVICE_WAS_ACTIVE" = true ]; then
+    log 'Migration failed; restoring the previously running Factory service'
+    systemctl reset-failed "$SERVICE" || true
+    systemctl start "$SERVICE" || true
+  fi
+}
+trap restore_service_on_failure EXIT
 
 if [ "$APPLY" != true ]; then
   report_status
@@ -94,18 +115,40 @@ if [ "$(id -u)" -ne 0 ]; then
   echo 'Run --apply with sudo.' >&2
   exit 1
 fi
-
-if ! blkid "$DEVICE_BY_ID" >/dev/null 2>&1; then
-  log "Formatting $DEVICE_BY_ID as ext4 (currently unformatted)"
-  mkfs.ext4 -q "$DEVICE_BY_ID"
+if ! id "$FACTORY_USER" >/dev/null 2>&1; then
+  echo "Factory user does not exist: $FACTORY_USER" >&2
+  exit 1
 fi
 
-mkdir -p "$MOUNT_POINT"
 if ! mountpoint -q "$MOUNT_POINT"; then
-  log "Mounting $MOUNT_POINT"
+  if [ -z "$DEVICE_BY_ID" ] || [ ! -e "$DEVICE_BY_ID" ]; then
+    echo "Secondary volume is not mounted at $MOUNT_POINT." >&2
+    echo 'Mount it first, or configure an attached RELOCATE_CACHE_DEVICE_BY_ID.' >&2
+    exit 1
+  fi
+  if ! blkid "$DEVICE_BY_ID" >/dev/null 2>&1; then
+    log "Formatting explicitly configured device $DEVICE_BY_ID as ext4"
+    mkfs.ext4 -q "$DEVICE_BY_ID"
+  fi
+  mkdir -p "$MOUNT_POINT"
+  fstab_source=$(awk -v target="$MOUNT_POINT" '$2 == target {print $1; exit}' /etc/fstab)
+  if [ -z "$fstab_source" ]; then
+    device_uuid=$(blkid -s UUID -o value "$DEVICE_BY_ID")
+    if [ -z "$device_uuid" ]; then
+      echo "Could not read a filesystem UUID from $DEVICE_BY_ID" >&2
+      exit 1
+    fi
+    printf 'UUID=%s %s ext4 defaults,nofail 0 2\n' "$device_uuid" "$MOUNT_POINT" >> /etc/fstab
+  fi
   mount "$MOUNT_POINT"
 fi
-mkdir -p "$CACHE_ROOT"
+
+mount_source=$(source_for "$MOUNT_POINT")
+if [ "$mount_source" = unmounted ]; then
+  echo "Could not resolve a mounted source for $MOUNT_POINT" >&2
+  exit 1
+fi
+install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$CACHE_ROOT"
 
 pending=()
 for directory in "${RELOCATABLE_DIRECTORIES[@]}"; do
@@ -117,40 +160,63 @@ for directory in "${RELOCATABLE_DIRECTORIES[@]}"; do
 done
 
 if [ "${#pending[@]}" -eq 0 ]; then
-  log "Nothing to relocate - every directory is already bind-mounted"
+  log 'Nothing to relocate; every existing provider/tool directory is bind-mounted'
+  MIGRATION_SUCCEEDED=true
+  report_status
   exit 0
 fi
 
-log "Stopping factory service for a consistent migration"
-systemctl stop "$SERVICE" || true
+if systemctl is-active --quiet "$SERVICE"; then
+  SERVICE_WAS_ACTIVE=true
+  log 'Stopping Factory service for a consistent provider-state migration'
+  systemctl stop "$SERVICE"
+fi
+MIGRATION_STARTED=true
 
 for directory in "${pending[@]}"; do
   target="$FACTORY_HOME/$directory"
   destination="$CACHE_ROOT/$directory"
-  mkdir -p "$destination"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$destination"
   if [ -e "$target" ]; then
-    log "Migrating $target -> $destination"
-    rsync -a --delete "$target/" "$destination/"
-    rm -rf "$target"
+    log "Copying $target -> $destination"
+    rsync -aHAX --delete "$target/" "$destination/"
+    # A checksum dry run must exit cleanly and report no difference before the
+    # root copy moves. Keep command failure distinct from content mismatch.
+    verification=$(mktemp)
+    if ! rsync -aHAXnci --delete "$target/" "$destination/" > "$verification"; then
+      rm -f "$verification"
+      echo "Verification command failed while migrating $target" >&2
+      exit 1
+    fi
+    if [ -s "$verification" ]; then
+      rm -f "$verification"
+      echo "Verification found differences while migrating $target" >&2
+      exit 1
+    fi
+    rm -f "$verification"
+    rm -rf --one-file-system -- "${target:?}"
   fi
-  mkdir -p "$target"
-  chown "$FACTORY_USER:$FACTORY_USER" "$destination" "$target"
+  install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$target"
+  chown -R "$FACTORY_USER:$FACTORY_USER" "$destination"
 
-  fstab_line="$destination $target none bind,nofail 0 0"
+  fstab_line="$destination $target none bind,nofail,x-systemd.requires-mounts-for=$MOUNT_POINT 0 0"
   if ! grep -qF "$destination $target " /etc/fstab; then
-    echo "$fstab_line" >> /etc/fstab
-    log "Added fstab entry: $fstab_line"
+    printf '%s\n' "$fstab_line" >> /etc/fstab
+    log "Added persistent bind mount for $target"
   fi
   mount "$target"
+  if ! mountpoint -q "$target"; then
+    echo "Bind mount did not activate: $target" >&2
+    exit 1
+  fi
 done
 
-log "Restoring dev:dev ownership under relocated directories"
-for directory in "${pending[@]}"; do
-  chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_HOME/$directory"
-done
-
-log "Starting factory service"
-systemctl reset-failed "$SERVICE" || true
-systemctl start "$SERVICE"
+if [ "$SERVICE_WAS_ACTIVE" = true ]; then
+  log 'Restarting Factory service'
+  systemctl reset-failed "$SERVICE" || true
+  systemctl start "$SERVICE"
+fi
+MIGRATION_SUCCEEDED=true
 
 report_status
+log 'Provider/tool state relocation completed without deleting history or credentials'
