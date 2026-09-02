@@ -6,11 +6,12 @@ set -euo pipefail
 FACTORY_USER=${RELOCATE_CACHE_USER:-dev}
 FACTORY_HOME=${RELOCATE_CACHE_HOME:-/home/dev}
 SERVICE=${RELOCATE_CACHE_SERVICE:-hellotalk-factory.service}
-# The Factory state/log volume is already attached and mounted in production.
-# It is a usable default now that recovery archives are independently bounded.
-MOUNT_POINT=${RELOCATE_CACHE_MOUNT_POINT:-/mnt/HC_Volume_106574422}
-DEVICE_BY_ID=${RELOCATE_CACHE_DEVICE_BY_ID:-}
-CACHE_ROOT=${RELOCATE_CACHE_ROOT:-$MOUNT_POINT/provider-home}
+# Provider-native history is intentionally placed on its own expandable volume.
+# Reusing the Factory state volume would merely move an unbounded growth source
+# onto the filesystem whose reserve gates scheduling.
+DEVICE_BY_ID=${RELOCATE_CACHE_DEVICE_BY_ID:-/dev/disk/by-id/scsi-0HC_Volume_106720613}
+MOUNT_POINT=${RELOCATE_CACHE_MOUNT_POINT:-/mnt/HC_Volume_106720613}
+CACHE_ROOT=${RELOCATE_CACHE_ROOT:-$MOUNT_POINT/home-dev}
 APPLY=false
 SERVICE_WAS_ACTIVE=false
 MIGRATION_STARTED=false
@@ -39,15 +40,16 @@ Usage: relocate-home-cache-to-second-disk.sh [--apply]
 Without --apply, reports the mounted backing filesystem and which growth-prone
 provider/tool directories still consume root storage.
 
-With --apply (must run as root), migrates each path to the already-mounted
+With --apply (must run as root), migrates each path to the dedicated
 secondary volume, verifies the copy with a dry-run checksum comparison, creates
 an idempotent bind mount, restores ownership, and returns the Factory service to
 its prior running/stopped state.
 
-The default target is /mnt/HC_Volume_106574422, the existing Factory secondary
-volume. To prepare a different unformatted attached disk, set both
-RELOCATE_CACHE_MOUNT_POINT and RELOCATE_CACHE_DEVICE_BY_ID; the latter is never
-required or formatted when the mount point is already active.
+The default target is the pre-staged dedicated provider-state volume
+HC_Volume_106720613. Attach that volume first. To use another disk, set both
+RELOCATE_CACHE_MOUNT_POINT and RELOCATE_CACHE_DEVICE_BY_ID. A configured device
+is formatted only when the target is not already mounted and it has no existing
+filesystem signature.
 USAGE
 }
 
@@ -176,8 +178,18 @@ MIGRATION_STARTED=true
 for directory in "${pending[@]}"; do
   target="$FACTORY_HOME/$directory"
   destination="$CACHE_ROOT/$directory"
+  backup="${target}.factory-relocation-backup"
+  had_source=false
   install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$destination"
-  if [ -e "$target" ]; then
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    if [ -e "$backup" ] || [ -L "$backup" ]; then
+      echo "Refusing to overwrite an existing migration backup: $backup" >&2
+      exit 1
+    fi
+    if [ ! -d "$target" ]; then
+      echo "Expected a provider directory, not a non-directory path: $target" >&2
+      exit 1
+    fi
     log "Copying $target -> $destination"
     rsync -aHAX --delete "$target/" "$destination/"
     # A checksum dry run must exit cleanly and report no difference before the
@@ -194,20 +206,48 @@ for directory in "${pending[@]}"; do
       exit 1
     fi
     rm -f "$verification"
-    rm -rf --one-file-system -- "${target:?}"
+    # Keep the verified root copy available until the bind mount and its
+    # persistent fstab entry are both active. A failed mount can therefore be
+    # rolled back without ever restarting the daemon with an empty auth path.
+    mv -- "$target" "$backup"
+    had_source=true
   fi
   install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$target"
   chown -R "$FACTORY_USER:$FACTORY_USER" "$destination"
 
+  if ! mount --bind "$destination" "$target" || ! mountpoint -q "$target"; then
+    umount "$target" 2>/dev/null || true
+    rmdir "$target" 2>/dev/null || true
+    if [ "$had_source" = true ]; then
+      mv -- "$backup" "$target"
+    fi
+    echo "Bind mount did not activate; restored original path: $target" >&2
+    exit 1
+  fi
+
   fstab_line="$destination $target none bind,nofail,x-systemd.requires-mounts-for=$MOUNT_POINT 0 0"
   if ! grep -qF "$destination $target " /etc/fstab; then
-    printf '%s\n' "$fstab_line" >> /etc/fstab
+    fstab_temporary=$(mktemp /etc/fstab.factory.XXXXXX)
+    if ! cp --preserve=all /etc/fstab "$fstab_temporary" || \
+      ! printf '%s\n' "$fstab_line" >> "$fstab_temporary" || \
+      ! mv -fT -- "$fstab_temporary" /etc/fstab; then
+      rm -f "$fstab_temporary"
+      if umount "$target"; then
+        rmdir "$target" 2>/dev/null || true
+        if [ "$had_source" = true ]; then
+          mv -- "$backup" "$target"
+        fi
+      fi
+      echo "Could not persist bind mount; restored original path where possible: $target" >&2
+      exit 1
+    fi
     log "Added persistent bind mount for $target"
   fi
-  mount "$target"
-  if ! mountpoint -q "$target"; then
-    echo "Bind mount did not activate: $target" >&2
-    exit 1
+
+  # Only contract the root copy after both the live and boot-time mounts are
+  # proven. If deletion itself fails, the safe duplicate remains for diagnosis.
+  if [ "$had_source" = true ]; then
+    rm -rf --one-file-system -- "${backup:?}"
   fi
 done
 
