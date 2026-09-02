@@ -7,7 +7,10 @@ FACTORY_PYTHON=/opt/hellotalk-factory/venv/bin/python
 FACTORY_USER=dev
 HEARTBEAT=/var/lib/hellotalk-factory/daemon.json
 CONTROL_REQUEST=/var/lib/hellotalk-factory/control_request.json
-STORAGE_MAINTENANCE=/var/lib/hellotalk-factory/repository/scripts/maintain-factory-host-storage.sh
+# The root-owned updater materialises maintenance from an immutable Git blob,
+# then executes the root-owned copy. Never execute a script directly from the
+# Factory-user-writable repository at root privilege.
+STORAGE_MAINTENANCE_RUNNER=/opt/hellotalk-factory/hellotalk-factory-update.sh
 STORAGE_STAMP=/run/hellotalk-factory-storage-maintenance.stamp
 MAX_TASK_MINUTES=${FACTORY_MAX_TASK_MINUTES:-120}
 RESTART_GRACE_SECONDS=${FACTORY_WATCHDOG_RESTART_GRACE_SECONDS:-30}
@@ -34,6 +37,11 @@ maintain_storage() {
     read -r last < "$STORAGE_STAMP" || last=0
     positive_integer "$last" || last=0
   fi
+  # A future stamp can otherwise suppress cleanup indefinitely after a clock
+  # correction or restored /run image.
+  if [ "$last" -gt "$now" ]; then
+    last=0
+  fi
   if [ $((now - last)) -lt "$STORAGE_INTERVAL_SECONDS" ]; then
     return 0
   fi
@@ -42,8 +50,8 @@ maintain_storage() {
   if systemctl is-active --quiet hellotalk-factory-update.service; then
     return 0
   fi
-  if [ ! -x "$STORAGE_MAINTENANCE" ]; then
-    echo "factory watchdog: storage maintenance command is missing: $STORAGE_MAINTENANCE" >&2
+  if [ ! -x "$STORAGE_MAINTENANCE_RUNNER" ]; then
+    echo "factory watchdog: root-owned storage runner is missing: $STORAGE_MAINTENANCE_RUNNER" >&2
     return 0
   fi
 
@@ -51,7 +59,7 @@ maintain_storage() {
   # two-minute watchdog into a repeated root cleanup loop.
   printf '%s\n' "$now" > "$STORAGE_STAMP"
   if ! timeout --signal=TERM --kill-after=5s "${STORAGE_TIMEOUT_SECONDS}s" \
-    "$STORAGE_MAINTENANCE" --apply --prune-containers; then
+    "$STORAGE_MAINTENANCE_RUNNER" --maintenance-only; then
     echo 'factory watchdog: host storage maintenance failed' >&2
   fi
 }
