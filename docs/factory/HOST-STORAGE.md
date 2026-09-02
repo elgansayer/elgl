@@ -14,15 +14,15 @@ while scheduling was silently blocked by its disk reserve.
 The storage failures were not one bug:
 
 1. On 14 August 2026 the 50 GiB Factory volume reached 100 per cent. The live
-   host contained 540 stale worktrees and 207 recovery backups. PR #3573 later
-   fixed one worktree-retirement gap for pull requests closed while in post-PR
-   states.
-2. On 23 August, 70 recovery archives created in four days reduced free space
-   below the 5 GiB scheduling reserve. The first fix added a 72-hour age limit.
-3. On 26 August, the problem recurred inside that 72-hour window. Regenerable
-   build output made individual archives exceed 2 GiB; 19 archives occupied
-   about 24 GiB. PR #8092 excluded known build trees and moved cleanup outside
-   the storage gate.
+   host contained 540 stale worktrees and 207 recovery backups. PR #3573 fixed
+   one worktree-retirement gap for pull requests closed while in post-PR states.
+2. On 23 August 2026, 70 recovery archives created in four days reduced free
+   space below the 5 GiB scheduling reserve. The then-current 72-hour age policy
+   could not react before the burst blocked scheduling.
+3. On 26 August 2026, the problem recurred inside that 72-hour window.
+   Regenerable build output made individual archives exceed 2 GiB; 19 archives
+   occupied about 24 GiB. PR #8092 excluded known build trees and moved archive
+   cleanup outside the storage gate.
 4. Root separately reached its reserve because journald, package/browser caches,
    root-owned uv entries, and subscription-provider state accumulated under
    `/home/dev`. Observed provider/tool directories totalled about 6.8 GiB and
@@ -31,17 +31,18 @@ The storage failures were not one bug:
    and task containers use rootless Podman. Old Podman layers therefore escaped
    the cleanup path.
 
-The key design error was relying on age-only cleanup and a daily code-update job.
-A burst can fill a disk before a time-to-live expires, and maintenance must still
-run when `main` has not changed, an update fails, or scheduling is already disk
-blocked.
+PR #8784, opened on 3 September 2026, establishes the multidimensional policy in
+this document. The key design error was relying on age-only cleanup and a daily
+code-update job. A burst can fill a disk before a time-to-live expires, and
+maintenance must still run when `main` has not changed, an update fails, or
+scheduling is already disk blocked.
 
 ## Steady-state policy
 
 ### Recovery archives
 
-`automation/openhands_factory/recovery_retention.py` now applies three limits,
-in this order:
+`automation/openhands_factory/recovery_retention.py` applies three limits, in
+this order:
 
 1. delete entries older than `FACTORY_RECOVERY_RETENTION_HOURS`;
 2. delete the oldest completed archives until aggregate logical size is at or
@@ -59,15 +60,19 @@ FACTORY_RECOVERY_MAX_TOTAL_GIB=2
 FACTORY_RECOVERY_FREE_HEADROOM_GIB=1
 ```
 
-`RECOVERY.txt` is written as the final archive step and is treated as the
-completion marker. Pressure cleanup also gives new archives a ten-minute grace
-period, so it cannot race a copy still in progress. Normally one archive is
-retained. That floor is removed when the archive budget is already exceeded or
-free space is below the scheduling reserve, preventing one oversized archive
-from permanently blocking the Factory.
+`RECOVERY.txt` is written as the final archive step. Only a regular file found
+with no symlink following counts as a completion marker. Pressure cleanup also
+gives new archives a ten-minute grace period, so it cannot race a copy still in
+progress. Normally one completed archive is retained. That floor is removed
+when the archive budget is exceeded or free space is below the scheduling
+reserve, preventing one oversized archive from permanently blocking the
+Factory. Incomplete archives never satisfy or consume the completed-archive
+retention floor.
 
 Deletion errors are logged and are not reported as successful removals. Size
-walking uses `lstat()` and never follows symlinks outside the archive.
+walking uses `lstat()` and never follows symlinks outside the archive. Free space
+is re-read from the filesystem after every pressure deletion; logical file size
+is never assumed to equal released blocks.
 
 ### Live worktrees
 
@@ -82,7 +87,7 @@ heartbeat state to establish ownership first.
 
 ### Host maintenance
 
-`maintain-factory-host-storage.sh` is safe to run repeatedly. It now:
+`maintain-factory-host-storage.sh` is safe to run repeatedly. It:
 
 - takes a host-wide non-blocking lock;
 - installs and restarts journald only when its policy changed;
@@ -91,8 +96,8 @@ heartbeat state to establish ownership first.
 - skips an absent or unavailable Docker daemon without aborting the whole pass;
 - prunes Docker dangling images and bounded builder cache when Docker exists;
 - prunes the **rootless Podman** image/build-cache store used by the Factory;
-- reports root, Factory-state, container-engine, and provider-home storage in
-  read-only mode.
+- reports root, Factory-state, container-engine, and every relocated provider
+  directory, including `.claude` and `.npm-global`, in read-only mode.
 
 It deliberately never invokes `docker system prune` or `podman system prune` and
 never removes volumes, named images, stopped/running containers, provider
@@ -111,20 +116,41 @@ sudo scripts/maintain-factory-host-storage.sh --apply --prune-containers
 ```
 
 `--prune-docker` remains a compatibility alias for older deployment scripts, but
-it now covers both container engines. Docker and Podman dangling images are
-limited to objects older than seven days by default.
+it covers both container engines. Docker and Podman dangling images are limited
+to objects older than seven days during normal operation. If the backing
+filesystem falls below `FACTORY_MINIMUM_FREE_DISK_GIB` plus
+`FACTORY_STORAGE_FREE_HEADROOM_GIB`, maintenance drops only that age grace and
+removes all dangling images and persistent build cache. Named images,
+containers, and volumes remain protected.
 
-The existing two-minute health watchdog invokes this command at most hourly,
+The existing two-minute health watchdog invokes maintenance at most hourly,
 independently of the daily update service:
 
 ```dotenv
+FACTORY_STORAGE_FREE_HEADROOM_GIB=1
 FACTORY_STORAGE_MAINTENANCE_INTERVAL_SECONDS=3600
 FACTORY_STORAGE_MAINTENANCE_TIMEOUT_SECONDS=75
 ```
 
 It skips the pass while `hellotalk-factory-update.service` is active, preventing
 cleanup from overlapping a worker-image build. Maintenance failure is logged but
-does not turn a healthy daemon into a restart loop.
+does not turn a healthy daemon into a restart loop. A future-dated cadence stamp
+is rejected so a clock correction cannot suppress cleanup indefinitely.
+
+### Root execution boundary
+
+The repository checkout is writable by the unprivileged `dev` service account.
+Nothing from that working tree is executed directly as root. The watchdog calls
+the root-owned `/opt/hellotalk-factory/hellotalk-factory-update.sh` with the
+fixed `--maintenance-only` operation.
+
+The updater selects an exact verified commit, reads each runtime file through
+`git cat-file blob`, recalculates its Git blob identity, writes a temporary
+root-owned file, and atomically replaces the runtime path. The maintenance
+script, journald policy, watchdog, updater, and recorded source commit are all
+materialised this way. A dirty or replaced checkout file therefore cannot alter
+the command later executed by the root watchdog. Verification and installation
+errors propagate explicitly and prevent execution of a partial bundle.
 
 ### Provider state and caches
 
@@ -145,6 +171,15 @@ It migrates `.cache`, `.local`, `.gemini`, `.pi`, `.codex`, `.claude`, `.npm`,
 was running, each copy is verified with an rsync checksum dry run, bind mounts
 are persisted in `/etc/fstab`, ownership is restored, and the service returns to
 its prior running/stopped state. Credentials and histories are moved intact.
+
+Before modifying root data, the script compares the mounted filesystem UUID with
+the UUID of the configured `/dev/disk/by-id` device. A mount at the right path
+but backed by the wrong device is refused. The verified root copy remains at a
+`.factory-relocation-backup` path until both the live bind mount and persistent
+fstab entry succeed. If persistence fails and the live mount cannot be rolled
+back, the service deliberately remains stopped, with both the verified
+destination and backup preserved, rather than restarting into an empty or
+non-persistent authentication path.
 
 Attach `HC_Volume_106720613` before `--apply`; the script reports a clear error
 without modifying the host while it is absent. A custom disk is supported by
