@@ -296,9 +296,7 @@ def test_pressure_does_not_delete_an_incomplete_archive(
     assert archive.exists()
 
 
-def test_failed_deletion_is_not_reported(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_failed_deletion_is_not_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     recovery_dir = tmp_path / "recovery"
     now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
     stale = recovery_dir / "stale"
