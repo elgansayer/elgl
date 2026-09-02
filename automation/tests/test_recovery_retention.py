@@ -125,9 +125,15 @@ def test_low_disk_pressure_restores_headroom_before_ttl(
     newest = recovery_dir / "newest"
     _touch_archive(oldest, timedelta(hours=3), now, payload=b"x" * 128)
     _touch_archive(newest, timedelta(hours=2), now, payload=b"x" * 128)
+    usage = iter(
+        (
+            DiskUsage(total=10_000, used=9_950, free=50),
+            DiskUsage(total=10_000, used=9_800, free=200),
+        )
+    )
     monkeypatch.setattr(
         "openhands_factory.recovery_retention.shutil.disk_usage",
-        lambda path: DiskUsage(total=10_000, used=9_950, free=50),
+        lambda path: next(usage),
     )
 
     removed = prune_recovery_archives(
@@ -154,11 +160,17 @@ def test_age_reclamation_is_not_double_counted_as_free_space(
     fresh = recovery_dir / "fresh"
     _touch_archive(stale, timedelta(hours=100), now, payload=b"x" * 128)
     _touch_archive(fresh, timedelta(hours=2), now, payload=b"x" * 128)
+    usage = iter(
+        (
+            # This first value is measured after stale was deleted and therefore
+            # already includes its reclaimed blocks.
+            DiskUsage(total=10_000, used=9_950, free=50),
+            DiskUsage(total=10_000, used=9_800, free=200),
+        )
+    )
     monkeypatch.setattr(
         "openhands_factory.recovery_retention.shutil.disk_usage",
-        # This value is measured after stale was deleted and therefore already
-        # includes its reclaimed blocks.
-        lambda path: DiskUsage(total=10_000, used=9_950, free=50),
+        lambda path: next(usage),
     )
 
     removed = prune_recovery_archives(
@@ -184,9 +196,15 @@ def test_critical_pressure_can_remove_the_last_archive(
     now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
     archive = recovery_dir / "only"
     _touch_archive(archive, timedelta(hours=2), now, payload=b"x" * 128)
+    usage = iter(
+        (
+            DiskUsage(total=10_000, used=9_990, free=10),
+            DiskUsage(total=10_000, used=9_800, free=200),
+        )
+    )
     monkeypatch.setattr(
         "openhands_factory.recovery_retention.shutil.disk_usage",
-        lambda path: DiskUsage(total=10_000, used=9_990, free=10),
+        lambda path: next(usage),
     )
 
     removed = prune_recovery_archives(
