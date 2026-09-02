@@ -68,3 +68,16 @@ def test_storage_limits_are_visible_in_production_configuration() -> None:
     assert "FACTORY_RECOVERY_FREE_HEADROOM_GIB=1" in example
     assert "FACTORY_STORAGE_MAINTENANCE_INTERVAL_SECONDS=3600" in example
     assert "FACTORY_STORAGE_MAINTENANCE_TIMEOUT_SECONDS=75" in example
+
+
+def test_daily_update_atomically_refreshes_runtime_watchdog() -> None:
+    updater = _read("config/systemd/hellotalk-factory-update.sh")
+
+    assert "install_runtime_script()" in updater
+    assert 'mv -fT -- "$temporary" "$destination"' in updater
+    assert (
+        '"$REPOSITORY/config/systemd/hellotalk-factory-watchdog.sh"'
+        in updater
+    )
+    assert '"$RUNTIME_ROOT/hellotalk-factory-watchdog.sh"' in updater
+    assert '"$REPOSITORY/config/systemd/hellotalk-factory-update.sh"' in updater
