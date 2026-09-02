@@ -255,10 +255,7 @@ def test_relocation_refuses_a_different_mounted_device(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "is not" in result.stderr
-    assert (
-        fixture.target.joinpath("oauth.json").read_text(encoding="utf-8")
-        == "credential"
-    )
+    assert fixture.target.joinpath("oauth.json").read_text(encoding="utf-8") == "credential"
     assert not fixture.destination.exists()
     assert not any(action.startswith("stop ") for action in _service_actions(fixture))
 
@@ -269,10 +266,7 @@ def test_relocation_persists_mount_before_removing_the_root_copy(tmp_path: Path)
     result = _run(fixture)
 
     assert result.returncode == 0, result.stderr
-    assert (
-        fixture.destination.joinpath("oauth.json").read_text(encoding="utf-8")
-        == "credential"
-    )
+    assert fixture.destination.joinpath("oauth.json").read_text(encoding="utf-8") == "credential"
     assert fixture.mount_state.exists()
     assert not fixture.target.with_name(".gemini.factory-relocation-backup").exists()
     fstab = fixture.fstab.read_text(encoding="utf-8")
@@ -294,10 +288,7 @@ def test_failed_persistence_with_busy_mount_leaves_factory_stopped(tmp_path: Pat
     assert "leaving Factory stopped" in result.stdout
     backup = fixture.target.with_name(".gemini.factory-relocation-backup")
     assert backup.joinpath("oauth.json").read_text(encoding="utf-8") == "credential"
-    assert (
-        fixture.destination.joinpath("oauth.json").read_text(encoding="utf-8")
-        == "credential"
-    )
+    assert fixture.destination.joinpath("oauth.json").read_text(encoding="utf-8") == "credential"
     actions = _service_actions(fixture)
     assert any(action.startswith("stop ") for action in actions)
     assert not any(action.startswith("start ") for action in actions)
