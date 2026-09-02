@@ -12,8 +12,11 @@ SERVICE=${RELOCATE_CACHE_SERVICE:-hellotalk-factory.service}
 DEVICE_BY_ID=${RELOCATE_CACHE_DEVICE_BY_ID:-/dev/disk/by-id/scsi-0HC_Volume_106720613}
 MOUNT_POINT=${RELOCATE_CACHE_MOUNT_POINT:-/mnt/HC_Volume_106720613}
 CACHE_ROOT=${RELOCATE_CACHE_ROOT:-$MOUNT_POINT/home-dev}
+FSTAB_PATH=${RELOCATE_CACHE_FSTAB_PATH:-/etc/fstab}
+LOCK_FILE=${RELOCATE_CACHE_LOCK_FILE:-/run/lock/hellotalk-factory-provider-relocation.lock}
 APPLY=false
 SERVICE_WAS_ACTIVE=false
+SERVICE_RESTART_SAFE=true
 MIGRATION_STARTED=false
 MIGRATION_SUCCEEDED=false
 
@@ -32,6 +35,9 @@ RELOCATABLE_DIRECTORIES=(
   .opencode
   .config
 )
+if [ -n "${RELOCATE_CACHE_DIRECTORIES:-}" ]; then
+  read -r -a RELOCATABLE_DIRECTORIES <<< "$RELOCATE_CACHE_DIRECTORIES"
+fi
 
 usage() {
   cat <<'USAGE'
@@ -40,10 +46,10 @@ Usage: relocate-home-cache-to-second-disk.sh [--apply]
 Without --apply, reports the mounted backing filesystem and which growth-prone
 provider/tool directories still consume root storage.
 
-With --apply (must run as root), migrates each path to the dedicated
-secondary volume, verifies the copy with a dry-run checksum comparison, creates
-an idempotent bind mount, restores ownership, and returns the Factory service to
-its prior running/stopped state.
+With --apply (must run as root), verifies the mounted filesystem is the
+configured dedicated device, migrates each path, checksum-verifies the copy,
+creates an idempotent bind mount, persists it, restores ownership, and returns
+the Factory service to its prior running/stopped state.
 
 The default target is the pre-staged dedicated provider-state volume
 HC_Volume_106720613. Attach that volume first. To use another disk, set both
@@ -67,19 +73,59 @@ source_for() {
   findmnt -no SOURCE -T "$1" 2>/dev/null || printf 'unmounted'
 }
 
+device_uuid() {
+  blkid -s UUID -o value "$DEVICE_BY_ID" 2>/dev/null
+}
+
+mounted_uuid() {
+  findmnt -n -o UUID -T "$MOUNT_POINT" 2>/dev/null
+}
+
+verify_dedicated_mount() {
+  local expected mounted
+  if [ ! -e "$DEVICE_BY_ID" ]; then
+    echo "Configured provider-state device is absent: $DEVICE_BY_ID" >&2
+    return 1
+  fi
+  expected=$(device_uuid) || true
+  mounted=$(mounted_uuid) || true
+  if [ -z "$expected" ]; then
+    echo "Configured provider-state device has no readable UUID: $DEVICE_BY_ID" >&2
+    return 1
+  fi
+  if [ -z "$mounted" ] || [ "$mounted" != "$expected" ]; then
+    echo "Refusing provider-state migration: $MOUNT_POINT is not $DEVICE_BY_ID." >&2
+    echo "Expected filesystem UUID $expected; mounted UUID is ${mounted:-unknown}." >&2
+    return 1
+  fi
+}
+
+append_fstab_line() {
+  local line=$1
+  local temporary
+  temporary=$(mktemp "${FSTAB_PATH}.factory.XXXXXX")
+  if ! cp --preserve=all "$FSTAB_PATH" "$temporary" || \
+    ! printf '%s\n' "$line" >> "$temporary" || \
+    ! mv -fT -- "$temporary" "$FSTAB_PATH"; then
+    rm -f "$temporary"
+    return 1
+  fi
+}
+
 report_status() {
   local directory size source target
   if mountpoint -q "$MOUNT_POINT" 2>/dev/null; then
     log "Secondary volume mounted at $MOUNT_POINT ($(source_for "$MOUNT_POINT"))"
+    if ! verify_dedicated_mount; then
+      log 'WARNING: mounted provider-state volume does not match the configured device'
+    fi
     df -h "$MOUNT_POINT"
   else
     log "Secondary volume is not mounted at $MOUNT_POINT"
-    if [ -n "$DEVICE_BY_ID" ]; then
-      if [ -e "$DEVICE_BY_ID" ]; then
-        log "Configured device is present: $DEVICE_BY_ID -> $(readlink -f "$DEVICE_BY_ID")"
-      else
-        log "Configured device is absent: $DEVICE_BY_ID"
-      fi
+    if [ -e "$DEVICE_BY_ID" ]; then
+      log "Configured device is present: $DEVICE_BY_ID -> $(readlink -f "$DEVICE_BY_ID")"
+    else
+      log "Configured device is absent: $DEVICE_BY_ID"
     fi
   fi
 
@@ -101,12 +147,36 @@ restore_service_on_failure() {
   if [ "$MIGRATION_STARTED" = true ] && \
     [ "$MIGRATION_SUCCEEDED" = false ] && \
     [ "$SERVICE_WAS_ACTIVE" = true ]; then
-    log 'Migration failed; restoring the previously running Factory service'
-    systemctl reset-failed "$SERVICE" || true
-    systemctl start "$SERVICE" || true
+    if [ "$SERVICE_RESTART_SAFE" = true ]; then
+      log 'Migration failed; restoring the previously running Factory service'
+      systemctl reset-failed "$SERVICE" || true
+      systemctl start "$SERVICE" || true
+    else
+      log 'Migration failed in an uncommitted mount transition; leaving Factory stopped'
+      log 'Provider data remains in the live bind mount or .factory-relocation-backup'
+    fi
   fi
 }
 trap restore_service_on_failure EXIT
+
+rollback_target() {
+  local target=$1
+  local backup=$2
+  local had_source=$3
+
+  if mountpoint -q "$target" 2>/dev/null; then
+    if ! umount "$target"; then
+      return 1
+    fi
+  fi
+  rmdir "$target" 2>/dev/null || true
+  if [ "$had_source" = true ]; then
+    if ! mv -- "$backup" "$target"; then
+      return 1
+    fi
+  fi
+  return 0
+}
 
 if [ "$APPLY" != true ]; then
   report_status
@@ -121,30 +191,61 @@ if ! id "$FACTORY_USER" >/dev/null 2>&1; then
   echo "Factory user does not exist: $FACTORY_USER" >&2
   exit 1
 fi
+if [ ! -r "$FSTAB_PATH" ]; then
+  echo "Missing readable fstab: $FSTAB_PATH" >&2
+  exit 1
+fi
+
+install -d -o root -g root -m 0755 "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  log 'Another provider-state relocation is active; refusing to overlap it'
+  exit 1
+fi
 
 if ! mountpoint -q "$MOUNT_POINT"; then
-  if [ -z "$DEVICE_BY_ID" ] || [ ! -e "$DEVICE_BY_ID" ]; then
+  if [ ! -e "$DEVICE_BY_ID" ]; then
     echo "Secondary volume is not mounted at $MOUNT_POINT." >&2
-    echo 'Mount it first, or configure an attached RELOCATE_CACHE_DEVICE_BY_ID.' >&2
+    echo "Configured device is absent: $DEVICE_BY_ID" >&2
     exit 1
   fi
   if ! blkid "$DEVICE_BY_ID" >/dev/null 2>&1; then
     log "Formatting explicitly configured device $DEVICE_BY_ID as ext4"
     mkfs.ext4 -q "$DEVICE_BY_ID"
   fi
+  filesystem_type=$(blkid -s TYPE -o value "$DEVICE_BY_ID")
+  device_filesystem_uuid=$(device_uuid)
+  if [ -z "$filesystem_type" ] || [ -z "$device_filesystem_uuid" ]; then
+    echo "Could not identify the filesystem on $DEVICE_BY_ID" >&2
+    exit 1
+  fi
   mkdir -p "$MOUNT_POINT"
-  fstab_source=$(awk -v target="$MOUNT_POINT" '$2 == target {print $1; exit}' /etc/fstab)
+  fstab_source=$(awk -v target="$MOUNT_POINT" '$2 == target {print $1; exit}' "$FSTAB_PATH")
+  added_volume_fstab=false
+  if [ -n "$fstab_source" ]; then
+    mount "$MOUNT_POINT"
+  else
+    mount "$DEVICE_BY_ID" "$MOUNT_POINT"
+  fi
+  if ! verify_dedicated_mount; then
+    umount "$MOUNT_POINT" 2>/dev/null || true
+    exit 1
+  fi
   if [ -z "$fstab_source" ]; then
-    device_uuid=$(blkid -s UUID -o value "$DEVICE_BY_ID")
-    if [ -z "$device_uuid" ]; then
-      echo "Could not read a filesystem UUID from $DEVICE_BY_ID" >&2
+    volume_fstab_line="UUID=$device_filesystem_uuid $MOUNT_POINT $filesystem_type defaults,nofail 0 2"
+    if ! append_fstab_line "$volume_fstab_line"; then
+      umount "$MOUNT_POINT" 2>/dev/null || true
+      echo "Could not persist provider-state volume mount in $FSTAB_PATH" >&2
       exit 1
     fi
-    printf 'UUID=%s %s ext4 defaults,nofail 0 2\n' "$device_uuid" "$MOUNT_POINT" >> /etc/fstab
+    added_volume_fstab=true
+    log "Added persistent volume mount for $MOUNT_POINT"
   fi
-  mount "$MOUNT_POINT"
 fi
 
+if ! verify_dedicated_mount; then
+  exit 1
+fi
 mount_source=$(source_for "$MOUNT_POINT")
 if [ "$mount_source" = unmounted ]; then
   echo "Could not resolve a mounted source for $MOUNT_POINT" >&2
@@ -162,7 +263,7 @@ for directory in "${RELOCATABLE_DIRECTORIES[@]}"; do
 done
 
 if [ "${#pending[@]}" -eq 0 ]; then
-  log 'Nothing to relocate; every existing provider/tool directory is bind-mounted'
+  log 'Nothing to relocate; every provider/tool directory is bind-mounted'
   MIGRATION_SUCCEEDED=true
   report_status
   exit 0
@@ -207,36 +308,30 @@ for directory in "${pending[@]}"; do
     fi
     rm -f "$verification"
     # Keep the verified root copy available until the bind mount and its
-    # persistent fstab entry are both active. A failed mount can therefore be
-    # rolled back without ever restarting the daemon with an empty auth path.
+    # persistent fstab entry are both active. A failed transition can therefore
+    # be rolled back without restarting the daemon with an empty auth path.
+    SERVICE_RESTART_SAFE=false
     mv -- "$target" "$backup"
     had_source=true
+  else
+    SERVICE_RESTART_SAFE=false
   fi
   install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0700 "$target"
   chown -R "$FACTORY_USER:$FACTORY_USER" "$destination"
 
   if ! mount --bind "$destination" "$target" || ! mountpoint -q "$target"; then
-    umount "$target" 2>/dev/null || true
-    rmdir "$target" 2>/dev/null || true
-    if [ "$had_source" = true ]; then
-      mv -- "$backup" "$target"
+    if rollback_target "$target" "$backup" "$had_source"; then
+      SERVICE_RESTART_SAFE=true
     fi
-    echo "Bind mount did not activate; restored original path: $target" >&2
+    echo "Bind mount did not activate; restored original path where possible: $target" >&2
     exit 1
   fi
 
   fstab_line="$destination $target none bind,nofail,x-systemd.requires-mounts-for=$MOUNT_POINT 0 0"
-  if ! grep -qF "$destination $target " /etc/fstab; then
-    fstab_temporary=$(mktemp /etc/fstab.factory.XXXXXX)
-    if ! cp --preserve=all /etc/fstab "$fstab_temporary" || \
-      ! printf '%s\n' "$fstab_line" >> "$fstab_temporary" || \
-      ! mv -fT -- "$fstab_temporary" /etc/fstab; then
-      rm -f "$fstab_temporary"
-      if umount "$target"; then
-        rmdir "$target" 2>/dev/null || true
-        if [ "$had_source" = true ]; then
-          mv -- "$backup" "$target"
-        fi
+  if ! grep -qF "$destination $target " "$FSTAB_PATH"; then
+    if ! append_fstab_line "$fstab_line"; then
+      if rollback_target "$target" "$backup" "$had_source"; then
+        SERVICE_RESTART_SAFE=true
       fi
       echo "Could not persist bind mount; restored original path where possible: $target" >&2
       exit 1
@@ -244,10 +339,11 @@ for directory in "${pending[@]}"; do
     log "Added persistent bind mount for $target"
   fi
 
-  # Only contract the root copy after both the live and boot-time mounts are
-  # proven. If deletion itself fails, the safe duplicate remains for diagnosis.
-  if [ "$had_source" = true ]; then
-    rm -rf --one-file-system -- "${backup:?}"
+  # Both the live and boot-time mounts are now proven, so restarting is safe.
+  SERVICE_RESTART_SAFE=true
+  if [ "$had_source" = true ] && \
+    ! rm -rf --one-file-system -- "${backup:?}"; then
+    log "WARNING: verified migration backup remains at $backup"
   fi
 done
 
