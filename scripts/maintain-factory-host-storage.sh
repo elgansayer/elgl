@@ -11,9 +11,12 @@ FACTORY_HOME=${FACTORY_STORAGE_HOME:-/home/dev}
 FACTORY_VENV=${FACTORY_STORAGE_VENV:-/opt/hellotalk-factory/venv}
 PRUNE_AGE=${FACTORY_CONTAINER_PRUNE_AGE:-168h}
 DOCKER_CACHE_LIMIT=${FACTORY_DOCKER_CACHE_LIMIT:-2GB}
+MINIMUM_FREE_GIB=${FACTORY_MINIMUM_FREE_DISK_GIB:-5}
+FREE_HEADROOM_GIB=${FACTORY_STORAGE_FREE_HEADROOM_GIB:-1}
 LOCK_FILE=${FACTORY_STORAGE_MAINTENANCE_LOCK:-/run/lock/hellotalk-factory-storage.lock}
 APPLY=false
 PRUNE_CONTAINERS=false
+STORAGE_TARGET_KIB=''
 
 usage() {
   cat <<'USAGE'
@@ -24,12 +27,14 @@ and provider-home usage without changing the host.
 
 With --apply, installs the bounded journal policy only when it changed, vacuums
 archived journal entries, and prunes unused uv cache records. Add
---prune-containers to remove only dangling Docker/Podman images older than seven
-days and bounded Docker/Podman build cache. The historical --prune-docker name
-is retained as an alias.
+--prune-containers to remove dangling Docker/Podman images older than seven days
+and bounded Docker/Podman build cache. If either container store falls below the
+Factory reserve plus headroom, the age grace is dropped for dangling images and
+build cache only.
 
-This command never removes volumes, named images, running/stopped containers,
-provider credentials, or provider history databases.
+The historical --prune-docker name is retained as an alias. This command never
+removes volumes, named images, running/stopped containers, provider credentials,
+or provider history databases.
 USAGE
 }
 
@@ -48,6 +53,23 @@ if [ "$PRUNE_CONTAINERS" = true ] && [ "$APPLY" != true ]; then
 fi
 
 log() { printf '[%s] factory-storage: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
+
+calculate_storage_target() {
+  awk -v reserve="$MINIMUM_FREE_GIB" -v headroom="$FREE_HEADROOM_GIB" '
+    BEGIN {
+      number = "^[0-9]+([.][0-9]+)?$"
+      if (reserve !~ number || headroom !~ number || reserve <= 0 || headroom <= 0) {
+        exit 1
+      }
+      printf "%.0f\n", (reserve + headroom) * 1024 * 1024
+    }
+  '
+}
+
+if ! STORAGE_TARGET_KIB=$(calculate_storage_target); then
+  log "WARNING: invalid storage reserve/headroom; using 6 GiB target"
+  STORAGE_TARGET_KIB=$((6 * 1024 * 1024))
+fi
 
 factory_uid() {
   id -u "$FACTORY_USER" 2>/dev/null
@@ -73,6 +95,19 @@ run_as_factory_user() {
   fi
 }
 
+filesystem_free_kib() {
+  df -Pk -- "$1" 2>/dev/null | awk 'NR == 2 {print $4}'
+}
+
+filesystem_below_target() {
+  local free
+  free=$(filesystem_free_kib "$1") || return 1
+  case "$free" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$free" -lt "$STORAGE_TARGET_KIB" ]
+}
+
 report_provider_home() {
   local path size source
   for path in \
@@ -81,7 +116,9 @@ report_provider_home() {
     "$FACTORY_HOME/.gemini" \
     "$FACTORY_HOME/.pi" \
     "$FACTORY_HOME/.codex" \
+    "$FACTORY_HOME/.claude" \
     "$FACTORY_HOME/.npm" \
+    "$FACTORY_HOME/.npm-global" \
     "$FACTORY_HOME/.opencode" \
     "$FACTORY_HOME/.config"; do
     [ -e "$path" ] || continue
@@ -98,6 +135,8 @@ report_usage() {
     echo 'Factory-state filesystem:'
     df -h /var/lib/hellotalk-factory
   fi
+  printf 'Container pressure target: %s GiB reserve + %s GiB headroom\n' \
+    "$MINIMUM_FREE_GIB" "$FREE_HEADROOM_GIB"
   journalctl --disk-usage || true
 
   if command -v docker >/dev/null 2>&1; then
@@ -156,7 +195,7 @@ prune_uv_cache() {
 }
 
 prune_docker_storage() {
-  local docker
+  local docker docker_root
   docker=$(command -v docker 2>/dev/null) || {
     log 'Docker not installed; skipping Docker cleanup'
     return 0
@@ -165,7 +204,8 @@ prune_docker_storage() {
     log 'Docker daemon unavailable; skipping Docker cleanup'
     return 0
   fi
-  # Invoke docker image prune through the resolved executable.
+  docker_root=$("$docker" info --format '{{.DockerRootDir}}' 2>/dev/null || true)
+
   if ! "$docker" image prune --force --filter "until=$PRUNE_AGE"; then
     log 'WARNING: Docker image prune failed'
   fi
@@ -175,10 +215,18 @@ prune_docker_storage() {
     --keep-storage "$DOCKER_CACHE_LIMIT"; then
     log 'WARNING: Docker builder prune failed'
   fi
+
+  if [ -n "$docker_root" ] && [ -d "$docker_root" ] && \
+    filesystem_below_target "$docker_root"; then
+    log 'Docker filesystem is below target; dropping age grace for dangling/build cache'
+    "$docker" image prune --force || log 'WARNING: pressure Docker image prune failed'
+    "$docker" builder prune --force --keep-storage "$DOCKER_CACHE_LIMIT" || \
+      log 'WARNING: pressure Docker builder prune failed'
+  fi
 }
 
 prune_podman_storage() {
-  local podman
+  local podman graph_root supports_build_cache=false
   podman=$(command -v podman 2>/dev/null) || {
     log 'Podman not installed; skipping rootless Podman cleanup'
     return 0
@@ -191,13 +239,36 @@ prune_podman_storage() {
     log 'Rootless Podman unavailable; skipping Podman cleanup'
     return 0
   fi
+  graph_root=$(
+    run_as_factory_user "$podman" info --format '{{.Store.GraphRoot}}' 2>/dev/null || true
+  )
 
   local -a arguments=(image prune --force --filter "until=$PRUNE_AGE")
   if run_as_factory_user "$podman" image prune --help 2>/dev/null | grep -q -- '--build-cache'; then
+    supports_build_cache=true
     arguments+=(--build-cache)
   fi
   if ! run_as_factory_user "$podman" "${arguments[@]}"; then
     log 'WARNING: rootless Podman image/build-cache prune failed'
+  fi
+
+  # Podman exposes no keep-storage budget for image prune. Bound a burst inside
+  # the seven-day grace with filesystem pressure: remove every dangling image
+  # and persistent build-cache entry, while still preserving named images,
+  # containers, and volumes.
+  if [ -n "$graph_root" ] && [ -d "$graph_root" ] && \
+    filesystem_below_target "$graph_root"; then
+    log 'Podman filesystem is below target; dropping age grace for dangling/build cache'
+    local -a pressure_arguments=(image prune --force)
+    if [ "$supports_build_cache" = true ]; then
+      pressure_arguments+=(--build-cache)
+    fi
+    if ! run_as_factory_user "$podman" "${pressure_arguments[@]}"; then
+      log 'WARNING: pressure rootless Podman image/build-cache prune failed'
+    fi
+    if filesystem_below_target "$graph_root"; then
+      log 'WARNING: Podman filesystem remains below target after safe cache eviction'
+    fi
   fi
 }
 
