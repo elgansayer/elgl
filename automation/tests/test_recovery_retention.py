@@ -296,6 +296,103 @@ def test_pressure_does_not_delete_an_incomplete_archive(
     assert archive.exists()
 
 
+def test_symlink_completion_marker_does_not_make_archive_prunable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recovery_dir = tmp_path / "recovery"
+    now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
+    archive = recovery_dir / "symlink-marker"
+    _touch_archive(archive, timedelta(hours=2), now, payload=b"x" * 128)
+    (archive / "RECOVERY.txt").unlink()
+    (archive / "RECOVERY.txt").symlink_to("file.bin")
+    monkeypatch.setattr(
+        "openhands_factory.recovery_retention.shutil.disk_usage",
+        lambda path: DiskUsage(total=10_000, used=9_990, free=10),
+    )
+
+    removed = prune_recovery_archives(
+        recovery_dir,
+        timedelta(hours=72),
+        now=now,
+        max_total_bytes=1,
+        minimum_free_bytes=100,
+        target_free_bytes=150,
+        pressure_grace=timedelta(0),
+    )
+
+    assert removed == []
+    assert archive.exists()
+
+
+def test_minimum_floor_counts_only_completed_archives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recovery_dir = tmp_path / "recovery"
+    now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
+    completed = recovery_dir / "completed"
+    incomplete = recovery_dir / "incomplete"
+    _touch_archive(completed, timedelta(hours=3), now, payload=b"x" * 128)
+    _touch_archive(incomplete, timedelta(hours=2), now, payload=b"x" * 128)
+    (incomplete / "RECOVERY.txt").unlink()
+    monkeypatch.setattr(
+        "openhands_factory.recovery_retention.shutil.disk_usage",
+        lambda path: DiskUsage(total=10_000, used=9_950, free=50),
+    )
+
+    removed = prune_recovery_archives(
+        recovery_dir,
+        timedelta(hours=72),
+        now=now,
+        max_total_bytes=10_000,
+        minimum_free_bytes=40,
+        target_free_bytes=150,
+        minimum_archives=1,
+        pressure_grace=timedelta(0),
+    )
+
+    assert removed == []
+    assert completed.exists()
+    assert incomplete.exists()
+
+
+def test_failed_disk_remeasurement_does_not_invent_free_space(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recovery_dir = tmp_path / "recovery"
+    now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
+    oldest = recovery_dir / "oldest"
+    newest = recovery_dir / "newest"
+    _touch_archive(oldest, timedelta(hours=3), now, payload=b"x" * 128)
+    _touch_archive(newest, timedelta(hours=2), now, payload=b"x" * 128)
+    calls = 0
+
+    def disk_usage(path: Path) -> DiskUsage:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return DiskUsage(total=10_000, used=9_950, free=50)
+        raise OSError("measurement unavailable")
+
+    monkeypatch.setattr(
+        "openhands_factory.recovery_retention.shutil.disk_usage", disk_usage
+    )
+
+    removed = prune_recovery_archives(
+        recovery_dir,
+        timedelta(hours=72),
+        now=now,
+        max_total_bytes=10_000,
+        minimum_free_bytes=40,
+        target_free_bytes=150,
+        minimum_archives=0,
+        pressure_grace=timedelta(0),
+    )
+
+    assert removed == [oldest, newest]
+    assert not oldest.exists()
+    assert not newest.exists()
+
+
 def test_failed_deletion_is_not_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     recovery_dir = tmp_path / "recovery"
     now = datetime(2026, 8, 23, 0, 0, tzinfo=UTC)
