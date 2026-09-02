@@ -373,9 +373,7 @@ def test_failed_disk_remeasurement_does_not_invent_free_space(
             return DiskUsage(total=10_000, used=9_950, free=50)
         raise OSError("measurement unavailable")
 
-    monkeypatch.setattr(
-        "openhands_factory.recovery_retention.shutil.disk_usage", disk_usage
-    )
+    monkeypatch.setattr("openhands_factory.recovery_retention.shutil.disk_usage", disk_usage)
 
     removed = prune_recovery_archives(
         recovery_dir,
