@@ -17,7 +17,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { MessageFiltersDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
@@ -487,12 +487,9 @@ export class UsersController {
   }
 
   @Get('me/message-filters')
-  async getMyMessageFilters(@CurrentUser() user: User | null): Promise<{
-    age_min?: number;
-    age_max?: number;
-    allowed_native_languages?: string[];
-    allowed_genders?: string[];
-  }> {
+  async getMyMessageFilters(
+    @CurrentUser() user: User | null,
+  ): Promise<MessageFiltersDto> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getMessageFilters(user.id);
   }
@@ -500,13 +497,7 @@ export class UsersController {
   @Put('me/message-filters')
   async setMyMessageFilters(
     @CurrentUser() user: User | null,
-    @Body()
-    filters: {
-      age_min?: number;
-      age_max?: number;
-      allowed_native_languages?: string[];
-      allowed_genders?: string[];
-    },
+    @Body() filters: MessageFiltersDto,
   ): Promise<void> {
     if (!user) throw new UnauthorizedException();
     await this.usersService.setMessageFilters(user.id, filters);
