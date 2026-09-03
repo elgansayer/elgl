@@ -1257,6 +1257,7 @@ export interface Database {
           };
           quiet_hours_start: string | null;
           quiet_hours_end: string | null;
+          quiet_hours_timezone: string | null;
           do_not_disturb: boolean;
           custom_tone_url: string | null;
           vibration_pattern: string | null;
@@ -1332,6 +1333,7 @@ export interface Database {
           };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
+          quiet_hours_timezone?: string | null;
           do_not_disturb?: boolean;
           custom_tone_url?: string | null;
           vibration_pattern?: string | null;
@@ -1406,6 +1408,7 @@ export interface Database {
           };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
+          quiet_hours_timezone?: string | null;
           do_not_disturb?: boolean;
           custom_tone_url?: string | null;
           vibration_pattern?: string | null;

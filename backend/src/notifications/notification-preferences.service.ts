@@ -1,9 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
-import {
-  NotificationPreferencesDto,
-  CategoryPreferenceDto,
-} from './dto/notification-preferences.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { Database, SupabaseService } from '../supabase/supabase.service';
+import { NotificationPreferencesDto } from './dto/notification-preferences.dto';
 import {
   NotificationPreferences,
   CategoryPreference,
@@ -24,11 +21,15 @@ interface DbNotificationPreferences {
   new_follower: CategoryPreference;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
+  quiet_hours_timezone: string | null;
   do_not_disturb: boolean;
   custom_tone_url: string | null;
   vibration_pattern: string | null;
   updated_at: string;
 }
+
+type DbNotificationPreferencesInsert =
+  Database['public']['Tables']['notification_preferences']['Insert'];
 
 type CategoryKeys = keyof Omit<
   NotificationPreferences,
@@ -36,8 +37,16 @@ type CategoryKeys = keyof Omit<
   | 'updatedAt'
   | 'quiet_hours_start'
   | 'quiet_hours_end'
+  | 'quiet_hours_timezone'
   | 'do_not_disturb'
+  | 'customToneUrl'
+  | 'vibrationPattern'
 >;
+
+type DeliveryChannel = 'push' | 'email' | 'in_app';
+
+const QUIET_HOURS_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const DEFAULT_QUIET_HOURS_TIMEZONE = 'UTC';
 
 @Injectable()
 export class NotificationPreferencesService {
@@ -58,6 +67,7 @@ export class NotificationPreferencesService {
     new_follower: { push: true, email: false, in_app: true, badges: true },
     quiet_hours_start: undefined,
     quiet_hours_end: undefined,
+    quiet_hours_timezone: undefined,
     do_not_disturb: false,
     customToneUrl: undefined,
     vibrationPattern: undefined,
@@ -95,8 +105,12 @@ export class NotificationPreferencesService {
     const existing = await this.getPreferences(userId);
 
     const merged = this.mergePreferences(existing, dto);
+    this.validateQuietHours(merged);
 
-    const dbPayload = this.mapPreferencesToDb(userId, merged);
+    const dbPayload: DbNotificationPreferencesInsert = this.mapPreferencesToDb(
+      userId,
+      merged,
+    );
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -110,14 +124,20 @@ export class NotificationPreferencesService {
     if (dbError) {
       throw new Error(dbError.message || 'Database error');
     }
+    if (!dbData) {
+      throw new Error('Database returned no notification preferences');
+    }
 
-    return this.mapDbToPreferences(dbData!);
+    return this.mapDbToPreferences(dbData);
   }
 
   async resetToDefaults(userId: string): Promise<NotificationPreferences> {
     const defaults = this.createDefaultPreferences(userId);
     const supabase = this.supabaseService.getClient();
-    const dbPayload = this.mapPreferencesToDb(userId, defaults);
+    const dbPayload: DbNotificationPreferencesInsert = this.mapPreferencesToDb(
+      userId,
+      defaults,
+    );
 
     const upsertResponse = await supabase
       .from('notification_preferences')
@@ -131,45 +151,133 @@ export class NotificationPreferencesService {
     if (dbError) {
       throw new Error(dbError.message || 'Database error');
     }
+    if (!dbData) {
+      throw new Error('Database returned no notification preferences');
+    }
 
-    return this.mapDbToPreferences(dbData!);
+    return this.mapDbToPreferences(dbData);
   }
 
   async shouldSendNotification(
     userId: string,
     category: CategoryKeys,
-    channel: 'push' | 'email' | 'in_app',
+    channel: DeliveryChannel,
+    at: Date = new Date(),
   ): Promise<boolean> {
     const prefs = await this.getPreferences(userId);
 
-    if (prefs.do_not_disturb) {
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Do Not Disturb and scheduled quiet hours silence interruptive delivery
+    // while keeping the in-app inbox available for users to review later.
+    if (channel !== 'in_app') {
+      if (prefs.do_not_disturb) {
+        return false;
+      }
 
-      if (prefs.quiet_hours_start && prefs.quiet_hours_end) {
-        const [startH, startM] = prefs.quiet_hours_start.split(':').map(Number);
-        const [endH, endM] = prefs.quiet_hours_end.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-        const endMinutes = endH * 60 + endM;
-
-        if (startMinutes <= endMinutes) {
-          if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
-            return false;
-          }
-        } else {
-          if (currentMinutes >= startMinutes || currentMinutes <= endMinutes) {
-            return false;
-          }
-        }
+      if (this.isInQuietHours(prefs, at)) {
+        return false;
       }
     }
 
     const categoryPref = prefs[category];
-    if (!categoryPref) {
-      return true;
+    return categoryPref[channel] ?? true;
+  }
+
+  private isInQuietHours(prefs: NotificationPreferences, at: Date): boolean {
+    const start = prefs.quiet_hours_start;
+    const end = prefs.quiet_hours_end;
+
+    if (!start || !end || start === end) {
+      return false;
     }
 
-    return categoryPref[channel] ?? true;
+    const configuredTimezone = prefs.quiet_hours_timezone;
+    const timezone =
+      configuredTimezone && this.isValidTimeZone(configuredTimezone)
+        ? configuredTimezone
+        : DEFAULT_QUIET_HOURS_TIMEZONE;
+    const currentMinutes = this.localMinutes(at, timezone);
+    const startMinutes = this.timeToMinutes(start);
+    const endMinutes = this.timeToMinutes(end);
+
+    // Start is inclusive and end is exclusive. This prevents a notification at
+    // exactly the configured wake-up time from being suppressed.
+    if (startMinutes < endMinutes) {
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    }
+
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+
+  private localMinutes(at: Date, timeZone: string): number {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(at);
+
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+    const minute = Number(
+      parts.find((part) => part.type === 'minute')?.value ?? 0,
+    );
+    return hour * 60 + minute;
+  }
+
+  private timeToMinutes(value: string): number {
+    const [hour, minute] = value.split(':').map(Number);
+    return hour * 60 + minute;
+  }
+
+  private validateQuietHours(prefs: NotificationPreferences): void {
+    const start = prefs.quiet_hours_start;
+    const end = prefs.quiet_hours_end;
+
+    if (!start && !end) {
+      prefs.quiet_hours_start = undefined;
+      prefs.quiet_hours_end = undefined;
+      prefs.quiet_hours_timezone = undefined;
+      return;
+    }
+
+    if (!start || !end) {
+      throw new BadRequestException(
+        'Quiet hours require both a start time and an end time.',
+      );
+    }
+
+    if (
+      !QUIET_HOURS_TIME_PATTERN.test(start) ||
+      !QUIET_HOURS_TIME_PATTERN.test(end)
+    ) {
+      throw new BadRequestException(
+        'Quiet hours must use valid 24-hour HH:mm times.',
+      );
+    }
+
+    if (start === end) {
+      throw new BadRequestException(
+        'Quiet hours start and end times must be different.',
+      );
+    }
+
+    const timezone = prefs.quiet_hours_timezone ?? DEFAULT_QUIET_HOURS_TIMEZONE;
+    if (!this.isValidTimeZone(timezone)) {
+      throw new BadRequestException('Quiet hours timezone is invalid.');
+    }
+    prefs.quiet_hours_timezone = timezone;
+  }
+
+  private isValidTimeZone(value: string | undefined): boolean {
+    if (!value) {
+      return false;
+    }
+
+    try {
+      new Intl.DateTimeFormat('en-GB', { timeZone: value }).format(new Date(0));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private createDefaultPreferences(userId: string): NotificationPreferences {
@@ -198,33 +306,29 @@ export class NotificationPreferencesService {
       'new_follower',
     ];
 
-    const merged = { ...existing } as Record<string, unknown>;
+    const merged: NotificationPreferences = { ...existing };
 
     for (const category of categories) {
-      const dtoMap = dto as Record<string, CategoryPreferenceDto | undefined>;
-      const existingMap = existing as unknown as Record<
-        string,
-        CategoryPreference | undefined
-      >;
-
-      const dtoCategory = dtoMap[category];
+      const dtoCategory = dto[category];
       if (dtoCategory) {
-        const existingCategory = existingMap[category];
-
+        const existingCategory = existing[category];
         merged[category] = {
-          push: dtoCategory.push ?? existingCategory?.push ?? true,
-          email: dtoCategory.email ?? existingCategory?.email ?? false,
-          in_app: dtoCategory.in_app ?? existingCategory?.in_app ?? true,
-          badges: dtoCategory.badges ?? existingCategory?.badges ?? true,
+          push: dtoCategory.push ?? existingCategory.push,
+          email: dtoCategory.email ?? existingCategory.email,
+          in_app: dtoCategory.in_app ?? existingCategory.in_app,
+          badges: dtoCategory.badges ?? existingCategory.badges,
         };
       }
     }
 
     if (dto.quiet_hours_start !== undefined) {
-      merged.quiet_hours_start = dto.quiet_hours_start;
+      merged.quiet_hours_start = dto.quiet_hours_start ?? undefined;
     }
     if (dto.quiet_hours_end !== undefined) {
-      merged.quiet_hours_end = dto.quiet_hours_end;
+      merged.quiet_hours_end = dto.quiet_hours_end ?? undefined;
+    }
+    if (dto.quiet_hours_timezone !== undefined) {
+      merged.quiet_hours_timezone = dto.quiet_hours_timezone ?? undefined;
     }
     if (dto.do_not_disturb !== undefined) {
       merged.do_not_disturb = dto.do_not_disturb;
@@ -239,7 +343,7 @@ export class NotificationPreferencesService {
     }
 
     merged.updatedAt = new Date().toISOString();
-    return merged as unknown as NotificationPreferences;
+    return merged;
   }
 
   private mapDbToPreferences(
@@ -260,6 +364,7 @@ export class NotificationPreferencesService {
       new_follower: data.new_follower,
       quiet_hours_start: data.quiet_hours_start ?? undefined,
       quiet_hours_end: data.quiet_hours_end ?? undefined,
+      quiet_hours_timezone: data.quiet_hours_timezone ?? undefined,
       do_not_disturb: data.do_not_disturb,
       customToneUrl: data.custom_tone_url ?? undefined,
       vibrationPattern: data.vibration_pattern ?? undefined,
@@ -286,6 +391,7 @@ export class NotificationPreferencesService {
       new_follower: prefs.new_follower,
       quiet_hours_start: prefs.quiet_hours_start ?? null,
       quiet_hours_end: prefs.quiet_hours_end ?? null,
+      quiet_hours_timezone: prefs.quiet_hours_timezone ?? null,
       do_not_disturb: prefs.do_not_disturb,
       custom_tone_url: prefs.customToneUrl ?? null,
       vibration_pattern: prefs.vibrationPattern ?? null,

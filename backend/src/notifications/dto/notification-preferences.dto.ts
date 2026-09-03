@@ -2,9 +2,14 @@ import {
   IsBoolean,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const QUIET_HOURS_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 export class CategoryPreferenceDto {
   @IsBoolean()
@@ -80,13 +85,27 @@ export class NotificationPreferencesDto {
   @Type(() => CategoryPreferenceDto)
   new_follower?: CategoryPreferenceDto;
 
-  @IsString()
   @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsString()
+  @Matches(QUIET_HOURS_TIME_PATTERN, {
+    message: 'quiet_hours_start must be a valid 24-hour HH:mm time',
+  })
   quiet_hours_start?: string | null;
 
-  @IsString()
   @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsString()
+  @Matches(QUIET_HOURS_TIME_PATTERN, {
+    message: 'quiet_hours_end must be a valid 24-hour HH:mm time',
+  })
   quiet_hours_end?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsString()
+  @MaxLength(100)
+  quiet_hours_timezone?: string | null;
 
   @IsBoolean()
   @IsOptional()
