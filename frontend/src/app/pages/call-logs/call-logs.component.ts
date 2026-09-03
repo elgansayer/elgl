@@ -2,11 +2,13 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
+import { Router } from '@angular/router';
 import { CallLogRecord, CallLogsService } from '../../services/call-logs.service';
 
 @Component({
   selector: 'app-call-logs',
-  imports: [HlmButton, CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe, AppEmptyStateComponent],
   template: `
     <div class="p-4">
       <h1 class="text-2xl font-bold mb-4">
@@ -53,7 +55,13 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
       </div>
 
       @if (logs().length === 0) {
-        <p class="text-surface-400">{{ 'call_logs.empty' | t }}</p>
+        <app-empty-state
+          icon="📞"
+          [title]="'call_logs.emptyTitle' | t"
+          [description]="'call_logs.emptyDesc' | t"
+          [actionLabel]="'call_logs.emptyAction' | t"
+          (actionClicked)="router.navigate(['/discovery'])"
+        />
       } @else {
         <ul class="space-y-2">
           @for (log of logs(); track log.id) {
@@ -79,6 +87,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 })
 export class CallLogsComponent {
   private callLogsService = inject(CallLogsService);
+  router = inject(Router);
   selectedCallType = signal<string | undefined>(undefined);
 
   private callLogsResource = resource<CallLogRecord[], { callType?: string }>({
