@@ -1,0 +1,30 @@
+name: Chat Draft Failure Contract
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'scripts/chat-send-draft-contract.test.mjs'
+      - '.github/workflows/chat-draft-failure-contract.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'frontend/src/app/components/chat-room/chat-room.component.ts'
+      - 'scripts/chat-send-draft-contract.test.mjs'
+      - '.github/workflows/chat-draft-failure-contract.yml'
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  chat-draft-failure-contract:
+    name: Chat Draft Failure Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify failed chat sends preserve the draft
+        run: node --test scripts/chat-send-draft-contract.test.mjs
