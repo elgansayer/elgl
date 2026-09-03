@@ -19,8 +19,8 @@ This report provides an evidence-based audit of the mobile application interface
 - **Severity:** N/A (Functioning as intended).
 
 ## 5. Safe Areas
-- **Observation (Verified):** Safe areas are implemented natively using CSS environment variables. Global padding rules (`styles.scss:117-119`) apply `env(safe-area-inset-top)` and corresponding logical directions to prevent content from rendering beneath mobile notches or home indicators.
-- **Severity:** N/A (Functioning as intended).
+- **Observation (Defect):** While global padding rules apply `env(safe-area-inset-top)`, the bottom navigation bar (`app.component.html:143`) uses an undefined `pb-safe` utility class which does not exist in `tailwind.config.js` or `styles.scss`, constituting an implementation drift and defect in the safe area handling for the bottom navigation tab.
+- **Severity:** High (Bottom navigation intersects with iOS home indicator).
 
 ## 6. Back-Navigation
 - **Observation (Verified):** The application uses the standard Angular router for view management. All semantic dialogs (`hlm-dialog`) correctly support dismissal via the `Escape` key, mapping properly to keyboard accessibility guidelines.
