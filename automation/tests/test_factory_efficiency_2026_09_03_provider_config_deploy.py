@@ -14,7 +14,7 @@ def _function_range(script: str, first: str, after: str) -> str:
     return script[start:end]
 
 
-def test_updater_reconciles_provider_config_from_verified_commit() -> None:
+def test_updater_reconciles_provider_policy_from_verified_commits() -> None:
     updater = _read("config/systemd/hellotalk-factory-update.sh")
 
     # The live config is external to the checkout, so deployment is part of the contract.
@@ -24,8 +24,8 @@ def test_updater_reconciles_provider_config_from_verified_commit() -> None:
     assert "/etc/repo-factory/*|/etc/hellotalk-factory/*" in updater
     assert "agents_config_metadata_current" in updater
     assert "stat -Lc '%u:%g:%a'" in updater
-    assert 'file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$config_path"' in updater
-    assert 'install_agents_config_from_commit "$pulled_sha"' in updater
+    assert "openhands_factory.config_reconcile" in updater
+    assert 'reconcile_agents_config_from_commits "$local_sha" "$pulled_sha"' in updater
     assert "AgentsConfig.model_validate_json" in updater
 
 
@@ -56,7 +56,7 @@ def test_updater_rejects_dotdot_escape_from_approved_config_root(tmp_path: Path)
     assert result.stdout == ""
 
 
-def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path) -> None:
+def test_provider_config_rollback_reloads_both_services(tmp_path: Path) -> None:
     updater = _read("config/systemd/hellotalk-factory-update.sh")
     functions = _function_range(
         updater,
@@ -66,7 +66,7 @@ def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path)
 
     config = tmp_path / "agents.json"
     backup = tmp_path / "agents.rollback.json"
-    starts = tmp_path / "starts.log"
+    restarts = tmp_path / "restarts.log"
     config.write_text("new-config", encoding="utf-8")
     backup.write_text("previous-config", encoding="utf-8")
     venv_bin = tmp_path / "venv" / "bin"
@@ -88,13 +88,13 @@ def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path)
         "FACTORY_USER=$(id -un)\n"
         "SERVICE=primary.service\n"
         "SECONDARY_SERVICE=secondary.service\n"
-        f"START_LOG={starts}\n"
+        f"RESTART_LOG={restarts}\n"
         "log() { :; }\n"
         "chown() { return 0; }\n"
         "chmod() { return 0; }\n"
         "systemctl() {\n"
-        '  if [ "${1:-}" = start ]; then\n'
-        '    printf \'%s:%s\\n\' "$2" "$(cat "$AGENTS_CONFIG")" >> "$START_LOG"\n'
+        '  if [ "${1:-}" = restart ]; then\n'
+        '    printf \'%s:%s\\n\' "$2" "$(cat "$AGENTS_CONFIG")" >> "$RESTART_LOG"\n'
         "  fi\n"
         "  return 0\n"
         "}\n"
@@ -105,7 +105,7 @@ def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path)
 
     subprocess.run(["bash", str(harness)], check=True)
     assert config.read_text(encoding="utf-8") == "previous-config"
-    assert starts.read_text(encoding="utf-8").splitlines() == [
+    assert restarts.read_text(encoding="utf-8").splitlines() == [
         "primary.service:previous-config",
         "secondary.service:previous-config",
     ]
@@ -120,7 +120,7 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
     )
     config = tmp_path / "agents.json"
     config.write_text("new-config", encoding="utf-8")
-    starts = tmp_path / "starts.log"
+    restarts = tmp_path / "restarts.log"
 
     harness = tmp_path / "failed-rollback.sh"
     harness.write_text(
@@ -135,10 +135,10 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
         "FACTORY_USER=$(id -un)\n"
         "SERVICE=primary.service\n"
         "SECONDARY_SERVICE=secondary.service\n"
-        f"START_LOG={starts}\n"
+        f"RESTART_LOG={restarts}\n"
         "log() { :; }\n"
         "systemctl() {\n"
-        '  if [ "${1:-}" = start ]; then echo "$2" >> "$START_LOG"; fi\n'
+        '  if [ "${1:-}" = restart ]; then echo "$2" >> "$RESTART_LOG"; fi\n'
         "  return 0\n"
         "}\n"
         f"{functions}\n"
@@ -148,7 +148,7 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
 
     result = subprocess.run(["bash", str(harness)], check=False)
     assert result.returncode != 0
-    assert not starts.exists()
+    assert not restarts.exists()
     assert config.read_text(encoding="utf-8") == "new-config"
 
 
