@@ -15,6 +15,10 @@ import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
+import {
+  LearnerKnowledgeService,
+  LearnerKnowledgeProfile,
+} from '../learner-knowledge/learner-knowledge.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
@@ -75,6 +79,7 @@ export class ChatService {
     private readonly xpService: XpService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly learnerKnowledgeService: LearnerKnowledgeService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -2227,8 +2232,34 @@ export class ChatService {
       'You are a friendly language learning conversation partner.',
       'Keep responses short, natural, and helpful.',
       `The user wrote: "${messageText}"`,
-    ].join('\n');
-    const result = await this.chatLlmService.proxyMessage(prompt);
+    ];
+
+    try {
+      const learnerKnowledge: LearnerKnowledgeProfile =
+        await this.learnerKnowledgeService.getProfile(userId, 'en');
+
+      if (learnerKnowledge && learnerKnowledge.knowledgeItems) {
+        const tokensToPractice = Array.from(
+          learnerKnowledge.knowledgeItems.values(),
+        )
+          .filter(
+            (item) =>
+              item.type === 'vocabulary' &&
+              (item.status === 'struggling' || item.status === 'learning'),
+          )
+          .map((item) => item.id);
+
+        if (tokensToPractice.length > 0) {
+          prompt.push(
+            `Try to naturally incorporate some of these words to help them practice: ${tokensToPractice.join(', ')}.`,
+          );
+        }
+      }
+    } catch (error) {
+      // Ignore errors fetching learner knowledge to allow the reply to still be generated
+    }
+
+    const result = await this.chatLlmService.proxyMessage(prompt.join('\n'));
     return { response: result.response };
   }
 
