@@ -4,8 +4,10 @@
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
-#   - Materialises root-owned runtime scripts and provider config from immutable
+#   - Materialises root-owned runtime scripts and provider policy from immutable
 #     Git blobs, never from the Factory-user-writable working tree.
+#   - Three-way provider-policy reconciliation preserves host overrides while
+#     adopting repository changes the host had not overridden.
 #   - Provider config is schema-validated after package refresh and rolled back
 #     automatically if any later update step or service restart fails.
 #   - Aborts on any error; the EXIT trap restores services stopped by an update.
@@ -99,12 +101,12 @@ restore_services_on_failure() {
       log 'ERROR: provider config rollback was not confirmed; services remain stopped'
       return 1
     fi
-    log "Update failed after service stop - restoring previously running services"
+    log "Update failed after service stop - restarting services against restored config"
     systemctl reset-failed "$SERVICE" || true
-    systemctl start "$SERVICE" || true
+    systemctl restart "$SERVICE" || true
     if [ "$secondary_was_active" = true ]; then
       systemctl reset-failed "$SECONDARY_SERVICE" || true
-      systemctl start "$SECONDARY_SERVICE" || true
+      systemctl restart "$SECONDARY_SERVICE" || true
     fi
   fi
 }
@@ -148,19 +150,6 @@ trusted_runtime_commit() {
     fi
   fi
   return 1
-}
-
-file_matches_commit() {
-  local commit=$1
-  local relative_path=$2
-  local destination=$3
-  local actual_blob expected_blob
-
-  [ -f "$destination" ] || return 1
-  expected_blob=$(factory_git_read rev-parse "${commit}:${relative_path}") || return 1
-  [[ "$expected_blob" =~ ^[0-9a-f]{40,64}$ ]] || return 1
-  actual_blob=$(git hash-object "$destination") || return 1
-  [ "$actual_blob" = "$expected_blob" ]
 }
 
 canonical_agents_config_path() {
@@ -292,32 +281,68 @@ install_runtime_bundle() {
   record_runtime_commit "$commit" || return 1
 }
 
-install_agents_config_from_commit() {
-  local commit=$1
-  local canonical parent
+reconcile_agents_config_from_commits() {
+  local base_commit=$1
+  local desired_commit=$2
+  local canonical parent workspace temporary
 
+  verify_commit_identity "$base_commit" || return 1
+  verify_commit_identity "$desired_commit" || return 1
   canonical=$(canonical_agents_config_path "$AGENTS_CONFIG") || return 1
   AGENTS_CONFIG=$canonical
   parent=$(dirname -- "$AGENTS_CONFIG")
   install -d -o root -g "$FACTORY_USER" -m 0750 "$parent"
 
-  if file_matches_commit "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
-    chown "root:$FACTORY_USER" "$AGENTS_CONFIG"
-    chmod 0640 "$AGENTS_CONFIG"
-  else
-    if [ -f "$AGENTS_CONFIG" ]; then
-      agents_config_backup=$(mktemp "${AGENTS_CONFIG}.rollback.XXXXXX")
-      cp --preserve=mode,ownership -- "$AGENTS_CONFIG" "$agents_config_backup"
-    else
-      agents_config_backup=__absent__
-    fi
-    agents_config_changed=true
-
-    install_runtime_file_from_commit \
-      "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG" 0640 \
-      root "$FACTORY_USER" 0750
+  workspace=$(mktemp -d /run/repo-factory-agents.XXXXXX) || return 1
+  chmod 0700 "$workspace"
+  if ! install_runtime_file_from_commit \
+    "$base_commit" "$AGENTS_CONFIG_SOURCE" "$workspace/base.json" 0600 root root 0700 || \
+    ! install_runtime_file_from_commit \
+    "$desired_commit" "$AGENTS_CONFIG_SOURCE" "$workspace/desired.json" 0600 root root 0700; then
+    rm -rf -- "$workspace"
+    return 1
   fi
 
+  if [ -f "$AGENTS_CONFIG" ]; then
+    cp -- "$AGENTS_CONFIG" "$workspace/local.json"
+  else
+    cp -- "$workspace/base.json" "$workspace/local.json"
+  fi
+
+  if ! "$FACTORY_VENV/bin/python" -m openhands_factory.config_reconcile \
+    "$workspace/base.json" "$workspace/local.json" \
+    "$workspace/desired.json" "$workspace/merged.json"; then
+    rm -rf -- "$workspace"
+    return 1
+  fi
+
+  if [ -f "$AGENTS_CONFIG" ] && cmp -s "$workspace/merged.json" "$AGENTS_CONFIG" && \
+    agents_config_metadata_current "$AGENTS_CONFIG"; then
+    rm -rf -- "$workspace"
+    validate_agents_config
+    return
+  fi
+
+  if [ -f "$AGENTS_CONFIG" ]; then
+    agents_config_backup=$(mktemp "${AGENTS_CONFIG}.rollback.XXXXXX")
+    cp --preserve=mode,ownership -- "$AGENTS_CONFIG" "$agents_config_backup"
+  else
+    agents_config_backup=__absent__
+  fi
+  agents_config_changed=true
+
+  temporary=$(mktemp "${AGENTS_CONFIG}.new.XXXXXX") || {
+    rm -rf -- "$workspace"
+    return 1
+  }
+  if ! install -o root -g "$FACTORY_USER" -m 0640 \
+    "$workspace/merged.json" "$temporary" || \
+    ! mv -fT -- "$temporary" "$AGENTS_CONFIG"; then
+    rm -f -- "$temporary"
+    rm -rf -- "$workspace"
+    return 1
+  fi
+  rm -rf -- "$workspace"
   validate_agents_config
 }
 
@@ -394,19 +419,20 @@ local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
 config_is_current=false
 config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
-if [ -n "$config_path" ] && verify_commit_identity "$remote_sha" && \
-  file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$config_path" && \
-  agents_config_metadata_current "$config_path"; then
-  config_is_current=true
+if [ -n "$config_path" ] && agents_config_metadata_current "$config_path"; then
+  AGENTS_CONFIG=$config_path
+  if validate_agents_config; then
+    config_is_current=true
+  fi
 fi
 
 if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
-  log "Already up to date at ${local_sha:0:12} with reconciled provider config - no restart needed"
+  log "Already up to date at ${local_sha:0:12} with valid provider config - no restart needed"
   exit 0
 fi
 
 if [ "$local_sha" = "$remote_sha" ]; then
-  log "Repository is current at ${local_sha:0:12}, but provider config drifted - reconciling autonomously"
+  log "Repository is current at ${local_sha:0:12}, but provider config needs repair"
 else
   log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
   merge_base=$(factory_git_read merge-base HEAD origin/main)
@@ -415,6 +441,14 @@ else
     exit 1
   fi
 fi
+verify_commit_identity "$local_sha" || {
+  log 'ERROR: current checkout identity could not be verified'
+  exit 1
+}
+verify_commit_identity "$remote_sha" || {
+  log 'ERROR: origin/main identity could not be verified'
+  exit 1
+}
 
 log 'Stopping factory service'
 systemctl stop "$SERVICE" || true
@@ -458,8 +492,8 @@ runuser -u "$FACTORY_USER" -- env \
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true
 
-log 'Reconciling root-owned provider config from the verified commit'
-install_agents_config_from_commit "$pulled_sha"
+log 'Reconciling repository provider policy while preserving host overrides'
+reconcile_agents_config_from_commits "$local_sha" "$pulled_sha"
 
 log 'Rebuilding the shared Factory worker image'
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 \
