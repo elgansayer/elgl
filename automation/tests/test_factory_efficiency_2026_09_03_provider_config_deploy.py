@@ -17,6 +17,7 @@ def _function_range(script: str, first: str, after: str) -> str:
 def test_updater_reconciles_provider_config_from_verified_commit() -> None:
     updater = _read("config/systemd/hellotalk-factory-update.sh")
 
+    # The live config is external to the checkout, so deployment is part of the contract.
     assert "AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}" in updater
     assert "AGENTS_CONFIG_SOURCE=config/factory/agents.production.json" in updater
     assert 'readlink -m -- "$candidate"' in updater
