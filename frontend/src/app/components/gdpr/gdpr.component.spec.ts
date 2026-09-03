@@ -7,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 describe('GdprComponent', () => {
   let fixture: ComponentFixture<GdprComponent>;
   let mockGdprService: {
+    getStatus: ReturnType<typeof vi.fn>;
     requestArchive: ReturnType<typeof vi.fn>;
     deleteAccount: ReturnType<typeof vi.fn>;
     cancelDeletion: ReturnType<typeof vi.fn>;
@@ -17,10 +18,16 @@ describe('GdprComponent', () => {
 
   beforeEach(async () => {
     mockGdprService = {
+      getStatus: vi.fn().mockResolvedValue({
+        is_deletion_pending: false,
+        scheduled_for_deletion_at: null,
+        latest_archive: null,
+      }),
       requestArchive: vi.fn().mockResolvedValue({
         request_id: '11111111-1111-4111-8111-111111111111',
         status: 'ready',
-        download_url: 'https://example.supabase.co/storage/v1/object/sign/gdpr-archives/archive.json?token=short-lived',
+        download_url:
+          'https://example.supabase.co/storage/v1/object/sign/gdpr-archives/archive.json?token=short-lived',
         expires_at: '2026-09-01T00:00:00.000Z',
         message: 'Archive ready for download.',
       }),
@@ -41,6 +48,8 @@ describe('GdprComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(GdprComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
   });
 
@@ -151,15 +160,49 @@ describe('GdprComponent', () => {
   });
 
   it('should show cancel deletion section when deletion is pending', () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+    mockGdprService.getStatus.mockResolvedValue({
+      is_deletion_pending: true,
+      scheduled_for_deletion_at: '2026-09-29T00:00:00.000Z',
+      latest_archive: null,
+    });
+    fixture.componentInstance.privacyStatusResource.reload();
     fixture.detectChanges();
 
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('gdpr.cancelDeletionSection');
+    return fixture.whenStable().then(() => {
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('gdpr.cancelDeletionSection');
+    });
+  });
+
+  it('restores and downloads the latest ready archive after reload', async () => {
+    mockGdprService.getStatus.mockResolvedValue({
+      is_deletion_pending: false,
+      scheduled_for_deletion_at: null,
+      latest_archive: {
+        request_id: '55555555-5555-4555-8555-555555555555',
+        status: 'ready',
+        download_url: 'https://storage.example/signed/archive?token=restored',
+        expires_at: '2026-09-01T00:00:00.000Z',
+      },
+    });
+    fixture.componentInstance.privacyStatusResource.reload();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+    fixture.componentInstance.downloadLatestArchive();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.textContent).toContain('privacy.hub.downloadData');
   });
 
   it('should call cancelDeletion and hide section on success', async () => {
-    fixture.componentInstance.isPendingDeletion.set(true);
+    fixture.componentInstance.confirmDelete.set(true);
+    await fixture.componentInstance.deleteAccount();
     fixture.detectChanges();
 
     await fixture.componentInstance.cancelDeletion();
@@ -174,5 +217,17 @@ describe('GdprComponent', () => {
     await fixture.componentInstance.requestArchive();
 
     expect(fixture.componentInstance.archiveError()).toBe('common.loadError');
+  });
+
+  it('shows an error when persisted privacy status cannot be restored', async () => {
+    mockGdprService.getStatus.mockRejectedValue(new Error('Network error'));
+    fixture.componentInstance.privacyStatusResource.reload();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.statusLoadError()).toBe(true);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'common.loadError',
+    );
   });
 });

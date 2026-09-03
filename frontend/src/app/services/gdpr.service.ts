@@ -11,15 +11,27 @@ export interface GdprArchiveResponse {
   message: string;
 }
 
+export interface PrivacyStatus {
+  is_deletion_pending: boolean;
+  scheduled_for_deletion_at: string | null;
+  latest_archive: {
+    request_id: string;
+    status: 'processing' | 'ready' | 'failed' | 'expired';
+    download_url?: string;
+    expires_at: string | null;
+  } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GdprService {
   private readonly http = inject(HttpClient);
   private readonly apiBase = environment.apiUrl;
 
-  async requestArchive(
-    receiptId?: string,
-    appStore?: string,
-  ): Promise<GdprArchiveResponse> {
+  async getStatus(): Promise<PrivacyStatus> {
+    return lastValueFrom(this.http.get<PrivacyStatus>(`${this.apiBase}/privacy/status`));
+  }
+
+  async requestArchive(receiptId?: string, appStore?: string): Promise<GdprArchiveResponse> {
     return lastValueFrom(
       this.http.post<GdprArchiveResponse>(`${this.apiBase}/privacy/request-archive`, {
         receipt_id: receiptId,
