@@ -10,6 +10,7 @@
 #     automatically if any later update step or service restart fails.
 #   - Aborts on any error; the EXIT trap restores services stopped by an update.
 #   - Logs every decision so journalctl -u hellotalk-factory-update traces the run.
+# FACTORY_PROVIDER_CONFIG_RECONCILIATION_V1
 set -euo pipefail
 
 FACTORY_USER=dev
@@ -21,6 +22,7 @@ SECONDARY_SERVICE=${REPO_FACTORY_SECONDARY_SERVICE:-}
 SECONDARY_HEARTBEAT=${REPO_FACTORY_SECONDARY_HEARTBEAT:-}
 FACTORY_VENV=/opt/hellotalk-factory/venv
 RUNTIME_ROOT=/opt/hellotalk-factory
+REPO_RUNTIME_ROOT=/opt/repo-factory
 RUNTIME_SOURCE_SHA_FILE="$RUNTIME_ROOT/runtime-source.sha"
 RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
 AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
@@ -47,22 +49,56 @@ fi
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
 
+validate_agents_config() {
+  "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
+import sys
+from pathlib import Path
+
+from openhands_factory.config import AgentsConfig
+
+AgentsConfig.model_validate_json(Path(sys.argv[1]).read_text(encoding="utf-8"))
+PY
+}
+
 restore_agents_config_on_failure() {
   if [ "$agents_config_changed" != true ]; then
-    return
+    return 0
   fi
   log 'Update failed after provider-config reconciliation - restoring previous config'
   if [ "$agents_config_backup" = __absent__ ]; then
-    rm -f -- "$AGENTS_CONFIG" || true
-  elif [ -n "$agents_config_backup" ] && [ -f "$agents_config_backup" ]; then
-    mv -fT -- "$agents_config_backup" "$AGENTS_CONFIG" || true
+    if ! rm -f -- "$AGENTS_CONFIG"; then
+      log 'ERROR: could not remove newly installed provider config during rollback'
+      return 1
+    fi
+    log 'ERROR: previous provider config was absent; refusing automatic service restart'
+    return 1
+  fi
+  if [ -z "$agents_config_backup" ] || [ ! -f "$agents_config_backup" ]; then
+    log 'ERROR: provider-config rollback copy is missing; refusing service restart'
+    return 1
+  fi
+  if ! mv -fT -- "$agents_config_backup" "$AGENTS_CONFIG"; then
+    log 'ERROR: could not restore previous provider config; refusing service restart'
+    return 1
+  fi
+  if ! chown "root:$FACTORY_USER" "$AGENTS_CONFIG" || ! chmod 0640 "$AGENTS_CONFIG"; then
+    log 'ERROR: could not restore provider-config access metadata; refusing service restart'
+    return 1
+  fi
+  if ! validate_agents_config; then
+    log 'ERROR: restored provider config is invalid under the installed schema; refusing restart'
+    return 1
   fi
   agents_config_changed=false
+  return 0
 }
 
 restore_services_on_failure() {
   if [ "$services_stopped" = true ] && [ "$update_completed" = false ]; then
-    restore_agents_config_on_failure
+    if ! restore_agents_config_on_failure; then
+      log 'ERROR: provider config rollback was not confirmed; services remain stopped'
+      return 1
+    fi
     log "Update failed after service stop - restoring previously running services"
     systemctl reset-failed "$SERVICE" || true
     systemctl start "$SERVICE" || true
@@ -125,6 +161,37 @@ file_matches_commit() {
   [[ "$expected_blob" =~ ^[0-9a-f]{40,64}$ ]] || return 1
   actual_blob=$(git hash-object "$destination") || return 1
   [ "$actual_blob" = "$expected_blob" ]
+}
+
+canonical_agents_config_path() {
+  local candidate=${1:-$AGENTS_CONFIG}
+  local canonical
+  canonical=$(readlink -m -- "$candidate") || return 1
+  case "$canonical" in
+    /etc/repo-factory/*|/etc/hellotalk-factory/*) printf '%s\n' "$canonical" ;;
+    *)
+      log "Refusing provider-config path outside an approved /etc Factory root: $candidate"
+      return 1
+      ;;
+  esac
+}
+
+agents_config_metadata_current() {
+  local config=$1
+  local factory_gid parent
+  factory_gid=$(id -g "$FACTORY_USER") || return 1
+  parent=$(dirname -- "$config")
+  [ -f "$config" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a' -- "$config")" = "0:${factory_gid}:640" ] || return 1
+  [ -d "$parent" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a' -- "$parent")" = "0:${factory_gid}:750" ]
+}
+
+repo_runtime_root_safe() {
+  [ -d "$REPO_RUNTIME_ROOT" ] || return 1
+  [ ! -L "$REPO_RUNTIME_ROOT" ] || return 1
+  [ "$(readlink -f -- "$REPO_RUNTIME_ROOT")" = "$REPO_RUNTIME_ROOT" ] || return 1
+  [ "$(stat -Lc '%u:%g:%a' -- "$REPO_RUNTIME_ROOT")" = '0:0:755' ]
 }
 
 install_runtime_file_from_commit() {
@@ -208,30 +275,31 @@ install_runtime_bundle() {
   install_runtime_file_from_commit \
     "$commit" config/systemd/hellotalk-factory-update.sh \
     "$RUNTIME_ROOT/hellotalk-factory-update.sh" 0755 || return 1
+
+  if [ -e "$REPO_RUNTIME_ROOT" ]; then
+    if ! repo_runtime_root_safe; then
+      log "Refusing to refresh unsafe neutral runtime root: $REPO_RUNTIME_ROOT"
+      return 1
+    fi
+    install_runtime_file_from_commit \
+      "$commit" config/systemd/repo-factory-watchdog.sh \
+      "$REPO_RUNTIME_ROOT/repo-factory-watchdog.sh" 0755 || return 1
+    install_runtime_file_from_commit \
+      "$commit" config/systemd/hellotalk-factory-update.sh \
+      "$REPO_RUNTIME_ROOT/repo-factory-update.sh" 0755 || return 1
+  fi
+
   record_runtime_commit "$commit" || return 1
-}
-
-validate_agents_config() {
-  "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
-import sys
-from pathlib import Path
-
-from openhands_factory.config import AgentsConfig
-
-AgentsConfig.model_validate_json(Path(sys.argv[1]).read_text(encoding="utf-8"))
-PY
 }
 
 install_agents_config_from_commit() {
   local commit=$1
+  local canonical parent
 
-  case "$AGENTS_CONFIG" in
-    /etc/repo-factory/*|/etc/hellotalk-factory/*) ;;
-    *)
-      log "Refusing provider-config reconciliation outside an approved /etc Factory root: $AGENTS_CONFIG"
-      return 1
-      ;;
-  esac
+  canonical=$(canonical_agents_config_path "$AGENTS_CONFIG") || return 1
+  AGENTS_CONFIG=$canonical
+  parent=$(dirname -- "$AGENTS_CONFIG")
+  install -d -o root -g "$FACTORY_USER" -m 0750 "$parent"
 
   if file_matches_commit "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
     chown "root:$FACTORY_USER" "$AGENTS_CONFIG"
@@ -325,8 +393,10 @@ timeout "${GIT_TIMEOUT}s" \
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
 config_is_current=false
-if verify_commit_identity "$remote_sha" && \
-  file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
+config_path=$(canonical_agents_config_path "$AGENTS_CONFIG" 2>/dev/null || true)
+if [ -n "$config_path" ] && verify_commit_identity "$remote_sha" && \
+  file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$config_path" && \
+  agents_config_metadata_current "$config_path"; then
   config_is_current=true
 fi
 
