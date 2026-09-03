@@ -11,6 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MediaService } from './media.service';
+import { PresignedMediaUploadDto } from './dto/presigned-media-upload.dto';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 
 @Controller('media')
@@ -24,6 +25,22 @@ export class MediaController {
     @Body() dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
     return this.mediaService.generateCoverPresignedUrl(req.user.id, dto);
+  }
+
+  @Post('avatar/presigned-url')
+  async getAvatarPresignedUrl(
+    @Req() req: { user: { id: string } },
+    @Body() dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return this.mediaService.generateAvatarPresignedUrl(req.user.id, dto);
+  }
+
+  @Post('audio-intro/presigned-url')
+  async getAudioIntroPresignedUrl(
+    @Req() req: { user: { id: string } },
+    @Body() dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return this.mediaService.generateAudioIntroPresignedUrl(req.user.id, dto);
   }
 
   @Post('voice-note')
@@ -69,6 +86,7 @@ export class MediaController {
     }
     return this.mediaService.uploadAndSetAvatarImage(req.user.id, file);
   }
+
   @Post('view-once/mark-viewed')
   async markMediaAsViewed(
     @Req() req: { user: { id: string } },
