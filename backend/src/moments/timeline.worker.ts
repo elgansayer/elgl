@@ -8,6 +8,18 @@ interface UserFollowRow {
 type RedisClient = ReturnType<SupabaseService['getRedisClient']>;
 type SupabaseClient = ReturnType<SupabaseService['getClient']>;
 
+class TimelineFollowerLookupError extends Error {
+  override readonly name = 'TimelineFollowerLookupError';
+}
+
+class TimelineQueueWriteError extends Error {
+  override readonly name = 'TimelineQueueWriteError';
+}
+
+class TimelinePaginationError extends Error {
+  override readonly name = 'TimelinePaginationError';
+}
+
 @Injectable()
 export class TimelineWorker {
   private static readonly FOLLOWER_BATCH_SIZE = 500;
@@ -22,12 +34,16 @@ export class TimelineWorker {
     try {
       const supabase = this.supabaseService.getClient();
       const redis = this.supabaseService.getRedisClient();
-      let offset = 0;
+      let followerCursor: string | null = null;
       let includeAuthor = true;
       let recipientCount = 0;
 
       while (true) {
-        const rows = await this.loadFollowerBatch(supabase, authorId, offset);
+        const rows = await this.loadFollowerBatch(
+          supabase,
+          authorId,
+          followerCursor,
+        );
         const recipientIds = new Set<string>(
           rows
             .map((follow) => follow.follower_id)
@@ -48,7 +64,11 @@ export class TimelineWorker {
           break;
         }
 
-        offset += TimelineWorker.FOLLOWER_BATCH_SIZE;
+        const nextCursor = rows.at(-1)?.follower_id;
+        if (!nextCursor || nextCursor === followerCursor) {
+          throw new TimelinePaginationError();
+        }
+        followerCursor = nextCursor;
       }
 
       this.logger.log(
@@ -63,18 +83,23 @@ export class TimelineWorker {
   private async loadFollowerBatch(
     supabase: SupabaseClient,
     authorId: string,
-    offset: number,
+    afterFollowerId: string | null,
   ): Promise<UserFollowRow[]> {
-    const end = offset + TimelineWorker.FOLLOWER_BATCH_SIZE - 1;
-
     for (let attempt = 1; attempt <= TimelineWorker.MAX_ATTEMPTS; attempt++) {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('user_follows')
           .select('follower_id')
           .eq('following_id', authorId)
-          .order('follower_id', { ascending: true })
-          .range(offset, end);
+          .order('follower_id', { ascending: true });
+
+        if (afterFollowerId !== null) {
+          query = query.gt('follower_id', afterFollowerId);
+        }
+
+        const { data, error } = await query.limit(
+          TimelineWorker.FOLLOWER_BATCH_SIZE,
+        );
 
         if (!error) {
           return data ?? [];
@@ -84,7 +109,7 @@ export class TimelineWorker {
       }
     }
 
-    throw new Error('Timeline follower lookup failed');
+    throw new TimelineFollowerLookupError();
   }
 
   private async enqueueRecipients(
@@ -124,6 +149,6 @@ export class TimelineWorker {
       }
     }
 
-    throw new Error('Timeline queue transaction failed');
+    throw new TimelineQueueWriteError();
   }
 }
