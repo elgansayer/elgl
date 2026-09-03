@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -16,6 +17,7 @@ import {
   CACHE_PUBLIC_SHORT,
   CACHE_PRIVATE_NO_STORE,
 } from '../common/cache.interceptor';
+import { SelectInterestsDto } from './dto/select-interests.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -35,9 +37,15 @@ export class InterestsController {
    */
   @Get()
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
-  async listInterests(@Query('language') language: string) {
+  async listInterests(
+    @Query('language') language: string,
+    @Query('includeEmpty') includeEmpty?: string,
+  ) {
     const targetLanguage = language || 'en';
-    return this.interestsService.findAll(targetLanguage);
+    return this.interestsService.findAll(
+      targetLanguage,
+      includeEmpty === 'true',
+    );
   }
 
   /**
@@ -46,12 +54,31 @@ export class InterestsController {
   @Post('select')
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async selectInterests(
-    @Body('interestIds') interestIds: string[],
+    @Body() body: SelectInterestsDto,
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.id;
     const targetLanguage = req.user?.target_languages?.[0] ?? 'en';
-    await this.interestsService.setUserInterests(userId, interestIds);
+    const legacyInterestIds = Array.isArray(body.interestIds)
+      ? body.interestIds
+      : null;
+    const interestTags = Array.isArray(body.interestTags)
+      ? body.interestTags
+      : await this.interestsService.resolveLegacyInterestIds(
+          legacyInterestIds ?? [],
+        );
+    if (legacyInterestIds && interestTags.length !== legacyInterestIds.length) {
+      throw new BadRequestException('Unknown interest ID');
+    }
+    if (
+      !(await this.interestsService.interestTagsExist(
+        interestTags,
+        targetLanguage,
+      ))
+    ) {
+      throw new BadRequestException('Unknown interest tag');
+    }
+    await this.interestsService.setUserInterests(userId, interestTags);
     await this.interestsService.generateFlashcards(userId, targetLanguage);
     return { success: true };
   }

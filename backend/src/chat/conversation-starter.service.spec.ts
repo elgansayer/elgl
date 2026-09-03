@@ -112,7 +112,7 @@ describe('ConversationStarterService', () => {
   it('returns three bounded suggestions and strips model list prefixes', async () => {
     const responses = [
       ...eligibleResponses(),
-      { data: [{ interests: { name: 'Hiking' } }], error: null },
+      { data: [{ tag: 'hiking' }], error: null },
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
     llm.proxyMessage.mockResolvedValue({
@@ -130,12 +130,16 @@ describe('ConversationStarterService', () => {
     expect(suggestions.every((suggestion) => suggestion.length <= 160)).toBe(
       true,
     );
+    const interestQuery = from.mock.results.at(-1)?.value as {
+      select: ReturnType<typeof vi.fn>;
+    };
+    expect(interestQuery.select).toHaveBeenCalledWith('tag');
   });
 
   it('uses deterministic fallbacks when the LLM provider is unavailable', async () => {
     const responses = [
       ...eligibleResponses(),
-      { data: [{ interests: { name: 'Hiking' } }], error: null },
+      { data: [{ tag: 'hiking' }], error: null },
     ];
     from.mockImplementation(() => makeQuery(responses.shift() ?? {}));
     llm.proxyMessage.mockRejectedValue(new Error('provider unavailable'));
@@ -143,7 +147,7 @@ describe('ConversationStarterService', () => {
     const suggestions = await service.getSuggestions(userId, partnerId);
 
     expect(suggestions).toHaveLength(3);
-    expect(suggestions[0]).toContain('Hiking');
+    expect(suggestions[0]).toContain('hiking');
     expect(suggestions.join(' ')).not.toContain('provider unavailable');
   });
 

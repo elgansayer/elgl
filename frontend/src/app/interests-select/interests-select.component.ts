@@ -5,7 +5,8 @@ import { TranslatePipe } from '../services/translate.pipe';
 import { environment } from '../../environments/environment';
 
 export interface InterestVocabulary {
-  id: string;
+  id: string | null;
+  tag: string;
   name: string;
   vocabulary: { word: string; translation: string }[];
 }
@@ -15,15 +16,15 @@ export interface InterestVocabulary {
   imports: [HlmButton, TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2">
-      @for (interest of interests.value(); track interest.id) {
+      @for (interest of interests.value(); track interest.tag) {
         <button
           hlmBtn
           class="px-4 py-2 rounded-full border-2 transition-colors"
-          [class.bg-primary]="selectedIds().has(interest.id)"
-          [class.text-on-fill]="selectedIds().has(interest.id)"
-          [class.border-primary]="selectedIds().has(interest.id)"
-          [class.border-surface-100]="!selectedIds().has(interest.id)"
-          (click)="toggleInterest(interest.id)"
+          [class.bg-primary]="selectedTags().has(interest.tag)"
+          [class.text-on-fill]="selectedTags().has(interest.tag)"
+          [class.border-primary]="selectedTags().has(interest.tag)"
+          [class.border-surface-100]="!selectedTags().has(interest.tag)"
+          (click)="toggleInterest(interest.tag)"
         >
           {{ interest.name }}
         </button>
@@ -43,7 +44,7 @@ export class InterestsSelectComponent {
   targetLanguage = input.required<string>();
   interestsSaved = output<void>();
 
-  selectedIds = signal(new Set<string>());
+  selectedTags = signal(new Set<string>());
   interests = resource<InterestVocabulary[], { language: string }>({
     params: () => ({ language: this.targetLanguage() }),
     loader: async ({ params }) => {
@@ -56,27 +57,27 @@ export class InterestsSelectComponent {
     defaultValue: [],
   });
 
-  toggleInterest(id: string): void {
-    this.selectedIds.update((current) => {
+  toggleInterest(tag: string): void {
+    this.selectedTags.update((current) => {
       const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
+      if (next.has(tag)) {
+        next.delete(tag);
       } else {
-        next.add(id);
+        next.add(tag);
       }
       return next;
     });
   }
 
   async confirmSelection(): Promise<void> {
-    const ids = Array.from(this.selectedIds());
+    const tags = Array.from(this.selectedTags());
     const response = await fetch(`${environment.apiUrl}/interests/select`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.authService.getAccessToken() ?? ''}`,
       },
-      body: JSON.stringify({ interestIds: ids }),
+      body: JSON.stringify({ interestTags: tags }),
     });
     if (response.ok) {
       this.interestsSaved.emit();
