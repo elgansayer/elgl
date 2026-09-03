@@ -1,347 +1,435 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProfileVisitsService } from './profile-visits.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('ProfileVisitsService', () => {
   let service: ProfileVisitsService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
-  let mockNotificationsService: { sendVisitNotification: Mock };
-  let mockEventEmitter: { emit: Mock };
+  let mockSupabaseClient: { from: Mock };
+  let query: {
+    insert: Mock;
+    delete: Mock;
+    select: Mock;
+    eq: Mock;
+    gte: Mock;
+    order: Mock;
+    range: Mock;
+    limit: Mock;
+    single: Mock;
+  };
+  let eventEmitter: { emit: Mock };
 
   beforeEach(async () => {
-    mockQueryBuilder = {
+    query = {
       insert: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
+      range: vi.fn(),
+      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
       single: vi.fn(),
     };
-
     mockSupabaseClient = {
-      from: vi.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(query),
     };
-
-    mockNotificationsService = {
-      sendVisitNotification: vi.fn(),
-    };
-
-    mockEventEmitter = {
-      emit: vi.fn(),
-    };
+    eventEmitter = { emit: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileVisitsService,
         {
           provide: SupabaseService,
-          useValue: {
-            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
-          },
+          useValue: { getClient: vi.fn().mockReturnValue(mockSupabaseClient) },
         },
-        {
-          provide: NotificationsService,
-          useValue: mockNotificationsService,
-        },
-        {
-          provide: EventEmitter2,
-          useValue: mockEventEmitter,
-        },
+        { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
 
-    service = module.get<ProfileVisitsService>(ProfileVisitsService);
+    service = module.get(ProfileVisitsService);
   });
 
-  describe('getVisitCount', () => {
-    it('should return the correct visit count for a user', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { visit_count: 5 },
-        error: null,
-      });
-
-      const result = await service.getVisitCount('user-1');
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'count(*) as visit_count',
-      );
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('viewed_id', 'user-1');
-      expect(result).toEqual(5);
-    });
-
-    it('should return 0 if no visits are found', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-
-      const result = await service.getVisitCount('user-1');
-
-      expect(result).toEqual(0);
-    });
-
-    it('should throw an error if the query fails', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'DB query error' },
-      });
-
-      await expect(service.getVisitCount('user-1')).rejects.toThrow(
-        'Failed to fetch visit count: DB query error',
-      );
-    });
-  });
-
-  describe('deleteVisit', () => {
-    it('should delete a visit record successfully', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { id: 'visit-1' },
-        error: null,
-      });
-
-      const result = await service.deleteVisit('visit-1');
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(mockQueryBuilder.delete).toHaveBeenCalled();
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
-      expect(result).toEqual({ id: 'visit-1' });
-    });
-
-    it('should throw an error if the delete operation fails', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Delete operation failed' },
-      });
-
-      await expect(service.deleteVisit('visit-1')).rejects.toThrow(
-        'Failed to delete visit: Delete operation failed',
-      );
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(mockQueryBuilder.delete).toHaveBeenCalled();
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'visit-1');
-    });
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+  afterEach(() => vi.clearAllMocks());
 
   describe('recordVisit', () => {
-    it('should ignore visit when visitor views their own profile', async () => {
-      const result = await service.recordVisit('user-1', 'user-1', false);
-      expect(result).toEqual({ ignored: true });
+    it('never records a self view', async () => {
+      await expect(service.recordVisit('user-1', 'user-1')).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'self',
+      });
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it('should ignore visit when VIP visitor has incognito mode (incognito_visits) enabled', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { incognito_visits: true },
+    it('never records an incognito VIP visit', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: true,
+          incognito_visits: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
         error: null,
       });
 
-      const result = await service.recordVisit('vip-user', 'target-user', true);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith('incognito_visits');
-      expect(result).toEqual({ incognito: true, ignored: true });
-      // No insert should be attempted, and no notification should be emitted
-      expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
-      expect(
-        mockNotificationsService.sendVisitNotification,
-      ).not.toHaveBeenCalled();
-      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'incognito',
+      });
+      expect(query.insert).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('should record visit for VIP visitor when incognito mode is disabled', async () => {
-      // 1st single call: user lookup for privacy setting
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { incognito_visits: false },
-        error: null,
-      });
-      // 2nd single call: profile_visits insert
-      const visitRow = {
-        id: 'visit-1',
-        visitor_id: 'vip-user',
-        viewed_id: 'target-user',
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: visitRow,
-        error: null,
-      });
+    it('never records a hidden, deleted or deletion-pending profile', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_vip: true,
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'hidden',
+          },
+          error: null,
+        });
 
-      const result = await service.recordVisit('vip-user', 'target-user', true);
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
-        visitor_id: 'vip-user',
-        viewed_id: 'target-user',
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'unavailable',
       });
-      expect(result).toEqual(visitRow);
+      expect(query.insert).not.toHaveBeenCalled();
     });
 
-    it('should record visit for regular non-VIP visitor without checking privacy setting', async () => {
-      const visitRow = {
-        id: 'visit-2',
-        visitor_id: 'free-user',
-        viewed_id: 'target-user',
-      };
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: visitRow,
+    it('never lets a non-VIP caller forge a visit to a VIP-only profile', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'vips_only',
+          },
+          error: null,
+        });
+
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'unavailable',
+      });
+      expect(query.insert).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('never records a visit when either user has blocked the other', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'everyone',
+          },
+          error: null,
+        });
+      query.limit.mockResolvedValueOnce({
+        data: [{ id: 'block-1' }],
         error: null,
       });
 
-      const result = await service.recordVisit(
-        'free-user',
-        'target-user',
-        false,
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'blocked',
+      });
+      expect(query.insert).not.toHaveBeenCalled();
+    });
+
+    it('coalesces duplicate refreshes using the database unique key and emits no duplicate notification', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'everyone',
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { code: '23505', message: 'duplicate key' },
+        });
+      query.limit
+        .mockResolvedValueOnce({ data: [], error: null })
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: false,
+        ignored: true,
+        reason: 'duplicate',
+      });
+      expect(query.insert).toHaveBeenCalledWith({
+        visitor_id: 'viewer-1',
+        viewed_id: 'target-1',
+      });
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('records an eligible visit once and emits the notification event', async () => {
+      query.single
+        .mockResolvedValueOnce({
+          data: { is_vip: false, incognito_visits: false },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'target-1',
+            is_vip: true,
+            is_deleted: false,
+            scheduled_for_deletion_at: null,
+            profile_visibility: 'everyone',
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: 'visit-1', created_at: '2026-08-20T12:00:00.000Z' },
+          error: null,
+        });
+      query.limit
+        .mockResolvedValueOnce({ data: [], error: null })
+        .mockResolvedValueOnce({ data: [], error: null });
+
+      await expect(
+        service.recordVisit('viewer-1', 'target-1'),
+      ).resolves.toEqual({
+        recorded: true,
+        ignored: false,
+        visit_id: 'visit-1',
+      });
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'profile.visit',
+        expect.objectContaining({
+          viewerId: 'viewer-1',
+          viewedUserId: 'target-1',
+          identityVisible: true,
+        }),
       );
-
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profile_visits');
-      expect(result).toEqual(visitRow);
     });
 
-    it('should throw Error when insert visit fails for VIP visitor', async () => {
-      // First call checks privacy setting
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { incognito_visits: false },
-        error: null,
-      });
-      // Second call fails to insert
-      mockQueryBuilder.single.mockResolvedValueOnce({
+    it('fails closed if privacy or block state cannot be verified', async () => {
+      query.single.mockResolvedValueOnce({
         data: null,
-        error: { message: 'Insert constraint violation' },
+        error: { message: 'database unavailable' },
       });
 
-      await expect(
-        service.recordVisit('vip-user', 'target-user', true),
-      ).rejects.toThrow('Failed to record visit: Insert constraint violation');
-    });
-
-    it('should throw Error when insert visit fails for non VIP visitor', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'Insert constraint violation' },
-      });
-
-      await expect(
-        service.recordVisit('free-user', 'target-user', false),
-      ).rejects.toThrow('Failed to record visit: Insert constraint violation');
+      await expect(service.recordVisit('viewer-1', 'target-1')).rejects.toThrow(
+        'Failed to verify profile-visit privacy',
+      );
+      expect(query.insert).not.toHaveBeenCalled();
     });
   });
 
   describe('getVisitors', () => {
-    it('should return unblurred visitor records when profile owner is VIP', async () => {
-      const rows = [
-        {
-          id: 'v-1',
-          created_at: '2026-07-22T10:00:00Z',
-          visitor: {
-            id: 'visitor-1',
-            display_name: 'John',
-            avatar_url: 'avatar.png',
-            native_language: 'en',
-            target_languages: ['fr'],
-          },
+    const visitor = {
+      id: 'visitor-1',
+      display_name: 'Visible Visitor',
+      avatar_url: 'avatar.png',
+      native_languages: ['en'],
+      target_languages: ['ja'],
+      bio_text: 'Hello',
+      is_vip: false,
+      is_deleted: false,
+      scheduled_for_deletion_at: null,
+      profile_visibility: 'everyone',
+    };
+
+    it('never returns visitor identity to a non-VIP API caller', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: false,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
         },
-      ];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: rows,
+        error: null,
+      });
+      query.range.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'visit-1',
+            created_at: '2026-08-20T12:00:00.000Z',
+            visitor,
+          },
+        ],
         error: null,
       });
 
-      const result = await service.getVisitors('owner-1', true);
+      const page = await service.getVisitors('owner-1', 20, 0);
 
-      expect(result).toEqual([
-        {
-          id: 'v-1',
-          created_at: '2026-07-22T10:00:00Z',
-          is_blurred: false,
-          visitor: {
-            id: 'visitor-1',
-            display_name: 'John',
-            avatar_url: 'avatar.png',
-            native_language: 'en',
-            target_languages: ['fr'],
-          },
+      expect(page.identity_visible).toBe(false);
+      expect(page.items).toHaveLength(1);
+      expect(page.items[0]).toMatchObject({
+        is_blurred: true,
+        visitor: {
+          id: 'hidden-vip-only',
+          avatar_url: null,
+          native_languages: [],
+          target_languages: [],
         },
-      ]);
+      });
+      expect(JSON.stringify(page.items[0])).not.toContain('Visible Visitor');
+      expect(JSON.stringify(page.items[0])).not.toContain('visitor-1');
     });
 
-    it('should return blurred visitor records when profile owner is not VIP', async () => {
-      const rows = [
-        {
-          id: 'v-2',
-          created_at: '2026-07-22T11:00:00Z',
-          visitor: {
-            id: 'visitor-2',
-            display_name: 'Secret User',
-            avatar_url: 'secret.png',
-            native_language: 'ja',
-            target_languages: ['en'],
-          },
+    it('returns full visitor identity to a verified VIP owner', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
         },
-      ];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: rows,
+        error: null,
+      });
+      query.range.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'visit-1',
+            created_at: '2026-08-20T12:00:00.000Z',
+            visitor,
+          },
+        ],
         error: null,
       });
 
-      const result = await service.getVisitors('owner-free', false);
+      const page = await service.getVisitors('owner-1', 20, 0);
 
-      expect(result).toEqual([
-        {
-          id: 'v-2',
-          created_at: '2026-07-22T11:00:00Z',
-          is_blurred: true,
-          visitor: {
-            id: 'hidden-vip-only',
-            display_name: 'Someone near you',
-            avatar_url: null,
-            native_language: 'ja',
-            target_languages: ['en'],
-          },
-        },
-      ]);
+      expect(page.identity_visible).toBe(true);
+      expect(page.items[0].is_blurred).toBe(false);
+      expect(page.items[0].visitor.id).toBe('visitor-1');
+      expect(page.items[0].visitor.display_name).toBe('Visible Visitor');
     });
 
-    it('should use default native_language and target_languages if visitor fields are null or undefined when blurring', async () => {
-      const rows = [
-        {
-          id: 'v-3',
-          created_at: '2026-07-22T12:00:00Z',
-          visitor: null,
+    it('filters historical rows for visitors who are now hidden or deletion-pending', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
         },
-      ];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: rows,
+        error: null,
+      });
+      query.range.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'visit-hidden',
+            created_at: '2026-08-20T12:00:00.000Z',
+            visitor: { ...visitor, profile_visibility: 'hidden' },
+          },
+          {
+            id: 'visit-pending',
+            created_at: '2026-08-20T11:00:00.000Z',
+            visitor: {
+              ...visitor,
+              id: 'visitor-2',
+              scheduled_for_deletion_at: '2026-08-21T00:00:00.000Z',
+            },
+          },
+        ],
         error: null,
       });
 
-      const result = await service.getVisitors('owner-free', false);
-
-      expect(result[0].visitor.native_language).toBe('en');
-      expect(result[0].visitor.target_languages).toEqual(['es']);
+      const page = await service.getVisitors('owner-1', 20, 0);
+      expect(page.items).toEqual([]);
     });
 
-    it('should return empty array when query returns error or null data', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+    it('bounds pagination and exposes an explicit next offset', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
+        error: null,
+      });
+      query.range.mockResolvedValueOnce({
+        data: Array.from({ length: 51 }, (_, index) => ({
+          id: `visit-${index}`,
+          created_at: '2026-08-20T12:00:00.000Z',
+          visitor: { ...visitor, id: `visitor-${index}` },
+        })),
+        error: null,
+      });
+
+      const page = await service.getVisitors('owner-1', 500, -10);
+
+      expect(query.range).toHaveBeenCalledWith(0, 50);
+      expect(page.limit).toBe(50);
+      expect(page.offset).toBe(0);
+      expect(page.items).toHaveLength(50);
+      expect(page.has_more).toBe(true);
+      expect(page.next_offset).toBe(50);
+    });
+
+    it('surfaces storage failures instead of turning them into an empty state', async () => {
+      query.single.mockResolvedValueOnce({
+        data: {
+          is_vip: true,
+          is_deleted: false,
+          scheduled_for_deletion_at: null,
+        },
+        error: null,
+      });
+      query.range.mockResolvedValueOnce({
         data: null,
-        error: { message: 'DB query error' },
+        error: { message: 'query failed' },
       });
 
-      const result = await service.getVisitors('owner-1', true);
-      expect(result).toEqual([]);
+      await expect(service.getVisitors('owner-1')).rejects.toThrow(
+        'Failed to fetch profile visitors',
+      );
+    });
+
+    it('fails closed if the owner entitlement cannot be verified', async () => {
+      query.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'query failed' },
+      });
+
+      await expect(service.getVisitors('owner-1')).rejects.toThrow(
+        'Failed to verify visitor-log entitlement',
+      );
+      expect(query.range).not.toHaveBeenCalled();
     });
   });
 });

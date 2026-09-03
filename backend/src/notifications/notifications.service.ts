@@ -271,6 +271,7 @@ export class NotificationsService {
       | 'system',
     entityId?: string,
     message?: string,
+    dispatchPush = true,
   ): Promise<void> {
     if (recipientId === actorId) return;
 
@@ -331,13 +332,15 @@ export class NotificationsService {
           break;
       }
 
-      await this.sendPushNotification(recipientId, {
-        type,
-        title: titleMap[type] || 'New Notification',
-        body: bodyMap[type] || 'You have a new alert',
-        data: { actorId, entityId: entityId || '' },
-        category: pushCategory,
-      });
+      if (dispatchPush) {
+        await this.sendPushNotification(recipientId, {
+          type,
+          title: titleMap[type] || 'New Notification',
+          body: bodyMap[type] || 'You have a new alert',
+          data: { actorId, entityId: entityId || '' },
+          category: pushCategory,
+        });
+      }
     } catch (err) {
       console.error(`Failed to create notification for ${recipientId}:`, err);
     }
