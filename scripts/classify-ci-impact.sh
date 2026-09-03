@@ -11,10 +11,14 @@ while IFS= read -r path; do
   saw_path=true
 
   case "$path" in
-    automation/*|config/factory/*|config/systemd/*)
+    automation/*|config/factory/*|config/systemd/*|scripts/decommission-legacy-factory.sh|scripts/deploy-and-start-factory.sh|scripts/install-factory-env.sh|scripts/install-repo-factory-instance.sh|scripts/maintain-factory-host-storage.sh|scripts/migrate-factory-to-secondary-disk.sh|scripts/relocate-home-cache-to-second-disk.sh|scripts/repair-factory-host.sh|scripts/start-factory.sh)
+      # These exact host-management scripts operate only the autonomous Factory
+      # runtime, provider homes, state volumes and service deployment. Changes to
+      # them cannot affect backend/frontend/admin application code, so installing
+      # and testing all three applications adds no verification signal.
       run_factory=true
       ;;
-    .github/workflows/ci.yml)
+    .github/workflows/ci.yml|scripts/classify-ci-impact.sh|scripts/classify-ci-impact.test.sh)
       # Changing the canonical classifier/gate itself must fail open to both
       # verification groups so a broken optimisation cannot silently skip CI.
       run_application=true
