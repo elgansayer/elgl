@@ -65,7 +65,9 @@ def _load_object(path: Path) -> dict[str, Any]:
     return value
 
 
-def reconcile_files(base_path: Path, local_path: Path, desired_path: Path, output_path: Path) -> None:
+def reconcile_files(
+    base_path: Path, local_path: Path, desired_path: Path, output_path: Path
+) -> None:
     merged = reconcile_agents_config(
         _load_object(base_path),
         _load_object(local_path),
