@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VisualDiffComponent } from './visual-diff.component';
 
-describe.skip('VisualDiffComponent', () => {
+describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
 
@@ -12,6 +12,10 @@ describe.skip('VisualDiffComponent', () => {
 
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
+
+    // Set initial required inputs before detectChanges()
+    fixture.componentRef.setInput('original', '');
+    fixture.componentRef.setInput('corrected', '');
     fixture.detectChanges();
   });
 
@@ -75,6 +79,27 @@ describe.skip('VisualDiffComponent', () => {
     for (let i = 0; i < indexes.length - 1; i++) {
       expect(indexes[i]).toBeLessThan(indexes[i + 1]);
     }
+  });
+
+  it('should preserve the longest common sequence after a middle deletion', () => {
+    setInputs('one two three four five', 'one three four five');
+
+    const changedSegments = component.segments().filter((segment) => segment.type !== 'unchanged');
+    expect(changedSegments).toEqual([
+      { type: 'removed', text: 'two', index: 2 },
+      { type: 'removed', text: ' ', index: 3 },
+    ]);
+  });
+
+  it('should fall back to a faithful coarse diff when the edit distance is excessive', () => {
+    const original = Array.from({ length: 600 }, (_, index) => `old${index}`).join(' ');
+    const corrected = Array.from({ length: 600 }, (_, index) => `new${index}`).join(' ');
+    setInputs(original, corrected);
+
+    expect(component.segments()).toEqual([
+      { type: 'removed', text: original, index: 0 },
+      { type: 'added', text: corrected, index: 1 },
+    ]);
   });
 
   it('should handle non-Latin text (Arabic)', () => {
