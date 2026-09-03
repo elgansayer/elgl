@@ -11,7 +11,7 @@ import {
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupSettingsDto } from './dto/update-group-settings.dto';
 import { SendAnnouncementDto } from './dto/send-announcement.dto';
-import { AddMemberDto } from '../chat/dto/add-member.dto';
+import { AddMemberDto } from './dto/add-member.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 
 describe('GroupsController', () => {
