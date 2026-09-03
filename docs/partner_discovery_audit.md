@@ -54,16 +54,16 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### C. Timezone / Active Hours Overlap
 
-**Why:** Language exchange fails if users are awake at completely different times. Manual availability blocks (morning/evening) are high friction and rarely updated by users.
+**Why:** Language exchange fails if users are awake at completely different times. Manual availability blocks (morning/evening) are high friction and rarely updated by users. Explicit timezone overlap scoring eliminates this friction by automatically favouring partners who share waking hours.
 **Implementation:**
 
-- Calculate the user's inferred timezone (either from device data or by analyzing their `last_active_at` distribution over 30 days).
+- Calculate the user's inferred timezone (either from device data or by analysing their `last_active_at` distribution over 30 days).
 - Calculate the overlapping waking hours (e.g., 08:00 - 23:00 local time) between the searcher and the candidate.
 - +10 points for every hour of overlap, up to a maximum of +50.
 
 ### D. Interest & Hobby Overlap
 
-**Why:** Shared interests provide immediate conversation starters and increase the likelihood of a long-term connection. Currently, interests are a hard filter, which artificially limits discovery.
+**Why:** Shared interests provide immediate conversation starters and increase the likelihood of a long-term connection. Currently, interests are a hard filter, which artificially limits discovery. Transitioning this to a weighted scoring system surfaces users with common ground without entirely hiding those who don't match perfectly.
 **Implementation:**
 
 - Convert the existing `overlaps` hard filter into a scoring mechanism.
@@ -72,7 +72,7 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### E. Response Behaviour (Responsiveness Score)
 
-**Why:** Users get frustrated when they send messages and receive no reply. We should promote users who actively engage in new conversations.
+**Why:** Users get frustrated when they send messages and receive no reply. We should promote users who actively engage in new conversations. Promoting users who actively engage in new conversations (e.g., high reply rate within 24 hours) ensures searchers are connected with active, responsive partners.
 **Implementation:**
 
 - Track a `reply_rate` (percentage of first messages replied to within 24 hours).
@@ -81,7 +81,7 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### F. Correction Behaviour (Helpfulness)
 
-**Why:** HelloTalk users highly value corrections. The platform already tracks `correction_ratio`, but it shouldn't just be a generic platform-wide metric.
+**Why:** HelloTalk users highly value corrections. The platform already tracks `correction_ratio`, but it shouldn't just be a generic platform-wide metric. Scaling this dynamically alongside a `corrector_score` elevates genuinely helpful users.
 **Implementation:**
 
 - Continue using `correction_ratio` and `corrector_score` (from `CorrectorScoreService`), but scale it dynamically.
@@ -90,7 +90,7 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### G. Learning Seriousness (Dedication)
 
-**Why:** Casual learners often drop off, frustrating serious learners. The current "Serious Learner" toggle is a strict gate; it should be a spectrum.
+**Why:** Casual learners often drop off, frustrating serious learners. The current "Serious Learner" toggle is a strict gate; it should be a spectrum. Integrating dedication metrics (like `study_streak_days`) as a spectrum allows the algorithm to match serious learners with other serious learners, while down-weighting the signal for casual learners who might prefer a less intense commitment.
 **Implementation:**
 
 - Score based on `study_streak_days`.
@@ -99,7 +99,7 @@ To build a truly personalised discovery experience, we should replace the cascad
 
 ### H. Conversation Compatibility (Past Success)
 
-**Why:** If a user tends to have long, successful conversations with users from a specific country or age group, the algorithm should learn this preference.
+**Why:** If a user tends to have long, successful conversations with users from a specific country or age group, the algorithm should learn and prioritise this preference. This adds a layer of personalisation that goes beyond explicit profile settings, adapting to the user's actual successful interactions.
 **Implementation:**
 
 - Track "successful conversations" (e.g., chats exceeding 50 messages).
