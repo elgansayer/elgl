@@ -4,8 +4,10 @@
 # Safety contract:
 #   - Never restarts while active jobs are running (checked via daemon.json).
 #   - Only pulls if the remote has new commits (fast-forward only - no merges).
-#   - Materialises root-owned runtime scripts from immutable Git blobs, never
-#     from the Factory-user-writable working tree.
+#   - Materialises root-owned runtime scripts and provider config from immutable
+#     Git blobs, never from the Factory-user-writable working tree.
+#   - Provider config is schema-validated after package refresh and rolled back
+#     automatically if any later update step or service restart fails.
 #   - Aborts on any error; the EXIT trap restores services stopped by an update.
 #   - Logs every decision so journalctl -u hellotalk-factory-update traces the run.
 set -euo pipefail
@@ -21,6 +23,8 @@ FACTORY_VENV=/opt/hellotalk-factory/venv
 RUNTIME_ROOT=/opt/hellotalk-factory
 RUNTIME_SOURCE_SHA_FILE="$RUNTIME_ROOT/runtime-source.sha"
 RUNTIME_MAINTENANCE="$RUNTIME_ROOT/scripts/maintain-factory-host-storage.sh"
+AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}
+AGENTS_CONFIG_SOURCE=config/factory/agents.production.json
 RESTART_GRACE_SECONDS=${FACTORY_UPDATE_RESTART_GRACE_SECONDS:-60}
 ACTIVE_JOB_WAIT_SECONDS=${FACTORY_UPDATE_ACTIVE_JOB_WAIT_SECONDS:-300}
 GIT_TIMEOUT=${FACTORY_UPDATE_GIT_TIMEOUT:-120}
@@ -28,6 +32,8 @@ MAINTENANCE_ONLY=false
 update_completed=false
 services_stopped=false
 secondary_was_active=false
+agents_config_changed=false
+agents_config_backup=
 
 case "${1:-}" in
   '') ;;
@@ -41,8 +47,22 @@ fi
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] factory-update: $*"; }
 
+restore_agents_config_on_failure() {
+  if [ "$agents_config_changed" != true ]; then
+    return
+  fi
+  log 'Update failed after provider-config reconciliation - restoring previous config'
+  if [ "$agents_config_backup" = __absent__ ]; then
+    rm -f -- "$AGENTS_CONFIG" || true
+  elif [ -n "$agents_config_backup" ] && [ -f "$agents_config_backup" ]; then
+    mv -fT -- "$agents_config_backup" "$AGENTS_CONFIG" || true
+  fi
+  agents_config_changed=false
+}
+
 restore_services_on_failure() {
   if [ "$services_stopped" = true ] && [ "$update_completed" = false ]; then
+    restore_agents_config_on_failure
     log "Update failed after service stop - restoring previously running services"
     systemctl reset-failed "$SERVICE" || true
     systemctl start "$SERVICE" || true
@@ -94,11 +114,27 @@ trusted_runtime_commit() {
   return 1
 }
 
+file_matches_commit() {
+  local commit=$1
+  local relative_path=$2
+  local destination=$3
+  local actual_blob expected_blob
+
+  [ -f "$destination" ] || return 1
+  expected_blob=$(factory_git_read rev-parse "${commit}:${relative_path}") || return 1
+  [[ "$expected_blob" =~ ^[0-9a-f]{40,64}$ ]] || return 1
+  actual_blob=$(git hash-object "$destination") || return 1
+  [ "$actual_blob" = "$expected_blob" ]
+}
+
 install_runtime_file_from_commit() {
   local commit=$1
   local relative_path=$2
   local destination=$3
   local mode=$4
+  local owner=${5:-root}
+  local group=${6:-root}
+  local directory_mode=${7:-0755}
   local actual_blob expected_blob temporary
 
   if ! expected_blob=$(factory_git_read rev-parse "${commit}:${relative_path}"); then
@@ -109,7 +145,8 @@ install_runtime_file_from_commit() {
     log "Invalid blob identity for $relative_path"
     return 1
   }
-  if ! install -d -o root -g root -m 0755 "$(dirname "$destination")"; then
+  if ! install -d -o "$owner" -g "$group" -m "$directory_mode" \
+    "$(dirname "$destination")"; then
     return 1
   fi
   if ! temporary=$(mktemp "${destination}.new.XXXXXX"); then
@@ -130,10 +167,10 @@ install_runtime_file_from_commit() {
   fi
   if [ -f "$destination" ] && cmp -s "$temporary" "$destination"; then
     rm -f "$temporary"
-    chown root:root "$destination" && chmod "$mode" "$destination"
+    chown "$owner:$group" "$destination" && chmod "$mode" "$destination"
     return
   fi
-  if ! chown root:root "$temporary" || \
+  if ! chown "$owner:$group" "$temporary" || \
     ! chmod "$mode" "$temporary" || \
     ! mv -fT -- "$temporary" "$destination"; then
     rm -f "$temporary"
@@ -172,6 +209,45 @@ install_runtime_bundle() {
     "$commit" config/systemd/hellotalk-factory-update.sh \
     "$RUNTIME_ROOT/hellotalk-factory-update.sh" 0755 || return 1
   record_runtime_commit "$commit" || return 1
+}
+
+install_agents_config_from_commit() {
+  local commit=$1
+
+  case "$AGENTS_CONFIG" in
+    /etc/repo-factory/*|/etc/hellotalk-factory/*) ;;
+    *)
+      log "Refusing provider-config reconciliation outside an approved /etc Factory root: $AGENTS_CONFIG"
+      return 1
+      ;;
+  esac
+
+  if file_matches_commit "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
+    chown "root:$FACTORY_USER" "$AGENTS_CONFIG"
+    chmod 0640 "$AGENTS_CONFIG"
+    return 0
+  fi
+
+  if [ -f "$AGENTS_CONFIG" ]; then
+    agents_config_backup=$(mktemp "${AGENTS_CONFIG}.rollback.XXXXXX")
+    cp --preserve=mode,ownership -- "$AGENTS_CONFIG" "$agents_config_backup"
+  else
+    agents_config_backup=__absent__
+  fi
+  agents_config_changed=true
+
+  install_runtime_file_from_commit \
+    "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG" 0640 \
+    root "$FACTORY_USER" 0750
+
+  "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
+import sys
+from pathlib import Path
+
+from openhands_factory.config import AgentsConfig
+
+AgentsConfig.model_validate_json(Path(sys.argv[1]).read_text(encoding="utf-8"))
+PY
 }
 
 run_storage_maintenance() {
@@ -245,17 +321,26 @@ timeout "${GIT_TIMEOUT}s" \
 
 local_sha=$(factory_git_read rev-parse HEAD)
 remote_sha=$(factory_git_read rev-parse origin/main)
+config_is_current=false
+if verify_commit_identity "$remote_sha" && \
+  file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
+  config_is_current=true
+fi
 
-if [ "$local_sha" = "$remote_sha" ]; then
-  log "Already up to date at ${local_sha:0:12} - no restart needed"
+if [ "$local_sha" = "$remote_sha" ] && [ "$config_is_current" = true ]; then
+  log "Already up to date at ${local_sha:0:12} with reconciled provider config - no restart needed"
   exit 0
 fi
 
-log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
-merge_base=$(factory_git_read merge-base HEAD origin/main)
-if [ "$merge_base" != "$local_sha" ]; then
-  log "ERROR: local main has diverged from origin/main (merge-base=${merge_base:0:12}) - manual intervention required"
-  exit 1
+if [ "$local_sha" = "$remote_sha" ]; then
+  log "Repository is current at ${local_sha:0:12}, but provider config drifted - reconciling autonomously"
+else
+  log "New commits on main: ${local_sha:0:12} -> ${remote_sha:0:12}"
+  merge_base=$(factory_git_read merge-base HEAD origin/main)
+  if [ "$merge_base" != "$local_sha" ]; then
+    log "ERROR: local main has diverged from origin/main (merge-base=${merge_base:0:12}) - refusing non-fast-forward update"
+    exit 1
+  fi
 fi
 
 log 'Stopping factory service'
@@ -266,19 +351,21 @@ if [ -n "$SECONDARY_SERVICE" ] && systemctl is-active --quiet "$SECONDARY_SERVIC
   systemctl stop "$SECONDARY_SERVICE" || true
 fi
 
-log 'Pulling main'
-timeout "${GIT_TIMEOUT}s" \
-  runuser -u "$FACTORY_USER" -- env \
+if [ "$local_sha" != "$remote_sha" ]; then
+  log 'Pulling main'
+  timeout "${GIT_TIMEOUT}s" \
+    runuser -u "$FACTORY_USER" -- env \
     HOME="$FACTORY_HOME" GH_TOKEN="${GITHUB_TOKEN:-}" \
     git -c credential.helper='!gh auth git-credential' \
     -C "$REPOSITORY" pull --ff-only origin main
+fi
 
 pulled_sha=$(factory_git_read rev-parse HEAD)
 if [ "$pulled_sha" != "$remote_sha" ] || ! verify_commit_identity "$pulled_sha"; then
-  log 'ERROR: pulled commit does not match the verified origin/main identity'
+  log 'ERROR: deployed checkout does not match the verified origin/main identity'
   exit 1
 fi
-log "Pulled to ${pulled_sha:0:12}"
+log "Deploying verified commit ${pulled_sha:0:12}"
 
 log 'Refreshing root-owned Factory runtime scripts from verified Git blobs'
 if ! install_runtime_bundle "$pulled_sha"; then
@@ -297,6 +384,9 @@ runuser -u "$FACTORY_USER" -- env \
     --project "$REPOSITORY/automation"
 runuser -u "$FACTORY_USER" -- env HOME="$FACTORY_HOME" \
   "$FACTORY_VENV/bin/uv" cache prune || true
+
+log 'Reconciling root-owned provider config from the verified commit'
+install_agents_config_from_commit "$pulled_sha"
 
 log 'Rebuilding the shared Factory worker image'
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 \
@@ -333,6 +423,10 @@ if systemctl is-active --quiet "$SERVICE"; then
   fi
   log "Factory restarted successfully at ${pulled_sha:0:12}"
   update_completed=true
+  if [ -n "$agents_config_backup" ] && [ "$agents_config_backup" != __absent__ ]; then
+    rm -f -- "$agents_config_backup" || \
+      log 'WARNING: could not remove successful provider-config rollback copy'
+  fi
 else
   log "ERROR: factory failed to start after update - check journalctl -u $SERVICE"
   exit 1
