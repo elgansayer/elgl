@@ -14,7 +14,7 @@ export class TwoFactorService {
   async enable(): Promise<{ secret: string; qrCodeUrl: string }> {
     return lastValueFrom(
       this.http.post<{ secret: string; qrCodeUrl: string }>(
-        `${this.apiUrl}/two-factor/enable`,
+        `${this.apiUrl}/auth/two-factor/enable`,
         {},
         {
           headers: {
@@ -28,7 +28,7 @@ export class TwoFactorService {
   async verify(token: string): Promise<boolean> {
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/two-factor/verify`,
+        `${this.apiUrl}/auth/two-factor/verify`,
         { token },
         {
           headers: {
@@ -43,7 +43,7 @@ export class TwoFactorService {
   async disable(token: string): Promise<boolean> {
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/two-factor/disable`,
+        `${this.apiUrl}/auth/two-factor/disable`,
         { token },
         {
           headers: {
@@ -58,7 +58,7 @@ export class TwoFactorService {
   async checkStatus(): Promise<boolean> {
     const res = await lastValueFrom(
       this.http.get<{ enabled: boolean }>(
-        `${this.apiUrl}/two-factor/status`,
+        `${this.apiUrl}/auth/two-factor/status`,
         {
           headers: {
             Authorization: `Bearer ${this.authService.getAccessToken()}`,
