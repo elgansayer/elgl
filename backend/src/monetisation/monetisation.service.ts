@@ -569,9 +569,7 @@ export class MonetisationService {
         );
 
       if (!purchaseDetails) {
-        this.logger.warn(
-          `Android restore: no purchase details for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase details unavailable');
         return { received: true, status: 'no_valid_subscription' };
       }
 
@@ -580,19 +578,17 @@ export class MonetisationService {
         Number.isFinite(expiryMillis) && expiryMillis > Date.now();
 
       if (!isCurrentlyEntitled) {
-        this.logger.warn(
-          `Android restore: purchase not currently entitled for token ${purchaseToken}`,
-        );
+        this.logger.warn('Android restore: purchase not currently entitled');
         return { received: true, status: 'no_valid_subscription' };
       }
 
-      // Determine which user this token belongs to
+      // A provider purchase token is an account-bound credential. Never let a
+      // token already associated with one account grant entitlement to another.
       const existingUserId =
         await this.googlePlayNotificationService.getUserIdByPurchaseToken(
           purchaseToken,
         );
       if (!existingUserId) {
-        // Store the purchase under the calling user's id
         await this.googlePlayNotificationService.storePurchaseToken(
           userId,
           purchaseToken,
@@ -600,7 +596,10 @@ export class MonetisationService {
         );
       } else if (existingUserId !== userId) {
         this.logger.warn(
-          `Purchase token ${purchaseToken} already belongs to user ${existingUserId}, but restore called for user ${userId}`,
+          'Android restore rejected: purchase belongs to a different account',
+        );
+        throw new ForbiddenException(
+          'This purchase is already linked to another account',
         );
       }
 
