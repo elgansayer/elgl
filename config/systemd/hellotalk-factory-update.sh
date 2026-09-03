@@ -211,6 +211,17 @@ install_runtime_bundle() {
   record_runtime_commit "$commit" || return 1
 }
 
+validate_agents_config() {
+  "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
+import sys
+from pathlib import Path
+
+from openhands_factory.config import AgentsConfig
+
+AgentsConfig.model_validate_json(Path(sys.argv[1]).read_text(encoding="utf-8"))
+PY
+}
+
 install_agents_config_from_commit() {
   local commit=$1
 
@@ -225,29 +236,21 @@ install_agents_config_from_commit() {
   if file_matches_commit "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG"; then
     chown "root:$FACTORY_USER" "$AGENTS_CONFIG"
     chmod 0640 "$AGENTS_CONFIG"
-    return 0
-  fi
-
-  if [ -f "$AGENTS_CONFIG" ]; then
-    agents_config_backup=$(mktemp "${AGENTS_CONFIG}.rollback.XXXXXX")
-    cp --preserve=mode,ownership -- "$AGENTS_CONFIG" "$agents_config_backup"
   else
-    agents_config_backup=__absent__
+    if [ -f "$AGENTS_CONFIG" ]; then
+      agents_config_backup=$(mktemp "${AGENTS_CONFIG}.rollback.XXXXXX")
+      cp --preserve=mode,ownership -- "$AGENTS_CONFIG" "$agents_config_backup"
+    else
+      agents_config_backup=__absent__
+    fi
+    agents_config_changed=true
+
+    install_runtime_file_from_commit \
+      "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG" 0640 \
+      root "$FACTORY_USER" 0750
   fi
-  agents_config_changed=true
 
-  install_runtime_file_from_commit \
-    "$commit" "$AGENTS_CONFIG_SOURCE" "$AGENTS_CONFIG" 0640 \
-    root "$FACTORY_USER" 0750
-
-  "$FACTORY_VENV/bin/python" - "$AGENTS_CONFIG" <<'PY'
-import sys
-from pathlib import Path
-
-from openhands_factory.config import AgentsConfig
-
-AgentsConfig.model_validate_json(Path(sys.argv[1]).read_text(encoding="utf-8"))
-PY
+  validate_agents_config
 }
 
 run_storage_maintenance() {
