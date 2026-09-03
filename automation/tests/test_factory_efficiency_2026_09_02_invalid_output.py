@@ -28,8 +28,6 @@ def test_production_invalid_output_circuit_outlives_normal_refreshes() -> None:
     assert breaker.invalid_output_cooldown_seconds > breaker.default_cooldown_seconds
 
     for instance in ("hellotalk", "workout-agent"):
-        environment_path = (
-            REPOSITORY_ROOT / "config" / "factory" / "instances" / f"{instance}.env"
-        )
+        environment_path = REPOSITORY_ROOT / "config" / "factory" / "instances" / f"{instance}.env"
         refresh_seconds = int(_environment_value(environment_path, "FACTORY_COOLDOWN_SECONDS"))
         assert breaker.invalid_output_cooldown_seconds >= 3 * refresh_seconds

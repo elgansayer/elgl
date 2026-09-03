@@ -17,19 +17,13 @@ def _function_range(script: str, first: str, after: str) -> str:
 def test_updater_reconciles_provider_config_from_verified_commit() -> None:
     updater = _read("config/systemd/hellotalk-factory-update.sh")
 
-    assert (
-        "AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}"
-        in updater
-    )
+    assert "AGENTS_CONFIG=${FACTORY_AGENTS_CONFIG:-/etc/hellotalk-factory/agents.json}" in updater
     assert "AGENTS_CONFIG_SOURCE=config/factory/agents.production.json" in updater
-    assert "readlink -m -- \"$candidate\"" in updater
+    assert 'readlink -m -- "$candidate"' in updater
     assert "/etc/repo-factory/*|/etc/hellotalk-factory/*" in updater
     assert "agents_config_metadata_current" in updater
     assert "stat -Lc '%u:%g:%a'" in updater
-    assert (
-        'file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$config_path"'
-        in updater
-    )
+    assert 'file_matches_commit "$remote_sha" "$AGENTS_CONFIG_SOURCE" "$config_path"' in updater
     assert 'install_agents_config_from_commit "$pulled_sha"' in updater
     assert "AgentsConfig.model_validate_json" in updater
 
@@ -98,8 +92,8 @@ def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path)
         "chown() { return 0; }\n"
         "chmod() { return 0; }\n"
         "systemctl() {\n"
-        "  if [ \"${1:-}\" = start ]; then\n"
-        "    printf '%s:%s\\n' \"$2\" \"$(cat \"$AGENTS_CONFIG\")\" >> \"$START_LOG\"\n"
+        '  if [ "${1:-}" = start ]; then\n'
+        '    printf \'%s:%s\\n\' "$2" "$(cat "$AGENTS_CONFIG")" >> "$START_LOG"\n'
         "  fi\n"
         "  return 0\n"
         "}\n"
@@ -143,7 +137,7 @@ def test_failed_provider_config_rollback_refuses_service_restart(tmp_path: Path)
         f"START_LOG={starts}\n"
         "log() { :; }\n"
         "systemctl() {\n"
-        "  if [ \"${1:-}\" = start ]; then echo \"$2\" >> \"$START_LOG\"; fi\n"
+        '  if [ "${1:-}" = start ]; then echo "$2" >> "$START_LOG"; fi\n'
         "  return 0\n"
         "}\n"
         f"{functions}\n"
