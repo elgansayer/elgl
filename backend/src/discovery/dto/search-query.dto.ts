@@ -11,6 +11,13 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
+const transformOptionalBoolean = ({ value }: { value: unknown }): unknown => {
+  if (value === true || value === false) return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+};
+
 export class SearchQueryDto {
   @ApiPropertyOptional({
     description:
@@ -157,13 +164,12 @@ export class SearchQueryDto {
   age_max?: number;
 
   @ApiPropertyOptional({
-    description: 'Only return partners currently hosting a LiveKit audio room.',
+    description:
+      'Only return partners currently hosting a public active LiveKit audio room.',
     example: true,
   })
-  @IsOptional()
-  @Transform(
-    ({ value }: { value: unknown }) => value === 'true' || value === true,
-  )
+  @ValidateIf((_query: SearchQueryDto, value: unknown) => value !== undefined)
+  @Transform(transformOptionalBoolean)
   @IsBoolean()
   voice_room_active?: boolean;
 
