@@ -23,9 +23,6 @@ import { DiscoveryService, DiscoveryResult } from './discovery.service';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import {
   DiscoveryCacheInterceptor,
-  DISCOVERY_CACHE_PUBLIC_LONG,
-  DISCOVERY_CACHE_PUBLIC_SHORT,
-  DISCOVERY_CACHE_PRIVATE_SHORT,
   DISCOVERY_CACHE_NO_STORE,
 } from './cache.interceptor';
 import {
@@ -89,10 +86,10 @@ export class DiscoveryController {
   ) {}
 
   /**
-   * Personalised partner search: user-specific filters, private short cache.
+   * Personalised partner search: user-specific filters, never HTTP cached.
    */
   @Get('partners')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -138,10 +135,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Partner of the Week: refreshed weekly by cron, public long-lived CDN cache.
+   * Partner of the Week: refreshed weekly by cron and revalidated on read.
    */
   @Get('partner-of-week')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -152,7 +149,7 @@ export class DiscoveryController {
     description:
       'Returns the current Partner of the Week user IDs, computed weekly by a cron job (Sundays at midnight). ' +
       'Partners are selected from top users with correction_ratio > 0.5, ordered by correction_ratio and study_streak_days. ' +
-      'Results are cached in Redis for 7 days with public CDN caching.',
+      'Candidate IDs are cached in Redis for 7 days and revalidated against current privacy, deletion, and viewer block state on every read.',
   })
   @ApiResponse({
     status: 200,
@@ -163,15 +160,16 @@ export class DiscoveryController {
       example: ['uuid-1', 'uuid-2'],
     },
   })
-  async getPartnerOfWeek(): Promise<string[]> {
-    return this.discoveryService.getPartnerOfWeekIds();
+  async getPartnerOfWeek(@CurrentUser() user: User | null): Promise<string[]> {
+    if (!user) return [];
+    return this.discoveryService.getPartnerOfWeekIds(user.id);
   }
 
   /**
-   * Audio intro discovery: user-specific filters, private short cache.
+   * Audio intro discovery: user-specific filters, never HTTP cached.
    */
   @Get('audio-intros')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -190,6 +188,10 @@ export class DiscoveryController {
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - missing or invalid JWT.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Audio introduction discovery is temporarily unavailable.',
   })
   async getAudioIntros(
     @CurrentUser() user: User | null,
@@ -212,10 +214,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Recently joined native speakers: shared list, public short-lived CDN cache.
+   * Recently joined native speakers: viewer-specific and never HTTP cached.
    */
   @Get('recent-native-speakers')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -225,7 +227,7 @@ export class DiscoveryController {
     summary: 'Get recently joined native speakers',
     description:
       'Returns up to 10 users who joined within the last 7 days and have at least one native language set. ' +
-      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are not HTTP cached so privacy transitions take effect immediately, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,
@@ -245,10 +247,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Spotlight users: shared list, public short-lived CDN cache.
+   * Spotlight users: viewer-specific and never HTTP cached.
    */
   @Get('spotlight')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -258,7 +260,7 @@ export class DiscoveryController {
     summary: 'Get spotlight users',
     description:
       'Returns up to 5 recently created users with native languages set. ' +
-      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
+      'Results exclude the requester and blocked profiles, are not HTTP cached so privacy transitions take effect immediately, and are enriched with Partner of the Week flags.',
   })
   @ApiResponse({
     status: 200,
@@ -276,10 +278,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Language pair matching: user-specific, private short cache.
+   * Language pair matching: user-specific and never HTTP cached.
    */
   @Get('language-pair')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -315,10 +317,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Location-based search: user-specific, private short cache.
+   * Location-based search: user-specific and never HTTP cached.
    */
   @Get('search-by-location')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   @DiscoveryRateLimit({
     freeMaxRequests: 20,
     vipMaxRequests: 80,
@@ -386,7 +388,7 @@ export class DiscoveryController {
    * Degradation-aware partner search: returns both data and degradation marker.
    */
   @Get('partners-with-degradation')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   async findPartnersWithDegradation(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,

@@ -6,6 +6,7 @@ type QueryBuilderMock = {
   select: Mock;
   neq: Mock;
   eq: Mock;
+  is: Mock;
   not: Mock;
   contains: Mock;
   gt: Mock;
@@ -40,6 +41,7 @@ const createQueryBuilder = (): QueryBuilderMock => {
     'select',
     'neq',
     'eq',
+    'is',
     'not',
     'contains',
     'gt',

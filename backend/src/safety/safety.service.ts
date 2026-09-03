@@ -262,10 +262,43 @@ export class SafetyService {
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    const [blocked, blockers] = await Promise.all([
-      this.getBlockedUserIds(userId),
-      this.getBlockerUserIds(userId),
+    const supabase = this.supabaseService.getClient();
+    const [blockedResult, blockerResult] = await Promise.all([
+      supabase.from('blocks').select('blocked_id').eq('blocker_id', userId),
+      supabase.from('blocks').select('blocker_id').eq('blocked_id', userId),
     ]);
+
+    const blockedRows = blockedResult.data;
+    const blockerRows = blockerResult.data;
+    const hasBlockedId = (row: unknown): row is { blocked_id: string } =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocked_id?: unknown }).blocked_id === 'string' &&
+      (row as { blocked_id: string }).blocked_id.trim().length > 0 &&
+      (row as { blocked_id: string }).blocked_id ===
+        (row as { blocked_id: string }).blocked_id.trim();
+    const hasBlockerId = (row: unknown): row is { blocker_id: string } =>
+      typeof row === 'object' &&
+      row !== null &&
+      typeof (row as { blocker_id?: unknown }).blocker_id === 'string' &&
+      (row as { blocker_id: string }).blocker_id.trim().length > 0 &&
+      (row as { blocker_id: string }).blocker_id ===
+        (row as { blocker_id: string }).blocker_id.trim();
+
+    if (
+      blockedResult.error ||
+      blockerResult.error ||
+      !Array.isArray(blockedRows) ||
+      !Array.isArray(blockerRows) ||
+      !blockedRows.every(hasBlockedId) ||
+      !blockerRows.every(hasBlockerId)
+    ) {
+      this.logger.error(`Failed to load complete block graph for ${userId}`);
+      throw new Error('Failed to load complete block graph');
+    }
+
+    const blocked = blockedRows.map((row) => row.blocked_id);
+    const blockers = blockerRows.map((row) => row.blocker_id);
     return [...new Set([...blocked, ...blockers])];
   }
 

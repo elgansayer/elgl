@@ -7,6 +7,7 @@ function createQueryBuilder() {
     'select',
     'neq',
     'eq',
+    'is',
     'contains',
     'gt',
     'gte',
