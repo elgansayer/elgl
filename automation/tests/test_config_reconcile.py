@@ -111,18 +111,18 @@ def test_reconciliation_preserves_local_additions_and_deletions() -> None:
     base = _base_config()
     local = deepcopy(base)
     desired = deepcopy(base)
-    local["providers"]["custom"] = {  # type: ignore[index]
+    local["providers"]["codex"] = {  # type: ignore[index]
         "enabled": False,
         "auth_mode": "subscription",
         "transport": "cli",
-        "model": "custom-model",
+        "model": "gpt-local",
     }
     del local["providers"]["google"]  # type: ignore[index]
     desired["providers"]["google"]["model"] = "gemini-new"  # type: ignore[index]
 
     merged = reconcile_agents_config(base, local, desired)
 
-    assert "custom" in merged["providers"]  # type: ignore[operator]
+    assert "codex" in merged["providers"]  # type: ignore[operator]
     assert "google" not in merged["providers"]  # type: ignore[operator]
 
 
