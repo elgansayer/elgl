@@ -20,7 +20,37 @@ class CategoryPreferenceDto {
   in_app?: boolean;
 }
 
+export class LegacyCategoryPreferenceDto {
+  @IsOptional()
+  @IsBoolean()
+  push?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  badge?: boolean;
+}
+
 export class UpdateNotificationPreferencesDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LegacyCategoryPreferenceDto)
+  direct_messages?: LegacyCategoryPreferenceDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LegacyCategoryPreferenceDto)
+  groups?: LegacyCategoryPreferenceDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LegacyCategoryPreferenceDto)
+  likes?: LegacyCategoryPreferenceDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LegacyCategoryPreferenceDto)
+  voice_rooms?: LegacyCategoryPreferenceDto;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => CategoryPreferenceDto)
