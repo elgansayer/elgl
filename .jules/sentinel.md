@@ -79,3 +79,9 @@
 **Vulnerability:** The TransferService could initialize using the well-known insecure fallback `test-transfer-secret` if the environment variable was omitted or masked in a production environment.
 **Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup. We must check all potential insecure defaults.
 **Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default (`test-transfer-secret`), preventing the backend from initializing insecurely.
+
+## 2026-08-30 - [Fail-Fast Centrifugo Credentials in Production]
+
+**Vulnerability:** Centrifugo `CENTRIFUGO_API_KEY` and `CENTRIFUGO_SECRET` could reach production as configuration defaults, tracked example placeholders, or whitespace-only values.
+**Learning:** Configuration defaults and example environment files can mask missing deployment secrets with predictable strings. Protect the service startup boundary against every repository-known placeholder, not only the schema default.
+**Prevention:** Reject missing, blank, whitespace-padded, test-default and example-placeholder Centrifugo credentials in the global production environment validator. Require both variables during production Compose interpolation and start Centrifugo only after the validated API is healthy, so predictable credentials are never exposed by the standalone WebSocket container.

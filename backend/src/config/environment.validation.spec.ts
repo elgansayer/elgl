@@ -79,10 +79,23 @@ describe('validateEnvironment', () => {
     ['CLOUDFLARE_R2_SIGNING_SECRET', 'replace-with-a-real-secret'],
     ['STRIPE_SECRET_KEY', 'sk_test_123'],
     ['SUPABASE_URL', 'https://example.supabase.co'],
+    ['CENTRIFUGO_API_KEY', 'secret-centrifugo-api-key-change-in-prod'],
+    ['CENTRIFUGO_SECRET', 'secret-centrifugo-token-key-change-in-prod'],
   ])('rejects production placeholder %s values', (key, value) => {
     expect(() =>
       validateEnvironment({ ...productionEnvironment(), [key]: value }),
     ).toThrow('Production environment contains placeholder values for:');
+  });
+
+  it.each([
+    ['CENTRIFUGO_API_KEY', ' prod-centrifugo-api-key'],
+    ['CENTRIFUGO_SECRET', 'prod-centrifugo-secret '],
+  ])('rejects whitespace-padded production %s values', (key, value) => {
+    expect(() =>
+      validateEnvironment({ ...productionEnvironment(), [key]: value }),
+    ).toThrow(
+      `Production environment contains surrounding whitespace for: ${key}`,
+    );
   });
 
   it.each([
