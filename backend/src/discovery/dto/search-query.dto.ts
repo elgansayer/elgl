@@ -87,7 +87,7 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Restrict to "serious learners": users with study_streak_days > 7 AND correction_ratio >= 0.8. Auto-enabled for users with serious_learner_mode profile setting.',
+      'Restrict to active serious learners: users with a study streak of at least 7 days and streak activity within the last 24 hours. Correction behaviour is not part of this predicate. Auto-enabled for users with the serious learner mode profile setting.',
     example: true,
   })
   @IsOptional()
