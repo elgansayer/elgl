@@ -24,3 +24,13 @@ def test_production_instances_use_bounded_github_refresh_cadence() -> None:
 
         assert refresh_seconds == 300, name
         assert issue_interval >= refresh_seconds, name
+
+
+def test_fresh_install_template_matches_production_refresh_cadence() -> None:
+    template = _environment(REPOSITORY_ROOT / "config" / "systemd" / "factory.env.example")
+
+    refresh_seconds = int(template["FACTORY_COOLDOWN_SECONDS"])
+    issue_interval = int(template["FACTORY_NEW_ISSUE_INTERVAL_SECONDS"])
+
+    assert refresh_seconds == 300
+    assert issue_interval >= refresh_seconds
