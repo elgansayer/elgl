@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -95,6 +95,8 @@ def test_provider_config_rollback_precedes_both_service_restarts(tmp_path: Path)
         "SECONDARY_SERVICE=secondary.service\n"
         f"START_LOG={starts}\n"
         "log() { :; }\n"
+        "chown() { return 0; }\n"
+        "chmod() { return 0; }\n"
         "systemctl() {\n"
         "  if [ \"${1:-}\" = start ]; then\n"
         "    printf '%s:%s\\n' \"$2\" \"$(cat \"$AGENTS_CONFIG\")\" >> \"$START_LOG\"\n"
