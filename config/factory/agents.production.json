@@ -125,6 +125,6 @@
     "transport_cooldown_seconds": 300,
     "timeout_cooldown_seconds": 300,
     "crash_cooldown_seconds": 300,
-    "invalid_output_cooldown_seconds": 60
+    "invalid_output_cooldown_seconds": 900
   }
 }
