@@ -106,7 +106,15 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
+      - name: Install frontend dependencies without Cypress binary
+        if: matrix.directory == 'frontend'
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+        run: npm ci --legacy-peer-deps
+        working-directory: frontend
+
       - name: Install dependencies
+        if: matrix.directory != 'frontend'
         run: npm ci --legacy-peer-deps
         working-directory: ${{ matrix.directory }}
 
