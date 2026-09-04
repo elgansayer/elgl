@@ -40,9 +40,13 @@ def test_profile_system_prompt_can_be_separate_from_shared_templates(tmp_path: P
 def test_production_system_prompt_keeps_model_work_in_one_provider_session() -> None:
     prompt = " ".join(build_system_prompt(PRODUCTION_PROMPT_DIR).split())
 
-    assert "Never spawn subagents, agent teams, delegated model sessions, nested LLM calls" in prompt
+    assert (
+        "Never spawn subagents, agent teams, delegated model sessions, nested LLM calls" in prompt
+    )
     assert "Nested model work bypasses Factory provider-start and allowance accounting" in prompt
-    assert "The Factory runs the authoritative full verification after the provider returns" in prompt
+    assert (
+        "The Factory runs the authoritative full verification after the provider returns" in prompt
+    )
 
 
 def test_build_task_prompt_includes_issue_and_verification_sections(
@@ -120,7 +124,9 @@ def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path)
     assert "Do not perform non-blocking cleanup" in prompt
     assert "If no blocking defect exists, leave tracked files unchanged" in prompt
     assert "If defects are found, correct them" not in prompt
-    assert "The Factory will follow any blocking repair with authoritative full verification" in prompt
+    assert (
+        "The Factory will follow any blocking repair with authoritative full verification" in prompt
+    )
     assert "run only focused checks needed for the repair inside this provider session" in prompt
 
 
