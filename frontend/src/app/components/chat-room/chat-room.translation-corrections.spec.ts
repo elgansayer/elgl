@@ -211,7 +211,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
     component.startCorrection(message);
 
     expect(component.originalText).toBe('Je suis aller au parc.');
-    expect(component.correctedText).toBe('');
+    expect(component.correctedText).toBe(component.originalText);
     expect(component.explanationText).toBe('');
     expect(component.showCorrectionForm()).toBe(true);
 
@@ -251,7 +251,7 @@ describe('ChatRoomComponent translation and correction contract', () => {
     });
     expect(component.messages()).toContain(saved);
     expect(component.originalText).toBe('');
-    expect(component.correctedText).toBe('');
+    expect(component.correctedText).toBe(component.originalText);
     expect(component.explanationText).toBe('');
     expect(component.showCorrectionForm()).toBe(false);
   });

@@ -143,7 +143,7 @@ describe('ChatRoomComponent group corrections', () => {
 
     expect(component.showCorrectionForm()).toBe(true);
     expect(component.originalText).toBe('Je suis aller au magasin');
-    expect(component.correctedText).toBe('');
+    expect(component.correctedText).toBe(component.originalText);
     expect(component.explanationText).toBe('');
   });
 
@@ -180,7 +180,7 @@ describe('ChatRoomComponent group corrections', () => {
     expect(component.messages()).toContainEqual(saved);
     expect(component.showCorrectionForm()).toBe(false);
     expect(component.originalText).toBe('');
-    expect(component.correctedText).toBe('');
+    expect(component.correctedText).toBe(component.originalText);
     expect(component.explanationText).toBe('');
   });
 
