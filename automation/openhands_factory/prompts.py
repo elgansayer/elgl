@@ -80,8 +80,7 @@ def build_task_prompt(
             "Factory-owned full verification (do not run this entire list inside the provider "
             "session; use it as acceptance constraints and run only focused checks needed for "
             "your edits. The Factory executes the authoritative full gate after this session "
-            "returns):\n"
-            + "\n".join(verification_commands)
+            "returns):\n" + "\n".join(verification_commands)
         ),
     ]
     bounded_body = _bounded_text(task.body, MAX_TASK_BODY_CHARS)
