@@ -72,6 +72,18 @@ export class R2Service {
       'CLOUDFLARE_R2_SIGNING_SECRET',
     );
     this.serviceToken = this.readRequiredSecret('CLOUDFLARE_R2_SERVICE_TOKEN');
+
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+    if (env === 'production') {
+      if (
+        this.signingSecret === 'test-r2-signing-secret-with-at-least-32-characters' ||
+        this.serviceToken === 'test-r2-service-token-with-at-least-32-characters'
+      ) {
+        throw new Error(
+          'CLOUDFLARE_R2_SIGNING_SECRET and CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
+        );
+      }
+    }
     this.uploadTtlSeconds = this.readPositiveInteger(
       'CLOUDFLARE_R2_UPLOAD_TTL_SECONDS',
       DEFAULT_UPLOAD_TTL_SECONDS,
