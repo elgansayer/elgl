@@ -62,6 +62,16 @@ export class CloudflareStreamService {
   constructor(private readonly configService: ConfigService) {
     this.accountId = this.readRequiredString('CLOUDFLARE_STREAM_ACCOUNT_ID');
     this.apiToken = this.readRequiredSecret('CLOUDFLARE_STREAM_API_TOKEN');
+
+    const env = this.configService.get<string>('NODE_ENV') || 'development';
+    if (env === 'production') {
+      if (this.apiToken === 'test-cloudflare-stream-api-token') {
+        throw new Error(
+          'CLOUDFLARE_STREAM_API_TOKEN must be securely configured in production',
+        );
+      }
+    }
+
     this.allowedOrigins = this.readCommaSeparated(
       'CLOUDFLARE_STREAM_ALLOWED_ORIGINS',
     );
