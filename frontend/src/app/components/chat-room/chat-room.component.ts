@@ -602,7 +602,7 @@ export class ChatRoomComponent implements OnDestroy {
   startCorrection(msg: ChatMessage): void {
     if (msg.message_type !== 'text') return;
     this.originalText = msg.text_content ?? '';
-    this.correctedText = '';
+    this.correctedText = msg.text_content ?? '';
     this.explanationText = '';
     this.showCorrectionForm.set(true);
   }
