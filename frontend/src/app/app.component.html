@@ -1,7 +1,7 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
-  @if (versionCheckService.isDeprecated()) {
+  @if (versionService.isDeprecated()) {
     <app-forced-update-modal [storeUrl]="'https://yourapp.com/update'" />
   }
   <app-no-network-banner />
