@@ -76,7 +76,13 @@ def build_task_prompt(
     # untrusted task data it's warning about, not up in the stable prefix.
     stable_sections = [
         template,
-        "Required verification:\n" + "\n".join(verification_commands),
+        (
+            "Factory-owned full verification (do not run this entire list inside the provider "
+            "session; use it as acceptance constraints and run only focused checks needed for "
+            "your edits. The Factory executes the authoritative full gate after this session "
+            "returns):\n"
+            + "\n".join(verification_commands)
+        ),
     ]
     bounded_body = _bounded_text(task.body, MAX_TASK_BODY_CHARS)
     task_sections = [
@@ -115,15 +121,17 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = ""
             "blocking acceptance, correctness, security, or verification defect. Do not perform "
             "non-blocking cleanup, style edits, refactors, speculative improvements, or unrelated "
             "optimizations during independent review. If no blocking defect exists, leave tracked "
-            "files unchanged. Any blocking repair must be followed by verification and a fresh "
-            "independent review of the resulting head."
+            "files unchanged. The Factory will follow any blocking repair with authoritative full "
+            "verification and a fresh independent review of the resulting head; run only focused "
+            "checks needed for the repair inside this provider session."
         )
     else:
         closing = (
             "Inspect AGENTS.md and the associated production and test files. Work only in the "
             "assigned worktree. If defects are found, correct them and update tests. If no defects "
-            "are found, leave the worktree unchanged. Run the applicable verification commands "
-            "before finishing."
+            "are found, leave the worktree unchanged. Run only focused checks needed for your "
+            "changes. Do not run the full Factory verification gate inside this provider session; "
+            "the orchestrator runs it after the session returns."
         )
     bounded_body = _bounded_text(task.body, PHASE_TASK_BODY_LIMITS[phase])
     bounded_extra = _bounded_text(extra, MAX_PHASE_EXTRA_CHARS)
