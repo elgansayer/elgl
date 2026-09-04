@@ -45,4 +45,12 @@ describe('VersionService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockVersion);
   });
+
+  it('should initialise isDeprecated as false', () => {
+    expect(service.isDeprecated()).toBe(false);
+  });
+
+  it('should expose reactive isDeprecated signal', () => {
+    expect(typeof service.isDeprecated()).toBe('boolean');
+  });
 });
