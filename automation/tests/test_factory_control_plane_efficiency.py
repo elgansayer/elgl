@@ -145,6 +145,7 @@ def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
         "**",
         "!automation/**/*.py",
         "!automation/prompts/**",
+        "!factory-dashboard/**",
         "!config/factory/**",
         "!config/systemd/**",
         "!docs/**",
