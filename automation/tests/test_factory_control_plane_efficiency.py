@@ -73,6 +73,7 @@ def test_clean_project_lint_skips_factory_only_pull_requests_before_runner_alloc
     assert "    paths-ignore:\n" in workflow
     for path in (
         "automation/**",
+        "factory-dashboard/**",
         "config/factory/**",
         "config/systemd/**",
         "docs/**",
@@ -106,6 +107,10 @@ def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None
         "automation/openhands_factory/**",
         "automation/tests/**",
         "automation/prompts/**",
+        "factory-dashboard/src/**",
+        "factory-dashboard/test/**",
+        "factory-dashboard/README.md",
+        "factory-dashboard/.env.example",
         "config/factory/**",
         "config/systemd/**",
         "docs/**",
@@ -113,10 +118,13 @@ def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None
         assert f"      - '{path}'\n" in workflow
 
     # Dependency inputs and GitHub Actions references are intentionally absent
-    # from the ignore set so pyproject/uv.lock and workflow action changes keep
-    # the vulnerability gate.
+    # from the ignore set so pyproject/uv.lock, dashboard package/infrastructure,
+    # and workflow action changes keep the vulnerability gate.
     assert "      - 'automation/pyproject.toml'\n" not in workflow
     assert "      - 'automation/uv.lock'\n" not in workflow
+    assert "      - 'factory-dashboard/package.json'\n" not in workflow
+    assert "      - 'factory-dashboard/Dockerfile'\n" not in workflow
+    assert "      - 'factory-dashboard/docker-compose.yml'\n" not in workflow
     assert "      - '.github/workflows/**'\n" not in workflow
 
 
@@ -137,6 +145,7 @@ def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
         "**",
         "!automation/**/*.py",
         "!automation/prompts/**",
+        "!factory-dashboard/**",
         "!config/factory/**",
         "!config/systemd/**",
         "!docs/**",
