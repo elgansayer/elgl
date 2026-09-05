@@ -113,7 +113,7 @@
     "quality_repair": 1800,
     "code_review": 900,
     "ci_repair": 1800,
-    "general_action": 600
+    "general_action": 300
   },
   "circuit_breaker": {
     "failure_threshold": 1,
