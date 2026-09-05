@@ -21,7 +21,8 @@ FROM nginx:alpine AS production
 RUN apk add --no-cache \
     'libcrypto3>=3.5.8-r0' \
     'libssl3>=3.5.8-r0' \
-    'libexpat>=2.8.4-r0'
+    'libexpat>=2.8.4-r0' \
+    'libuuid>=2.42.3-r0'
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 # Fallback SPA routing for Angular
 RUN echo 'server { listen 80; location / { root /usr/share/nginx/html; index index.html; try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
