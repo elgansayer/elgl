@@ -16,6 +16,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = parseInt(process.env.PORT) || 3100;
 const GH_TOKEN = process.env.GH_TOKEN || '';
+const DASHBOARD_USER = process.env.DASHBOARD_USER || 'admin';
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
+
+if (!DASHBOARD_PASSWORD || DASHBOARD_PASSWORD.length < 16) {
+  console.error('CRITICAL: DASHBOARD_PASSWORD must be at least 16 characters.');
+  process.exit(1);
+}
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -255,6 +262,24 @@ async function handleRoute(req, res) {
 // ---- Server ----
 const server = createServer(async (req, res) => {
   try {
+    const url = new URL(req.url, `http://localhost`);
+    if (url.pathname !== '/health') {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Basic ')) {
+        res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
+        return res.end('Unauthorized');
+      }
+
+      const b64 = authHeader.substring(6);
+      const decoded = Buffer.from(b64, 'base64').toString('utf8');
+      const [username, password] = decoded.split(':', 2);
+
+      if (username !== DASHBOARD_USER || password !== DASHBOARD_PASSWORD) {
+        res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Factory Dashboard"' });
+        return res.end('Unauthorized');
+      }
+    }
+
     await handleRoute(req, res);
   } catch (err) {
     console.error('Request error:', err);
