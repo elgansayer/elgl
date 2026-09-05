@@ -50,7 +50,7 @@ def test_production_resource_policy_has_no_immediate_retry_and_bounds_diagnostic
     )
 
     assert config.agents.routing.same_provider_retries == 0
-    assert config.agents.timeouts.general_action == 600
+    assert config.agents.timeouts.general_action == 300
     assert maximum_agent_lease_seconds(config) == 3900
 
 
