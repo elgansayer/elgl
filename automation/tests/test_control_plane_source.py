@@ -55,13 +55,17 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         AgentPhase.SECURITY_REVIEW: ["claude", "codex", "google", "opencode", "pi"],
         AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
         AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
-        AgentPhase.CI_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
+        AgentPhase.CI_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
         AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
     }
     for phase, candidates in expected.items():
         assert routing[phase.value.replace("-", "_")] == candidates
-        assert candidates[-1] == "pi"
         assert "openhands" not in candidates
+
+    # CI repair is mechanically bounded by failing-check evidence, local verification,
+    # fresh independent review and required GitHub checks. Prefer the lower-capacity
+    # routine models and keep flagship Codex as the final automatic fallback.
+    assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
 
 
 def test_active_architecture_matches_provider_neutral_boundary() -> None:
