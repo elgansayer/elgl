@@ -73,6 +73,7 @@ def test_clean_project_lint_skips_factory_only_pull_requests_before_runner_alloc
     assert "    paths-ignore:\n" in workflow
     for path in (
         "automation/**",
+        "factory-dashboard/**",
         "config/factory/**",
         "config/systemd/**",
         "docs/**",
