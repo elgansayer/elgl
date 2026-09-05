@@ -41,7 +41,7 @@
   },
   "private": true,
   "engines": {
-    "node": ">=22.0.0",
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
     "npm": ">=10.0.0"
   },
   "packageManager": "npm@10.9.8",
@@ -97,7 +97,7 @@
     "eslint": "10.9.0",
     "eslint-formatter-compact": "^9.0.1",
     "fake-indexeddb": "^6.2.5",
-    "jsdom": "^28.1.0",
+    "jsdom": "^30.0.1",
     "listr2": "10.2.1",
     "postcss": "^8.5.26",
     "prettier": "3.9.6",
