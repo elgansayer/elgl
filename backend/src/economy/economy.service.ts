@@ -303,7 +303,7 @@ export class EconomyService {
     }
 
     this.stripe = new Stripe(stripeSecret, {
-      apiVersion: '2023-10-16',
+      apiVersion: '2026-07-29.dahlia',
     });
   }
 
