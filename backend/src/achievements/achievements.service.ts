@@ -247,17 +247,29 @@ export class AchievementsService implements OnModuleInit {
       return [];
     }
 
-    const [earnedRows, messageCount, streakDays] = await Promise.all([
-      this.getUserAchievements(userId),
-      this.getUserMessageCount(userId),
-      this.getStudyStreakDays(userId),
-    ]);
+    const earnedRows = await this.getUserAchievements(userId);
 
     const earnedCodes = new Set<string>();
     for (const row of earnedRows) {
       const code = row.achievements?.code;
       if (code) earnedCodes.add(code);
     }
+
+    const messageMilestonesComplete = MESSAGE_MILESTONES.every((milestone) =>
+      earnedCodes.has(milestone.code),
+    );
+    const streakMilestonesComplete = STREAK_MILESTONES.every((milestone) =>
+      earnedCodes.has(milestone.code),
+    );
+
+    const [messageCount, streakDays] = await Promise.all([
+      messageMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getUserMessageCount(userId),
+      streakMilestonesComplete
+        ? Promise.resolve(0)
+        : this.getStudyStreakDays(userId),
+    ]);
 
     return definitions.map((definition) => {
       const milestone = MILESTONES.find(
