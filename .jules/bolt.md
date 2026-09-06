@@ -9,3 +9,6 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+## 2026-09-06 - Batching database updates in `purgeExpiredArchives`
+**Learning:** Sequential `await` calls that hit the database and storage within a loop can drastically bound throughput and increase task latency. They add network overhead incrementally per row.
+**Action:** Replace loops making sequential async queries with `Promise.all` applying over mapped arrays.
