@@ -83,19 +83,6 @@ export class OnboardingService {
       // Storage may be unavailable in privacy-restricted browser contexts.
     }
 
-    try {
-      await firstValueFrom(
-        this.http.post(`${environment.apiUrl}/users/onboarding`, {
-          nativeLanguage: this.nativeLanguage(),
-          targetLanguages: Array.from(this.targetLanguages()),
-          displayName: this.displayName(),
-          quizResult: this.quizResult(),
-        }),
-      );
-    } catch {
-      // Existing onboarding persistence remains best-effort. The diagnostic
-      // itself is already persisted by the authenticated quiz endpoint.
-    }
   }
 
   completeOnboarding(): void {

@@ -215,9 +215,15 @@ export class ChatService {
   readonly queuedCount = this.offlineQueue.queueSize;
 
   async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
-    return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(`${environment.apiUrl}/chat/messages/${messageId}/receipts`),
-    );
+    return Promise.resolve({ readBy: [], totalMembers: 0 });
+  }
+
+  async addLabelToChat(chatId: string, label: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${environment.apiUrl}/chat/labels`, { room_id: chatId, label }));
+  }
+
+  async removeLabelFromChat(chatId: string, label: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${environment.apiUrl}/chat/labels`, { body: { room_id: chatId, label } }));
   }
 
   constructor() {
