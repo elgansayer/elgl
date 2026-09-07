@@ -80,12 +80,6 @@ test('the accessibility audit records the exact current high-priority debt', () 
       id: 'MOM-A11Y-006',
       present: submitComment.includes('aria-label=\"Submit comment\"'),
     },
-    {
-      id: 'MOM-A11Y-007',
-      present:
-        template.includes('(keydown)=\"onCommentKeydown($event, moment)\"') &&
-        !component.includes('event.isComposing'),
-    },
   ];
 
   for (const finding of findings) {
@@ -105,6 +99,16 @@ test('the accessibility audit records the exact current high-priority debt', () 
     findings.map(({ id }) => id).sort(),
     'The documented and executable accessibility debt baselines must match',
   );
+});
+
+test('the comment autocomplete delegates interaction semantics and handles IME safely', () => {
+  assert.match(template, /<hlm-autocomplete-search\b/);
+  assert.match(template, /<hlm-autocomplete-input\b/);
+  assert.match(template, /hlmAutocompleteList/);
+  assert.match(template, /<hlm-autocomplete-item\b/);
+  assert.doesNotMatch(template, /role="combobox"|aria-activedescendant/);
+  assert.match(component, /if \(event\.isComposing\) return;/);
+  assert.doesNotMatch(component, /event\.key === 'Arrow(?:Down|Up)'/);
 });
 
 test('the audit covers screen-reader, keyboard, zoom, RTL, privacy, and rollback review', () => {

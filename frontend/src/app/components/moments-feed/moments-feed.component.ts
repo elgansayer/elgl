@@ -519,6 +519,7 @@ export class MomentsFeedComponent {
   }
 
   onCommentKeydown(event: KeyboardEvent, moment: MomentRecord): void {
+    if (event.isComposing) return;
     if (event.key === 'Enter' && (this.mentionSuggestionsMap()[moment.id]?.length ?? 0) === 0) {
       event.preventDefault();
       void this.submitComment(moment);
