@@ -1645,9 +1645,6 @@ This document contains an exhaustive list of files and methods in the codebase.
 ### `frontend/src/app/achievements/achievements.component.ts`
 - Methods: `progressPercent`
 
-### `frontend/src/app/admin/user-management/user-management.component.ts`
-- Methods: `ngOnInit`, `loadUsers`, `toggleVip`
-
 ### `frontend/src/app/interests-select/interests-select.component.ts`
 - Methods: `toggleInterest`, `confirmSelection`
 
@@ -2826,4 +2823,3 @@ This document contains an exhaustive list of files and methods in the codebase.
 
 ### `frontend/src/app/pages/block-management/block-management.component.ts`
 - Methods: `hasTargetLanguages`, `getTargetLanguagesText`, `onUnblock`, `retryLoad`
-
