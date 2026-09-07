@@ -46,6 +46,17 @@ describe('CloudflareStreamService', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects the development API token in production', () => {
+    const productionConfig = { ...CONFIG, NODE_ENV: 'production' };
+    const configService = {
+      get: vi.fn((key: string) => productionConfig[key]),
+    } as unknown as ConfigService;
+
+    expect(() => new CloudflareStreamService(configService)).toThrow(
+      'must be securely configured in production',
+    );
+  });
+
   it('creates a short-lived automatic Cloudflare Stream live input', async () => {
     fetchMock.mockResolvedValue(
       apiResponse({
