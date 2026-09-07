@@ -101,7 +101,7 @@
     "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
     "code_review": ["codex", "claude", "google", "opencode", "pi"],
     "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
-    "general_action": ["opencode", "google", "pi", "claude", "codex"],
+    "general_action": ["opencode", "google", "codex", "claude", "pi"],
     "skip_busy_providers": true,
     "same_provider_retries": 0
   },
