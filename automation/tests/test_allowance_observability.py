@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from openhands_factory.agents.base import (
     ProviderHealth,
     ProviderStatus,
 )
+from openhands_factory.agents.cli import CLIProvider
+from openhands_factory.agents.process import ProcessResult
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, Task
@@ -44,6 +47,34 @@ class SuccessfulProvider:
         )
 
 
+class OutputProcessRunner:
+    def run(self, *_args: object, **_kwargs: object) -> ProcessResult:
+        return ProcessResult(
+            command=("fake",),
+            exit_code=0,
+            stdout="abc",
+            stderr="de",
+            timed_out=False,
+            output_truncated=True,
+            duration_seconds=0.1,
+        )
+
+
+class OutputProvider(CLIProvider):
+    name = "output-provider"
+    default_command = "fake"
+    default_model = "test-model"
+
+    def build_command(
+        self,
+        request: AgentRequest,
+        model: str,
+        prompt_path: Path | None,
+    ) -> Sequence[str]:
+        del request, model, prompt_path
+        return ["fake"]
+
+
 def _usage(metrics: MetricsStore) -> dict[str, object]:
     providers = metrics.snapshot()["providers"]
     assert isinstance(providers, list)
@@ -51,6 +82,17 @@ def _usage(metrics: MetricsStore) -> dict[str, object]:
     usage = providers[0]
     assert isinstance(usage, dict)
     return usage
+
+
+def test_cli_provider_reports_retained_output_volume_without_content(tmp_path: Path) -> None:
+    task = Task("41", "Measure output", "body", "github-issue", 0)
+    provider = OutputProvider(process_runner=OutputProcessRunner())
+
+    result = provider.run(AgentRequest(AgentPhase.CODE_REVIEW, task, "prompt", tmp_path))
+
+    assert result.success
+    assert result.captured_output_chars == 5
+    assert result.output_truncated is True
 
 
 def test_router_records_content_free_allowance_volume(tmp_path: Path) -> None:
