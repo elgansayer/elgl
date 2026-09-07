@@ -32,7 +32,7 @@ def test_branch_hygiene_is_daily_and_retains_short_lived_evidence() -> None:
 def test_self_healing_schedule_is_only_a_backstop_to_event_driven_checks() -> None:
     workflow = _workflow("on-failure.yml")
 
-    assert "cron: '17 */3 * * *'" in workflow
+    assert "cron: '17 */6 * * *'" in workflow
     assert "  push:\n    branches: [main]\n" in workflow
     assert "  workflow_run:\n" in workflow
     assert "      - CI\n" in workflow
@@ -64,3 +64,98 @@ def test_static_product_contracts_only_run_when_their_inputs_change() -> None:
         assert "  pull_request:\n    branches: [main]\n    paths:\n" in workflow
         for path in inputs:
             assert f"      - '{path}'\n" in workflow
+
+
+def test_clean_project_lint_skips_factory_only_pull_requests_before_runner_allocation() -> None:
+    workflow = _workflow("clean-project-lint.yml")
+
+    assert "  pull_request:\n    branches: [main]\n    #" in workflow
+    assert "    paths-ignore:\n" in workflow
+    for path in (
+        "automation/**",
+        "factory-dashboard/**",
+        "config/factory/**",
+        "config/systemd/**",
+        "docs/**",
+        ".github/workflows/factory-merge.yml",
+        ".github/workflows/factory-format-evidence.yml",
+        ".github/workflows/on-failure.yml",
+        ".github/workflows/branch-pr-hygiene.yml",
+    ):
+        assert f"      - '{path}'\n" in workflow
+
+    # Keep changes to the classifier and canonical CI fail-open: they are not
+    # ignored by the workflow-level guard and therefore still allocate the
+    # ordinary application lint verification path.
+    assert "      - 'scripts/classify-ci-impact.sh'\n" not in workflow
+    assert "      - '.github/workflows/ci.yml'\n" not in workflow
+
+
+def test_factory_format_evidence_only_runs_for_its_actual_daemon_input() -> None:
+    workflow = _workflow("factory-format-evidence.yml")
+
+    assert "      - 'automation/openhands_factory/daemon.py'\n" in workflow
+    assert "      - 'automation/**/*.py'\n" not in workflow
+    assert "uv run --frozen ruff format openhands_factory/daemon.py" in workflow
+
+
+def test_dependency_review_skips_dependency_free_factory_pull_requests() -> None:
+    workflow = _workflow("dependency-review.yml")
+
+    assert "    paths-ignore:\n" in workflow
+    for path in (
+        "automation/openhands_factory/**",
+        "automation/tests/**",
+        "automation/prompts/**",
+        "factory-dashboard/src/**",
+        "factory-dashboard/test/**",
+        "factory-dashboard/README.md",
+        "factory-dashboard/.env.example",
+        "config/factory/**",
+        "config/systemd/**",
+        "docs/**",
+    ):
+        assert f"      - '{path}'\n" in workflow
+
+    # Dependency inputs and GitHub Actions references are intentionally absent
+    # from the ignore set so pyproject/uv.lock, dashboard package/infrastructure,
+    # and workflow action changes keep the vulnerability gate.
+    assert "      - 'automation/pyproject.toml'\n" not in workflow
+    assert "      - 'automation/uv.lock'\n" not in workflow
+    assert "      - 'factory-dashboard/package.json'\n" not in workflow
+    assert "      - 'factory-dashboard/Dockerfile'\n" not in workflow
+    assert "      - 'factory-dashboard/docker-compose.yml'\n" not in workflow
+    assert "      - '.github/workflows/**'\n" not in workflow
+
+
+def test_mock_boundary_skips_only_non_production_factory_surfaces() -> None:
+    workflow = _workflow("mock-backend-boundary.yml")
+    paths_block = workflow.split("    paths:\n", 1)[1].split("  push:\n", 1)[0]
+    paths = [
+        line.removeprefix("      - '").removesuffix("'")
+        for line in paths_block.splitlines()
+        if line.startswith("      - '")
+    ]
+
+    dockerfile = "**/*[Dd][Oo][Cc][Kk][Ee][Rr][Ff][Ii][Ll][Ee]"
+    compose = "**/*[Dd][Oo][Cc][Kk][Ee][Rr]-[Cc][Oo][Mm][Pp][Oo][Ss][Ee]"
+    production = "**/*.[Pp][Rr][Oo][Dd][Uu][Cc][Tt][Ii][Oo][Nn]"
+    prod = "**/*.[Pp][Rr][Oo][Dd]."
+    assert paths == [
+        "**",
+        "!automation/**/*.py",
+        "!automation/prompts/**",
+        "!factory-dashboard/**",
+        "!config/factory/**",
+        "!config/systemd/**",
+        "!docs/**",
+        f"{dockerfile}*",
+        f"{dockerfile}*/**",
+        f"{compose}*",
+        f"{compose}*/**",
+        f"{production}*",
+        f"{production}*/**",
+        f"{prod}*",
+        f"{prod}*/**",
+    ]
+    assert "paths-ignore:" not in workflow
