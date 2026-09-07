@@ -33,12 +33,12 @@ export interface DiscoveryRecommendationDto {
 interface CurrentUserSignals {
   nativeLanguages: string[];
   targetLanguages: string[];
-  proficiencyLevel?: string;
-  availabilityMorning?: boolean;
-  availabilityAfternoon?: boolean;
-  availabilityEvening?: boolean;
-  availableTimeStart?: string;
-  availableTimeEnd?: string;
+  proficiencyLevel?: string | null;
+  availabilityMorning?: boolean | null;
+  availabilityAfternoon?: boolean | null;
+  availabilityEvening?: boolean | null;
+  availableTimeStart?: string | null;
+  availableTimeEnd?: string | null;
   learningGoals?: string[];
 }
 
@@ -158,8 +158,10 @@ export function rankDiscoveryRecommendations(
       hasAvailabilityMatch = true;
     }
     if (
-      candidate.available_time_start && candidate.available_time_end &&
-      currentUser.availableTimeStart && currentUser.availableTimeEnd
+      candidate.available_time_start &&
+      candidate.available_time_end &&
+      currentUser.availableTimeStart &&
+      currentUser.availableTimeEnd
     ) {
       const cStart = candidate.available_time_start;
       const cEnd = candidate.available_time_end;
@@ -171,7 +173,10 @@ export function rankDiscoveryRecommendations(
     }
 
     const candidateGoals = normaliseLanguages(candidate.learning_goals);
-    const hasConversationCompatibility = hasOverlap(candidateGoals, currentUser.learningGoals || []);
+    const hasConversationCompatibility = hasOverlap(
+      candidateGoals,
+      currentUser.learningGoals || [],
+    );
 
     let score = 0;
     const reasons: RecommendationReason[] = [];
@@ -258,7 +263,9 @@ export class DiscoveryRecommendationsService {
 
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('native_languages, target_languages, proficiency_level, availability_morning, availability_afternoon, availability_evening, available_time_start, available_time_end, learning_goals')
+      .select(
+        'native_languages, target_languages, proficiency_level, availability_morning, availability_afternoon, availability_evening, available_time_start, available_time_end, learning_goals',
+      )
       .eq('id', userId)
       .maybeSingle();
 
