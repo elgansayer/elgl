@@ -150,8 +150,22 @@ class DurableAdmissionGate:
             for item in payload["admissions"]
         ]
         cutoff = now - self.interval
-        active = [item for item in admissions if item.admitted_at > cutoff]
-        if active != admissions:
+        active: list[Admission] = []
+        changed = False
+        for admission in admissions:
+            if admission.admitted_at <= cutoff:
+                changed = True
+                continue
+            if admission.admitted_at > now:
+                # Clock correction or damaged durable state must not push an
+                # allowance window arbitrarily far into the future. Clamp the
+                # admission to the current clock instead of dropping it so the
+                # budget remains conservative for exactly one configured interval.
+                active.append(Admission(task_id=admission.task_id, admitted_at=now))
+                changed = True
+                continue
+            active.append(admission)
+        if changed:
             self._write(active)
         return active
 
