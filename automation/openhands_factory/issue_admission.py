@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -12,12 +13,21 @@ from filelock import FileLock
 from openhands_factory.state import atomic_write_json, read_json
 
 _STATE_VERSION = 1
+_HEAD_STABILITY_STATE_VERSION = 1
+_HEAD_STABILITY_RETENTION = timedelta(days=7)
 
 
 @dataclass(frozen=True)
 class Admission:
     task_id: str
     admitted_at: datetime
+
+
+@dataclass(frozen=True)
+class ReviewHeadObservation:
+    task_id: str
+    head_sha: str
+    observed_at: datetime
 
 
 # Backwards-compatible name retained for callers/tests which imported the old
@@ -203,3 +213,129 @@ class ReviewAdmissionGate(DurableAdmissionGate):
             active.append(Admission(task_id=task_id, admitted_at=current))
             self._write(active)
             return True
+
+
+class ReviewHeadStabilityGate:
+    """Debounce provider-managed PR heads before subscription-backed review.
+
+    A review is useful only for a head that survives long enough to be a realistic
+    merge candidate. External agents can publish several commits in quick succession;
+    reviewing every intermediate SHA spends review allowance and immediately makes the
+    result stale. This gate records only content-free PR identity, SHA, and timestamp,
+    and requires the same SHA to remain observed for a bounded quiet period.
+
+    Deferral is entirely machine-owned. A changed head resets the timer; an unchanged
+    head becomes eligible automatically. No review admission or provider-route budget
+    is consumed while the head is moving.
+    """
+
+    def __init__(self, path: Path, *, quiet_seconds: int) -> None:
+        if quiet_seconds < 0:
+            raise ValueError("review head stability period cannot be negative")
+        self.path = path
+        self.quiet_period = timedelta(seconds=quiet_seconds)
+        self.lock = FileLock(str(path) + ".lock")
+
+    @property
+    def enabled(self) -> bool:
+        return self.quiet_period.total_seconds() > 0
+
+    def defer_seconds(
+        self,
+        task_id: str,
+        head_sha: str,
+        now: datetime | None = None,
+    ) -> int:
+        """Return seconds until this exact head is stable, or zero when eligible."""
+
+        if not self.enabled:
+            return 0
+        if not task_id or not head_sha:
+            raise ValueError("review head stability requires task identity and exact head SHA")
+
+        current = now or datetime.now(UTC)
+        with self.lock:
+            observations = self._observations(current)
+            previous = observations.get(task_id)
+            if previous is None or previous.head_sha != head_sha:
+                observations[task_id] = ReviewHeadObservation(task_id, head_sha, current)
+                self._write_observations(observations.values())
+                return max(1, ceil(self.quiet_period.total_seconds()))
+
+            ready_at = previous.observed_at + self.quiet_period
+            remaining = (ready_at - current).total_seconds()
+            if remaining <= 0:
+                return 0
+            return max(1, ceil(remaining))
+
+    def _observations(self, now: datetime) -> dict[str, ReviewHeadObservation]:
+        payload = read_json(
+            self.path,
+            {"version": _HEAD_STABILITY_STATE_VERSION, "observations": []},
+            validator=self._valid_observation_payload,
+        )
+        cutoff = now - max(_HEAD_STABILITY_RETENTION, self.quiet_period)
+        observations: dict[str, ReviewHeadObservation] = {}
+        pruned = False
+        for item in payload["observations"]:
+            observed_at = datetime.fromisoformat(str(item["observed_at"]))
+            if observed_at <= cutoff:
+                pruned = True
+                continue
+            observation = ReviewHeadObservation(
+                task_id=str(item["task_id"]),
+                head_sha=str(item["head_sha"]),
+                observed_at=observed_at,
+            )
+            existing = observations.get(observation.task_id)
+            if existing is None or observation.observed_at > existing.observed_at:
+                observations[observation.task_id] = observation
+        if pruned:
+            self._write_observations(observations.values())
+        return observations
+
+    def _write_observations(self, observations: Any) -> None:
+        ordered = sorted(observations, key=lambda item: item.task_id)
+        atomic_write_json(
+            self.path,
+            {
+                "version": _HEAD_STABILITY_STATE_VERSION,
+                "observations": [
+                    {
+                        "task_id": item.task_id,
+                        "head_sha": item.head_sha,
+                        "observed_at": item.observed_at.isoformat(),
+                    }
+                    for item in ordered
+                ],
+            },
+            validator=self._valid_observation_payload,
+        )
+
+    @staticmethod
+    def _valid_observation_payload(value: Any) -> bool:
+        if (
+            not isinstance(value, dict)
+            or value.get("version") != _HEAD_STABILITY_STATE_VERSION
+        ):
+            return False
+        observations = value.get("observations")
+        if not isinstance(observations, list):
+            return False
+        for item in observations:
+            if not isinstance(item, dict):
+                return False
+            if not isinstance(item.get("task_id"), str) or not item["task_id"]:
+                return False
+            if not isinstance(item.get("head_sha"), str) or not item["head_sha"]:
+                return False
+            observed_at = item.get("observed_at")
+            if not isinstance(observed_at, str):
+                return False
+            try:
+                parsed = datetime.fromisoformat(observed_at)
+            except ValueError:
+                return False
+            if parsed.tzinfo is None:
+                return False
+        return True
