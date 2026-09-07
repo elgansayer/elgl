@@ -102,16 +102,20 @@ describe('Chat Flow (Mocked)', () => {
   it('displays the chat list and navigates to the selected room', () => {
     cy.visit('/chat');
 
-    cy.wait('@getRooms');
+    // The room and message may come from IndexedDB on a Cypress retry.
     cy.contains('Language Exchange with Maria').should('be.visible').click();
 
     cy.url().should('include', `/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.contains('[data-testid="chat-message"]', 'Hola, how are you?').should('be.visible');
   });
 
   it('sends a text message with the canonical room and message payload', () => {
+    let initialMessageCount = 0;
     cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.get('[data-testid="chat-message"]').then(($messages) => {
+      initialMessageCount = $messages.length;
+      expect(initialMessageCount).to.be.greaterThan(0);
+    });
 
     const testMessage = 'I am doing great, thanks for asking!';
     cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
@@ -126,7 +130,10 @@ describe('Chat Flow (Mocked)', () => {
       });
     });
 
-    cy.get('[data-testid="chat-message"]').should('have.length', 2);
+    cy.get('[data-testid="chat-message"]').should(($messages) => {
+      expect($messages).to.have.length(initialMessageCount + 1);
+    });
+    cy.contains('[data-testid="chat-message"]', testMessage).should('be.visible');
     cy.get('[data-testid="chat-message-input"]').should('have.value', '');
   });
 
