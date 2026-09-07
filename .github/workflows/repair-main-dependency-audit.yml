@@ -38,7 +38,8 @@ jobs:
           done
 
           cd backend
-          npm pkg set devDependencies.ngrok=4.3.3
+          npm pkg delete scripts.tunnel
+          npm pkg delete devDependencies.ngrok
           npm install --package-lock-only --ignore-scripts
           npm audit fix --package-lock-only --ignore-scripts || true
 
