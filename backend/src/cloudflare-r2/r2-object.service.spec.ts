@@ -46,6 +46,18 @@ describe('R2ObjectService', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects the development service token in production', () => {
+    const productionConfig = { ...CONFIG, NODE_ENV: 'production' };
+    const configService = {
+      get: vi.fn((key: string) => productionConfig[key]),
+    } as unknown as ConfigService;
+
+    expect(
+      () =>
+        new R2ObjectService(configService, r2Service as unknown as R2Service),
+    ).toThrow('must be securely configured in production');
+  });
+
   it('uploads server-produced bytes through a signed Worker URL', async () => {
     fetchMock.mockResolvedValue(
       new Response(
