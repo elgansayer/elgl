@@ -314,10 +314,7 @@ class ReviewHeadStabilityGate:
 
     @staticmethod
     def _valid_observation_payload(value: Any) -> bool:
-        if (
-            not isinstance(value, dict)
-            or value.get("version") != _HEAD_STABILITY_STATE_VERSION
-        ):
+        if not isinstance(value, dict) or value.get("version") != _HEAD_STABILITY_STATE_VERSION:
             return False
         observations = value.get("observations")
         if not isinstance(observations, list):
