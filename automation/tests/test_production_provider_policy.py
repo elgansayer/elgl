@@ -43,7 +43,7 @@ def test_production_provider_policy_is_locked() -> None:
         "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
         "code_review": ["codex", "claude", "google", "opencode", "pi"],
         "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
-        "general_action": ["opencode", "google", "codex", "claude", "pi"],
+        "general_action": ["opencode", "google", "pi", "claude", "codex"],
     }
 
     assert config["routing_enabled"] is True
@@ -82,6 +82,10 @@ def test_production_provider_policy_is_locked() -> None:
     assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
     assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
     assert providers["pi"]["phase_models"]["ci_repair"].endswith("haiku-4.5")
+    # Factory-internal GENERAL_ACTION diagnostics never cascade beyond one healthy
+    # provider, so flagship Codex belongs behind every cheaper regular route.
+    assert routing["general_action"][-1] == "codex"
+    assert routing["general_action"][:3] == ["opencode", "google", "pi"]
 
     # With only six real provider starts admitted per hour in conservative mode,
     # rediscovering a known provider-wide outage is material allowance waste.
