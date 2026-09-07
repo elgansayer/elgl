@@ -85,7 +85,7 @@ credential broker can separate provider sessions without changing `FactoryPipeli
 | `provider_capacity.py`       | Generation-aware cross-process provider leases                                            |
 | `conversation_runner.py`     | OpenHands SDK compatibility transport and inner-provider attribution                      |
 | `jobs.py`, `retry_policy.py` | Backwards-compatible durable state and restart-stable retry authority                     |
-| `task_source.py`             | Logical task claims, worker CAS leases and canonical branch/PR provenance                 |
+| `task_source.py`            | Logical task claims, worker CAS leases and canonical branch/PR provenance                |
 | `git_workflow.py`            | Worktree, branch, commit, push, and recovery archive safety                               |
 | `review_report.py`           | Authoritative `.factory-review.json` schema and acceptance validation                     |
 | `architect_report.py`        | Authoritative `.factory-architect.json` schema                                            |
@@ -103,7 +103,7 @@ last-known-good backup:
   verified SHAs, predecessor/successor links, path and failure fingerprints;
 - `agent_health.json`: circuit state, failures, cooldown, and half-open ownership;
 - `provider-capacity.json`: current-generation provider leases;
-- `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, prompt/output-volume, and typed failure counters;
+- `metrics.json`: provider, model, phase, result, duration, fallback, quota, timeout, and typed failure counters;
 - `generation.json`: active daemon ownership UUID and schema version;
 - `daemon.json`: heartbeat, PID, generation, queue counts, active tasks, pause state, and provider health;
 - `control.json`: pause state;
@@ -112,9 +112,9 @@ last-known-good backup:
 - `architect_state.json`: architect completion and retry data;
 - `provider-attribution.json`: detailed OpenHands inner-provider attribution.
 
-Typed metric failure and volume counters are additive state expansions. New readers treat absent or malformed
-optional counters as empty or zero, while older readers ignore added fields, so mixed-version startup and rollback
-preserve the existing call, success, failure, quota, fallback, duration, timeout, and known-cost counters.
+Typed metric failure counters are an additive state expansion. New readers treat an absent or malformed counter
+map as empty, while older readers ignore the added field, so mixed-version startup and rollback preserve the
+existing call, success, failure, quota, fallback, duration, and timeout counters.
 
 A restart never assumes a provider process is alive. The daemon stops admitting work, terminates registered CLI,
 OpenHands, Git, verification, and repository child process groups, waits for workers to unwind, and records itself
@@ -128,18 +128,18 @@ closed PRs using issue links, logical titles, branch metadata, changed paths and
 
 A repeated identical task-side failure opens a durable, recoverable quarantine after
 `FACTORY_MAX_CONSECUTIVE_FAILURES`. This bounded circuit stops deterministic bugs from retrying forever and adds
-`factory-quarantined` once. It is not a human-release state and does not apply `needs-human`. Provider auth, quota,
-rate-limit, availability, timeout, transport, crash, malformed-output, and busy-capacity exhaustion never consume
-a task attempt or open this task circuit. After the bounded window, automatic recovery preserves failure evidence,
-returns the job to discovery, and requests a startup-equivalent reconciliation that silently removes GitHub
-quarantine labels no longer backed by durable state. `backlog requeue-quarantined` provides an earlier
-operator-selected reset, with repeatable `--issue` targeting and optional `--announce` comments. Historical
-quarantine entries without the new reason marker are migrated back into normal retry flow. Successful issue
-completion removes the Factory ownership label before closing the issue, preventing new stale `factory-active`
-markers from accumulating after merge. Startup also compares open ownership labels with durable active jobs and
-protected workers, including retired `swarm-active` markers. It releases only a configured bounded batch per
-refresh, restoring the ready label to preserve admission and posting no comments, until historical drift reaches
-zero.
+`factory-quarantined` plus `needs-human` once. Provider auth, quota, rate-limit, availability, timeout, transport,
+crash, malformed-output, and busy-capacity exhaustion never consume a task attempt or open this task circuit.
+After the bounded window, automatic recovery preserves failure evidence, returns the job to discovery, and
+requests a startup-equivalent reconciliation that silently removes GitHub quarantine labels no longer backed by
+durable state. `backlog requeue-quarantined`
+provides an earlier operator-selected reset, with repeatable `--issue` targeting and optional `--announce`
+comments. Historical quarantine entries without the new reason marker are migrated back into normal retry flow.
+Successful issue completion removes the Factory ownership label before closing the issue, preventing new stale
+`factory-active` markers from accumulating after merge. Startup also compares open ownership labels with durable
+active jobs and protected workers, including retired `swarm-active` markers. It releases only a configured bounded
+batch per refresh, restoring the ready label to preserve admission and posting no comments, until historical drift
+reaches zero.
 
 ## GitHub operator panel
 
@@ -151,7 +151,8 @@ environment values, credentials, raw provider diagnostics, or exception text.
 Only actors in the narrower `FACTORY_CONTROL_GITHUB_ACTORS` allowlist can submit the exact fixed commands
 `status`, `pause`, `resume`, and `restart`. Comment text never enters a shell. Restart crosses the privilege
 boundary through a schema, owner, mode and age checked single-use request consumed by the existing root watchdog.
-No panel action can select work, change routes, execute a task, push, review, approve, or merge. See
+No panel action can
+select work, change routes, execute a task, push, review, approve, or merge. See
 [CONTROL-PANEL.md](CONTROL-PANEL.md).
 
 ## Routing and independent review
@@ -192,14 +193,14 @@ following:
 - mergeability is clean;
 - no human review reports `CHANGES_REQUESTED`.
 
-The daemon is the normal autonomous merge authority. Once all gates pass it persists `MERGE_QUEUED`, re-reads the
-live PR state, and asks GitHub for an exact-head squash merge bound to the reviewed SHA. The scheduled merge
-workflow is a downtime/recovery backstop that independently rechecks the same safety conditions. Neither path uses
-native auto-merge or an administrator bypass. A baseline ruleset requires pull requests and strict
-`CI / required`. A second, review-only ruleset requires `factory/independent-review`. The exact repository-owner
-user may be the sole pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI,
-review, or both without permitting direct pushes. Factory automation still requires literal success from both
-statuses and never invokes that path. See [MANUAL-MERGE.md](MANUAL-MERGE.md).
+The scheduled merge workflow is the only autonomous merge authority. It re-reads the live conditions, binds the
+squash merge atomically to the inspected head with `--match-head-commit`, and never uses native `--auto` or an
+administrator bypass. A baseline ruleset requires pull requests and strict `CI / required`. A second,
+review-only ruleset requires `factory/independent-review`. The exact repository-owner user may be the sole
+pull-request-only bypass actor on both rulesets, allowing deliberate manual waiver of CI, review, or both without
+permitting direct pushes. Factory automation still requires literal success from both statuses and never invokes
+that path. See
+[MANUAL-MERGE.md](MANUAL-MERGE.md).
 
 A dedicated GitHub App and ruleset expected-source binding are still required to prevent another write actor from
 publishing the same legacy status-context name. Online doctor currently validates the layered rules, context
