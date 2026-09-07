@@ -9,6 +9,8 @@ const CANDIDATE_LIMIT = 80;
 const INTEREST_ROW_LIMIT = 400;
 const ACTIVE_DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_WEEK_MS = 7 * ACTIVE_DAY_MS;
+const MINUTES_PER_DAY = 24 * 60;
+const HIGH_CORRECTION_RATIO = 0.8;
 
 export type RecommendationReason =
   | 'language_exchange'
@@ -18,7 +20,7 @@ export type RecommendationReason =
   | 'proficiency_match'
   | 'availability_match'
   | 'high_correction_ratio'
-  | 'conversation_compatibility';
+  | 'learning_goal_match';
 
 export interface DiscoveryRecommendationDto {
   id: string;
@@ -93,6 +95,46 @@ function hasOverlap(left: string[], right: string[]): boolean {
   return left.some((value) => rightSet.has(value));
 }
 
+function parseAvailabilityTime(
+  value: string | null | undefined,
+): number | null {
+  if (typeof value !== 'string') return null;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function dailyIntervals(start: number, end: number): Array<[number, number]> {
+  if (start === end) return [];
+  return start < end
+    ? [[start, end]]
+    : [
+        [start, MINUTES_PER_DAY],
+        [0, end],
+      ];
+}
+
+function hasAvailabilityWindowOverlap(
+  candidateStart: string | null,
+  candidateEnd: string | null,
+  currentStart: string | null | undefined,
+  currentEnd: string | null | undefined,
+): boolean {
+  const cStart = parseAvailabilityTime(candidateStart);
+  const cEnd = parseAvailabilityTime(candidateEnd);
+  const uStart = parseAvailabilityTime(currentStart);
+  const uEnd = parseAvailabilityTime(currentEnd);
+  if (cStart === null || cEnd === null || uStart === null || uEnd === null) {
+    return false;
+  }
+
+  return dailyIntervals(cStart, cEnd).some(([leftStart, leftEnd]) =>
+    dailyIntervals(uStart, uEnd).some(
+      ([rightStart, rightEnd]) => leftStart < rightEnd && rightStart < leftEnd,
+    ),
+  );
+}
+
 function getActivityRank(candidate: CandidateRow, nowMs: number): number {
   if (candidate.privacy_hide_online_status || !candidate.last_active_at) {
     return 0;
@@ -143,11 +185,20 @@ export function rankDiscoveryRecommendations(
     );
     const activityRank = getActivityRank(candidate, nowMs);
     const hasStudyStreak = (candidate.study_streak_days ?? 0) >= 7;
-    const hasHighCorrectionRatio = (candidate.correction_ratio ?? 0) > 0.8;
+    const hasHighCorrectionRatio =
+      typeof candidate.correction_ratio === 'number' &&
+      Number.isFinite(candidate.correction_ratio) &&
+      candidate.correction_ratio >= HIGH_CORRECTION_RATIO;
+    const candidateProficiency = candidate.proficiency_level
+      ?.trim()
+      .toUpperCase();
+    const currentProficiency = currentUser.proficiencyLevel
+      ?.trim()
+      .toUpperCase();
     const hasProficiencyMatch =
-      !!candidate.proficiency_level &&
-      !!currentUser.proficiencyLevel &&
-      candidate.proficiency_level === currentUser.proficiencyLevel;
+      typeof candidateProficiency === 'string' &&
+      /^(A1|A2|B1|B2|C1|C2)$/.test(candidateProficiency) &&
+      candidateProficiency === currentProficiency;
 
     let hasAvailabilityMatch = false;
     if (
@@ -158,24 +209,20 @@ export function rankDiscoveryRecommendations(
       hasAvailabilityMatch = true;
     }
     if (
-      candidate.available_time_start &&
-      candidate.available_time_end &&
-      currentUser.availableTimeStart &&
-      currentUser.availableTimeEnd
+      hasAvailabilityWindowOverlap(
+        candidate.available_time_start,
+        candidate.available_time_end,
+        currentUser.availableTimeStart,
+        currentUser.availableTimeEnd,
+      )
     ) {
-      const cStart = candidate.available_time_start;
-      const cEnd = candidate.available_time_end;
-      const uStart = currentUser.availableTimeStart;
-      const uEnd = currentUser.availableTimeEnd;
-      if (cStart <= uEnd && cEnd >= uStart) {
-        hasAvailabilityMatch = true;
-      }
+      hasAvailabilityMatch = true;
     }
 
     const candidateGoals = normaliseLanguages(candidate.learning_goals);
-    const hasConversationCompatibility = hasOverlap(
+    const hasLearningGoalMatch = hasOverlap(
       candidateGoals,
-      currentUser.learningGoals || [],
+      normaliseLanguages(currentUser.learningGoals),
     );
 
     let score = 0;
@@ -212,9 +259,9 @@ export function rankDiscoveryRecommendations(
       score += 15;
       reasons.push('availability_match');
     }
-    if (hasConversationCompatibility) {
+    if (hasLearningGoalMatch) {
       score += 10;
-      reasons.push('conversation_compatibility');
+      reasons.push('learning_goal_match');
     }
 
     if (score === 0) continue;
