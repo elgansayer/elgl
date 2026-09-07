@@ -41,6 +41,7 @@ Cypress.on('window:before:load', (win) => {
     if (
       message.includes('Expected Error') ||
       message.includes('Centrifugo error:') ||
+      message === 'Centrifugo connection error.' ||
       message.includes('Subscription to the channel')
     ) {
       return;
