@@ -13,6 +13,7 @@ describe('InterestsService', () => {
   let eq: ReturnType<typeof vi.fn>;
   let inQuery: ReturnType<typeof vi.fn>;
   let is: ReturnType<typeof vi.fn>;
+  let remove: ReturnType<typeof vi.fn>;
   let insert: ReturnType<typeof vi.fn>;
   let update: ReturnType<typeof vi.fn>;
   let upsert: ReturnType<typeof vi.fn>;
@@ -35,6 +36,7 @@ describe('InterestsService', () => {
     eq = vi.fn(() => query);
     inQuery = vi.fn(() => query);
     is = vi.fn(() => query);
+    remove = vi.fn(() => query);
     insert = vi.fn(() => query);
     update = vi.fn(() => query);
     select = vi.fn(() => query);
@@ -45,7 +47,7 @@ describe('InterestsService', () => {
       in: inQuery,
       limit: vi.fn(() => query),
       single: vi.fn(() => query),
-      delete: vi.fn(() => query),
+      delete: remove,
       insert,
       returns: vi.fn(),
       update,
@@ -96,6 +98,14 @@ describe('InterestsService', () => {
       'interest_tag, vocab_word, translation',
     );
     expect(insert).toHaveBeenCalledWith([{ user_id: 'user-1', tag: 'travel' }]);
+  });
+
+  it('clears interests without sending an empty insert', async () => {
+    await service.setUserInterests('user-1', []);
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it('translates legacy interest UUIDs before storing canonical tags', async () => {

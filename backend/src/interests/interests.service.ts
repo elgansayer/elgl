@@ -176,6 +176,10 @@ export class InterestsService {
       tag,
     }));
 
+    if (rows.length === 0) {
+      return;
+    }
+
     const { error: insertError } = await this.supabase
       .from('user_interests')
       .insert(rows);
