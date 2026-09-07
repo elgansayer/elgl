@@ -5,7 +5,6 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
@@ -575,7 +574,7 @@ export class EconomyService {
     }
 
     // Grant between 5 and 10 coins
-    const reward = crypto.randomInt(5, 11);
+    const reward = Math.floor(Math.random() * 6) + 5;
     const { coins_balance } = await this.getBalance(userId);
     const newBalance = coins_balance + reward;
 
