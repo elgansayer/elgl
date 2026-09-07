@@ -161,7 +161,7 @@ describe('Chat Flow (Mocked)', () => {
     cy.window().then((win) => {
       (
         win as typeof win & { __cypressExpectedConsoleError?: string }
-      ).__cypressExpectedConsoleError = 'Error sending message:';
+      ).__cypressExpectedConsoleError = 'Failed to send text message:';
     });
     cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
