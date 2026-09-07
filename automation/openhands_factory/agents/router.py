@@ -332,6 +332,10 @@ class AgentRouter:
             "duration_seconds": round(duration, 3),
             "fallback_reason": result.fallback_reason,
         }
+        if result.captured_output_chars is not None:
+            entry["captured_output_chars"] = max(result.captured_output_chars, 0)
+        if result.output_truncated is not None:
+            entry["output_truncated"] = result.output_truncated
         if result.exit_code is not None:
             entry["exit_code"] = result.exit_code
         if result.failure is not None:
@@ -413,6 +417,8 @@ class AgentRouter:
             capacity_wait_seconds=capacity_wait_seconds,
             failure_kind=failure.kind.value if failure is not None else None,
             request_prompt_chars=request_prompt_chars,
+            captured_output_chars=result.captured_output_chars,
+            output_truncated=result.output_truncated,
         )
 
     def _release_capacity(self, provider: str, owner: str) -> None:
