@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from openhands_factory.agents.base import (
     ProviderStatus,
 )
 from openhands_factory.agents.cli import CLIProvider
-from openhands_factory.agents.process import ProcessResult
+from openhands_factory.agents.process import AgentProcessRunner, ProcessResult, ProviderHomeMount
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import Job, Task
@@ -47,8 +47,19 @@ class SuccessfulProvider:
         )
 
 
-class OutputProcessRunner:
-    def run(self, *_args: object, **_kwargs: object) -> ProcessResult:
+class OutputProcessRunner(AgentProcessRunner):
+    def run(
+        self,
+        command: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str],
+        stdin_text: str | None,
+        timeout_seconds: int,
+        max_output_bytes: int,
+        home_mounts: Sequence[ProviderHomeMount] = (),
+    ) -> ProcessResult:
+        del command, cwd, env, stdin_text, timeout_seconds, max_output_bytes, home_mounts
         return ProcessResult(
             command=("fake",),
             exit_code=0,
