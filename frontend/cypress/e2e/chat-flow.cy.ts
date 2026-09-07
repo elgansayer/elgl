@@ -131,23 +131,33 @@ describe('Chat Flow (Mocked)', () => {
   });
 
   it('does not submit whitespace-only messages', () => {
+    let initialMessageCount = 0;
     cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.get('[data-testid="chat-message"]').then(($messages) => {
+      initialMessageCount = $messages.length;
+      expect(initialMessageCount).to.be.greaterThan(0);
+    });
 
     cy.get('[data-testid="chat-message-input"]').type('   {enter}');
 
     cy.then(() => {
       expect(sendAttempts).to.eq(0);
     });
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.get('[data-testid="chat-message"]').should(($messages) => {
+      expect($messages).to.have.length(initialMessageCount);
+    });
   });
 
   it('retains a failed message draft and allows a successful retry', () => {
     failNextSend = true;
     const retryMessage = 'Please keep this draft if sending fails.';
+    let initialMessageCount = 0;
 
     cy.visit(`/chat/${roomId}`);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.get('[data-testid="chat-message"]').then(($messages) => {
+      initialMessageCount = $messages.length;
+      expect(initialMessageCount).to.be.greaterThan(0);
+    });
     cy.window().then((win) => {
       (
         win as typeof win & { __cypressExpectedConsoleError?: string }
@@ -157,7 +167,9 @@ describe('Chat Flow (Mocked)', () => {
 
     cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
     cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
-    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+    cy.get('[data-testid="chat-message"]').should(($messages) => {
+      expect($messages).to.have.length(initialMessageCount);
+    });
 
     cy.get('[data-testid="chat-message-input"]').type('{enter}');
     cy.wait('@sendMessage').then((interception) => {
@@ -166,7 +178,9 @@ describe('Chat Flow (Mocked)', () => {
     });
 
     cy.get('[data-testid="chat-message-input"]').should('have.value', '');
-    cy.get('[data-testid="chat-message"]').should('have.length', 2);
+    cy.get('[data-testid="chat-message"]').should(($messages) => {
+      expect($messages).to.have.length(initialMessageCount + 1);
+    });
     cy.then(() => {
       expect(sendAttempts).to.eq(2);
     });
