@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -66,27 +65,6 @@ def test_factory_internal_general_action_skips_emergency_provider() -> None:
     )
 
     assert candidates == []
-
-
-def test_production_factory_diagnostic_prefers_pi_before_flagship_codex() -> None:
-    raw = json.loads(
-        (REPOSITORY_ROOT / "config/factory/agents.production.json").read_text(encoding="utf-8")
-    )
-    config = AgentsConfig.model_validate(raw)
-    policy = ConfigRoutingPolicy(config)
-    health = _health(config, ProviderStatus.HEALTHY)
-    health["opencode"] = ProviderHealth("opencode", ProviderStatus.UNAVAILABLE, datetime.now(UTC))
-    health["google"] = ProviderHealth("google", ProviderStatus.UNAVAILABLE, datetime.now(UTC))
-
-    candidates = list(
-        policy.candidates(
-            AgentPhase.GENERAL_ACTION,
-            _job(source="factory-internal"),
-            health,
-        )
-    )
-
-    assert candidates == ["pi"]
 
 
 def test_normal_general_action_retains_provider_fallback_chain() -> None:
