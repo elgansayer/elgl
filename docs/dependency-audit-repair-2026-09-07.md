@@ -1,4 +1,4 @@
-# npm audit baseline repair — 2026-09-07
+# npm audit baseline repair: 2026-09-07
 
 The scheduled repository dependency audit failed on `main` at `a935d15ca0a345875d853e269d5aa333dd6b9291` with HIGH-severity findings in the root, backend, frontend, admin-portal and load-test lockfiles.
 
