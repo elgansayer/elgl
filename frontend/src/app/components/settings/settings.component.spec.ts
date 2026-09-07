@@ -14,7 +14,10 @@ describe.skip('SettingsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
-      providers: [{ provide: Router, useValue: routerMock }, provideRouter([])],
+      providers: [
+        { provide: Router, useValue: routerMock },
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SettingsComponent);
@@ -26,8 +29,9 @@ describe.skip('SettingsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+
   it('should navigate to the My Subscription page', () => {
     component.goToMySubscription();
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/settings/subscription']);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/my-subscription']);
   });
 });
