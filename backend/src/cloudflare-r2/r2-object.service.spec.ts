@@ -46,6 +46,22 @@ describe('R2ObjectService', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects the test service token in production', () => {
+    const productionConfig = { ...CONFIG, NODE_ENV: 'production' };
+
+    expect(
+      () =>
+        new R2ObjectService(
+          {
+            get: vi.fn((key: string) => productionConfig[key]),
+          } as unknown as ConfigService,
+          r2Service as unknown as R2Service,
+        ),
+    ).toThrow(
+      'CLOUDFLARE_R2_SERVICE_TOKEN must be securely configured in production',
+    );
+  });
+
   it('uploads server-produced bytes through a signed Worker URL', async () => {
     fetchMock.mockResolvedValue(
       new Response(

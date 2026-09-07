@@ -12,6 +12,8 @@ from openhands_factory.prompts import (
     build_task_prompt,
 )
 
+PRODUCTION_PROMPT_DIR = Path(__file__).resolve().parents[1] / "prompts"
+
 
 def task() -> Task:
     return Task("42", "Fix build", "Broken build", "github-issue", 0)
@@ -35,6 +37,18 @@ def test_profile_system_prompt_can_be_separate_from_shared_templates(tmp_path: P
     assert build_system_prompt(prompt_dir, system_prompt_path=profile_prompt) == "workout"
 
 
+def test_production_system_prompt_keeps_model_work_in_one_provider_session() -> None:
+    prompt = " ".join(build_system_prompt(PRODUCTION_PROMPT_DIR).split())
+
+    assert (
+        "Never spawn subagents, agent teams, delegated model sessions, nested LLM calls" in prompt
+    )
+    assert "Nested model work bypasses Factory provider-start and allowance accounting" in prompt
+    assert (
+        "The Factory runs the authoritative full verification after the provider returns" in prompt
+    )
+
+
 def test_build_task_prompt_includes_issue_and_verification_sections(
     tmp_path: Path,
 ) -> None:
@@ -44,7 +58,10 @@ def test_build_task_prompt_includes_issue_and_verification_sections(
 
     assert "task template" in prompt
     assert "Task ID: 42" in prompt
-    assert "Required verification:\nnpm run build" in prompt
+    assert "Factory-owned full verification" in prompt
+    assert "npm run build" in prompt
+    assert "do not run this entire list inside the provider session" in prompt
+    assert "run only focused checks needed for your edits" in prompt
     assert "Untrusted-content rule" in prompt
     assert "reveal secrets" in prompt
 
@@ -62,7 +79,7 @@ def test_build_task_prompt_puts_stable_content_before_the_task_body(
     prompt = build_task_prompt(tmp_path, task(), context_files, ["npm run build"], [])
 
     assert prompt.index("agents contract content") < prompt.index("Task ID: 42")
-    assert prompt.index("Required verification") < prompt.index("Task ID: 42")
+    assert prompt.index("Factory-owned full verification") < prompt.index("Task ID: 42")
     assert prompt.index("Untrusted-content rule") < prompt.index("Task ID: 42")
 
 
@@ -95,6 +112,7 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert prompt.index("Untrusted-content rule") < prompt.index("Task ID: 42")
     assert "## Begin untrusted task and evidence data" in prompt
     assert "## End untrusted task and evidence data" in prompt
+    assert "Do not run the full Factory verification gate inside this provider session" in prompt
 
 
 def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path) -> None:
@@ -106,6 +124,10 @@ def test_build_phase_prompt_blocks_non_blocking_review_mutations(tmp_path: Path)
     assert "Do not perform non-blocking cleanup" in prompt
     assert "If no blocking defect exists, leave tracked files unchanged" in prompt
     assert "If defects are found, correct them" not in prompt
+    assert (
+        "The Factory will follow any blocking repair with authoritative full verification" in prompt
+    )
+    assert "run only focused checks needed for the repair inside this provider session" in prompt
 
 
 def test_build_phase_prompt_bounds_large_evidence(tmp_path: Path) -> None:

@@ -32,6 +32,7 @@ assert_case() {
 }
 
 assert_case "factory python" false true automation/openhands_factory/router.py
+assert_case "factory dashboard" false true factory-dashboard/src/server.js factory-dashboard/docker-compose.yml
 assert_case "factory configuration" false true config/factory/agents.json config/systemd/hellotalk-factory.service
 assert_case "factory host scripts" false true \
   scripts/decommission-legacy-factory.sh \
@@ -47,6 +48,7 @@ assert_case "factory workflows" false true .github/workflows/factory-merge.yml .
 assert_case "documentation only" false false docs/factory/RESOURCE-POLICY.md docs/README.md
 assert_case "application source" true false frontend/src/app/app.component.ts
 assert_case "mixed factory and application" true true automation/openhands_factory/pipeline.py backend/src/main.ts
+assert_case "mixed dashboard and application" true true factory-dashboard/src/server.js backend/src/main.ts
 assert_case "mixed host script and application" true true scripts/repair-factory-host.sh backend/src/main.ts
 assert_case "canonical CI self-change" true true .github/workflows/ci.yml
 assert_case "unknown workflow fails open" true false .github/workflows/new-product-gate.yml
