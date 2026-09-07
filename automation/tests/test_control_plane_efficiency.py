@@ -75,9 +75,7 @@ def test_production_factory_diagnostic_prefers_pi_before_flagship_codex() -> Non
     config = AgentsConfig.model_validate(raw)
     policy = ConfigRoutingPolicy(config)
     health = _health(config, ProviderStatus.HEALTHY)
-    health["opencode"] = ProviderHealth(
-        "opencode", ProviderStatus.UNAVAILABLE, datetime.now(UTC)
-    )
+    health["opencode"] = ProviderHealth("opencode", ProviderStatus.UNAVAILABLE, datetime.now(UTC))
     health["google"] = ProviderHealth("google", ProviderStatus.UNAVAILABLE, datetime.now(UTC))
 
     candidates = list(
