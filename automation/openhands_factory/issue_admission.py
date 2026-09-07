@@ -279,7 +279,11 @@ class ReviewHeadStabilityGate:
         pruned = False
         for item in payload["observations"]:
             observed_at = datetime.fromisoformat(str(item["observed_at"]))
-            if observed_at <= cutoff:
+            # Treat future-dated observations as stale state rather than allowing
+            # clock skew or damaged state to defer autonomous review indefinitely.
+            # The next call records the same exact head at the current trusted clock
+            # and starts only the configured bounded quiet period again.
+            if observed_at <= cutoff or observed_at > now:
                 pruned = True
                 continue
             observation = ReviewHeadObservation(
