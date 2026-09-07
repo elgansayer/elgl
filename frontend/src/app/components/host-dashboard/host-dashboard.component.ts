@@ -55,7 +55,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class HostDashboardComponent {
   // Allow parent to override stats, otherwise component auto-fetches.
-  readonly roomId = input<string>('');
+  readonly roomId = input.required<string>();
   readonly viewerCount = signal<number>(0);
   readonly earnedCoins = signal<number>(0);
   readonly startTime = signal<Date>(new Date());

@@ -7,6 +7,7 @@ def test_production_provider_policy_is_locked() -> None:
     config = json.loads(path.read_text(encoding="utf-8"))
     providers = config["providers"]
     routing = config["routing"]
+    breaker = config["circuit_breaker"]
     expected_routes = {
         "planning": ["claude", "codex", "google", "opencode", "pi"],
         "architecture": ["claude", "codex", "google", "opencode", "pi"],
@@ -14,7 +15,7 @@ def test_production_provider_policy_is_locked() -> None:
         "security_review": ["claude", "codex", "google", "opencode", "pi"],
         "quality_repair": ["codex", "claude", "google", "opencode", "pi"],
         "code_review": ["codex", "claude", "google", "opencode", "pi"],
-        "ci_repair": ["codex", "claude", "google", "opencode", "pi"],
+        "ci_repair": ["opencode", "google", "claude", "pi", "codex"],
         "general_action": ["opencode", "google", "codex", "claude", "pi"],
     }
 
@@ -47,3 +48,17 @@ def test_production_provider_policy_is_locked() -> None:
     assert expected_routes.keys() <= routing.keys()
     assert all(routing[phase] == route for phase, route in expected_routes.items())
     assert "openhands" not in routing["planning"]
+
+    # CI repair is bounded by concrete failed-check evidence and cannot merge its own
+    # output: local verification, independent review, reviewed-SHA protection and
+    # required GitHub checks remain authoritative. Reserve flagship Codex for fallback.
+    assert routing["ci_repair"][:2] == ["opencode", "google"]
+    assert routing["ci_repair"][-1] == "codex"
+    assert providers["google"]["phase_models"]["ci_repair"].endswith("flash-low")
+    assert providers["claude"]["phase_models"]["ci_repair"] == "haiku"
+    assert providers["pi"]["phase_models"]["ci_repair"].endswith("haiku-4.5")
+
+    # With only six real provider starts admitted per hour in conservative mode,
+    # rediscovering a known provider-wide outage is material allowance waste.
+    assert breaker["failure_threshold"] == 1
+    assert breaker["rate_limit_cooldown_seconds"] >= 900

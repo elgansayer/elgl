@@ -1216,6 +1216,27 @@ export class EconomyService {
     }
     const gift = giftData;
 
+    if (dto.room_id) {
+      const roomId = dto.room_id;
+      const roomResponse = await withExponentialBackoff(
+        () =>
+          supabase
+            .from('audio_rooms')
+            .select('host_id')
+            .eq('id', roomId)
+            .maybeSingle(),
+        'sendGift',
+        { logger: this.logger },
+      );
+      if (
+        roomResponse.error ||
+        !roomResponse.data ||
+        roomResponse.data.host_id !== dto.receiver_id
+      ) {
+        throw new BadRequestException();
+      }
+    }
+
     const { coins_balance: senderBalance } = await this.getBalance(senderId);
     if (senderBalance < gift.cost_coins) {
       throw new BadRequestException(

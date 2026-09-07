@@ -71,7 +71,12 @@ describe('AtomicEconomyService daily check-in', () => {
 
     expect(rpc).toHaveBeenCalledWith('claim_daily_checkin', {
       p_user_id: 'user-1',
+      p_reward: expect.any(Number),
     });
+    const args = rpc.mock.calls[0]?.[1] as { p_reward?: unknown };
+    expect(args.p_reward).toEqual(expect.any(Number));
+    expect(args.p_reward).toBeGreaterThanOrEqual(5);
+    expect(args.p_reward).toBeLessThanOrEqual(10);
     expect(redisDel).toHaveBeenCalledWith('economy:sticker_packs:user-1');
     expect(recordDailyCheckInClaim).toHaveBeenCalledWith(true);
   });

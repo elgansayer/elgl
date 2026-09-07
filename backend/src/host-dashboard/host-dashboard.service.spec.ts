@@ -132,4 +132,18 @@ describe('HostDashboardService', () => {
       startTime: new Date(createdAt),
     });
   });
+
+  it('fails closed when the aggregate request rejects', async () => {
+    const { service, client } = createService();
+    client.rpc.mockRejectedValue(new Error('provider unavailable'));
+
+    const result = await service.getStats(roomId, hostId);
+
+    expect(result).toEqual({
+      roomId,
+      viewerCount: 7,
+      earnedCoins: 0,
+      startTime: new Date(createdAt),
+    });
+  });
 });
