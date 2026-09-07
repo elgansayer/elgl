@@ -9,7 +9,6 @@ on:
       - '**'
       - '!automation/**/*.py'
       - '!automation/prompts/**'
-      - '!factory-dashboard/**'
       - '!config/factory/**'
       - '!config/systemd/**'
       - '!docs/**'
