@@ -12,11 +12,13 @@ function createService(options?: {
     error: options?.rpcError ?? null,
   });
   const redis = {
-    get: vi.fn().mockImplementation((key: string) =>
-      Promise.resolve(
-        key === 'network-abuse:v1:epoch' ? '0' : (options?.cached ?? null),
+    get: vi
+      .fn()
+      .mockImplementation((key: string) =>
+        Promise.resolve(
+          key === 'network-abuse:v1:epoch' ? '0' : (options?.cached ?? null),
+        ),
       ),
-    ),
     set: vi.fn().mockResolvedValue('OK'),
     incr: vi.fn().mockResolvedValue(1),
   };
@@ -45,9 +47,7 @@ describe('AdminNetworkAbuseService', () => {
     expect(() => service.normalizeCidr('127.0.0.1')).toThrow(
       BadRequestException,
     );
-    expect(() => service.normalizeCidr('fc00::1')).toThrow(
-      BadRequestException,
-    );
+    expect(() => service.normalizeCidr('fc00::1')).toThrow(BadRequestException);
   });
 
   it('does not persist raw IPs in Redis decision keys', async () => {
@@ -74,7 +74,9 @@ describe('AdminNetworkAbuseService', () => {
   });
 
   it('fails open when the enforcement store is unavailable', async () => {
-    const { service } = createService({ rpcError: new Error('db unavailable') });
+    const { service } = createService({
+      rpcError: new Error('db unavailable'),
+    });
 
     await expect(service.isRequestBlocked('1.1.1.1', 'auth')).resolves.toBe(
       false,

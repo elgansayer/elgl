@@ -20,19 +20,22 @@ export class SuggestFlashcardsDto {
   message!: string;
 
   @ApiPropertyOptional({
-    description: 'User ID for excluding already-known words (SRS level 4)',
-    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+    description:
+      'Deprecated compatibility parameter. Ignored by the server; filtering is scoped to the authenticated user.',
+    deprecated: true,
   })
   @IsOptional()
   @IsString()
+  @MaxLength(128)
   user_id?: string;
 
   @ApiPropertyOptional({
-    description: 'Target language ISO 639-1 code for word segmentation',
+    description: 'BCP 47 language tag for word segmentation',
     example: 'fr',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(35)
   target_language?: string;
 
   @ApiPropertyOptional({

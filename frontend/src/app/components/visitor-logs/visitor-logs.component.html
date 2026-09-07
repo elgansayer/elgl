@@ -18,7 +18,7 @@
         type="button"
         class="visitor-toggle-btn"
         (click)="toggleHideBlurred()"
-        [attr.aria-label]="'visitors.showAllBtn' | t"
+        [attr.aria-label]="hideBlurredLabelKey() | t"
       >
         @if (hideBlurred()) {
           {{ 'visitors.showAllBtn' | t }}
@@ -109,7 +109,7 @@
                   {{ log.visitor.display_name || ('visitors.partnerFallback' | t) }}
                 </p>
                 <p class="visitor-languages">
-                  <span class="visitor-lang-native">{{ log.visitor.native_languages }}</span>
+                  <span class="visitor-lang-native">{{ log.visitor.native_languages.join(', ') }}</span>
                   <span class="visitor-lang-arrow" aria-hidden="true">&rarr;</span>
                   <span class="visitor-lang-target">{{ log.visitor.target_languages.join(', ') }}</span>
                 </p>

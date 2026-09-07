@@ -20,7 +20,11 @@ describe('ConfirmDialogComponent', () => {
   });
 
   afterEach(() => {
-    confirmService.dismiss(false);
+    try {
+      confirmService.dismiss(false);
+    } finally {
+      fixture.destroy();
+    }
   });
 
   function openConfirmation(message = 'Confirm this action'): Promise<boolean> {
@@ -150,16 +154,15 @@ describe('ConfirmDialogComponent', () => {
   it('should use the Spartan dialog title contract without fixed ids', () => {
     openConfirmation('Delete this draft?');
 
-    const dialogContent = fixture.debugElement.query(By.css('[data-slot="dialog-content"]'));
-    const title = fixture.debugElement.query(By.css('[data-slot="dialog-title"]'));
-    const renderedHtml = dialogContent.nativeElement.outerHTML;
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
+    const title = dialog?.querySelector<HTMLElement>('[data-slot="dialog-title"]');
+    const titleId = dialog?.getAttribute('aria-labelledby');
 
-    expect(dialogContent).not.toBeNull();
-    expect(title).not.toBeNull();
-    expect(title.nativeElement.textContent).toContain('Delete this draft?');
-    expect(title.nativeElement.id).toBeTruthy();
-    expect(dialogContent.nativeElement.getAttribute('aria-labelledby')).toBe(title.nativeElement.id);
-    expect(renderedHtml).not.toContain('confirm-message');
+    expect(dialog).not.toBeNull();
+    expect(title?.textContent).toContain('Delete this draft?');
+    expect(titleId).toMatch(/^brn-dialog-title-\d+$/);
+    expect(title?.id).toBe(titleId);
+    expect(dialog?.outerHTML).not.toContain('confirm-message');
   });
 
   it('should keep required content scrollable at high zoom and narrow viewport heights', () => {

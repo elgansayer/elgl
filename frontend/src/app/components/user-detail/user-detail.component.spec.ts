@@ -2,11 +2,14 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
+import { AuthService } from '../../services/auth.service';
+import { DirectConversationService } from '../../services/direct-conversation.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { I18nService } from '../../services/i18n.service';
+import { ProfileRelationshipService } from '../../services/profile-relationship.service';
 import { SafetyService } from '../../services/safety.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { UserDetailComponent } from './user-detail.component';
@@ -34,23 +37,34 @@ function makeProfile(id: string, bioText = 'Original profile bio'): UserProfile 
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolver) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolver, rejecter) => {
     resolve = resolver;
+    reject = rejecter;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
-describe('UserDetailComponent bio translation', () => {
+describe('UserDetailComponent', () => {
   let component: UserDetailComponent;
   let fixture: ComponentFixture<UserDetailComponent>;
   let currentLang: ReturnType<typeof signal<string>>;
+  let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
   let translateBio: ReturnType<typeof vi.fn>;
   let getUserProfile: ReturnType<typeof vi.fn>;
+  let openOrCreate: ReturnType<typeof vi.fn>;
+  let follow: ReturnType<typeof vi.fn>;
+  let unfollow: ReturnType<typeof vi.fn>;
+  let navigate: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     currentLang = signal('en-GB');
+    currentUser = signal<{ id: string } | null>({ id: 'current-user' });
     translateBio = vi.fn();
     getUserProfile = vi.fn().mockResolvedValue(makeProfile('user-1'));
+    openOrCreate = vi.fn().mockResolvedValue('room-123');
+    follow = vi.fn().mockResolvedValue(undefined);
+    unfollow = vi.fn().mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [UserDetailComponent],
@@ -59,13 +73,23 @@ describe('UserDetailComponent bio translation', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         {
+          provide: AuthService,
+          useValue: { currentUser },
+        },
+        {
           provide: UserService,
           useValue: {
             getUserProfile,
-            followUser: vi.fn(),
-            unfollowUser: vi.fn(),
             likeProfile: vi.fn(),
           },
+        },
+        {
+          provide: DirectConversationService,
+          useValue: { openOrCreate },
+        },
+        {
+          provide: ProfileRelationshipService,
+          useValue: { follow, unfollow },
         },
         {
           provide: DiscoveryService,
@@ -87,6 +111,9 @@ describe('UserDetailComponent bio translation', () => {
       })
       .compileComponents();
 
+    const router = TestBed.inject(Router);
+    navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
     fixture = TestBed.createComponent(UserDetailComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('userId', 'user-1');
@@ -99,6 +126,26 @@ describe('UserDetailComponent bio translation', () => {
     expect(component).toBeTruthy();
     expect(getUserProfile).toHaveBeenCalledWith('user-1');
     expect(component.profile()?.id).toBe('user-1');
+  });
+
+  it('ignores a stale profile response after the route target changes', async () => {
+    const stale = createDeferred<UserProfile | null>();
+    getUserProfile.mockReturnValueOnce(stale.promise);
+    getUserProfile.mockResolvedValueOnce(makeProfile('user-fast'));
+
+    fixture.componentRef.setInput('userId', 'user-slow');
+    fixture.detectChanges();
+    fixture.componentRef.setInput('userId', 'user-fast');
+    fixture.detectChanges();
+    await Promise.resolve();
+
+    stale.resolve(makeProfile('user-slow'));
+    await stale.promise;
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component.profile()?.id).toBe('user-fast');
+    expect(component.isLoading()).toBe(false);
   });
 
   it('translates into the active UI language and can show the original again', async () => {
@@ -194,5 +241,82 @@ describe('UserDetailComponent bio translation', () => {
 
     expect(component.isTranslating()).toBe(false);
     expect(component.displayBio).toBe('Translated bio');
+  });
+
+  it('opens or creates the direct room before navigating to chat', async () => {
+    await component.openConversation();
+
+    expect(openOrCreate).toHaveBeenCalledWith('user-1');
+    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-123']);
+    expect(component.chatErrorKey()).toBe('');
+  });
+
+  it('prevents duplicate direct-chat requests while one is pending', async () => {
+    const deferred = createDeferred<string>();
+    openOrCreate.mockReturnValue(deferred.promise);
+
+    const first = component.openConversation();
+    const second = component.openConversation();
+
+    expect(openOrCreate).toHaveBeenCalledTimes(1);
+    expect(component.isOpeningChat()).toBe(true);
+
+    deferred.resolve('room-456');
+    await Promise.all([first, second]);
+
+    expect(navigate).toHaveBeenCalledWith(['/chat', 'room-456']);
+    expect(component.isOpeningChat()).toBe(false);
+  });
+
+  it('shows a retryable status when direct-chat creation fails', async () => {
+    openOrCreate.mockRejectedValue(new Error('blocked'));
+
+    await component.openConversation();
+    fixture.detectChanges();
+
+    expect(component.chatErrorKey()).toBe('common.error_generic');
+    expect(component.isOpeningChat()).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
+    const status = fixture.nativeElement.querySelector(`#${component.chatStatusId()}`) as HTMLElement;
+    expect(status.getAttribute('role')).toBe('status');
+  });
+
+  it('rolls back an optimistic follow when the request fails', async () => {
+    follow.mockRejectedValue(new Error('network failure'));
+
+    await component.toggleFollow();
+    fixture.detectChanges();
+
+    expect(component.isFollowing()).toBe(false);
+    expect(component.followErrorKey()).toBe('common.error_generic');
+    expect(component.isFollowingPending()).toBe(false);
+  });
+
+  it('prevents duplicate follow requests while the first is pending', async () => {
+    const deferred = createDeferred<void>();
+    follow.mockReturnValue(deferred.promise);
+
+    const first = component.toggleFollow();
+    const second = component.toggleFollow();
+
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(component.isFollowingPending()).toBe(true);
+
+    deferred.resolve();
+    await Promise.all([first, second]);
+    expect(component.isFollowing()).toBe(true);
+  });
+
+  it('suppresses profile actions for the current user', async () => {
+    currentUser.set({ id: 'user-1' });
+    fixture.detectChanges();
+
+    expect(component.isOwnProfile()).toBe(true);
+    await component.openConversation();
+    await component.toggleFollow();
+
+    expect(openOrCreate).not.toHaveBeenCalled();
+    expect(follow).not.toHaveBeenCalled();
+    expect(unfollow).not.toHaveBeenCalled();
   });
 });

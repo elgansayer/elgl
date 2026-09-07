@@ -10,6 +10,7 @@ SUBSCRIPTION_AGENTS = REPOSITORY / "docs" / "factory" / "SUBSCRIPTION-AGENTS.md"
 CURRENT_AUDIT = REPOSITORY / "docs" / "factory" / "AUDIT-2026-08-17.md"
 CONTROL_PANEL = REPOSITORY / "docs" / "factory" / "CONTROL-PANEL.md"
 MANUAL_MERGE = REPOSITORY / "docs" / "factory" / "MANUAL-MERGE.md"
+TASK_OWNERSHIP = REPOSITORY / "docs" / "factory" / "TASK-OWNERSHIP.md"
 
 OPERATOR_RECOVERY_COMMANDS = (
     "doctor --online",
@@ -49,6 +50,29 @@ def test_execution_architecture_locks_single_factory_owner_and_multiple_provider
         "bounded pull-request review lane",
     ):
         assert marker in architecture
+
+
+def test_task_ownership_documents_atomic_claim_and_rollback_contract() -> None:
+    ownership = TASK_OWNERSHIP.read_text(encoding="utf-8")
+    architecture = EXECUTION_ARCHITECTURE.read_text(encoding="utf-8")
+    active = ACTIVE_ARCHITECTURE.read_text(encoding="utf-8")
+    workflow = AI_WORKFLOW.read_text(encoding="utf-8")
+
+    for marker in (
+        "one canonical implementation branch",
+        "worker-distinct token",
+        "compare-and-swap",
+        "Before branch creation",
+        "changed-path fingerprint",
+        "explicitly supersedes",
+        "crash-after-claim",
+        "Upgrade and rollback",
+        "additive state expansion",
+    ):
+        assert marker in ownership
+    assert "TASK-OWNERSHIP.md" in architecture
+    assert "TASK-OWNERSHIP.md" in active
+    assert "equivalent-PR reconciliation" in workflow
 
 
 def test_active_architecture_cannot_drift_back_to_competing_owners() -> None:

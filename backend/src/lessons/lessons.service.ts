@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService, type LessonRow } from '../supabase/supabase.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
@@ -14,6 +19,14 @@ export interface LessonRecord {
   audio_url?: string | null;
   created_at?: string;
   updated_at?: string | null;
+}
+
+export interface LessonProgressRecord {
+  lesson_id: string;
+  segment_index: number;
+  completed: boolean;
+  completed_at: string | null;
+  updated_at: string | null;
 }
 
 @Injectable()
@@ -39,8 +52,74 @@ export class LessonsService {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Lesson ${id} not found`);
+      }
+      throw error;
+    }
+    if (!data) throw new NotFoundException(`Lesson ${id} not found`);
     return data;
+  }
+
+  async getLessonProgress(
+    userId: string,
+    lessonId: string,
+  ): Promise<LessonProgressRecord> {
+    await this.getLesson(lessonId);
+    const client = this.progressClient();
+    const { data, error } = await client
+      .from('lesson_progress')
+      .select('lesson_id, segment_index, completed, completed_at, updated_at')
+      .eq('user_id', userId)
+      .eq('lesson_id', lessonId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return this.emptyProgress(lessonId);
+    return this.normaliseProgress(data, lessonId);
+  }
+
+  async saveLessonProgress(
+    userId: string,
+    lessonId: string,
+    segmentIndex: number,
+    completed: boolean,
+  ): Promise<LessonProgressRecord> {
+    const lesson = await this.getLesson(lessonId);
+    const maxSegmentIndex = this.maxSegmentIndex(lesson);
+    if (segmentIndex > maxSegmentIndex) {
+      throw new BadRequestException(
+        'Lesson progress is outside the lesson content',
+      );
+    }
+    if (completed && segmentIndex !== maxSegmentIndex) {
+      throw new BadRequestException(
+        'A lesson can only complete on its final segment',
+      );
+    }
+
+    const client = this.progressClient();
+    const now = new Date().toISOString();
+    const { data, error } = await client
+      .from('lesson_progress')
+      .upsert(
+        {
+          user_id: userId,
+          lesson_id: lessonId,
+          segment_index: segmentIndex,
+          completed,
+          completed_at: completed ? now : null,
+          updated_at: now,
+        },
+        { onConflict: 'user_id,lesson_id' },
+      )
+      .select('lesson_id, segment_index, completed, completed_at, updated_at')
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Lesson progress write returned no row');
+    return this.normaliseProgress(data, lessonId);
   }
 
   async createLesson(dto: CreateLessonDto): Promise<LessonRecord> {
@@ -95,15 +174,72 @@ export class LessonsService {
   }
 
   async completeLesson(userId: string, lessonId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    const { data: lesson, error } = await supabase
-      .from('lessons')
-      .select('id')
-      .eq('id', lessonId)
-      .single();
+    const lesson = await this.getLesson(lessonId);
+    await this.saveLessonProgress(
+      userId,
+      lessonId,
+      this.maxSegmentIndex(lesson),
+      true,
+    );
+  }
 
-    if (error || !lesson) {
-      throw new NotFoundException(`Lesson ${lessonId} not found`);
+  private progressClient(): SupabaseClient {
+    return this.supabaseService.getClient();
+  }
+
+  private emptyProgress(lessonId: string): LessonProgressRecord {
+    return {
+      lesson_id: lessonId,
+      segment_index: 0,
+      completed: false,
+      completed_at: null,
+      updated_at: null,
+    };
+  }
+
+  private normaliseProgress(
+    value: unknown,
+    lessonId: string,
+  ): LessonProgressRecord {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('Lesson progress response was malformed');
     }
+
+    const record = value as Record<string, unknown>;
+    const segmentIndex = record['segment_index'];
+    const completed = record['completed'];
+    const completedAt = record['completed_at'];
+    const updatedAt = record['updated_at'];
+
+    if (
+      typeof segmentIndex !== 'number' ||
+      !Number.isInteger(segmentIndex) ||
+      segmentIndex < 0 ||
+      typeof completed !== 'boolean' ||
+      (completedAt !== null && typeof completedAt !== 'string') ||
+      (updatedAt !== null && typeof updatedAt !== 'string')
+    ) {
+      throw new Error('Lesson progress response was malformed');
+    }
+
+    return {
+      lesson_id: lessonId,
+      segment_index: segmentIndex,
+      completed,
+      completed_at: completedAt,
+      updated_at: updatedAt,
+    };
+  }
+
+  private maxSegmentIndex(lesson: LessonRecord): number {
+    const segments = lesson.content_json?.['segments'];
+    if (!Array.isArray(segments)) return 0;
+    const usableCount = segments.filter((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+      const text = (value as Record<string, unknown>)['text'];
+      return typeof text === 'string' && text.trim().length > 0;
+    }).length;
+    return Math.max(0, usableCount - 1);
   }
 }

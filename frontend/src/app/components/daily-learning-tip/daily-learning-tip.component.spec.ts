@@ -65,7 +65,7 @@ describe('DailyLearningTipComponent', () => {
     createComponent();
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/api/daily-tip', {
+    expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:3000/api/daily-tip', {
       headers: { Authorization: 'Bearer mock-access-token' },
     });
   });

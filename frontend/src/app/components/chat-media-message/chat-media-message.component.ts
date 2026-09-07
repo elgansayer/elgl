@@ -24,6 +24,17 @@ interface MediaMessageLike {
           class="max-h-96 max-w-full rounded-xl object-contain"
         />
       </a>
+    } @else if (isInstantVideo() && safeUrl()) {
+      <div class="max-w-full" aria-label="Instant video note">
+        <video
+          [src]="safeUrl()"
+          controls
+          preload="metadata"
+          playsinline
+          class="aspect-square h-56 w-56 max-h-[70vw] max-w-[70vw] rounded-full bg-black object-cover shadow-lift"
+          aria-label="Play instant video note"
+        ></video>
+      </div>
     } @else if (isVideo() && safeUrl()) {
       <video
         [src]="safeUrl()"
@@ -45,6 +56,10 @@ export class ChatMediaMessageComponent {
 
   isVideo(): boolean {
     return this.message().message_type === 'video';
+  }
+
+  isInstantVideo(): boolean {
+    return this.message().message_type === 'video_note';
   }
 
   safeUrl(): string | null {

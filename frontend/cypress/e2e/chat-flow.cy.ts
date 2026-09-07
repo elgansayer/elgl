@@ -1,6 +1,14 @@
 describe('Chat Flow (Mocked)', () => {
+  const roomId = 'room-123';
+  const fixedTimestamp = '2026-08-28T12:00:00.000Z';
+  let failNextSend = false;
+  let sendAttempts = 0;
+
   beforeEach(() => {
-    // 1. Mock the user's session and basic API requirements
+    failNextSend = false;
+    sendAttempts = 0;
+
+    // Keep the chat flow deterministic and isolated from external services.
     cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
     cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
     cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
@@ -12,16 +20,31 @@ describe('Chat Flow (Mocked)', () => {
     );
     cy.intercept('GET', '**/api/chat/rooms/*/members', { body: [] }).as('getRoomMembers');
     cy.intercept('GET', '**/api/chat/groups/*/members', { body: [] }).as('getGroupMembers');
+    cy.intercept('PATCH', '**/api/chat/messages/*/status', { statusCode: 204, body: {} }).as(
+      'markMessageStatus',
+    );
 
-    // 2. Mock Chat Rooms List
+    cy.intercept('POST', '**/api/nlp/grammar-check', (req) => {
+      const text = typeof req.body?.text === 'string' ? req.body.text : '';
+      req.reply({
+        statusCode: 200,
+        body: {
+          original: text,
+          corrected: text,
+          explanation: '',
+          errors_found: 0,
+        },
+      });
+    }).as('checkGrammar');
+
     cy.intercept('GET', '**/api/chat/rooms', {
       body: [
         {
-          id: 'room-123',
+          id: roomId,
           title: 'Language Exchange with Maria',
           subtitle: 'Hola a todos!',
-          created_at: new Date().toISOString(),
-          avatar: 'https://i.pravatar.cc/150?u=partner-2',
+          created_at: fixedTimestamp,
+          avatar: 'https://example.test/maria-avatar.png',
           is_online: true,
           is_pinned: false,
         },
@@ -31,68 +54,119 @@ describe('Chat Flow (Mocked)', () => {
     cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
-    // 3. Mock Chat Messages for room-123
-    cy.intercept('GET', '**/api/chat/messages/room-123*', {
+    cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
       body: [
         {
           id: 'msg-1',
-          room_id: 'room-123',
+          room_id: roomId,
           sender_id: 'partner-2',
           message_type: 'text',
           text_content: 'Hola, how are you?',
-          created_at: new Date().toISOString(),
+          created_at: fixedTimestamp,
           is_read: true,
         },
       ],
     }).as('getMessages');
 
-    // 4. Mock sending a new message
     cy.intercept('POST', '**/api/chat/messages', (req) => {
-      // Echo back the sent message as a successful response
+      sendAttempts += 1;
+      if (failNextSend) {
+        failNextSend = false;
+        req.reply({
+          statusCode: 503,
+          headers: { 'x-cypress-expected-error': 'true' },
+          body: { message: 'Chat service temporarily unavailable' },
+        });
+        return;
+      }
+
       req.reply({
         statusCode: 201,
         body: {
-          id: `msg-${Date.now()}`,
-          room_id: 'room-123',
+          id: `msg-sent-${sendAttempts}`,
+          room_id: roomId,
           sender_id: 'mock-user-123',
           message_type: 'text',
           text_content: req.body.text_content,
-          created_at: new Date().toISOString(),
+          created_at: fixedTimestamp,
           is_read: false,
         },
       });
     }).as('sendMessage');
   });
 
-  it('should display the chat list and navigate to a chat room', () => {
+  it('displays the chat list and navigates to the selected room', () => {
     cy.visit('/chat');
 
-    // Verify the chat room appears in the list
     cy.wait('@getRooms');
-    cy.contains('Language Exchange with Maria').should('be.visible');
+    cy.contains('Language Exchange with Maria').should('be.visible').click();
 
-    // Click on the room to navigate
-    cy.contains('Language Exchange with Maria').click();
-
-    // Verify we are routed to the room and messages load
-    cy.url().should('include', '/chat/room-123');
+    cy.url().should('include', `/chat/${roomId}`);
+    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
-  it('should allow sending a new text message', () => {
-    cy.visit('/chat/room-123');
+  it('sends a text message with the canonical room and message payload', () => {
+    cy.visit(`/chat/${roomId}`);
+    cy.wait('@getMessages');
 
     const testMessage = 'I am doing great, thanks for asking!';
+    cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
 
-    // Type and send a message
-    cy.get('[data-testid="chat-message-input"]').type(testMessage);
+    cy.wait('@checkGrammar')
+      .its('request.body.text')
+      .should('eq', testMessage);
+    cy.wait('@sendMessage').then((interception) => {
+      expect(interception.response?.statusCode).to.eq(201);
+      expect(interception.request.body).to.deep.include({
+        room_id: roomId,
+        message_type: 'text',
+        text_content: testMessage,
+      });
+    });
 
-    // Sometimes send buttons are just icons, we can hit Enter instead or find the button
-    cy.get('[data-testid="chat-message-input"]').type('{enter}');
-
-    // Wait for the POST request to complete
-    cy.wait('@sendMessage').its('request.body.text_content').should('eq', testMessage);
-
-    // Assert the message is optimistically added to the UI
     cy.get('[data-testid="chat-message"]').should('have.length', 2);
+    cy.get('[data-testid="chat-message-input"]').should('have.value', '');
+  });
+
+  it('does not submit whitespace-only messages', () => {
+    cy.visit(`/chat/${roomId}`);
+    cy.wait('@getMessages');
+
+    cy.get('[data-testid="chat-message-input"]').type('   {enter}');
+
+    cy.then(() => {
+      expect(sendAttempts).to.eq(0);
+    });
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+  });
+
+  it('retains a failed message draft and allows a successful retry', () => {
+    failNextSend = true;
+    const retryMessage = 'Please keep this draft if sending fails.';
+
+    cy.visit(`/chat/${roomId}`);
+    cy.wait('@getMessages');
+    cy.window().then((win) => {
+      (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
+        'Error sending message:';
+    });
+    cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
+
+    cy.wait('@sendMessage').its('response.statusCode').should('eq', 503);
+    cy.get('[data-testid="chat-message-input"]').should('have.value', retryMessage);
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
+
+    cy.get('[data-testid="chat-message-input"]').type('{enter}');
+    cy.wait('@sendMessage').then((interception) => {
+      expect(interception.response?.statusCode).to.eq(201);
+      expect(interception.request.body.text_content).to.eq(retryMessage);
+    });
+
+    cy.get('[data-testid="chat-message-input"]').should('have.value', '');
+    cy.get('[data-testid="chat-message"]').should('have.length', 2);
+    cy.then(() => {
+      expect(sendAttempts).to.eq(2);
+    });
   });
 });

@@ -48,6 +48,40 @@ describe('ChatMediaMessageService', () => {
     await expect(sendPromise).resolves.toBeUndefined();
   });
 
+  it('marks instant video presentation explicitly without changing the owned video key', async () => {
+    const objectKey = 'chat-media/user/video/standard/123-aaaaaaaaaaaaaaaaaaaaaaaa.webm';
+    const sendPromise = service.send('room-123', {
+      url: 'https://cdn.example/video-note',
+      objectKey,
+      kind: 'video',
+      quality: 'standard',
+      presentation: 'instant_video',
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/media/chat/send`);
+    expect(request.request.body).toEqual({
+      roomId: 'room-123',
+      mediaKind: 'video',
+      objectKey,
+      presentation: 'instant_video',
+    });
+    request.flush({ id: 'video-note-1' });
+
+    await expect(sendPromise).resolves.toBeUndefined();
+  });
+
+  it('rejects instant video presentation for a non-video upload before network I/O', async () => {
+    await expect(
+      service.send('room-123', {
+        url: 'https://cdn.example/image',
+        objectKey: 'chat-media/user/image/standard/123-aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
+        kind: 'image',
+        quality: 'standard',
+        presentation: 'instant_video',
+      }),
+    ).rejects.toThrow('Instant video presentation requires a video upload');
+  });
+
   it('fails before network I/O when no session exists', async () => {
     auth.getAccessToken.mockReturnValue(null as never);
     await expect(

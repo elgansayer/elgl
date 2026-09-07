@@ -18,7 +18,9 @@ describe('PostGIS nearby discovery migration (#1302)', () => {
   });
 
   it('preserves the active named-argument RPC signature for mixed-version backends', () => {
-    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.search_nearby_users\(/);
+    expect(sql).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.search_nearby_users\(/,
+    );
     expect(sql).toMatch(/search_lat DOUBLE PRECISION/);
     expect(sql).toMatch(/search_lon DOUBLE PRECISION/);
     expect(sql).toMatch(/radius_m DOUBLE PRECISION/);
@@ -28,7 +30,9 @@ describe('PostGIS nearby discovery migration (#1302)', () => {
 
   it('uses PostGIS ST_DWithin and returns nearest results first with a hard cap', () => {
     expect(sql).toMatch(/ST_DWithin\(/);
-    expect(sql).toMatch(/ST_SetSRID\(ST_MakePoint\(search_lon, search_lat\), 4326\)/);
+    expect(sql).toMatch(
+      /ST_SetSRID\(ST_MakePoint\(search_lon, search_lat\), 4326\)/,
+    );
     expect(sql).toMatch(/ST_Distance\(/);
     expect(sql).toMatch(/ORDER BY distance ASC, u\.id ASC/);
     expect(sql).toMatch(/LIMIT 100/);
@@ -70,9 +74,13 @@ describe('PostGIS nearby discovery migration (#1302)', () => {
   it('keeps SECURITY DEFINER execution behind the service role', () => {
     expect(sql).toMatch(/SECURITY DEFINER/);
     expect(sql).toMatch(/SET search_path = public/);
-    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.search_nearby_users[\s\S]*FROM PUBLIC/);
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.search_nearby_users[\s\S]*FROM PUBLIC/,
+    );
     expect(sql).toMatch(/FROM anon, authenticated/);
-    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.search_nearby_users[\s\S]*TO service_role/);
+    expect(sql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.search_nearby_users[\s\S]*TO service_role/,
+    );
   });
 
   it('does not log coordinates or other location data from the database function', () => {

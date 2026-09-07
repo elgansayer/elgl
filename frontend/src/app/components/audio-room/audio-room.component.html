@@ -541,6 +541,7 @@
 
   @if (showCreateModal()) {
     <app-voiceroom-create-modal
+      [isSubmitting]="isCreatingRoom()"
       (closed)="showCreateModal.set(false)"
       (created)="createRoom($event)"
     ></app-voiceroom-create-modal>

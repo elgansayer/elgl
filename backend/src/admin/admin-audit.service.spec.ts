@@ -3,6 +3,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AdminAuditService } from './admin-audit.service';
 
 describe('AdminAuditService', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('persists an allow-listed, scrubbed audit event', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const from = vi.fn().mockReturnValue({ insert });
@@ -197,6 +201,33 @@ describe('AdminAuditService', () => {
       .join('\n');
     expect(logged).toContain('admin_audit_retention_failed');
     expect(logged).not.toContain('retention unavailable');
+  });
+
+  it('does not fail a completed audit write when retention RPC rejects', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockRejectedValue(new Error('rpc network secret'));
+    const errorLog = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const service = new AdminAuditService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ insert }),
+        rpc,
+      }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      service.record({
+        actorUserId: 'admin-1',
+        action: 'users.read',
+        outcome: 'success',
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(errorLog).toHaveBeenCalledOnce();
+    const logged = String(errorLog.mock.calls[0]?.[0]);
+    expect(logged).toContain('admin_audit_retention_failed');
+    expect(logged).not.toContain('rpc network secret');
   });
 
   it('fails closed and logs only sanitized audit persistence context', async () => {

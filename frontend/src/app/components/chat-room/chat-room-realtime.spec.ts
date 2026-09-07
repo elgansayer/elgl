@@ -161,6 +161,52 @@ describe('applyChatRoomRealtimeEvent', () => {
     );
 
     expect(result.messages[0]?.delivery_status).toBe('read');
+    expect(result.messages[0]?.is_read).toBe(true);
+  });
+
+  it('never regresses a read receipt when stale realtime status events arrive late', () => {
+    const readMessage: ChatMessage = {
+      ...baseMessage,
+      delivery_status: 'read',
+      is_read: true,
+    };
+    const messages = [readMessage];
+
+    const delivered = applyChatRoomRealtimeEvent(
+      messages,
+      { status_update: { message_id: 'message-1', delivery_status: 'delivered' } },
+      'room-1',
+      'user-1',
+    );
+    const sent = applyChatRoomRealtimeEvent(
+      delivered.messages,
+      { status_update: { message_id: 'message-1', delivery_status: 'sent' } },
+      'room-1',
+      'user-1',
+    );
+
+    expect(delivered.messages).toBe(messages);
+    expect(sent.messages).toBe(messages);
+    expect(sent.messages[0]).toMatchObject({ delivery_status: 'read', is_read: true });
+  });
+
+  it('treats legacy is_read state as authoritative when status events arrive out of order', () => {
+    const legacyRead: ChatMessage = {
+      ...baseMessage,
+      delivery_status: undefined,
+      is_read: true,
+    };
+    const messages = [legacyRead];
+
+    const result = applyChatRoomRealtimeEvent(
+      messages,
+      { status_update: { message_id: 'message-1', delivery_status: 'delivered' } },
+      'room-1',
+      'user-1',
+    );
+
+    expect(result.messages).toBe(messages);
+    expect(result.messages[0]?.is_read).toBe(true);
   });
 
   it('rejects malformed delivery-status updates', () => {

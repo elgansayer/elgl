@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from openhands_factory.models import Task, logical_task_key
+from openhands_factory.models import Task, changed_path_fingerprint, logical_task_key
 from openhands_factory.state import atomic_write_json
-from openhands_factory.task_source import TaskStore
+from openhands_factory.task_source import TaskClaimConflict, TaskStore
 
 
 def test_logical_key_is_independent_of_issue_and_pr_numbers() -> None:
@@ -41,6 +41,22 @@ def test_explicit_logical_key_survives_substantial_retitle() -> None:
     )
 
     assert first.logical_key == successor.logical_key == "explicit:discovery-overlay"
+
+
+def test_full_logical_key_marker_round_trips_into_pull_request_metadata() -> None:
+    key = logical_task_key("Stable title")
+
+    assert logical_task_key("Decorated PR", f"Logical-Task-Key: {key}\n") == key
+
+
+def test_changed_path_fingerprint_is_order_independent_and_non_empty() -> None:
+    first = changed_path_fingerprint(["backend/src/a.py", "docs/contract.md"])
+    second = changed_path_fingerprint(["docs/contract.md", "backend\\src\\a.py"])
+
+    assert first == second
+    assert first is not None
+    assert changed_path_fingerprint([]) is None
+    assert changed_path_fingerprint([" ", "/"]) is None
 
 
 def test_priority_and_duplicate_lease_rejection(tmp_path: Path) -> None:
@@ -114,6 +130,135 @@ def test_lease_renewal_preserves_owner_and_acquisition_time(tmp_path: Path) -> N
     assert renewed.expires_at == now + timedelta(minutes=50)
     with pytest.raises(ValueError, match="belongs to daemon-a"):
         store.renew(task.identifier, "daemon-b", now + timedelta(minutes=21))
+
+
+def test_release_is_compare_and_swap_safe_and_retains_canonical_metadata(
+    tmp_path: Path,
+) -> None:
+    store = TaskStore(tmp_path, lease_minutes=30)
+    task = Task(
+        "42",
+        "Fix build",
+        "Logical-Task-Key: shared-build",
+        "github-issue",
+        3,
+    )
+    sibling = Task(
+        "43",
+        "Build replacement",
+        "Logical-Task-Key: shared-build",
+        "github-issue",
+        3,
+    )
+    store.cache([task, sibling])
+    store.acquire(task, "worker-a", producer_identity="producer-a")
+    store.bind_branch(
+        "42",
+        "worker-a",
+        "factory/42-fix-build",
+        "base-sha",
+        predecessor_pull_request=80,
+    )
+    with pytest.raises(TaskClaimConflict):
+        store.bind_branch(
+            "42",
+            "worker-a",
+            "factory/42-sibling",
+            "base-sha",
+        )
+    with pytest.raises(TaskClaimConflict):
+        store.bind_branch(
+            "42",
+            "worker-a",
+            "factory/42-fix-build",
+            "different-base-sha",
+        )
+    store.bind_pull_request(
+        "42",
+        "worker-a",
+        81,
+        "factory/42-fix-build",
+        predecessor_pull_request=80,
+    )
+    store.record_verification("42", "worker-a", "verified-sha", "paths:abc123")
+    store.record_failure("42", "worker-a", "failure:stable")
+
+    with pytest.raises(TaskClaimConflict):
+        store.bind_pull_request(
+            "42",
+            "worker-a",
+            82,
+            "factory/42-sibling",
+        )
+    with pytest.raises(TaskClaimConflict):
+        store.release("42", owner="worker-b")
+    store.release("43")
+
+    assert store.leases()[task.logical_key].owner == "worker-a"
+
+    store.release("42", owner="worker-a")
+
+    assert store.leases() == {}
+    claim = store.claims()[task.logical_key]
+    assert claim.owner is None
+    assert claim.producer_identity == "producer-a"
+    assert claim.canonical_branch == "factory/42-fix-build"
+    assert claim.canonical_pull_request == 81
+    assert claim.initial_base_sha == "base-sha"
+    assert claim.latest_verified_sha == "verified-sha"
+    assert claim.predecessor_pull_request == 80
+    assert claim.successor_pull_request == 81
+    assert claim.changed_path_fingerprint == "paths:abc123"
+    assert claim.failure_fingerprint == "failure:stable"
+
+
+def test_crash_lease_blocks_duplicate_until_expiry_then_allows_same_task_takeover(
+    tmp_path: Path,
+) -> None:
+    now = datetime.now(UTC)
+    store = TaskStore(tmp_path, lease_minutes=1)
+    task = Task("42", "Crash recovery", "body", "github-issue", 0)
+    store.acquire(task, "crashed-worker", now)
+
+    with pytest.raises(TaskClaimConflict):
+        store.acquire(task, "early-worker", now + timedelta(seconds=30))
+
+    recovered = store.acquire(task, "recovery-worker", now + timedelta(minutes=2))
+
+    assert recovered.task_id == "42"
+    assert recovered.owner == "recovery-worker"
+    assert recovered.claimed_at == now
+
+
+def test_explicit_failed_successor_can_take_over_an_inactive_canonical_claim(
+    tmp_path: Path,
+) -> None:
+    now = datetime.now(UTC)
+    store = TaskStore(tmp_path, lease_minutes=1)
+    predecessor = Task(
+        "42",
+        "Initial wording",
+        "Logical-Task-Key: shared-fix",
+        "github-issue",
+        0,
+    )
+    successor = Task(
+        "84",
+        "Replacement wording",
+        "Logical-Task-Key: shared-fix\nSupersedes #42",
+        "github-issue",
+        0,
+    )
+    store.cache([predecessor, successor])
+    store.acquire(predecessor, "old-worker", now)
+    store.record_failure("42", "old-worker", "failure:stable")
+    store.release("42", owner="old-worker", now=now + timedelta(seconds=1))
+
+    claimed = store.acquire(successor, "new-worker", now + timedelta(minutes=2))
+
+    assert claimed.task_id == "84"
+    assert claimed.predecessor_task_id == "42"
+    assert claimed.failure_fingerprint == "failure:stable"
 
 
 def test_release_by_identifier_resolves_logical_lease(tmp_path: Path) -> None:

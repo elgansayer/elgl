@@ -21,6 +21,7 @@ from openhands_factory.retry_policy import (
 from openhands_factory.state import atomic_write_json, read_json
 
 MAX_PERSISTED_RETRY_DELAY = timedelta(hours=24)
+AUTONOMOUS_CHRONIC_RETRY_BASE = timedelta(minutes=30)
 RECOVERABLE_ACTIVE_STATES = {
     JobState.LEASED,
     JobState.IMPLEMENTING,
@@ -81,7 +82,11 @@ class JobStore:
             return maximum
         return parsed
 
-    def _load(self) -> dict[str, Job]:
+    def _load(
+        self,
+        *,
+        migrate_legacy_quarantine: bool = True,
+    ) -> dict[str, Job]:
         payload = read_json(self.path, {"jobs": []}, validator=_is_job_payload)
         jobs: dict[str, Job] = {}
         now = datetime.now(UTC)
@@ -95,8 +100,8 @@ class JobStore:
                     type(error).__name__,
                 )
                 continue
-            if job.state is JobState.QUARANTINED and job.quarantine_reason is None:
-                self._reset_legacy_quarantine(job, now)
+            if migrate_legacy_quarantine and job.state is JobState.QUARANTINED:
+                self._resume_legacy_quarantine(job, now)
             jobs[job.task.identifier] = job
         return jobs
 
@@ -136,6 +141,13 @@ class JobStore:
             branch=item.get("branch"),
             pull_request=item.get("pull_request"),
             head_sha=item.get("head_sha"),
+            canonical_task_id=item.get("canonical_task_id"),
+            producer_identity=item.get("producer_identity"),
+            initial_base_sha=item.get("initial_base_sha"),
+            latest_verified_sha=item.get("latest_verified_sha"),
+            predecessor_pull_request=item.get("predecessor_pull_request"),
+            successor_pull_request=item.get("successor_pull_request"),
+            changed_path_fingerprint=item.get("changed_path_fingerprint"),
             attempts=int(item.get("attempts", 0)),
             repair_attempts=int(item.get("repair_attempts", 0)),
             quality_repairs=int(item.get("quality_repairs", 0)),
@@ -210,11 +222,68 @@ class JobStore:
         if self.factory_generation != "unknown":
             job.factory_generation = self.factory_generation
 
+    def _retry_delay(self, job: Job, class_retry_count: int) -> timedelta:
+        """Return autonomous retry delay, escalating chronic identical failures.
+
+        The ordinary per-failure-class schedule remains the default. Once the same
+        stable failure fingerprint reaches ``max_repeated_failures``, the task stays in
+        its current machine-owned pipeline state but receives a stronger 30m, 1h, 2h,
+        4h, 8h, 16h, 24h backoff. This preserves eventual autonomous recovery without
+        a quarantine/manual-release state or hot-looping a deterministic failure.
+        """
+
+        fingerprint = job.last_failure_fingerprint or "unknown"
+        ordinary = deterministic_backoff(
+            class_retry_count,
+            jitter_key=f"{job.task.identifier}:{fingerprint}",
+        )
+        limit = self.max_repeated_failures
+        if limit is None or job.repeated_failure_count < limit:
+            return ordinary
+
+        extra_failures = max(0, job.repeated_failure_count - limit)
+        multiplier = 1 << min(extra_failures, 20)
+        chronic = min(
+            AUTONOMOUS_CHRONIC_RETRY_BASE * multiplier,
+            MAX_PERSISTED_RETRY_DELAY,
+        )
+        return max(ordinary, chronic)
+
+    def _resume_legacy_quarantine(self, job: Job, now: datetime) -> None:
+        """Migrate a persisted quarantine into autonomous backoff without data loss.
+
+        Old releases may have durable ``quarantined`` jobs. Loading one must never
+        recreate a human-release dependency. The migration keeps failure fingerprints,
+        counters, attempts, provider history, review findings, and the current pipeline
+        context, then schedules the same bounded autonomous retry policy used for new
+        failures. The legacy quarantine metadata is discarded after migration.
+        """
+
+        retry_count = max(
+            job.failure_counts.get(job.last_failure_kind or "", 0),
+            job.repeated_failure_count,
+            1,
+        )
+        delay = self._retry_delay(job, retry_count)
+        base = job.quarantined_at or job.updated_at
+        due = base + delay
+        job.state = JobState.DISCOVERED
+        job.next_attempt_at = due if due > now else None
+        job.quarantine_reason = None
+        job.quarantined_at = None
+        job.quarantine_notification_pending = False
+        job.updated_at = now
+
     def _save_raw(self, jobs: dict[str, Job]) -> None:
         """Persist already-normalized jobs without applying retry policy again."""
 
         serialised = []
+        now = datetime.now(UTC)
         for job in jobs.values():
+            # Quarantine is legacy input only. No current Factory write path may
+            # persist a human-release state, even if an older caller constructs one.
+            if job.state is JobState.QUARANTINED:
+                self._resume_legacy_quarantine(job, now)
             self._stamp(job)
             item = asdict(job)
             item["task"]["triage_tags"] = sorted(job.task.triage_tags)
@@ -262,8 +331,12 @@ class JobStore:
         with self._process_lock, self.file_lock:
             self._assert_generation_current()
             previous_jobs = self._load()
+            now = datetime.now(UTC)
             for task_id, job in jobs.items():
                 previous = previous_jobs.get(task_id)
+                if job.state is JobState.QUARANTINED:
+                    self._resume_legacy_quarantine(job, now)
+                    continue
                 if job.last_error and job.attempts > 0:
                     if self._retry_transition_changed(previous, job):
                         self._apply_retry_policy(previous, job)
@@ -296,7 +369,7 @@ class JobStore:
     ) -> None:
         """Attach restart-safe retry accounting immediately before durable save."""
 
-        if job.state in {JobState.DONE, JobState.QUARANTINED}:
+        if job.state is JobState.DONE:
             return
         if (
             previous is not None
@@ -310,24 +383,7 @@ class JobStore:
             return
         if job.last_error and job.attempts > 0:
             class_retry_count = record_failure_diagnostics(job, job.last_error)
-            if (
-                self.max_repeated_failures is not None
-                and job.repeated_failure_count >= self.max_repeated_failures
-            ):
-                job.state = JobState.QUARANTINED
-                job.next_attempt_at = None
-                job.quarantine_reason = (
-                    f"Repeated {job.last_failure_kind or 'task'} failure reached the "
-                    f"configured limit of {self.max_repeated_failures}"
-                )
-                job.quarantined_at = now or datetime.now(UTC)
-                job.quarantine_notification_pending = True
-                return
-            fingerprint = job.last_failure_fingerprint or "unknown"
-            delay = deterministic_backoff(
-                class_retry_count,
-                jitter_key=f"{job.task.identifier}:{fingerprint}",
-            )
+            delay = self._retry_delay(job, class_retry_count)
             job.next_attempt_at = (now or datetime.now(UTC)) + delay
             return
         if previous is not None and self._made_meaningful_progress(previous, job):
@@ -339,7 +395,9 @@ class JobStore:
             self._assert_generation_current()
             jobs = self._load()
             previous = jobs.get(job.task.identifier)
-            if job.last_error and job.attempts > 0:
+            if job.state is JobState.QUARANTINED:
+                self._resume_legacy_quarantine(job, datetime.now(UTC))
+            elif job.last_error and job.attempts > 0:
                 if self._retry_transition_changed(previous, job):
                     self._apply_retry_policy(previous, job)
             elif previous is not None and self._made_meaningful_progress(previous, job):
@@ -411,7 +469,7 @@ class JobStore:
 
     @staticmethod
     def _reset_legacy_quarantine(job: Job, now: datetime) -> None:
-        """Reset either a legacy quarantine or an operator-approved task circuit."""
+        """Reset a legacy quarantine for an explicit compatibility requeue."""
         job.state = JobState.DISCOVERED
         job.attempts = 0
         job.repair_attempts = 0
@@ -437,11 +495,6 @@ class JobStore:
 
             for persisted_job in jobs.values():
                 self._stamp(persisted_job)
-                if (
-                    persisted_job.state is JobState.QUARANTINED
-                    and persisted_job.quarantine_reason is None
-                ):
-                    self._reset_legacy_quarantine(persisted_job, now)
 
             for task in tasks:
                 existing = jobs.get(task.identifier)
@@ -479,13 +532,17 @@ class JobStore:
             return jobs
 
     def requeue_quarantined(self, task_ids: set[str]) -> list[str]:
-        """Reset durable quarantine state for an explicit operator-selected set."""
+        """Compatibility reset for explicitly selected legacy persisted quarantines.
+
+        Current Factory writes cannot create quarantine state; this remains only so an
+        older state file or control command can be migrated without losing compatibility.
+        """
 
         requeued: list[str] = []
         now = datetime.now(UTC)
         with self._process_lock, self.file_lock:
             self._assert_generation_current()
-            jobs = self._load()
+            jobs = self._load(migrate_legacy_quarantine=False)
             for task_id in sorted(task_ids, key=lambda value: (not value.isdigit(), value)):
                 job = jobs.get(task_id)
                 if job is None or job.state is not JobState.QUARANTINED:

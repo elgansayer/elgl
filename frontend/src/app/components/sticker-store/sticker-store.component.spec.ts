@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, Component, input } from '@angular/core';
+import { Pipe, PipeTransform, Component, input, signal, WritableSignal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StickerStoreComponent } from './sticker-store.component';
@@ -58,9 +58,11 @@ const mockPacks: StickerPack[] = [
 describe('StickerStoreComponent', () => {
   let component: StickerStoreComponent;
   let fixture: ComponentFixture<StickerStoreComponent>;
+  let stickerPacks: WritableSignal<StickerPack[]>;
   let economyStoreMock: {
-    stickerPacks: ReturnType<typeof vi.fn>;
+    stickerPacks: WritableSignal<StickerPack[]>;
     coinsBalance: ReturnType<typeof vi.fn>;
+    isOnline: ReturnType<typeof vi.fn>;
     loadStickerPacks: ReturnType<typeof vi.fn>;
     unlockStickerPack: ReturnType<typeof vi.fn>;
   };
@@ -69,9 +71,11 @@ describe('StickerStoreComponent', () => {
   };
 
   beforeEach(async () => {
+    stickerPacks = signal(mockPacks);
     economyStoreMock = {
-      stickerPacks: vi.fn().mockReturnValue(mockPacks),
+      stickerPacks,
       coinsBalance: vi.fn().mockReturnValue(200),
+      isOnline: vi.fn().mockReturnValue(true),
       loadStickerPacks: vi.fn().mockResolvedValue(undefined),
       unlockStickerPack: vi.fn().mockResolvedValue(true),
     };
@@ -122,7 +126,6 @@ describe('StickerStoreComponent', () => {
       expect(html).not.toMatch(/\bml-\d/);
       expect(html).not.toMatch(/\bmr-\d/);
     }
-    // Verify no physical direction classes exist in the entire component
     const componentHtml = fixture.nativeElement.innerHTML;
     expect(componentHtml).not.toMatch(/\bborder-l\b/);
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
@@ -165,6 +168,60 @@ describe('StickerStoreComponent', () => {
     await component.purchasePack(ownedPack);
 
     expect(economyStoreMock.unlockStickerPack).not.toHaveBeenCalled();
+  });
+
+  it('should not spend coins while offline', async () => {
+    economyStoreMock.isOnline.mockReturnValue(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    await component.purchasePack(mockPacks[0]);
+
+    expect(economyStoreMock.unlockStickerPack).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('economy.offlinePurchaseUnavailable');
+    const purchaseButtons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('button[aria-label]'),
+    );
+    expect(purchaseButtons.every((button) => button.disabled)).toBe(true);
+  });
+
+  it('should serialize purchase attempts so one click cannot start a second spend', async () => {
+    let resolveUnlock!: (value: boolean) => void;
+    economyStoreMock.unlockStickerPack.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveUnlock = resolve;
+        }),
+    );
+
+    const firstPurchase = component.purchasePack(mockPacks[0]);
+    await Promise.resolve();
+    expect(component.purchasingId()).toBe('stk_pack_1');
+
+    await component.purchasePack({
+      ...mockPacks[0],
+      id: 'stk_pack_2',
+      name: 'Second Pack',
+    });
+    expect(economyStoreMock.unlockStickerPack).toHaveBeenCalledTimes(1);
+
+    resolveUnlock(true);
+    await firstPurchase;
+    expect(component.purchasingId()).toBeNull();
+  });
+
+  it('should render current store ownership after an unlock updates the store signal', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const updated = mockPacks.map((pack) =>
+      pack.id === 'stk_pack_1' ? { ...pack, owned: true } : pack,
+    );
+    stickerPacks.set(updated);
+    fixture.detectChanges();
+
+    expect(component.packs().find((pack) => pack.id === 'stk_pack_1')?.owned).toBe(true);
   });
 
   it('should filter packs by category', async () => {
