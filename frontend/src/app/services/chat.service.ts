@@ -184,8 +184,8 @@ export class ChatService {
   async assignLabelToRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
       this.http.post(
-        `${this.baseUrl}/rooms/${roomId}/labels`,
-        { label },
+        `${this.baseUrl}/labels`,
+        { room_id: roomId, label },
         { headers: this.getHeaders() },
       ),
     );
@@ -193,7 +193,8 @@ export class ChatService {
 
   async removeLabelFromRoom(roomId: string, label: string): Promise<void> {
     await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/rooms/${roomId}/labels/${encodeURIComponent(label)}`, {
+      this.http.delete(`${this.baseUrl}/labels`, {
+        body: { room_id: roomId, label },
         headers: this.getHeaders(),
       }),
     );
@@ -216,14 +217,6 @@ export class ChatService {
 
   async getMessageReceipts(_messageId: string): Promise<MessageReceiptStatus> {
     return Promise.resolve({ readBy: [], totalMembers: 0 });
-  }
-
-  async addLabelToChat(chatId: string, label: string): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`${environment.apiUrl}/chat/labels`, { room_id: chatId, label }));
-  }
-
-  async removeLabelFromChat(chatId: string, label: string): Promise<void> {
-    return firstValueFrom(this.http.delete<void>(`${environment.apiUrl}/chat/labels`, { body: { room_id: chatId, label } }));
   }
 
   constructor() {
