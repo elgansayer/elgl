@@ -288,7 +288,11 @@ class ReviewHeadStabilityGate:
             {"version": _HEAD_STABILITY_STATE_VERSION, "observations": []},
             validator=self._valid_observation_payload,
         )
-        cutoff = now - max(_HEAD_STABILITY_RETENTION, self.quiet_period)
+        # Keep each observation through its configured quiet period, then retain
+        # it for the normal cleanup window. Using only the larger duration would
+        # prune observations as soon as a long quiet period elapsed, causing the
+        # same unchanged head to be observed again and deferred indefinitely.
+        cutoff = now - (self.quiet_period + _HEAD_STABILITY_RETENTION)
         observations: dict[str, ReviewHeadObservation] = {}
         pruned = False
         for item in payload["observations"]:

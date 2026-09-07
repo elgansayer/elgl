@@ -86,6 +86,18 @@ def test_future_review_head_observation_resets_to_current_clock(tmp_path: Path) 
     assert corrected.defer_seconds("pr-42", "head-a", current + timedelta(seconds=120)) == 0
 
 
+def test_quiet_period_longer_than_retention_can_become_ready(tmp_path: Path) -> None:
+    quiet_period = timedelta(days=8)
+    gate = ReviewHeadStabilityGate(
+        tmp_path / "heads.json",
+        quiet_seconds=int(quiet_period.total_seconds()),
+    )
+    start = datetime(2026, 9, 1, tzinfo=UTC)
+
+    assert gate.defer_seconds("pr-42", "head-a", start) == int(quiet_period.total_seconds())
+    assert gate.defer_seconds("pr-42", "head-a", start + quiet_period) == 0
+
+
 def test_moving_external_pr_consumes_no_provider_or_review_budget(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
