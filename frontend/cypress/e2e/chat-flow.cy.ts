@@ -55,6 +55,7 @@ describe('Chat Flow (Mocked)', () => {
     }).as('getRooms');
 
     cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
+    cy.intercept('GET', '**/api/chat/archived-rooms', { body: [] }).as('getArchivedRooms');
     cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
 
     cy.intercept('GET', `**/api/chat/messages/${roomId}*`, {
@@ -105,20 +106,17 @@ describe('Chat Flow (Mocked)', () => {
     cy.contains('Language Exchange with Maria').should('be.visible').click();
 
     cy.url().should('include', `/chat/${roomId}`);
-    cy.wait('@getMessages');
     cy.get('[data-testid="chat-message"]').should('have.length', 1);
   });
 
   it('sends a text message with the canonical room and message payload', () => {
     cy.visit(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     const testMessage = 'I am doing great, thanks for asking!';
     cy.get('[data-testid="chat-message-input"]').type(`${testMessage}{enter}`);
 
-    cy.wait('@checkGrammar')
-      .its('request.body.text')
-      .should('eq', testMessage);
+    cy.wait('@checkGrammar').its('request.body.text').should('eq', testMessage);
     cy.wait('@sendMessage').then((interception) => {
       expect(interception.response?.statusCode).to.eq(201);
       expect(interception.request.body).to.deep.include({
@@ -134,7 +132,7 @@ describe('Chat Flow (Mocked)', () => {
 
   it('does not submit whitespace-only messages', () => {
     cy.visit(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
 
     cy.get('[data-testid="chat-message-input"]').type('   {enter}');
 
@@ -149,10 +147,11 @@ describe('Chat Flow (Mocked)', () => {
     const retryMessage = 'Please keep this draft if sending fails.';
 
     cy.visit(`/chat/${roomId}`);
-    cy.wait('@getMessages');
+    cy.get('[data-testid="chat-message"]').should('have.length', 1);
     cy.window().then((win) => {
-      (win as typeof win & { __cypressExpectedConsoleError?: string }).__cypressExpectedConsoleError =
-        'Error sending message:';
+      (
+        win as typeof win & { __cypressExpectedConsoleError?: string }
+      ).__cypressExpectedConsoleError = 'Error sending message:';
     });
     cy.get('[data-testid="chat-message-input"]').type(`${retryMessage}{enter}`);
 
