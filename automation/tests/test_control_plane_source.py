@@ -56,7 +56,7 @@ def test_production_uses_subscription_first_phase_routing() -> None:
         AgentPhase.QUALITY_REPAIR: ["codex", "claude", "google", "opencode", "pi"],
         AgentPhase.CODE_REVIEW: ["codex", "claude", "google", "opencode", "pi"],
         AgentPhase.CI_REPAIR: ["opencode", "google", "claude", "pi", "codex"],
-        AgentPhase.GENERAL_ACTION: ["opencode", "google", "codex", "claude", "pi"],
+        AgentPhase.GENERAL_ACTION: ["opencode", "google", "pi", "claude", "codex"],
     }
     for phase, candidates in expected.items():
         assert routing[phase.value.replace("-", "_")] == candidates
@@ -65,6 +65,9 @@ def test_production_uses_subscription_first_phase_routing() -> None:
     # Keep the static preference cheap-first. Runtime history promotes Codex only
     # after two real CI-repair provider starts.
     assert expected[AgentPhase.CI_REPAIR][-1] == "codex"
+    # Factory-internal GENERAL_ACTION work uses only one healthy regular provider, so
+    # keep flagship Codex behind all cheaper diagnostic routes.
+    assert expected[AgentPhase.GENERAL_ACTION][-1] == "codex"
 
 
 def test_active_architecture_matches_provider_neutral_boundary() -> None:
