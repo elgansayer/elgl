@@ -112,19 +112,19 @@ export class PrivacySettingsComponent {
       icon: '\uD83D\uDEAB',
       titleKey: 'privacy.hub.blockedUsers',
       descriptionKey: 'privacy.hub.blockedUsersDesc',
-      route: '/blocks',
+      route: '/settings/blocks',
     },
     {
       icon: '\uD83D\uDCE5',
       titleKey: 'privacy.hub.downloadData',
       descriptionKey: 'privacy.hub.downloadDataDesc',
-      route: '/gdpr',
+      route: '/settings/gdpr',
     },
     {
       icon: '\uD83D\uDDD1\uFE0F',
       titleKey: 'privacy.hub.accountDeletion',
       descriptionKey: 'privacy.hub.accountDeletionDesc',
-      route: '/account/deletion',
+      route: '/settings/account/deletion',
     },
     {
       icon: '\uD83D\uDCCB',

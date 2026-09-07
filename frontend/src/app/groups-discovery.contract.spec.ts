@@ -6,15 +6,9 @@ const chatListTemplate = readFileSync(
   resolve(process.cwd(), 'src/app/components/chat-list/chat-list.component.html'),
   'utf8',
 );
-const chatRoutes = readFileSync(
-  resolve(process.cwd(), 'src/app/routes/chat.routes.ts'),
-  'utf8',
-);
+const chatRoutes = readFileSync(resolve(process.cwd(), 'src/app/routes/chat.routes.ts'), 'utf8');
 const discoverySource = readFileSync(
-  resolve(
-    process.cwd(),
-    'src/app/components/groups-discovery/groups-discovery.component.ts',
-  ),
+  resolve(process.cwd(), 'src/app/components/groups-discovery/groups-discovery.component.ts'),
   'utf8',
 );
 
@@ -38,9 +32,7 @@ describe('groups discovery product contract', () => {
   it('loads authenticated discoverable groups and topic metadata', () => {
     expect(discoverySource).toContain('`${this.apiUrl}/groups/discoverable`');
     expect(discoverySource).toContain('`${this.apiUrl}/interests?language=${lang}`');
-    expect(discoverySource).toContain(
-      'return groups.filter((g) => g.interest_id === interestId);',
-    );
+    expect(discoverySource).toContain('return groups.filter((g) => g.interest_id === interestId);');
   });
 
   it('keeps join state and capacity state explicit in the UI', () => {
@@ -49,6 +41,11 @@ describe('groups discovery product contract', () => {
     expect(discoverySource).toContain('group.member_count < group.max_members');
     expect(discoverySource).toContain("'groups_discovery_joined' | t");
     expect(discoverySource).toContain("'groups_discovery_full' | t");
+  });
+
+  it('links group creation directly to the canonical community route', () => {
+    expect(discoverySource).toContain('[routerLink]="[\'/community/groups/create\']"');
+    expect(discoverySource).not.toContain('[routerLink]="[\'/groups/create\']"');
   });
 
   it('uses Spartan-owned native actions and avoids synthetic button semantics', () => {
