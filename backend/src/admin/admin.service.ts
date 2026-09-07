@@ -200,7 +200,7 @@ export class AdminService {
 
     await Promise.all([
       this.invalidateUserListCaches(),
-      this.invalidateLoginHistoryCache(userId)
+      this.invalidateLoginHistoryCache(userId),
     ]);
 
     return data;
@@ -288,7 +288,7 @@ export class AdminService {
     await Promise.all([
       this.invalidateUserListCaches(),
       this.invalidateBlocksListCaches(),
-      this.invalidateLoginHistoryCache(targetUserId)
+      this.invalidateLoginHistoryCache(targetUserId),
     ]);
   }
 
@@ -319,7 +319,7 @@ export class AdminService {
     await Promise.all([
       this.invalidateUserListCaches(),
       this.invalidateReportsListCaches(),
-      this.invalidateLoginHistoryCache(targetUserId)
+      this.invalidateLoginHistoryCache(targetUserId),
     ]);
   }
 
