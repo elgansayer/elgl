@@ -10,25 +10,26 @@ This document defines which repository artifacts are authoritative, generated, t
 | Product capability specification | `FEATURES_SPEC.md` | Product capability inventory. Implementation status still comes from code and tests. |
 | System architecture | `SPEC.md` and `DESIGN.md` | `SPEC.md` owns platform/data contracts; `DESIGN.md` owns design-system/product design decisions. Material changes must keep both consistent where their domains overlap. |
 | UI architecture | `ui_architecture.md` | Angular, Spartan, accessibility, responsive and design-token architecture. |
-| Factory operations | `docs/factory/README.md` | Operator-facing deployment, recovery and provider behavior for the active VPS Factory. |
-| Factory executable behavior | `automation/openhands_factory/` | Code is authoritative when prose and runtime behavior disagree. Documentation drift is a bug. |
+| Factory operations | `docs/factory/README.md` | Operator-facing deployment, recovery and provider behaviour for the active VPS Factory. |
+| Factory executable behaviour | `automation/openhands_factory/` | Code is authoritative when prose and runtime behaviour disagree. Documentation drift is a bug. |
+| Production provider policy | `config/factory/agents.production.json` | Enabled providers, phase models, static route preferences, timeouts and circuit policy. Runtime policy may further bound or rotate these candidates. |
 | Critical cross-app API contracts | `config/critical-product-contracts.json` | Machine-checked contract anchors for the standalone admin portal and critical product journeys. |
 
 `README.md` is an index and onboarding document, not a second copy of the feature specification.
 
 ## Active development automation architecture
 
-The active autonomous coding control plane is the bounded OpenHands Factory in `automation/openhands_factory/`, deployed on the VPS.
+The active autonomous coding control plane is the bounded OpenHands Factory in `automation/openhands_factory/`, deployed on the VPS. In this name, OpenHands identifies the Factory control plane and does not imply that every phase is one OpenHands SDK conversation.
 
-The default production execution path is:
+The current production execution path is:
 
-1. OpenHands owns the bounded coding conversation and isolated worktree.
-2. Inside OpenHands, OpenAI Codex subscription OAuth is the primary LLM provider.
-3. OpenCode Go is an optional fallback when both its API key and model are configured.
-4. Gemini fields remain migration/diagnostic compatibility only and cannot be enabled as a production Factory LLM tier.
-5. The optional outer `AgentRouter` may route explicit phase-specific CLI providers only when `routing_enabled` is deliberately configured. It is not the retired swarm and is disabled by default.
+1. The Factory scheduler owns issue/PR discovery, durable state, worktrees, retries, provider budgets, verification, review and exact-head merge safety.
+2. `routing_enabled` is enabled in `config/factory/agents.production.json`. The typed phase router selects from subscription-authenticated Claude Code, Codex, Google Antigravity, OpenCode Go and Pi according to phase-specific policy, health, capacity, prior attempts and conservative allowance limits.
+3. Direct provider sessions are bounded subprocesses beneath Factory authority. Providers cannot schedule work, bypass required verification/review, push to protected `main`, or merge their own PRs.
+4. OpenHands SDK/API remains a provider adapter in the same abstraction but is disabled in production and marked emergency-only. Re-enabling it is an explicit configuration/architecture change, not an implicit fallback.
+5. Provider-local subagents, nested LLM sessions and alternate control planes are not legitimate fallbacks because they bypass Factory provider-start and allowance accounting.
 
-The retired swarm/aider/guardian/resolver/reviewer control plane must not be recreated or share the Factory state directory.
+The retired swarm/Aider/guardian/resolver/reviewer control plane must not be recreated or share the Factory state directory.
 
 ## Tool-specific adapter directories
 
@@ -73,7 +74,7 @@ CI uploads diagnostic output as GitHub Actions artifacts instead of committing i
 
 ## Change protocol
 
-When changing architecture or provider behavior:
+When changing architecture or provider behaviour:
 
 1. Change executable code and tests.
 2. Update the canonical source for that domain.
