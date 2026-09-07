@@ -1,7 +1,4 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { computed, Injectable, signal } from '@angular/core';
 import type { DiagnosticQuizResult } from './quiz.service';
 
 /**
@@ -12,8 +9,6 @@ import type { DiagnosticQuizResult } from './quiz.service';
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   readonly isOnboardingComplete = signal(false);
-
-  private readonly http = inject(HttpClient);
 
   readonly steps: { label: string }[] = [
     { label: 'diagnosticQuiz.title' },
@@ -82,7 +77,6 @@ export class OnboardingService {
     } catch {
       // Storage may be unavailable in privacy-restricted browser contexts.
     }
-
   }
 
   completeOnboarding(): void {
