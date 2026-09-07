@@ -9,3 +9,7 @@
 ## 2026-08-28 - [Bound Initial Chat Unread Fetch Concurrency]
 **Learning:** Loading room unread counts sequentially creates N+1 latency, while starting every request at once can overload the client and backend for accounts with large room histories.
 **Action:** Fetch room messages in bounded `Promise.allSettled()` batches so startup gains parallelism, retains partial results, and caps request fan-out.
+
+## 2026-09-07 - [Skip Redundant Analytics/Achievements COUNT queries]
+**Learning:** In the `AchievementsService`, fetching metrics like message count or streak days dynamically for *every* achievement check creates unnecessary database load (especially expensive `COUNT(*)` queries) for users who have already maxed out their progression.
+**Action:** Always verify if a user has completed the relevant milestones *before* triggering the associated metric calculation queries. Replace the metric fetch with a static zero (or early return) if the user has already earned all corresponding achievements to eliminate a completely avoidable database performance bottleneck.
