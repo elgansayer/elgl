@@ -10,6 +10,8 @@ Every such review can be technically correct and still become useless immediatel
 
 This is especially expensive for automated producer branches because implementation, repair, formatting, generated-file reconciliation, or a provider's own follow-up can arrive as separate pushes.
 
+The same durable-admission audit also found that an admission timestamp later than the current host clock could survive restart and keep issue, review, or provider-route allowance unavailable until that future timestamp plus the full interval. Clock correction or damaged state must not make the autonomous Factory idle beyond its configured bounded window.
+
 ## Change
 
 Production Factory profiles now require an external/provider-managed PR head to remain unchanged for 120 seconds before a subscription-backed independent code review may start.
@@ -25,6 +27,8 @@ A new SHA resets its timer automatically. Once the same SHA survives the quiet p
 The check runs before review concurrency, exact-head review admission, provider-route admission, or any provider process starts. A moving head therefore consumes none of those scarce resources.
 
 Factory-owned issue work is intentionally not delayed because the Factory controls when those branches are pushed and already advances them through its own verification/review state machine.
+
+Future-dated review-head observations are discarded and re-observed at the current clock, so a clock correction can cost at most the configured quiet period. Future-dated durable allowance admissions are conservatively clamped to the current clock rather than dropped, preserving the admission charge for one configured interval without allowing a bad timestamp to stall issue intake, review, or provider routing indefinitely.
 
 ## Autonomy
 
@@ -46,13 +50,15 @@ This change does not remove, bypass, or weaken:
 - `CI / required`;
 - mergeability or branch-protection requirements.
 
-The change only avoids paying for review before a producer has finished publishing a realistic candidate head.
+The change only avoids paying for review before a producer has finished publishing a realistic candidate head and prevents malformed clock state from extending bounded allowance windows indefinitely.
 
 ## Expected efficiency impact
 
 Each burst of two or more observed producer heads can now collapse to one independent-review provider start instead of one start per intermediate SHA. No token-saving percentage is claimed because the exact saving depends on branch churn and review prompt/output size.
 
 The trade-off is a bounded 120-second delay for newly observed external PR heads. This is deliberately smaller than the production five-minute general refresh cadence and materially cheaper than repeated review/repair cycles on immediately superseded SHAs.
+
+Clock-skew hardening does not increase configured allowance. A future-dated admission remains charged, but only from the corrected current clock for the normal interval instead of potentially blocking the Factory for hours or days beyond policy.
 
 ## Regression coverage
 
@@ -62,5 +68,7 @@ Focused tests verify that:
 - an unchanged head becomes eligible automatically;
 - a changed head resets the quiet period;
 - observation state survives a process restart;
+- future review observations reset to the current clock and cannot create an unbounded delay;
+- future durable admissions are clamped to the current clock while preserving one normal admission interval;
 - a deferred external PR consumes no provider start, provider-route admission, or review admission; and
 - Factory-owned issue PR review is not delayed.
