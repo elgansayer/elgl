@@ -1,0 +1,67 @@
+name: Repair main dependency audit
+
+on:
+  push:
+    branches:
+      - repair/main-dependency-audit-20260907
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-main-dependency-audit-20260907
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: repair/main-dependency-audit-20260907
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Refresh fixable audit resolutions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in . tests/load frontend admin-portal; do
+            echo "Refreshing ${dir}"
+            (
+              cd "$dir"
+              npm audit fix --package-lock-only --ignore-scripts || true
+            )
+          done
+
+          cd backend
+          npm pkg set devDependencies.ngrok=4.3.3
+          npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts || true
+
+      - name: Verify high and critical audit baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in . backend frontend admin-portal e2e tests/load; do
+            echo "Auditing ${dir}"
+            (cd "$dir" && npm audit --audit-level=high)
+          done
+
+      - name: Commit repaired manifests and lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/repair-main-dependency-audit.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json backend/package.json backend/package-lock.json frontend/package-lock.json admin-portal/package-lock.json tests/load/package-lock.json .github/workflows/repair-main-dependency-audit.yml
+          if git diff --cached --quiet; then
+            echo "No dependency changes were generated."
+            exit 1
+          fi
+          git commit -m "fix(security): repair npm audit baseline"
+          git push origin HEAD:repair/main-dependency-audit-20260907
