@@ -18,9 +18,13 @@ describe('Chat Flow (Mocked)', () => {
     cy.intercept('POST', '**/api/economy/daily-check-in', {
       body: { claimed: false, coins_rewarded: 0, new_balance: 50 },
     }).as('dailyCheckIn');
-    cy.intercept('POST', '**/api/chat/token', { body: { token: 'mock-centrifugo-token' } }).as(
-      'getChatToken',
-    );
+    // Mock the backend's supported rate-limit response so this product-flow test
+    // exercises the realtime degraded path without creating a real WebSocket.
+    cy.intercept('POST', '**/api/chat/token', {
+      statusCode: 429,
+      headers: { 'retry-after': '30' },
+      body: { message: 'Centrifugo unavailable in the mocked E2E environment' },
+    }).as('centrifugoUnavailable');
     cy.intercept('GET', '**/api/chat/rooms/*/members', { body: [] }).as('getRoomMembers');
     cy.intercept('GET', '**/api/chat/groups/*/members', { body: [] }).as('getGroupMembers');
     cy.intercept('PATCH', '**/api/chat/messages/*/status', { statusCode: 204, body: {} }).as(
