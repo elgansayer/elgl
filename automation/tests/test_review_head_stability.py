@@ -73,6 +73,19 @@ def test_review_head_observation_survives_restart(tmp_path: Path) -> None:
     assert restarted.defer_seconds("pr-42", "head-a", start + timedelta(seconds=120)) == 0
 
 
+def test_future_review_head_observation_resets_to_current_clock(tmp_path: Path) -> None:
+    path = tmp_path / "heads.json"
+    current = datetime(2026, 9, 7, 22, 0, tzinfo=UTC)
+    future = current + timedelta(days=1)
+
+    skewed = ReviewHeadStabilityGate(path, quiet_seconds=120)
+    assert skewed.defer_seconds("pr-42", "head-a", future) == 120
+
+    corrected = ReviewHeadStabilityGate(path, quiet_seconds=120)
+    assert corrected.defer_seconds("pr-42", "head-a", current) == 120
+    assert corrected.defer_seconds("pr-42", "head-a", current + timedelta(seconds=120)) == 0
+
+
 def test_moving_external_pr_consumes_no_provider_or_review_budget(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
