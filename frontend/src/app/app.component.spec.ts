@@ -87,8 +87,9 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const versionServiceMock = {
-    checkVersion: vi.fn(),
+    checkVersion: vi.fn(() => Promise.resolve(false)),
     isDeprecated: vi.fn(() => false),
+    updateUrl: vi.fn(() => 'https://github.com/elgansayer/elgl/releases/latest'),
   };
 
   const fontScaleServiceMock = {
