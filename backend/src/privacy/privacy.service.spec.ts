@@ -323,6 +323,39 @@ describe('PrivacyService', () => {
         }),
       );
     });
+
+    it('bounds concurrent cleanup operations and isolates row failures', async () => {
+      tableRows.set(
+        'archive_requests',
+        Array.from({ length: 25 }, (_, index) => ({
+          id: `archive-${index}`,
+          user_id: 'user-1',
+          status: 'ready',
+          object_key: `opaque-${index}.json`,
+          expires_at: '2026-08-01T00:00:00.000Z',
+          created_at: '2026-07-25T00:00:00.000Z',
+        })),
+      );
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockRemove.mockImplementation(async ([objectKey]: string[]) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        inFlight -= 1;
+
+        if (objectKey === 'opaque-4.json') {
+          throw new Error('transient storage failure');
+        }
+        return { error: null };
+      });
+
+      await expect(service.purgeExpiredArchives(25)).resolves.toBe(24);
+      expect(maxInFlight).toBe(10);
+      expect(mockRemove).toHaveBeenCalledTimes(25);
+      expect(updates).toHaveLength(24);
+    });
   });
 
   describe('deleteAccount', () => {
