@@ -180,8 +180,7 @@ The NestJS API applies a global `/api` prefix, so the compose health checks poll
 
 ## Advanced AI Factory Tooling
 
-The repository contains a bounded OpenHands Factory under `automation/`. A typed, phase-specific router uses
-subscription-authenticated Claude Code, Codex subscription OAuth, configurable Google and OpenCode Go agents, with OpenHands API as
+The repository contains a bounded OpenHands Factory under `automation/`. A typed, phase-specific router uses OpenHands API as
 an optional emergency fallback. Every task uses bounded execution and an isolated rootless Podman worktree. Agent
 providers cannot push to `main` or merge their own pull requests.
 

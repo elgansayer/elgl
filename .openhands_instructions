@@ -10,13 +10,6 @@ Welcome to the HelloTalk project. Before starting any task, you **MUST** read an
 
 The active autonomous coding system is the OpenHands Factory daemon on the VPS. The retired AI swarm, Aider workers, swarm watchdogs, legacy guardians, resolver/reviewer daemons, and other pre-OpenHands orchestration are not active systems and must never be invoked, restored, used as fallbacks, or treated as authoritative state.
 
-The default provider order is conversation-scoped:
-
-1. ChatGPT/OpenAI subscription OAuth through OpenHands `LLM.subscription_login(vendor="openai", ...)` using the configured supported Codex model.
-2. OpenCode Go.
-3. No third provider by default. Gemini is explicit opt-in only.
-
-Do not replace conversation-scoped provider selection with a per-call cross-provider fallback chain for multi-turn agent conversations.
 
 ## Key directives
 
