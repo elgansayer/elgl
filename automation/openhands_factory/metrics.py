@@ -87,9 +87,7 @@ class MetricsStore:
                     total_captured_output_chars=max(
                         int(item.get("total_captured_output_chars", 0)), 0
                     ),
-                    max_captured_output_chars=max(
-                        int(item.get("max_captured_output_chars", 0)), 0
-                    ),
+                    max_captured_output_chars=max(int(item.get("max_captured_output_chars", 0)), 0),
                     output_truncated_calls=max(int(item.get("output_truncated_calls", 0)), 0),
                     failure_counts=_restore_failure_counts(item.get("failure_counts")),
                 )
